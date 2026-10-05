@@ -155,6 +155,15 @@ async function main() {
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
 
+  /* ---- installer / update bundles (dashboard "Download App" button) ----
+     Drop files like LabPOS-Setup-1.0.0.exe into ./releases/ on the VPS;
+     they are served at <api>/releases/<file>. Set the URL in the app at
+     Settings -> Lab Profile -> "Desktop App Download URL". */
+  const RELEASES_DIR = path.join(__dirname, 'releases');
+  if (!fs.existsSync(RELEASES_DIR)) fs.mkdirSync(RELEASES_DIR, { recursive: true });
+  app.use('/releases', express.static(RELEASES_DIR, { dotfiles: 'deny' }));
+  console.log('[labpos-cloud] serving installer bundles from', RELEASES_DIR);
+
   /* ---- landing / optional static frontend ---- */
   if (WWW_ROOT && fs.existsSync(WWW_ROOT)) {
     app.use(express.static(WWW_ROOT, { index: 'index.html' }));

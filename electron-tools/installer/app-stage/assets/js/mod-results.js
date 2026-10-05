@@ -253,7 +253,8 @@
       '</div>' +
       testsHtml +
       (pendingCount ? '<p style="color:#d97706"><em>Note: ' + pendingCount + ' test(s) from this invoice are still pending.</em></p>' : '') +
-      '<p style="color:#64748b;margin-top:18px"><em>' + App.esc(s.footerNote || '') + '</em></p>' +
+      '<p style="color:#64748b;margin-top:18px;margin-bottom:4px"><em>' + App.esc(s.footerNote || '') + '</em></p>' +
+      '<p style="color:#999;font-size:11px;text-align:center;margin:0">Powered by System Optix</p>' +
       '<div style="display:flex;justify-content:space-between;margin-top:48px">' +
         '<div style="text-align:center;min-width:180px"><div style="border-top:1px solid #0f1e2e;padding-top:6px">Lab Technologist</div></div>' +
         '<div style="text-align:center;min-width:180px"><div style="border-top:1px solid #0f1e2e;padding-top:6px">Pathologist</div></div>' +

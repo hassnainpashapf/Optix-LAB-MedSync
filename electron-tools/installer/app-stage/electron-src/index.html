@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LabPOS — Diagnostic Lab Management</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230d9488'/%3E%3Cpath d='M13 7h6v7l4 9.2c.6 1.4-.4 2.8-1.9 2.8H10.9c-1.5 0-2.5-1.4-1.9-2.8L13 14V7z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cpath d='M11 20h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"><!-- rendered by App.renderShell() --></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"><!-- rendered by App.renderShell() --></header>
+    <main id="view"><!-- route views render here --></main>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script>
+/* Shell-level delegation (works regardless of module render timing) */
+document.addEventListener('click', function (e) {
+  if (e.target.closest('#navToggle')) document.body.classList.toggle('side-open');
+  else if (e.target.closest('.nav-it')) document.body.classList.remove('side-open');
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') document.body.classList.remove('side-open');
+});
+</script>
+<script src="/api-config.js"></script>
+<script src="assets/js/db.js"></script>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/mod-dashboard.js"></script>
+<script src="assets/js/mod-billing.js"></script>
+<script src="assets/js/mod-invoices.js"></script>
+<script src="assets/js/mod-patients.js"></script>
+<script src="assets/js/mod-masters.js"></script>
+<script src="assets/js/mod-results.js"></script>
+<script src="assets/js/mod-admin.js"></script>
+</body>
+</html>

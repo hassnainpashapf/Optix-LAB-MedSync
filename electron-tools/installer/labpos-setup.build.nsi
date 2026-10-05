@@ -1,6 +1,6 @@
 ; =====================================================================
 ; LabPOS Setup — hand-written NSIS installer (compiled with native makensis)
-;   Placeholders 1.0.0 and 326828 are filled in by
+;   Placeholders 1.0.0 and 327152 are filled in by
 ;   build-installer.sh before compiling. Do not edit the built .nsi by hand.
 ; =====================================================================
 !include "MUI2.nsh"
@@ -86,7 +86,7 @@ Section "${APP_NAME}" SecMain
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayIcon" "$INSTDIR\${APP_EXE},0"
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "Publisher" "${APP_PUBLISHER}"
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayVersion" "${APP_VERSION}"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "EstimatedSize" 326828
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "EstimatedSize" 327152
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoRepair" 1
 

@@ -349,9 +349,6 @@
     '@media(max-width:760px){.bl-pos{grid-template-columns:1fr}}' +
     '</style>' +
 
-    '<div class="toolbar"><div><h2 style="margin:0">New Bill</h2>' +
-    '<p style="margin:2px 0 0;color:var(--muted);font-size:13px">Create a lab invoice — patient, tests, payment.</p></div></div>' +
-
     '<div class="bl-pos">' +
       /* patient column */
       '<div class="bl-panel"><div class="bl-panel-h">Patient' +

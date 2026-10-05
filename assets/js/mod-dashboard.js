@@ -198,7 +198,16 @@
 
     var quick = isTech
       ? '<a class="btn btn-primary" href="#/results">Lab Results</a><a class="btn btn-ghost" href="#/tests">View Tests</a>'
-      : '<a class="btn btn-primary" href="#/billing">+ New Bill</a><a class="btn btn-blue" href="#/patients">+ Add Patient</a><a class="btn btn-amber" href="#/expenses">+ Add Expense</a>';
+      : '<a class="btn btn-primary" href="#/billing">+ New Bill</a><a class="btn btn-blue" href="#/patients">+ Add Patient</a><a class="btn btn-amber" href="#/expenses">+ Add Expense</a>' +
+        '<button class="btn btn-ghost" onclick="LabPOSDownloadApp()">&#8681; Download App</button>';
+
+    window.LabPOSDownloadApp = function () {
+      var st = {};
+      try { st = DB.get('settings', 'main') || {}; } catch (e) {}
+      var url = String(st.installerUrl || '').trim();
+      if (url) window.open(url, '_blank', 'noopener');
+      else App.toast('Desktop app link not set yet \u2014 add it in Settings \u2192 Lab Profile.', 'info');
+    };
 
     return '' +
     '<style>' +

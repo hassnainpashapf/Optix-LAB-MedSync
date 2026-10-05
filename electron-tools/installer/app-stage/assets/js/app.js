@@ -221,7 +221,7 @@
     if (!w) { toast('Popup blocked — allow popups to print', 'err'); return; }
     w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
       '<style>' + css + '</style></head><body>' +
-      '<div class="ph"><h1>' + esc(s.labName || 'City Blood Lab') + '</h1>' +
+      '<div class="ph"><h1>' + esc(s.labName || 'Optxic LAB') + '</h1>' +
       '<div class="tag">' + esc(s.tagline || '') + '</div>' +
       '<div class="addr">' + esc(s.address || '') + ' &nbsp;•&nbsp; ' + esc(s.phone || '') +
       (s.email ? ' &nbsp;•&nbsp; ' + esc(s.email) : '') + '</div></div>' +
@@ -327,20 +327,28 @@
     }).join('');
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + icon('flask', 22) + '</span>' +
-      '<span class="brand-tx"><b>' + esc(st.labName || 'City Blood Lab') + '</b><small>Lab POS</small></span></div>' +
+      '<span class="brand-tx"><b>' + esc(st.labName || 'Optxic LAB') + '</b><small>Lab POS</small></span></div>' +
       '<div class="nav-sec">Main Menu</div>' +
       '<nav class="nav">' + items + '</nav>' +
       '<div class="side-foot"><div class="side-ver">LabPOS v1.0</div></div>';
     /* topbar */
     var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
     document.getElementById('topbar').innerHTML =
+      '<style>' +
+      '.tb-profile{padding-right:6px}' +
+      '.tb-div{width:1px;align-self:stretch;background:var(--line);margin:3px 0}' +
+      '.tb-logout{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:background .15s,color .15s;flex:none}' +
+      '.tb-logout:hover{background:#fee2e2;color:var(--red)}' +
+      '.tb-logout svg{display:block}' +
+      '</style>' +
       '<button class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Menu">' + icon('menu', 18) + '</button>' +
       '<h1 class="page-title">' + esc(navItem ? navItem.label : '') + '</h1>' +
       '<div class="top-right">' +
         '<span class="top-date">' + esc(d(new Date())) + '</span>' +
-        '<span class="user-chip"><span class="avatar">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</span>' +
-        '<span class="user-tx"><b>' + esc(s.name) + '</b>' + badge(s.role) + '</span></span>' +
-        '<button class="btn btn-ghost btn-sm" id="logoutBtn">' + icon('logout', 16) + '<span>Logout</span></button>' +
+        '<span class="user-chip tb-profile"><span class="avatar">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</span>' +
+        '<span class="user-tx"><b>' + esc(s.name) + '</b>' + badge(s.role) + '</span>' +
+        '<span class="tb-div"></span>' +
+        '<button class="tb-logout" id="logoutBtn" title="Logout" aria-label="Logout">' + icon('logout', 16) + '</button></span>' +
       '</div>';
     document.getElementById('logoutBtn').addEventListener('click', logout);
     var nt = document.getElementById('navToggle');
@@ -363,7 +371,7 @@
         '<div class="login-brand">' +
           '<div class="lb-inner">' +
             '<span class="brand-mark lg">' + icon('flask', 30) + '</span>' +
-            '<h1>' + esc(st.labName || 'City Blood Lab') + '</h1>' +
+            '<h1>' + esc(st.labName || 'Optxic LAB') + '</h1>' +
             '<p class="lb-tag">' + esc(st.tagline || 'Accurate • Fast • Trusted') + '</p>' +
             '<ul class="lb-feats">' +
               '<li>' + icon('check', 15) + ' Complete billing & invoicing</li>' +

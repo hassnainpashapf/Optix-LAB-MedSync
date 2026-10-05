@@ -191,7 +191,8 @@
         '<tr><td style="padding:10px 6px;font-size:18px;font-weight:800">Amount Received</td><td style="padding:10px 6px;font-size:18px;font-weight:800">' + App.money(py.amount) + '</td></tr>' +
         (inv ? '<tr><td style="padding:6px;color:#555">Invoice Balance Due</td><td style="padding:6px;font-weight:700;color:#dc2626">' + App.money(inv.due) + '</td></tr>' : '') +
       '</table>' +
-      '<div style="font-size:12px;color:#555;text-align:center;margin-bottom:24px">' + App.esc(s.footerNote || '') + '</div>' +
+      '<div style="font-size:12px;color:#555;text-align:center;margin-bottom:6px">' + App.esc(s.footerNote || '') + '</div>' +
+      '<div style="font-size:11px;color:#999;text-align:center;margin-bottom:24px">Powered by System Optix</div>' +
       '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:32px">' +
         '<div>Received by: __________________</div><div>Patient signature: __________________</div>' +
       '</div>';
@@ -381,7 +382,8 @@
         '<th style="text-align:right;padding:8px;border:1px solid #ddd">Amount</th></tr></thead>' +
         '<tbody>' + payRows + '</tbody>' +
       '</table>' +
-      '<div style="font-size:12px;color:#555;text-align:center;margin-bottom:24px">' + App.esc(s.footerNote || '') + '</div>' +
+      '<div style="font-size:12px;color:#555;text-align:center;margin-bottom:6px">' + App.esc(s.footerNote || '') + '</div>' +
+      '<div style="font-size:11px;color:#999;text-align:center;margin-bottom:24px">Powered by System Optix</div>' +
       '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:32px">' +
         '<div>Received by: __________________</div><div>Authorised signature: __________________</div>' +
       '</div>';
@@ -457,11 +459,6 @@
     setRefresh(renderInvoices);
     var view = document.getElementById('view');
     view.innerHTML =
-      '<div class="toolbar">' +
-        '<h2 style="margin:0">Invoices</h2>' +
-        '<div style="flex:1"></div>' +
-        '<a class="btn btn-primary" href="#/billing">+ New Bill</a>' +
-      '</div>' +
       '<div class="card"><div class="card-b">' +
         '<div class="toolbar" style="margin-bottom:14px">' +
           '<input id="f-q" class="input search" style="max-width:280px" placeholder="Search invoice no, patient, phone..." value="' + App.esc(F.q) + '">' +
@@ -477,6 +474,7 @@
             '<option value="partial"' + (F.status === 'partial' ? ' selected' : '') + '>Partial</option>' +
             '<option value="unpaid"' + (F.status === 'unpaid' ? ' selected' : '') + '>Unpaid</option>' +
           '</select>' +
+          '<a class="btn btn-primary" href="#/billing" style="margin-left:auto">+ New Bill</a>' +
         '</div>' +
         '<div id="inv-summary"></div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr>' +
@@ -628,7 +626,6 @@
     }).join('') : '<tr><td colspan="8">' + App.empty('🎉 No outstanding dues. All invoices are paid.') + '</td></tr>';
 
     document.getElementById('view').innerHTML =
-      '<div class="toolbar"><h2 style="margin:0">Pending Dues</h2></div>' +
       '<div class="stat-grid" style="margin-bottom:18px">' +
         '<div class="stat"><div class="stat-label">Total Outstanding</div>' +
           '<div class="stat-num" style="color:var(--red)">' + App.money(totalDue) + '</div>' +

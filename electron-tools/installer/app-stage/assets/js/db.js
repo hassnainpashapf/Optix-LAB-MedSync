@@ -86,7 +86,7 @@
       seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0 },
       settings: {
         id: 'main',
-        labName: 'City Blood Lab',
+        labName: 'Optxic LAB',
         tagline: 'Accurate • Fast • Trusted',
         address: 'Main Road, Gulberg, Lahore',
         phone: '0300-1234567',
@@ -264,6 +264,10 @@
   /* ---------------- public API ---------------- */
   var store = load();
   if (!store) { store = seedStore(); save(store); }
+  /* one-time rebrand: existing installs seeded with the old default name */
+  if (store && store.settings && store.settings.labName === 'City Blood Lab') {
+    store.settings.labName = 'Optxic LAB'; save(store);
+  }
 
   function persist() { if (!remote) save(store); }
 

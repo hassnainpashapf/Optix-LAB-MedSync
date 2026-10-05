@@ -366,6 +366,7 @@
       + '<div><label class="label">Email</label><input class="input" id="spEmail" value="' + App.esc(s.email || '') + '"></div>'
       + '<div><label class="label">Invoice Prefix *</label><input class="input" id="spPref" value="' + App.esc(s.invoicePrefix || 'INV') + '" style="max-width:140px"></div>'
       + '<div style="grid-column:1/-1"><label class="label">Report / Receipt Footer Note</label><input class="input" id="spFoot" value="' + App.esc(s.footerNote || '') + '"></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Desktop App Download URL</label><input class="input" id="spDl" placeholder="https://your-server/releases/LabPOS-Setup-1.0.0.exe" value="' + App.esc(s.installerUrl || '') + '"></div>'
       + '</div>'
       + '<div style="margin-top:18px"><button class="btn btn-primary" id="spSave">Save Profile</button></div>';
     document.getElementById('setBody').innerHTML = html;
@@ -380,7 +381,8 @@
         phone: document.getElementById('spPhone').value.trim(),
         email: document.getElementById('spEmail').value.trim(),
         invoicePrefix: pref,
-        footerNote: document.getElementById('spFoot').value.trim()
+        footerNote: document.getElementById('spFoot').value.trim(),
+        installerUrl: document.getElementById('spDl').value.trim()
       });
       App.toast('Lab profile saved.');
       if (App.renderShell) App.renderShell();

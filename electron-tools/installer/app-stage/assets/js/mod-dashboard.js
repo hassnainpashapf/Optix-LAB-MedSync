@@ -33,10 +33,10 @@
 
   function statCard(icon, tint, label, value, sub) {
     return '<div class="stat">' +
-      '<div class="db-ic" style="background:var(--' + tint + '-soft);color:var(--' + tint + ')">' + icon + '</div>' +
-      '<div class="db-sl">' + App.esc(label) + '</div>' +
-      '<div class="db-sv">' + value + '</div>' +
-      '<div class="db-ss">' + sub + '</div>' +
+      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft);--sc-c:var(--' + tint + ')">' + icon + '</div>' +
+      '<div class="stat-tx"><div class="lb">' + App.esc(label) + '</div>' +
+      '<div class="vl">' + value + '</div>' +
+      '<div class="dl">' + sub + '</div></div>' +
       '</div>';
   }
 
@@ -65,6 +65,65 @@
     var pendingRes = results.filter(function (r) { return r.status === 'pending'; });
     var reportedToday = results.filter(function (r) { return r.status === 'ready' && dayKey(r.reportedAt) === today; }).length;
     var monthName = new Date().toLocaleDateString('en-US', { month: 'long' });
+
+    // ---- today vs yesterday collection trend ----
+    var yDate = new Date(); yDate.setDate(yDate.getDate() - 1);
+    var yestCol = payments.filter(function (p) { return dayKey(p.date) === ymd(yDate); })
+      .reduce(function (a, p) { return a + (+p.amount || 0); }, 0);
+    var colDelta;
+    if (yestCol > 0) {
+      var colPct = Math.round((todayCol - yestCol) / yestCol * 100);
+      colDelta = colPct >= 0
+        ? '<span class="db-up">&#9650; ' + colPct + '% vs yesterday</span>'
+        : '<span class="db-down">&#9660; ' + Math.abs(colPct) + '% vs yesterday</span>';
+    } else {
+      colDelta = '<span class="db-flat">&mdash; vs yesterday</span>';
+    }
+
+    // ---- top tests this month (by billed item count) ----
+    var monthInvs = invoices.filter(function (i) { return dayKey(i.createdAt).slice(0, 7) === mKey; });
+    var testAgg = {};
+    monthInvs.forEach(function (i) {
+      (i.items || []).forEach(function (it) {
+        var key = it.testId || it.code || it.name || 'unknown';
+        var e = testAgg[key] = testAgg[key] || { testId: it.testId, code: it.code, name: it.name, count: 0, revenue: 0 };
+        e.count += 1;
+        e.revenue += (+it.price || 0);
+      });
+    });
+    var topTests = Object.keys(testAgg).map(function (k) { return testAgg[k]; })
+      .sort(function (a, b) { return b.count - a.count; }).slice(0, 5);
+    var topTestRows = topTests.map(function (e, ix) {
+      var t = e.testId ? DB.get('tests', e.testId) : null;
+      var nm = t ? ((t.code ? t.code + ' \u2014 ' : '') + t.name) : (e.name || e.code || 'Test');
+      return '<tr><td><span class="db-rank">' + (ix + 1) + '</span></td>' +
+        '<td><strong>' + App.esc(nm) + '</strong></td>' +
+        '<td>' + e.count + ' billed</td>' +
+        (isTech ? '' : '<td style="text-align:right"><strong>' + App.money(e.revenue) + '</strong></td>') +
+        '</tr>';
+    }).join('');
+
+    // ---- top referring doctors this month ----
+    var docAgg = {};
+    monthInvs.forEach(function (i) {
+      if (!i.doctorId) return;
+      var e = docAgg[i.doctorId] = docAgg[i.doctorId] || { count: 0, revenue: 0 };
+      e.count += 1;
+      e.revenue += (+i.total || 0);
+    });
+    var topDocs = Object.keys(docAgg).map(function (id) {
+      var d = DB.get('doctors', id);
+      var pct = d ? (+d.commissionPct || 0) : 0;
+      return { name: d ? d.name : 'Doctor', clinic: d ? (d.clinic || '') : '',
+               count: docAgg[id].count, comm: Math.round(docAgg[id].revenue * pct / 100) };
+    }).sort(function (a, b) { return b.count - a.count; }).slice(0, 5);
+    var topDocRows = topDocs.map(function (d) {
+      return '<tr>' +
+        '<td><strong>' + App.esc(d.name) + '</strong>' + (d.clinic ? '<div class="db-sub">' + App.esc(d.clinic) + '</div>' : '') + '</td>' +
+        '<td>' + d.count + ' referral' + (d.count !== 1 ? 's' : '') + '</td>' +
+        (isTech ? '' : '<td style="text-align:right"><strong>' + App.money(d.comm) + '</strong></td>') +
+        '</tr>';
+    }).join('');
 
     // ---- weekly chart (last 7 days) ----
     var week = [];
@@ -131,7 +190,7 @@
         statCard(ICONS.users, 'blue', 'Total Patients', patients.length, 'registered');
     } else {
       stats =
-        statCard(ICONS.cash, 'brand', "Today's Collection", App.money(todayCol), payToday.length + ' payments received') +
+        statCard(ICONS.cash, 'brand', "Today's Collection", App.money(todayCol), payToday.length + ' payments received &middot; ' + colDelta) +
         statCard(ICONS.flask, 'blue', "Today's Tests", testsToday, invToday.length + ' invoices today') +
         statCard(ICONS.alert, 'amber', 'Pending Dues', App.money(duesTotal), dueInvs.length + ' invoices unpaid') +
         statCard(ICONS.cal, 'green', monthName + ' Collection', App.money(monthCol), 'this month');
@@ -139,7 +198,7 @@
 
     var quick = isTech
       ? '<a class="btn btn-primary" href="#/results">Lab Results</a><a class="btn btn-ghost" href="#/tests">View Tests</a>'
-      : '<a class="btn btn-primary" href="#/billing">+ New Bill</a><a class="btn btn-ghost" href="#/patients">+ Add Patient</a><a class="btn btn-ghost" href="#/expenses">+ Add Expense</a>';
+      : '<a class="btn btn-primary" href="#/billing">+ New Bill</a><a class="btn btn-blue" href="#/patients">+ Add Patient</a><a class="btn btn-amber" href="#/expenses">+ Add Expense</a>';
 
     return '' +
     '<style>' +
@@ -150,11 +209,6 @@
     '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}' +
     '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
     '@media(max-width:560px){.stat-grid{grid-template-columns:1fr}}' +
-    '.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 1px 3px rgba(15,30,46,.06)}' +
-    '.db-ic{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:12px}' +
-    '.db-sl{font-size:13px;color:var(--muted);font-weight:600}' +
-    '.db-sv{font-size:26px;font-weight:800;letter-spacing:-.02em;margin-top:2px}' +
-    '.db-ss{font-size:12.5px;color:var(--muted);margin-top:4px}' +
     '.db-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px}' +
     '@media(max-width:1000px){.db-grid{grid-template-columns:1fr}}' +
     '.db-sub{font-size:12px;color:var(--muted);margin-top:2px}' +
@@ -171,6 +225,10 @@
     '.db-fill.db-today{background:linear-gradient(180deg,#3b82f6,#1d4ed8)}' +
     '.db-day{font-size:12px;color:var(--muted);font-weight:600}' +
     '.db-day-t{color:var(--blue);font-weight:800}' +
+    '.db-up{color:var(--green);font-weight:700;white-space:nowrap}' +
+    '.db-down{color:var(--red);font-weight:700;white-space:nowrap}' +
+    '.db-flat{color:var(--muted);font-weight:600;white-space:nowrap}' +
+    '.db-rank{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--brand-soft);color:var(--brand-d);font-weight:800;font-size:12px}' +
     '</style>' +
 
     '<div class="db-head"><div><h2>' + greeting() + (s.name ? ', ' + App.esc(s.name) : '') + '</h2>' +
@@ -188,6 +246,19 @@
       '<div class="card"><div class="card-h"><h3>Pending Lab Results</h3><span class="badge b-pending">' + pendingRes.length + ' pending</span></div>' +
       '<div class="card-b">' + (pendList || App.empty('All caught up! No pending results.')) +
       (pendList ? '<div class="db-foot"><a class="btn btn-primary btn-sm" href="#/results" style="width:100%">Open Lab Results</a></div>' : '') +
+      '</div></div>' +
+    '</div>' +
+
+    '<div class="db-grid">' +
+      '<div class="card"><div class="card-h"><h3>Top Tests &mdash; This Month</h3><a class="btn btn-ghost btn-sm" href="#/tests">View all</a></div>' +
+      '<div class="tbl-wrap"><table class="table"><thead><tr><th></th><th>Test</th><th>Billed</th>' + (isTech ? '' : '<th style="text-align:right">Revenue</th>') + '</tr></thead>' +
+      '<tbody>' + (topTestRows || '') + '</tbody></table>' +
+      (topTests.length ? '' : App.empty('No bills this month yet.')) +
+      '</div></div>' +
+      '<div class="card"><div class="card-h"><h3>Top Referring Doctors</h3><a class="btn btn-ghost btn-sm" href="#/doctors">View all</a></div>' +
+      '<div class="tbl-wrap"><table class="table"><thead><tr><th>Doctor</th><th>Referrals</th>' + (isTech ? '' : '<th style="text-align:right">Commission Due</th>') + '</tr></thead>' +
+      '<tbody>' + (topDocRows || '') + '</tbody></table>' +
+      (topDocs.length ? '' : App.empty('No referrals this month yet.')) +
       '</div></div>' +
     '</div>' +
 

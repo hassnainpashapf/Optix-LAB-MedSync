@@ -36,6 +36,24 @@ function categories() {
   return Object.keys(s).sort();
 }
 
+/* dashboard-style stat card icons (22x22, stroke=currentColor, round caps) */
+var TICONS = {
+  flask: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/></svg>',
+  check: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14l-3-3"/></svg>',
+  tag: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.2"/></svg>',
+  box: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 8.3L12 13l8.7-4.7"/><path d="M12 13v9"/></svg>'
+};
+
+/* dashboard-style stat card — reuses global .stat classes from app.css */
+function tStat(icon, tint, label, value, sub) {
+  return '<div class="stat">' +
+    '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft);--sc-c:var(--' + tint + ')">' + icon + '</div>' +
+    '<div class="stat-tx" style="flex:1;min-width:0"><div class="lb">' + App.esc(label) + '</div>' +
+    '<div class="vl">' + value + '</div>' +
+    '<div class="dl">' + App.esc(sub) + '</div></div>' +
+    '</div>';
+}
+
 /* how many invoices reference this test / doctor */
 function testInvoiceCount(id) {
   return DB.all('invoices').filter(function (inv) {
@@ -60,6 +78,14 @@ function renderTests() {
   var canEdit = (r === 'admin');
 
   var cats = categories();
+  var allT = DB.all('tests');
+  var nActive = allT.filter(function (t) { return t.active !== false; }).length;
+  var nPkg = allT.filter(function (t) { return t.isPackage; }).length;
+  var statCards =
+    tStat(TICONS.flask, 'blue', 'Total Tests', allT.length, 'in catalog') +
+    tStat(TICONS.check, 'green', 'Active Tests', nActive, 'available for booking') +
+    tStat(TICONS.tag, 'amber', 'Categories', cats.length, 'test categories') +
+    tStat(TICONS.box, 'brand', 'Packages', nPkg, 'bundled offers');
   var chips = ['All'].concat(cats).map(function (c) {
     return '<button type="button" class="btn btn-sm ' +
       (testFilter.cat === c ? 'btn-primary' : 'btn-ghost') +
@@ -67,11 +93,7 @@ function renderTests() {
   }).join(' ');
 
   view().innerHTML =
-    '<div class="toolbar">' +
-      '<div><h2 style="margin:0">Test Catalog</h2>' +
-      '<p class="muted" style="margin:4px 0 0">Manage lab tests, prices and report parameters</p></div>' +
-      (canEdit ? '<button type="button" class="btn btn-primary" id="t-add">+ Add Test</button>' : '') +
-    '</div>' +
+    '<div class="stat-grid">' + statCards + '</div>' +
     '<div class="card"><div class="card-b">' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">' +
         '<input id="t-q" class="input search" placeholder="Search code, name, category..." value="' + App.esc(testFilter.q) + '" style="max-width:280px">' +
@@ -80,6 +102,7 @@ function renderTests() {
             return '<option' + (testFilter.status === s ? ' selected' : '') + '>' + s + '</option>';
           }).join('') +
         '</select>' +
+        (canEdit ? '<button type="button" class="btn btn-primary" id="t-add" style="margin-left:auto">+ Add Test</button>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="t-chips">' + chips + '</div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
@@ -320,13 +343,9 @@ function renderDoctors() {
   var canEdit = true; // admin + reception both manage doctors
 
   view().innerHTML =
-    '<div class="toolbar">' +
-      '<div><h2 style="margin:0">Referral Doctors</h2>' +
-      '<p class="muted" style="margin:4px 0 0">Doctors who refer patients — track referrals & commission</p></div>' +
-      '<button type="button" class="btn btn-primary" id="d-add">+ Add Doctor</button>' +
-    '</div>' +
     '<div class="card"><div class="card-b">' +
-      '<div style="margin-bottom:12px"><input id="d-q" class="input search" placeholder="Search name, clinic, phone..." value="' + App.esc(docFilter.q) + '" style="max-width:280px"></div>' +
+      '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px"><input id="d-q" class="input search" placeholder="Search name, clinic, phone..." value="' + App.esc(docFilter.q) + '" style="max-width:280px">' +
+      '<button type="button" class="btn btn-primary" id="d-add" style="margin-left:auto">+ Add Doctor</button></div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Doctor</th><th>Clinic</th><th>Phone</th><th style="text-align:right">Commission %</th>' +
         '<th style="text-align:right">Referred (this month)</th><th style="text-align:right">Commission Due (month)</th>' +

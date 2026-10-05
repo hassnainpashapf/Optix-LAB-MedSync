@@ -62,11 +62,6 @@
     var filtTotal = rows.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
 
     var html = ''
-      + '<div class="toolbar">'
-      +   '<div><h2 style="margin:0">Expenses</h2>'
-      +   '<p class="muted" style="margin:4px 0 0">Track lab running costs and overheads.</p></div>'
-      +   '<button class="btn btn-primary" id="exAdd">+ Add Expense</button>'
-      + '</div>'
       + '<div class="stat-grid" style="margin-bottom:18px">'
       +   '<div class="stat"><div class="stat-ic" style="background:var(--red-soft);color:var(--red)">₨</div>'
       +   '<div><div class="stat-num">' + App.money(monthTotal) + '</div><div class="stat-lbl">Spent this month</div></div></div>'
@@ -78,6 +73,7 @@
       +     '<input class="input search" id="exQ" placeholder="Search title or note..." value="' + App.esc(expFilter.q) + '" style="max-width:280px">'
       +     '<input class="input" type="month" id="exMonth" value="' + App.esc(expFilter.month) + '" style="max-width:180px">'
       +     '<button class="btn btn-ghost btn-sm" id="exClear">Clear</button>'
+      +     '<button class="btn btn-primary" id="exAdd" style="margin-left:auto">+ Add Expense</button>'
       +   '</div>'
       +   '<div class="tbl-wrap"><table class="table"><thead><tr>'
       +   '<th>Date</th><th>Title</th><th>Category</th><th style="text-align:right">Amount</th><th>Added By</th><th>Note</th><th style="text-align:right">Actions</th>'
@@ -240,11 +236,6 @@
     }
 
     var html = ''
-      + '<div class="toolbar">'
-      +   '<div><h2 style="margin:0">Reports</h2>'
-      +   '<p class="muted" style="margin:4px 0 0">Collection, test and doctor performance.</p></div>'
-      +   '<button class="btn btn-ghost" id="repPrint">Print Report</button>'
-      + '</div>'
       + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
       +   '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">'
       +     '<div><label class="label">From</label><input class="input" type="date" id="repFrom" value="' + App.esc(from) + '"></div>'
@@ -255,6 +246,7 @@
       +       '<button class="btn btn-ghost btn-sm" data-preset="week">Last 7 days</button>'
       +       '<button class="btn btn-ghost btn-sm" data-preset="month">This month</button>'
       +     '</div>'
+      +     '<button class="btn btn-ghost" id="repPrint" style="margin-left:auto">Print Report</button>'
       +   '</div>'
       + '</div></div>'
 
@@ -330,7 +322,7 @@
 
   /* ============================================================
      SETTINGS  (#/settings) — admin only
-     Tabs: Lab Profile | Users | Backup | Danger Zone
+     Tabs: Lab Profile | My Account | Users | Backup | Danger Zone
      ============================================================ */
   var settingsTab = 'profile';
 
@@ -338,12 +330,12 @@
     if (role() !== 'admin') return denied();
     var tabs = [
       { id: 'profile', label: 'Lab Profile' },
+      { id: 'account', label: 'My Account' },
       { id: 'users', label: 'Users' },
       { id: 'backup', label: 'Backup' },
       { id: 'danger', label: 'Danger Zone' }
     ];
-    var html = '<div class="toolbar"><div><h2 style="margin:0">Settings</h2>'
-      + '<p class="muted" style="margin:4px 0 0">Lab profile, staff accounts, backup and data controls.</p></div></div>'
+    var html = ''
       + '<div class="card"><div class="card-b">'
       + '<div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px">'
       + tabs.map(function (t) {
@@ -357,6 +349,7 @@
       b.addEventListener('click', function () { settingsTab = b.getAttribute('data-stab'); renderSettings(); });
     });
     if (settingsTab === 'profile') renderSetProfile();
+    else if (settingsTab === 'account') renderSetAccount();
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
@@ -394,6 +387,48 @@
     });
   }
 
+  /* ---- My Account — change own username / password ---- */
+  function renderSetAccount() {
+    var me = sess();
+    var u = me ? DB.get('users', me.userId) : null;
+    if (!u) { document.getElementById('setBody').innerHTML = App.empty('Account not found. Please log in again.'); return; }
+    var html = '<div class="form-grid" style="max-width:560px">'
+      + '<div><label class="label">Full Name</label><input class="input" id="maName" value="' + App.esc(u.name || '') + '"></div>'
+      + '<div><label class="label">Username *</label><input class="input" id="maUser" value="' + App.esc(u.username || '') + '"></div>'
+      + '<div><label class="label">New Password</label><input class="input" id="maPass" type="password" placeholder="min 4 characters"></div>'
+      + '<div><label class="label">Confirm New Password</label><input class="input" id="maPass2" type="password" placeholder="repeat new password"></div>'
+      + '</div>'
+      + '<p class="muted" style="font-size:12.5px;margin-top:10px">Leave the password fields blank to keep your current password.</p>'
+      + '<div style="margin-top:14px"><button class="btn btn-primary" id="maSave">Save Changes</button></div>';
+    document.getElementById('setBody').innerHTML = html;
+    document.getElementById('maSave').addEventListener('click', function () {
+      var name = document.getElementById('maName').value.trim();
+      var username = document.getElementById('maUser').value.trim();
+      var p1 = document.getElementById('maPass').value;
+      var p2 = document.getElementById('maPass2').value;
+      if (username.length < 3) return App.toast('Username must be at least 3 characters.', 'err');
+      var clash = DB.all('users').some(function (x) {
+        return x.id !== u.id && String(x.username || '').toLowerCase() === username.toLowerCase();
+      });
+      if (clash) return App.toast('That username is already taken.', 'err');
+      var patch = { username: username, name: name || u.name };
+      if (p1 || p2) {
+        if (p1.length < 4) return App.toast('New password must be at least 4 characters.', 'err');
+        if (p1 !== p2) return App.toast('Passwords do not match.', 'err');
+        patch.password = p1;
+      }
+      DB.update('users', u.id, patch);
+      try {
+        var s = sess() || {};
+        s.name = patch.name;
+        localStorage.setItem('labpos_session', JSON.stringify(s));
+      } catch (e) {}
+      App.toast('Account updated.');
+      if (App.renderShell) App.renderShell();
+      renderSettings();
+    });
+  }
+
   /* ---- Users (admin only) ---- */
   function roleBadge(r) {
     var cls = r === 'admin' ? 'b-paid' : (r === 'reception' ? 'b-ready' : 'b-partial');
@@ -404,8 +439,7 @@
     var users = DB.all('users').slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
     var me = sess();
     var html = '<div class="toolbar" style="margin-bottom:12px">'
-      + '<p class="muted" style="margin:0">Control who can log in and what they can access.</p>'
-      + '<button class="btn btn-primary btn-sm" id="uAdd">+ Add User</button></div>'
+      + '<button class="btn btn-primary btn-sm" id="uAdd" style="margin-left:auto">+ Add User</button></div>'
       + '<div class="tbl-wrap"><table class="table"><thead><tr>'
       + '<th>Name</th><th>Username</th><th>Role</th><th>Status</th><th style="text-align:right">Actions</th>'
       + '</tr></thead><tbody>';

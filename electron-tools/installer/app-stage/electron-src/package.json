@@ -1,0 +1,1 @@
+{"author":"LabPOS","dependencies":{"express":"^4.19.2"},"description":"LabPOS — Diagnostic Blood Lab POS (Desktop)","license":"UNLICENSED","main":"main.js","name":"labpos-desktop","private":true,"productName":"LabPOS","version":"1.0.0"}

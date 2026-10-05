@@ -182,8 +182,6 @@
     var edit = canEdit();
 
     var html = '' +
-      '<div class="page-head"><div><h1>Patients</h1><p class="muted">' + all.length + ' registered patients</p></div>' +
-      (edit ? '<button class="btn btn-primary" id="pt-add">+ Add Patient</button>' : '') + '</div>' +
       '<div class="stat-grid stat-grid-3">' +
       '<div class="stat"><div class="stat-ic teal">👥</div><div><div class="stat-v">' + all.length + '</div><div class="stat-l">Total Patients</div></div></div>' +
       '<div class="stat"><div class="stat-ic amber">⏳</div><div><div class="stat-v">' + withDue + '</div><div class="stat-l">Patients with Due</div></div></div>' +
@@ -191,7 +189,8 @@
       '</div>' +
       '<div class="card"><div class="card-b">' +
       '<div class="toolbar"><input class="input search" id="pt-search" placeholder="Search by name, phone or patient ID…" value="' + App.esc(listQuery) + '">' +
-      '<span class="muted" id="pt-count">' + rows.length + ' shown</span></div>' +
+      '<span class="muted" id="pt-count">' + rows.length + ' shown</span>' +
+      (edit ? '<button class="btn btn-primary" id="pt-add" style="margin-left:auto">+ Add Patient</button>' : '') + '</div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
       '<th>ID</th><th>Patient</th><th>Age / Gender</th><th>Phone</th><th class="num">Visits</th>' +
       '<th class="num">Total Spent</th><th class="num">Due</th><th></th>' +
