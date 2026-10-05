@@ -43,6 +43,7 @@
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses' },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports' },
+    { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads' },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings' }
   ];
   var PERMS = {
@@ -56,6 +57,7 @@
     results:   ['admin', 'technician'],
     expenses:  ['admin', 'reception'],
     reports:   ['admin'],
+    downloads:  ['admin', 'reception', 'technician'],
     settings:  ['admin']
   };
   function routeKey(path) {
@@ -335,16 +337,20 @@
       '<div class="side-foot"><div class="side-ver">Optix LAB MedSync v1.0</div></div>';
     /* topbar */
     var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
+    /* time-aware greeting for the header */
+    var _gh = new Date().getHours();
+    var _greet = _gh < 12 ? 'Good morning' : (_gh < 17 ? 'Good afternoon' : 'Good evening');
+    var _greetName = s.name ? ', ' + s.name : '';
+    var _longDate = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     /* quick actions — role-aware; technicians get read-only shortcuts */
     var isTech = (s.role === 'technician');
-    var dlHref = window.labposDesktop ? 'https://optix-lab-medsync.pages.dev/download/' : '/download/';
     var tbQa = isTech
       ? '<a class="btn btn-sm tb-qab tb-classic" href="#/results">' + icon('clipboard', 14) + '<span class="tb-qa-t">Lab Results</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/tests">' + icon('flask', 14) + '<span class="tb-qa-t">View Tests</span></a>'
       : '<a class="btn btn-sm tb-qab tb-classic" href="#/billing">' + icon('plus', 14) + '<span class="tb-qa-t">New Bill</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/patients">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses">' + icon('wallet', 14) + '<span class="tb-qa-t">Add Expense</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic tb-icon" href="' + dlHref + '" title="Download App" aria-label="Download App">' + icon('download', 16) + '</a>';
+        '<a class="btn btn-sm tb-qab tb-classic tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>';
     document.getElementById('topbar').innerHTML =
       '<style>' +
       '.tb-acct{position:relative;flex:none}' +
@@ -366,23 +372,25 @@
       '.tb-qa .tb-classic:hover{background:#ebf4f8;border-color:#131845;color:#131845;transform:none}' +
       '.tb-qa .tb-classic svg{color:#131845;flex:none}' +
       '.tb-qa .tb-icon{padding:7px;border-radius:10px;min-width:34px;justify-content:center}' +
+      '.tb-greet{display:flex;flex-direction:column;justify-content:center;line-height:1.3;min-width:0;margin-right:2px}' +
+      '.tb-greet b{font-size:14.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}' +
+      '.tb-greet span{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}' +
+      '@media (max-width:760px){.tb-greet{display:none}}' +
       '@media (max-width:900px){.tb-qa .tb-qa-t{display:none}}' +
       '@media (max-width:640px){.tb-qa{display:none}}' +
       '</style>' +
       '<button class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Menu">' + icon('menu', 18) + '</button>' +
+      '<div class="tb-acct">' +
+      '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</button>' +
+      '<div class="tb-menu" id="userMenu" hidden>' +
+      '<div class="tb-menu-head"><b>' + esc(s.name) + '</b>' + badge(s.role) + '</div>' +
+      (can('settings', s.role) ? '<a class="tb-menu-it" href="#/settings">' + icon('gear', 16) + '<span>Settings</span></a>' : '') +
+      (can('settings', s.role) ? '<a class="tb-menu-it" href="#/settings">' + icon('lock', 16) + '<span>Change Password</span></a>' : '') +
+      '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
+      '</div></div>' +
+      '<div class="tb-greet"><b>' + esc(_greet + _greetName) + '</b><span>' + esc(_longDate) + '</span></div>' +
       '<h1 class="page-title">' + esc(navItem ? navItem.label : '') + '</h1>' +
-      '<div class="top-right">' +
-        '<span class="top-date">' + esc(d(new Date())) + '</span>' +
-        '<div class="tb-acct">' +
-        '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</button>' +
-        '<div class="tb-menu" id="userMenu" hidden>' +
-        '<div class="tb-menu-head"><b>' + esc(s.name) + '</b>' + badge(s.role) + '</div>' +
-        (can('settings', s.role) ? '<a class="tb-menu-it" href="#/settings">' + icon('gear', 16) + '<span>Settings</span></a>' : '') +
-        (can('settings', s.role) ? '<a class="tb-menu-it" href="#/settings">' + icon('lock', 16) + '<span>Change Password</span></a>' : '') +
-        '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
-        '</div></div>' +
-      '</div>' +
-      (activeKey === 'dashboard' ? '<span class="tb-div"></span><div class="tb-qa">' + tbQa + '</div>' : '');
+      (activeKey === 'dashboard' ? '<div class="top-right"><div class="tb-qa">' + tbQa + '</div></div>' : '');
     document.getElementById('menuLogout').addEventListener('click', logout);
     /* avatar dropdown: toggle, close on outside click / Escape (delegated once) */
     (function () {

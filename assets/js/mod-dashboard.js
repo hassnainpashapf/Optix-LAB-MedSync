@@ -15,12 +15,6 @@
     if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
     return String(Math.round(n));
   }
-  function greeting() {
-    var h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
 
   var ICONS = {
     cash: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
@@ -496,8 +490,6 @@
         statCard(ICONS.cal, 'green', monthName + ' Collection', App.money(monthCol), 'this month', monthCol, true);
     }
 
-    var dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-
     /* count-up stat values — scheduled here, runs after view.innerHTML is set by the router */
     (function () {
       function fmt(raw, isMoney) {
@@ -538,14 +530,12 @@
     '--line:#e3ecf7;--line2:#edf2f9;--bg:#f4f7fc;--card:#ffffff;' +
     '--sh-sm:0 2px 8px rgba(19,24,69,.06);--sh-md:0 18px 45px rgba(11,23,64,.10);' +
     'font-family:"Plus Jakarta Sans",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink)}' +
-    '.db-page .db-head h2{color:var(--ink);font-size:28px;font-weight:800;letter-spacing:-.02em}' +
-    '.db-page .db-head p{color:var(--muted)}' +
     '.db-page .db-date{background:#fff;border:1px solid var(--line);box-shadow:0 18px 45px rgba(11,23,64,.10);color:var(--ink);font-weight:700}' +
     '.db-page .db-date svg{color:var(--blue)}' +
-    '.db-page .stat{border-radius:20px;box-shadow:0 18px 45px rgba(11,23,64,.10);border:1px solid #eef3fa;padding:20px}' +
+    '.db-page .stat{border-radius:20px;box-shadow:0 18px 45px rgba(11,23,64,.10);border:1px solid #eef3fa}' +
     '.db-page .stat[data-tint="brand"]{--sc-line:#c9d4f2;--sc-soft:#e9edf9}' +
     '.db-page .stat[data-tint="blue"]{--sc-line:#c9e2f2;--sc-soft:#ebf4f8}' +
-    '.db-page .stat-ico{width:52px;height:52px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--sc-line),0 4px 10px rgba(11,23,64,.08)}' +
+    '.db-page .stat-ico{border-radius:50%;box-shadow:inset 0 0 0 1px var(--sc-line),0 4px 10px rgba(11,23,64,.08)}' +
     '.db-page .stat .vl{color:var(--ink)}' +
     '.db-page .stat .lb{color:var(--muted)}' +
     '.db-page .card{border-radius:20px;box-shadow:0 18px 45px rgba(11,23,64,.10);border:1px solid #eef3fa}' +
@@ -560,8 +550,6 @@
     '.db-page .dbw-bar,.db-page .dbw-hbar{background:#e8eef6}' +
     '.db-page .dbw-pct{color:var(--brand-d)}' +
     '.db-page .db-rank{background:linear-gradient(135deg,var(--brand-soft),#ffffff 130%);color:var(--brand-d);box-shadow:inset 0 0 0 1px var(--brand-line)}' +
-    '.db-page .dbd-card{border-radius:20px;box-shadow:0 18px 45px rgba(11,23,64,.10);border:1px solid #eef3fa;background:linear-gradient(135deg,#ebf4f8,#ffffff 140%)}' +
-    '.db-page .dbd-ico{background:linear-gradient(135deg,#5392ba,#3d7ea6);box-shadow:0 4px 12px rgba(83,146,186,.35)}' +
     '.db-page .dbd-tx h3{color:var(--ink)}' +
     '.db-page .db-tip{background:var(--ink)}' +
     '.db-page .db-tip::after{border-top-color:var(--ink)}' +
@@ -569,9 +557,6 @@
     '.db-page .table .id-cell{color:var(--brand-d)}' +
     '</style>' +
     '<style>' +
-    '.db-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px;flex-wrap:wrap}' +
-    '.db-head h2{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em}' +
-    '.db-head p{margin:8px 0 0;color:var(--muted);font-size:13.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}' +
     '.db-date{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:12.5px;font-weight:600;color:var(--ink2);box-shadow:var(--sh-sm)}' +
     '.db-date svg{width:14px;height:14px;color:var(--brand-d)}' +
     '.db-qa{display:flex;gap:10px;flex-wrap:wrap}' +
@@ -614,36 +599,8 @@
     '.db-day{font-size:12px;color:var(--muted);font-weight:600}' +
     '.db-day-t{color:var(--blue);font-weight:800}' +
     '.db-rank{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 7px;border-radius:9px;background:linear-gradient(135deg,var(--brand-soft),#ffffff 130%);color:var(--brand-d);font-weight:800;font-size:12px;box-shadow:inset 0 0 0 1px var(--brand-line)}' +
-    '@media(max-width:640px){.db-head h2{font-size:22px}}' +
     '@media (prefers-reduced-motion:reduce){.stat,.db-fill{animation:none}.db-fill{transform:none}.stat:hover,.db-qa .btn:hover{transform:none}}' +
     '</style>' +
-
-    '<div class="db-head"><div><h2>' + greeting() + (s.name ? ', ' + App.esc(s.name) : '') + '</h2>' +
-    '<p><span class="db-date">' + ICONS.cal + App.esc(dateStr) + '</span><span>Here is what is happening at the lab today.</span></p></div></div>' +
-
-    '<style>' +
-    '.dbd-card{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:linear-gradient(135deg,var(--brand-soft),#ffffff 140%);border:1px solid var(--line);border-radius:14px;padding:16px 20px;margin-bottom:20px;box-shadow:0 2px 10px rgba(15,23,55,.06)}' +
-    '.dbd-tx{display:flex;align-items:center;gap:14px;min-width:0}' +
-    '.dbd-ico{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;box-shadow:0 4px 12px rgba(13,148,136,.35);flex-shrink:0}' +
-    '.dbd-ico svg{width:24px;height:24px}' +
-    '.dbd-tx h3{margin:0;font-size:16px;letter-spacing:-.01em;color:var(--ink)}' +
-    '.dbd-tx p{margin:3px 0 0;font-size:13px;color:var(--muted)}' +
-    '.dbd-btns{display:flex;gap:10px;flex-wrap:wrap}' +
-    '.dbd-btn{display:inline-flex;align-items:center;gap:8px;padding:10px 18px;border-radius:99px;font-weight:700;font-size:13.5px;text-decoration:none;transition:transform .15s,box-shadow .15s;white-space:nowrap}' +
-    '.dbd-btn:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(15,23,55,.18)}' +
-    '.dbd-win{background:#131845;color:#fff;box-shadow:0 4px 14px rgba(19,24,69,.3)}' +
-    '.dbd-mac{background:#fff;color:#131845;border:1.5px solid var(--line)}' +
-    '.dbd-btn svg{width:16px;height:16px}' +
-    '@media(max-width:560px){.dbd-card{padding:14px}.dbd-btns{width:100%}.dbd-btn{flex:1;justify-content:center}}' +
-    '</style>' +
-
-    '<div class="dbd-card"><div class="dbd-tx">' +
-    '<div class="dbd-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M12 17v4M8 21h8M12 7v6m0 0 3-3m-3 3-3-3"/></svg></div>' +
-    '<div><h3>Desktop App</h3><p>Faster billing &amp; offline mode</p></div></div>' +
-    '<div class="dbd-btns">' +
-    '<a class="dbd-btn dbd-win" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-Setup-1.0.0.exe" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Windows (.exe)</a>' +
-    '<a class="dbd-btn dbd-mac" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-1.0.0-arm64.dmg.tar.gz" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg>Mac (.dmg)</a>' +
-    '</div></div>' +
 
     '<div class="stat-grid">' + stats + '</div>' +
 

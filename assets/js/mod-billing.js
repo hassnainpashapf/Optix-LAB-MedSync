@@ -257,7 +257,7 @@
     function paintCart() {
       var box = document.getElementById('blCart');
       if (!box) return;
-      if (!state.cart.length) { box.innerHTML = App.empty('Cart is empty.<br>Add tests from the list.'); return; }
+      if (!state.cart.length) { box.innerHTML = App.empty('Cart is empty. Add tests from the list.'); return; }
       box.innerHTML = state.cart.map(function (l, i) {
         return '<div class="bl-cart-line">' +
           '<div class="bl-cart-info"><strong>' + App.esc(l.name) + '</strong>' +
