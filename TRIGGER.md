@@ -1,3 +1,0 @@
-# Optix LAB MedSync
-
-trigger
