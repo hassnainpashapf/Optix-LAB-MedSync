@@ -363,7 +363,7 @@
     '@media(max-width:900px){.dbw-grid{grid-template-columns:1fr}}' +
     '.dbw-pct{font-weight:800;color:var(--brand-d);font-size:15px}' +
     '.dbw-bar{height:9px;background:#eef2f7;border-radius:99px;overflow:hidden;margin:8px 0 6px}' +
-    '.dbw-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#14b8a6,#0d9488);transition:width .6s}' +
+    '.dbw-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#5392ba,#131845);transition:width .6s}' +
     '.dbw-split{display:flex;align-items:center;gap:18px}' +
     '.dbw-legs{flex:1;min-width:0}' +
     '.dbw-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px}' +
@@ -572,7 +572,7 @@
     '.db-track{position:relative;height:100px;width:100%;max-width:58px;background:#f1f5f9;border-radius:10px;display:flex;align-items:flex-end;box-shadow:inset 0 2px 5px rgba(15,30,46,.07)}' +
     '@media(max-width:560px){.db-track{max-width:none}}' +
     '@keyframes dbGrow{to{transform:scaleY(1)}}' +
-    '.db-fill{width:100%;border-radius:10px;background:linear-gradient(180deg,#2dd4bf 0%,#0d9488 55%,#0f766e 100%);box-shadow:0 8px 16px -8px rgba(13,148,136,.6);transform:scaleY(0);transform-origin:50% 100%;animation:dbGrow .8s cubic-bezier(.22,.8,.3,1) forwards}' +
+    '.db-fill{width:100%;border-radius:10px;background:linear-gradient(180deg,#5392ba 0%,#131845 55%,#0d0f36 100%);box-shadow:0 8px 16px -8px rgba(19,24,69,.6);transform:scaleY(0);transform-origin:50% 100%;animation:dbGrow .8s cubic-bezier(.22,.8,.3,1) forwards}' +
     '.db-fill.db-today{background:linear-gradient(180deg,#60a5fa 0%,#2563eb 55%,#1d4ed8 100%);box-shadow:0 8px 18px -6px rgba(37,99,235,.65),0 0 0 3px rgba(37,99,235,.14)}' +
     '.db-tip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);background:var(--ink);color:#fff;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:8px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .16s ease,transform .16s ease;z-index:5;box-shadow:var(--sh-md)}' +
     '.db-tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink)}' +

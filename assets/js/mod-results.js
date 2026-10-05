@@ -397,7 +397,7 @@
     var doc = new JSPDF({ unit: 'mm', format: 'a4' });
     var W = 210, M = 14, CW = W - 2 * M;
     var y = M;
-    var TEAL = [13, 148, 136];
+    var TEAL = [19, 24, 69];
 
     function need(h) { if (y + h > 282) { doc.addPage(); y = M; } }
     function txt(t, x, yy, opts) { doc.text(String(t == null ? '' : t), x, yy, opts || {}); }
@@ -445,7 +445,7 @@
     var COLS = [72, 52, 28, 30]; // param | result | unit | ref  (sum 182 = CW)
     function tableHead() {
       need(9);
-      doc.setFillColor(13, 148, 136); doc.setTextColor(255, 255, 255);
+      doc.setFillColor(19, 24, 69); doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
       var x = M, heads = ['Parameter', 'Result', 'Unit', 'Reference Range'];
       var hh = 7;
