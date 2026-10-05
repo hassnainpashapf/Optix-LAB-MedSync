@@ -6,3 +6,5 @@ dist-installer/
 .env
 *.db
 *.sqlite
+
+electron-tools/installer/app-stage/
