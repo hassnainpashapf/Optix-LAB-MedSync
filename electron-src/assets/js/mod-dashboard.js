@@ -595,7 +595,7 @@
     '<div><h3>Desktop App</h3><p>Faster billing &amp; offline mode</p></div></div>' +
     '<div class="dbd-btns">' +
     '<a class="dbd-btn dbd-win" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-Setup-1.0.0.exe" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>Windows (.exe)</a>' +
-    '<a class="dbd-btn dbd-mac" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-1.0.0-arm64.dmg" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg>Mac (.dmg)</a>' +
+    '<a class="dbd-btn dbd-mac" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-1.0.0-arm64.dmg.tar.gz" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2.5"/><path d="M11 18h2"/></svg>Mac (.dmg)</a>' +
     '</div></div>' +
 
     '<div class="stat-grid">' + stats + '</div>' +
