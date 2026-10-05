@@ -9,6 +9,15 @@ Diagnostic blood-lab POS: Electron desktop app (Windows installer), Express + SQ
 
 The desktop apps work fully offline, with all data stored on the computer.
 
+## Features
+
+- **Marketing website** (https://optix-lab-medsync.pages.dev) with a dedicated [Download page](/download) for the desktop installers.
+- **App dashboard** styled to match the website (navy/blue palette, Plus Jakarta Sans): stat cards with count-ups, 7-day chart, monthly collection goal, payments-by-method donut, dues aging, month P&L, and a Desktop App download card.
+- **Header quick actions** in the app topbar: + New Bill, + Add Patient, + Add Expense, Download App (role-aware; technicians get Lab Results / View Tests).
+- **Dashboard-style stat cards** on every main page: New Bill, Lab Results, Invoices, Dues, Patients, Doctors, Expenses, Reports — all real data, no placeholders.
+- **10% zoom-out** across the app UI (`body{zoom:.9}`), with print output kept at full size.
+- Website notes: the "Book Service Now" buttons and the floating WhatsApp icon were removed from the marketing site.
+
 ## Deploy pipeline
 
 Git-first: push to `main` on GitHub (`hassnainpashapf/Optix-LAB-MedSync`) and Cloudflare Pages builds + deploys automatically:

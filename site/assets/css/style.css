@@ -70,12 +70,6 @@ section{scroll-margin-top:90px}
 }
 .nav-links a.staff:hover{border-color:var(--blue);color:var(--blue-d)}
 .nav-cta{display:flex;align-items:center;gap:14px}
-.nav-cta .arr{
-  display:inline-flex;align-items:center;justify-content:center;
-  width:26px;height:26px;border-radius:50%;
-  background:#fff;color:var(--navy);font-size:14px;font-weight:800;
-  margin-left:2px;
-}
 .burger{display:none;background:none;border:0;cursor:pointer;padding:8px;flex-direction:column;gap:5px}
 .burger span{display:block;width:24px;height:2.5px;border-radius:3px;background:var(--navy);transition:transform .25s,opacity .25s}
 
@@ -289,21 +283,18 @@ textarea.input{resize:vertical;min-height:120px}
 .form-err{color:#dc2626;font-size:13px;font-weight:600;margin-top:6px}
 
 /* ---------- forms: structural styling (labels wrap their inputs) ---------- */
-.c-form label,#bkForm label{display:block;font-size:13.5px;font-weight:700;color:var(--navy);margin:0 0 16px}
-.c-form input,.c-form textarea,.c-form select,
-#bkForm input,#bkForm textarea,#bkForm select{
+.c-form label{display:block;font-size:13.5px;font-weight:700;color:var(--navy);margin:0 0 16px}
+.c-form input,.c-form textarea,.c-form select{
   display:block;width:100%;margin-top:7px;padding:13px 16px;
   border:1.5px solid var(--line);border-radius:14px;
   font-family:var(--font);font-size:15px;font-weight:400;color:var(--ink);
   background:#fff;outline:none;
   transition:border-color .2s,box-shadow .2s;
 }
-.c-form input:focus,.c-form textarea:focus,.c-form select:focus,
-#bkForm input:focus,#bkForm textarea:focus,#bkForm select:focus{
+.c-form input:focus,.c-form textarea:focus,.c-form select:focus{
   border-color:var(--blue);box-shadow:0 0 0 4px rgba(91,155,213,.15);
 }
-.c-form textarea,#bkForm textarea{resize:vertical;min-height:110px}
-#bkForm .form-err{margin:0 0 14px}
+.c-form textarea{resize:vertical;min-height:110px}
 
 /* ---------- footer ---------- */
 .footer{background:var(--navy);color:#fff;padding:70px 0 0}
@@ -322,48 +313,6 @@ textarea.input{resize:vertical;min-height:120px}
   text-align:center;font-size:13px;color:rgba(255,255,255,.55);
 }
 
-/* ---------- modal ---------- */
-.modal{
-  position:fixed;inset:0;z-index:200;
-  background:rgba(11,23,64,.5);
-  display:flex;align-items:center;justify-content:center;
-  padding:20px;
-  opacity:0;visibility:hidden;
-  transition:opacity .25s ease,visibility .25s;
-}
-.modal.open{opacity:1;visibility:visible}
-.modal-card{
-  position:relative;
-  background:#fff;border-radius:24px;
-  max-width:480px;width:100%;
-  padding:34px;
-  box-shadow:0 30px 80px rgba(11,23,64,.3);
-  transform:translateY(14px);
-  transition:transform .25s ease;
-}
-.modal.open .modal-card{transform:translateY(0)}
-.modal-card h3{font-size:22px;font-weight:800;color:var(--navy);margin-bottom:10px}
-.modal-card p{font-size:14.5px;color:var(--muted);margin-bottom:22px}
-.modal-x{
-  position:absolute;top:16px;right:16px;
-  width:36px;height:36px;border-radius:50%;
-  border:0;background:var(--soft);color:var(--navy);
-  font-size:18px;cursor:pointer;line-height:1;
-  display:flex;align-items:center;justify-content:center;
-}
-.modal-x:hover{background:var(--line)}
-
-/* ---------- whatsapp float ---------- */
-.wa-float{
-  position:fixed;right:22px;bottom:22px;z-index:150;
-  width:60px;height:60px;border-radius:50%;
-  background:#25D366;
-  display:flex;align-items:center;justify-content:center;
-  box-shadow:0 12px 30px rgba(37,211,102,.45);
-  transition:transform .2s ease;
-}
-.wa-float:hover{transform:scale(1.08)}
-.wa-float svg{width:30px;height:30px;fill:#fff}
 
 /* ---------- reveal animation ---------- */
 .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s ease,transform .7s ease}
@@ -379,7 +328,6 @@ textarea.input{resize:vertical;min-height:120px}
 }
 @media(max-width:900px){
   .burger{display:flex}
-  .nav-cta .btn{display:none}
   .nav-links{
     display:none;
     position:absolute;top:100%;left:0;right:0;
@@ -402,7 +350,6 @@ textarea.input{resize:vertical;min-height:120px}
   .foot-grid{grid-template-columns:repeat(2,1fr)}
   .why-grid{grid-template-columns:1fr}
   .svc-grid{grid-template-columns:1fr}
-  .modal-card{margin:10px;padding:28px 24px}
   .served-badge{left:8px;bottom:18px;padding:12px 14px}
   .step-card{margin-left:30px;padding:18px 20px}
   .ghost{font-size:64px}
@@ -444,13 +391,6 @@ textarea.input{resize:vertical;min-height:120px}
 .svc-photo img{width:100%;height:100%;object-fit:cover}
 .svc-ol{position:absolute;inset:0;background:linear-gradient(180deg,transparent 45%,rgba(11,23,64,.88))}
 .svc-photo h3{position:absolute;left:22px;bottom:22px;right:70px;color:#fff;font-size:21px;font-weight:800}
-.svc-go{
-  position:absolute;right:18px;bottom:18px;
-  width:52px;height:52px;border-radius:50%;
-  background:#fff;color:var(--navy);border:0;
-  font-size:22px;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
-}
 
 /* ---------- 2. why panel ---------- */
 .why{padding:40px 0}
@@ -587,8 +527,6 @@ textarea.input{resize:vertical;min-height:120px}
 .svc-photo:hover img,.spec-photo:hover img{transform:scale(1.07)}
 .svc-photo,.spec-photo{transition:transform .25s ease,box-shadow .25s ease}
 .svc-photo:hover,.spec-photo:hover{transform:translateY(-6px);box-shadow:0 26px 60px rgba(11,23,64,.18)}
-.svc-go{transition:transform .2s ease,background .2s ease}
-.svc-go:hover{transform:rotate(45deg) scale(1.08)}
 
 /* ---------- serve arrows: stroke draw-in ---------- */
 .serve-arrow{position:absolute;z-index:2;pointer-events:none}
@@ -619,9 +557,6 @@ textarea.input{resize:vertical;min-height:120px}
   .burger.active span:nth-child(3){transform:translateY(-7.5px) rotate(-45deg)}
 }
 
-/* ---------- modal polish ---------- */
-.modal-card{transform:translateY(16px) scale(.97)}
-.modal.open .modal-card{transform:none}
 
 /* ---------- serve cards overlap ---------- */
 .serve-card{z-index:3}
@@ -670,7 +605,6 @@ textarea.input{resize:vertical;min-height:120px}
 #svcNext{background:#131845;color:#fff}
 #services .svc-photo{flex:0 0 340px;height:453px}
 #services .svc-ol{background:linear-gradient(180deg,transparent 42%,rgba(19,24,69,.92))}
-#services .svc-go{color:#131845}
 
 /* ===== A1: NAV+HERO FIDELITY ===== */
 /* palette: navy #131845, ink #0f1537, blue #5392ba, badge-pale #ebf4f8, gray #5b6b80 */
@@ -688,9 +622,6 @@ textarea.input{resize:vertical;min-height:120px}
 .nav-links a:hover{color:#5392ba}
 .nav-links a.staff{color:#131845;border-color:#dfe9f2;background:#fff}
 .nav-links a.staff:hover{border-color:#5392ba;color:#5392ba}
-.nav-cta .btn-blue{background:#5392ba;padding:12px 12px 12px 24px;font-size:14.5px}
-.nav-cta .btn-blue:hover{background:#46819f}
-.nav-cta .arr{background:#fff;color:#5392ba;margin-left:10px;width:28px;height:28px;font-size:15px}
 
 /* badge: pale blue pill, navy text + navy icon */
 .pill-badge{background:#ebf4f8;color:#131845;box-shadow:0 10px 30px rgba(11,23,64,.10);font-size:13.5px;font-weight:700;padding:10px 22px}
@@ -780,10 +711,6 @@ textarea.input{resize:vertical;min-height:120px}
 /* --- footer: exact bg --- */
 .footer{background:#0f1537}
 
-/* --- booking modal: navy headings, blue primary --- */
-#bookModal .btn-navy{background:#5392ba;box-shadow:0 12px 28px rgba(83,146,186,.38)}
-#bookModal .btn-navy:hover{background:#45809f;box-shadow:0 16px 34px rgba(83,146,186,.45)}
-#bookModal .modal-card h3{color:#131845}
 
 /* ===== A3: WHY+SERVE FIDELITY ===== */
 .why-panel{background:#4f90b8}
@@ -863,3 +790,9 @@ textarea.input{resize:vertical;min-height:120px}
   .nav-links a[href="#why"]{margin-left:auto}
   .nav-links a[href="#contact"]{margin-right:auto}
 }
+
+/* ===== A8: SOCIAL ICONS FIX ===== */
+.f-social{display:flex;gap:12px;margin-top:18px}
+.f-social a{width:40px;height:40px;border-radius:50%;border:1.5px solid #33456e;display:flex;align-items:center;justify-content:center;transition:border-color .2s ease,background-color .2s ease,transform .2s ease;text-decoration:none}
+.f-social a:hover{border-color:#5b9bd5;background-color:rgba(91,155,213,.14);transform:translateY(-2px)}
+.f-social svg{display:block;width:18px;height:18px;fill:#c9d6ee;flex-shrink:0}

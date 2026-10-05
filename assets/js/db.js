@@ -93,7 +93,8 @@
         email: 'info@citybloodlab.pk',
         invoicePrefix: 'INV',
         footerNote: 'Get well soon. Reports available on counter & phone.',
-        currency: 'PKR'
+        currency: 'PKR',
+        whatsapp: { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' }
       },
       users: [], patients: [], tests: [], doctors: [],
       invoices: [], payments: [], expenses: [], results: []
@@ -267,6 +268,11 @@
   /* one-time rebrand: existing installs seeded with the old default name */
   if (store && store.settings && (store.settings.labName === 'City Blood Lab' || store.settings.labName === 'Optxic LAB')) {
     store.settings.labName = 'Optix LAB MedSync'; save(store);
+  }
+  /* one-time: existing installs lack the WhatsApp config object */
+  if (store && store.settings && !store.settings.whatsapp) {
+    store.settings.whatsapp = { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' };
+    save(store);
   }
 
   function persist() { if (!remote) save(store); }

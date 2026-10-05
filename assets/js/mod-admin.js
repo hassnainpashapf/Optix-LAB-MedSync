@@ -435,6 +435,7 @@
     var tabs = [
       { id: 'profile', label: 'Lab Profile' },
       { id: 'account', label: 'My Account' },
+      { id: 'whatsapp', label: 'WhatsApp' },
       { id: 'users', label: 'Users' },
       { id: 'backup', label: 'Backup' },
       { id: 'danger', label: 'Danger Zone' }
@@ -454,6 +455,7 @@
     });
     if (settingsTab === 'profile') renderSetProfile();
     else if (settingsTab === 'account') renderSetAccount();
+    else if (settingsTab === 'whatsapp') renderSetWhatsapp();
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
@@ -532,6 +534,94 @@
       App.toast('Account updated.');
       if (App.renderShell) App.renderShell();
       renderSettings();
+    });
+  }
+
+  /* ---- WhatsApp API (admin only) ---- */
+  function waDefaults() {
+    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' };
+  }
+  function waPhone(p) {
+    var d = String(p || '').replace(/\D/g, '');
+    if (!d) return null;
+    if (d.charAt(0) === '0') d = '92' + d.slice(1);
+    return d;
+  }
+  function renderSetWhatsapp() {
+    var s = DB.get('settings', 'main') || {};
+    var w = Object.assign(waDefaults(), s.whatsapp || {});
+    var html = '<div class="form-grid" style="max-width:640px">'
+      + '<div><label class="label">API Provider</label><select class="select" id="waProvider">'
+      + '<option value="ultramsg"' + (w.provider === 'ultramsg' ? ' selected' : '') + '>Ultramsg</option>'
+      + '<option value="custom"' + (w.provider === 'custom' ? ' selected' : '') + '>Custom (Ultramsg-compatible)</option>'
+      + '</select></div>'
+      + '<div><label class="label">Instance ID *</label><input class="input" id="waInst" placeholder="e.g. instance12345" value="' + App.esc(w.instanceId) + '"></div>'
+      + '<div><label class="label">API Token *</label><input class="input" id="waToken" type="password" placeholder="paste API token" value="' + App.esc(w.token) + '"></div>'
+      + '<div id="waBaseWrap" style="' + (w.provider === 'custom' ? '' : 'display:none') + '"><label class="label">API Base URL</label><input class="input" id="waBase" placeholder="https://api.example.com" value="' + App.esc(w.baseUrl) + '"></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Lab WhatsApp Number</label><input class="input" id="waNum" placeholder="0300-1234567" value="' + App.esc(w.labNumber) + '"></div>'
+      + '</div>'
+      + '<p class="muted" style="font-size:12.5px;margin-top:10px;max-width:640px">'
+      + 'Used to send reports and invoices directly to patients over WhatsApp. '
+      + 'For Ultramsg: copy the Instance ID and Token from your Ultramsg dashboard, then use <strong>Test Connection</strong> — a test message is sent to the lab number above.</p>'
+      + '<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">'
+      + '<button class="btn btn-primary" id="waSave">Save WhatsApp Settings</button>'
+      + '<button class="btn btn-ghost" id="waTest">Test Connection</button></div>';
+    document.getElementById('setBody').innerHTML = html;
+
+    document.getElementById('waProvider').addEventListener('change', function () {
+      document.getElementById('waBaseWrap').style.display =
+        (document.getElementById('waProvider').value === 'custom') ? '' : 'none';
+    });
+
+    document.getElementById('waSave').addEventListener('click', function () {
+      var cfg = {
+        provider: document.getElementById('waProvider').value,
+        instanceId: document.getElementById('waInst').value.trim(),
+        token: document.getElementById('waToken').value.trim(),
+        baseUrl: (document.getElementById('waBase') ? document.getElementById('waBase').value.trim() : ''),
+        labNumber: document.getElementById('waNum').value.trim()
+      };
+      DB.update('settings', 'main', { whatsapp: cfg });
+      App.toast('WhatsApp settings saved.');
+      renderSettings();
+    });
+
+    document.getElementById('waTest').addEventListener('click', function () {
+      var provider = document.getElementById('waProvider').value;
+      var inst = document.getElementById('waInst').value.trim();
+      var token = document.getElementById('waToken').value.trim();
+      var base = document.getElementById('waBase') ? document.getElementById('waBase').value.trim() : '';
+      var to = waPhone(document.getElementById('waNum').value.trim());
+      if (!inst) return App.toast('Enter the Instance ID first.', 'err');
+      if (!token) return App.toast('Enter the API Token first.', 'err');
+      if (!to) return App.toast('Enter the Lab WhatsApp Number to receive the test message.', 'err');
+      var url = provider === 'custom'
+        ? base.replace(/\/+$/, '') + '/messages/chat'
+        : 'https://api.ultramsg.com/' + encodeURIComponent(inst) + '/messages/chat';
+      if (provider === 'custom' && !base) return App.toast('Enter the API Base URL for the Custom provider.', 'err');
+      var btn = document.getElementById('waTest');
+      btn.disabled = true; btn.textContent = 'Sending...';
+      var s2 = DB.get('settings', 'main') || {};
+      var lab = s2.labName || 'Lab';
+      var params = 'token=' + encodeURIComponent(token)
+        + '&to=' + encodeURIComponent(to)
+        + '&body=' + encodeURIComponent('Test message from ' + lab + ' — WhatsApp integration is working.');
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params })
+        .then(function (r) { return r.json().catch(function () { return {}; }); })
+        .then(function (data) {
+          btn.disabled = false; btn.textContent = 'Test Connection';
+          if (data && (data.sent || data.message === 'ok' || data.status === 'sent')) {
+            App.toast('Test message sent successfully.');
+          } else if (data && data.error) {
+            App.toast('API error: ' + data.error, 'err');
+          } else {
+            App.toast('Message queued. Check the lab number on WhatsApp.', 'ok');
+          }
+        })
+        .catch(function (err) {
+          btn.disabled = false; btn.textContent = 'Test Connection';
+          App.toast('Connection failed: ' + (err && err.message ? err.message : err), 'err');
+        });
     });
   }
 

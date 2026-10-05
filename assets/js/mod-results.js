@@ -30,17 +30,97 @@
     if (d.charAt(0) === '0') d = '92' + d.slice(1);
     return d;
   }
-  function shareReportWhatsApp(invoiceId) {
+
+  /* ---------- WhatsApp API (send report PDF) ---------- */
+
+  var WA_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px;vertical-align:-2px"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22c5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm0 18.13a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.36c0-4.54 3.7-8.24 8.24-8.24 4.54 0 8.24 3.7 8.24 8.24 0 4.54-3.7 8.22-8.24 8.22zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.4-.12-.56.13-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.38-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.29z"/></svg>';
+
+  function waCfg() {
+    try {
+      var s = DB.get('settings', 'main') || {};
+      return s.whatsapp || {};
+    } catch (e) { return {}; }
+  }
+  function waReady(cfg) {
+    return !!(cfg && cfg.instanceId && cfg.token);
+  }
+  function waSummaryText(inv, pat) {
+    var s = DB.get('settings', 'main') || {};
+    return (s.labName || 'Lab') + '\nAssalam-o-Alaikum ' + (pat.name || '') + ',\n' +
+      'Your lab report is ready.\nInvoice: ' + inv.no + ' (' + App.d(inv.createdAt) + ')\n' +
+      'Please collect it from the lab or reply here. Shukriya!';
+  }
+  function waTextFallback(invoiceId) {
     var inv = invOf(invoiceId);
     if (!inv) return;
     var pat = patOf(inv.patientId);
     var ph = waPhone(pat.phone);
     if (!ph) { App.toast('No WhatsApp number on patient record', 'err'); return; }
-    var s = DB.get('settings', 'main') || {};
-    var msg = (s.labName || 'Lab') + '\nAssalam-o-Alaikum ' + (pat.name || '') + ',\n' +
-      'Your lab report is ready.\nInvoice: ' + inv.no + ' (' + App.d(inv.createdAt) + ')\n' +
-      'Please collect it from the lab or reply here. Shukriya!';
-    window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(msg), '_blank');
+    window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(waSummaryText(inv, pat)), '_blank');
+  }
+
+  // POST the PDF document to the configured provider. done(err)
+  function waSendDocument(cfg, to, filename, dataUri, caption, done) {
+    var url, body, headers = {};
+    if (cfg.provider === 'custom' && cfg.baseUrl) {
+      url = cfg.baseUrl;
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify({ to: to, filename: filename, document: dataUri, caption: caption, token: cfg.token });
+    } else {
+      // Ultramsg-compatible
+      url = 'https://api.ultramsg.com/' + encodeURIComponent(cfg.instanceId) + '/messages/document';
+      var fd = new FormData();
+      fd.append('token', cfg.token);
+      fd.append('to', to);
+      fd.append('filename', filename);
+      fd.append('document', dataUri);
+      fd.append('caption', caption || '');
+      body = fd;
+    }
+    var timer = setTimeout(function () { done(new Error('Request timed out')); done = function () {}; }, 45000);
+    fetch(url, { method: 'POST', headers: headers, body: body })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          var j = null;
+          try { j = JSON.parse(t); } catch (e) {}
+          return { status: r.status, json: j, text: t };
+        });
+      })
+      .then(function (res) {
+        clearTimeout(timer);
+        var j = res.json || {};
+        var ok = res.status >= 200 && res.status < 300 &&
+          (j.sent === true || j.sent === 'true' || j.status === 'sent' || j.success === true || res.status === 200);
+        if (ok) done(null);
+        else done(new Error((j.message || j.error || res.text || ('HTTP ' + res.status)).toString().slice(0, 140)));
+      })
+      .catch(function (e) { clearTimeout(timer); done(e); });
+  }
+
+  function shareReportWhatsApp(invoiceId) {
+    var inv = invOf(invoiceId);
+    if (!inv) { App.toast('Invoice not found', 'err'); return; }
+    var pat = patOf(inv.patientId);
+    var ph = waPhone(pat.phone);
+    if (!ph) { App.toast('No WhatsApp number on patient record', 'err'); return; }
+
+    var cfg = waCfg();
+    if (!waReady(cfg)) { waTextFallback(invoiceId); return; } // API not configured → wa.me text
+
+    var pdf = buildReportPdf(invoiceId);
+    if (!pdf) return; // error already toasted
+
+    var fname = 'LabReport-' + String(inv.no || inv.id).replace(/[^A-Za-z0-9_-]/g, '') + '.pdf';
+    var caption = waSummaryText(inv, pat);
+    App.toast('Sending report on WhatsApp…', 'info');
+    waSendDocument(cfg, ph, fname, pdf.dataUri, caption, function (err) {
+      if (err) {
+        App.toast('WhatsApp API failed — opening chat instead', 'err');
+        waTextFallback(invoiceId);
+      } else {
+        App.toast('Report sent on WhatsApp');
+      }
+    });
   }
   function clearResult(resId) {
     var r = DB.get('results', resId);

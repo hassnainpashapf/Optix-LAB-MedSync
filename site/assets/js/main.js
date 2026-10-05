@@ -134,65 +134,6 @@ document.addEventListener('DOMContentLoaded', function () {
   } catch (e) {}
 
   try {
-    // 5. Booking modal.
-    var modal = $('bookModal');
-    var openModal = function () {
-      if (!modal) return;
-      modal.classList.add('open');
-      modal.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-      var nm = $('bkName');
-      if (nm) nm.focus();
-    };
-    var closeModal = function () {
-      if (!modal) return;
-      modal.classList.remove('open');
-      modal.setAttribute('aria-hidden', 'true');
-      document.body.style.overflow = '';
-    };
-    document.querySelectorAll('[data-book]').forEach(function (b) {
-      b.addEventListener('click', function (e) {
-        e.preventDefault();
-        openModal();
-      });
-    });
-    var bkClose = $('bkClose');
-    if (bkClose) bkClose.addEventListener('click', closeModal);
-    if (modal) modal.addEventListener('click', function (e) {
-      if (e.target === modal) closeModal();
-    });
-    document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && modal && modal.classList.contains('open')) closeModal();
-    });
-
-    var bkForm = $('bkForm'), bkErr = $('bkErr');
-    if (bkForm) {
-      bkForm.addEventListener('submit', function (e) {
-        e.preventDefault();
-        clearErr(bkErr);
-        var name = ($('bkName') && $('bkName').value || '').trim();
-        var phone = ($('bkPhone') && $('bkPhone').value || '').trim();
-        var service = ($('bkService') && $('bkService').value || '').trim();
-        var date = ($('bkDate') && $('bkDate').value || '').trim() || 'Flexible';
-        var address = ($('bkAddress') && $('bkAddress').value || '').trim();
-        if (name.length < 3) return setErr(bkErr, 'Please enter your full name (min 3 characters).');
-        if (!phoneOk(phone)) return setErr(bkErr, 'Please enter a valid phone number (10–13 digits).');
-        if (address.length < 8) return setErr(bkErr, 'Please enter your full address (min 8 characters).');
-        var lines = [
-          'Hello Optix LAB MedSync! I want to book:',
-          'Name: ' + name,
-          'Phone: ' + phone,
-          'Service: ' + (service || '—'),
-          'Date: ' + date,
-          'Address: ' + address
-        ];
-        window.open('https://wa.me/923001234567?text=' + encodeURIComponent(lines.join('\n')), '_blank');
-        closeModal();
-      });
-    }
-  } catch (e) {}
-
-  try {
     // 6. Contact form.
     var ctForm = $('ctForm'), ctErr = $('ctErr');
     if (ctForm) {
