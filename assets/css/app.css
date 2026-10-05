@@ -494,10 +494,10 @@ body.login-mode{background:#fff}
   main.view{padding:18px 16px 60px}
 }
 
-/* ============ 10% zoom-out (agent-appended) ============ */
-body{zoom:0.9}
-.app,.shell{min-height:calc(100vh/0.9)}
-.sidebar{height:calc(100vh/0.9)}
+/* ============ 20% zoom-out (agent-appended) ============ */
+body{zoom:0.8}
+.app,.shell{min-height:calc(100vh/0.8)}
+.sidebar{height:calc(100vh/0.8)}
 
 /* ============ Compact stat cards (shared across all pages) ============ */
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}

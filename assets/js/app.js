@@ -380,6 +380,9 @@
       '@media (max-width:640px){.tb-qa{display:none}}' +
       '</style>' +
       '<button class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Menu">' + icon('menu', 18) + '</button>' +
+      '<div class="tb-greet"><b>' + esc(_greet + _greetName) + '</b><span>' + esc(_longDate) + '</span></div>' +
+      '<h1 class="page-title"' + (activeKey === 'dashboard' ? ' hidden' : '') + '>' + esc(navItem ? navItem.label : '') + '</h1>' +
+      '<div class="top-right">' + (activeKey === 'dashboard' ? '<div class="tb-qa">' + tbQa + '</div>' : '') + '</div>' +
       '<div class="tb-acct">' +
       '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</button>' +
       '<div class="tb-menu" id="userMenu" hidden>' +
@@ -387,10 +390,7 @@
       (can('settings', s.role) ? '<a class="tb-menu-it" href="#/settings">' + icon('gear', 16) + '<span>Settings</span></a>' : '') +
       (can('settings', s.role) ? '<a class="tb-menu-it" href="#/settings">' + icon('lock', 16) + '<span>Change Password</span></a>' : '') +
       '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
-      '</div></div>' +
-      '<div class="tb-greet"><b>' + esc(_greet + _greetName) + '</b><span>' + esc(_longDate) + '</span></div>' +
-      '<h1 class="page-title">' + esc(navItem ? navItem.label : '') + '</h1>' +
-      (activeKey === 'dashboard' ? '<div class="top-right"><div class="tb-qa">' + tbQa + '</div></div>' : '');
+      '</div></div>';
     document.getElementById('menuLogout').addEventListener('click', logout);
     /* avatar dropdown: toggle, close on outside click / Escape (delegated once) */
     (function () {

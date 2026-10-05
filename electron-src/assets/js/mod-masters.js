@@ -77,25 +77,8 @@ function dStat(icon, tint, label, value, sub, raw, isMoney, vlStyle) {
     '<div class="dl">' + sub + '</div>' +
     '</div>';
 }
-var DOC_STAT_CSS =
-  '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
-  '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
-  '@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:12px}}' +
-  '@keyframes dbRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
-  '.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:dbRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
-  '.stat:nth-child(2){animation-delay:.07s}.stat:nth-child(3){animation-delay:.14s}.stat:nth-child(4){animation-delay:.21s}' +
-  '.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
-  '.stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
-  '.stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
-  '.stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
-  '.stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
-  '.stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
-  '.stat[data-tint="red"]{--sc-line:#f2c6c6;--sc-soft:var(--red-soft)}' +
-  '.stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
-  '.stat-ico svg{width:22px;height:22px}' +
-  '.stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
-  '.stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
-  '.stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}';
+/* shared compact stat card CSS now in app.css */
+var DOC_STAT_CSS = '';
 /* dashboard-style count-up for .vl[data-count] values (final value is already
    in the markup, so a failure here never leaves a blank card) */
 function dCountUp() {
@@ -318,12 +301,15 @@ function testModal(t) {
         '<div id="tm-pkglist" style="max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px"></div>' +
       '</div>' +
     '</div>' +
-    '<div style="margin-top:18px;text-align:right"><button type="submit" class="btn btn-primary">' +
+    '<div style="margin-top:18px;display:flex;justify-content:flex-end;gap:10px">' +
+      '<button type="button" class="btn btn-ghost" id="tm-cancel">Cancel</button>' +
+      '<button type="submit" class="btn btn-primary">' +
       (isNew ? 'Add Test' : 'Save Changes') + '</button></div>' +
     '</form>';
 
-  App.modal(isNew ? 'Add New Test' : 'Edit Test', body, { onOpen: function () {
+  App.modal(isNew ? 'Add New Test' : 'Edit Test', body, { onOpen: function (ov, close) {
     var m = lastModal(); if (!m) return;
+    m.querySelector('#tm-cancel').addEventListener('click', close);
     var rowsBox = m.querySelector('#tm-prows');
     function addRow(p) {
       rowsBox.insertAdjacentHTML('beforeend', paramRow(p));
@@ -388,10 +374,7 @@ function testModal(t) {
       if (data.isPackage && !data.includes.length) { App.toast('Select at least one test for the package.', 'err'); return; }
       if (isNew) { DB.insert('tests', data); App.toast('Test added.'); }
       else { DB.update(t.id, data); App.toast('Test updated.'); }
-      var ms = document.querySelectorAll('.modal-ov');
-      // close via App.modal's closer: re-query close by clicking overlay close button if present
-      var closer = m.querySelector('[data-close]');
-      if (closer) closer.click();
+      close();
       renderTests();
     });
   }});
@@ -541,7 +524,7 @@ function openCommissionPay(doctorId, dueAmount) {
     '</div>' +
     '<div class="actions" style="margin-top:16px"><button class="btn btn-ghost" id="cp-cancel">Cancel</button>' +
     '<button class="btn btn-primary" id="cp-save">Record Payment</button></div>';
-  var close = App.modal('Pay Commission', body, { onOpen: function (root) {
+  var close = App.modal('Pay Commission', body, { onOpen: function (root, close) {
     root.querySelector('#cp-cancel').addEventListener('click', close);
     root.querySelector('#cp-save').addEventListener('click', function () {
       var amt = parseFloat(root.querySelector('#cp-amt').value);
@@ -569,11 +552,14 @@ function doctorModal(d) {
       '<div><label class="label">Phone</label><input id="dm-phone" class="input" value="' + App.esc(d.phone || '') + '" placeholder="03xx-xxxxxxx"></div>' +
       '<div><label class="label">Commission % *</label><input id="dm-comm" class="input" type="number" min="0" max="100" step="0.5" value="' + App.esc(String(d.commissionPct == null ? '' : d.commissionPct)) + '" required></div>' +
     '</div>' +
-    '<div style="margin-top:18px;text-align:right"><button type="submit" class="btn btn-primary">' +
+    '<div style="margin-top:18px;display:flex;justify-content:flex-end;gap:10px">' +
+      '<button type="button" class="btn btn-ghost" id="dm-cancel">Cancel</button>' +
+      '<button type="submit" class="btn btn-primary">' +
       (isNew ? 'Add Doctor' : 'Save Changes') + '</button></div></form>';
 
-  App.modal(isNew ? 'Add Referral Doctor' : 'Edit Doctor', body, { onOpen: function () {
+  App.modal(isNew ? 'Add Referral Doctor' : 'Edit Doctor', body, { onOpen: function (ov, close) {
     var m = lastModal(); if (!m) return;
+    m.querySelector('#dm-cancel').addEventListener('click', close);
     m.querySelector('#dm-form').addEventListener('submit', function (e) {
       e.preventDefault();
       var name = m.querySelector('#dm-name').value.trim();
@@ -588,8 +574,7 @@ function doctorModal(d) {
       };
       if (isNew) { DB.insert('doctors', data); App.toast('Doctor added.'); }
       else { DB.update(d.id, data); App.toast('Doctor updated.'); }
-      var closer = m.querySelector('[data-close]');
-      if (closer) closer.click();
+      close();
       renderDoctors();
     });
   }});

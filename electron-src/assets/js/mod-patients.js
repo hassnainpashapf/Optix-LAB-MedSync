@@ -34,32 +34,33 @@
       Math.round(s * 0.38) + 'px">' + initials(name) + '</span>';
   }
 
-  /* ---------- dashboard-style stat cards ---------- */
-
-  var STAT_CSS =
+  /* ---------- WhatsApp chat buttons ---------- */
+  var WA_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>';
+  var WA_CSS =
     '<style>' +
-    '.pgstat .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
-    '@media(max-width:1100px){.pgstat .stat-grid{grid-template-columns:repeat(2,1fr)}}' +
-    '@media(max-width:560px){.pgstat .stat-grid{grid-template-columns:1fr;gap:12px}}' +
-    '@keyframes pgRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
-    '.pgstat .stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:pgRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
-    '.pgstat .stat:nth-child(2){animation-delay:.07s}' +
-    '.pgstat .stat:nth-child(3){animation-delay:.14s}' +
-    '.pgstat .stat:nth-child(4){animation-delay:.21s}' +
-    '.pgstat .stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
-    '.pgstat .stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
-    '.pgstat .stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
-    '.pgstat .stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
-    '.pgstat .stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
-    '.pgstat .stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
-    '.pgstat .stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
-    '.pgstat .stat-ico svg{width:22px;height:22px}' +
-    '.pgstat .stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
-    '.pgstat .stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
-    '.pgstat .stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}' +
-    '@media(max-width:640px){.pgstat .stat .vl{font-size:26px}}' +
-    '@media (prefers-reduced-motion:reduce){.pgstat .stat{animation:none}.pgstat .stat:hover{transform:none}}' +
+    '.wa-btn{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;background:#e7f6ec;color:#1da851;border:1px solid #c4e9d1;vertical-align:middle;cursor:pointer;transition:transform .15s ease,box-shadow .15s ease,color .15s ease}' +
+    '.wa-btn:hover{transform:scale(1.12);box-shadow:0 2px 8px rgba(29,168,81,.35);color:#0f8a41}' +
+    '.wa-btn svg{display:block}' +
+    '.ptf-phone-wrap{display:flex;align-items:center;gap:8px}' +
+    '.ptf-phone-wrap .input{flex:1;min-width:0}' +
+    '.ptf-phone-wrap .wa-btn{flex:0 0 auto}' +
     '</style>';
+  function waNumber(phone) {
+    var d = String(phone || '').replace(/\D/g, '');
+    if (!d) return '';
+    if (d.charAt(0) === '0') d = '92' + d.slice(1); /* PK mobile: 0xxx -> 92xxx */
+    return d;
+  }
+  function waBtn(phone, title) {
+    var d = waNumber(phone);
+    if (!d) return '';
+    return '<a class="wa-btn" href="https://wa.me/' + d + '" target="_blank" rel="noopener" title="' +
+      App.esc(title || 'Chat on WhatsApp') + '">' + WA_SVG + '</a>';
+  }
+
+  /* ---------- dashboard-style stat cards: shared compact CSS now in app.css ---------- */
+
+  var STAT_CSS = '';
 
   function svgIcon(inner) {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
@@ -120,7 +121,8 @@
       '</select><div class="f-err" id="ptf-e-gender"></div></div>' +
       '</div>' +
       '<div class="form-row"><label class="label" for="ptf-phone">Phone</label>' +
-      '<input class="input" id="ptf-phone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + val('phone') + '">' +
+      '<div class="ptf-phone-wrap"><input class="input" id="ptf-phone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + val('phone') + '">' +
+      '<span id="ptf-wa">' + waBtn(val('phone'), 'Chat on WhatsApp') + '</span></div>' +
       '<div class="f-err" id="ptf-e-phone"></div></div>' +
       '<div class="form-row"><label class="label" for="ptf-address">Address</label>' +
       '<textarea class="input" id="ptf-address" rows="2" maxlength="200" placeholder="Street, area, city">' + val('address') + '</textarea></div>' +
@@ -139,6 +141,14 @@
     var form = document.getElementById('ptf-form');
     if (!form) return;
     document.getElementById('ptf-cancel').addEventListener('click', close);
+    // live-update the WhatsApp button next to the phone field as the user types
+    var phoneInput = document.getElementById('ptf-phone');
+    var waWrap = document.getElementById('ptf-wa');
+    if (phoneInput && waWrap) {
+      phoneInput.addEventListener('input', function () {
+        waWrap.innerHTML = waBtn(phoneInput.value, 'Chat on WhatsApp');
+      });
+    }
     form.addEventListener('submit', function (ev) {
       ev.preventDefault();
       var name = document.getElementById('ptf-name').value.trim();
@@ -168,11 +178,10 @@
     });
   }
   function openPatientModal(existing, afterSave) {
-    // NOTE: App.modal may invoke onOpen synchronously, before it returns the
-    // close fn — so bind a lazy wrapper, not the (still undefined) return value.
-    var api = {};
-    api.close = App.modal(existing ? 'Edit Patient' : 'Add New Patient', formHTML(existing || {}), {
-      onOpen: function () { bindForm(function () { api.close(); }, existing, afterSave); }
+    // NOTE: App.modal invokes onOpen synchronously and passes (ov, close) —
+    // use the close param directly (the outer return value isn't assigned yet).
+    App.modal(existing ? 'Edit Patient' : 'Add New Patient', formHTML(existing || {}), {
+      onOpen: function (ov, close) { bindForm(close, existing, afterSave); }
     });
   }
 
@@ -200,7 +209,7 @@
       '<td><a class="pt-name" href="#/patient/' + App.esc(p.id) + '">' + avatarHTML(p.name, 34) +
       '<span><strong>' + App.esc(p.name) + '</strong><small>' + App.esc(p.phone || '—') + '</small></span></a></td>' +
       '<td>' + App.esc(p.age) + ' yrs · ' + App.esc(p.gender) + '</td>' +
-      '<td>' + App.esc(p.phone || '—') + '</td>' +
+      '<td>' + App.esc(p.phone || '—') + (p.phone ? ' ' + waBtn(p.phone, 'Chat on WhatsApp') : '') + '</td>' +
       '<td class="num">' + st.visits + '</td>' +
       '<td class="num">' + App.money(st.spent) + '</td>' +
       '<td class="num">' + (st.due > 0
@@ -234,7 +243,7 @@
       return mOf(i.createdAt) === mKey && (!i.patientId || !DB.get('patients', i.patientId));
     }).length;
 
-    var html = '' + STAT_CSS +
+    var html = '' + STAT_CSS + WA_CSS +
       '<div class="pgstat"><div class="stat-grid">' +
       statCard(STAT_ICONS.users, 'blue', 'Total Patients', all.length, 'registered') +
       statCard(STAT_ICONS.userPlus, 'green', 'New This Month', newThisMonth, 'joined this month') +
@@ -316,7 +325,7 @@
         '<td class="actions"><a class="btn btn-ghost btn-sm" href="#/invoice/' + App.esc(inv.id) + '">View</a></td></tr>';
     }).join('');
 
-    var html = '' +
+    var html = '' + WA_CSS +
       '<div class="page-head"><div><a class="back-link" href="#/patients">← All Patients</a><h1>Patient Profile</h1></div>' +
       (edit ? '<div class="head-actions"><button class="btn btn-ghost" id="pt-edit">Edit Details</button>' +
         '<button class="btn btn-danger" id="pt-del">Delete</button></div>' : '') + '</div>' +
@@ -326,7 +335,7 @@
       '<div class="pt-id-block"><h2>' + App.esc(p.name) + ' <span class="badge b-id mono">' + App.esc(p.id) + '</span></h2>' +
       '<div class="pt-meta">' +
       '<span>🎂 ' + App.esc(p.age) + ' years</span><span>⚧ ' + App.esc(p.gender) + '</span>' +
-      '<span>📞 ' + App.esc(p.phone || '—') + '</span>' +
+      '<span>📞 ' + App.esc(p.phone || '—') + ' ' + (p.phone ? waBtn(p.phone, 'Chat on WhatsApp') : '') + '</span>' +
       (p.address ? '<span>📍 ' + App.esc(p.address) + '</span>' : '') +
       '<span>🗓 Registered ' + App.d(p.createdAt) + '</span>' +
       '</div></div></div></div>' +

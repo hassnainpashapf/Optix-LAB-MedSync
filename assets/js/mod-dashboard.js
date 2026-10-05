@@ -216,20 +216,20 @@
       mBuckets[b].amt += (+p.amount || 0); mBuckets[b].n += 1;
     });
     var mTot = mBuckets.reduce(function (a, b) { return a + b.amt; }, 0);
-    var RC = 2 * Math.PI * 54, dAcc = 0, dSegs = '';
+    var RC = 2 * Math.PI * 38, dAcc = 0, dSegs = '';
     mBuckets.forEach(function (b) {
       if (!(b.amt > 0)) return;
       var frac = b.amt / mTot;
-      dSegs += '<circle cx="70" cy="70" r="54" fill="none" stroke="' + b.color + '" stroke-width="18"' +
+      dSegs += '<circle cx="50" cy="50" r="38" fill="none" stroke="' + b.color + '" stroke-width="14"' +
         ' stroke-dasharray="' + (frac * RC).toFixed(1) + ' ' + RC.toFixed(1) + '"' +
-        ' stroke-dashoffset="' + (-dAcc * RC).toFixed(1) + '" transform="rotate(-90 70 70)"/>';
+        ' stroke-dashoffset="' + (-dAcc * RC).toFixed(1) + '" transform="rotate(-90 50 50)"/>';
       dAcc += frac;
     });
-    var donutSvg = '<svg width="140" height="140" viewBox="0 0 140 140">' +
-      '<circle cx="70" cy="70" r="54" fill="none" stroke="#eef2f7" stroke-width="18"/>' + dSegs +
-      '<text x="70" y="67" text-anchor="middle" font-size="17" font-weight="800" fill="#0f172a">' +
+    var donutSvg = '<svg width="100" height="100" viewBox="0 0 100 100">' +
+      '<circle cx="50" cy="50" r="38" fill="none" stroke="#eef2f7" stroke-width="14"/>' + dSegs +
+      '<text x="50" y="49" text-anchor="middle" font-size="14" font-weight="800" fill="#0f172a">' +
         App.esc(isTech ? String(monthPayCount) : 'Rs ' + compact(mTot)) + '</text>' +
-      '<text x="70" y="87" text-anchor="middle" font-size="11" fill="#64748b">' +
+      '<text x="50" y="63" text-anchor="middle" font-size="10" fill="#64748b">' +
         App.esc(isTech ? 'payments' : monthName) + '</text></svg>';
     var legRows = mBuckets.map(function (b) {
       return '<div class="dbw-row"><span class="dbw-dot" style="background:' + b.color + '"></span>' +
@@ -286,24 +286,26 @@
 
     var widgets =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}' +
+    '.dbw-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}' +
+    '.dbw-grid .card-h,.dbx-grid .card-h{padding:10px 14px}.dbw-grid .card-h h3,.dbx-grid .card-h h3{font-size:14px}' +
+    '.dbw-grid .card-b,.dbx-grid .card-b{padding:12px 14px}' +
     '@media(max-width:900px){.dbw-grid{grid-template-columns:1fr}}' +
     '.dbw-pct{font-weight:800;color:var(--brand-d);font-size:15px}' +
-    '.dbw-bar{height:12px;background:#eef2f7;border-radius:99px;overflow:hidden;margin:12px 0 8px}' +
+    '.dbw-bar{height:9px;background:#eef2f7;border-radius:99px;overflow:hidden;margin:8px 0 6px}' +
     '.dbw-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#14b8a6,#0d9488);transition:width .6s}' +
     '.dbw-split{display:flex;align-items:center;gap:18px}' +
     '.dbw-legs{flex:1;min-width:0}' +
-    '.dbw-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}' +
+    '.dbw-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px}' +
     '.dbw-row:last-child{border-bottom:none}' +
     '.dbw-dot{width:12px;height:12px;border-radius:4px;flex:none}' +
     '.dbw-leg{flex:1;color:var(--muted)}' +
     '.dbw-amt{font-weight:700;white-space:nowrap}' +
-    '.dbw-arow{display:grid;grid-template-columns:86px 1fr auto;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}' +
+    '.dbw-arow{display:grid;grid-template-columns:86px 1fr auto;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}' +
     '.dbw-arow:last-child{border-bottom:none}' +
     '.dbw-alab{color:var(--muted);font-weight:600}' +
-    '.dbw-hbar{height:10px;background:#eef2f7;border-radius:99px;overflow:hidden}' +
+    '.dbw-hbar{height:8px;background:#eef2f7;border-radius:99px;overflow:hidden}' +
     '.dbw-hfill{height:100%;border-radius:99px}' +
-    '.dbw-net{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-weight:800;font-size:16px}' +
+    '.dbw-net{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-weight:800;font-size:14px}' +
     '.dbw-pos{color:var(--green)}' +
     '.dbw-neg{color:var(--red)}' +
     '</style>' +
@@ -323,7 +325,7 @@
       });
     }
     function trendSvg(data, money) {
-      var W = 640, H = 250, pl = 48, pr = 14, pt = 16, pb = 34;
+      var W = 640, H = 150, pl = 42, pr = 10, pt = 10, pb = 26;
       var iw = W - pl - pr, ih = H - pt - pb;
       var rawMax = Math.max.apply(null, data.map(function (d) { return d.val; }).concat([0]));
       var top = rawMax;
@@ -350,22 +352,22 @@
         var gv = top * g / 4, gy = Y(gv);
         grid += '<line x1="' + pl + '" y1="' + gy.toFixed(1) + '" x2="' + (W - pr) + '" y2="' + gy.toFixed(1) +
                 '" stroke="#e8eef6" stroke-width="1"/>' +
-                '<text x="' + (pl - 9) + '" y="' + (gy + 4).toFixed(1) + '" text-anchor="end" font-size="11" fill="#8a94a6">' +
+                '<text x="' + (pl - 9) + '" y="' + (gy + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="#8a94a6">' +
                 App.esc(money ? compact(gv) : String(Math.round(gv))) + '</text>';
       }
       var xl = data.map(function (d, i) {
-        return '<text x="' + X(i).toFixed(1) + '" y="' + (H - 12) + '" text-anchor="middle" font-size="11.5" font-weight="700" fill="#5b6b80">' +
+        return '<text x="' + X(i).toFixed(1) + '" y="' + (H - 12) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b6b80">' +
                App.esc(d.label) + '</text>';
       }).join('');
       var dots = data.map(function (d, i) {
-        return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(d.val).toFixed(1) + '" r="4.5" fill="#ffffff" stroke="#131845" stroke-width="2.5">' +
+        return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(d.val).toFixed(1) + '" r="3.5" fill="#ffffff" stroke="#131845" stroke-width="2">' +
                '<title>' + App.esc(d.label + ': ' + (money ? App.money(d.val) : d.val + ' invoices')) + '</title></circle>';
       }).join('');
       return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Trend chart">' +
         '<defs><linearGradient id="dbx-area" x1="0" y1="0" x2="0" y2="1">' +
         '<stop offset="0" stop-color="#5392ba" stop-opacity=".32"/><stop offset="1" stop-color="#5392ba" stop-opacity=".03"/></linearGradient></defs>' +
         grid + '<path d="' + area + '" fill="url(#dbx-area)"/>' +
-        '<path d="' + line + '" fill="none" stroke="#131845" stroke-width="3" stroke-linecap="round"/>' +
+        '<path d="' + line + '" fill="none" stroke="#131845" stroke-width="2.5" stroke-linecap="round"/>' +
         dots + xl + '</svg>';
     }
     var trendTotal = trendMonths.reduce(function (a, m) { return a + m.val; }, 0);
@@ -451,25 +453,25 @@
 
     var advSection =
     '<style>' +
-    '.dbx-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}' +
+    '.dbx-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}' +
     '.dbx-span{grid-column:1/-1}' +
     '@media(max-width:900px){.dbx-grid{grid-template-columns:1fr}.dbx-span{grid-column:auto}}' +
-    '.dbx-total{font-weight:800;color:#131845;font-size:14px;white-space:nowrap}' +
-    '.dbx-hrow{display:grid;grid-template-columns:130px 1fr auto;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}' +
+    '.dbx-total{font-weight:800;color:#131845;font-size:13px;white-space:nowrap}' +
+    '.dbx-hrow{display:grid;grid-template-columns:120px 1fr auto;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12.5px}' +
     '.dbx-hrow:last-child{border-bottom:none}' +
     '.dbx-hlab{font-weight:600;color:var(--ink2,#2a2f38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
-    '.dbx-htrack{height:12px;background:#e8eef6;border-radius:99px;overflow:hidden}' +
+    '.dbx-htrack{height:9px;background:#e8eef6;border-radius:99px;overflow:hidden}' +
     '.dbx-hfill{height:100%;border-radius:99px;background:linear-gradient(90deg,#5392ba,#3d7ea6)}' +
     '.dbx-hval{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums;min-width:70px;text-align:right}' +
-    '.dbx-lbrow{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}' +
+    '.dbx-lbrow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)}' +
     '.dbx-lbrow:last-child{border-bottom:none}' +
-    '.dbx-rank{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12.5px;flex:none}' +
-    '.dbx-av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,#e9edf9,#ffffff);display:grid;place-items:center;font-weight:800;color:#131845;box-shadow:inset 0 0 0 1px #c9d4f2;flex:none}' +
+    '.dbx-rank{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:11px;flex:none}' +
+    '.dbx-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#e9edf9,#ffffff);display:grid;place-items:center;font-weight:800;color:#131845;box-shadow:inset 0 0 0 1px #c9d4f2;flex:none}' +
     '.dbx-linfo{flex:1.2;min-width:0}' +
     '.dbx-linfo strong{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
-    '.dbx-lbar{flex:1.6;height:10px;background:#e8eef6;border-radius:99px;overflow:hidden;min-width:70px}' +
+    '.dbx-lbar{flex:1.6;height:8px;background:#e8eef6;border-radius:99px;overflow:hidden;min-width:70px}' +
     '.dbx-lfill{height:100%;border-radius:99px;background:linear-gradient(90deg,#2b3a7a,#131845)}' +
-    '.dbx-lval{text-align:right;white-space:nowrap;font-size:13px;min-width:96px}' +
+    '.dbx-lval{text-align:right;white-space:nowrap;font-size:12px;min-width:84px}' +
     '@media(max-width:560px){.dbx-hrow{grid-template-columns:104px 1fr auto}.dbx-lbar{flex-basis:100%;order:6}.dbx-lbrow{flex-wrap:wrap}}' +
     '</style>' +
     '<div class="dbx-grid">' + trendCard + catCard + expCard + lbCard + '</div>';
@@ -588,7 +590,7 @@
     '.db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}' +
     '.db-val{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;transition:color .15s}' +
     '.db-col:hover .db-val{color:var(--ink)}' +
-    '.db-track{position:relative;height:150px;width:100%;max-width:58px;background:#f1f5f9;border-radius:10px;display:flex;align-items:flex-end;box-shadow:inset 0 2px 5px rgba(15,30,46,.07)}' +
+    '.db-track{position:relative;height:100px;width:100%;max-width:58px;background:#f1f5f9;border-radius:10px;display:flex;align-items:flex-end;box-shadow:inset 0 2px 5px rgba(15,30,46,.07)}' +
     '@media(max-width:560px){.db-track{max-width:none}}' +
     '@keyframes dbGrow{to{transform:scaleY(1)}}' +
     '.db-fill{width:100%;border-radius:10px;background:linear-gradient(180deg,#2dd4bf 0%,#0d9488 55%,#0f766e 100%);box-shadow:0 8px 16px -8px rgba(13,148,136,.6);transform:scaleY(0);transform-origin:50% 100%;animation:dbGrow .8s cubic-bezier(.22,.8,.3,1) forwards}' +

@@ -17,6 +17,7 @@
     chart: '<path d="M3 3v18h18"/><path d="M7 15v3M12 10v8M17 6v12"/>',
     gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
     logout: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/>',
+    lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
     x: '<path d="M18 6 6 18M6 6l12 12"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     printer: '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
@@ -42,6 +43,7 @@
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses' },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports' },
+    { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads' },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings' }
   ];
   var PERMS = {
@@ -55,6 +57,7 @@
     results:   ['admin', 'technician'],
     expenses:  ['admin', 'reception'],
     reports:   ['admin'],
+    downloads:  ['admin', 'reception', 'technician'],
     settings:  ['admin']
   };
   function routeKey(path) {
@@ -334,39 +337,85 @@
       '<div class="side-foot"><div class="side-ver">Optix LAB MedSync v1.0</div></div>';
     /* topbar */
     var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
+    /* time-aware greeting for the header */
+    var _gh = new Date().getHours();
+    var _greet = _gh < 12 ? 'Good morning' : (_gh < 17 ? 'Good afternoon' : 'Good evening');
+    var _greetName = s.name ? ', ' + s.name : '';
+    var _longDate = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     /* quick actions — role-aware; technicians get read-only shortcuts */
     var isTech = (s.role === 'technician');
-    var dlHref = window.labposDesktop ? 'https://optix-lab-medsync.pages.dev/download/' : '/download/';
     var tbQa = isTech
-      ? '<a class="btn btn-primary btn-sm tb-qab" href="#/results">' + icon('clipboard', 14) + '<span class="tb-qa-t">Lab Results</span></a>' +
-        '<a class="btn btn-blue btn-sm tb-qab" href="#/tests">' + icon('flask', 14) + '<span class="tb-qa-t">View Tests</span></a>'
-      : '<a class="btn btn-primary btn-sm tb-qab" href="#/billing">' + icon('plus', 14) + '<span class="tb-qa-t">New Bill</span></a>' +
-        '<a class="btn btn-blue btn-sm tb-qab" href="#/patients">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
-        '<a class="btn btn-amber btn-sm tb-qab" href="#/expenses">' + icon('wallet', 14) + '<span class="tb-qa-t">Add Expense</span></a>' +
-        '<a class="btn btn-ghost btn-sm tb-qab" href="' + dlHref + '">' + icon('download', 14) + '<span class="tb-qa-t">Download App</span></a>';
+      ? '<a class="btn btn-sm tb-qab tb-classic" href="#/results">' + icon('clipboard', 14) + '<span class="tb-qa-t">Lab Results</span></a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/tests">' + icon('flask', 14) + '<span class="tb-qa-t">View Tests</span></a>'
+      : '<a class="btn btn-sm tb-qab tb-classic" href="#/billing">' + icon('plus', 14) + '<span class="tb-qa-t">New Bill</span></a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/patients">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses">' + icon('wallet', 14) + '<span class="tb-qa-t">Add Expense</span></a>' +
+        '<a class="btn btn-sm tb-qab tb-classic tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>';
     document.getElementById('topbar').innerHTML =
       '<style>' +
-      '.tb-profile{padding-right:6px}' +
+      '.tb-acct{position:relative;flex:none}' +
       '.tb-div{width:1px;align-self:stretch;background:var(--line);margin:3px 0}' +
-      '.tb-logout{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:background .15s,color .15s;flex:none}' +
-      '.tb-logout:hover{background:#fee2e2;color:var(--red)}' +
-      '.tb-logout svg{display:block}' +
-      '.tb-qa{display:flex;gap:8px;align-items:center;margin-right:4px}' +
+      '.tb-avatar{width:36px;height:36px;border-radius:50%;border:2px solid #fff;background:var(--brand-grad);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(13,148,136,.35);transition:transform .15s,box-shadow .15s;padding:0}' +
+      '.tb-avatar:hover{transform:scale(1.07);box-shadow:0 3px 12px rgba(13,148,136,.5)}' +
+      '.tb-menu{position:absolute;right:0;top:calc(100% + 10px);min-width:212px;background:var(--card,#fff);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 40px rgba(15,30,46,.16);padding:6px;z-index:80}' +
+      '.tb-menu-head{padding:10px 12px 12px;border-bottom:1px solid var(--line);margin-bottom:6px;display:flex;flex-direction:column;align-items:flex-start;gap:5px}' +
+      '.tb-menu-head b{font-size:14px;color:var(--ink)}' +
+      '.tb-menu-it{display:flex;align-items:center;gap:10px;width:100%;padding:9px 12px;border:none;background:transparent;border-radius:9px;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;text-decoration:none;font-family:inherit;text-align:left}' +
+      '.tb-menu-it:hover{background:var(--bg)}' +
+      '.tb-menu-it svg{color:var(--muted);flex:none}' +
+      '.tb-menu-danger{color:var(--red)}' +
+      '.tb-menu-danger:hover{background:var(--red-soft)}' +
+      '.tb-menu-danger svg{color:var(--red)}' +
+      '.tb-qa{display:flex;gap:8px;align-items:center;margin-left:2px}' +
       '.tb-qa .tb-qab{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}' +
+      '.tb-qa .tb-classic{background:#fff;border:1px solid #131845;color:#131845;font-weight:600;box-shadow:none}' +
+      '.tb-qa .tb-classic:hover{background:#ebf4f8;border-color:#131845;color:#131845;transform:none}' +
+      '.tb-qa .tb-classic svg{color:#131845;flex:none}' +
+      '.tb-qa .tb-icon{padding:7px;border-radius:10px;min-width:34px;justify-content:center}' +
+      '.tb-greet{display:flex;flex-direction:column;justify-content:center;line-height:1.3;min-width:0;margin-right:2px}' +
+      '.tb-greet b{font-size:14.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}' +
+      '.tb-greet span{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}' +
+      '@media (max-width:760px){.tb-greet{display:none}}' +
       '@media (max-width:900px){.tb-qa .tb-qa-t{display:none}}' +
       '@media (max-width:640px){.tb-qa{display:none}}' +
       '</style>' +
       '<button class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Menu">' + icon('menu', 18) + '</button>' +
+      '<div class="tb-acct">' +
+      '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</button>' +
+      '<div class="tb-menu" id="userMenu" hidden>' +
+      '<div class="tb-menu-head"><b>' + esc(s.name) + '</b>' + badge(s.role) + '</div>' +
+      (can('settings', s.role) ? '<a class="tb-menu-it" href="#/settings">' + icon('gear', 16) + '<span>Settings</span></a>' : '') +
+      (can('settings', s.role) ? '<a class="tb-menu-it" href="#/settings">' + icon('lock', 16) + '<span>Change Password</span></a>' : '') +
+      '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
+      '</div></div>' +
+      '<div class="tb-greet"><b>' + esc(_greet + _greetName) + '</b><span>' + esc(_longDate) + '</span></div>' +
       '<h1 class="page-title">' + esc(navItem ? navItem.label : '') + '</h1>' +
-      '<div class="tb-qa">' + tbQa + '</div>' +
-      '<div class="top-right">' +
-        '<span class="top-date">' + esc(d(new Date())) + '</span>' +
-        '<span class="user-chip tb-profile"><span class="avatar">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</span>' +
-        '<span class="user-tx"><b>' + esc(s.name) + '</b>' + badge(s.role) + '</span>' +
-        '<span class="tb-div"></span>' +
-        '<button class="tb-logout" id="logoutBtn" title="Logout" aria-label="Logout">' + icon('logout', 16) + '</button></span>' +
-      '</div>';
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+      (activeKey === 'dashboard' ? '<div class="top-right"><div class="tb-qa">' + tbQa + '</div></div>' : '');
+    document.getElementById('menuLogout').addEventListener('click', logout);
+    /* avatar dropdown: toggle, close on outside click / Escape (delegated once) */
+    (function () {
+      var avatarBtn = document.getElementById('avatarBtn');
+      var userMenu = document.getElementById('userMenu');
+      avatarBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        userMenu.hidden = !userMenu.hidden;
+        avatarBtn.setAttribute('aria-expanded', String(!userMenu.hidden));
+      });
+      if (!window.__tbAcctWired) {
+        window.__tbAcctWired = true;
+        document.addEventListener('click', function (e) {
+          var m = document.getElementById('userMenu');
+          if (m && !m.hidden && !e.target.closest('.tb-acct')) m.hidden = true;
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape') {
+            var m = document.getElementById('userMenu');
+            var b = document.getElementById('avatarBtn');
+            if (m && !m.hidden) { m.hidden = true; if (b) b.setAttribute('aria-expanded', 'false'); }
+          }
+        });
+      }
+    })();
     var nt = document.getElementById('navToggle');
     if (nt) nt.addEventListener('click', function () { document.body.classList.toggle('side-open'); });
   }

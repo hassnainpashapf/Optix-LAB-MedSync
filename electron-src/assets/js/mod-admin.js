@@ -61,25 +61,8 @@
       '<div class="dl">' + sub + '</div>' +
       '</div>';
   }
-  var ADM_STAT_CSS =
-    '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
-    '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
-    '@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:12px}}' +
-    '@keyframes dbRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
-    '.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:dbRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
-    '.stat:nth-child(2){animation-delay:.07s}.stat:nth-child(3){animation-delay:.14s}.stat:nth-child(4){animation-delay:.21s}' +
-    '.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
-    '.stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
-    '.stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
-    '.stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
-    '.stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
-    '.stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
-    '.stat[data-tint="red"]{--sc-line:#f2c6c6;--sc-soft:var(--red-soft)}' +
-    '.stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
-    '.stat-ico svg{width:22px;height:22px}' +
-    '.stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
-    '.stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
-    '.stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}';
+  /* shared compact stat card CSS now in app.css */
+  var ADM_STAT_CSS = '';
   /* dashboard-style count-up for .vl[data-count] values (final value is
      already in the markup, so a failure here never leaves a blank card) */
   function admCountUp() {
@@ -221,7 +204,7 @@
       + '<button class="btn btn-primary" id="exfSave">' + (isEdit ? 'Save Changes' : 'Add Expense') + '</button></div>';
 
     var close = App.modal(isEdit ? 'Edit Expense' : 'Add Expense', body, {
-      onOpen: function () {
+      onOpen: function (ov, close) {
         document.getElementById('exfCancel').addEventListener('click', close);
         document.getElementById('exfSave').addEventListener('click', function () {
           var title = document.getElementById('exfTitle').value.trim();
@@ -435,6 +418,7 @@
     var tabs = [
       { id: 'profile', label: 'Lab Profile' },
       { id: 'account', label: 'My Account' },
+      { id: 'whatsapp', label: 'WhatsApp' },
       { id: 'users', label: 'Users' },
       { id: 'backup', label: 'Backup' },
       { id: 'danger', label: 'Danger Zone' }
@@ -454,6 +438,7 @@
     });
     if (settingsTab === 'profile') renderSetProfile();
     else if (settingsTab === 'account') renderSetAccount();
+    else if (settingsTab === 'whatsapp') renderSetWhatsapp();
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
@@ -535,6 +520,94 @@
     });
   }
 
+  /* ---- WhatsApp API (admin only) ---- */
+  function waDefaults() {
+    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' };
+  }
+  function waPhone(p) {
+    var d = String(p || '').replace(/\D/g, '');
+    if (!d) return null;
+    if (d.charAt(0) === '0') d = '92' + d.slice(1);
+    return d;
+  }
+  function renderSetWhatsapp() {
+    var s = DB.get('settings', 'main') || {};
+    var w = Object.assign(waDefaults(), s.whatsapp || {});
+    var html = '<div class="form-grid" style="max-width:640px">'
+      + '<div><label class="label">API Provider</label><select class="select" id="waProvider">'
+      + '<option value="ultramsg"' + (w.provider === 'ultramsg' ? ' selected' : '') + '>Ultramsg</option>'
+      + '<option value="custom"' + (w.provider === 'custom' ? ' selected' : '') + '>Custom (Ultramsg-compatible)</option>'
+      + '</select></div>'
+      + '<div><label class="label">Instance ID *</label><input class="input" id="waInst" placeholder="e.g. instance12345" value="' + App.esc(w.instanceId) + '"></div>'
+      + '<div><label class="label">API Token *</label><input class="input" id="waToken" type="password" placeholder="paste API token" value="' + App.esc(w.token) + '"></div>'
+      + '<div id="waBaseWrap" style="' + (w.provider === 'custom' ? '' : 'display:none') + '"><label class="label">API Base URL</label><input class="input" id="waBase" placeholder="https://api.example.com" value="' + App.esc(w.baseUrl) + '"></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Lab WhatsApp Number</label><input class="input" id="waNum" placeholder="0300-1234567" value="' + App.esc(w.labNumber) + '"></div>'
+      + '</div>'
+      + '<p class="muted" style="font-size:12.5px;margin-top:10px;max-width:640px">'
+      + 'Used to send reports and invoices directly to patients over WhatsApp. '
+      + 'For Ultramsg: copy the Instance ID and Token from your Ultramsg dashboard, then use <strong>Test Connection</strong> — a test message is sent to the lab number above.</p>'
+      + '<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">'
+      + '<button class="btn btn-primary" id="waSave">Save WhatsApp Settings</button>'
+      + '<button class="btn btn-ghost" id="waTest">Test Connection</button></div>';
+    document.getElementById('setBody').innerHTML = html;
+
+    document.getElementById('waProvider').addEventListener('change', function () {
+      document.getElementById('waBaseWrap').style.display =
+        (document.getElementById('waProvider').value === 'custom') ? '' : 'none';
+    });
+
+    document.getElementById('waSave').addEventListener('click', function () {
+      var cfg = {
+        provider: document.getElementById('waProvider').value,
+        instanceId: document.getElementById('waInst').value.trim(),
+        token: document.getElementById('waToken').value.trim(),
+        baseUrl: (document.getElementById('waBase') ? document.getElementById('waBase').value.trim() : ''),
+        labNumber: document.getElementById('waNum').value.trim()
+      };
+      DB.update('settings', 'main', { whatsapp: cfg });
+      App.toast('WhatsApp settings saved.');
+      renderSettings();
+    });
+
+    document.getElementById('waTest').addEventListener('click', function () {
+      var provider = document.getElementById('waProvider').value;
+      var inst = document.getElementById('waInst').value.trim();
+      var token = document.getElementById('waToken').value.trim();
+      var base = document.getElementById('waBase') ? document.getElementById('waBase').value.trim() : '';
+      var to = waPhone(document.getElementById('waNum').value.trim());
+      if (!inst) return App.toast('Enter the Instance ID first.', 'err');
+      if (!token) return App.toast('Enter the API Token first.', 'err');
+      if (!to) return App.toast('Enter the Lab WhatsApp Number to receive the test message.', 'err');
+      var url = provider === 'custom'
+        ? base.replace(/\/+$/, '') + '/messages/chat'
+        : 'https://api.ultramsg.com/' + encodeURIComponent(inst) + '/messages/chat';
+      if (provider === 'custom' && !base) return App.toast('Enter the API Base URL for the Custom provider.', 'err');
+      var btn = document.getElementById('waTest');
+      btn.disabled = true; btn.textContent = 'Sending...';
+      var s2 = DB.get('settings', 'main') || {};
+      var lab = s2.labName || 'Lab';
+      var params = 'token=' + encodeURIComponent(token)
+        + '&to=' + encodeURIComponent(to)
+        + '&body=' + encodeURIComponent('Test message from ' + lab + ' — WhatsApp integration is working.');
+      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params })
+        .then(function (r) { return r.json().catch(function () { return {}; }); })
+        .then(function (data) {
+          btn.disabled = false; btn.textContent = 'Test Connection';
+          if (data && (data.sent || data.message === 'ok' || data.status === 'sent')) {
+            App.toast('Test message sent successfully.');
+          } else if (data && data.error) {
+            App.toast('API error: ' + data.error, 'err');
+          } else {
+            App.toast('Message queued. Check the lab number on WhatsApp.', 'ok');
+          }
+        })
+        .catch(function (err) {
+          btn.disabled = false; btn.textContent = 'Test Connection';
+          App.toast('Connection failed: ' + (err && err.message ? err.message : err), 'err');
+        });
+    });
+  }
+
   /* ---- Users (admin only) ---- */
   function roleBadge(r) {
     var cls = r === 'admin' ? 'b-paid' : (r === 'reception' ? 'b-ready' : 'b-partial');
@@ -610,7 +683,7 @@
       + '<button class="btn btn-ghost" id="ufCancel">Cancel</button>'
       + '<button class="btn btn-primary" id="ufSave">' + (isEdit ? 'Save Changes' : 'Add User') + '</button></div>';
     var close = App.modal(isEdit ? 'Edit User' : 'Add User', body, {
-      onOpen: function () {
+      onOpen: function (ov, close) {
         document.getElementById('ufCancel').addEventListener('click', close);
         document.getElementById('ufSave').addEventListener('click', function () {
           var name = document.getElementById('ufName').value.trim();
@@ -643,7 +716,7 @@
       + '<button class="btn btn-ghost" id="pwCancel">Cancel</button>'
       + '<button class="btn btn-primary" id="pwSave">Set Password</button></div>';
     var close = App.modal('Reset Password', body, {
-      onOpen: function () {
+      onOpen: function (ov, close) {
         document.getElementById('pwCancel').addEventListener('click', close);
         document.getElementById('pwSave').addEventListener('click', function () {
           var p = document.getElementById('pwNew').value;
