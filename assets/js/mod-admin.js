@@ -7,6 +7,7 @@
   'use strict';
 
   /* ---------------- helpers ---------------- */
+  var PRINT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
   function sess() {
     try { return JSON.parse(localStorage.getItem('labpos_session')) || null; }
     catch (e) { return null; }
@@ -318,7 +319,7 @@
         + '<div><div class="stat-num">' + val + '</div><div class="stat-lbl">' + label + '</div></div></div>';
     }
 
-    var html = ''
+    var filterCard = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
       +   '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">'
       +     '<div><label class="label">From</label><input class="input" type="date" id="repFrom" value="' + App.esc(from) + '"></div>'
@@ -329,10 +330,11 @@
       +       '<button class="btn btn-ghost btn-sm" data-preset="week">Last 7 days</button>'
       +       '<button class="btn btn-ghost btn-sm" data-preset="month">This month</button>'
       +     '</div>'
-      +     '<button class="btn btn-ghost" id="repPrint" style="margin-left:auto">Print Report</button>'
+      +     '<button class="btn btn-ghost" id="repPrint" style="margin-left:auto">' + PRINT_ICON + ' Print Report</button>'
       +   '</div>'
-      + '</div></div>'
+      + '</div></div>';
 
+    var html = ''
       + '<style>' + ADM_STAT_CSS + '</style>'
       + '<div class="stat-grid">' + repStats + '</div>'
 
@@ -345,6 +347,8 @@
       +   statCard('Expenses', App.money(expTotal), '−', 'var(--red-soft)', 'var(--red)')
       +   statCard('Net Collection', App.money(net), '=', 'var(--brand-soft)', 'var(--brand-d)')
       + '</div>'
+
+      + filterCard
 
       + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Payment Methods</h3></div><div class="card-b">'
       +   '<div class="stat-grid">'
@@ -418,6 +422,7 @@
     var tabs = [
       { id: 'profile', label: 'Lab Profile' },
       { id: 'account', label: 'My Account' },
+      { id: 'templates', label: 'Report Templates' },
       { id: 'whatsapp', label: 'WhatsApp' },
       { id: 'users', label: 'Users' },
       { id: 'backup', label: 'Backup' },
@@ -438,6 +443,7 @@
     });
     if (settingsTab === 'profile') renderSetProfile();
     else if (settingsTab === 'account') renderSetAccount();
+    else if (settingsTab === 'templates') renderSetTemplates();
     else if (settingsTab === 'whatsapp') renderSetWhatsapp();
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
@@ -520,92 +526,126 @@
     });
   }
 
+  /* ---- Report Templates — per-test report fields (admin only) ----
+     Each test's template defines the fields shown when entering results
+     and printed on the lab report. The lab header/footer stay the same. */
+  function renderSetTemplates() {
+    var tests = DB.all('tests').filter(function (t) { return t.active !== false; })
+      .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    if (!tests.length) {
+      document.getElementById('setBody').innerHTML = App.empty('No tests in the catalog yet.');
+      return;
+    }
+    var opts = tests.map(function (t) {
+      var n = (t.params || []).length;
+      return '<option value="' + App.esc(t.id) + '">' +
+        App.esc((t.code ? t.code + ' — ' : '') + t.name) + (n ? '  (' + n + ' fields)' : '') + '</option>';
+    }).join('');
+    var html = '<div style="max-width:860px">'
+      + '<p class="muted" style="margin-top:0">Design the printed report for each test. Fields you add here appear when entering results and on the printed report / PDF. The lab header and footer stay the same for every test.</p>'
+      + '<div style="max-width:420px;margin-bottom:14px"><label class="label">Test</label>'
+      + '<select class="input" id="rtTest">' + opts + '</select></div>'
+      + '<div class="label" style="margin-bottom:6px">Report fields</div>'
+      + '<div id="rtFields"></div>'
+      + '<button class="btn btn-ghost btn-sm" id="rtAdd">+ Add Field</button>'
+      + '<div style="margin-top:16px;display:flex;gap:10px;align-items:center">'
+      + '<button class="btn btn-primary" id="rtSave">Save Template</button>'
+      + '<button class="btn btn-ghost" id="rtClear">Clear Template</button>'
+      + '</div></div>';
+    document.getElementById('setBody').innerHTML = html;
+    var box = document.getElementById('rtFields');
+
+    function fieldRow(p) {
+      p = p || {};
+      var isNum = p.type === 'number';
+      return '<div class="rt-frow" style="display:grid;grid-template-columns:1fr 90px 1fr 110px 36px;gap:8px;margin-bottom:8px">'
+        + '<input class="input rt-fn" placeholder="Field label (e.g. Hemoglobin)" value="' + App.esc(p.name || '') + '">'
+        + '<input class="input rt-fu" placeholder="Unit" value="' + App.esc(p.unit || '') + '">'
+        + '<input class="input rt-fr" placeholder="Reference range" value="' + App.esc(p.ref || '') + '">'
+        + '<select class="input rt-ft"><option value="text"' + (isNum ? '' : ' selected') + '>Text</option>'
+        + '<option value="number"' + (isNum ? ' selected' : '') + '>Number</option></select>'
+        + '<button type="button" class="btn btn-ghost btn-sm rt-frm" title="Remove">✕</button></div>';
+    }
+    function wireRemovals() {
+      box.querySelectorAll('.rt-frm').forEach(function (b) {
+        b.onclick = function () { b.closest('.rt-frow').remove(); };
+      });
+    }
+    function paint(testId) {
+      var t = DB.get('tests', testId);
+      var params = (t && t.params) || [];
+      if (params.length) { box.innerHTML = params.map(fieldRow).join(''); }
+      else {
+        box.innerHTML = '<p class="muted" style="border:1px dashed var(--line);border-radius:10px;padding:12px 14px">'
+          + 'No fields yet — this test prints a single free-text Result box. Add fields above to build its report form.</p>';
+      }
+      wireRemovals();
+    }
+    document.getElementById('rtTest').addEventListener('change', function (e) { paint(e.target.value); });
+    document.getElementById('rtAdd').addEventListener('click', function () {
+      if (!box.querySelector('.rt-frow')) box.innerHTML = '';
+      box.insertAdjacentHTML('beforeend', fieldRow(null));
+      wireRemovals();
+      var last = box.querySelector('.rt-frow:last-child .rt-fn');
+      if (last) last.focus();
+    });
+    document.getElementById('rtSave').addEventListener('click', function () {
+      var tid = document.getElementById('rtTest').value;
+      var params = [];
+      box.querySelectorAll('.rt-frow').forEach(function (row) {
+        var n = row.querySelector('.rt-fn').value.trim();
+        if (!n) return;
+        params.push({
+          name: n,
+          unit: row.querySelector('.rt-fu').value.trim(),
+          ref: row.querySelector('.rt-fr').value.trim(),
+          type: row.querySelector('.rt-ft').value === 'number' ? 'number' : 'text'
+        });
+      });
+      DB.update('tests', tid, { params: params });
+      App.toast('Report template saved — ' + params.length + ' field(s).');
+      renderSettings();
+    });
+    document.getElementById('rtClear').addEventListener('click', function () {
+      var tid = document.getElementById('rtTest').value;
+      App.confirm('Remove all fields from this test\'s template? It will print a single free-text Result box.').then(function (ok) {
+        if (!ok) return;
+        DB.update('tests', tid, { params: [] });
+        App.toast('Template cleared.');
+        renderSettings();
+      });
+    });
+    paint(tests[0].id);
+  }
+
   /* ---- WhatsApp API (admin only) ---- */
   function waDefaults() {
     return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' };
   }
-  function waPhone(p) {
-    var d = String(p || '').replace(/\D/g, '');
-    if (!d) return null;
-    if (d.charAt(0) === '0') d = '92' + d.slice(1);
-    return d;
-  }
+  /* ---- WhatsApp API: managed by the Superadmin console (read-only here) ---- */
   function renderSetWhatsapp() {
     var s = DB.get('settings', 'main') || {};
     var w = Object.assign(waDefaults(), s.whatsapp || {});
-    var html = '<div class="form-grid" style="max-width:640px">'
-      + '<div><label class="label">API Provider</label><select class="select" id="waProvider">'
-      + '<option value="ultramsg"' + (w.provider === 'ultramsg' ? ' selected' : '') + '>Ultramsg</option>'
-      + '<option value="custom"' + (w.provider === 'custom' ? ' selected' : '') + '>Custom (Ultramsg-compatible)</option>'
-      + '</select></div>'
-      + '<div><label class="label">Instance ID *</label><input class="input" id="waInst" placeholder="e.g. instance12345" value="' + App.esc(w.instanceId) + '"></div>'
-      + '<div><label class="label">API Token *</label><input class="input" id="waToken" type="password" placeholder="paste API token" value="' + App.esc(w.token) + '"></div>'
-      + '<div id="waBaseWrap" style="' + (w.provider === 'custom' ? '' : 'display:none') + '"><label class="label">API Base URL</label><input class="input" id="waBase" placeholder="https://api.example.com" value="' + App.esc(w.baseUrl) + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Lab WhatsApp Number</label><input class="input" id="waNum" placeholder="0300-1234567" value="' + App.esc(w.labNumber) + '"></div>'
-      + '</div>'
-      + '<p class="muted" style="font-size:12.5px;margin-top:10px;max-width:640px">'
-      + 'Used to send reports and invoices directly to patients over WhatsApp. '
-      + 'For Ultramsg: copy the Instance ID and Token from your Ultramsg dashboard, then use <strong>Test Connection</strong> — a test message is sent to the lab number above.</p>'
-      + '<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">'
-      + '<button class="btn btn-primary" id="waSave">Save WhatsApp Settings</button>'
-      + '<button class="btn btn-ghost" id="waTest">Test Connection</button></div>';
+    var masked = w.token ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : '\u2014';
+    var rows =
+      row('API Provider', w.provider === 'custom' ? 'Custom' : 'Ultramsg') +
+      row('Instance ID', w.instanceId || '\u2014') +
+      row('API Token', masked) +
+      (w.provider === 'custom' ? row('API Base URL', w.baseUrl || '\u2014') : '') +
+      row('Lab WhatsApp Number', w.labNumber || '\u2014');
+    function row(k, v) {
+      return '<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)">' +
+        '<span style="color:var(--muted);font-size:13px">' + App.esc(k) + '</span>' +
+        '<strong style="font-size:13px;word-break:break-all;text-align:right">' + App.esc(v) + '</strong></div>';
+    }
+    var html =
+      '<div style="max-width:640px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:14px 16px;margin-bottom:16px">' +
+      '<div style="font-weight:700;font-size:14px;margin-bottom:4px">Managed by Superadmin</div>' +
+      '<div style="font-size:13px;color:var(--muted)">The WhatsApp API is configured in the Superadmin console. ' +
+      'These settings are read-only here — contact your superadmin to change them.</div>' +
+      '<div style="margin-top:10px"><a class="btn btn-sm" href="../superadmin/">Open Superadmin Console</a></div></div>' +
+      '<div style="max-width:640px">' + rows + '</div>';
     document.getElementById('setBody').innerHTML = html;
-
-    document.getElementById('waProvider').addEventListener('change', function () {
-      document.getElementById('waBaseWrap').style.display =
-        (document.getElementById('waProvider').value === 'custom') ? '' : 'none';
-    });
-
-    document.getElementById('waSave').addEventListener('click', function () {
-      var cfg = {
-        provider: document.getElementById('waProvider').value,
-        instanceId: document.getElementById('waInst').value.trim(),
-        token: document.getElementById('waToken').value.trim(),
-        baseUrl: (document.getElementById('waBase') ? document.getElementById('waBase').value.trim() : ''),
-        labNumber: document.getElementById('waNum').value.trim()
-      };
-      DB.update('settings', 'main', { whatsapp: cfg });
-      App.toast('WhatsApp settings saved.');
-      renderSettings();
-    });
-
-    document.getElementById('waTest').addEventListener('click', function () {
-      var provider = document.getElementById('waProvider').value;
-      var inst = document.getElementById('waInst').value.trim();
-      var token = document.getElementById('waToken').value.trim();
-      var base = document.getElementById('waBase') ? document.getElementById('waBase').value.trim() : '';
-      var to = waPhone(document.getElementById('waNum').value.trim());
-      if (!inst) return App.toast('Enter the Instance ID first.', 'err');
-      if (!token) return App.toast('Enter the API Token first.', 'err');
-      if (!to) return App.toast('Enter the Lab WhatsApp Number to receive the test message.', 'err');
-      var url = provider === 'custom'
-        ? base.replace(/\/+$/, '') + '/messages/chat'
-        : 'https://api.ultramsg.com/' + encodeURIComponent(inst) + '/messages/chat';
-      if (provider === 'custom' && !base) return App.toast('Enter the API Base URL for the Custom provider.', 'err');
-      var btn = document.getElementById('waTest');
-      btn.disabled = true; btn.textContent = 'Sending...';
-      var s2 = DB.get('settings', 'main') || {};
-      var lab = s2.labName || 'Lab';
-      var params = 'token=' + encodeURIComponent(token)
-        + '&to=' + encodeURIComponent(to)
-        + '&body=' + encodeURIComponent('Test message from ' + lab + ' — WhatsApp integration is working.');
-      fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params })
-        .then(function (r) { return r.json().catch(function () { return {}; }); })
-        .then(function (data) {
-          btn.disabled = false; btn.textContent = 'Test Connection';
-          if (data && (data.sent || data.message === 'ok' || data.status === 'sent')) {
-            App.toast('Test message sent successfully.');
-          } else if (data && data.error) {
-            App.toast('API error: ' + data.error, 'err');
-          } else {
-            App.toast('Message queued. Check the lab number on WhatsApp.', 'ok');
-          }
-        })
-        .catch(function (err) {
-          btn.disabled = false; btn.textContent = 'Test Connection';
-          App.toast('Connection failed: ' + (err && err.message ? err.message : err), 'err');
-        });
-    });
   }
 
   /* ---- Users (admin only) ---- */

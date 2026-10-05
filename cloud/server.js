@@ -35,8 +35,13 @@ function readReleases() {
 
 function requireSuperadmin(req, res, next) {
   if (!SUPERADMIN_KEY) return res.status(500).json({ error: 'SUPERADMIN_KEY not configured on server' });
-  if (req.get('X-Superadmin-Key') !== SUPERADMIN_KEY) return res.status(403).json({ error: 'forbidden' });
-  next();
+  const provided = req.get('X-Superadmin-Key') || '';
+  /* Accept either the legacy static key or the username/password derived token
+     sent by the console ('up:' + sha256('username:password')). The expected
+     derived token is stored server-side as SUPERADMIN_LOGIN_TOKEN. */
+  const loginToken = (process.env.SUPERADMIN_LOGIN_TOKEN || '').trim();
+  if (provided === SUPERADMIN_KEY || (loginToken && provided === loginToken)) return next();
+  return res.status(403).json({ error: 'forbidden' });
 }
 
 async function main() {

@@ -1,6 +1,9 @@
 node_modules/
 dist/
 dist-installer/
+*.exe
+*.dmg
+*.dmg.tar.gz
 *.log
 .DS_Store
 .env

@@ -5,6 +5,8 @@
 (function () {
   'use strict';
 
+  var PRINT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
+
   function currentUser() {
     try {
       if (window.App && App.session) {
@@ -359,8 +361,11 @@
     '<style>' +
     '.bl-pos{display:grid;grid-template-columns:290px minmax(0,1fr) 340px;gap:18px;align-items:start}' +
     '.bl-panel{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(15,30,46,.06)}' +
-    '.bl-panel-h{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800;font-size:14.5px;display:flex;align-items:center;justify-content:space-between;min-height:58px;gap:10px}' +
-    '.bl-panel-t{display:flex;align-items:center;gap:9px;min-width:0}' +
+    '.bl-panel-h{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800;font-size:14.5px;display:flex;align-items:center;justify-content:space-between;min-height:58px;gap:10px;flex-wrap:nowrap}' +
+    '.bl-panel-t{display:flex;align-items:center;gap:9px;min-width:0;flex:1}' +
+    '.bl-panel-h .btn{flex:none;white-space:nowrap}' +
+    '.bl-pat-searchrow{display:flex;gap:8px;align-items:center}' +
+    '.bl-pat-searchrow .input{flex:1;min-width:0}' +
     '.bl-step{width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;display:inline-grid;place-items:center;font-size:12.5px;font-weight:800;flex:none}' +
     '.bl-panel-b{padding:14px 16px}' +
     '.bl-sec{margin-top:14px}' +
@@ -413,10 +418,10 @@
       /* patient column */
       '<div class="bl-panel"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">1</span>Patient</span>' +
         '<button class="btn btn-primary btn-sm" id="blNewPat">+ New Patient</button></div>' +
-        '<div class="bl-panel-b"><div id="blPatSearchWrap">' +
+        '<div class="bl-panel-b"><div id="blPatSearchWrap" class="bl-pat-searchrow">' +
           '<input class="input search" id="blPatSearch" placeholder="Search name or phone…" autocomplete="off">' +
-          '<div id="blPatResults"></div>' +
-        '</div><div id="blPatientBox" style="margin-top:10px"></div></div></div>' +
+          '</div><div id="blPatResults"></div>' +
+        '<div id="blPatientBox" style="margin-top:10px"></div></div></div>' +
 
       /* tests column */
       '<div class="bl-panel"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">2</span>Tests</span><span class="badge b-ready" id="blCount">0 tests</span></div>' +
@@ -451,7 +456,7 @@
         '<div class="bl-sec"><label class="label">Amount tendered</label>' +
         '<input class="input" id="blTendered" type="number" min="0" placeholder="0"></div>' +
         '<div class="bl-row" id="blChangeRow" style="margin-top:6px"></div>' +
-        '<button class="btn btn-primary bl-save" id="blSave" disabled>Save &amp; Print</button>' +
+        '<button class="btn btn-primary bl-save" id="blSave" disabled>' + PRINT_ICON + ' Save &amp; Print</button>' +
         '<button class="btn btn-ghost" id="blClear" style="width:100%;margin-top:8px">Clear Bill</button>' +
       '</div></div>' +
     '</div>';

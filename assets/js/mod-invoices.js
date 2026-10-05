@@ -10,7 +10,8 @@
     doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
     cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
     cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
-    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>'
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+    printer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>'
   };
   function scIsTech() {
     try {
@@ -506,24 +507,24 @@
 
     view.innerHTML =
       '<div class="card"><div class="card-b">' +
-        '<div class="toolbar" style="margin-bottom:14px">' +
-          '<input id="f-q" class="input search" style="max-width:280px" placeholder="Search invoice no, patient, phone..." value="' + App.esc(F.q) + '">' +
-          '<select id="f-date" class="select">' +
+        SC_STYLE +
+        '<div class="stat-grid">' + invStats + '</div>' +
+        '<div class="toolbar" style="margin:0 0 12px;gap:8px;flex-wrap:nowrap">' +
+          '<input id="f-q" class="input" style="flex:1;min-width:0;width:auto;padding:8px 12px;font-size:13px" placeholder="Search invoice no, patient, phone..." value="' + App.esc(F.q) + '">' +
+          '<select id="f-date" class="select" style="width:auto;flex:0 0 auto;padding:8px 10px;font-size:13px">' +
             '<option value="all">All dates</option>' +
             '<option value="today"' + (F.date === 'today' ? ' selected' : '') + '>Today</option>' +
             '<option value="yesterday"' + (F.date === 'yesterday' ? ' selected' : '') + '>Yesterday</option>' +
             '<option value="last7"' + (F.date === 'last7' ? ' selected' : '') + '>Last 7 days</option>' +
           '</select>' +
-          '<select id="f-status" class="select">' +
+          '<select id="f-status" class="select" style="width:auto;flex:0 0 auto;padding:8px 10px;font-size:13px">' +
             '<option value="all">All statuses</option>' +
             '<option value="paid"' + (F.status === 'paid' ? ' selected' : '') + '>Paid</option>' +
             '<option value="partial"' + (F.status === 'partial' ? ' selected' : '') + '>Partial</option>' +
             '<option value="unpaid"' + (F.status === 'unpaid' ? ' selected' : '') + '>Unpaid</option>' +
           '</select>' +
-          '<a class="btn btn-primary" href="#/billing" style="margin-left:auto">+ New Bill</a>' +
+          '<a class="btn btn-primary" href="#/billing" style="flex:0 0 auto;white-space:nowrap;padding:8px 14px;font-size:13px">+ New Bill</a>' +
         '</div>' +
-        SC_STYLE +
-        '<div class="stat-grid">' + invStats + '</div>' +
         '<div id="inv-summary"></div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr>' +
           '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:center">Tests</th>' +
@@ -577,7 +578,7 @@
       '<div class="toolbar">' +
         '<a class="btn btn-ghost" href="#/invoices">← Back to Invoices</a>' +
         '<div style="flex:1"></div>' +
-        '<button class="btn btn-ghost" id="iv-print">🖨 Print Invoice</button>' +
+        '<button class="btn btn-ghost" id="iv-print">' + SC_ICONS.printer + ' Print Invoice</button>' +
         '<button class="btn btn-ghost" id="iv-edit">Edit</button>' +
         '<button class="btn btn-ghost" id="iv-wa">WhatsApp</button>' +
         (r2(inv.due) > 0 ? '<button class="btn btn-primary" id="iv-collect">Collect Payment</button>' : '') +

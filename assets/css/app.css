@@ -164,7 +164,8 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 .card-b.flush{padding:0}
 
 /* ============ Tables ============ */
-.tbl-wrap{overflow-x:auto}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:640px){.tbl-wrap table.table{min-width:620px}}
 table.table{width:100%;border-collapse:collapse;font-size:14px}
 .table thead th{
   text-align:left;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;
@@ -271,11 +272,12 @@ textarea.input{resize:vertical;min-height:84px}
 .modal-f{padding:16px 22px;border-top:1px solid var(--line2);display:flex;justify-content:flex-end;gap:10px;background:#f8fafc}
 
 /* ============ Toast ============ */
-#toast-root{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px}
+#toast-root,#toasts,.toast-wrap{position:fixed;bottom:24px;right:24px;z-index:200;display:flex;flex-direction:column;gap:10px}
 .toast{background:#0f1e2e;color:#fff;border-radius:12px;padding:13px 18px;font-weight:600;font-size:14px;
   box-shadow:var(--sh-lg);display:flex;align-items:center;gap:10px;animation:toastIn .25s ease;max-width:360px}
 .toast.t-ok{border-left:4px solid var(--green)}
 .toast.t-err{border-left:4px solid var(--red)}
+.toast.t-info{border-left:4px solid var(--blue)}
 @keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
 .toast.out{opacity:0;transform:translateX(20px);transition:all .3s}
 
@@ -395,10 +397,15 @@ table.print-tbl{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px
   .form-grid.cols4{grid-template-columns:repeat(2,1fr)}
 }
 @media (max-width:900px){
+  /* slide-over drawer */
   .sidebar{position:fixed;left:0;top:0;transform:translateX(-105%);transition:transform .25s ease;
-    box-shadow:var(--sh-lg)}
+    box-shadow:var(--sh-lg);z-index:60;width:min(280px,84vw)}
+  body.side-open{overflow:hidden}
   body.side-open .sidebar{transform:none}
-  body.side-open::after{content:'';position:fixed;inset:0;background:rgba(15,30,46,.4);z-index:35}
+  /* backdrop: scale(1.3) compensates body{zoom:.8} so it truly covers the viewport */
+  body.side-open::after{content:'';position:fixed;inset:0;background:rgba(15,30,46,.45);z-index:55;
+    transform:scale(1.3);transform-origin:top left}
+  body .side-close{display:grid}
   #view{padding:18px 16px 60px}
   .topbar{padding:12px 16px}
   .grid2{grid-template-columns:1fr}
@@ -410,9 +417,12 @@ table.print-tbl{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px
   .toolbar .search{flex:1}
 }
 @media (max-width:560px){
-  .stat-grid{grid-template-columns:1fr}
   .modal-ov{padding:16px 10px}
   .user-chip b{display:none}
+  .toolbar[style*="nowrap"]{flex-wrap:wrap;gap:8px}
+  .toolbar[style*="nowrap"]>.input{flex:1 1 100%;min-width:0}
+  .toolbar[style*="nowrap"]>.select{flex:1 1 0;min-width:0;padding:7px 8px;font-size:12px}
+  .toolbar[style*="nowrap"]>.btn{flex:0 0 auto;padding:7px 12px;font-size:12px}
 }
 
 /* ============================================================
@@ -444,6 +454,11 @@ nav.nav{flex:1;overflow-y:auto;padding:6px 12px 16px}
   border-radius:0 4px 4px 0;background:var(--brand-grad)}
 .nav-lb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .side-ver{font-size:11.5px}
+.side-close{display:none;place-items:center;margin-left:auto;width:34px;height:34px;flex:none;
+  border:1px solid var(--line);background:#fff;border-radius:10px;color:var(--muted);cursor:pointer}
+.side-close svg{width:16px;height:16px}
+.side-keys{font-size:10.5px;margin-top:7px;opacity:.72}
+.side-keys kbd{font-family:inherit;font-size:10px;font-weight:600;background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:1px 5px;color:var(--ink2)}
 .nav-toggle{display:none;border:1px solid var(--line);background:#fff;border-radius:var(--r-md);
   width:40px;height:40px;color:var(--ink2);place-items:center;flex:none}
 .nav-toggle svg{width:18px;height:18px}
@@ -456,40 +471,43 @@ nav.nav{flex:1;overflow-y:auto;padding:6px 12px 16px}
 .user-tx .badge{margin-top:2px}
 
 /* ---- Login (classes rendered by app.js) ---- */
-body.login-mode{background:#fff}
-.login-wrap{position:fixed;inset:0;display:flex;z-index:50;background:#fff}
-.login-brand{flex:1.1;background:var(--brand-grad);color:#fff;position:relative;overflow:hidden;
-  display:flex;flex-direction:column;justify-content:center;padding:60px}
-.login-brand::before{content:'';position:absolute;width:520px;height:520px;border-radius:50%;
-  background:rgba(255,255,255,.08);top:-160px;right:-160px}
-.login-brand::after{content:'';position:absolute;width:340px;height:340px;border-radius:50%;
-  background:rgba(255,255,255,.06);bottom:-120px;left:-100px}
-.lb-inner{position:relative;z-index:1;max-width:480px}
-.lb-inner .brand-mark{margin-bottom:28px}
-.login-brand h1{font-size:38px;font-weight:800;letter-spacing:-.03em;line-height:1.15;margin-bottom:12px}
-.lb-tag{font-size:15.5px;opacity:.92;line-height:1.7;margin-bottom:34px}
-.lb-feats{list-style:none;display:flex;flex-direction:column;gap:14px;margin-bottom:40px}
-.lb-feats li{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:600}
-.lb-feats li svg{width:16px;height:16px;flex:none;opacity:.9}
-.lb-foot{font-size:13.5px;opacity:.85;line-height:1.7}
-.login-side{flex:1;display:flex;align-items:center;justify-content:center;padding:40px;background:#fbfcfd}
-.login-card{width:400px;max-width:100%}
-.login-card h2{font-size:24px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
-.login-sub{color:var(--muted);font-size:14px;margin-bottom:24px}
+body.login-mode{background:#131845}
+.login-wrap{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;gap:18px;
+  align-items:center;justify-content:center;padding:24px;overflow:auto;
+  background:linear-gradient(135deg,#131845 0%,#1e2a6b 55%,#5392ba 135%)}
+.login-wrap::before{content:'';position:absolute;width:560px;height:560px;border-radius:50%;
+  background:rgba(255,255,255,.07);top:-180px;right:-140px;pointer-events:none}
+.login-wrap::after{content:'';position:absolute;width:380px;height:380px;border-radius:50%;
+  background:rgba(255,255,255,.05);bottom:-140px;left:-120px;pointer-events:none}
+.login-card{position:relative;z-index:1;width:420px;max-width:100%;background:#fff;
+  border-radius:20px;box-shadow:0 24px 60px -12px rgba(0,0,0,.45);padding:38px 36px}
+.login-logo{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:24px}
+.login-mark{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(135deg,#131845,#5392ba);
+  box-shadow:0 10px 24px -8px rgba(19,24,69,.55);margin-bottom:14px}
+.login-mark svg{width:32px;height:32px}
+.login-logo h1{font-size:22px;font-weight:800;letter-spacing:-.02em;color:#131845}
+.login-tag{font-size:13px;color:var(--muted);margin-top:4px}
+.login-card h2{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px;text-align:center;color:#131845}
+.login-sub{color:var(--muted);font-size:13.5px;margin-bottom:22px;text-align:center}
 .login-card .label{margin-bottom:14px}
 .login-err{background:var(--red-soft);color:var(--red);border:1px solid #f5c6c6;border-radius:var(--r-md);
   padding:11px 14px;font-weight:600;font-size:13.5px;margin-bottom:16px}
 .login-err[hidden]{display:none}
 .login-card .btn-block{margin-top:6px}
-.login-div{display:flex;align-items:center;gap:10px;margin:14px 0 4px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.login-signin{background:linear-gradient(135deg,#131845,#2a3a8f);border:none;color:#fff;
+  box-shadow:0 8px 18px -8px rgba(19,24,69,.6)}
+.login-signin:hover{background:linear-gradient(135deg,#0e1238,#1e2a6b);color:#fff;transform:translateY(-1px)}
+.login-div{display:flex;align-items:center;gap:10px;margin:16px 0 6px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
 .login-div::before,.login-div::after{content:'';flex:1;height:1px;background:var(--border)}
-.login-hint{margin-top:18px;font-size:12.5px;color:var(--muted);text-align:center;
-  background:#f8fafc;border:1px dashed var(--line);border-radius:var(--r-md);padding:10px 12px}
+.login-hint{margin-top:16px;font-size:12px;color:var(--muted);text-align:center;opacity:.8}
+.login-hint b{color:#4b5563;font-weight:700}
+.login-foot{position:relative;z-index:1;font-size:11.5px;color:rgba(255,255,255,.6);letter-spacing:.04em}
 
 @media (max-width:900px){
   .nav-toggle{display:inline-grid}
-  .login-brand{display:none}
-  .login-side{padding:24px}
+  .login-card{padding:28px 22px}
+  .login-wrap{padding:16px}
   .top-date{display:none}
   main.view{padding:18px 16px 60px}
 }
@@ -502,7 +520,17 @@ body{zoom:0.8}
 /* ============ Compact stat cards (shared across all pages) ============ */
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
 @media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:10px}}
+@media(max-width:560px){.stat-grid{grid-template-columns:repeat(2,1fr);gap:10px}}
+/* keep small stat cards from blowing out their grid column */
+.stat{min-width:0}
+@media(max-width:560px){
+  .stat{padding:10px 11px;border-radius:10px}
+  .stat-ico{width:28px;height:28px;border-radius:9px;margin-bottom:6px}
+  .stat .vl{font-size:16px}
+  .stat .dl{font-size:10.5px;margin-top:3px}
+  .card-b{padding:14px}
+  .card-h{padding:12px 14px}
+}
 @keyframes scRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes dbRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 .stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards}
@@ -521,4 +549,11 @@ body{zoom:0.8}
 .stat .lb{position:relative;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
 .stat .vl{position:relative;font-size:20px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}
 .stat .dl{position:relative;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:5px}
-@media(max-width:640px){.stat .vl{font-size:18px}}
+
+/* ============ Small phones: keep the header on one line ============ */
+@media(max-width:640px){
+  .topbar{padding:10px 12px;gap:10px}
+  .page-title{font-size:17px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .top-right{gap:8px;min-width:0}
+  .nav-toggle{width:36px;height:36px}
+}

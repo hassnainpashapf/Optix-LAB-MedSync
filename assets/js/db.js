@@ -1,8 +1,58 @@
-/* Optix LAB MedSync — DB layer (localStorage). Exposes window.DB. See SPEC.md for schema. */
+/* Optix LAB MedSync — DB layer (localStorage). Exposes window.DB. See SPEC.md for schema.
+   MULTI-TENANT: each lab gets its own isolated store under 'labpos_db_' + labId.
+   The registry 'labpos_labs_v1' lists all labs. Switch stores with DB.useLab(labId). */
 (function () {
   'use strict';
 
-  var KEY = 'labpos_db_v1';
+  /* ---------------- multi-tenant ---------------- */
+  var REG_KEY = 'labpos_labs_v1';   /* lab registry: { labs: [{id,name,adminUsername,createdAt,active}] } */
+  var LAST_KEY = 'labpos_last_lab'; /* last used lab (login page preview) */
+  var LEGACY_KEY = 'labpos_db_v1';  /* old single-lab key — migrated to lab1, kept as backup */
+  var KEY = LEGACY_KEY;
+  var currentLabId = null;
+
+  function keyFor(labId) { return 'labpos_db_' + labId; }
+
+  function loadRegistry() {
+    try {
+      var r = JSON.parse(localStorage.getItem(REG_KEY) || 'null');
+      if (r && Array.isArray(r.labs)) return r;
+    } catch (e) {}
+    return null;
+  }
+  function saveRegistry(reg) {
+    try { localStorage.setItem(REG_KEY, JSON.stringify(reg)); } catch (e) {}
+  }
+  function labById(id) {
+    var reg = loadRegistry();
+    if (!reg || !id) return null;
+    for (var i = 0; i < reg.labs.length; i++) {
+      if (reg.labs[i].id === id) return reg.labs[i];
+    }
+    return null;
+  }
+
+  /* First run: build the registry. An existing single-lab database is migrated
+     into the default lab ('lab1'); the legacy key is left untouched as backup. */
+  function ensureRegistry() {
+    var reg = loadRegistry();
+    if (reg) return reg;
+    var legacy = null;
+    try { legacy = localStorage.getItem(LEGACY_KEY); } catch (e) {}
+    var labName = 'Optix LAB MedSync';
+    if (legacy) {
+      try {
+        var s = JSON.parse(legacy);
+        if (s && s.settings && s.settings.labName) labName = s.settings.labName;
+      } catch (e) {}
+    }
+    reg = { labs: [{ id: 'lab1', name: labName, adminUsername: 'admin', createdAt: new Date().toISOString(), active: true }] };
+    saveRegistry(reg);
+    if (legacy) {
+      try { localStorage.setItem(keyFor('lab1'), legacy); } catch (e) {}
+    }
+    return reg;
+  }
 
   /* Remote mode: when served by the LabPOS server, /api-config.js sets
      window.LABPOS_API and DB.init() loads the server dump into `store`.
@@ -81,12 +131,13 @@
     return d.toISOString();
   }
 
-  function seedStore() {
+  function seedStore(opts) {
+    opts = opts || {};
     var store = {
       seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0 },
       settings: {
         id: 'main',
-        labName: 'Optix LAB MedSync',
+        labName: opts.labName || 'Optix LAB MedSync',
         tagline: 'Accurate • Fast • Trusted',
         address: 'Main Road, Gulberg, Lahore',
         phone: '0300-1234567',
@@ -112,8 +163,9 @@
       return obj;
     }
 
-    /* users */
-    put('users', { id: 'U-01', name: 'Administrator', username: 'admin', password: 'admin123', role: 'admin', active: true });
+    /* users — per-tenant admin comes from opts.admin when provided */
+    var _adm = opts.admin || {};
+    put('users', { id: 'U-01', name: _adm.name || 'Administrator', username: _adm.username || 'admin', password: _adm.password || 'admin123', role: 'admin', active: true });
     put('users', { id: 'U-02', name: 'Rizwan Ahmed', username: 'reception', password: 'rec123', role: 'reception', active: true });
     put('users', { id: 'U-03', name: 'Sana Iqbal', username: 'technician', password: 'tech123', role: 'technician', active: true });
 
@@ -122,11 +174,106 @@
     put('doctors', { id: 'D-02', name: 'Dr. Sara Malik', clinic: 'Health Center, Model Town', phone: '0321-4445556', commissionPct: 10 });
 
     /* tests: [code, name, category, price, sampleType, tat, params] */
-    var CBC_P = [{ name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5' }, { name: 'TLC', unit: '/µL', ref: '4,000–11,000' }, { name: 'Platelets', unit: '/µL', ref: '150,000–450,000' }, { name: 'ESR', unit: 'mm/hr', ref: '0–20' }];
-    var A1C_P = [{ name: 'HbA1c', unit: '%', ref: '< 5.7' }];
-    var LIP_P = [{ name: 'Total Cholesterol', unit: 'mg/dL', ref: '< 200' }, { name: 'Triglycerides', unit: 'mg/dL', ref: '< 150' }, { name: 'HDL', unit: 'mg/dL', ref: '> 40' }, { name: 'LDL', unit: 'mg/dL', ref: '< 100' }];
+    /* Default report templates — per-test fields used by result entry, print and PDF */
+    var TP = {
+      'CBC': [
+        { name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5', type: 'number' },
+        { name: 'TLC', unit: '/µL', ref: '4,000–11,000', type: 'number' },
+        { name: 'Neutrophils', unit: '%', ref: '40–70', type: 'number' },
+        { name: 'Lymphocytes', unit: '%', ref: '20–40', type: 'number' },
+        { name: 'Monocytes', unit: '%', ref: '2–8', type: 'number' },
+        { name: 'Eosinophils', unit: '%', ref: '1–6', type: 'number' },
+        { name: 'Platelets', unit: '/µL', ref: '150,000–450,000', type: 'number' },
+        { name: 'PCV', unit: '%', ref: '40–50', type: 'number' },
+        { name: 'MCV', unit: 'fL', ref: '80–100', type: 'number' },
+        { name: 'MCH', unit: 'pg', ref: '27–32', type: 'number' },
+        { name: 'MCHC', unit: 'g/dL', ref: '32–36', type: 'number' },
+        { name: 'ESR', unit: 'mm/hr', ref: '0–20', type: 'number' }
+      ],
+      'HB': [{ name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5', type: 'number' }],
+      'ESR': [{ name: 'ESR', unit: 'mm/hr', ref: '0–20', type: 'number' }],
+      'PLT': [{ name: 'Platelet Count', unit: '/µL', ref: '150,000–450,000', type: 'number' }],
+      'BGRP': [{ name: 'ABO Group', unit: '', ref: '', type: 'text' }, { name: 'Rh Factor', unit: '', ref: 'Positive / Negative', type: 'text' }],
+      'PTINR': [
+        { name: 'Prothrombin Time', unit: 'sec', ref: '11–13', type: 'number' },
+        { name: 'Control', unit: 'sec', ref: '', type: 'number' },
+        { name: 'INR', unit: 'ratio', ref: '0.9–1.1', type: 'number' }
+      ],
+      'RETIC': [{ name: 'Reticulocyte Count', unit: '%', ref: '0.5–2.5', type: 'number' }],
+      'LFT': [
+        { name: 'Bilirubin – Total', unit: 'mg/dL', ref: '0.3–1.2', type: 'number' },
+        { name: 'Bilirubin – Direct', unit: 'mg/dL', ref: '0.0–0.3', type: 'number' },
+        { name: 'ALT (SGPT)', unit: 'U/L', ref: '7–56', type: 'number' },
+        { name: 'AST (SGOT)', unit: 'U/L', ref: '10–40', type: 'number' },
+        { name: 'Alkaline Phosphatase', unit: 'U/L', ref: '44–147', type: 'number' },
+        { name: 'Total Protein', unit: 'g/dL', ref: '6.0–8.3', type: 'number' },
+        { name: 'Albumin', unit: 'g/dL', ref: '3.5–5.5', type: 'number' }
+      ],
+      'RFT': [
+        { name: 'Urea', unit: 'mg/dL', ref: '15–40', type: 'number' },
+        { name: 'Creatinine', unit: 'mg/dL', ref: '0.6–1.2', type: 'number' },
+        { name: 'Sodium', unit: 'mmol/L', ref: '135–145', type: 'number' },
+        { name: 'Potassium', unit: 'mmol/L', ref: '3.5–5.1', type: 'number' }
+      ],
+      'ELEC': [
+        { name: 'Sodium', unit: 'mmol/L', ref: '135–145', type: 'number' },
+        { name: 'Potassium', unit: 'mmol/L', ref: '3.5–5.1', type: 'number' },
+        { name: 'Chloride', unit: 'mmol/L', ref: '98–107', type: 'number' },
+        { name: 'Bicarbonate', unit: 'mmol/L', ref: '22–28', type: 'number' }
+      ],
+      'CA': [{ name: 'Serum Calcium', unit: 'mg/dL', ref: '8.5–10.5', type: 'number' }],
+      'UA': [{ name: 'Uric Acid', unit: 'mg/dL', ref: '3.4–7.0', type: 'number' }],
+      'CRP': [{ name: 'C-Reactive Protein', unit: 'mg/L', ref: '< 3.0', type: 'number' }],
+      'FBS': [{ name: 'Glucose – Fasting', unit: 'mg/dL', ref: '70–100', type: 'number' }],
+      'RBS': [{ name: 'Glucose – Random', unit: 'mg/dL', ref: '< 140', type: 'number' }],
+      'HBA1C': [{ name: 'HbA1c', unit: '%', ref: '< 5.7', type: 'number' }],
+      'OGTT': [
+        { name: 'Glucose – Fasting', unit: 'mg/dL', ref: '70–100', type: 'number' },
+        { name: 'Glucose – 2 Hour', unit: 'mg/dL', ref: '< 140', type: 'number' }
+      ],
+      'LIPID': [
+        { name: 'Total Cholesterol', unit: 'mg/dL', ref: '< 200', type: 'number' },
+        { name: 'Triglycerides', unit: 'mg/dL', ref: '< 150', type: 'number' },
+        { name: 'HDL', unit: 'mg/dL', ref: '> 40', type: 'number' },
+        { name: 'LDL', unit: 'mg/dL', ref: '< 100', type: 'number' }
+      ],
+      'CHOL': [{ name: 'Total Cholesterol', unit: 'mg/dL', ref: '< 200', type: 'number' }],
+      'TG': [{ name: 'Triglycerides', unit: 'mg/dL', ref: '< 150', type: 'number' }],
+      'HBSAG': [{ name: 'Result', unit: '', ref: 'Non-Reactive', type: 'text' }],
+      'AHCV': [{ name: 'Result', unit: '', ref: 'Non-Reactive', type: 'text' }],
+      'HIV': [{ name: 'Result', unit: '', ref: 'Non-Reactive', type: 'text' }],
+      'NS1': [{ name: 'Dengue NS1', unit: '', ref: 'Negative', type: 'text' }],
+      'WIDAL': [{ name: 'Result', unit: '', ref: 'Negative', type: 'text' }],
+      'TYPHI': [
+        { name: 'IgG', unit: '', ref: 'Negative', type: 'text' },
+        { name: 'IgM', unit: '', ref: 'Negative', type: 'text' }
+      ],
+      'TSH': [{ name: 'TSH', unit: 'µIU/mL', ref: '0.27–4.2', type: 'number' }],
+      'TFT': [
+        { name: 'T3', unit: 'ng/mL', ref: '0.8–2.0', type: 'number' },
+        { name: 'T4', unit: 'µg/dL', ref: '5.1–14.1', type: 'number' },
+        { name: 'TSH', unit: 'µIU/mL', ref: '0.27–4.2', type: 'number' }
+      ],
+      'TESTO': [{ name: 'Testosterone – Total', unit: 'ng/dL', ref: '264–916', type: 'number' }],
+      'VITD': [{ name: 'Vitamin D (25-OH)', unit: 'ng/mL', ref: '30–100', type: 'number' }],
+      'B12': [{ name: 'Vitamin B12', unit: 'pg/mL', ref: '200–900', type: 'number' }],
+      'FERR': [{ name: 'Ferritin', unit: 'ng/mL', ref: '30–400', type: 'number' }],
+      'URE': [
+        { name: 'Colour', unit: '', ref: 'Pale yellow', type: 'text' },
+        { name: 'Appearance', unit: '', ref: 'Clear', type: 'text' },
+        { name: 'pH', unit: '', ref: '4.6–8.0', type: 'number' },
+        { name: 'Specific Gravity', unit: '', ref: '1.005–1.030', type: 'number' },
+        { name: 'Protein', unit: '', ref: 'Negative', type: 'text' },
+        { name: 'Glucose', unit: '', ref: 'Negative', type: 'text' },
+        { name: 'Pus Cells', unit: '/hpf', ref: 'Nil', type: 'text' },
+        { name: 'RBCs', unit: '/hpf', ref: 'Nil', type: 'text' },
+        { name: 'Epithelial Cells', unit: '/hpf', ref: 'Few', type: 'text' }
+      ],
+      'UCUL': [{ name: 'Culture Result', unit: '', ref: 'No growth', type: 'text' }],
+      'UPT': [{ name: 'Result', unit: '', ref: '', type: 'text' }]
+    };
     var T = [
-      ['CBC', 'Complete Blood Count', 'Hematology', 800, 'Blood', 'Same day', CBC_P],
+      ['CBC', 'Complete Blood Count', 'Hematology', 800, 'Blood', 'Same day', []],
       ['ESR', 'Erythrocyte Sedimentation Rate', 'Hematology', 300, 'Blood', 'Same day', []],
       ['HB', 'Hemoglobin', 'Hematology', 250, 'Blood', 'Same day', []],
       ['PLT', 'Platelet Count', 'Hematology', 400, 'Blood', 'Same day', []],
@@ -141,9 +288,9 @@
       ['CRP', 'C-Reactive Protein', 'Biochemistry', 800, 'Serum', 'Same day', []],
       ['FBS', 'Fasting Blood Glucose', 'Diabetes', 300, 'Blood', 'Same day', []],
       ['RBS', 'Random Blood Glucose', 'Diabetes', 300, 'Blood', 'Same day', []],
-      ['HBA1C', 'HbA1c (Glycated Hemoglobin)', 'Diabetes', 1100, 'Blood', 'Same day', A1C_P],
+      ['HBA1C', 'HbA1c (Glycated Hemoglobin)', 'Diabetes', 1100, 'Blood', 'Same day', []],
       ['OGTT', 'Oral Glucose Tolerance Test', 'Diabetes', 900, 'Blood', 'Next day', []],
-      ['LIPID', 'Lipid Profile', 'Lipid', 1300, 'Serum', 'Same day', LIP_P],
+      ['LIPID', 'Lipid Profile', 'Lipid', 1300, 'Serum', 'Same day', []],
       ['CHOL', 'Total Cholesterol', 'Lipid', 450, 'Serum', 'Same day', []],
       ['TG', 'Triglycerides', 'Lipid', 450, 'Serum', 'Same day', []],
       ['HBSAG', 'HBsAg (Hepatitis B)', 'Serology', 700, 'Serum', 'Same day', []],
@@ -163,10 +310,13 @@
       ['UPT', 'Urine Pregnancy Test', 'Urine', 500, 'Urine', 'Same day', []]
     ];
     T.forEach(function (t) {
-      put('tests', { code: t[0], name: t[1], category: t[2], price: t[3], sampleType: t[4], tat: t[5], active: true, params: t[6] });
+      put('tests', { code: t[0], name: t[1], category: t[2], price: t[3], sampleType: t[4], tat: t[5], active: true, params: TP[t[0]] || t[6] });
     });
     var testByCode = {};
     store.tests.forEach(function (t) { testByCode[t.code] = t; });
+
+    /* ---- demo data: only for the default lab (fresh tenants start clean) ---- */
+    if (opts.demoData !== false) {
 
     /* patients */
     var P = [
@@ -259,26 +409,63 @@
       put('expenses', { title: e[1], category: e[2], amount: e[3], date: isoDaysAgo(e[0], 12, 0), note: 'Seed expense', createdBy: e[4] });
     });
 
+    } /* end demo data */
+
     return store;
   }
 
   /* ---------------- public API ---------------- */
-  var store = load();
-  if (!store) { store = seedStore(); save(store); }
-  /* one-time rebrand: existing installs seeded with the old default name */
-  if (store && store.settings && (store.settings.labName === 'City Blood Lab' || store.settings.labName === 'Optxic LAB')) {
-    store.settings.labName = 'Optix LAB MedSync'; save(store);
+  var store = null;
+
+  /* one-time migrations applied per store */
+  function applyMigrations() {
+    /* rebrand: existing installs seeded with the old default name */
+    if (store && store.settings && (store.settings.labName === 'City Blood Lab' || store.settings.labName === 'Optxic LAB')) {
+      store.settings.labName = 'Optix LAB MedSync'; save(store);
+    }
+    /* existing installs lack the WhatsApp config object */
+    if (store && store.settings && !store.settings.whatsapp) {
+      store.settings.whatsapp = { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' };
+      save(store);
+    }
   }
-  /* one-time: existing installs lack the WhatsApp config object */
-  if (store && store.settings && !store.settings.whatsapp) {
-    store.settings.whatsapp = { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' };
-    save(store);
+
+  /* Switch to a lab's isolated store. Falls back to the first registered lab.
+     Returns the lab record (copy) or null when no labs exist. */
+  function useLab(labId) {
+    var reg = ensureRegistry();
+    var lab = labById(labId) || (reg.labs.length ? reg.labs[0] : null);
+    if (!lab) return null;
+    currentLabId = lab.id;
+    KEY = keyFor(lab.id);
+    store = load();
+    if (!store) {
+      store = seedStore({ labName: lab.name, demoData: lab.id === 'lab1' });
+      save(store);
+    }
+    applyMigrations();
+    try { localStorage.setItem(LAST_KEY, lab.id); } catch (e) {}
+    return copy(lab);
   }
+
+  /* boot: registry + migration, then load the last-used lab as the preview
+     store (the login page reads branding from it before anyone logs in) */
+  ensureRegistry();
+  var _lastLab = null;
+  try { _lastLab = localStorage.getItem(LAST_KEY); } catch (e) {}
+  useLab(_lastLab || 'lab1');
 
   function persist() { if (!remote) save(store); }
 
   window.DB = {
-    KEY: KEY,
+    get KEY() { return KEY; },
+
+    /* ---- multi-tenant ---- */
+    useLab: useLab,
+    currentLab: function () { var l = labById(currentLabId); return l ? copy(l) : null; },
+    currentLabId: function () { return currentLabId; },
+    labs: function () { var r = loadRegistry(); return r ? copy(r.labs) : []; },
+    labById: function (id) { var l = labById(id); return l ? copy(l) : null; },
 
     /* Load server data when running under the LabPOS server/Electron app.
        Must be awaited before first render (app.js does this). Falls back to
@@ -364,7 +551,8 @@
           return r.json();
         }).then(function (dump) { store = dump; return true; });
       }
-      store = seedStore();
+      var _rlab = labById(currentLabId);
+      store = seedStore({ labName: _rlab ? _rlab.name : undefined, demoData: currentLabId === 'lab1' });
       persist();
       return Promise.resolve(true);
     },

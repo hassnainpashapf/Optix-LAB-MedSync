@@ -41,6 +41,77 @@
     var s = session();
     var role = s.role || 'admin';
     var isTech = role === 'technician';
+
+    /* ---------- loading skeletons (CSS-only shimmer, shown while content computes) ---------- */
+    var SKEL_CSS =
+      '<style>' +
+      '.db-skel .sk{position:relative;overflow:hidden;background:#e9eef6;border-radius:8px}' +
+      '.db-skel .sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);' +
+      'background:linear-gradient(90deg,transparent,rgba(255,255,255,.8),transparent);' +
+      'animation:dbShimmer 1.15s infinite}' +
+      '@keyframes dbShimmer{to{transform:translateX(100%)}}' +
+      '@media (prefers-reduced-motion:reduce){.db-skel .sk::after{animation:none;transform:none}}' +
+      '.db-skel .stat{min-height:118px;box-shadow:none}' +
+      '.db-skel .stat-ico{border-radius:50%;width:32px;height:32px}' +
+      '.db-skel .sk-bar{flex:1;border-radius:8px 8px 4px 4px}' +
+      '</style>';
+
+    function skelStat() {
+      return '<div class="stat"><div class="stat-ico sk"></div>' +
+        '<div class="lb sk" style="height:10px;width:62%"></div>' +
+        '<div class="vl sk" style="height:20px;width:48%"></div>' +
+        '<div class="dl sk" style="height:11px;width:84%"></div></div>';
+    }
+    function skelBars() {
+      var hs = [42, 66, 54, 78, 60, 88, 72], out = '';
+      for (var i = 0; i < hs.length; i++) out += '<div class="sk sk-bar" style="height:' + hs[i] + 'px"></div>';
+      return out;
+    }
+    function skelRows(n) {
+      var out = '';
+      for (var i = 0; i < n; i++) out += '<div class="sk" style="height:14px;margin:12px 0;width:' + (92 - i * 6) + '%"></div>';
+      return out;
+    }
+    function skeletonHtml() {
+      return '<div class="db-page db-skel" data-db-skel="1">' + SKEL_CSS +
+        '<div class="stat-grid">' + skelStat() + skelStat() + skelStat() + skelStat() + '</div>' +
+        '<div class="card"><div class="card-h"><div class="sk" style="height:15px;width:180px"></div></div>' +
+        '<div class="card-b"><div style="display:flex;align-items:flex-end;gap:10px;height:100px">' + skelBars() + '</div></div></div>' +
+        '<div class="card"><div class="card-h"><div class="sk" style="height:15px;width:150px"></div></div>' +
+        '<div class="card-b">' + skelRows(4) + '</div></div>' +
+        '</div>';
+    }
+
+    /* count-up stat values — runs after the real content is painted */
+    function scheduleCountUp() {
+      function fmt(raw, isMoney) {
+        raw = Math.round(raw);
+        return isMoney ? 'Rs ' + raw.toLocaleString('en-US') : String(raw);
+      }
+      function run() {
+        var els = document.querySelectorAll('#view .stat .vl[data-count]');
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        for (var i = 0; i < els.length; i++) (function (el) {
+          var target = parseFloat(el.getAttribute('data-count')) || 0;
+          var isMoney = el.getAttribute('data-money') === '1';
+          if (reduce || target <= 0) { el.textContent = fmt(target, isMoney); return; }
+          var t0 = null, dur = 900;
+          function step(ts) {
+            if (!t0) t0 = ts;
+            var p = Math.min(1, (ts - t0) / dur);
+            var e = 1 - Math.pow(1 - p, 3);
+            el.textContent = fmt(target * e, isMoney);
+            if (p < 1) requestAnimationFrame(step);
+          }
+          requestAnimationFrame(step);
+        })(els[i]);
+      }
+      if (window.requestAnimationFrame) requestAnimationFrame(function () { requestAnimationFrame(run); });
+      else setTimeout(run, 40);
+    }
+
+    /* ---------- full dashboard render (deferred until the skeleton has painted) ---------- */
+    function buildDashboard() {
     var today = App.today();
     var invoices = DB.all('invoices') || [];
     var payments = DB.all('payments') || [];
@@ -311,69 +382,7 @@
     '</style>' +
     '<div class="dbw-grid">' + goalCard + donutCard + ageCard + plCard + '</div>';
 
-    // ---- ADVANCED graphs: 6-month trend, category bars, expense breakdown, doctor leaderboard ----
-    var trendMonths = [];
-    for (var tm = 5; tm >= 0; tm--) {
-      var td = new Date(); td.setMonth(td.getMonth() - tm);
-      var tk = td.getFullYear() + '-' + String(td.getMonth() + 1).padStart(2, '0');
-      trendMonths.push({
-        label: td.toLocaleDateString('en-US', { month: 'short' }),
-        val: isTech
-          ? invoices.filter(function (i) { return dayKey(i.createdAt).slice(0, 7) === tk; }).length
-          : payments.filter(function (p) { return dayKey(p.date).slice(0, 7) === tk; })
-              .reduce(function (a, p) { return a + (+p.amount || 0); }, 0)
-      });
-    }
-    function trendSvg(data, money) {
-      var W = 640, H = 150, pl = 42, pr = 10, pt = 10, pb = 26;
-      var iw = W - pl - pr, ih = H - pt - pb;
-      var rawMax = Math.max.apply(null, data.map(function (d) { return d.val; }).concat([0]));
-      var top = rawMax;
-      if (rawMax > 0) {
-        var step = rawMax / 4, mag = Math.pow(10, Math.floor(Math.log(step) / Math.LN10)), norm = step / mag;
-        var nice = norm <= 1 ? 1 : (norm <= 2 ? 2 : (norm <= 5 ? 5 : 10));
-        top = nice * mag * 4;
-      }
-      var scale = top > 0 ? top * 1.04 : 1;
-      function X(i) { return pl + (data.length < 2 ? iw / 2 : i * iw / (data.length - 1)); }
-      function Y(v) { return pt + ih - (v / scale) * ih; }
-      var pts = data.map(function (d, i) { return [X(i), Y(d.val)]; });
-      var line = 'M' + pts[0][0].toFixed(1) + ',' + pts[0][1].toFixed(1);
-      for (var i = 0; i < pts.length - 1; i++) {
-        var p0 = pts[Math.max(0, i - 1)], p1 = pts[i], p2 = pts[i + 1], p3 = pts[Math.min(pts.length - 1, i + 2)];
-        line += 'C' + (p1[0] + (p2[0] - p0[0]) / 6).toFixed(1) + ',' + (p1[1] + (p2[1] - p0[1]) / 6).toFixed(1) + ' ' +
-                (p2[0] - (p3[0] - p1[0]) / 6).toFixed(1) + ',' + (p2[1] - (p3[1] - p1[1]) / 6).toFixed(1) + ' ' +
-                p2[0].toFixed(1) + ',' + p2[1].toFixed(1);
-      }
-      var area = line + 'L' + pts[pts.length - 1][0].toFixed(1) + ',' + (pt + ih).toFixed(1) +
-                 'L' + pts[0][0].toFixed(1) + ',' + (pt + ih).toFixed(1) + 'Z';
-      var grid = '';
-      for (var g = 0; g <= 4; g++) {
-        var gv = top * g / 4, gy = Y(gv);
-        grid += '<line x1="' + pl + '" y1="' + gy.toFixed(1) + '" x2="' + (W - pr) + '" y2="' + gy.toFixed(1) +
-                '" stroke="#e8eef6" stroke-width="1"/>' +
-                '<text x="' + (pl - 9) + '" y="' + (gy + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="#8a94a6">' +
-                App.esc(money ? compact(gv) : String(Math.round(gv))) + '</text>';
-      }
-      var xl = data.map(function (d, i) {
-        return '<text x="' + X(i).toFixed(1) + '" y="' + (H - 12) + '" text-anchor="middle" font-size="10.5" font-weight="700" fill="#5b6b80">' +
-               App.esc(d.label) + '</text>';
-      }).join('');
-      var dots = data.map(function (d, i) {
-        return '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(d.val).toFixed(1) + '" r="3.5" fill="#ffffff" stroke="#131845" stroke-width="2">' +
-               '<title>' + App.esc(d.label + ': ' + (money ? App.money(d.val) : d.val + ' invoices')) + '</title></circle>';
-      }).join('');
-      return '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="Trend chart">' +
-        '<defs><linearGradient id="dbx-area" x1="0" y1="0" x2="0" y2="1">' +
-        '<stop offset="0" stop-color="#5392ba" stop-opacity=".32"/><stop offset="1" stop-color="#5392ba" stop-opacity=".03"/></linearGradient></defs>' +
-        grid + '<path d="' + area + '" fill="url(#dbx-area)"/>' +
-        '<path d="' + line + '" fill="none" stroke="#131845" stroke-width="2.5" stroke-linecap="round"/>' +
-        dots + xl + '</svg>';
-    }
-    var trendTotal = trendMonths.reduce(function (a, m) { return a + m.val; }, 0);
-    var trendCard = '<div class="card dbx-span"><div class="card-h"><h3>' + (isTech ? 'Invoices — Last 6 Months' : 'Revenue Trend — Last 6 Months') + '</h3>' +
-      '<span class="dbx-total">' + (isTech ? trendTotal + ' invoices' : App.money(trendTotal)) + ' total</span></div>' +
-      '<div class="card-b">' + trendSvg(trendMonths, !isTech) + '</div></div>';
+    // ---- ADVANCED graphs: category bars, expense breakdown, doctor leaderboard ----
 
     // tests by category (all time)
     var catAgg = {};
@@ -474,7 +483,7 @@
     '.dbx-lval{text-align:right;white-space:nowrap;font-size:12px;min-width:84px}' +
     '@media(max-width:560px){.dbx-hrow{grid-template-columns:104px 1fr auto}.dbx-lbar{flex-basis:100%;order:6}.dbx-lbrow{flex-wrap:wrap}}' +
     '</style>' +
-    '<div class="dbx-grid">' + trendCard + catCard + expCard + lbCard + '</div>';
+    '<div class="dbx-grid">' + catCard + expCard + lbCard + '</div>';
 
     // ---- stats per role ----
     var stats;
@@ -491,36 +500,6 @@
         statCard(ICONS.alert, 'amber', 'Pending Dues', App.money(duesTotal), dueInvs.length + ' invoices unpaid', duesTotal, true) +
         statCard(ICONS.cal, 'green', monthName + ' Collection', App.money(monthCol), 'this month', monthCol, true);
     }
-
-    /* count-up stat values — scheduled here, runs after view.innerHTML is set by the router */
-    (function () {
-      function fmt(raw, isMoney) {
-        raw = Math.round(raw);
-        return isMoney ? 'Rs ' + raw.toLocaleString('en-US') : String(raw);
-      }
-      function run() {
-        var els = document.querySelectorAll('#view .stat .vl[data-count]');
-        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        for (var i = 0; i < els.length; i++) (function (el) {
-          var target = parseFloat(el.getAttribute('data-count')) || 0;
-          var isMoney = el.getAttribute('data-money') === '1';
-          if (reduce || target <= 0) { el.textContent = fmt(target, isMoney); return; }
-          var t0 = null, dur = 900;
-          function step(ts) {
-            if (!t0) t0 = ts;
-            var p = Math.min(1, (ts - t0) / dur);
-            var e = 1 - Math.pow(1 - p, 3);
-            el.textContent = fmt(target * e, isMoney);
-            if (p < 1) requestAnimationFrame(step);
-          }
-          requestAnimationFrame(step);
-        })(els[i]);
-      }
-      if (window.requestAnimationFrame) requestAnimationFrame(function () { requestAnimationFrame(run); });
-      else setTimeout(run, 40);
-    })();
-
-
 
     return '<div class="db-page">' +
     '<style>' +
@@ -637,5 +616,16 @@
     '<span class="db-week-pill">Total ' + (isTech ? week.reduce(function (a, w) { return a + w.val; }, 0) + ' tests' : App.money(week.reduce(function (a, w) { return a + w.val; }, 0))) + ' this week</span></div>' +
     '<div class="card-b"><div class="db-cols">' + bars + '</div></div></div>' +
     '</div>';
+    } /* end buildDashboard */
+
+    /* paint skeleton now; render full content right after it paints */
+    setTimeout(function () {
+      var v = document.getElementById('view');
+      if (!v || !v.querySelector('[data-db-skel]')) return; /* user navigated away */
+      v.innerHTML = buildDashboard();
+      scheduleCountUp();
+    }, 120);
+
+    return skeletonHtml();
   });
 })();

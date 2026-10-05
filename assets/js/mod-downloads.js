@@ -30,8 +30,7 @@
     return '<style>' +
     '.dl-wrap{max-width:960px;margin:0 auto}' +
     '.dl-head{margin-bottom:20px}' +
-    '.dl-head h2{font-size:24px;letter-spacing:-.02em;color:#131845;margin:0 0 6px}' +
-    '.dl-head p{color:var(--muted);margin:0;font-size:14px}' +
+    '.dl-head h2{font-size:24px;letter-spacing:-.02em;color:#131845;margin:0}' +
     '.dl-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}' +
     '@media(max-width:720px){.dl-grid{grid-template-columns:1fr}}' +
     '.dl-card{overflow:hidden}' +
@@ -50,7 +49,7 @@
     '</style>' +
 
     '<div class="dl-wrap">' +
-    '<div class="dl-head"><h2>Downloads</h2><p>Get the Optix LAB MedSync desktop app for your computer. Your data stays safe — it is stored locally on your device.</p></div>' +
+    '<div class="dl-head"><h2>Downloads</h2></div>' +
 
     '<div class="dl-grid">' +
     dlCard({

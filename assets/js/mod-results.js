@@ -35,6 +35,8 @@
 
   var WA_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px;vertical-align:-2px"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.25-1.38a9.9 9.9 0 0 0 4.79 1.22c5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm0 18.13a8.2 8.2 0 0 1-4.19-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.36c0-4.54 3.7-8.24 8.24-8.24 4.54 0 8.24 3.7 8.24 8.24 0 4.54-3.7 8.22-8.24 8.22zm4.52-6.16c-.25-.12-1.47-.72-1.69-.81-.23-.08-.4-.12-.56.13-.17.25-.64.81-.78.97-.14.17-.29.19-.54.06-.25-.12-1.05-.38-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31-.22.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.29z"/></svg>';
 
+  var PRINT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
+
   function waCfg() {
     try {
       var s = DB.get('settings', 'main') || {};
@@ -107,19 +109,23 @@
     var cfg = waCfg();
     if (!waReady(cfg)) { waTextFallback(invoiceId); return; } // API not configured → wa.me text
 
-    var pdf = buildReportPdf(invoiceId);
-    if (!pdf) return; // error already toasted
+    App.toast('Preparing PDF…', 'info');
+    App.ensureJsPDF().then(function (ok) {
+      if (!ok) { App.toast('PDF engine failed to load — check connection', 'err'); return; }
+      var pdf = buildReportPdf(invoiceId);
+      if (!pdf) return; // error already toasted
 
-    var fname = 'LabReport-' + String(inv.no || inv.id).replace(/[^A-Za-z0-9_-]/g, '') + '.pdf';
-    var caption = waSummaryText(inv, pat);
-    App.toast('Sending report on WhatsApp…', 'info');
-    waSendDocument(cfg, ph, fname, pdf.dataUri, caption, function (err) {
-      if (err) {
-        App.toast('WhatsApp API failed — opening chat instead', 'err');
-        waTextFallback(invoiceId);
-      } else {
-        App.toast('Report sent on WhatsApp');
-      }
+      var fname = 'LabReport-' + String(inv.no || inv.id).replace(/[^A-Za-z0-9_-]/g, '') + '.pdf';
+      var caption = waSummaryText(inv, pat);
+      App.toast('Sending report on WhatsApp…', 'info');
+      waSendDocument(cfg, ph, fname, pdf.dataUri, caption, function (err) {
+        if (err) {
+          App.toast('WhatsApp API failed — opening chat instead', 'err');
+          waTextFallback(invoiceId);
+        } else {
+          App.toast('Report sent on WhatsApp');
+        }
+      });
     });
   }
   function clearResult(resId) {
@@ -199,9 +205,10 @@
     if (params.length) {
       var rowsHtml = params.map(function (p, i) {
         var v = existing[p.name] != null ? String(existing[p.name]) : '';
+        var isNum = p.type === 'number';
         return '<tr>' +
           '<td><strong>' + App.esc(p.name) + '</strong></td>' +
-          '<td><input class="input" data-pi="' + i + '" value="' + App.esc(v) + '" placeholder="Enter value"></td>' +
+          '<td><input class="input" data-pi="' + i + '"' + (isNum ? ' type="number" step="any" inputmode="decimal"' : '') + ' value="' + App.esc(v) + '" placeholder="Enter value"></td>' +
           '<td class="muted">' + App.esc(p.unit || '') + '</td>' +
           '<td class="muted">' + App.esc(p.ref || '') + '</td></tr>';
       }).join('');
@@ -367,7 +374,7 @@
       '<div class="actions" style="margin-top:16px">' +
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
         '<button class="btn btn-ghost" id="rvWa">' + WA_ICON + ' Share on WhatsApp</button>' +
-        '<button class="btn btn-primary" id="rvPrint">Print Report</button>' +
+        '<button class="btn btn-primary" id="rvPrint">' + PRINT_ICON + ' Print Report</button>' +
       '</div>',
       { wide: true, onOpen: function (ov, close) {
           document.getElementById('rvClose').addEventListener('click', close);
@@ -638,7 +645,7 @@
             '<div class="actions"><span class="muted">' + App.d(inv.createdAt) + '</span>' +
             '<button class="btn btn-ghost btn-sm" data-viewrep="' + App.esc(inv.id) + '">View</button>' +
             '<button class="btn btn-ghost btn-sm" data-wa="' + App.esc(inv.id) + '">' + WA_ICON + ' Share on WhatsApp</button>' +
-            '<button class="btn btn-primary btn-sm" data-print="' + App.esc(inv.id) + '">Print Report</button></div></div>' +
+            '<button class="btn btn-primary btn-sm" data-print="' + App.esc(inv.id) + '">' + PRINT_ICON + ' Print Report</button></div></div>' +
             '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th>Status</th><th>Reported</th><th></th></tr></thead>' +
             '<tbody>' + rowsHtml + '</tbody></table></div></div>';
         }).join('');
@@ -647,7 +654,7 @@
 
     var v = document.getElementById('view');
     v.innerHTML =
-      '<div class="page-h"><h1>Lab Results</h1><p class="muted">Enter test results and print laboratory reports.</p></div>' +
+      '<div class="page-h"><h1>Lab Results</h1></div>' +
       statsHtml + tabsHtml + bodyHtml;
 
     // wire tabs
