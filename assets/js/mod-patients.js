@@ -34,6 +34,52 @@
       Math.round(s * 0.38) + 'px">' + initials(name) + '</span>';
   }
 
+  /* ---------- dashboard-style stat cards ---------- */
+
+  var STAT_CSS =
+    '<style>' +
+    '.pgstat .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
+    '@media(max-width:1100px){.pgstat .stat-grid{grid-template-columns:repeat(2,1fr)}}' +
+    '@media(max-width:560px){.pgstat .stat-grid{grid-template-columns:1fr;gap:12px}}' +
+    '@keyframes pgRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
+    '.pgstat .stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:pgRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
+    '.pgstat .stat:nth-child(2){animation-delay:.07s}' +
+    '.pgstat .stat:nth-child(3){animation-delay:.14s}' +
+    '.pgstat .stat:nth-child(4){animation-delay:.21s}' +
+    '.pgstat .stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
+    '.pgstat .stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
+    '.pgstat .stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
+    '.pgstat .stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
+    '.pgstat .stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
+    '.pgstat .stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
+    '.pgstat .stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
+    '.pgstat .stat-ico svg{width:22px;height:22px}' +
+    '.pgstat .stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
+    '.pgstat .stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
+    '.pgstat .stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}' +
+    '@media(max-width:640px){.pgstat .stat .vl{font-size:26px}}' +
+    '@media (prefers-reduced-motion:reduce){.pgstat .stat{animation:none}.pgstat .stat:hover{transform:none}}' +
+    '</style>';
+
+  function svgIcon(inner) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+  }
+  var STAT_ICONS = {
+    users: svgIcon('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>'),
+    userPlus: svgIcon('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/>'),
+    alert: svgIcon('<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
+    receipt: svgIcon('<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><path d="M8 7h8M8 11h8M8 15h5"/>')
+  };
+
+  function statCard(icon, tint, label, value, sub) {
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
+      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
+      '<div class="lb">' + App.esc(label) + '</div>' +
+      '<div class="vl">' + value + '</div>' +
+      '<div class="dl">' + sub + '</div>' +
+      '</div>';
+  }
+
   /* ---------- view painter (writes straight into #view; no dependency beyond App.route) ---------- */
   function paint(html, onMount) {
     var v = document.getElementById('view');
@@ -178,15 +224,23 @@
         (p.id || '').toLowerCase().indexOf(q) > -1;
     });
     var withDue = all.filter(function (p) { return patientStats(p).due > 0; }).length;
-    var totalDue = all.reduce(function (s, p) { return s + patientStats(p).due; }, 0);
     var edit = canEdit();
 
-    var html = '' +
-      '<div class="stat-grid stat-grid-3">' +
-      '<div class="stat"><div class="stat-ic teal">👥</div><div><div class="stat-v">' + all.length + '</div><div class="stat-l">Total Patients</div></div></div>' +
-      '<div class="stat"><div class="stat-ic amber">⏳</div><div><div class="stat-v">' + withDue + '</div><div class="stat-l">Patients with Due</div></div></div>' +
-      '<div class="stat"><div class="stat-ic red">💰</div><div><div class="stat-v">' + App.money(totalDue) + '</div><div class="stat-l">Total Outstanding</div></div></div>' +
-      '</div>' +
+    // ---- dashboard-style stat cards (real data) ----
+    var mKey = App.today().slice(0, 7);
+    function mOf(d) { return String(d || '').slice(0, 7); }
+    var newThisMonth = all.filter(function (p) { return mOf(p.createdAt) === mKey; }).length;
+    var walkinThisMonth = DB.all('invoices').filter(function (i) {
+      return mOf(i.createdAt) === mKey && (!i.patientId || !DB.get('patients', i.patientId));
+    }).length;
+
+    var html = '' + STAT_CSS +
+      '<div class="pgstat"><div class="stat-grid">' +
+      statCard(STAT_ICONS.users, 'blue', 'Total Patients', all.length, 'registered') +
+      statCard(STAT_ICONS.userPlus, 'green', 'New This Month', newThisMonth, 'joined this month') +
+      statCard(STAT_ICONS.alert, 'amber', 'Patients with Dues', withDue, 'have unpaid invoices') +
+      statCard(STAT_ICONS.receipt, 'brand', 'Walk-in Bills This Month', walkinThisMonth, 'unregistered patients') +
+      '</div></div>' +
       '<div class="card"><div class="card-b">' +
       '<div class="toolbar"><input class="input search" id="pt-search" placeholder="Search by name, phone or patient ID…" value="' + App.esc(listQuery) + '">' +
       '<span class="muted" id="pt-count">' + rows.length + ' shown</span>' +

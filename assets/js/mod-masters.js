@@ -54,6 +54,70 @@ function tStat(icon, tint, label, value, sub) {
     '</div>';
 }
 
+/* doctors-page premium stat cards — markup + CSS copied from the dashboard
+   statCard() pattern (stat-grid > stat > stat-ico + lb/vl/dl), inline style so
+   the premium look applies without touching app.css */
+function _svgD(paths) {
+  return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg>';
+}
+var DICONS = {
+  doctor: _svgD('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M18 6v6M21 9h-6"/>'),
+  refer: _svgD('<path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/>'),
+  cash: _svgD('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'),
+  trophy: _svgD('<circle cx="12" cy="8" r="6"/><path d="M15.5 13 17 22l-5-3-5 3 1.5-9"/>')
+};
+function dStat(icon, tint, label, value, sub, raw, isMoney, vlStyle) {
+  var countAttrs = (typeof raw === 'number' && isFinite(raw))
+    ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"'
+    : '';
+  return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
+    '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
+    '<div class="lb">' + App.esc(label) + '</div>' +
+    '<div class="vl"' + countAttrs + (vlStyle ? ' style="' + vlStyle + '"' : '') + '>' + value + '</div>' +
+    '<div class="dl">' + sub + '</div>' +
+    '</div>';
+}
+var DOC_STAT_CSS =
+  '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
+  '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
+  '@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:12px}}' +
+  '@keyframes dbRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
+  '.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:dbRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
+  '.stat:nth-child(2){animation-delay:.07s}.stat:nth-child(3){animation-delay:.14s}.stat:nth-child(4){animation-delay:.21s}' +
+  '.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
+  '.stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
+  '.stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
+  '.stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
+  '.stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
+  '.stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
+  '.stat[data-tint="red"]{--sc-line:#f2c6c6;--sc-soft:var(--red-soft)}' +
+  '.stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
+  '.stat-ico svg{width:22px;height:22px}' +
+  '.stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
+  '.stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
+  '.stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}';
+/* dashboard-style count-up for .vl[data-count] values (final value is already
+   in the markup, so a failure here never leaves a blank card) */
+function dCountUp() {
+  function fmt(raw, isMoney) { return isMoney ? App.money(raw) : String(Math.round(raw)); }
+  var els = document.querySelectorAll('#view .stat .vl[data-count]');
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  for (var i = 0; i < els.length; i++) (function (el) {
+    var target = parseFloat(el.getAttribute('data-count')) || 0;
+    var isMoney = el.getAttribute('data-money') === '1';
+    if (reduce || target <= 0) { el.textContent = fmt(target, isMoney); return; }
+    var t0 = null, dur = 800;
+    function step(ts) {
+      if (!t0) t0 = ts;
+      var p = Math.min(1, (ts - t0) / dur);
+      var e = 1 - Math.pow(1 - p, 3);
+      el.textContent = fmt(target * e, isMoney);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  })(els[i]);
+}
+
 /* how many invoices reference this test / doctor */
 function testInvoiceCount(id) {
   return DB.all('invoices').filter(function (inv) {
@@ -342,7 +406,40 @@ function renderDoctors() {
   if (r !== 'admin' && r !== 'reception') { deny(); return; }
   var canEdit = true; // admin + reception both manage doctors
 
+  /* ---- month stats for the premium stat row (real data) ---- */
+  var mk = currentMonthKey();
+  var docs = DB.all('doctors');
+  var invsAll = DB.all('invoices');
+  var refM = 0, commDue = 0, topId = null, topN = 0;
+  var byDoc = {};
+  invsAll.forEach(function (i) {
+    if (monthKey(i.createdAt) !== mk) return;
+    refM++;
+    if (i.doctorId) byDoc[i.doctorId] = (byDoc[i.doctorId] || 0) + 1;
+  });
+  docs.forEach(function (d) {
+    var rev = invsAll.filter(function (i) { return i.doctorId === d.id && monthKey(i.createdAt) === mk; })
+      .reduce(function (s, i) { return s + (+i.total || 0); }, 0);
+    var comm = rev * (+d.commissionPct || 0) / 100;
+    var paidM = (d.commissionPaid || []).filter(function (x) { return monthKey(x.date) === mk; })
+      .reduce(function (s, x) { return s + (+x.amount || 0); }, 0);
+    commDue += Math.max(0, comm - paidM);
+    var n = byDoc[d.id] || 0;
+    if (n > topN) { topN = n; topId = d.id; }
+  });
+  var topDoc = topId ? DB.get('doctors', topId) : null;
+  var mLbl = new Date().toLocaleDateString('en-US', { month: 'long' });
+  var docStats =
+    dStat(DICONS.doctor, 'brand', 'Total Doctors', docs.length, 'on the referral panel', docs.length, false) +
+    dStat(DICONS.refer, 'blue', 'Referrals (This Month)', refM, 'bills referred in ' + mLbl, refM, false) +
+    dStat(DICONS.cash, 'amber', 'Commission Due (Month)', App.money(commDue), 'net of paid commission', Math.round(commDue), true) +
+    dStat(DICONS.trophy, 'green', 'Top Referrer', topDoc ? App.esc(topDoc.name) : '—',
+      topN + ' referral' + (topN === 1 ? '' : 's') + ' this month', null, false,
+      'font-size:20px;white-space:normal;line-height:1.25');
+
   view().innerHTML =
+    '<style>' + DOC_STAT_CSS + '</style>' +
+    '<div class="stat-grid">' + docStats + '</div>' +
     '<div class="card"><div class="card-b">' +
       '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px"><input id="d-q" class="input search" placeholder="Search name, clinic, phone..." value="' + App.esc(docFilter.q) + '" style="max-width:280px">' +
       '<button type="button" class="btn btn-primary" id="d-add" style="margin-left:auto">+ Add Doctor</button></div>' +
@@ -359,6 +456,7 @@ function renderDoctors() {
   document.getElementById('d-add').addEventListener('click', function () { doctorModal(null); });
 
   drawDoctorRows();
+  dCountUp();
 }
 
 function drawDoctorRows() {

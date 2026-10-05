@@ -23,6 +23,52 @@
     return n;
   }
 
+  /* ---------- dashboard-style stat cards (scoped compact CSS) ---------- */
+  var SC_STYLE =
+    '<style>' +
+    '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
+    '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
+    '@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:12px}}' +
+    '@keyframes scRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
+    '.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
+    '.stat:nth-child(2){animation-delay:.07s}' +
+    '.stat:nth-child(3){animation-delay:.14s}' +
+    '.stat:nth-child(4){animation-delay:.21s}' +
+    '.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
+    '.stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
+    '.stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
+    '.stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
+    '.stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
+    '.stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
+    '.stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
+    '.stat-ico svg{width:22px;height:22px}' +
+    '.stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
+    '.stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
+    '.stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px}' +
+    '</style>';
+  var SC_ICONS = {
+    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
+    cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
+    cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+    trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>'
+  };
+  function scIsTech() {
+    try {
+      var s = (typeof App.session === 'function') ? App.session() : App.session;
+      return !!(s && s.role === 'technician');
+    } catch (e) { return false; }
+  }
+  function scCard(icon, tint, label, value, sub) {
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
+      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
+      '<div class="lb">' + App.esc(label) + '</div>' +
+      '<div class="vl">' + value + '</div>' +
+      '<div class="dl">' + sub + '</div>' +
+    '</div>';
+  }
+
   App.route('#/billing', function () {
     var view = document.getElementById('view');
     var state = {
@@ -299,7 +345,36 @@
     }
 
     /* ---------- layout ---------- */
+
+    /* stat cards: today's & month billing overview */
+    var isTech = scIsTech();
+    var bTodayKey = App.today();
+    var bMonthKey = bTodayKey.slice(0, 7);
+    var bAllInv = DB.all('invoices');
+    var bTodayInv = bAllInv.filter(function (i) { return String(i.createdAt || '').slice(0, 10) === bTodayKey; });
+    var bMonthInv = bAllInv.filter(function (i) { return String(i.createdAt || '').slice(0, 7) === bMonthKey; });
+    var bTodayBilled = bTodayInv.reduce(function (s, i) { return s + (+i.total || 0); }, 0);
+    var bMonthBilled = bMonthInv.reduce(function (s, i) { return s + (+i.total || 0); }, 0);
+    var bAvgToday = bTodayInv.length ? Math.round(bTodayBilled / bTodayInv.length) : 0;
+    var bTestsToday = bTodayInv.reduce(function (s, i) { return s + ((i.items && i.items.length) || 0); }, 0);
+    var billStats =
+      scCard(SC_ICONS.doc, 'brand', "Today's Bills", String(bTodayInv.length),
+        bTodayInv.length === 1 ? 'bill created today' : 'bills created today') +
+      scCard(SC_ICONS.cash, 'green', "Today's Billed",
+        isTech ? String(bTodayInv.length) : App.money(bTodayBilled),
+        isTech ? 'bills created today' : 'billed value today') +
+      scCard(SC_ICONS.cal, 'blue', 'This Month Billed',
+        isTech ? String(bMonthInv.length) : App.money(bMonthBilled),
+        isTech ? 'invoices this month' : 'billed value this month') +
+      scCard(SC_ICONS.trend, 'amber', 'Avg Bill Today',
+        isTech ? String(bTestsToday) : App.money(bAvgToday),
+        isTech ? 'tests billed today' : 'per bill average');
+
     view.innerHTML =
+    SC_STYLE +
+    '<div class="stat-grid">' + billStats + '</div>' +
+
+    '<div class="bl-pos">' +
     '<style>' +
     '.bl-pos{display:grid;grid-template-columns:290px minmax(0,1fr) 340px;gap:18px;align-items:start}' +
     '.bl-panel{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(15,30,46,.06)}' +

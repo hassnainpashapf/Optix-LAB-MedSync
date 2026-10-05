@@ -376,6 +376,7 @@ body.auth .sidebar,body.auth .topbar{display:none}
 
 /* ============ Print ============ */
 @media print{
+  body{zoom:1} /* print safeguard: never shrink printed output */
   .sidebar,.topbar,#toast-root,#modal-root,.no-print{display:none !important}
   body{background:#fff}
   #view{padding:0}

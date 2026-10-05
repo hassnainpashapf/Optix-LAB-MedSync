@@ -1,6 +1,6 @@
 ; =====================================================================
-; LabPOS Setup — hand-written NSIS installer (compiled with native makensis)
-;   Placeholders 1.0.0 and 327152 are filled in by
+; Optix LAB MedSync Setup — hand-written NSIS installer (compiled with native makensis)
+;   Placeholders 1.0.0 and 327264 are filled in by
 ;   build-installer.sh before compiling. Do not edit the built .nsi by hand.
 ; =====================================================================
 !include "MUI2.nsh"
@@ -8,13 +8,13 @@
 !include "LogicLib.nsh"
 
 ; ---- App info ---------------------------------------------------------
-!define APP_NAME      "LabPOS"
+!define APP_NAME      "Optix LAB MedSync"
 !define APP_VERSION   "1.0.0"
-!define APP_PUBLISHER "LabPOS"
-!define APP_EXE       "LabPOS.exe"
+!define APP_PUBLISHER "System Optix"
+!define APP_EXE       "Optix LAB MedSync.exe"
 
 Name "${APP_NAME} ${APP_VERSION}"
-OutFile "..\..\dist-installer\LabPOS-Setup-${APP_VERSION}.exe"
+OutFile "..\..\dist-installer\Optix-LAB-MedSync-Setup-${APP_VERSION}.exe"
 InstallDir "$PROGRAMFILES64\${APP_NAME}"
 InstallDirRegKey HKLM "Software\${APP_NAME}" "InstallDir"
 RequestExecutionLevel admin
@@ -70,7 +70,7 @@ Section "${APP_NAME}" SecMain
   SetShellVarContext all
   SetOutPath "$INSTDIR"
 
-  ; App payload (Electron build: LabPOS.exe + resources)
+  ; App payload (Electron build: Optix LAB MedSync.exe + resources)
   File /r "..\..\dist-installer\win-unpacked\*.*"
 
   ; Uninstaller
@@ -86,11 +86,11 @@ Section "${APP_NAME}" SecMain
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayIcon" "$INSTDIR\${APP_EXE},0"
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "Publisher" "${APP_PUBLISHER}"
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayVersion" "${APP_VERSION}"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "EstimatedSize" 327152
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "EstimatedSize" 327264
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoRepair" 1
 
-  ; Start Menu shortcuts ("LabPOS" folder)
+  ; Start Menu shortcuts ("Optix LAB MedSync" folder)
   CreateDirectory "$SMPROGRAMS\${APP_NAME}"
   CreateShortcut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}" "" "$INSTDIR\${APP_EXE}" 0
   CreateShortcut "$SMPROGRAMS\${APP_NAME}\Uninstall ${APP_NAME}.lnk" "$INSTDIR\Uninstall.exe"

@@ -827,3 +827,39 @@ textarea.input{resize:vertical;min-height:120px}
   .spec-big h3.big{font-size:38px}
   .spec-big p{font-size:17px}
 }
+
+/* ===== A6: BG FIX ===== */
+/* Hero: match R1's light-blue top wash exactly.
+   Sampled vertical profile from R1 (median of solid areas):
+   top #8ab3cd -> 18% #bcd9e5 -> 36% #dfeef6 -> 54% #f4f9fc -> 70% #fbfdfd -> white.
+   The old wash was far too faint (near-white); R1 has a strong, present blue wash. */
+.hero{
+  background:linear-gradient(180deg,#8ab3cd 0%,#a9cde2 6%,#bcd9e5 11%,#d3e7f2 17%,#e4f0f7 24%,#f0f6fb 31%,#f8fbfd 38%,#ffffff 45%,#ffffff 100%);
+}
+/* Nav sits on the wash: blue-tinted translucency so it blends like R1 */
+.nav{background:rgba(219,234,244,.74);}
+.nav.scrolled{background:rgba(255,255,255,.96);}
+/* Services section bg: sampled #f4f7fc from R3 (was #f2f7fb) */
+#services{background:#f4f7fc;}
+
+/* ===== A7: NAV CORNERS ===== */
+/* Pin logo to the left viewport corner and login/action buttons to the right
+   viewport corner, with the plain nav links optically centered.
+   Desktop only (min-width:901px) — mobile burger/dropdown untouched. */
+@media(min-width:901px){
+  .nav-inner{
+    max-width:none;          /* full-bleed instead of 1200px centered box */
+    padding-left:20px;        /* 20px from viewport edges (corners) */
+    padding-right:20px;
+  }
+  /* Flatten .nav-links so its children become direct flex items of .nav-inner */
+  .nav-links{display:contents}
+  .brand{order:0}
+  .nav-links a:not(.staff){order:1}
+  .nav-links a.staff{order:2}
+  .nav-cta{order:3}
+  /* Auto margins on first/last plain link center the link group
+     between the brand (left corner) and the actions (right corner) */
+  .nav-links a[href="#why"]{margin-left:auto}
+  .nav-links a[href="#contact"]{margin-right:auto}
+}

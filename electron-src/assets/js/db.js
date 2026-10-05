@@ -265,7 +265,7 @@
   var store = load();
   if (!store) { store = seedStore(); save(store); }
   /* one-time rebrand: existing installs seeded with the old default name */
-  if (store && store.settings && store.settings.labName === 'City Blood Lab') {
+  if (store && store.settings && (store.settings.labName === 'City Blood Lab' || store.settings.labName === 'Optxic LAB')) {
     store.settings.labName = 'Optix LAB MedSync'; save(store);
   }
 

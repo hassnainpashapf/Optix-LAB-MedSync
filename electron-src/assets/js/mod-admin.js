@@ -34,6 +34,74 @@
 
   var EXP_CATS = ['Rent', 'Salaries', 'Reagents', 'Utilities', 'Other'];
 
+  /* dashboard-style premium stat cards — markup + CSS copied from the
+     dashboard statCard() pattern (stat-grid > stat > stat-ico + lb/vl/dl),
+     injected inline per page so the premium look applies without touching
+     app.css */
+  function _svgA(paths) {
+    return '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg>';
+  }
+  var AICONS = {
+    receipt: _svgA('<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/>'),
+    cal: _svgA('<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/>'),
+    tag: _svgA('<path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.2"/>'),
+    list: _svgA('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'),
+    cash: _svgA('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'),
+    trend: _svgA('<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>'),
+    flask: _svgA('<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/>')
+  };
+  function admStat(icon, tint, label, value, sub, raw, isMoney, vlStyle) {
+    var countAttrs = (typeof raw === 'number' && isFinite(raw))
+      ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"'
+      : '';
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
+      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
+      '<div class="lb">' + App.esc(label) + '</div>' +
+      '<div class="vl"' + countAttrs + (vlStyle ? ' style="' + vlStyle + '"' : '') + '>' + value + '</div>' +
+      '<div class="dl">' + sub + '</div>' +
+      '</div>';
+  }
+  var ADM_STAT_CSS =
+    '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
+    '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
+    '@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:12px}}' +
+    '@keyframes dbRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
+    '.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:dbRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
+    '.stat:nth-child(2){animation-delay:.07s}.stat:nth-child(3){animation-delay:.14s}.stat:nth-child(4){animation-delay:.21s}' +
+    '.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
+    '.stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
+    '.stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
+    '.stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
+    '.stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
+    '.stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
+    '.stat[data-tint="red"]{--sc-line:#f2c6c6;--sc-soft:var(--red-soft)}' +
+    '.stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
+    '.stat-ico svg{width:22px;height:22px}' +
+    '.stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
+    '.stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
+    '.stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}';
+  /* dashboard-style count-up for .vl[data-count] values (final value is
+     already in the markup, so a failure here never leaves a blank card) */
+  function admCountUp() {
+    function fmt(raw, isMoney) { return isMoney ? App.money(raw) : String(Math.round(raw)); }
+    var els = document.querySelectorAll('#view .stat .vl[data-count]');
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    for (var i = 0; i < els.length; i++) (function (el) {
+      var target = parseFloat(el.getAttribute('data-count')) || 0;
+      var isMoney = el.getAttribute('data-money') === '1';
+      if (reduce || target <= 0) { el.textContent = fmt(target, isMoney); return; }
+      var t0 = null, dur = 800;
+      function step(ts) {
+        if (!t0) t0 = ts;
+        var p = Math.min(1, (ts - t0) / dur);
+        var e = 1 - Math.pow(1 - p, 3);
+        el.textContent = fmt(target * e, isMoney);
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    })(els[i]);
+  }
+
   /* ============================================================
      EXPENSES  (#/expenses) — admin + reception
      ============================================================ */
@@ -56,18 +124,32 @@
           String(e.note || '').toLowerCase().indexOf(q) < 0) return false;
       return true;
     });
-    var monthTotal = DB.all('expenses')
-      .filter(function (e) { return toDay(e.date).slice(0, 7) === thisMonth(); })
+    var monthExp = DB.all('expenses').filter(function (e) {
+      return toDay(e.date).slice(0, 7) === thisMonth();
+    });
+    var monthTotal = monthExp.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
+    var todayTotal = monthExp.filter(function (e) { return toDay(e.date) === App.today(); })
       .reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
-    var filtTotal = rows.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
+    var byCat = {};
+    monthExp.forEach(function (e) {
+      var c = e.category || 'Other';
+      byCat[c] = (byCat[c] || 0) + (+e.amount || 0);
+    });
+    var topCat = '', topCatAmt = 0;
+    Object.keys(byCat).forEach(function (c) {
+      if (byCat[c] > topCatAmt) { topCatAmt = byCat[c]; topCat = c; }
+    });
+    var mLabel = new Date().toLocaleDateString('en-US', { month: 'long' });
+    var expStats =
+      admStat(AICONS.receipt, 'red', 'Expenses (This Month)', App.money(monthTotal), mLabel + ' total spend', monthTotal, true) +
+      admStat(AICONS.cal, 'amber', 'Expenses Today', App.money(todayTotal), 'recorded today', todayTotal, true) +
+      admStat(AICONS.tag, 'blue', 'Top Category', App.esc(topCat || '—'), App.money(topCatAmt) + ' this month',
+        null, false, 'font-size:20px;white-space:normal;line-height:1.25') +
+      admStat(AICONS.list, 'green', 'Expense Entries', monthExp.length, 'recorded in ' + mLabel, monthExp.length, false);
 
     var html = ''
-      + '<div class="stat-grid" style="margin-bottom:18px">'
-      +   '<div class="stat"><div class="stat-ic" style="background:var(--red-soft);color:var(--red)">₨</div>'
-      +   '<div><div class="stat-num">' + App.money(monthTotal) + '</div><div class="stat-lbl">Spent this month</div></div></div>'
-      +   '<div class="stat"><div class="stat-ic" style="background:var(--amber-soft);color:var(--amber)">∑</div>'
-      +   '<div><div class="stat-num">' + App.money(filtTotal) + '</div><div class="stat-lbl">Filtered total (' + rows.length + ')</div></div></div>'
-      + '</div>'
+      + '<style>' + ADM_STAT_CSS + '</style>'
+      + '<div class="stat-grid">' + expStats + '</div>'
       + '<div class="card"><div class="card-b">'
       +   '<div class="toolbar" style="margin-bottom:12px">'
       +     '<input class="input search" id="exQ" placeholder="Search title or note..." value="' + App.esc(expFilter.q) + '" style="max-width:280px">'
@@ -99,6 +181,7 @@
     html += '</tbody></table></div></div></div>';
 
     document.getElementById('view').innerHTML = html;
+    admCountUp();
 
     document.getElementById('exAdd').addEventListener('click', function () { openExpenseModal(null); });
     document.getElementById('exQ').addEventListener('input', function (e) { expFilter.q = e.target.value; renderExpenses(); var q2 = document.getElementById('exQ'); q2.focus(); q2.setSelectionRange(q2.value.length, q2.value.length); });
@@ -197,6 +280,23 @@
     var expTotal = expenses.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
     var net = collected - expTotal;
 
+    /* ---- this-month snapshot row (real data) ---- */
+    var mFrom = App.today().slice(0, 8) + '01', mTo = App.today();
+    var mLbl2 = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    var mShort = new Date().toLocaleDateString('en-US', { month: 'long' });
+    var mPayments = DB.all('payments').filter(function (p) { return inRange(toDay(p.date || p.createdAt), mFrom, mTo); });
+    var mExpenses = DB.all('expenses').filter(function (e) { return inRange(toDay(e.date), mFrom, mTo); });
+    var mInvoices = DB.all('invoices').filter(function (iv) { return inRange(toDay(iv.createdAt), mFrom, mTo); });
+    var mColl = mPayments.reduce(function (s, p) { return s + (+p.amount || 0); }, 0);
+    var mExpT = mExpenses.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
+    var mNet = mColl - mExpT;
+    var mTests = mInvoices.reduce(function (s, iv) { return s + ((iv.items || []).length); }, 0);
+    var repStats =
+      admStat(AICONS.cash, 'green', 'Month Collection', App.money(mColl), 'collected in ' + mShort, mColl, true) +
+      admStat(AICONS.receipt, 'red', 'Month Expenses', App.money(mExpT), mExpenses.length + ' entries in ' + mShort, mExpT, true) +
+      admStat(AICONS.trend, 'brand', 'Net (This Month)', App.money(mNet), mNet >= 0 ? 'surplus so far' : 'deficit so far', mNet, true) +
+      admStat(AICONS.flask, 'blue', 'Tests Billed', mTests, mInvoices.length + ' bills in ' + mShort, mTests, false);
+
     var methods = { Cash: 0, Bank: 0, Card: 0, Other: 0 };
     payments.forEach(function (p) {
       var m = p.method || 'Cash';
@@ -250,6 +350,9 @@
       +   '</div>'
       + '</div></div>'
 
+      + '<style>' + ADM_STAT_CSS + '</style>'
+      + '<div class="stat-grid">' + repStats + '</div>'
+
       + '<h3 style="margin:0 0 12px">Collection Summary <span class="muted" style="font-weight:500;font-size:13px">(' + App.esc(App.d(from)) + ' – ' + App.esc(App.d(to)) + ')</span></h3>'
       + '<div class="stat-grid" style="margin-bottom:18px">'
       +   statCard('Total Billed (' + invoices.length + ' bills)', App.money(billed), '₨', 'var(--blue-soft)', 'var(--blue)')
@@ -292,6 +395,7 @@
     html += '</tbody></table></div></div></div></div>';
 
     document.getElementById('view').innerHTML = html;
+    admCountUp();
 
     document.getElementById('repFrom').addEventListener('change', function (e) { rep.from = e.target.value; renderReports(); });
     document.getElementById('repTo').addEventListener('change', function (e) { rep.to = e.target.value; renderReports(); });

@@ -264,6 +264,52 @@
     App.print('Lab Report — ' + inv.no, html);
   }
 
+  /* ---------- dashboard-style stat cards ---------- */
+
+  var STAT_CSS =
+    '<style>' +
+    '.pgstat .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
+    '@media(max-width:1100px){.pgstat .stat-grid{grid-template-columns:repeat(2,1fr)}}' +
+    '@media(max-width:560px){.pgstat .stat-grid{grid-template-columns:1fr;gap:12px}}' +
+    '@keyframes pgRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
+    '.pgstat .stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:pgRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
+    '.pgstat .stat:nth-child(2){animation-delay:.07s}' +
+    '.pgstat .stat:nth-child(3){animation-delay:.14s}' +
+    '.pgstat .stat:nth-child(4){animation-delay:.21s}' +
+    '.pgstat .stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
+    '.pgstat .stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
+    '.pgstat .stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
+    '.pgstat .stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
+    '.pgstat .stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
+    '.pgstat .stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
+    '.pgstat .stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
+    '.pgstat .stat-ico svg{width:22px;height:22px}' +
+    '.pgstat .stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
+    '.pgstat .stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
+    '.pgstat .stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}' +
+    '@media(max-width:640px){.pgstat .stat .vl{font-size:26px}}' +
+    '@media (prefers-reduced-motion:reduce){.pgstat .stat{animation:none}.pgstat .stat:hover{transform:none}}' +
+    '</style>';
+
+  function svgIcon(inner) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
+  }
+  var STAT_ICONS = {
+    alert: svgIcon('<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
+    check: svgIcon('<path d="M22 11.1V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14l-3-3"/>'),
+    cal: svgIcon('<rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>'),
+    clock: svgIcon('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>')
+  };
+
+  function statCard(icon, tint, label, value, sub) {
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
+      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
+      '<div class="lb">' + App.esc(label) + '</div>' +
+      '<div class="vl">' + value + '</div>' +
+      '<div class="dl">' + sub + '</div>' +
+      '</div>';
+  }
+
   /* ---------- main render ---------- */
 
   function render() {
@@ -271,6 +317,28 @@
     var readyRows = joinedRows('ready');
     var pendingGroups = groupByInvoice(pendingRows);
     var readyGroups = groupByInvoice(readyRows);
+
+    // ---- dashboard-style stat cards (real data) ----
+    var today = App.today();
+    var mKey = today.slice(0, 7);
+    function dayKey(d) { return String(d || '').slice(0, 10); }
+    var reportedToday = readyRows.filter(function (r) { return r.res && dayKey(r.res.reportedAt) === today; }).length;
+    var reportedMonth = readyRows.filter(function (r) { return r.res && dayKey(r.res.reportedAt).slice(0, 7) === mKey; }).length;
+    var oldestDays = null;
+    pendingRows.forEach(function (r) {
+      var c = r.invoice && r.invoice.createdAt;
+      if (!c) return;
+      var d = Math.floor((Date.now() - new Date(c).getTime()) / 86400000);
+      if (d < 0) d = 0;
+      oldestDays = (oldestDays === null) ? d : Math.max(oldestDays, d);
+    });
+    var statsHtml = STAT_CSS +
+      '<div class="pgstat"><div class="stat-grid">' +
+      statCard(STAT_ICONS.alert, 'amber', 'Pending Results', pendingRows.length, 'awaiting entry') +
+      statCard(STAT_ICONS.check, 'green', 'Reported Today', reportedToday, 'results completed') +
+      statCard(STAT_ICONS.cal, 'blue', 'Reported This Month', reportedMonth, 'this month') +
+      statCard(STAT_ICONS.clock, 'brand', 'Oldest Pending', oldestDays === null ? '—' : oldestDays, oldestDays === null ? 'no pending' : 'days old') +
+      '</div></div>';
 
     var q = query.trim().toLowerCase();
     function matches(g) {
@@ -342,7 +410,7 @@
     var v = document.getElementById('view');
     v.innerHTML =
       '<div class="page-h"><h1>Lab Results</h1><p class="muted">Enter test results and print laboratory reports.</p></div>' +
-      tabsHtml + bodyHtml;
+      statsHtml + tabsHtml + bodyHtml;
 
     // wire tabs
     v.querySelectorAll('[data-tab]').forEach(function (b) {

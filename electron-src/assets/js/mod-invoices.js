@@ -4,6 +4,50 @@
 (function () {
   'use strict';
 
+  /* ---------- dashboard-style stat cards (scoped compact CSS) ---------- */
+  var SC_STYLE =
+    '<style>' +
+    '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
+    '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
+    '@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:12px}}' +
+    '@keyframes scRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
+    '.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
+    '.stat:nth-child(2){animation-delay:.07s}' +
+    '.stat:nth-child(3){animation-delay:.14s}' +
+    '.stat:nth-child(4){animation-delay:.21s}' +
+    '.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
+    '.stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
+    '.stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
+    '.stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
+    '.stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
+    '.stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
+    '.stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
+    '.stat-ico svg{width:22px;height:22px}' +
+    '.stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
+    '.stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
+    '.stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px}' +
+    '</style>';
+  var SC_ICONS = {
+    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
+    cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
+    cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>'
+  };
+  function scIsTech() {
+    try {
+      var s = JSON.parse(localStorage.getItem('labpos_session') || 'null');
+      return !!(s && s.role === 'technician');
+    } catch (e) { return false; }
+  }
+  function scCard(icon, tint, label, value, sub) {
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
+      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
+      '<div class="lb">' + App.esc(label) + '</div>' +
+      '<div class="vl">' + value + '</div>' +
+      '<div class="dl">' + sub + '</div>' +
+    '</div>';
+  }
+
   /* ---------- shared helpers ---------- */
   var F = { q: '', date: 'all', status: 'all' };
   var refreshCurrent = null;
@@ -458,6 +502,29 @@
   function renderInvoices() {
     setRefresh(renderInvoices);
     var view = document.getElementById('view');
+
+    /* stat cards: month overview (static, not affected by filters) */
+    var ivIsTech = scIsTech();
+    var ivMonthKey = App.today().slice(0, 7);
+    var ivAll = DB.all('invoices');
+    var ivMonth = ivAll.filter(function (i) { return String(i.createdAt || '').slice(0, 7) === ivMonthKey; });
+    var ivMonthPays = DB.all('payments').filter(function (p) { return String(p.date || '').slice(0, 7) === ivMonthKey; });
+    var ivBilled = ivMonth.reduce(function (s, i) { return s + (+i.total || 0); }, 0);
+    var ivCollected = ivMonthPays.reduce(function (s, p) { return s + (+p.amount || 0); }, 0);
+    var ivDueAll = ivAll.filter(function (i) { return i.status !== 'paid'; });
+    var ivOutstanding = ivDueAll.reduce(function (s, i) { return s + (+i.due || 0); }, 0);
+    var invStats =
+      scCard(SC_ICONS.doc, 'brand', 'Invoices This Month', String(ivMonth.length), 'invoices created') +
+      scCard(SC_ICONS.cash, 'green', 'Billed This Month',
+        ivIsTech ? String(ivMonth.length) : App.money(ivBilled),
+        ivIsTech ? 'invoices this month' : 'total invoiced value') +
+      scCard(SC_ICONS.cal, 'blue', 'Collected This Month',
+        ivIsTech ? String(ivMonthPays.length) : App.money(ivCollected),
+        ivIsTech ? 'payments this month' : 'payments received') +
+      scCard(SC_ICONS.clock, 'amber', 'Outstanding Dues',
+        ivIsTech ? String(ivDueAll.length) : App.money(ivOutstanding),
+        ivIsTech ? 'invoices with dues' : 'yet to collect');
+
     view.innerHTML =
       '<div class="card"><div class="card-b">' +
         '<div class="toolbar" style="margin-bottom:14px">' +
@@ -476,6 +543,8 @@
           '</select>' +
           '<a class="btn btn-primary" href="#/billing" style="margin-left:auto">+ New Bill</a>' +
         '</div>' +
+        SC_STYLE +
+        '<div class="stat-grid">' + invStats + '</div>' +
         '<div id="inv-summary"></div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr>' +
           '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:center">Tests</th>' +
@@ -610,6 +679,28 @@
       .sort(function (a, b) { return new Date(a.createdAt) - new Date(b.createdAt); }); // oldest first
     var totalDue = list.reduce(function (s, inv) { return s + inv.due; }, 0);
 
+    /* stat cards: outstanding overview */
+    var duesIsTech = scIsTech();
+    var duesMonthKey = App.today().slice(0, 7);
+    var duesMonthPays = DB.all('payments').filter(function (p) { return String(p.date || '').slice(0, 7) === duesMonthKey; });
+    var duesCollected = duesMonthPays.reduce(function (s, p) { return s + (+p.amount || 0); }, 0);
+    var duesUnpaid = list.filter(function (i) { return i.status === 'unpaid'; });
+    var cutD = new Date(new Date(App.today() + 'T12:00:00').getTime() - 30 * 864e5);
+    var cutKey = cutD.getFullYear() + '-' + String(cutD.getMonth() + 1).padStart(2, '0') + '-' + String(cutD.getDate()).padStart(2, '0');
+    var duesOverdue = list.filter(function (i) { return String(i.createdAt || '').slice(0, 10) <= cutKey; });
+    var duesOverdueAmt = duesOverdue.reduce(function (s, i) { return s + (+i.due || 0); }, 0);
+    var duesStats =
+      scCard(SC_ICONS.cash, 'brand', 'Total Outstanding',
+        duesIsTech ? String(list.length) : App.money(totalDue),
+        duesIsTech ? 'invoices with dues' : list.length + ' unpaid invoice(s)') +
+      scCard(SC_ICONS.doc, 'blue', 'Unpaid Invoices', String(duesUnpaid.length), 'zero payment received') +
+      scCard(SC_ICONS.clock, 'amber', 'Overdue 30+ Days',
+        duesIsTech ? String(duesOverdue.length) : App.money(duesOverdueAmt),
+        duesIsTech ? 'invoices overdue' : duesOverdue.length + ' invoice(s) overdue') +
+      scCard(SC_ICONS.cal, 'green', 'Collected This Month',
+        duesIsTech ? String(duesMonthPays.length) : App.money(duesCollected),
+        duesIsTech ? 'payments this month' : 'payments received');
+
     var rows = list.length ? list.map(function (inv) {
       var p = patientOf(inv);
       return '<tr>' +
@@ -626,17 +717,8 @@
     }).join('') : '<tr><td colspan="8">' + App.empty('🎉 No outstanding dues. All invoices are paid.') + '</td></tr>';
 
     document.getElementById('view').innerHTML =
-      '<div class="stat-grid" style="margin-bottom:18px">' +
-        '<div class="stat"><div class="stat-label">Total Outstanding</div>' +
-          '<div class="stat-num" style="color:var(--red)">' + App.money(totalDue) + '</div>' +
-          '<div class="stat-sub">' + list.length + ' unpaid invoice(s)</div></div>' +
-        '<div class="stat"><div class="stat-label">Fully Unpaid</div>' +
-          '<div class="stat-num">' + list.filter(function (i) { return i.status === 'unpaid'; }).length + '</div>' +
-          '<div class="stat-sub">zero payment received</div></div>' +
-        '<div class="stat"><div class="stat-label">Partially Paid</div>' +
-          '<div class="stat-num">' + list.filter(function (i) { return i.status === 'partial'; }).length + '</div>' +
-          '<div class="stat-sub">some payment received</div></div>' +
-      '</div>' +
+      SC_STYLE +
+      '<div class="stat-grid">' + duesStats + '</div>' +
       '<div class="card"><div class="card-b"><div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:right">Total</th>' +
         '<th style="text-align:right">Paid</th><th style="text-align:right">Due</th><th>Status</th><th>Actions</th>' +

@@ -22,7 +22,8 @@
     printer: '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
-    alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>'
+    alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+    download: '<path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>'
   };
   function icon(name, size) {
     size = size || 18;
@@ -333,6 +334,16 @@
       '<div class="side-foot"><div class="side-ver">Optix LAB MedSync v1.0</div></div>';
     /* topbar */
     var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
+    /* quick actions — role-aware; technicians get read-only shortcuts */
+    var isTech = (s.role === 'technician');
+    var dlHref = window.labposDesktop ? 'https://optix-lab-medsync.pages.dev/download/' : '/download/';
+    var tbQa = isTech
+      ? '<a class="btn btn-primary btn-sm tb-qab" href="#/results">' + icon('clipboard', 14) + '<span class="tb-qa-t">Lab Results</span></a>' +
+        '<a class="btn btn-blue btn-sm tb-qab" href="#/tests">' + icon('flask', 14) + '<span class="tb-qa-t">View Tests</span></a>'
+      : '<a class="btn btn-primary btn-sm tb-qab" href="#/billing">' + icon('plus', 14) + '<span class="tb-qa-t">New Bill</span></a>' +
+        '<a class="btn btn-blue btn-sm tb-qab" href="#/patients">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
+        '<a class="btn btn-amber btn-sm tb-qab" href="#/expenses">' + icon('wallet', 14) + '<span class="tb-qa-t">Add Expense</span></a>' +
+        '<a class="btn btn-ghost btn-sm tb-qab" href="' + dlHref + '">' + icon('download', 14) + '<span class="tb-qa-t">Download App</span></a>';
     document.getElementById('topbar').innerHTML =
       '<style>' +
       '.tb-profile{padding-right:6px}' +
@@ -340,9 +351,14 @@
       '.tb-logout{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;border:none;background:transparent;color:var(--muted);cursor:pointer;transition:background .15s,color .15s;flex:none}' +
       '.tb-logout:hover{background:#fee2e2;color:var(--red)}' +
       '.tb-logout svg{display:block}' +
+      '.tb-qa{display:flex;gap:8px;align-items:center;margin-right:4px}' +
+      '.tb-qa .tb-qab{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}' +
+      '@media (max-width:900px){.tb-qa .tb-qa-t{display:none}}' +
+      '@media (max-width:640px){.tb-qa{display:none}}' +
       '</style>' +
       '<button class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Menu">' + icon('menu', 18) + '</button>' +
       '<h1 class="page-title">' + esc(navItem ? navItem.label : '') + '</h1>' +
+      '<div class="tb-qa">' + tbQa + '</div>' +
       '<div class="top-right">' +
         '<span class="top-date">' + esc(d(new Date())) + '</span>' +
         '<span class="user-chip tb-profile"><span class="avatar">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</span>' +
