@@ -37,6 +37,24 @@
       '</div>';
   }
 
+  /* Donut stat card — ring shows pct of a meaningful total, value below with count-up */
+  function donutStat(color, label, valueText, pct, sub, raw, isMoney) {
+    var C = 2 * Math.PI * 44;
+    var p = Math.max(0, Math.min(100, Math.round(pct || 0)));
+    var countAttrs = (typeof raw === 'number' && isFinite(raw))
+      ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"'
+      : '';
+    return '<div class="dbd" style="--dbd:' + color + '">' +
+      '<div class="dbd-ring"><svg width="104" height="104" viewBox="0 0 118 118">' +
+      '<circle cx="59" cy="59" r="44" fill="none" stroke="#edf1f7" stroke-width="13"/>' +
+      '<circle cx="59" cy="59" r="44" fill="none" stroke="' + color + '" stroke-width="13" stroke-linecap="round"' +
+      ' stroke-dasharray="' + (p / 100 * C).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 59 59)"/>' +
+      '<text x="59" y="65" text-anchor="middle" class="dbd-p">' + p + '%</text></svg></div>' +
+      '<div class="dbd-lb">' + App.esc(label) + '</div>' +
+      '<div class="dbd-vl"' + countAttrs + '>' + valueText + '</div>' +
+      '<div class="dbd-sub">' + sub + '</div></div>';
+  }
+
   App.route('/dashboard', function () {
     var s = session();
     var role = s.role || 'admin';
@@ -89,7 +107,7 @@
         return isMoney ? 'Rs ' + raw.toLocaleString('en-US') : String(raw);
       }
       function run() {
-        var els = document.querySelectorAll('#view .stat .vl[data-count]');
+        var els = document.querySelectorAll('#view .stat .vl[data-count], #view .dbd-vl[data-count]');
         var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         for (var i = 0; i < els.length; i++) (function (el) {
           var target = parseFloat(el.getAttribute('data-count')) || 0;
@@ -133,6 +151,11 @@
     var pendingRes = results.filter(function (r) { return r.status === 'pending'; });
     var reportedToday = results.filter(function (r) { return r.status === 'ready' && dayKey(r.reportedAt) === today; }).length;
     var monthName = new Date().toLocaleDateString('en-US', { month: 'long' });
+    // ---- month aggregates for donut percentages ----
+    var invMonth = invoices.filter(function (i) { return dayKey(i.createdAt).slice(0, 7) === mKey; });
+    var monthTests = invMonth.reduce(function (a, i) { return a + (i.items ? i.items.length : 0); }, 0);
+    var monthBilled = invMonth.reduce(function (a, i) { return a + (+i.total || 0); }, 0);
+    var monthPatients = patients.filter(function (p) { return dayKey(p.createdAt).slice(0, 7) === mKey; }).length;
 
     // ---- today vs yesterday collection trend ----
     var yDate = new Date(); yDate.setDate(yDate.getDate() - 1);
@@ -485,21 +508,36 @@
     '</style>' +
     '<div class="dbx-grid">' + catCard + expCard + lbCard + '</div>';
 
-    // ---- stats per role ----
+    // ---- donut stats per role (ring = share of a meaningful total) ----
+    var NAVY = '#131845', BLUE = '#5392ba', AMBER = '#f59e0b', GREEN = '#16a34a';
     var stats;
     if (isTech) {
       stats =
-        statCard(ICONS.flask, 'brand', "Today's Tests", testsToday, invToday.length + ' invoices today', testsToday, false) +
-        statCard(ICONS.alert, 'amber', 'Pending Results', pendingRes.length, 'awaiting entry', pendingRes.length, false) +
-        statCard(ICONS.check, 'green', 'Reported Today', reportedToday, 'results completed', reportedToday, false) +
-        statCard(ICONS.users, 'blue', 'Total Patients', patients.length, 'registered', patients.length, false);
+        donutStat(NAVY, "Today's Tests", String(testsToday), monthTests > 0 ? testsToday / monthTests * 100 : 0, invToday.length + ' invoices today', testsToday, false) +
+        donutStat(AMBER, 'Pending Results', String(pendingRes.length), results.length > 0 ? pendingRes.length / results.length * 100 : 0, 'awaiting entry', pendingRes.length, false) +
+        donutStat(GREEN, 'Reported Today', String(reportedToday), testsToday > 0 ? Math.min(100, reportedToday / testsToday * 100) : 0, 'results completed', reportedToday, false) +
+        donutStat(BLUE, 'Total Patients', String(patients.length), patients.length > 0 ? monthPatients / patients.length * 100 : 0, monthPatients + ' new this month', patients.length, false);
     } else {
       stats =
-        statCard(ICONS.cash, 'brand', "Today's Collection", App.money(todayCol), payToday.length + ' payments received &middot; ' + colDelta, todayCol, true) +
-        statCard(ICONS.flask, 'blue', "Today's Tests", testsToday, invToday.length + ' invoices today', testsToday, false) +
-        statCard(ICONS.alert, 'amber', 'Pending Dues', App.money(duesTotal), dueInvs.length + ' invoices unpaid', duesTotal, true) +
-        statCard(ICONS.cal, 'green', monthName + ' Collection', App.money(monthCol), 'this month', monthCol, true);
+        donutStat(NAVY, "Today's Collection", App.money(todayCol), goalTarget > 0 ? todayCol / goalTarget * 100 : 0, payToday.length + ' payments today', todayCol, true) +
+        donutStat(BLUE, "Today's Tests", String(testsToday), monthTests > 0 ? testsToday / monthTests * 100 : 0, invToday.length + ' invoices today', testsToday, false) +
+        donutStat(AMBER, 'Pending Dues', App.money(duesTotal), monthBilled > 0 ? duesTotal / monthBilled * 100 : 0, dueInvs.length + ' invoices unpaid', duesTotal, true) +
+        donutStat(GREEN, monthName + ' Collection', App.money(monthCol), goalTarget > 0 ? monthCol / goalTarget * 100 : 0, 'of ' + App.money(goalTarget) + ' goal', monthCol, true);
     }
+
+    var donutCss =
+      '<style>' +
+      '.dbd{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 12px 15px;' +
+      'box-shadow:var(--sh-sm);text-align:center;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards;min-width:0}' +
+      '.dbd:nth-child(2){animation-delay:.07s}.dbd:nth-child(3){animation-delay:.14s}.dbd:nth-child(4){animation-delay:.21s}' +
+      '.dbd:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}' +
+      '.dbd-ring{display:grid;place-items:center;margin-bottom:8px}' +
+      '.dbd-p{font-size:15px;font-weight:800;fill:var(--ink)}' +
+      '.dbd-lb{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}' +
+      '.dbd-vl{font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}' +
+      '.dbd-sub{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:5px}' +
+      '@media(max-width:560px){.dbd{padding:14px 8px 12px}.dbd-vl{font-size:17px}}' +
+      '</style>';
 
     return '<div class="db-page">' +
     '<style>' +
@@ -583,6 +621,7 @@
     '@media (prefers-reduced-motion:reduce){.stat,.db-fill{animation:none}.db-fill{transform:none}.stat:hover,.db-qa .btn:hover{transform:none}}' +
     '</style>' +
 
+    donutCss +
     '<div class="stat-grid">' + stats + '</div>' +
 
     '<div class="db-grid">' +
