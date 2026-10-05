@@ -1,12 +1,17 @@
 /* Optix LAB — static marketing site stylesheet */
 :root{
-  --navy:#0b1740;
-  --blue:#5b9bd5;
-  --blue-d:#3f83c4;
-  --ink:#22304f;
-  --muted:#5b6b8c;
+  --navy:#121a44;
+  --navy-deep:#0f2a64;
+  --blue:#4e90b8;
+  --blue-d:#3d7ea6;
+  --step-blue:#5190b4;
+  --ink:#2a2f38;
+  --h2:#20242c;
+  --muted:#6b7684;
   --bg:#ffffff;
   --soft:#f4f9fe;
+  --tint:#f1f3f6;
+  --ghost:#d8dce3;
   --line:#e3ecf7;
   --shadow:0 18px 45px rgba(11,23,64,.10);
   --r:22px;
@@ -42,14 +47,16 @@ section{scroll-margin-top:90px}
   max-width:1200px;margin:0 auto;
   padding:14px 24px;
   display:flex;align-items:center;justify-content:space-between;gap:16px;
+  transition:padding .25s ease;
 }
+.nav.scrolled .nav-inner{padding-top:9px;padding-bottom:9px}
 .brand{display:flex;align-items:center;gap:10px}
 .brand svg{width:40px;height:40px;flex:none}
 .brand-tx{display:flex;flex-direction:column;line-height:1.15}
 .brand-tx b{font-size:17px;font-weight:800;color:var(--navy);letter-spacing:-0.01em}
 .brand-tx small{font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--muted);font-weight:600}
-.nav-links{display:flex;align-items:center;gap:26px}
-.nav-links a{font-size:15px;font-weight:600;color:var(--ink);transition:color .2s}
+.nav-links{display:flex;align-items:center;gap:22px}
+.nav-links a{font-size:14.5px;font-weight:600;color:var(--ink);transition:color .2s;white-space:nowrap}
 .nav-links a:hover{color:var(--blue-d)}
 .nav-links a.staff{
   border:1.5px solid var(--line);
@@ -63,11 +70,18 @@ section{scroll-margin-top:90px}
 }
 .nav-links a.staff:hover{border-color:var(--blue);color:var(--blue-d)}
 .nav-cta{display:flex;align-items:center;gap:14px}
+.nav-cta .arr{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:50%;
+  background:#fff;color:var(--navy);font-size:14px;font-weight:800;
+  margin-left:2px;
+}
 .burger{display:none;background:none;border:0;cursor:pointer;padding:8px;flex-direction:column;gap:5px}
 .burger span{display:block;width:24px;height:2.5px;border-radius:3px;background:var(--navy);transition:transform .25s,opacity .25s}
 
 /* ---------- buttons ---------- */
 .btn{
+  position:relative;overflow:hidden;
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
   border-radius:999px;
   padding:15px 32px;
@@ -76,6 +90,15 @@ section{scroll-margin-top:90px}
   transition:transform .18s ease,box-shadow .18s ease,background .2s;
   white-space:nowrap;
 }
+.btn::after{
+  content:"";position:absolute;top:0;left:-90%;
+  width:55%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);
+  transform:skewX(-20deg);
+  transition:left .55s ease;
+  pointer-events:none;
+}
+.btn:hover::after{left:140%}
 .btn:hover{transform:translateY(-2px)}
 .btn-navy{background:var(--navy);color:#fff;box-shadow:0 12px 28px rgba(11,23,64,.25)}
 .btn-navy:hover{box-shadow:0 16px 34px rgba(11,23,64,.3)}
@@ -85,15 +108,18 @@ section{scroll-margin-top:90px}
 
 /* ---------- hero ---------- */
 .hero{
-  background:linear-gradient(180deg,#e9f4fc 0%,#ffffff 88%);
+  background:linear-gradient(180deg,#d3e6f0 0%,#e4f0f7 45%,#f4fafd 75%,#ffffff 100%);
   padding:150px 24px 90px;
+  overflow:hidden;
 }
-.hero-inner{max-width:860px;margin:0 auto;text-align:center}
+.hero-inner{max-width:860px;margin:0 auto;text-align:center;position:relative}
+.hero-doodle{position:absolute;left:-40px;top:52%;width:86px;height:56px;opacity:.9;animation:riseIn .7s .6s both}
+@media(max-width:900px){.hero-doodle{display:none}}
 .pill-badge{
   display:inline-flex;align-items:center;gap:8px;
   background:#fff;border-radius:999px;
   padding:9px 20px;
-  font-size:13px;font-weight:700;color:var(--navy);
+  font-size:13px;font-weight:700;color:#7c8698;
   box-shadow:var(--shadow);
   margin-bottom:26px;
 }
@@ -108,11 +134,15 @@ h1{
 .hero-cta{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;align-items:center}
 
 /* ---------- image strip ---------- */
-.strip{overflow:hidden;padding:30px 0 70px}
+.strip{overflow-x:auto;padding:30px 0 70px;cursor:grab;scrollbar-width:none}
+.strip::-webkit-scrollbar{display:none}
+.strip:active{cursor:grabbing}
 .strip-track{display:flex;gap:18px;width:max-content;padding:0 24px}
+.strip-card{margin:0}
 .strip-card img{
-  width:300px;height:210px;object-fit:cover;
+  width:270px;height:370px;object-fit:cover;
   border-radius:20px;box-shadow:var(--shadow);flex:none;
+  pointer-events:none;
 }
 
 /* ---------- how it works ---------- */
@@ -144,38 +174,42 @@ h1{
 .eyebrow{
   display:inline-flex;align-items:center;gap:8px;
   font-size:12px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;
-  color:var(--blue-d);margin-bottom:16px;
+  color:#3a3f47;margin-bottom:16px;
 }
 .eyebrow .dot{width:8px;height:8px;border-radius:50%;background:var(--navy)}
 .eyebrow-c{display:flex;justify-content:center}
 h2{
   font-size:clamp(2rem,4vw,2.9rem);
-  font-weight:800;color:var(--navy);letter-spacing:-0.02em;line-height:1.15;
+  font-weight:800;color:var(--h2);letter-spacing:-0.02em;line-height:1.15;
   margin-bottom:18px;
 }
 .center{text-align:center}
 .steps{display:flex;flex-direction:column;gap:18px;margin-top:34px}
-.step{position:relative}
+.step{position:relative;display:flex;align-items:center;gap:26px}
+.step:nth-child(even){flex-direction:row-reverse}
 .ghost{
-  position:absolute;left:2px;top:50%;transform:translateY(-56%);
-  font-size:76px;font-weight:800;color:#e6edf7;line-height:1;
-  z-index:0;user-select:none;pointer-events:none;
+  flex:0 0 118px;
+  font-size:98px;font-weight:800;color:var(--ghost);line-height:1;
+  user-select:none;pointer-events:none;text-align:center;
+  letter-spacing:-0.02em;
 }
 .step-card{
-  position:relative;z-index:1;
+  position:relative;z-index:1;flex:1;
   background:#fff;border-radius:20px;box-shadow:var(--shadow);
   padding:22px 26px;
   display:flex;align-items:center;gap:18px;
-  margin-left:72px;
+  transition:transform .25s ease,box-shadow .25s ease;
 }
+.step:nth-child(even) .step-card{background:var(--tint)}
+.step-card:hover{transform:translateY(-4px);box-shadow:0 24px 55px rgba(11,23,64,.14)}
 .step-ico{
   width:52px;height:52px;border-radius:50%;flex:none;
   display:flex;align-items:center;justify-content:center;
-  background:var(--navy);
+  background:var(--navy-deep);
 }
-.step:nth-child(even) .step-ico{background:var(--blue)}
-.step-ico svg{width:24px;height:24px;stroke:#fff}
-.step-card h3{font-size:17px;font-weight:800;color:var(--navy);margin-bottom:4px}
+.step:nth-child(even) .step-ico{background:var(--step-blue)}
+.step-ico svg{width:24px;height:24px}
+.step-card h3{font-size:17px;font-weight:800;color:#26292e;margin-bottom:4px}
 .step-card p{font-size:14.5px;color:var(--muted)}
 
 /* ---------- why ---------- */
@@ -364,7 +398,7 @@ textarea.input{resize:vertical;min-height:120px}
   .hero-cta{flex-direction:column;align-items:stretch}
   .hero-cta .btn{width:100%}
   .stats{grid-template-columns:repeat(2,1fr)}
-  .strip-card img{width:220px;height:160px}
+  .strip-card img{width:200px;height:270px}
   .foot-grid{grid-template-columns:repeat(2,1fr)}
   .why-grid{grid-template-columns:1fr}
   .svc-grid{grid-template-columns:1fr}
@@ -421,7 +455,7 @@ textarea.input{resize:vertical;min-height:120px}
 /* ---------- 2. why panel ---------- */
 .why{padding:40px 0}
 .why-panel{
-  background:#5b93c4;border-radius:36px;padding:70px;
+  background:#4e90b8;border-radius:36px;padding:70px;
   display:grid;grid-template-columns:1fr 1.2fr;gap:60px;align-items:center;
 }
 .why-media img{border-radius:24px;aspect-ratio:3/3.6;object-fit:cover;width:100%}
@@ -435,24 +469,23 @@ textarea.input{resize:vertical;min-height:120px}
 
 /* ---------- 3. serve ---------- */
 .serve{padding:100px 0}
-.serve-stage{position:relative;max-width:1000px;margin:50px auto 0;min-height:560px}
-.serve-blob{position:absolute;inset:5% 15%;background:radial-gradient(closest-side,#dbeafe,transparent);border-radius:50%}
-.serve-center{position:relative;width:340px;margin:0 auto;border-radius:28px;overflow:hidden;box-shadow:var(--shadow)}
-.serve-center img{width:100%;height:480px;object-fit:cover;display:block}
-.serve-center span{position:absolute;bottom:26px;left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:22px;text-shadow:0 2px 12px rgba(0,0,0,.4)}
-.serve-card{position:absolute;background:#fff;border-radius:20px;box-shadow:var(--shadow);padding:22px;width:230px;text-align:center}
+.serve-stage{position:relative;max-width:1100px;margin:50px auto 0;min-height:680px}
+.serve-center{position:relative;z-index:2;width:360px;margin:0 auto;border-radius:28px;overflow:hidden;box-shadow:var(--shadow)}
+.serve-center img{width:100%;height:520px;object-fit:cover;display:block}
+.serve-center span{position:absolute;bottom:26px;left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:22px;text-shadow:0 2px 12px rgba(0,0,0,.4);z-index:2}
+.serve-card{position:absolute;background:#fff;border-radius:20px;box-shadow:var(--shadow);padding:22px;width:250px;text-align:center}
 .serve-card b{display:block;font-size:16px;color:var(--navy)}
 .serve-card small{color:var(--muted)}
 .serve-ico svg{width:34px;height:34px;stroke:var(--blue)}
-.sc-1{left:0;top:40px}
-.sc-2{left:0;bottom:60px}
-.sc-3{right:0;top:60px}
-.sc-4{right:0;bottom:40px}
+.sc-1{left:14%;top:55px}
+.sc-2{left:11%;bottom:130px}
+.sc-3{right:14%;top:75px}
+.sc-4{right:11%;bottom:110px}
 .btn-sm{padding:10px 20px;font-size:13px;margin-top:10px}
 
 /* ---------- 4. specialty ---------- */
 .special{padding:40px 0}
-.spec-panel{background:#5b93c4;border-radius:36px;padding:70px}
+.spec-panel{background:#4e90b8;border-radius:36px;padding:70px}
 .spec-panel h2.light,.spec-panel .eyebrow.light{color:#fff}
 .spec-sub{text-align:center;color:#dbe9f8;margin-bottom:40px}
 .spec-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px}
@@ -477,13 +510,13 @@ textarea.input{resize:vertical;min-height:120px}
 .marquee:hover .mq-track{animation-play-state:paused}
 @keyframes mq{to{transform:translateX(-50%)}}
 .loc-pill{display:inline-flex;align-items:center;gap:10px;border-radius:999px;padding:13px 26px;color:#fff;font-weight:700;white-space:nowrap}
-.loc-pill.navy{background:var(--navy)}
+.loc-pill.navy{background:#1a1f4b}
 .loc-pill.blue{background:var(--blue)}
 .loc-pill svg{width:18px;height:18px}
 
 /* ---------- 6. CTA banner ---------- */
 .cta{padding:40px 0 100px}
-.cta-banner{position:relative;border-radius:36px;overflow:hidden;min-height:420px;display:flex;align-items:center;justify-content:center;text-align:center}
+.cta-banner{position:relative;border-radius:36px;overflow:hidden;min-height:340px;display:flex;align-items:center;justify-content:center;text-align:center}
 .cta-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
 .cta-ol{position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,23,64,.55),rgba(11,23,64,.85))}
 .cta-inner{position:relative;padding:70px 30px;color:#fff}
@@ -520,4 +553,277 @@ textarea.input{resize:vertical;min-height:120px}
   .why-list{grid-template-columns:1fr}
   .foot-grid{grid-template-columns:1fr 1fr}
   .cta-inner h2{font-size:1.9rem}
+}
+
+/* ============================================================
+   ANIMATION LAYER — appended 2026-10-05
+   ============================================================ */
+
+/* ---------- hero entrance choreography ---------- */
+@keyframes riseIn{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:none}}
+.hero .pill-badge{animation:riseIn .7s .05s both}
+.hero h1 .w{display:inline-block;animation:riseIn .65s both}
+.hero .lede{animation:riseIn .7s .55s both}
+.hero-cta{animation:riseIn .7s .7s both}
+.strip{animation:riseIn .9s .85s both}
+
+/* ---------- staggered scroll reveals ---------- */
+.reveal{transition-delay:var(--d,0s)}
+.steps .step:nth-child(2){--d:.08s}
+.steps .step:nth-child(3){--d:.16s}
+.steps .step:nth-child(4){--d:.24s}
+.why-list li:nth-child(2n){--d:.07s}
+.stats .stat:nth-child(2){--d:.08s}
+.stats .stat:nth-child(3){--d:.16s}
+.stats .stat:nth-child(4){--d:.24s}
+.serve-card.sc-2,.serve-card.sc-4{--d:.12s}
+
+/* ---------- floating 10K badge ---------- */
+@keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+.served-badge{animation:floaty 4.5s ease-in-out infinite}
+
+/* ---------- image zoom on card hover ---------- */
+.svc-photo img,.spec-photo img{transition:transform .6s cubic-bezier(.2,.6,.2,1)}
+.svc-photo:hover img,.spec-photo:hover img{transform:scale(1.07)}
+.svc-photo,.spec-photo{transition:transform .25s ease,box-shadow .25s ease}
+.svc-photo:hover,.spec-photo:hover{transform:translateY(-6px);box-shadow:0 26px 60px rgba(11,23,64,.18)}
+.svc-go{transition:transform .2s ease,background .2s ease}
+.svc-go:hover{transform:rotate(45deg) scale(1.08)}
+
+/* ---------- serve arrows: stroke draw-in ---------- */
+.serve-arrow{position:absolute;z-index:2;pointer-events:none}
+.serve-arrow path{stroke:#1a2045;stroke-width:2.6;fill:none;stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:320;stroke-dashoffset:320;transition:stroke-dashoffset 1.3s ease .35s}
+.serve-stage.in .serve-arrow path{stroke-dashoffset:0}
+.sa-tr{top:6px;right:8%}
+.sa-bl{bottom:2px;left:6%}
+
+/* ---------- serve arch rings ---------- */
+.serve-blob{position:absolute;inset:2% 12%;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(219,234,254,.55),transparent 72%)}
+.serve-blob::before,.serve-blob::after{
+  content:"";position:absolute;inset:0;border-radius:50%;
+  border:1.5px solid rgba(78,144,184,.28);
+}
+.serve-blob::after{inset:9%}
+
+/* ---------- mobile menu slide ---------- */
+@media(max-width:900px){
+  .nav-links{
+    transform:translateY(-10px);opacity:0;
+    transition:transform .3s ease,opacity .3s ease;
+  }
+  .nav-links.open{transform:none;opacity:1}
+  .burger.active span:nth-child(1){transform:translateY(7.5px) rotate(45deg)}
+  .burger.active span:nth-child(2){opacity:0}
+  .burger.active span:nth-child(3){transform:translateY(-7.5px) rotate(-45deg)}
+}
+
+/* ---------- modal polish ---------- */
+.modal-card{transform:translateY(16px) scale(.97)}
+.modal.open .modal-card{transform:none}
+
+/* ---------- serve cards overlap ---------- */
+.serve-card{z-index:3}
+
+/* ---------- reduced motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .reveal{opacity:1!important;transform:none!important}
+  .serve-arrow path{stroke-dashoffset:0!important}
+}
+
+/* ===== A2: HOW+SERVICES FIDELITY ===== */
+/* shared palette scoped to A2 sections (append-only overrides) */
+#how,#services{
+  --navy:#131845;
+  --ink:#0f1537;
+  --blue:#5392ba;
+  --muted:#5b6b80;
+  --h2:#131845;
+  --tint:#edf3fa;
+  --ghost:#d7e4f0;
+  --shadow:0 18px 45px rgba(19,24,69,.10);
+}
+
+/* ---------- A2: how ---------- */
+#how .eyebrow{color:#131845}
+#how .eyebrow .dot{background:#131845}
+#how .how-body h2{color:#131845}
+#how .served-badge{left:-26px;bottom:44px;border-radius:16px}
+#how .served-tx b{color:#131845}
+#how .served-tx span{color:#5b6b80}
+#how .ghost{color:#d7e4f0;font-size:104px;flex:0 0 124px}
+#how .step-card{background:#fff}
+#how .step:nth-child(even) .step-card{background:#edf3fa}
+#how .step-ico{background:#131845}
+#how .step:nth-child(even) .step-ico{background:#5392ba}
+#how .step-card h3{color:#131845}
+#how .step-card p{color:#5b6b80}
+
+/* ---------- A2: services ---------- */
+#services{background:#f2f7fb}
+#services .eyebrow{color:#131845}
+#services .eyebrow .dot{background:#131845}
+#services .svc-head h2{color:#131845}
+#svcPrev{background:#e8eef4;color:#131845}
+#svcNext{background:#131845;color:#fff}
+#services .svc-photo{flex:0 0 340px;height:453px}
+#services .svc-ol{background:linear-gradient(180deg,transparent 42%,rgba(19,24,69,.92))}
+#services .svc-go{color:#131845}
+
+/* ===== A1: NAV+HERO FIDELITY ===== */
+/* palette: navy #131845, ink #0f1537, blue #5392ba, badge-pale #ebf4f8, gray #5b6b80 */
+
+/* hero background: soft blue pooling at top corners, fading to white */
+.hero{
+  background:
+    radial-gradient(760px 380px at 4% -8%, #cfe4f2 0%, rgba(207,228,242,0) 65%),
+    radial-gradient(760px 380px at 96% -8%, #cfe4f2 0%, rgba(207,228,242,0) 65%),
+    linear-gradient(180deg,#edf5fb 0%,#f6fbfe 34%,#ffffff 74%);
+}
+
+/* nav: ink links, blue CTA pill with white circle arrow */
+.nav-links a{color:#0f1537}
+.nav-links a:hover{color:#5392ba}
+.nav-links a.staff{color:#131845;border-color:#dfe9f2;background:#fff}
+.nav-links a.staff:hover{border-color:#5392ba;color:#5392ba}
+.nav-cta .btn-blue{background:#5392ba;padding:12px 12px 12px 24px;font-size:14.5px}
+.nav-cta .btn-blue:hover{background:#46819f}
+.nav-cta .arr{background:#fff;color:#5392ba;margin-left:10px;width:28px;height:28px;font-size:15px}
+
+/* badge: pale blue pill, navy text + navy icon */
+.pill-badge{background:#ebf4f8;color:#131845;box-shadow:0 10px 30px rgba(11,23,64,.10);font-size:13.5px;font-weight:700;padding:10px 22px}
+.pill-badge svg path{stroke:#131845}
+
+/* h1: ink navy, ~64px desktop, tight */
+.hero h1{color:#0f1537;font-size:clamp(2.55rem,4.6vw,4rem);letter-spacing:-0.025em;line-height:1.1}
+
+/* doodle: navy, tucked left of the subtext */
+.hero-doodle{left:115px;top:64%;width:78px;height:52px}
+.hero-doodle path{stroke:#131845}
+
+/* sub text: gray */
+.lede{color:#5b6b80;font-size:17.5px}
+
+/* hero CTAs: navy + blue pills */
+.btn-navy{background:#131845}
+.btn-navy:hover{background:#1d2559}
+.hero-cta .btn-blue{background:#5392ba}
+.hero-cta .btn-blue:hover{background:#46819f}
+
+/* photo strip: full-bleed, edge-to-edge, 5 across, ~210px tall */
+.strip{margin:0 -24px;padding:36px 0 70px}
+.strip-track{display:flex;gap:16px;width:max-content;padding:0;margin-left:-32px}
+.strip-card{margin:0;flex:none}
+.strip-card img{
+  width:264px;height:210px;object-fit:cover;
+  border-radius:20px;box-shadow:0 18px 45px rgba(11,23,64,.10);
+  flex:none;pointer-events:none;
+}
+
+@media(max-width:900px){
+  .hero-doodle{display:none}
+  .strip-card img{width:220px;height:180px}
+}
+@media(max-width:600px){
+  .hero h1{font-size:2.35rem}
+  .strip{margin:0 -20px}
+}
+
+/* ===== A2: mobile corrections (600px) ===== */
+@media(max-width:600px){
+  #how .ghost{flex:0 0 58px;font-size:52px}
+  #how .step{gap:10px}
+  #how .step-card{margin-left:0;padding:16px 18px}
+  #how .served-badge{left:8px;bottom:18px}
+  #services .svc-photo{flex:0 0 270px;height:360px}
+}
+
+/* ===== A4: SPECIALTY+LOCATIONS+FOOTER FIDELITY ===== */
+/* shared palette: navy #131845, ink #0f1537, blue #5392ba, panel #4f90b8, gray #5b6b80, footer #0f1537 */
+
+/* --- specialty: exact panel + overlay + type colors --- */
+.spec-panel{background:#4f90b8}
+.spec-sub{color:#eaf3fa}
+.spec-ol{background:linear-gradient(180deg,transparent 38%,rgba(19,24,69,.92))}
+.spec-photo h3.big{left:0;right:0;text-align:center;bottom:28px;font-size:44px;line-height:1.12;letter-spacing:-.01em}
+.spec-text h3{color:#131845;font-size:22px}
+.spec-text p{color:#5b6b80}
+.muted-sm{color:#5b6b80}
+
+/* --- locations: exact pill colors, navy headings --- */
+#locations .eyebrow{color:#131845}
+#locations .eyebrow .dot{background:#131845}
+#locations h2.center{color:#131845}
+.loc-sub{color:#5b6b80}
+.loc-pill{padding:14px 28px;font-size:15px}
+.loc-pill.navy{background:#131845}
+.loc-pill.blue{background:#5392ba}
+
+/* --- about: navy heading, palette gray --- */
+#about .eyebrow{color:#131845}
+#about .eyebrow .dot{background:#131845}
+.about h2.center{color:#131845}
+.about-tx{color:#5b6b80}
+.stat b{color:#131845}
+.stat span{color:#5b6b80}
+
+/* --- contact: navy heading --- */
+#contact .eyebrow{color:#131845}
+#contact .eyebrow .dot{background:#131845}
+#contact h2.center{color:#131845}
+
+/* --- CTA banner: exact navy overlay --- */
+.cta-ol{background:linear-gradient(180deg,rgba(19,24,69,.5),rgba(19,24,69,.88))}
+
+/* --- footer: exact bg --- */
+.footer{background:#0f1537}
+
+/* --- booking modal: navy headings, blue primary --- */
+#bookModal .btn-navy{background:#5392ba;box-shadow:0 12px 28px rgba(83,146,186,.38)}
+#bookModal .btn-navy:hover{background:#45809f;box-shadow:0 16px 34px rgba(83,146,186,.45)}
+#bookModal .modal-card h3{color:#131845}
+
+/* ===== A3: WHY+SERVE FIDELITY ===== */
+.why-panel{background:#4f90b8}
+.why-lede{color:#eaf3fa}
+.why-list{gap:26px 34px}
+.why-list li{align-items:center;gap:14px;font-size:15.5px}
+.why-list svg{width:32px;height:32px}
+.serve .eyebrow{color:#131845}
+.serve .eyebrow .dot{background:#131845}
+.serve h2.center{color:#131845}
+.serve-center{width:320px}
+.serve-center img{height:440px}
+.serve-center::after{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:linear-gradient(180deg,rgba(19,24,69,0) 52%,rgba(19,24,69,.82) 100%)}
+.serve-ico svg{stroke:#131845}
+.serve-blob{background:radial-gradient(closest-side,rgba(227,238,247,.95),rgba(227,238,247,0) 72%)}
+.serve-blob::before{border-color:rgba(83,146,186,.28)}
+.serve-blob::after{border-color:rgba(83,146,186,.16)}
+.serve-arrow path{stroke:#131845}
+.sc-1{left:11%;top:64px}
+.sc-2{left:8%;bottom:100px}
+.sc-3{right:11%;top:84px}
+.sc-4{right:8%;bottom:84px}
+@media(max-width:900px){
+  .serve-center{width:min(320px,86vw)}
+  .serve-arrow{display:none}
+}
+
+/* --- specialty tall-card big stat: wrapper keeps count-up script compatible --- */
+.spec-big{position:absolute;left:0;right:0;bottom:30px;text-align:center;color:#fff;z-index:2}
+.spec-big h3.big{position:static;font-size:46px;line-height:1.1;letter-spacing:-.01em;margin:0;color:#fff}
+.spec-big p{color:#fff;font-size:20px;font-weight:700;margin:6px 0 0}
+
+/* --- A4 mobile tightening for specialty --- */
+@media(max-width:640px){
+  .spec-panel{padding:44px 22px;border-radius:28px}
+  .spec-grid{gap:18px}
+  .spec-col{gap:18px}
+  .spec-photo{height:230px}
+  .spec-photo.tall{min-height:430px}
+  .spec-big h3.big{font-size:38px}
+  .spec-big p{font-size:17px}
 }

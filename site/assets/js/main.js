@@ -99,20 +99,20 @@ document.addEventListener('DOMContentLoaded', function () {
       var paused = false, dragging = false, dragged = false;
       var startX = 0, startLeft = 0;
 
-      track.addEventListener('pointerenter', function () { paused = true; });
-      track.addEventListener('pointerleave', function () { paused = false; });
+      strip.addEventListener('pointerenter', function () { paused = true; });
+      strip.addEventListener('pointerleave', function () { paused = false; });
 
       strip.addEventListener('pointerdown', function (e) {
         dragging = true; dragged = false;
-        startX = e.clientX; startLeft = track.scrollLeft;
-        track.setPointerCapture(e.pointerId);
+        startX = e.clientX; startLeft = strip.scrollLeft;
+        try { strip.setPointerCapture(e.pointerId); } catch (err) {}
         e.preventDefault();
       });
       strip.addEventListener('pointermove', function (e) {
         if (!dragging) return;
         var dx = e.clientX - startX;
         if (Math.abs(dx) > 4) dragged = true;
-        track.scrollLeft = startLeft - dx;
+        strip.scrollLeft = startLeft - dx;
       });
       var endDrag = function () { dragging = false; };
       strip.addEventListener('pointerup', endDrag);
@@ -124,8 +124,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
       var step = function () {
         if (!paused && !dragging) {
-          track.scrollLeft += 0.6;
-          if (track.scrollLeft >= half) track.scrollLeft -= half;
+          strip.scrollLeft += 0.6;
+          if (strip.scrollLeft >= half) strip.scrollLeft -= half;
         }
         requestAnimationFrame(step);
       };
@@ -250,4 +250,153 @@ document.addEventListener('DOMContentLoaded', function () {
       wire();
     }
   } catch (e) { /* never throw */ }
+})();
+
+// 12. Extra scroll-reveal targets (self-contained).
+// Runs immediately at script eval (end of body, DOM parsed) — BEFORE the
+// DOMContentLoaded reveal system in section 3 collects `.reveal` elements,
+// so these are picked up automatically (IO + 2.5s safety fallback included).
+(function () {
+  'use strict';
+  try {
+    var groups = [
+      '.why-list li',
+      '.c-row',
+      '.svc-head > *',
+      '.loc-sub'
+    ];
+    groups.forEach(function (sel) {
+      var nodes = document.querySelectorAll(sel);
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        if (el.classList.contains('reveal')) continue;
+        el.classList.add('reveal');
+        el.style.setProperty('--d', (0.05 + i * 0.07).toFixed(2) + 's');
+      }
+    });
+  } catch (e) { /* never throw */ }
+})();
+
+// 13. Count-up for the specialty "98% On-Time Rate" stat (self-contained).
+// 9. Hero entrance choreography + stats count-up + serve arrows (self-contained).
+(function () {
+  'use strict';
+  function onReady(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  onReady(function () {
+    try {
+      var el = document.querySelector('.spec-photo.tall h3.big');
+      if (!el || el.dataset.done) return;
+      var t = (el.textContent || '').replace(/\s+/g, '');
+      var m = t.match(/^([\d.]+)(.*)$/);
+      if (!m) return;
+      var target = parseFloat(m[1]), dec = m[1].indexOf('.') > -1 ? 1 : 0, suffix = m[2] || '';
+      function countUp() {
+        if (el.dataset.done) return;
+        el.dataset.done = '1';
+        var dur = 1400, t0 = null;
+        function frame(ts) {
+          if (!t0) t0 = ts;
+          var k = Math.min(1, (ts - t0) / dur);
+          var e = 1 - Math.pow(1 - k, 3);
+          el.innerHTML = (target * e).toFixed(dec) + suffix;
+          if (k < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+      if ('IntersectionObserver' in window) {
+        var so = new IntersectionObserver(function (es) {
+          es.forEach(function (en) {
+            if (en.isIntersecting) { countUp(); so.disconnect(); }
+          });
+        }, { threshold: 0.4 });
+        so.observe(el);
+        setTimeout(countUp, 6000); // safety: never stuck at 0
+      } else { countUp(); }
+    } catch (e) { /* never throw */ }
+  });
+})();
+(function () {
+  'use strict';
+  function onReady(fn) {
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
+    else fn();
+  }
+  onReady(function () {
+    try {
+      // 9a. Split hero H1 into word spans for staggered rise.
+      var h1 = document.querySelector('.hero h1');
+      if (h1 && !h1.querySelector('.w')) {
+        var parts = [];
+        h1.childNodes.forEach(function (n) {
+          if (n.nodeType === 3) {
+            n.textContent.split(/(\s+)/).forEach(function (tok) {
+              if (!tok) return;
+              if (/^\s+$/.test(tok)) { parts.push(document.createTextNode(' ')); return; }
+              var sp = document.createElement('span');
+              sp.className = 'w';
+              sp.textContent = tok;
+              parts.push(sp);
+            });
+          } else if (n.nodeName === 'BR') {
+            parts.push(document.createElement('br'));
+          } else { parts.push(n); }
+        });
+        h1.innerHTML = '';
+        var wi = 0;
+        parts.forEach(function (p) {
+          if (p.className === 'w') { p.style.animationDelay = (0.15 + wi * 0.09) + 's'; wi++; }
+          h1.appendChild(p);
+        });
+      }
+    } catch (e) {}
+
+    try {
+      // 9b. Stats count-up on first view.
+      var stats = document.querySelectorAll('.stat b');
+      function parseStat(el) {
+        var t = (el.textContent || '').trim();
+        var m = t.match(/^([\d.]+)(.*)$/);
+        if (!m) return null;
+        return { target: parseFloat(m[1]), dec: (m[1].indexOf('.') > -1 ? 1 : 0), suffix: m[2] || '' };
+      }
+      function countUp(el) {
+        var p = parseStat(el);
+        if (!p || el.dataset.done) return;
+        el.dataset.done = '1';
+        var dur = 1400, t0 = null;
+        function frame(ts) {
+          if (!t0) t0 = ts;
+          var k = Math.min(1, (ts - t0) / dur);
+          var e = 1 - Math.pow(1 - k, 3);
+          el.textContent = (p.target * e).toFixed(p.dec) + p.suffix;
+          if (k < 1) requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      }
+      if ('IntersectionObserver' in window && stats.length) {
+        var so = new IntersectionObserver(function (es) {
+          es.forEach(function (en) {
+            if (en.isIntersecting) { countUp(en.target); so.unobserve(en.target); }
+          });
+        }, { threshold: 0.4 });
+        stats.forEach(function (s) { so.observe(s); });
+      }
+    } catch (e) {}
+
+    try {
+      // 9c. Serve-stage arrow draw-in trigger.
+      var stage = document.getElementById('serveStage');
+      if (stage && 'IntersectionObserver' in window) {
+        var ao = new IntersectionObserver(function (es) {
+          es.forEach(function (en) {
+            if (en.isIntersecting) { stage.classList.add('in'); ao.disconnect(); }
+          });
+        }, { threshold: 0.25 });
+        ao.observe(stage);
+      } else if (stage) { stage.classList.add('in'); }
+    } catch (e) {}
+  });
 })();

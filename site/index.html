@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<link rel="stylesheet" href="assets/css/animations.css">
 </head>
 <body>
 
@@ -31,7 +32,7 @@
       <a href="/app/" class="staff">Staff Login</a>
     </nav>
     <div class="nav-cta">
-      <button class="btn btn-blue" data-book>Book Service Now <span aria-hidden="true">&#8599;</span></button>
+      <button class="btn btn-blue" data-book>Book Service Now <span class="arr" aria-hidden="true">&#8599;</span></button>
       <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
     </div>
   </div>
@@ -49,6 +50,10 @@
         Secure Specimen Handling &amp; Delivery
       </div>
       <h1>Mobile Blood Draw &amp;<br>Specimen Collection!</h1>
+      <svg class="hero-doodle" width="86" height="56" viewBox="0 0 86 56" aria-hidden="true">
+        <path d="M6 8 C 22 26, 40 40, 62 42 C 70 43, 76 40, 78 34 C 79 29, 75 26, 70 28 C 64 31, 66 39, 74 41" fill="none" stroke="#1a2045" stroke-width="2.6" stroke-linecap="round"/>
+        <path d="M68 44 L 80 42 L 74 52" fill="none" stroke="#1a2045" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
       <p class="lede">Professional mobile phlebotomy and specimen courier services across Lahore &amp; surroundings — at your home, on your schedule.</p>
       <div class="hero-cta">
         <button class="btn btn-navy" data-book>Book Appointment Now</button>
@@ -89,9 +94,9 @@
             <div class="step-card">
               <span class="step-ico">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <rect x="5" y="4" width="14" height="17" rx="2" stroke="#5b9bd5" stroke-width="1.8"/>
-                  <path d="M9 4a3 3 0 0 1 6 0" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
-                  <path d="M9 11h6M9 15h6" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
+                  <rect x="5" y="4" width="14" height="17" rx="2" stroke="#fff" stroke-width="1.8"/>
+                  <path d="M9 4a3 3 0 0 1 6 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M9 11h6M9 15h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
               </span>
               <div>
@@ -105,9 +110,9 @@
             <div class="step-card">
               <span class="step-ico">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <rect x="3.5" y="5" width="17" height="16" rx="2" stroke="#5b9bd5" stroke-width="1.8"/>
-                  <path d="M3.5 10h17M8 2.8V6M16 2.8V6" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
-                  <path d="M12 14.5v4M10 16.5h4" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
+                  <rect x="3.5" y="5" width="17" height="16" rx="2" stroke="#fff" stroke-width="1.8"/>
+                  <path d="M3.5 10h17M8 2.8V6M16 2.8V6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+                  <path d="M12 14.5v4M10 16.5h4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
               </span>
               <div>
@@ -121,9 +126,9 @@
             <div class="step-card">
               <span class="step-ico">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M3 11.5L12 4l9 7.5" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M5.5 10.5V20h13v-9.5" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M10 20v-5h4v5" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M3 11.5L12 4l9 7.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M5.5 10.5V20h13v-9.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M10 20v-5h4v5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
               </span>
               <div>
@@ -137,15 +142,15 @@
             <div class="step-card">
               <span class="step-ico">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M2.5 6.5h12v10h-12z" stroke="#5b9bd5" stroke-width="1.8" stroke-linejoin="round"/>
-                  <path d="M14.5 10.5h4l3 3.5v2.5h-7" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                  <circle cx="7" cy="18.5" r="1.8" stroke="#5b9bd5" stroke-width="1.8"/>
-                  <circle cx="17.5" cy="18.5" r="1.8" stroke="#5b9bd5" stroke-width="1.8"/>
+                  <path d="M2.5 6.5h12v10h-12z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+                  <path d="M14.5 10.5h4l3 3.5v2.5h-7" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  <circle cx="7" cy="18.5" r="1.8" stroke="#fff" stroke-width="1.8"/>
+                  <circle cx="17.5" cy="18.5" r="1.8" stroke="#fff" stroke-width="1.8"/>
                 </svg>
               </span>
               <div>
                 <h3>We Deliver Your Specimen</h3>
-                <p>Secure transport to your preferred laboratory.</p>
+                <p>Secure transport to your preferred laboratory or carrier.</p>
               </div>
             </div>
           </li>
@@ -219,58 +224,69 @@
           <p class="why-lede">Choosing the right mobile phlebotomy provider is about trust, precision, and reliability. Optix LAB MedSync delivers clinical-quality service directly to your location without compromise.</p>
           <ul class="why-list">
             <li>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 3l7 2.8v5.4c0 4.4-2.9 7.6-7 9.3-4.1-1.7-7-4.9-7-9.3V5.8L12 3z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-                <path d="M9 11.5l2.2 2.2 4.3-4.2" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M12 2.6l1.6 3.2 3.5.5-2.5 2.5.6 3.5-3.2-1.7-3.2 1.7.6-3.5-2.5-2.5 3.5-.5z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+                <circle cx="7" cy="16.8" r="2.1" stroke="#fff" stroke-width="1.5"/>
+                <path d="M3.6 20.2c.7-2.2 1.9-3.3 3.4-3.3s2.7 1.1 3.4 3.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                <circle cx="17" cy="16.8" r="2.1" stroke="#fff" stroke-width="1.5"/>
+                <path d="M13.6 20.2c.7-2.2 1.9-3.3 3.4-3.3s2.7 1.1 3.4 3.3" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
               <span>Certified &amp; Experienced Staff</span>
             </li>
             <li>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 20.5S4.5 15.3 4.5 10A4.5 4.5 0 0 1 9 5.5c1.7 0 2.7 1 3 1.7.3-.7 1.3-1.7 3-1.7a4.5 4.5 0 0 1 4.5 4.5c0 5.3-7.5 10.5-7.5 10.5z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="10" cy="8" r="3.4" stroke="#fff" stroke-width="1.5"/>
+                <path d="M4 20c1-3.8 3.2-5.7 6-5.7 1.4 0 2.7.5 3.7 1.4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M18.5 13.5v6M15.5 16.5h6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
               <span>Patient-First Approach</span>
             </li>
             <li>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="12" r="8.5" stroke="#fff" stroke-width="1.8"/>
-                <path d="M12 7.5V12l3.2 2" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="13.5" r="6.2" stroke="#fff" stroke-width="1.5"/>
+                <path d="M12 10v3.5l2.4 1.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M18.6 3.2A8.6 8.6 0 0 1 21 7.6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M21 4.6v3h-3" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <span>Fast Scheduling &amp; Reliable Service</span>
             </li>
             <li>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="5.5" y="10.5" width="13" height="9" rx="2" stroke="#fff" stroke-width="1.8"/>
-                <path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="6" y="10.5" width="12" height="8.5" rx="2" stroke="#fff" stroke-width="1.5"/>
+                <path d="M8.8 10.5V8a3.2 3.2 0 0 1 6.4 0v2.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M12 13l.7 1.4 1.6.3-1.2 1.1.3 1.6-1.4-.7-1.4.7.3-1.6-1.2-1.1 1.6-.3z" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/>
               </svg>
               <span>Secure &amp; Confidential</span>
             </li>
             <li>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-                <circle cx="12" cy="10" r="2.6" stroke="#fff" stroke-width="1.8"/>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="4" y="8" width="16" height="11" rx="2" stroke="#fff" stroke-width="1.5"/>
+                <path d="M9 8V6.5A1.5 1.5 0 0 1 10.5 5h3A1.5 1.5 0 0 1 15 6.5V8" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+                <path d="M4 12.5h16" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
               </svg>
               <span>Serving Lahore &amp; Surroundings</span>
             </li>
             <li>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 3.5c-3.5 4.5-6.3 7.9-6.3 11.3a6.3 6.3 0 0 0 12.6 0C18.3 11.4 15.5 8 12 3.5z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-                <path d="M9.3 15a2.9 2.9 0 0 0 2.7 3" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <rect x="6" y="4.5" width="12" height="16" rx="2" stroke="#fff" stroke-width="1.5"/>
+                <rect x="9.5" y="2.5" width="5" height="2.8" rx="1" stroke="#fff" stroke-width="1.5"/>
+                <path d="M9.8 13.2l2 2 3.4-3.6" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <span>Safe &amp; Hygienic Kits</span>
             </li>
             <li>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M4 11.5L12 4.5l8 7" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M6.5 10.5V19h11v-8.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="8.5" cy="11.5" r="4" stroke="#fff" stroke-width="1.5"/>
+                <circle cx="15.5" cy="11.5" r="4" stroke="#fff" stroke-width="1.5"/>
+                <path d="M17.5 16.5l1.6 1.6 2.9-3.1" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <span>Convenience Without Compromise</span>
             </li>
             <li>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 3.5h8l4 4v13H6z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-                <path d="M14 3.5V8h4" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/>
-                <path d="M9.5 14.5l2 2 3.5-3.8" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M7 3.5h7l4 4V20.5H7z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+                <path d="M14 3.5V8h4" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
+                <path d="M10 13.8l1.8 1.8 3-3.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
               <span>Compliance, Safety, and Confidentiality</span>
             </li>
@@ -284,17 +300,27 @@
     <div class="wrap">
       <p class="eyebrow eyebrow-c"><span class="dot"></span>SERVE</p>
       <h2 class="center">Who We Serve</h2>
-      <div class="serve-stage">
+      <div class="serve-stage" id="serveStage">
         <div class="serve-blob"></div>
+        <svg class="serve-arrow sa-tr" width="110" height="70" viewBox="0 0 110 70" aria-hidden="true">
+          <path d="M104 12 C 80 2, 52 8, 44 22 C 38 32, 46 40, 54 36 C 60 33, 58 25, 51 26"/>
+          <path d="M28 16 L 41 25 L 32 36"/>
+        </svg>
+        <svg class="serve-arrow sa-bl" width="110" height="70" viewBox="0 0 110 70" aria-hidden="true">
+          <path d="M6 58 C 30 68, 58 62, 66 48 C 72 38, 64 30, 56 34 C 50 37, 52 45, 59 44"/>
+          <path d="M82 50 L 69 43 L 78 33"/>
+        </svg>
         <div class="serve-center reveal">
           <img src="assets/img/serve-center.jpg" alt="Blood draw close-up">
           <span>Clinical Research Organizations</span>
         </div>
         <article class="serve-card sc-1 reveal">
           <span class="serve-ico">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="7.5" r="3.4" stroke="#5b9bd5" stroke-width="1.8"/>
-              <path d="M5.5 20c1.2-3.6 3.7-5.4 6.5-5.4s5.3 1.8 6.5 5.4" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="8.6" stroke="#131845" stroke-width="1.6"/>
+              <circle cx="11" cy="9.6" r="2.7" stroke="#131845" stroke-width="1.6"/>
+              <path d="M6.6 16.6c.9-2.5 2.5-3.8 4.4-3.8s3.5 1.3 4.4 3.8" stroke="#131845" stroke-width="1.6" stroke-linecap="round"/>
+              <path d="M17.6 5.4v3.6M15.8 7.2h3.6" stroke="#131845" stroke-width="1.6" stroke-linecap="round"/>
             </svg>
           </span>
           <b>Patients</b>
@@ -303,31 +329,27 @@
         </article>
         <article class="serve-card sc-2 reveal">
           <span class="serve-ico">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M6 3.5V10a6 6 0 0 0 12 0V8" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
-              <circle cx="6" cy="3" r="1.3" stroke="#5b9bd5" stroke-width="1.8"/>
-              <path d="M18 12.5v1.5a5 5 0 0 1-10 0" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
-              <circle cx="13" cy="19.3" r="1.9" stroke="#5b9bd5" stroke-width="1.8"/>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M7 3.5V9a4 4 0 0 0 8 0V5" stroke="#131845" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="7" cy="3" r="1.4" stroke="#131845" stroke-width="1.4"/>
+              <circle cx="15" cy="4.5" r="1.4" stroke="#131845" stroke-width="1.4"/>
+              <path d="M11 13v2.5a4.5 4.5 0 0 0 9 0V14" stroke="#131845" stroke-width="1.6" stroke-linecap="round"/>
+              <circle cx="20" cy="11.5" r="1.9" stroke="#131845" stroke-width="1.6"/>
             </svg>
           </span>
           <b>Physicians &amp; Medical Clinics</b>
         </article>
         <article class="serve-card sc-3 reveal">
           <span class="serve-ico">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="5" y="4" width="14" height="16" rx="1" stroke="#5b9bd5" stroke-width="1.8"/>
-              <path d="M9 8h2M13 8h2M9 12h2M13 12h2M10 20v-3h4v3" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 11l8-6.5L20 11" stroke="#131845" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M6.5 9.3V19h11V9.3" stroke="#131845" stroke-width="1.6" stroke-linejoin="round"/>
+              <path d="M10.3 19v-3.8h3.4V19" stroke="#131845" stroke-width="1.6" stroke-linejoin="round"/>
             </svg>
           </span>
           <b>Assisted Living &amp; Nursing Facilities</b>
         </article>
         <article class="serve-card sc-4 reveal">
-          <span class="serve-ico">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="3.5" y="7.5" width="17" height="12" rx="2" stroke="#5b9bd5" stroke-width="1.8"/>
-              <path d="M9 7.5V6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v1.5M3.5 12.5h17" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-          </span>
           <b>Employers &amp; Wellness Programs</b>
           <button class="btn btn-blue btn-sm" data-book>Get Service Now</button>
         </article>
@@ -357,7 +379,10 @@
             <article class="spec-photo tall reveal">
               <img src="assets/img/spec-tall.jpg" alt="On-time collection">
               <div class="spec-ol"></div>
-              <h3 class="big">98%<br>On-Time Rate</h3>
+              <div class="spec-big">
+                <h3 class="big">98%</h3>
+                <p>On-Time Rate</p>
+              </div>
             </article>
           </div>
           <div class="spec-col">

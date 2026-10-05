@@ -1,0 +1,222 @@
+/* ============================================================
+   Optix LAB MedSync — Motion layer (animations.css)
+   ------------------------------------------------------------
+   Canonical home for ALL site animations. Loaded AFTER
+   style.css, so these rules win on equal specificity.
+   Motion is transform/opacity only (60fps) except for
+   color/box-shadow hovers. Honors prefers-reduced-motion.
+   Layout, colors, text and images are untouched here.
+   ============================================================ */
+
+/* ---------- keyframes ---------- */
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes btnPop {
+  0%   { opacity: 0; transform: translateY(14px) scale(.94); }
+  60%  { opacity: 1; transform: translateY(-2px) scale(1.02); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes floaty {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+@keyframes mq {
+  to { transform: translateX(-50%); }
+}
+@keyframes pulseDot {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50%      { transform: scale(1.4); opacity: .6; }
+}
+
+/* ---------- smooth anchors + header offset ---------- */
+html { scroll-behavior: smooth; }
+section { scroll-margin-top: 88px; }
+footer  { scroll-margin-top: 88px; }
+
+/* ---------- 1. hero entrance choreography ---------- */
+.hero .pill-badge { animation: riseIn .7s .05s both; }
+.hero h1 .w {
+  display: inline-block;
+  animation: riseIn .65s both;
+  will-change: transform, opacity;
+}
+.hero .lede      { animation: riseIn .7s .55s both; }
+.hero-cta        { animation: riseIn .7s .7s both; }
+.hero-cta .btn   { animation: btnPop .55s both; }
+.hero-cta .btn:nth-child(1) { animation-delay: .85s; }
+.hero-cta .btn:nth-child(2) { animation-delay: 1s; }
+.hero-doodle     { animation: riseIn .7s .6s both; }
+.strip           { animation: riseIn .9s .9s both; }
+.eyebrow .dot    { animation: pulseDot 2.4s ease-in-out infinite; }
+
+/* ---------- 2. scroll reveals + grouped stagger ---------- */
+.reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition: opacity .7s ease, transform .7s ease;
+  transition-delay: var(--d, 0s);
+}
+.reveal.in { opacity: 1; transform: none; }
+
+/* stagger siblings inside common groups */
+.steps > .reveal:nth-child(1) { --d: .05s; }
+.steps > .reveal:nth-child(2) { --d: .13s; }
+.steps > .reveal:nth-child(3) { --d: .21s; }
+.steps > .reveal:nth-child(4) { --d: .29s; }
+.stats > .reveal:nth-child(1) { --d: .05s; }
+.stats > .reveal:nth-child(2) { --d: .12s; }
+.stats > .reveal:nth-child(3) { --d: .19s; }
+.stats > .reveal:nth-child(4) { --d: .26s; }
+.why-list > .reveal:nth-child(1)  { --d: .04s; }
+.why-list > .reveal:nth-child(2)  { --d: .08s; }
+.why-list > .reveal:nth-child(3)  { --d: .12s; }
+.why-list > .reveal:nth-child(4)  { --d: .16s; }
+.why-list > .reveal:nth-child(5)  { --d: .20s; }
+.why-list > .reveal:nth-child(6)  { --d: .24s; }
+.why-list > .reveal:nth-child(7)  { --d: .28s; }
+.why-list > .reveal:nth-child(8)  { --d: .32s; }
+.spec-grid .reveal:nth-child(1) { --d: .06s; }
+.spec-grid .reveal:nth-child(2) { --d: .14s; }
+.spec-grid .reveal:nth-child(3) { --d: .22s; }
+
+/* ---------- 3. photo strip (JS-driven loop; CSS polish) ---------- */
+.strip { overflow-x: auto; scrollbar-width: none; }
+.strip::-webkit-scrollbar { display: none; }
+.strip-track { will-change: scroll-position; }
+
+/* ---------- 4. stats count-up (JS-driven; no CSS needed) ---------- */
+
+/* ---------- 5. buttons: hover lift + shine sweep ---------- */
+.btn {
+  position: relative;
+  overflow: hidden;
+  transition: transform .18s ease, box-shadow .18s ease, background .2s;
+}
+.btn::after {
+  content: "";
+  position: absolute; top: 0; left: -90%;
+  width: 55%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.45), transparent);
+  transform: skewX(-20deg);
+  transition: left .55s ease;
+  pointer-events: none;
+}
+.btn:hover::after { left: 140%; }
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(0) scale(.98); }
+.btn-navy:hover { box-shadow: 0 16px 34px rgba(11,23,64,.3); }
+.btn-blue:hover { box-shadow: 0 14px 30px rgba(59,130,196,.35); }
+.btn-white:hover { box-shadow: 0 14px 30px rgba(11,23,64,.18); }
+
+/* ---------- 6. cards: hover lift + deeper shadow + image zoom ---------- */
+.svc-photo, .spec-photo {
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.svc-photo img, .spec-photo img {
+  transition: transform .6s cubic-bezier(.2,.6,.2,1);
+  will-change: transform;
+}
+.svc-photo:hover, .spec-photo:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 26px 60px rgba(11,23,64,.18);
+}
+.svc-photo:hover img, .spec-photo:hover img { transform: scale(1.07); }
+.step-card { transition: transform .25s ease, box-shadow .25s ease; }
+.step-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 24px 55px rgba(11,23,64,.14);
+}
+.serve-card { transition: transform .25s ease, box-shadow .25s ease; }
+.serve-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 22px 50px rgba(11,23,64,.14);
+}
+.svc-go { transition: transform .2s ease, background .2s ease; }
+.svc-go:hover { transform: rotate(45deg) scale(1.08); }
+.svc-arrows button { transition: transform .18s ease, background .2s; }
+.svc-arrows button:hover { transform: scale(1.07); }
+.svc-arrows button:active { transform: scale(.96); }
+.wa-float { transition: transform .2s ease; }
+.wa-float:hover { transform: scale(1.08); }
+
+/* ---------- 7. "10K+ Served" badge: gentle float loop ---------- */
+.served-badge { animation: floaty 4.5s ease-in-out infinite; will-change: transform; }
+
+/* ---------- 8. serve-stage curved arrows: stroke draw-in ---------- */
+.serve-arrow { pointer-events: none; }
+.serve-arrow path {
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  transition: stroke-dashoffset 1.3s ease .35s;
+}
+.serve-stage.in .serve-arrow path { stroke-dashoffset: 0; }
+
+/* ---------- 9. booking modal + mobile menu ---------- */
+.modal {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity .25s ease, visibility .25s;
+}
+.modal.open { opacity: 1; visibility: visible; }
+.modal-card {
+  transform: translateY(16px) scale(.97);
+  transition: transform .28s cubic-bezier(.2,.7,.3,1.2);
+}
+.modal.open .modal-card { transform: none; }
+.modal-x { transition: transform .2s ease, background .2s; }
+.modal-x:hover { transform: rotate(90deg); }
+@media (max-width: 900px) {
+  .nav-links {
+    transform: translateY(-10px);
+    opacity: 0;
+    transition: transform .3s ease, opacity .3s ease;
+  }
+  .nav-links.open { transform: none; opacity: 1; }
+  .burger span { transition: transform .25s, opacity .25s; }
+  .burger.active span:nth-child(1) { transform: translateY(7.5px) rotate(45deg); }
+  .burger.active span:nth-child(2) { opacity: 0; }
+  .burger.active span:nth-child(3) { transform: translateY(-7.5px) rotate(-45deg); }
+}
+
+/* ---------- 10. nav: shadow + shrink on scroll ---------- */
+.nav { transition: box-shadow .25s ease, background .25s ease; }
+.nav.scrolled {
+  box-shadow: 0 6px 24px rgba(11,23,64,.10);
+  background: rgba(255,255,255,.96);
+}
+.nav-inner { transition: padding .25s ease; }
+.nav.scrolled .nav-inner { padding-top: 9px; padding-bottom: 9px; }
+.nav-links a { transition: color .2s; }
+
+/* ---------- 11. locations marquee rows ---------- */
+.marquee { overflow: hidden; }
+.mq-track {
+  display: flex;
+  width: max-content;
+  animation: mq 28s linear infinite;
+  will-change: transform;
+}
+.mq-b { animation-direction: reverse; animation-duration: 34s; }
+.marquee:hover .mq-track { animation-play-state: paused; }
+
+/* ---------- misc link hovers ---------- */
+.foot-grid a { transition: color .2s; }
+.nav-links a.staff { transition: border-color .2s, color .2s, transform .2s; }
+.nav-links a.staff:hover { transform: translateY(-1px); }
+
+/* ---------- 12. reduced motion: kill it all, keep content visible ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  .serve-arrow path { stroke-dashoffset: 0 !important; }
+  html { scroll-behavior: auto; }
+}
