@@ -445,19 +445,6 @@
     return list;
   }
 
-  function summaryStrip(list) {
-    var billed = 0, collected = 0, due = 0;
-    list.forEach(function (inv) { billed += inv.total; collected += inv.paid; due += inv.due; });
-    return '<div class="stat-grid" style="margin-bottom:18px">' +
-      '<div class="stat"><div class="stat-label">Total Billed</div><div class="stat-num">' + App.money(billed) + '</div>' +
-      '<div class="stat-sub">' + list.length + ' invoice(s)</div></div>' +
-      '<div class="stat"><div class="stat-label">Collected</div><div class="stat-num" style="color:var(--green)">' + App.money(collected) + '</div>' +
-      '<div class="stat-sub">payments received</div></div>' +
-      '<div class="stat"><div class="stat-label">Outstanding Due</div><div class="stat-num" style="color:var(--red)">' + App.money(due) + '</div>' +
-      '<div class="stat-sub">yet to collect</div></div>' +
-    '</div>';
-  }
-
   function invoiceRows(list) {
     if (!list.length) return '<tr><td colspan="9">' + App.empty('No invoices found. Adjust filters or create a new bill.') + '</td></tr>';
     return list.map(function (inv) {
@@ -525,7 +512,6 @@
           '</select>' +
           '<a class="btn btn-primary" href="#/billing" style="flex:0 0 auto;white-space:nowrap;padding:8px 14px;font-size:13px">+ New Bill</a>' +
         '</div>' +
-        '<div id="inv-summary"></div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr>' +
           '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:center">Tests</th>' +
           '<th style="text-align:right">Total</th><th style="text-align:right">Paid</th>' +
@@ -535,7 +521,6 @@
 
     function update() {
       var list = filteredInvoices();
-      document.getElementById('inv-summary').innerHTML = summaryStrip(list);
       document.getElementById('inv-rows').innerHTML = invoiceRows(list);
       view.querySelectorAll('[data-collect]').forEach(function (btn) {
         btn.addEventListener('click', function () { openPaymentModal(btn.getAttribute('data-collect')); });
