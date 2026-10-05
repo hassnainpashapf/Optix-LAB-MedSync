@@ -221,7 +221,7 @@
     if (!w) { toast('Popup blocked — allow popups to print', 'err'); return; }
     w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
       '<style>' + css + '</style></head><body>' +
-      '<div class="ph"><h1>' + esc(s.labName || 'Optxic LAB') + '</h1>' +
+      '<div class="ph"><h1>' + esc(s.labName || 'Optix LAB MedSync') + '</h1>' +
       '<div class="tag">' + esc(s.tagline || '') + '</div>' +
       '<div class="addr">' + esc(s.address || '') + ' &nbsp;•&nbsp; ' + esc(s.phone || '') +
       (s.email ? ' &nbsp;•&nbsp; ' + esc(s.email) : '') + '</div></div>' +
@@ -327,7 +327,7 @@
     }).join('');
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + icon('flask', 22) + '</span>' +
-      '<span class="brand-tx"><b>' + esc(st.labName || 'Optxic LAB') + '</b><small>Lab POS</small></span></div>' +
+      '<span class="brand-tx"><b>' + esc(st.labName || 'Optix LAB MedSync') + '</b><small>Lab POS</small></span></div>' +
       '<div class="nav-sec">Main Menu</div>' +
       '<nav class="nav">' + items + '</nav>' +
       '<div class="side-foot"><div class="side-ver">LabPOS v1.0</div></div>';
@@ -371,7 +371,7 @@
         '<div class="login-brand">' +
           '<div class="lb-inner">' +
             '<span class="brand-mark lg">' + icon('flask', 30) + '</span>' +
-            '<h1>' + esc(st.labName || 'Optxic LAB') + '</h1>' +
+            '<h1>' + esc(st.labName || 'Optix LAB MedSync') + '</h1>' +
             '<p class="lb-tag">' + esc(st.tagline || 'Accurate • Fast • Trusted') + '</p>' +
             '<ul class="lb-feats">' +
               '<li>' + icon('check', 15) + ' Complete billing & invoicing</li>' +
