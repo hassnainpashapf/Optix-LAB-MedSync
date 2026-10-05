@@ -251,9 +251,9 @@
       statCard(STAT_ICONS.receipt, 'brand', 'Walk-in Bills This Month', walkinThisMonth, 'unregistered patients') +
       '</div></div>' +
       '<div class="card"><div class="card-b">' +
-      '<div class="toolbar"><input class="input search" id="pt-search" placeholder="Search by name, phone or patient ID…" value="' + App.esc(listQuery) + '">' +
-      '<span class="muted" id="pt-count">' + rows.length + ' shown</span>' +
-      (edit ? '<button class="btn btn-primary" id="pt-add" style="margin-left:auto">+ Add Patient</button>' : '') + '</div>' +
+      '<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><input class="input search" id="pt-search" placeholder="Search by name, phone or patient ID…" value="' + App.esc(listQuery) + '" style="flex:1;min-width:0">' +
+      (edit ? '<button class="btn btn-primary" id="pt-add" style="margin-left:auto;flex:none">+ Add Patient</button>' : '') + '</div>' +
+      '<div class="muted" id="pt-count" style="font-size:12.5px;margin-bottom:10px">' + rows.length + ' shown</div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
       '<th>ID</th><th>Patient</th><th>Age / Gender</th><th>Phone</th><th class="num">Visits</th>' +
       '<th class="num">Total Spent</th><th class="num">Due</th><th></th>' +

@@ -128,13 +128,13 @@
       });
     });
   }
-  function clearResult(resId) {
+  function deleteResult(resId) {
     var r = DB.get('results', resId);
     if (!r) return;
-    App.confirm('Clear this result? It will go back to pending.').then(function (ok) {
+    App.confirm('Delete this report permanently? This cannot be undone.').then(function (ok) {
       if (!ok) return;
-      DB.update('results', resId, { values: {}, status: 'pending', reportedAt: null, reportedBy: null });
-      App.toast('Result cleared — back to pending');
+      DB.remove('results', resId);
+      App.toast('Report deleted');
       render();
     });
   }
@@ -638,7 +638,7 @@
               '<td><span class="badge b-ready">Ready</span></td>' +
               '<td class="muted">' + App.esc(rep) + '</td>' +
               '<td class="actions"><button class="btn btn-ghost btn-sm" data-view="' + App.esc(r.res ? r.res.id : '') + '|' + App.esc(inv.id) + '|' + App.esc(r.item.testId) + '">View / Edit</button> ' +
-              '<button class="btn btn-ghost btn-sm" data-clear="' + App.esc(r.res ? r.res.id : '') + '" style="color:var(--red)">Clear</button></td></tr>';
+              '<button class="btn btn-ghost btn-sm" data-delres="' + App.esc(r.res ? r.res.id : '') + '" style="color:var(--red)">Delete</button></td></tr>';
           }).join('');
           return '<div class="card" style="margin-bottom:14px">' +
             '<div class="card-h"><div><strong>' + App.esc(inv.no) + '</strong> — ' + App.esc(pat.name || '—') + '</div>' +
@@ -693,8 +693,8 @@
     v.querySelectorAll('[data-wa]').forEach(function (b) {
       b.addEventListener('click', function () { shareReportWhatsApp(b.getAttribute('data-wa')); });
     });
-    v.querySelectorAll('[data-clear]').forEach(function (b) {
-      b.addEventListener('click', function () { var id = b.getAttribute('data-clear'); if (id) clearResult(id); });
+    v.querySelectorAll('[data-delres]').forEach(function (b) {
+      b.addEventListener('click', function () { var id = b.getAttribute('data-delres'); if (id) deleteResult(id); });
     });
   }
 

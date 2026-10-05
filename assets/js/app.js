@@ -445,6 +445,7 @@
       '.tb-qa .tb-classic:hover{background:#ebf4f8;border-color:#131845;color:#131845;transform:none}' +
       '.tb-qa .tb-classic svg{color:#131845;flex:none}' +
       '.tb-qa .tb-icon{padding:7px;border-radius:10px;min-width:34px;justify-content:center}' +
+      '@media(max-width:640px){.tb-qa .tb-qa-t{display:none}.tb-qa{gap:6px}.tb-qa .tb-qab{padding:7px 9px}}' +
       '.tb-greet{display:flex;flex-direction:column;justify-content:center;line-height:1.3;min-width:0;margin-right:2px}' +
       '.tb-greet b{font-size:14.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}' +
       '.tb-greet span{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}' +
@@ -455,7 +456,7 @@
       '<button class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Menu">' + icon('menu', 18) + '</button>' +
       (activeKey === 'dashboard' ? '<div class="tb-greet"><b>' + esc(_greet + _greetName) + '</b><span>' + esc(_longDate) + '</span></div>' : '') +
       '<h1 class="page-title"' + (activeKey === 'dashboard' ? ' hidden' : '') + '>' + esc(navItem ? navItem.label : '') + '</h1>' +
-      '<div class="top-right">' + (activeKey === 'dashboard' ? '<div class="tb-qa">' + tbQa + '</div>' : '') + '</div>' +
+      '<div class="top-right"><div class="tb-qa">' + tbQa + '</div></div>' +
       '<div class="tb-acct">' +
       '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + _avatarInner + '</button>' +
       '<div class="tb-menu" id="userMenu" hidden>' +

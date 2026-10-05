@@ -416,10 +416,10 @@
 
     '<div class="bl-pos">' +
       /* patient column */
-      '<div class="bl-panel"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">1</span>Patient</span>' +
-        '<button class="btn btn-primary btn-sm" id="blNewPat">+ New Patient</button></div>' +
+      '<div class="bl-panel"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">1</span>Patient</span></div>' +
         '<div class="bl-panel-b"><div id="blPatSearchWrap" class="bl-pat-searchrow">' +
           '<input class="input search" id="blPatSearch" placeholder="Search name or phone…" autocomplete="off">' +
+          '<button class="btn btn-primary" id="blNewPat">+ New Patient</button>' +
           '</div><div id="blPatResults"></div>' +
         '<div id="blPatientBox" style="margin-top:10px"></div></div></div>' +
 
