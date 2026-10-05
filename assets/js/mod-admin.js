@@ -1,5 +1,5 @@
 /* ============================================================
-   LabPOS — Admin module (Agent 10)
+   Optix LAB MedSync — Admin module (Agent 10)
    Routes: #/expenses, #/reports, #/settings
    Depends on: window.DB, window.App (per SPEC.md)
    ============================================================ */
@@ -366,7 +366,7 @@
       + '<div><label class="label">Email</label><input class="input" id="spEmail" value="' + App.esc(s.email || '') + '"></div>'
       + '<div><label class="label">Invoice Prefix *</label><input class="input" id="spPref" value="' + App.esc(s.invoicePrefix || 'INV') + '" style="max-width:140px"></div>'
       + '<div style="grid-column:1/-1"><label class="label">Report / Receipt Footer Note</label><input class="input" id="spFoot" value="' + App.esc(s.footerNote || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Desktop App Download URL</label><input class="input" id="spDl" placeholder="https://your-server/releases/LabPOS-Setup-1.0.0.exe" value="' + App.esc(s.installerUrl || '') + '"></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Desktop App Download URL</label><input class="input" id="spDl" placeholder="https://your-server/releases/Optix-LAB-MedSync-Setup-1.0.0.exe" value="' + App.esc(s.installerUrl || '') + '"></div>'
       + '</div>'
       + '<div style="margin-top:18px"><button class="btn btn-primary" id="spSave">Save Profile</button></div>';
     document.getElementById('setBody').innerHTML = html;
@@ -575,7 +575,7 @@
       var blob = new Blob([pretty], { type: 'application/json' });
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'labpos-backup-' + App.today() + '.json';
+      a.download = 'optix-lab-medsync-backup-' + App.today() + '.json';
       document.body.appendChild(a);
       a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
@@ -595,7 +595,7 @@
         if (!data || typeof data !== 'object') return App.toast('Invalid backup file.', 'err');
         var chk = (data.tables && typeof data.tables === 'object') ? data.tables : data;
         if (!chk.settings || !Array.isArray(chk.invoices) || !Array.isArray(chk.patients))
-          return App.toast('This file is not a LabPOS backup.', 'err');
+          return App.toast('This file is not an Optix LAB MedSync backup.', 'err');
         App.confirm('Restore backup? ALL current data will be replaced.').then(function (ok) {
           if (!ok) return;
           Promise.resolve(DB.import(data)).then(function () {

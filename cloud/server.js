@@ -156,7 +156,7 @@ async function main() {
   });
 
   /* ---- installer / update bundles (dashboard "Download App" button) ----
-     Drop files like LabPOS-Setup-1.0.0.exe into ./releases/ on the VPS;
+     Drop files like Optix-LAB-MedSync-Setup-1.0.0.exe into ./releases/ on the VPS;
      they are served at <api>/releases/<file>. Set the URL in the app at
      Settings -> Lab Profile -> "Desktop App Download URL". */
   const RELEASES_DIR = path.join(__dirname, 'releases');

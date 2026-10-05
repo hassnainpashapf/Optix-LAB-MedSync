@@ -1,4 +1,4 @@
-/* LabPOS — Invoices & Dues module
+/* Optix LAB MedSync — Invoices & Dues module
    Routes: #/invoices, #/invoice/:id, #/dues
    Depends on: DB (db.js), App (app.js) as specified in SPEC.md */
 (function () {

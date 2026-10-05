@@ -48,6 +48,6 @@ function showUpdateBanner(info) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
-  if (!document.title || document.title === '') document.title = 'LabPOS — Diagnostic Lab';
+  if (!document.title || document.title === '') document.title = 'Optix LAB MedSync';
   ipcRenderer.on('labpos:update-available', (_event, info) => showUpdateBanner(info || {}));
 });

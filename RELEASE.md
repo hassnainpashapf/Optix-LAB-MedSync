@@ -1,4 +1,4 @@
-# LabPOS — Release Process
+# Optix LAB MedSync — Release Process
 
 Release engineering for the cloud + installer era. Local installs, cloud backend, and the web demo all version from this document.
 

@@ -1,5 +1,5 @@
 /* ============================================================
-   LabPOS Cloud — Superadmin Console
+   Optix LAB MedSync — Superadmin Console
    Manages lab installations: registry, version rollout, changelog.
    API contract:
      GET  /api/labs              -> [{labId,name,version,lastSeen,platform,targetVersion}]
@@ -201,7 +201,7 @@ function renderLogin() {
   $('root').innerHTML =
     '<div class="login-wrap"><div class="login-card">' +
     '<div class="brand-row"><div class="brand-ico">' + IC.cloud + '</div>' +
-    '<div><div class="brand-name">LabPOS Cloud</div><div class="brand-sub">SUPERADMIN CONSOLE</div></div></div>' +
+    '<div><div class="brand-name">Optix LAB MedSync</div><div class="brand-sub">SUPERADMIN CONSOLE</div></div></div>' +
     '<h2>Welcome back</h2>' +
     '<p class="lede">Enter your superadmin key to manage lab installations, roll out updates and view the release changelog.</p>' +
     (state.loginError ? '<div class="login-err">' + esc(state.loginError) + '</div>' : '') +
@@ -209,7 +209,7 @@ function renderLogin() {
     '<input class="input" id="keyInput" type="password" placeholder="Paste your key here" autocomplete="off" spellcheck="false">' +
     '<button class="btn btn-primary btn-block" id="loginBtn">Sign in</button>' +
     '<div class="login-div"><span>or</span></div>' +
-    '<a class="btn btn-ghost btn-block" href="/">LabPOS Admin Login</a>' +
+    '<a class="btn btn-ghost btn-block" href="/">Optix LAB MedSync Login</a>' +
     '<p class="login-hint">The key is stored only in this tab (session storage) and sent as the X-Superadmin-Key header.</p>' +
     '</div></div>';
 
@@ -319,7 +319,7 @@ function renderApp() {
 
   $('root').innerHTML =
     '<header class="topbar">' +
-    '<div class="tb-brand"><div class="brand-ico">' + IC.cloud + '</div><span class="t">LabPOS Cloud</span> <span class="badge b-blue">SUPERADMIN</span></div>' +
+    '<div class="tb-brand"><div class="brand-ico">' + IC.cloud + '</div><span class="t">Optix LAB MedSync</span> <span class="badge b-blue">SUPERADMIN</span></div>' +
     '<div class="tb-right">' +
     '<span class="api-pill ' + (state.apiDown ? 'down' : 'ok') + '" id="apiPill"><span class="pdot"></span>' + (state.apiDown ? 'API unreachable' : 'API connected') + '</span>' +
     '<button class="btn btn-sm" id="refreshBtn">Refresh</button>' +

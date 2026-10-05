@@ -1,4 +1,4 @@
-/* LabPOS — app framework: hash router, auth, shell, shared UI helpers.
+/* Optix LAB MedSync — app framework: hash router, auth, shell, shared UI helpers.
    Exposes window.App. Loaded after db.js, before mod-*.js. */
 (function () {
   'use strict';
@@ -327,10 +327,10 @@
     }).join('');
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + icon('flask', 22) + '</span>' +
-      '<span class="brand-tx"><b>' + esc(st.labName || 'Optix LAB MedSync') + '</b><small>Lab POS</small></span></div>' +
+      '<span class="brand-tx"><b>' + esc(st.labName || 'Optix LAB MedSync') + '</b><small>Diagnostic Lab</small></span></div>' +
       '<div class="nav-sec">Main Menu</div>' +
       '<nav class="nav">' + items + '</nav>' +
-      '<div class="side-foot"><div class="side-ver">LabPOS v1.0</div></div>';
+      '<div class="side-foot"><div class="side-ver">Optix LAB MedSync v1.0</div></div>';
     /* topbar */
     var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
     document.getElementById('topbar').innerHTML =
@@ -391,7 +391,7 @@
             '<button class="btn btn-primary btn-block" type="submit">Sign In</button>' +
             '<div class="login-div"><span>or</span></div>' +
             ((window.labposDesktop && window.labposDesktop.isDesktop)
-              ? '<a class="btn btn-ghost btn-block" href="https://labpos.pages.dev/superadmin/" target="_blank" rel="noopener">Superadmin Login</a>'
+              ? '<a class="btn btn-ghost btn-block" href="https://optix-lab-medsync.pages.dev/superadmin/" target="_blank" rel="noopener">Superadmin Login</a>'
               : '<a class="btn btn-ghost btn-block" href="/superadmin/">Superadmin Login</a>') +
             '<p class="login-hint">Default access — admin / admin123</p>' +
           '</form>' +

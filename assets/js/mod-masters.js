@@ -1,5 +1,5 @@
 /* ============================================================
-   LabPOS — Masters module (Agent 8)
+   Optix LAB MedSync — Masters module (Agent 8)
    Routes: #/tests (test catalog), #/doctors (referral doctors)
    Depends on: window.DB, window.App (see SPEC.md)
    ============================================================ */

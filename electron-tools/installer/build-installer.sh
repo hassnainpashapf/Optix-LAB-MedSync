@@ -1,9 +1,9 @@
 #!/bin/bash
-# LabPOS Windows installer — full rebuild pipeline (no wine needed).
+# Optix LAB MedSync Windows installer — full rebuild pipeline (no wine needed).
 #   1. stages the latest app source from ../../electron-src (read-only copy)
 #   2. repacks the win32 Electron app via electron-builder --dir
 #   3. compiles the MUI2 NSIS installer with native makensis
-# Output: ../../dist-installer/LabPOS-Setup-<version>.exe
+# Output: ../../dist-installer/Optix-LAB-MedSync-Setup-<version>.exe
 # Usage: ./build-installer.sh   (run from electron-tools/installer/)
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -29,4 +29,4 @@ sed -e "s/__APP_VERSION__/${VER}/g" -e "s/__ESTIMATED_KB__/${KB}/g" \
 makensis -V2 labpos-setup.build.nsi
 
 echo "== done =="
-ls -lh "../../dist-installer/LabPOS-Setup-${VER}.exe"
+ls -lh "../../dist-installer/Optix-LAB-MedSync-Setup-${VER}.exe"

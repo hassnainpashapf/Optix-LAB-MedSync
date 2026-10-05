@@ -1,8 +1,9 @@
-/* LabPOS Desktop — Electron main process.
+/* Optix LAB MedSync Desktop — Electron main process.
    Starts the embedded API+SQLite server, then opens the app window. */
 'use strict';
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const updater = require('./updater');
 
 const gotLock = app.requestSingleInstanceLock();
@@ -14,6 +15,19 @@ async function boot() {
   updater.applyPendingUpdate(); /* swap in any staged update BEFORE the server starts */
   const { start } = require('./server/index.js');
   const dbPath = path.join(app.getPath('userData'), 'labpos.db');
+  /* one-time rebrand migration: productName changed LabPOS -> Optix LAB MedSync,
+     so userData moved from %APPDATA%/LabPOS to %APPDATA%/Optix LAB MedSync.
+     Carry the existing database over so no lab records are lost. */
+  try {
+    if (!fs.existsSync(dbPath)) {
+      const legacyDb = path.join(app.getPath('appData'), 'LabPOS', 'labpos.db');
+      if (fs.existsSync(legacyDb)) {
+        fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+        fs.copyFileSync(legacyDb, dbPath);
+        console.log('[labpos] migrated database from', legacyDb);
+      }
+    }
+  } catch (e) { console.error('[labpos] db migration failed:', e && e.message); }
 
   let started = null;
   let lastErr = null;
@@ -34,7 +48,7 @@ async function boot() {
     minHeight: 700,
     autoHideMenuBar: true,
     backgroundColor: '#f6f8fb',
-    title: 'LabPOS — Diagnostic Lab',
+    title: 'Optix LAB MedSync',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,

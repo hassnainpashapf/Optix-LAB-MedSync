@@ -121,5 +121,15 @@ mkdir -p dist dist/superadmin && cp index.html dist/ && cp -r assets dist/ && cp
 ```
 
 Cross-login links are relative now (`/superadmin/` and `/`); the desktop
-Electron build opens the live `https://labpos.pages.dev/superadmin/` URL in
+Electron build opens the live `https://optix-lab-medsync.pages.dev/superadmin/` URL in
 the system browser via `labposDesktop` preload flag + `setWindowOpenHandler`.
+
+## 2026-10-05: project renamed labpos → optix-lab-medsync
+
+Full product rebrand to "Optix LAB MedSync" (user: "har jaga sa labpos ni ha").
+The Pages project is being renamed `labpos` → `optix-lab-medsync`
+(URL https://optix-lab-medsync.pages.dev). The desktop app's Superadmin button
+now opens https://optix-lab-medsync.pages.dev/superadmin/ in the system browser.
+Electron productName is "Optix LAB MedSync" (exe + install dir); the SQLite
+database migrates one-time from %APPDATA%/LabPOS/labpos.db to
+%APPDATA%/Optix LAB MedSync/labpos.db on first boot (see main.js).

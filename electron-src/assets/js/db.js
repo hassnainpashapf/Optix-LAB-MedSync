@@ -1,4 +1,4 @@
-/* LabPOS — DB layer (localStorage). Exposes window.DB. See SPEC.md for schema. */
+/* Optix LAB MedSync — DB layer (localStorage). Exposes window.DB. See SPEC.md for schema. */
 (function () {
   'use strict';
 

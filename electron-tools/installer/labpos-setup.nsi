@@ -1,5 +1,5 @@
 ; =====================================================================
-; LabPOS Setup — hand-written NSIS installer (compiled with native makensis)
+; Optix LAB MedSync Setup — hand-written NSIS installer (compiled with native makensis)
 ;   Placeholders __APP_VERSION__ and __ESTIMATED_KB__ are filled in by
 ;   build-installer.sh before compiling. Do not edit the built .nsi by hand.
 ; =====================================================================
@@ -8,13 +8,13 @@
 !include "LogicLib.nsh"
 
 ; ---- App info ---------------------------------------------------------
-!define APP_NAME      "LabPOS"
+!define APP_NAME      "Optix LAB MedSync"
 !define APP_VERSION   "__APP_VERSION__"
-!define APP_PUBLISHER "LabPOS"
-!define APP_EXE       "LabPOS.exe"
+!define APP_PUBLISHER "System Optix"
+!define APP_EXE       "Optix LAB MedSync.exe"
 
 Name "${APP_NAME} ${APP_VERSION}"
-OutFile "..\..\dist-installer\LabPOS-Setup-${APP_VERSION}.exe"
+OutFile "..\..\dist-installer\Optix-LAB-MedSync-Setup-${APP_VERSION}.exe"
 InstallDir "$PROGRAMFILES64\${APP_NAME}"
 InstallDirRegKey HKLM "Software\${APP_NAME}" "InstallDir"
 RequestExecutionLevel admin
@@ -70,7 +70,7 @@ Section "${APP_NAME}" SecMain
   SetShellVarContext all
   SetOutPath "$INSTDIR"
 
-  ; App payload (Electron build: LabPOS.exe + resources)
+  ; App payload (Electron build: Optix LAB MedSync.exe + resources)
   File /r "..\..\dist-installer\win-unpacked\*.*"
 
   ; Uninstaller
@@ -90,7 +90,7 @@ Section "${APP_NAME}" SecMain
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoRepair" 1
 
-  ; Start Menu shortcuts ("LabPOS" folder)
+  ; Start Menu shortcuts ("Optix LAB MedSync" folder)
   CreateDirectory "$SMPROGRAMS\${APP_NAME}"
   CreateShortcut "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk" "$INSTDIR\${APP_EXE}" "" "$INSTDIR\${APP_EXE}" 0
   CreateShortcut "$SMPROGRAMS\${APP_NAME}\Uninstall ${APP_NAME}.lnk" "$INSTDIR\Uninstall.exe"

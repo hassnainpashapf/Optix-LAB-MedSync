@@ -1,4 +1,4 @@
-/* LabPOS — Dashboard module (#/dashboard) */
+/* Optix LAB MedSync — Dashboard module (#/dashboard) */
 (function () {
   'use strict';
 

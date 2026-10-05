@@ -111,8 +111,8 @@ is untouched by rebuilds.
 ## Desktop app downloads (dashboard button)
 
 1. Copy the installer into the releases dir on the VPS:
-   `cp LabPOS-Setup-1.0.0.exe /path/to/labpos/cloud/releases/`
+   `cp Optix-LAB-MedSync-Setup-1.0.0.exe /path/to/labpos/cloud/releases/`
    (or place it there before `docker compose up`; the dir is created automatically)
-2. It is served at `https://<your-api-domain>/releases/LabPOS-Setup-1.0.0.exe`
+2. It is served at `https://<your-api-domain>/releases/Optix-LAB-MedSync-Setup-1.0.0.exe`
 3. In the LabPOS app: Settings → Lab Profile → "Desktop App Download URL" → paste that URL → Save.
 4. The dashboard "⬇ Download App" button will then download the installer.

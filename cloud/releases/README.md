@@ -1,6 +1,6 @@
 # releases/
 
-Drop installer/update bundles here on the VPS, e.g. `LabPOS-Setup-1.0.0.exe`.
+Drop installer/update bundles here on the VPS, e.g. `Optix-LAB-MedSync-Setup-1.0.0.exe`.
 
 They are served publicly at `<api-base>/releases/<filename>`.
 

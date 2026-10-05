@@ -1,8 +1,8 @@
-# LabPOS Windows installer (NSIS) — electron-builder config.
-# Built on Linux via wine. Produces dist-installer/LabPOS-Setup-<version>.exe
+# Optix LAB MedSync Windows installer (NSIS) — electron-builder config.
+# Built on Linux via wine. Produces dist-installer/Optix-LAB-MedSync-Setup-<version>.exe
 appId: com.labpos.desktop
-productName: LabPOS
-copyright: Copyright © LabPOS
+productName: Optix LAB MedSync
+copyright: Copyright © Optix LAB MedSync
 electronVersion: 37.10.3
 
 directories:
@@ -21,7 +21,7 @@ win:
     - target: nsis
       arch: [x64]
   icon: ../../electron-src/icon.ico
-  artifactName: "LabPOS-Setup-${version}.${ext}"
+  artifactName: "Optix-LAB-MedSync-Setup-${version}.${ext}"
 
 nsis:
   oneClick: false
@@ -30,6 +30,6 @@ nsis:
   allowElevation: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: LabPOS
-  uninstallDisplayName: LabPOS
+  shortcutName: Optix LAB MedSync
+  uninstallDisplayName: Optix LAB MedSync
   # classic Next-Next wizard pages are used when oneClick is false

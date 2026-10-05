@@ -1,5 +1,5 @@
 /* ============================================================
-   LabPOS — Lab Results module
+   Optix LAB MedSync — Lab Results module
    Route: #/results
    - Pending results grouped by invoice, per-test result entry
    - Ready results grouped by invoice, printable lab reports
