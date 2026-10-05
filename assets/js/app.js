@@ -205,8 +205,8 @@
     var css = '' +
       '*{margin:0;padding:0;box-sizing:border-box}' +
       'body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:28px;font-size:13px}' +
-      '.ph{text-align:center;border-bottom:3px double #0d9488;padding-bottom:12px;margin-bottom:16px}' +
-      '.ph h1{font-size:24px;color:#0d9488;letter-spacing:.5px}' +
+      '.ph{text-align:center;border-bottom:3px double #131845;padding-bottom:12px;margin-bottom:16px}' +
+      '.ph h1{font-size:24px;color:#131845;letter-spacing:.5px}' +
       '.ph .tag{font-size:12px;color:#555;margin:2px 0}' +
       '.ph .addr{font-size:11.5px;color:#555}' +
       '.pt{display:flex;justify-content:space-between;gap:12px;margin:12px 0;padding:10px;border:1px solid #ddd;border-radius:6px;background:#fafafa}' +
@@ -258,6 +258,10 @@
   var lazyPending = {};
   function loadScript(url) {
     return new Promise(function (res, rej) {
+      /* cache-bust: ?v= stamp from index.html (bumped every release) so a fresh
+         deploy never serves a stale cached module */
+      var v = (typeof window !== 'undefined' && window.__ASSET_V) || '';
+      if (v) url += (url.indexOf('?') > -1 ? '&' : '?') + 'v=' + encodeURIComponent(v);
       var sc = document.createElement('script');
       sc.src = url; sc.async = true;
       sc.onload = function () { res(); };
@@ -427,8 +431,8 @@
       '<style>' +
       '.tb-acct{position:relative;flex:none}' +
       '.tb-div{width:1px;align-self:stretch;background:var(--line);margin:3px 0}' +
-      '.tb-avatar{width:36px;height:36px;border-radius:50%;border:2px solid #fff;background:var(--brand-grad);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(13,148,136,.35);transition:transform .15s,box-shadow .15s;padding:0}' +
-      '.tb-avatar:hover{transform:scale(1.07);box-shadow:0 3px 12px rgba(13,148,136,.5)}' +
+      '.tb-avatar{width:36px;height:36px;border-radius:50%;border:2px solid #fff;background:var(--brand-grad);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(19,24,69,.35);transition:transform .15s,box-shadow .15s;padding:0}' +
+      '.tb-avatar:hover{transform:scale(1.07);box-shadow:0 3px 12px rgba(19,24,69,.5)}' +
       '.tb-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}' +
       '.tb-menu{position:absolute;right:0;top:calc(100% + 10px);min-width:212px;background:var(--card,#fff);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 40px rgba(15,30,46,.16);padding:6px;z-index:80}' +
       '.tb-menu-head{padding:10px 12px 12px;border-bottom:1px solid var(--line);margin-bottom:6px;display:flex;flex-direction:column;align-items:flex-start;gap:5px}' +

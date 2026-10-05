@@ -541,13 +541,18 @@
       return '<option value="' + App.esc(t.id) + '">' +
         App.esc((t.code ? t.code + ' — ' : '') + t.name) + (n ? '  (' + n + ' fields)' : '') + '</option>';
     }).join('');
-    var html = '<div style="max-width:860px">'
+    var html = '<div style="max-width:1100px">'
       + '<p class="muted" style="margin-top:0">Design the printed report for each test. Fields you add here appear when entering results and on the printed report / PDF. The lab header and footer stay the same for every test.</p>'
       + '<div style="max-width:420px;margin-bottom:14px"><label class="label">Test</label>'
       + '<select class="input" id="rtTest">' + opts + '</select></div>'
-      + '<div class="label" style="margin-bottom:6px">Report fields</div>'
+      + '<div class="rt-cols" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">'
+      + '<div><div class="label" style="margin-bottom:6px">Report fields</div>'
       + '<div id="rtFields"></div>'
-      + '<button class="btn btn-ghost btn-sm" id="rtAdd">+ Add Field</button>'
+      + '<button class="btn btn-ghost btn-sm" id="rtAdd">+ Add Field</button></div>'
+      + '<div><div class="label" style="margin-bottom:6px">Live preview — printed report</div>'
+      + '<div id="rtPreview" style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,.06)"></div></div>'
+      + '</div>'
+      + '<style>@media(max-width:900px){.rt-cols{grid-template-columns:1fr!important}}</style>'
       + '<div style="margin-top:16px;display:flex;gap:10px;align-items:center">'
       + '<button class="btn btn-primary" id="rtSave">Save Template</button>'
       + '<button class="btn btn-ghost" id="rtClear">Clear Template</button>'
@@ -568,8 +573,46 @@
     }
     function wireRemovals() {
       box.querySelectorAll('.rt-frm').forEach(function (b) {
-        b.onclick = function () { b.closest('.rt-frow').remove(); };
+        b.onclick = function () { b.closest('.rt-frow').remove(); paintPreview(); };
       });
+    }
+    /* Live preview of the printed report section, mirroring reportHtml() in mod-results.js */
+    function curFields() {
+      var out = [];
+      box.querySelectorAll('.rt-frow').forEach(function (row) {
+        var n = row.querySelector('.rt-fn').value.trim();
+        if (!n) return;
+        out.push({
+          name: n,
+          unit: row.querySelector('.rt-fu').value.trim(),
+          ref: row.querySelector('.rt-fr').value.trim()
+        });
+      });
+      return out;
+    }
+    function paintPreview() {
+      var pv = document.getElementById('rtPreview');
+      if (!pv) return;
+      var t = DB.get('tests', document.getElementById('rtTest').value);
+      var s = DB.get('settings', 'main') || {};
+      var fields = curFields();
+      var h = '<div style="border-bottom:3px solid #131845;padding-bottom:10px;margin-bottom:12px">'
+        + '<div style="font-size:17px;font-weight:800;color:#131845">' + App.esc(s.labName || 'Lab') + '</div>'
+        + '<div style="color:#64748b;font-size:12px">' + App.esc(s.address || '') + ' • ' + App.esc(s.phone || '') + '</div></div>'
+        + '<div style="text-align:center;font-weight:700;font-size:13px;margin-bottom:10px;letter-spacing:.04em">LABORATORY REPORT</div>'
+        + '<div style="font-size:15px;font-weight:800;margin:0 0 6px">' + App.esc(t ? t.name : '')
+        + (t && t.code ? ' <span style="color:#64748b;font-weight:500">(' + App.esc(t.code) + ')</span>' : '') + '</div>';
+      if (!fields.length) {
+        h += '<p class="muted" style="font-size:13px;margin:8px 0 0">No template — this test prints a single free-text Result box.</p>';
+      } else {
+        h += '<table class="table"><thead><tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Reference Range</th></tr></thead><tbody>'
+          + fields.map(function (p) {
+            return '<tr><td>' + App.esc(p.name) + '</td><td></td><td>' + App.esc(p.unit) + '</td><td>' + App.esc(p.ref) + '</td></tr>';
+          }).join('') + '</tbody></table>';
+      }
+      h += '<p style="color:#64748b;font-size:11.5px;margin:12px 0 2px"><em>' + App.esc(s.footerNote || '') + '</em></p>'
+        + '<p style="color:#999;font-size:10.5px;text-align:center;margin:0">Powered by System Optix</p>';
+      pv.innerHTML = h;
     }
     function paint(testId) {
       var t = DB.get('tests', testId);
@@ -580,12 +623,15 @@
           + 'No fields yet — this test prints a single free-text Result box. Add fields above to build its report form.</p>';
       }
       wireRemovals();
+      paintPreview();
     }
     document.getElementById('rtTest').addEventListener('change', function (e) { paint(e.target.value); });
+    box.addEventListener('input', paintPreview);
     document.getElementById('rtAdd').addEventListener('click', function () {
       if (!box.querySelector('.rt-frow')) box.innerHTML = '';
       box.insertAdjacentHTML('beforeend', fieldRow(null));
       wireRemovals();
+      paintPreview();
       var last = box.querySelector('.rt-frow:last-child .rt-fn');
       if (last) last.focus();
     });

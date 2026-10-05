@@ -329,8 +329,8 @@
       return '<div><span style="color:#64748b">' + k + ':</span> <strong>' + App.esc(v || '—') + '</strong></div>';
     };
 
-    return '<div style="border-bottom:3px solid #0d9488;padding-bottom:12px;margin-bottom:16px">' +
-        '<h1 style="margin:0;color:#0d9488">' + App.esc(s.labName || 'Lab') + '</h1>' +
+    return '<div style="border-bottom:3px solid #131845;padding-bottom:12px;margin-bottom:16px">' +
+        '<h1 style="margin:0;color:#131845">' + App.esc(s.labName || 'Lab') + '</h1>' +
         '<div style="color:#64748b">' + App.esc(s.tagline || '') + '</div>' +
         '<div style="color:#64748b">' + App.esc(s.address || '') + ' &nbsp;•&nbsp; ' + App.esc(s.phone || '') +
         (s.email ? ' &nbsp;•&nbsp; ' + App.esc(s.email) : '') + '</div>' +

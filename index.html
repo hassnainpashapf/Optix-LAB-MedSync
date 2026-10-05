@@ -33,6 +33,10 @@ document.addEventListener('keydown', function (e) {
 </script>
 <script src="/api-config.js"></script>
 <script>
+/* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
+   It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
+   to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
+window.__ASSET_V = 'b327873';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
@@ -52,8 +56,8 @@ window.__LAZY_ROUTES = {
   '/profile': 'assets/js/mod-profile.js'
 };
 </script>
-<script src="assets/js/db.js"></script>
-<script src="assets/js/app.js"></script>
-<script src="assets/js/mod-dashboard.js"></script>
+<script src="assets/js/db.js?v=b327873"></script>
+<script src="assets/js/app.js?v=b327873"></script>
+<script src="assets/js/mod-dashboard.js?v=b327873"></script>
 </body>
 </html>
