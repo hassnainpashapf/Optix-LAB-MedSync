@@ -204,7 +204,7 @@
         '<div style="font-size:26px;font-weight:800">' + App.esc(s.labName || 'Lab') + '</div>' +
         '<div style="color:#555;font-size:13px">' + App.esc(s.address || '') + ' &nbsp;|&nbsp; ' + App.esc(s.phone || '') + '</div>' +
       '</div>' +
-      '<div style="font-size:20px;font-weight:800;border-top:2px solid #0d9488;border-bottom:2px solid #0d9488;padding:10px 0;margin-bottom:16px">PAYMENT RECEIPT</div>' +
+      '<div style="font-size:20px;font-weight:800;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:16px">PAYMENT RECEIPT</div>' +
       '<table style="width:100%;font-size:14px;border-collapse:collapse;margin-bottom:16px">' +
         '<tr><td style="padding:6px;color:#555">Receipt No</td><td style="padding:6px;font-weight:700">' + App.esc(py.id) + '</td></tr>' +
         '<tr><td style="padding:6px;color:#555">Date</td><td style="padding:6px">' + App.d(py.date) + ' ' + (App.dt(py.date).split(' ').slice(-1) || '') + '</td></tr>' +
@@ -369,7 +369,7 @@
         '<div style="color:#555;font-size:13px">' + App.esc(s.tagline || '') + '</div>' +
         '<div style="color:#555;font-size:13px">' + App.esc(s.address || '') + ' &nbsp;|&nbsp; ' + App.esc(s.phone || '') + '</div>' +
       '</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #0d9488;border-bottom:2px solid #0d9488;padding:10px 0;margin-bottom:16px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:16px">' +
         '<div style="font-size:20px;font-weight:800">INVOICE</div>' +
         '<div style="text-align:right"><div><strong>' + App.esc(inv.no) + '</strong></div>' +
         '<div style="font-size:13px;color:#555">Date: ' + App.d(inv.createdAt) + ' ' + App.dt(inv.createdAt).split(' ').slice(-1) + '</div>' +

@@ -13,10 +13,10 @@
   --faint:#94a3b8;
   --line:#e8eef4;
   --line2:#eef3f8;
-  --brand:#0d9488;
-  --brand-d:#0f766e;
-  --brand-grad:linear-gradient(135deg,#14b8a6 0%,#0d9488 55%,#0f766e 100%);
-  --brand-soft:#e6f7f5;
+  --brand:#131845;
+  --brand-d:#0d0f36;
+  --brand-grad:linear-gradient(135deg,#5392ba 0%,#131845 55%,#0d0f36 100%);
+  --brand-soft:#ebf4f8;
   --blue:#2563eb;
   --blue-soft:#e8f0fe;
   --red:#dc2626;
@@ -58,8 +58,8 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
   transition:all .15s;white-space:nowrap;
 }
 .btn:hover{border-color:#cbd5e1;background:#f8fafc}
-.btn-primary{background:var(--brand-grad);border:none;color:#fff;box-shadow:0 6px 14px -6px rgba(13,148,136,.6)}
-.btn-primary:hover{background:linear-gradient(135deg,#0d9488,#0b6e64);color:#fff;transform:translateY(-1px)}
+.btn-primary{background:var(--brand-grad);border:none;color:#fff;box-shadow:0 6px 14px -6px rgba(19,24,69,.6)}
+.btn-primary:hover{background:linear-gradient(135deg,#0d0f36,#131845);color:#fff;transform:translateY(-1px)}
 .btn-danger{background:var(--red);border:none;color:#fff}
 .btn-danger:hover{background:#b91c1c;color:#fff}
 .btn-ghost{background:transparent;border-color:transparent;color:var(--muted)}
@@ -88,7 +88,7 @@ textarea.input{resize:vertical;min-height:90px}
 
 /* ============ Login ============ */
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
-  background:radial-gradient(1000px 500px at 50% -10%,#e6f7f5 0%,var(--bg) 60%)}
+  background:radial-gradient(1000px 500px at 50% -10%,#ebf4f8 0%,var(--bg) 60%)}
 .login-card{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh-lg);
   width:420px;max-width:100%;padding:36px 34px}
 .brand-row{display:flex;align-items:center;gap:12px;margin-bottom:22px}
