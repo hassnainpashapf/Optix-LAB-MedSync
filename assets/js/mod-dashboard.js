@@ -31,12 +31,15 @@
     check: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14l-3-3"/></svg>'
   };
 
-  function statCard(icon, tint, label, value, sub) {
-    return '<div class="stat">' +
-      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft);--sc-c:var(--' + tint + ')">' + icon + '</div>' +
-      '<div class="stat-tx"><div class="lb">' + App.esc(label) + '</div>' +
-      '<div class="vl">' + value + '</div>' +
-      '<div class="dl">' + sub + '</div></div>' +
+  function statCard(icon, tint, label, value, sub, raw, isMoney) {
+    var countAttrs = (typeof raw === 'number' && isFinite(raw))
+      ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"'
+      : '';
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
+      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
+      '<div class="lb">' + App.esc(label) + '</div>' +
+      '<div class="vl"' + countAttrs + '>' + value + '</div>' +
+      '<div class="dl">' + sub + '</div>' +
       '</div>';
   }
 
@@ -138,12 +141,14 @@
       week.push({ key: key, label: d.toLocaleDateString('en-US', { weekday: 'short' }), val: val, isToday: key === today });
     }
     var maxV = Math.max.apply(null, week.map(function (w) { return w.val; }).concat([0]));
-    var bars = week.map(function (w) {
+    var bars = week.map(function (w, ix) {
       var h = maxV > 0 ? Math.max(6, Math.round(w.val / maxV * 100)) : 3;
       var vlab = isTech ? String(w.val) : 'Rs ' + compact(w.val);
+      var tip = App.esc(w.label + ': ' + (isTech ? w.val + ' tests' : App.money(w.val)));
       return '<div class="db-col">' +
         '<div class="db-val">' + vlab + '</div>' +
-        '<div class="db-track"><div class="db-fill' + (w.isToday ? ' db-today' : '') + '" style="height:' + h + '%" title="' + App.esc(w.label + ': ' + (isTech ? w.val + ' tests' : App.money(w.val))) + '"></div></div>' +
+        '<div class="db-track"><div class="db-fill' + (w.isToday ? ' db-today' : '') + '" style="height:' + h + '%;animation-delay:' + (ix * 0.07).toFixed(2) + 's"></div>' +
+        '<span class="db-tip">' + tip + '</span></div>' +
         '<div class="db-day' + (w.isToday ? ' db-day-t' : '') + '">' + w.label + '</div>' +
         '</div>';
     }).join('');
@@ -180,26 +185,159 @@
         '</div>';
     }).join('');
 
+    // ---- NEW rich widgets: monthly goal, payment methods, dues aging, month P&L ----
+    var monthPays = payments.filter(function (p) { return dayKey(p.date).slice(0, 7) === mKey; });
+    var monthPayCount = monthPays.length;
+    var mkY = +mKey.slice(0, 4), mkM = +mKey.slice(5, 7);
+    var pvY = mkM === 1 ? mkY - 1 : mkY, pvM = mkM === 1 ? 12 : mkM - 1;
+    var prevKey = pvY + '-' + String(pvM).padStart(2, '0');
+    var lastMonthCol = payments.filter(function (p) { return dayKey(p.date).slice(0, 7) === prevKey; })
+      .reduce(function (a, p) { return a + (+p.amount || 0); }, 0);
+    var mainSet = {}; try { mainSet = DB.get('settings', 'main') || {}; } catch (e) {}
+    var goalTarget = +mainSet.monthlyTarget > 0 ? +mainSet.monthlyTarget
+      : Math.round(lastMonthCol * 1.25 / 100) * 100;
+    var goalPct = goalTarget > 0 ? Math.min(100, Math.round(monthCol / goalTarget * 100)) : 0;
+    var goalBody = goalTarget > 0
+      ? '<div class="dbw-bar"><div class="dbw-fill" style="width:' + goalPct + '%"></div></div>' +
+        '<div class="db-sub">' + (isTech
+          ? monthPayCount + ' payments received &middot; ' + goalPct + '% of monthly goal'
+          : App.money(monthCol) + ' of ' + App.money(goalTarget) + ' (' + goalPct + '%)') + '</div>'
+      : App.empty('No collection data yet — the goal appears once payments are recorded.');
+    var goalCard = '<div class="card"><div class="card-h"><h3>Monthly Collection Goal</h3>' +
+      (goalTarget > 0 ? '<span class="dbw-pct">' + goalPct + '%</span>' : '') + '</div>' +
+      '<div class="card-b">' + goalBody + '</div></div>';
+
+    // payment method donut (this month)
+    var mBuckets = [
+      { label: 'Cash', color: '#0d9488', amt: 0, n: 0 },
+      { label: 'Card', color: '#3b82f6', amt: 0, n: 0 },
+      { label: 'Bank / Transfer', color: '#f59e0b', amt: 0, n: 0 },
+      { label: 'Other', color: '#94a3b8', amt: 0, n: 0 }
+    ];
+    monthPays.forEach(function (p) {
+      var m = String(p.method || '').toLowerCase();
+      var b = m.indexOf('cash') >= 0 ? 0 : m.indexOf('card') >= 0 ? 1 :
+        (m.indexOf('bank') >= 0 || m.indexOf('transfer') >= 0 || m.indexOf('online') >= 0 ||
+         m.indexOf('cheque') >= 0 || m.indexOf('check') >= 0) ? 2 : 3;
+      mBuckets[b].amt += (+p.amount || 0); mBuckets[b].n += 1;
+    });
+    var mTot = mBuckets.reduce(function (a, b) { return a + b.amt; }, 0);
+    var RC = 2 * Math.PI * 54, dAcc = 0, dSegs = '';
+    mBuckets.forEach(function (b) {
+      if (!(b.amt > 0)) return;
+      var frac = b.amt / mTot;
+      dSegs += '<circle cx="70" cy="70" r="54" fill="none" stroke="' + b.color + '" stroke-width="18"' +
+        ' stroke-dasharray="' + (frac * RC).toFixed(1) + ' ' + RC.toFixed(1) + '"' +
+        ' stroke-dashoffset="' + (-dAcc * RC).toFixed(1) + '" transform="rotate(-90 70 70)"/>';
+      dAcc += frac;
+    });
+    var donutSvg = '<svg width="140" height="140" viewBox="0 0 140 140">' +
+      '<circle cx="70" cy="70" r="54" fill="none" stroke="#eef2f7" stroke-width="18"/>' + dSegs +
+      '<text x="70" y="67" text-anchor="middle" font-size="17" font-weight="800" fill="#0f172a">' +
+        App.esc(isTech ? String(monthPayCount) : 'Rs ' + compact(mTot)) + '</text>' +
+      '<text x="70" y="87" text-anchor="middle" font-size="11" fill="#64748b">' +
+        App.esc(isTech ? 'payments' : monthName) + '</text></svg>';
+    var legRows = mBuckets.map(function (b) {
+      return '<div class="dbw-row"><span class="dbw-dot" style="background:' + b.color + '"></span>' +
+        '<span class="dbw-leg">' + App.esc(b.label) + '</span>' +
+        '<span class="dbw-amt">' + (isTech ? b.n + ' paid' : App.money(b.amt)) + '</span></div>';
+    }).join('');
+    var donutCard = '<div class="card"><div class="card-h"><h3>Payments by Method</h3><span class="db-sub">' +
+      App.esc(monthName) + '</span></div><div class="card-b">' + (mTot > 0
+        ? '<div class="dbw-split"><div>' + donutSvg + '</div><div class="dbw-legs">' + legRows + '</div></div>'
+        : App.empty('No payments recorded this month.')) + '</div></div>';
+
+    // dues aging buckets
+    var ageB = [
+      { label: '0\u201315 days', color: '#3b82f6', amt: 0, n: 0 },
+      { label: '16\u201330 days', color: '#f59e0b', amt: 0, n: 0 },
+      { label: '30+ days', color: '#ef4444', amt: 0, n: 0 }
+    ];
+    dueInvs.forEach(function (i) {
+      var t = new Date(i.createdAt).getTime();
+      var age = isNaN(t) ? 0 : Math.max(0, Math.floor((Date.now() - t) / 86400000));
+      var bi = age <= 15 ? 0 : (age <= 30 ? 1 : 2);
+      ageB[bi].amt += (+i.due || 0); ageB[bi].n += 1;
+    });
+    var ageMax = Math.max.apply(null, ageB.map(function (b) { return isTech ? b.n : b.amt; }).concat([0]));
+    var ageRows = ageB.map(function (b) {
+      var v = isTech ? b.n : b.amt;
+      var w = ageMax > 0 ? Math.max(4, Math.round(v / ageMax * 100)) : 0;
+      return '<div class="dbw-arow"><div class="dbw-alab">' + b.label + '</div>' +
+        '<div class="dbw-hbar"><div class="dbw-hfill" style="width:' + w + '%;background:' + b.color + '"></div></div>' +
+        '<div class="dbw-amt">' + (isTech ? b.n + ' inv' : App.money(b.amt)) + '</div></div>';
+    }).join('');
+    var ageCard = '<div class="card"><div class="card-h"><h3>Dues Aging</h3><span class="db-sub">' +
+      (isTech ? dueInvs.length + ' unpaid invoices' : App.money(duesTotal) + ' outstanding') + '</span></div>' +
+      '<div class="card-b">' + (dueInvs.length ? ageRows : App.empty('No pending dues. All clear!')) + '</div></div>';
+
+    // month P&L snapshot
+    var monthExps = (DB.all('expenses') || []).filter(function (e) { return dayKey(e.date).slice(0, 7) === mKey; });
+    var monthExp = monthExps.reduce(function (a, e) { return a + (+e.amount || 0); }, 0);
+    var net = monthCol - monthExp;
+    var plMax = isTech ? Math.max(monthPayCount, monthExps.length, 0) : Math.max(monthCol, monthExp, 0);
+    function dbwBar(val, color) {
+      var w = plMax > 0 ? Math.max(4, Math.round(val / plMax * 100)) : 0;
+      return '<div class="dbw-hbar"><div class="dbw-hfill" style="width:' + w + '%;background:' + color + '"></div></div>';
+    }
+    var plRows = isTech
+      ? '<div class="dbw-arow"><div class="dbw-alab">Payments in</div>' + dbwBar(monthPayCount, '#0d9488') + '<div class="dbw-amt">' + monthPayCount + '</div></div>' +
+        '<div class="dbw-arow"><div class="dbw-alab">Expense entries</div>' + dbwBar(monthExps.length, '#f59e0b') + '<div class="dbw-amt">' + monthExps.length + '</div></div>'
+      : '<div class="dbw-arow"><div class="dbw-alab">Collection</div>' + dbwBar(monthCol, '#0d9488') + '<div class="dbw-amt">' + App.money(monthCol) + '</div></div>' +
+        '<div class="dbw-arow"><div class="dbw-alab">Expenses</div>' + dbwBar(monthExp, '#ef4444') + '<div class="dbw-amt">' + App.money(monthExp) + '</div></div>' +
+        '<div class="dbw-net' + (net >= 0 ? ' dbw-pos' : ' dbw-neg') + '">Net ' + App.money(net) + '</div>';
+    var plCard = '<div class="card"><div class="card-h"><h3>' + (isTech ? 'Month Activity' : 'Month P&L') + '</h3>' +
+      '<span class="db-sub">' + App.esc(monthName) + '</span></div>' +
+      '<div class="card-b">' + plRows + '</div></div>';
+
+    var widgets =
+    '<style>' +
+    '.dbw-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}' +
+    '@media(max-width:900px){.dbw-grid{grid-template-columns:1fr}}' +
+    '.dbw-pct{font-weight:800;color:var(--brand-d);font-size:15px}' +
+    '.dbw-bar{height:12px;background:#eef2f7;border-radius:99px;overflow:hidden;margin:12px 0 8px}' +
+    '.dbw-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#14b8a6,#0d9488);transition:width .6s}' +
+    '.dbw-split{display:flex;align-items:center;gap:18px}' +
+    '.dbw-legs{flex:1;min-width:0}' +
+    '.dbw-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}' +
+    '.dbw-row:last-child{border-bottom:none}' +
+    '.dbw-dot{width:12px;height:12px;border-radius:4px;flex:none}' +
+    '.dbw-leg{flex:1;color:var(--muted)}' +
+    '.dbw-amt{font-weight:700;white-space:nowrap}' +
+    '.dbw-arow{display:grid;grid-template-columns:86px 1fr auto;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13.5px}' +
+    '.dbw-arow:last-child{border-bottom:none}' +
+    '.dbw-alab{color:var(--muted);font-weight:600}' +
+    '.dbw-hbar{height:10px;background:#eef2f7;border-radius:99px;overflow:hidden}' +
+    '.dbw-hfill{height:100%;border-radius:99px}' +
+    '.dbw-net{margin-top:10px;padding-top:10px;border-top:1px solid var(--line);font-weight:800;font-size:16px}' +
+    '.dbw-pos{color:var(--green)}' +
+    '.dbw-neg{color:var(--red)}' +
+    '</style>' +
+    '<div class="dbw-grid">' + goalCard + donutCard + ageCard + plCard + '</div>';
+
     // ---- stats per role ----
     var stats;
     if (isTech) {
       stats =
-        statCard(ICONS.flask, 'brand', "Today's Tests", testsToday, invToday.length + ' invoices today') +
-        statCard(ICONS.alert, 'amber', 'Pending Results', pendingRes.length, 'awaiting entry') +
-        statCard(ICONS.check, 'green', 'Reported Today', reportedToday, 'results completed') +
-        statCard(ICONS.users, 'blue', 'Total Patients', patients.length, 'registered');
+        statCard(ICONS.flask, 'brand', "Today's Tests", testsToday, invToday.length + ' invoices today', testsToday, false) +
+        statCard(ICONS.alert, 'amber', 'Pending Results', pendingRes.length, 'awaiting entry', pendingRes.length, false) +
+        statCard(ICONS.check, 'green', 'Reported Today', reportedToday, 'results completed', reportedToday, false) +
+        statCard(ICONS.users, 'blue', 'Total Patients', patients.length, 'registered', patients.length, false);
     } else {
       stats =
-        statCard(ICONS.cash, 'brand', "Today's Collection", App.money(todayCol), payToday.length + ' payments received &middot; ' + colDelta) +
-        statCard(ICONS.flask, 'blue', "Today's Tests", testsToday, invToday.length + ' invoices today') +
-        statCard(ICONS.alert, 'amber', 'Pending Dues', App.money(duesTotal), dueInvs.length + ' invoices unpaid') +
-        statCard(ICONS.cal, 'green', monthName + ' Collection', App.money(monthCol), 'this month');
+        statCard(ICONS.cash, 'brand', "Today's Collection", App.money(todayCol), payToday.length + ' payments received &middot; ' + colDelta, todayCol, true) +
+        statCard(ICONS.flask, 'blue', "Today's Tests", testsToday, invToday.length + ' invoices today', testsToday, false) +
+        statCard(ICONS.alert, 'amber', 'Pending Dues', App.money(duesTotal), dueInvs.length + ' invoices unpaid', duesTotal, true) +
+        statCard(ICONS.cal, 'green', monthName + ' Collection', App.money(monthCol), 'this month', monthCol, true);
     }
 
+    var icPlus = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
+    var icDl = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
+    var icWallet = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H5a2 2 0 0 1 0-4h14v4"/><path d="M20 7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/><circle cx="17.5" cy="13.5" r="1.3" fill="currentColor" stroke="none"/></svg>';
     var quick = isTech
-      ? '<a class="btn btn-primary" href="#/results">Lab Results</a><a class="btn btn-ghost" href="#/tests">View Tests</a>'
-      : '<a class="btn btn-primary" href="#/billing">+ New Bill</a><a class="btn btn-blue" href="#/patients">+ Add Patient</a><a class="btn btn-amber" href="#/expenses">+ Add Expense</a>' +
-        '<button class="btn btn-ghost" onclick="LabPOSDownloadApp()">&#8681; Download App</button>';
+      ? '<a class="btn btn-primary" href="#/results">' + ICONS.check + 'Lab Results</a><a class="btn btn-ghost" href="#/tests">' + ICONS.flask + 'View Tests</a>'
+      : '<a class="btn btn-primary" href="#/billing">' + icPlus + 'New Bill</a><a class="btn btn-blue" href="#/patients">' + ICONS.users + 'Add Patient</a><a class="btn btn-amber" href="#/expenses">' + icWallet + 'Add Expense</a>' +
+        '<button class="btn btn-ghost" onclick="LabPOSDownloadApp()">' + icDl + 'Download App</button>';
 
     window.LabPOSDownloadApp = function () {
       var st = {};
@@ -209,39 +347,106 @@
       else App.toast('Desktop app link not set yet \u2014 add it in Settings \u2192 Lab Profile.', 'info');
     };
 
+    var dateStr = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    /* count-up stat values — scheduled here, runs after view.innerHTML is set by the router */
+    (function () {
+      function fmt(raw, isMoney) {
+        raw = Math.round(raw);
+        return isMoney ? 'Rs ' + raw.toLocaleString('en-US') : String(raw);
+      }
+      function run() {
+        var els = document.querySelectorAll('#view .stat .vl[data-count]');
+        var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        for (var i = 0; i < els.length; i++) (function (el) {
+          var target = parseFloat(el.getAttribute('data-count')) || 0;
+          var isMoney = el.getAttribute('data-money') === '1';
+          if (reduce || target <= 0) { el.textContent = fmt(target, isMoney); return; }
+          var t0 = null, dur = 900;
+          function step(ts) {
+            if (!t0) t0 = ts;
+            var p = Math.min(1, (ts - t0) / dur);
+            var e = 1 - Math.pow(1 - p, 3);
+            el.textContent = fmt(target * e, isMoney);
+            if (p < 1) requestAnimationFrame(step);
+          }
+          requestAnimationFrame(step);
+        })(els[i]);
+      }
+      if (window.requestAnimationFrame) requestAnimationFrame(function () { requestAnimationFrame(run); });
+      else setTimeout(run, 40);
+    })();
+
     return '' +
     '<style>' +
-    '.db-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap}' +
-    '.db-head h2{margin:0;font-size:24px;letter-spacing:-.02em}' +
-    '.db-head p{margin:4px 0 0;color:var(--muted);font-size:14px}' +
+    '.db-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:22px;flex-wrap:wrap}' +
+    '.db-head h2{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em}' +
+    '.db-head p{margin:8px 0 0;color:var(--muted);font-size:13.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}' +
+    '.db-date{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px 13px;font-size:12.5px;font-weight:600;color:var(--ink2);box-shadow:var(--sh-sm)}' +
+    '.db-date svg{width:14px;height:14px;color:var(--brand-d)}' +
     '.db-qa{display:flex;gap:10px;flex-wrap:wrap}' +
-    '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}' +
+    '.db-qa .btn{display:inline-flex;align-items:center;gap:8px;transition:transform .15s ease,box-shadow .15s ease}' +
+    '.db-qa .btn svg{width:16px;height:16px}' +
+    '.db-qa .btn:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}' +
+    '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
     '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
-    '@media(max-width:560px){.stat-grid{grid-template-columns:1fr}}' +
+    '@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:12px}}' +
+    '@keyframes dbRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
+    '.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:dbRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
+    '.stat:nth-child(2){animation-delay:.07s}' +
+    '.stat:nth-child(3){animation-delay:.14s}' +
+    '.stat:nth-child(4){animation-delay:.21s}' +
+    '.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
+    '.stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
+    '.stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
+    '.stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
+    '.stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
+    '.stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
+    '.stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
+    '.stat-ico svg{width:22px;height:22px}' +
+    '.stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
+    '.stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
+    '.stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}' +
+    '.db-up,.db-down,.db-flat{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;white-space:nowrap;line-height:1.6}' +
+    '.db-up{background:var(--green-soft);color:var(--green)}' +
+    '.db-down{background:var(--red-soft);color:var(--red)}' +
+    '.db-flat{background:#eef2f6;color:var(--muted)}' +
     '.db-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px}' +
     '@media(max-width:1000px){.db-grid{grid-template-columns:1fr}}' +
+    '.db-grid .card-h h3,.card:has(>.card-b>.db-cols) .card-h h3{font-size:16.5px;font-weight:700;letter-spacing:-.01em}' +
+    '.card:has(>.card-b>.db-cols) .card-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}' +
+    '.db-grid .table tbody tr{transition:background .15s ease}' +
+    '.db-grid .table tbody tr:hover{background:#f4f9fd}' +
     '.db-sub{font-size:12px;color:var(--muted);margin-top:2px}' +
     '.db-due{color:var(--red);font-weight:700}' +
     '.db-tests{font-size:12.5px;color:var(--muted);margin-top:4px}' +
-    '.db-pend{padding:12px 0;border-bottom:1px solid var(--line)}' +
+    '.db-pend{padding:12px 10px;margin:0 -10px;border-bottom:1px solid var(--line);border-radius:10px;transition:background .15s ease}' +
     '.db-pend:last-child{border-bottom:none}' +
+    '.db-pend:hover{background:#f4f9fd}' +
     '.db-foot{margin-top:12px}' +
-    '.db-cols{display:flex;align-items:stretch;gap:8px;padding:8px 4px 0}' +
+    '.db-week-pill{display:inline-flex;align-items:center;gap:6px;background:var(--brand-soft);color:var(--brand-d);font-size:12px;font-weight:700;padding:5px 13px;border-radius:999px;box-shadow:inset 0 0 0 1px var(--brand-line);white-space:nowrap}' +
+    '.db-cols{display:flex;align-items:stretch;gap:10px;padding:12px 4px 2px}' +
+    '@media(max-width:560px){.db-cols{gap:5px}}' +
     '.db-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}' +
-    '.db-val{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}' +
-    '.db-track{height:150px;width:100%;max-width:58px;background:#f1f5f9;border-radius:9px;display:flex;align-items:flex-end;overflow:hidden}' +
-    '.db-fill{width:100%;background:linear-gradient(180deg,#14b8a6,#0f766e);border-radius:9px;transition:height .5s}' +
-    '.db-fill.db-today{background:linear-gradient(180deg,#3b82f6,#1d4ed8)}' +
+    '.db-val{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums;transition:color .15s}' +
+    '.db-col:hover .db-val{color:var(--ink)}' +
+    '.db-track{position:relative;height:150px;width:100%;max-width:58px;background:#f1f5f9;border-radius:10px;display:flex;align-items:flex-end;box-shadow:inset 0 2px 5px rgba(15,30,46,.07)}' +
+    '@media(max-width:560px){.db-track{max-width:none}}' +
+    '@keyframes dbGrow{to{transform:scaleY(1)}}' +
+    '.db-fill{width:100%;border-radius:10px;background:linear-gradient(180deg,#2dd4bf 0%,#0d9488 55%,#0f766e 100%);box-shadow:0 8px 16px -8px rgba(13,148,136,.6);transform:scaleY(0);transform-origin:50% 100%;animation:dbGrow .8s cubic-bezier(.22,.8,.3,1) forwards}' +
+    '.db-fill.db-today{background:linear-gradient(180deg,#60a5fa 0%,#2563eb 55%,#1d4ed8 100%);box-shadow:0 8px 18px -6px rgba(37,99,235,.65),0 0 0 3px rgba(37,99,235,.14)}' +
+    '.db-tip{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translate(-50%,4px);background:var(--ink);color:#fff;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:8px;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .16s ease,transform .16s ease;z-index:5;box-shadow:var(--sh-md)}' +
+    '.db-tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:var(--ink)}' +
+    '.db-col:hover .db-tip{opacity:1;transform:translate(-50%,0)}' +
     '.db-day{font-size:12px;color:var(--muted);font-weight:600}' +
     '.db-day-t{color:var(--blue);font-weight:800}' +
-    '.db-up{color:var(--green);font-weight:700;white-space:nowrap}' +
-    '.db-down{color:var(--red);font-weight:700;white-space:nowrap}' +
-    '.db-flat{color:var(--muted);font-weight:600;white-space:nowrap}' +
-    '.db-rank{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;background:var(--brand-soft);color:var(--brand-d);font-weight:800;font-size:12px}' +
+    '.db-rank{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 7px;border-radius:9px;background:linear-gradient(135deg,var(--brand-soft),#ffffff 130%);color:var(--brand-d);font-weight:800;font-size:12px;box-shadow:inset 0 0 0 1px var(--brand-line)}' +
+    '@media(max-width:640px){.db-head h2{font-size:22px}.stat .vl{font-size:26px}}' +
+    '@media (prefers-reduced-motion:reduce){.stat,.db-fill{animation:none}.db-fill{transform:none}.stat:hover,.db-qa .btn:hover{transform:none}}' +
     '</style>' +
 
     '<div class="db-head"><div><h2>' + greeting() + (s.name ? ', ' + App.esc(s.name) : '') + '</h2>' +
-    '<p>' + App.esc(new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })) + ' &middot; Here is what is happening at the lab today.</p></div>' +
+    '<p><span class="db-date">' + ICONS.cal + App.esc(dateStr) + '</span><span>Here is what is happening at the lab today.</span></p></div>' +
     '<div class="db-qa">' + quick + '</div></div>' +
 
     '<div class="stat-grid">' + stats + '</div>' +
@@ -271,8 +476,9 @@
       '</div></div>' +
     '</div>' +
 
+    widgets +
     '<div class="card" style="margin-bottom:20px"><div class="card-h"><h3>' + (isTech ? 'Tests — Last 7 Days' : 'Collection — Last 7 Days') + '</h3>' +
-    '<span class="db-sub">Total ' + (isTech ? week.reduce(function (a, w) { return a + w.val; }, 0) + ' tests' : App.money(week.reduce(function (a, w) { return a + w.val; }, 0))) + ' this week</span></div>' +
+    '<span class="db-week-pill">Total ' + (isTech ? week.reduce(function (a, w) { return a + w.val; }, 0) + ' tests' : App.money(week.reduce(function (a, w) { return a + w.val; }, 0))) + ' this week</span></div>' +
     '<div class="card-b"><div class="db-cols">' + bars + '</div></div></div>';
   });
 })();
