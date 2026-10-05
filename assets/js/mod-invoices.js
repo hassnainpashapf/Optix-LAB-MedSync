@@ -4,29 +4,8 @@
 (function () {
   'use strict';
 
-  /* ---------- dashboard-style stat cards (scoped compact CSS) ---------- */
-  var SC_STYLE =
-    '<style>' +
-    '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
-    '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
-    '@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:12px}}' +
-    '@keyframes scRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
-    '.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
-    '.stat:nth-child(2){animation-delay:.07s}' +
-    '.stat:nth-child(3){animation-delay:.14s}' +
-    '.stat:nth-child(4){animation-delay:.21s}' +
-    '.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
-    '.stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
-    '.stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
-    '.stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
-    '.stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
-    '.stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
-    '.stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
-    '.stat-ico svg{width:22px;height:22px}' +
-    '.stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
-    '.stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
-    '.stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px}' +
-    '</style>';
+  /* ---------- dashboard-style stat cards: shared compact CSS now in app.css ---------- */
+  var SC_STYLE = '';
   var SC_ICONS = {
     doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
     cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
@@ -135,7 +114,7 @@
         '<button class="btn btn-primary" id="pm-save">Mark as Paid</button>' +
       '</div>';
     var close = App.modal('Collect Payment', body, {
-      onOpen: function (root) {
+      onOpen: function (root, close) {
         var amtEl = root.querySelector('#pm-amount');
         var saveBtn = root.querySelector('#pm-save');
         function syncLabel() {
@@ -304,7 +283,7 @@
     }
 
     var close = App.modal('Edit Invoice ' + inv.no, body, {
-      onOpen: function (root) {
+      onOpen: function (root, close) {
         paintItems(root); paintTotal(root);
         root.querySelector('#ei-cancel').addEventListener('click', close);
         root.querySelector('#ei-disc').addEventListener('input', function (e) {

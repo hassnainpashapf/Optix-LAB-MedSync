@@ -61,25 +61,8 @@
       '<div class="dl">' + sub + '</div>' +
       '</div>';
   }
-  var ADM_STAT_CSS =
-    '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
-    '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
-    '@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:12px}}' +
-    '@keyframes dbRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
-    '.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:dbRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
-    '.stat:nth-child(2){animation-delay:.07s}.stat:nth-child(3){animation-delay:.14s}.stat:nth-child(4){animation-delay:.21s}' +
-    '.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
-    '.stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
-    '.stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
-    '.stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
-    '.stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
-    '.stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
-    '.stat[data-tint="red"]{--sc-line:#f2c6c6;--sc-soft:var(--red-soft)}' +
-    '.stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
-    '.stat-ico svg{width:22px;height:22px}' +
-    '.stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
-    '.stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
-    '.stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}';
+  /* shared compact stat card CSS now in app.css */
+  var ADM_STAT_CSS = '';
   /* dashboard-style count-up for .vl[data-count] values (final value is
      already in the markup, so a failure here never leaves a blank card) */
   function admCountUp() {
@@ -221,7 +204,7 @@
       + '<button class="btn btn-primary" id="exfSave">' + (isEdit ? 'Save Changes' : 'Add Expense') + '</button></div>';
 
     var close = App.modal(isEdit ? 'Edit Expense' : 'Add Expense', body, {
-      onOpen: function () {
+      onOpen: function (ov, close) {
         document.getElementById('exfCancel').addEventListener('click', close);
         document.getElementById('exfSave').addEventListener('click', function () {
           var title = document.getElementById('exfTitle').value.trim();
@@ -700,7 +683,7 @@
       + '<button class="btn btn-ghost" id="ufCancel">Cancel</button>'
       + '<button class="btn btn-primary" id="ufSave">' + (isEdit ? 'Save Changes' : 'Add User') + '</button></div>';
     var close = App.modal(isEdit ? 'Edit User' : 'Add User', body, {
-      onOpen: function () {
+      onOpen: function (ov, close) {
         document.getElementById('ufCancel').addEventListener('click', close);
         document.getElementById('ufSave').addEventListener('click', function () {
           var name = document.getElementById('ufName').value.trim();
@@ -733,7 +716,7 @@
       + '<button class="btn btn-ghost" id="pwCancel">Cancel</button>'
       + '<button class="btn btn-primary" id="pwSave">Set Password</button></div>';
     var close = App.modal('Reset Password', body, {
-      onOpen: function () {
+      onOpen: function (ov, close) {
         document.getElementById('pwCancel').addEventListener('click', close);
         document.getElementById('pwSave').addEventListener('click', function () {
           var p = document.getElementById('pwNew').value;

@@ -23,29 +23,8 @@
     return n;
   }
 
-  /* ---------- dashboard-style stat cards (scoped compact CSS) ---------- */
-  var SC_STYLE =
-    '<style>' +
-    '.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
-    '@media(max-width:1100px){.stat-grid{grid-template-columns:repeat(2,1fr)}}' +
-    '@media(max-width:560px){.stat-grid{grid-template-columns:1fr;gap:12px}}' +
-    '@keyframes scRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
-    '.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
-    '.stat:nth-child(2){animation-delay:.07s}' +
-    '.stat:nth-child(3){animation-delay:.14s}' +
-    '.stat:nth-child(4){animation-delay:.21s}' +
-    '.stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
-    '.stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
-    '.stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
-    '.stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
-    '.stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
-    '.stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
-    '.stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
-    '.stat-ico svg{width:22px;height:22px}' +
-    '.stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
-    '.stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
-    '.stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px}' +
-    '</style>';
+  /* ---------- dashboard-style stat cards: shared compact CSS now in app.css ---------- */
+  var SC_STYLE = '';
   var SC_ICONS = {
     doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
     cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
@@ -196,9 +175,11 @@
 
     function openNewPatient() {
       var body =
+        '<style>.npf .label{display:block;margin-bottom:6px}.npf .form-grid{align-items:start}</style>' +
+        '<div class="npf">' +
         '<div class="form-grid">' +
           '<div><label class="label">Full name *</label><input class="input" id="npName" placeholder="e.g. Ali Raza"></div>' +
-          '<div class="form-2">' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
             '<div><label class="label">Age</label><input class="input" id="npAge" type="number" min="0" max="130" placeholder="35"></div>' +
             '<div><label class="label">Gender</label><select class="select" id="npGender"><option>Male</option><option>Female</option><option>Other</option></select></div>' +
           '</div>' +
@@ -206,9 +187,10 @@
           '<div><label class="label">Address</label><input class="input" id="npAddress" placeholder="House, street, city"></div>' +
         '</div>' +
         '<div class="bl-modal-foot"><button class="btn btn-ghost" id="npCancel">Cancel</button>' +
-        '<button class="btn btn-primary" id="npSave">Save Patient</button></div>';
+        '<button class="btn btn-primary" id="npSave">Save Patient</button></div>' +
+        '</div>';
       var close = App.modal('New Patient', body, {
-        onOpen: function () {
+        onOpen: function (ov, close) {
           document.getElementById('npCancel').addEventListener('click', close);
           document.getElementById('npName').focus();
           document.getElementById('npSave').addEventListener('click', function () {
@@ -374,12 +356,15 @@
     SC_STYLE +
     '<div class="stat-grid">' + billStats + '</div>' +
 
-    '<div class="bl-pos">' +
     '<style>' +
     '.bl-pos{display:grid;grid-template-columns:290px minmax(0,1fr) 340px;gap:18px;align-items:start}' +
     '.bl-panel{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(15,30,46,.06)}' +
-    '.bl-panel-h{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800;font-size:14.5px;display:flex;align-items:center;justify-content:space-between}' +
+    '.bl-panel-h{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800;font-size:14.5px;display:flex;align-items:center;justify-content:space-between;min-height:58px;gap:10px}' +
+    '.bl-panel-t{display:flex;align-items:center;gap:9px;min-width:0}' +
+    '.bl-step{width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;display:inline-grid;place-items:center;font-size:12.5px;font-weight:800;flex:none}' +
     '.bl-panel-b{padding:14px 16px}' +
+    '.bl-sec{margin-top:14px}' +
+    '.bl-sec>.label{display:block;margin:0 0 7px}' +
     '.bl-pat-card{display:flex;gap:12px;align-items:center;background:var(--brand-soft);border:1px solid #cdeee9;border-radius:12px;padding:12px}' +
     '.bl-pat-ava{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;display:grid;place-items:center;font-weight:800;font-size:19px;flex:none}' +
     '.bl-pat-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}' +
@@ -413,9 +398,9 @@
     '.bl-change{color:var(--green)}' +
     '.bl-due{color:var(--amber)}' +
     '.bl-seg{display:flex;gap:6px}' +
-    '.bl-seg button{flex:1;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 4px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}' +
+    '.bl-seg button{flex:1;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 4px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer}' +
     '.bl-seg button.on{background:var(--ink);border-color:var(--ink);color:#fff}' +
-    '.bl-disc-wrap{display:flex;gap:8px}' +
+    '.bl-disc-wrap{display:flex;gap:8px;align-items:stretch}' +
     '.bl-disc-wrap .input{flex:1}' +
     '.bl-modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}' +
     '.bl-save{width:100%;padding:14px;font-size:15.5px;margin-top:12px}' +
@@ -426,7 +411,7 @@
 
     '<div class="bl-pos">' +
       /* patient column */
-      '<div class="bl-panel"><div class="bl-panel-h">Patient' +
+      '<div class="bl-panel"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">1</span>Patient</span>' +
         '<button class="btn btn-primary btn-sm" id="blNewPat">+ New Patient</button></div>' +
         '<div class="bl-panel-b"><div id="blPatSearchWrap">' +
           '<input class="input search" id="blPatSearch" placeholder="Search name or phone…" autocomplete="off">' +
@@ -434,7 +419,7 @@
         '</div><div id="blPatientBox" style="margin-top:10px"></div></div></div>' +
 
       /* tests column */
-      '<div class="bl-panel"><div class="bl-panel-h">Tests <span class="badge b-ready" id="blCount">0 tests</span></div>' +
+      '<div class="bl-panel"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">2</span>Tests</span><span class="badge b-ready" id="blCount">0 tests</span></div>' +
         '<div class="bl-panel-b">' +
           '<input class="input search" id="blTestSearch" placeholder="Search test name or code…" autocomplete="off">' +
           '<div class="bl-chips" id="blChips">' + cats.map(function (c) {
@@ -444,26 +429,27 @@
         '</div></div>' +
 
       /* summary column */
-      '<div class="bl-panel bl-col-summary"><div class="bl-panel-h">Bill Summary</div><div class="bl-panel-b">' +
-        '<div id="blCart" style="max-height:210px;overflow:auto;margin-bottom:6px"></div>' +
-        '<label class="label">Referral doctor (optional)</label>' +
+      '<div class="bl-panel bl-col-summary"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">3</span>Bill Summary</span></div><div class="bl-panel-b">' +
+        '<div class="bl-sec" style="margin-top:0"><label class="label">Selected tests</label>' +
+        '<div id="blCart" style="max-height:210px;overflow:auto"></div></div>' +
+        '<div class="bl-sec"><label class="label">Referral doctor (optional)</label>' +
         '<select class="select" id="blDoctor"><option value="">Walk-in (no referral)</option>' +
           doctors.map(function (d) {
             return '<option value="' + App.esc(d.id) + '">' + App.esc(d.name) + ' — ' + App.esc(d.commissionPct || 0) + '%</option>';
-          }).join('') + '</select>' +
-        '<label class="label" style="margin-top:12px">Discount</label>' +
+          }).join('') + '</select></div>' +
+        '<div class="bl-sec"><label class="label">Discount</label>' +
         '<div class="bl-disc-wrap"><div class="bl-seg" style="width:130px;flex:none">' +
           '<button id="blDiscRs" class="on">Rs</button><button id="blDiscPct">%</button></div>' +
-          '<input class="input" id="blDiscVal" type="number" min="0" value="0"></div>' +
-        '<div style="margin-top:14px">' +
+          '<input class="input" id="blDiscVal" type="number" min="0" value="0"></div></div>' +
+        '<div class="bl-sec">' +
           '<div class="bl-row"><span>Subtotal</span><strong id="blSub" style="color:var(--ink)">Rs 0</strong></div>' +
           '<div class="bl-row"><span>Discount</span><strong id="blDisc" style="color:var(--ink)">− Rs 0</strong></div>' +
           '<div class="bl-total"><span>Total</span><strong id="blTotal">Rs 0</strong></div>' +
         '</div>' +
-        '<label class="label" style="margin-top:12px">Payment method</label>' +
-        '<div class="bl-seg" id="blMethod"><button data-m="Cash" class="on">Cash</button><button data-m="Bank">Bank</button><button data-m="Card">Card</button></div>' +
-        '<label class="label" style="margin-top:12px">Amount tendered</label>' +
-        '<input class="input" id="blTendered" type="number" min="0" placeholder="0">' +
+        '<div class="bl-sec"><label class="label">Payment method</label>' +
+        '<div class="bl-seg" id="blMethod"><button data-m="Cash" class="on">Cash</button><button data-m="Bank">Bank</button><button data-m="Card">Card</button></div></div>' +
+        '<div class="bl-sec"><label class="label">Amount tendered</label>' +
+        '<input class="input" id="blTendered" type="number" min="0" placeholder="0"></div>' +
         '<div class="bl-row" id="blChangeRow" style="margin-top:6px"></div>' +
         '<button class="btn btn-primary bl-save" id="blSave" disabled>Save &amp; Print</button>' +
         '<button class="btn btn-ghost" id="blClear" style="width:100%;margin-top:8px">Clear Bill</button>' +

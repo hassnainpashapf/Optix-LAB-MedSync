@@ -226,7 +226,7 @@
       '<p class="muted" style="margin-bottom:14px">' + sub + '</p>' + body +
       '<div class="actions" style="margin-top:16px"><button class="btn btn-ghost" id="resCancel">Cancel</button>' +
       '<button class="btn btn-primary" id="resSave">Save Result</button></div>',
-      { onOpen: function () {
+      { onOpen: function (ov, close) {
           document.getElementById('resCancel').addEventListener('click', close);
           document.getElementById('resSave').addEventListener('click', function () {
             saveResult(row, params, close);
@@ -269,21 +269,30 @@
 
   /* ---------- print report ---------- */
 
-  function printReport(invoiceId) {
+  // Shared structured report data (used by HTML print, preview modal, and PDF builder)
+  function reportData(invoiceId) {
     var inv = invOf(invoiceId);
-    if (!inv) { App.toast('Invoice not found', 'err'); return; }
-    var pat = patOf(inv.patientId);
-    var s = DB.get('settings', 'main') || {};
-    var doc = inv.doctorId ? DB.get('doctors', inv.doctorId) : null;
-
+    if (!inv) return null;
     var readyRows = joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; });
+    if (!readyRows.length) return null;
     var pendingCount = joinedRows('pending').filter(function (r) { return r.invoice.id === invoiceId; }).length;
-    if (!readyRows.length) { App.toast('No ready results to print', 'err'); return; }
-
     var maxReported = '';
     readyRows.forEach(function (r) {
       if (r.res && r.res.reportedAt && r.res.reportedAt > maxReported) maxReported = r.res.reportedAt;
     });
+    return {
+      inv: inv,
+      pat: patOf(inv.patientId),
+      s: DB.get('settings', 'main') || {},
+      doc: inv.doctorId ? DB.get('doctors', inv.doctorId) : null,
+      readyRows: readyRows,
+      pendingCount: pendingCount,
+      maxReported: maxReported
+    };
+  }
+
+  function reportHtml(d) {
+    var inv = d.inv, pat = d.pat, s = d.s, readyRows = d.readyRows, pendingCount = d.pendingCount;
 
     var testsHtml = readyRows.map(function (r) {
       var test = r.test;
@@ -313,8 +322,7 @@
       return '<div><span style="color:#64748b">' + k + ':</span> <strong>' + App.esc(v || '—') + '</strong></div>';
     };
 
-    var html =
-      '<div style="border-bottom:3px solid #0d9488;padding-bottom:12px;margin-bottom:16px">' +
+    return '<div style="border-bottom:3px solid #0d9488;padding-bottom:12px;margin-bottom:16px">' +
         '<h1 style="margin:0;color:#0d9488">' + App.esc(s.labName || 'Lab') + '</h1>' +
         '<div style="color:#64748b">' + App.esc(s.tagline || '') + '</div>' +
         '<div style="color:#64748b">' + App.esc(s.address || '') + ' &nbsp;•&nbsp; ' + App.esc(s.phone || '') +
@@ -327,8 +335,8 @@
         info('Phone', pat.phone) +
         info('Invoice No', inv.no) +
         info('Date', App.d(inv.createdAt)) +
-        info('Reported', maxReported ? App.dt(maxReported) : '—') +
-        info('Referred By', doc ? doc.name : 'Self') +
+        info('Reported', d.maxReported ? App.dt(d.maxReported) : '—') +
+        info('Referred By', d.doc ? d.doc.name : 'Self') +
         info('Tests', readyRows.length + (pendingCount ? ' (' + pendingCount + ' pending)' : '')) +
       '</div>' +
       testsHtml +
@@ -340,36 +348,185 @@
         '<div style="text-align:center;min-width:180px"><div style="border-top:1px solid #0f1e2e;padding-top:6px">Pathologist</div></div>' +
       '</div>' +
       '<p style="text-align:center;color:#64748b;margin-top:32px">— End of Report —</p>';
-
-    App.print('Lab Report — ' + inv.no, html);
   }
 
-  /* ---------- dashboard-style stat cards ---------- */
+  function printReport(invoiceId) {
+    var d = reportData(invoiceId);
+    if (!d) { App.toast('No ready results to print', 'err'); return; }
+    App.print('Lab Report — ' + d.inv.no, reportHtml(d));
+  }
 
-  var STAT_CSS =
-    '<style>' +
-    '.pgstat .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}' +
-    '@media(max-width:1100px){.pgstat .stat-grid{grid-template-columns:repeat(2,1fr)}}' +
-    '@media(max-width:560px){.pgstat .stat-grid{grid-template-columns:1fr;gap:12px}}' +
-    '@keyframes pgRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}' +
-    '.pgstat .stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:pgRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
-    '.pgstat .stat:nth-child(2){animation-delay:.07s}' +
-    '.pgstat .stat:nth-child(3){animation-delay:.14s}' +
-    '.pgstat .stat:nth-child(4){animation-delay:.21s}' +
-    '.pgstat .stat:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:var(--sc-line)}' +
-    '.pgstat .stat::before{content:"";position:absolute;top:-42px;right:-42px;width:120px;height:120px;border-radius:50%;background:var(--sc-soft,var(--brand-soft));opacity:.55;pointer-events:none}' +
-    '.pgstat .stat[data-tint="brand"]{--sc-line:#bfe9e4;--sc-soft:var(--brand-soft)}' +
-    '.pgstat .stat[data-tint="blue"]{--sc-line:#c7dafc;--sc-soft:var(--blue-soft)}' +
-    '.pgstat .stat[data-tint="amber"]{--sc-line:#f3ddb4;--sc-soft:var(--amber-soft)}' +
-    '.pgstat .stat[data-tint="green"]{--sc-line:#bde8d3;--sc-soft:var(--green-soft)}' +
-    '.pgstat .stat-ico{position:relative;width:46px;height:46px;border-radius:14px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),var(--sh-sm);margin-bottom:12px}' +
-    '.pgstat .stat-ico svg{width:22px;height:22px}' +
-    '.pgstat .stat .lb{position:relative;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}' +
-    '.pgstat .stat .vl{position:relative;font-size:30px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0}' +
-    '.pgstat .stat .dl{position:relative;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:8px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}' +
-    '@media(max-width:640px){.pgstat .stat .vl{font-size:26px}}' +
-    '@media (prefers-reduced-motion:reduce){.pgstat .stat{animation:none}.pgstat .stat:hover{transform:none}}' +
-    '</style>';
+  // Report preview modal with Print + Share on WhatsApp actions
+  function viewReport(invoiceId) {
+    var d = reportData(invoiceId);
+    if (!d) { App.toast('No ready results to view', 'err'); return; }
+    var close = App.modal('Lab Report — ' + App.esc(d.inv.no),
+      '<div class="report-preview" style="max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:20px;background:#fff">' +
+        reportHtml(d) +
+      '</div>' +
+      '<div class="actions" style="margin-top:16px">' +
+        '<button class="btn btn-ghost" id="rvClose">Close</button>' +
+        '<button class="btn btn-ghost" id="rvWa">' + WA_ICON + ' Share on WhatsApp</button>' +
+        '<button class="btn btn-primary" id="rvPrint">Print Report</button>' +
+      '</div>',
+      { wide: true, onOpen: function (ov, close) {
+          document.getElementById('rvClose').addEventListener('click', close);
+          document.getElementById('rvPrint').addEventListener('click', function () { printReport(invoiceId); });
+          document.getElementById('rvWa').addEventListener('click', function () { shareReportWhatsApp(invoiceId); });
+        }
+      });
+  }
+
+  /* ---------- report PDF builder (jsPDF) ---------- */
+
+  // Returns { dataUri } or null (error toasted)
+  function buildReportPdf(invoiceId) {
+    var d = reportData(invoiceId);
+    if (!d) { App.toast('No ready results for PDF', 'err'); return null; }
+    var JSPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
+    if (!JSPDF) { App.toast('PDF engine not loaded — check connection and reload', 'err'); return null; }
+
+    var s = d.s, inv = d.inv, pat = d.pat;
+    var doc = new JSPDF({ unit: 'mm', format: 'a4' });
+    var W = 210, M = 14, CW = W - 2 * M;
+    var y = M;
+    var TEAL = [13, 148, 136];
+
+    function need(h) { if (y + h > 282) { doc.addPage(); y = M; } }
+    function txt(t, x, yy, opts) { doc.text(String(t == null ? '' : t), x, yy, opts || {}); }
+
+    // header
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(TEAL[0], TEAL[1], TEAL[2]);
+    txt(s.labName || 'Optix LAB MedSync', W / 2, y, { align: 'center' }); y += 7;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(100, 100, 100);
+    if (s.tagline) { txt(s.tagline, W / 2, y, { align: 'center' }); y += 5; }
+    var addr = [s.address, s.phone, s.email].filter(function (x) { return x; }).join('  •  ');
+    if (addr) { doc.setFontSize(9); txt(addr, W / 2, y, { align: 'center' }); y += 6; }
+    doc.setDrawColor(TEAL[0], TEAL[1], TEAL[2]); doc.setLineWidth(0.8);
+    doc.line(M, y, W - M, y); y += 8;
+
+    // title
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
+    txt('LABORATORY REPORT', W / 2, y, { align: 'center' }); y += 8;
+
+    // patient box
+    var infoRows = [
+      ['Patient', pat.name || '—', 'Age / Gender', (pat.age || '') + (pat.gender ? ' / ' + pat.gender : '')],
+      ['Phone', pat.phone || '—', 'Invoice No', inv.no || '—'],
+      ['Date', App.d(inv.createdAt), 'Reported', d.maxReported ? App.dt(d.maxReported) : '—'],
+      ['Referred By', d.doc ? d.doc.name : 'Self', 'Tests', String(d.readyRows.length) + (d.pendingCount ? ' (' + d.pendingCount + ' pending)' : '')]
+    ];
+    var boxH = infoRows.length * 6.5 + 6;
+    need(boxH + 4);
+    doc.setDrawColor(220, 228, 235); doc.setFillColor(248, 250, 252); doc.setLineWidth(0.3);
+    doc.roundedRect(M, y, CW, boxH, 2, 2, 'FD');
+    var iy = y + 5.5;
+    infoRows.forEach(function (r) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(100, 116, 139);
+      txt(r[0] + ':', M + 5, iy);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
+      txt(r[1], M + 38, iy);
+      doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+      txt(r[2] + ':', M + CW / 2 + 5, iy);
+      doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
+      txt(r[3], M + CW / 2 + 38, iy);
+      iy += 6.5;
+    });
+    y += boxH + 6;
+
+    // test tables
+    var COLS = [72, 52, 28, 30]; // param | result | unit | ref  (sum 182 = CW)
+    function tableHead() {
+      need(9);
+      doc.setFillColor(13, 148, 136); doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+      var x = M, heads = ['Parameter', 'Result', 'Unit', 'Reference Range'];
+      var hh = 7;
+      doc.rect(M, y, CW, hh, 'F');
+      heads.forEach(function (h, i) { txt(h, x + 2, y + 4.8); x += COLS[i]; });
+      y += hh;
+      doc.setTextColor(20, 20, 20);
+    }
+    function tableRow(cells, boldVal) {
+      doc.setFontSize(9.5);
+      var lines = cells.map(function (c, i) { return doc.splitTextToSize(String(c == null ? '' : c), COLS[i] - 4); });
+      var rh = Math.max.apply(null, lines.map(function (l) { return l.length; })) * 5 + 2.5;
+      need(rh);
+      var x = M;
+      doc.setDrawColor(220, 228, 235); doc.setLineWidth(0.25);
+      doc.rect(M, y, CW, rh);
+      lines.forEach(function (ln, i) {
+        doc.setFont('helvetica', (i === 1 && boldVal) ? 'bold' : 'normal');
+        txt(ln, x + 2, y + 4.6);
+        x += COLS[i];
+      });
+      // vertical separators
+      var sx = M;
+      for (var i = 0; i < 3; i++) { sx += COLS[i]; doc.line(sx, y, sx, y + rh); }
+      y += rh;
+    }
+
+    d.readyRows.forEach(function (r) {
+      var test = r.test;
+      var params = (test && Array.isArray(test.params)) ? test.params : [];
+      var vals = (r.res && r.res.values) || {};
+      need(10);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(20, 20, 20);
+      var tname = testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : '');
+      txt(doc.splitTextToSize(tname, CW)[0], M, y); y += 6.5;
+      tableHead();
+      if (params.length) {
+        params.forEach(function (p) {
+          tableRow([p.name, vals[p.name] != null ? String(vals[p.name]) : '', p.unit || '', p.ref || ''], true);
+        });
+        if (vals['Remarks']) {
+          need(8);
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(9.5); doc.setTextColor(100, 100, 100);
+          txt('Remarks: ' + vals['Remarks'], M, y + 4.5);
+          doc.setTextColor(20, 20, 20);
+          y += 7;
+        }
+      } else {
+        tableRow(['Result', vals['Result'] != null ? String(vals['Result']) : '', '', ''], true);
+      }
+      y += 4;
+    });
+
+    if (d.pendingCount) {
+      need(8);
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(180, 120, 20);
+      txt('Note: ' + d.pendingCount + ' test(s) from this invoice are still pending.', M, y);
+      y += 7;
+    }
+
+    if (s.footerNote) {
+      need(8);
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9.5); doc.setTextColor(120, 120, 120);
+      txt(doc.splitTextToSize(s.footerNote, CW), M, y);
+      y += 6;
+    }
+
+    // signatures
+    need(24);
+    y += 12;
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+    doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.3);
+    doc.line(M, y, M + 55, y); doc.line(W - M - 55, y, W - M, y);
+    txt('Lab Technologist', M + 27.5, y + 5, { align: 'center' });
+    txt('Pathologist', W - M - 27.5, y + 5, { align: 'center' });
+    y += 10;
+    doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+    txt('Powered by System Optix', W / 2, y, { align: 'center' });
+
+    var dataUri;
+    try { dataUri = doc.output('datauristring'); }
+    catch (e) { App.toast('Could not build PDF: ' + e.message, 'err'); return null; }
+    return { dataUri: dataUri };
+  }
+
+  /* ---------- dashboard-style stat cards: shared compact CSS now in app.css ---------- */
+
+  var STAT_CSS = '';
 
   function svgIcon(inner) {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + inner + '</svg>';
@@ -479,7 +636,8 @@
           return '<div class="card" style="margin-bottom:14px">' +
             '<div class="card-h"><div><strong>' + App.esc(inv.no) + '</strong> — ' + App.esc(pat.name || '—') + '</div>' +
             '<div class="actions"><span class="muted">' + App.d(inv.createdAt) + '</span>' +
-            '<button class="btn btn-ghost btn-sm" data-wa="' + App.esc(inv.id) + '">WhatsApp</button>' +
+            '<button class="btn btn-ghost btn-sm" data-viewrep="' + App.esc(inv.id) + '">View</button>' +
+            '<button class="btn btn-ghost btn-sm" data-wa="' + App.esc(inv.id) + '">' + WA_ICON + ' Share on WhatsApp</button>' +
             '<button class="btn btn-primary btn-sm" data-print="' + App.esc(inv.id) + '">Print Report</button></div></div>' +
             '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th>Status</th><th>Reported</th><th></th></tr></thead>' +
             '<tbody>' + rowsHtml + '</tbody></table></div></div>';
@@ -522,6 +680,9 @@
     });
     v.querySelectorAll('[data-print]').forEach(function (b) {
       b.addEventListener('click', function () { printReport(b.getAttribute('data-print')); });
+    });
+    v.querySelectorAll('[data-viewrep]').forEach(function (b) {
+      b.addEventListener('click', function () { viewReport(b.getAttribute('data-viewrep')); });
     });
     v.querySelectorAll('[data-wa]').forEach(function (b) {
       b.addEventListener('click', function () { shareReportWhatsApp(b.getAttribute('data-wa')); });
