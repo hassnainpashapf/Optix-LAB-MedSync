@@ -594,11 +594,11 @@
 
     var tabsHtml =
       '<div class="toolbar" style="margin-bottom:16px">' +
-        '<div style="display:flex;gap:8px">' +
+        '<input class="input search" id="resSearch" placeholder="Search invoice no / patient..." value="' + App.esc(query) + '" style="max-width:280px">' +
+        '<div style="display:flex;gap:8px;margin-left:auto">' +
           '<button class="btn ' + (tab === 'pending' ? 'btn-primary' : 'btn-ghost') + '" data-tab="pending">Pending Entry <span class="badge b-pending" style="margin-left:6px">' + pendingRows.length + '</span></button>' +
           '<button class="btn ' + (tab === 'ready' ? 'btn-primary' : 'btn-ghost') + '" data-tab="ready">Ready Reports <span class="badge b-ready" style="margin-left:6px">' + readyGroups.length + '</span></button>' +
         '</div>' +
-        '<input class="input search" id="resSearch" placeholder="Search invoice no / patient..." value="' + App.esc(query) + '" style="max-width:280px">' +
       '</div>';
 
     var bodyHtml = '';
@@ -654,7 +654,6 @@
 
     var v = document.getElementById('view');
     v.innerHTML =
-      '<div class="page-h"><h1>Lab Results</h1></div>' +
       statsHtml + tabsHtml + bodyHtml;
 
     // wire tabs
