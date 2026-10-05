@@ -593,8 +593,8 @@
     }
 
     var tabsHtml =
-      '<div class="toolbar" style="margin-bottom:16px">' +
-        '<input class="input search" id="resSearch" placeholder="Search invoice no / patient..." value="' + App.esc(query) + '" style="max-width:280px">' +
+      '<div class="toolbar" style="margin-bottom:16px;flex-wrap:wrap">' +
+        '<input class="input search" id="resSearch" placeholder="Search invoice no / patient..." value="' + App.esc(query) + '" style="max-width:280px;flex:1;min-width:200px">' +
         '<div style="display:flex;gap:8px;margin-left:auto">' +
           '<button class="btn ' + (tab === 'pending' ? 'btn-primary' : 'btn-ghost') + '" data-tab="pending">Pending Entry <span class="badge b-pending" style="margin-left:6px">' + pendingRows.length + '</span></button>' +
           '<button class="btn ' + (tab === 'ready' ? 'btn-primary' : 'btn-ghost') + '" data-tab="ready">Ready Reports <span class="badge b-ready" style="margin-left:6px">' + readyGroups.length + '</span></button>' +
