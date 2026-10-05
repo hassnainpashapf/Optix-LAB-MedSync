@@ -5,7 +5,6 @@ Diagnostic blood-lab POS: Electron desktop app (Windows installer), Express + SQ
 ## Deploy pipeline
 
 Git-first: push to `main` on GitHub (`hassnainpashapf/Optix-LAB-MedSync`) and Cloudflare Pages builds + deploys automatically:
-- `labpos` → https://labpos.pages.dev (build: copy `index.html` + `assets/` to `dist/`)
-- `labpos-superadmin` → https://labpos-superadmin.pages.dev (build: copy `cloud/superadmin/` to `dist/`)
+- `labpos` → https://labpos.pages.dev (main app at `/`, superadmin console at `/superadmin/`)
 
 Never deploy with direct upload; the old `labpos-auto-deploy` watcher is retired.

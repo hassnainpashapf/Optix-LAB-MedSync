@@ -41,7 +41,10 @@ async function boot() {
       nodeIntegration: false,
     },
   });
-  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' })); /* keep prints in-app */
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (typeof url === 'string' && /^https:\/\//.test(url)) { try { require('electron').shell.openExternal(url); } catch (e) {} }
+    return { action: 'deny' }; /* keep prints and in-app navigation inside */
+  });
   await win.loadURL(`http://127.0.0.1:${started.port}/index.html`);
   updater.wireWindow(win);        /* health marker + auto-rollback on failed boot */
   updater.startUpdateChecks(win); /* heartbeat + version poll, non-blocking */

@@ -209,7 +209,7 @@ function renderLogin() {
     '<input class="input" id="keyInput" type="password" placeholder="Paste your key here" autocomplete="off" spellcheck="false">' +
     '<button class="btn btn-primary btn-block" id="loginBtn">Sign in</button>' +
     '<div class="login-div"><span>or</span></div>' +
-    '<a class="btn btn-ghost btn-block" href="https://labpos.pages.dev/">LabPOS Admin Login</a>' +
+    '<a class="btn btn-ghost btn-block" href="/">LabPOS Admin Login</a>' +
     '<p class="login-hint">The key is stored only in this tab (session storage) and sent as the X-Superadmin-Key header.</p>' +
     '</div></div>';
 

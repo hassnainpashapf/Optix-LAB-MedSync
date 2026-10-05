@@ -3,6 +3,8 @@
    Additionally exposes a tiny auto-updater bridge (banner only). */
 const { contextBridge, ipcRenderer } = require('electron');
 
+contextBridge.exposeInMainWorld('labposDesktop', { isDesktop: true });
+
 contextBridge.exposeInMainWorld('labposUpdater', {
   onUpdateAvailable: (cb) => {
     if (typeof cb !== 'function') return;

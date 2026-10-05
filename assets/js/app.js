@@ -390,7 +390,9 @@
             '<label class="label">Password<input class="input" id="liPass" type="password" placeholder="Enter password"></label>' +
             '<button class="btn btn-primary btn-block" type="submit">Sign In</button>' +
             '<div class="login-div"><span>or</span></div>' +
-            '<a class="btn btn-ghost btn-block" href="https://labpos-superadmin.pages.dev/" target="_blank" rel="noopener">Superadmin Login</a>' +
+            ((window.labposDesktop && window.labposDesktop.isDesktop)
+              ? '<a class="btn btn-ghost btn-block" href="https://labpos.pages.dev/superadmin/" target="_blank" rel="noopener">Superadmin Login</a>'
+              : '<a class="btn btn-ghost btn-block" href="/superadmin/">Superadmin Login</a>') +
             '<p class="login-hint">Default access — admin / admin123</p>' +
           '</form>' +
         '</div>' +

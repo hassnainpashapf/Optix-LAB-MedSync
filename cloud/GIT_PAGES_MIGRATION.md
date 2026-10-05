@@ -109,3 +109,17 @@ Temp name for step 2: `labpos-superadmin-git` → final name for step 4: `labpos
   `main` (or immediately if Cloudflare auto-deploys on project creation).
 - The Electron desktop app and the VPS cloud backend are unaffected by this
   migration; only the two Pages sites change deploy path.
+
+## 2026-10-05: merged into ONE project
+
+Per user request the two projects were merged into a single Cloudflare Pages
+project `labpos`: the main app is served at `/`, the superadmin console at
+`/superadmin/`. The `labpos-superadmin` project was deleted. Build command:
+
+```
+mkdir -p dist dist/superadmin && cp index.html dist/ && cp -r assets dist/ && cp -r cloud/superadmin/index.html cloud/superadmin/assets dist/superadmin/
+```
+
+Cross-login links are relative now (`/superadmin/` and `/`); the desktop
+Electron build opens the live `https://labpos.pages.dev/superadmin/` URL in
+the system browser via `labposDesktop` preload flag + `setWindowOpenHandler`.
