@@ -5,7 +5,7 @@ Diagnostic blood-lab POS: Electron desktop app (Windows installer), Express + SQ
 ## Download
 
 - **Windows:** [Optix-LAB-MedSync-Setup-1.0.0.exe](https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-Setup-1.0.0.exe) — Windows 10/11 64-bit
-- **Mac:** [Optix-LAB-MedSync-1.0.0.dmg](https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-1.0.0.dmg) — macOS 12+ (Apple Silicon & Intel)
+- **Mac:** [Optix-LAB-MedSync-1.0.0-arm64.dmg](https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-1.0.0-arm64.dmg) — macOS 12+ (Apple Silicon)
 
 The desktop apps work fully offline, with all data stored on the computer.
 
