@@ -1856,7 +1856,7 @@
     var addrHtml = '';
     if (addrParts.length) {
       addrHtml =
-        '<div style="margin:8px 0 6px">' +
+        '<div style="border-top:1px solid #000;margin:8px 0 6px;padding-top:6px">' +
         '<div style="text-align:center;font-weight:400;font-size:0.85em;line-height:1.6">' +
           App.esc(addrParts.join(' | ')) +
         '</div></div>';
@@ -1868,7 +1868,7 @@
     var disc = s.disclaimer || _fn ||
       'NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.';
     var discHtml =
-      '<div class="rpt-disc" style="border:none;border-bottom:1px solid #000;padding:2px 0 8px;font-size:0.62em;line-height:1.5;margin:6px 0 0;text-align:justify">' +
+      '<div class="rpt-disc" style="border:none;border-bottom:1px solid #000;padding:2px 0 6px;font-size:0.52em;line-height:1.4;margin:4px 0 0;text-align:justify">' +
         App.esc(disc) + '</div>';
 
     /* 6: powered-by (existing constraint) */
