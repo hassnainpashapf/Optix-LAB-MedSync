@@ -79,9 +79,11 @@
     invoices: { prefix: null, digits: 4 }, /* uses settings.invoicePrefix */
     payments: { prefix: 'PM', digits: 4 },
     expenses: { prefix: 'EX', digits: 4 },
-    results:  { prefix: 'R',  digits: 4 }
+    results:  { prefix: 'R',  digits: 4 },
+    report_templates: { prefix: 'TPL', digits: 3 },
+    report_schedules: { prefix: 'SCH', digits: 3 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -546,7 +548,7 @@
       var row = copy(obj) || {};
       row.id = nextId(store, table);
       if (table === 'invoices' && !row.no) row.no = row.id;
-      store[table].push(row);
+      (store[table] = store[table] || []).push(row);
       persist();
       apiWrite('POST', table, null, row);
       return copy(row);
@@ -605,7 +607,7 @@
       var tables = (data && data.tables) || data; /* accept both {tables:{...}} and flat dumps */
       if (!tables || typeof tables !== 'object') throw new Error('Invalid backup file');
       ARRAY_TABLES.forEach(function (t) {
-        if (!Array.isArray(tables[t])) throw new Error('Invalid backup: missing table ' + t);
+        if (!Array.isArray(tables[t])) tables[t] = []; /* backfill tables added after the backup was made */
       });
       if (!tables.settings || typeof tables.settings !== 'object') throw new Error('Invalid backup: missing settings');
       if (!tables.seq || typeof tables.seq !== 'object') tables.seq = {};
@@ -625,7 +627,8 @@
         seq: tables.seq, settings: tables.settings,
         users: tables.users, patients: tables.patients, tests: tables.tests,
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
-        expenses: tables.expenses, results: tables.results
+        expenses: tables.expenses, results: tables.results,
+        report_templates: tables.report_templates, report_schedules: tables.report_schedules
       };
       normalizeSeq(store);
       persist();

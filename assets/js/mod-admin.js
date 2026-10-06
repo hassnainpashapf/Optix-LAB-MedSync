@@ -367,7 +367,7 @@
       .sort(function (a, b) { return b.billed - a.billed; });
 
     /* ---- report sections shared by CSV export + print ---- */
-    var repTypeLbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports' }[rep.type] || rep.type;
+    var repTypeLbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports', labs: 'Lab Comparison' }[rep.type] || rep.type;
     var repSecs = {
       finance: rep.type === 'all' || rep.type === 'finance',
       tests: rep.type === 'all' || rep.type === 'tests',
@@ -394,6 +394,617 @@
       return { txt: (r > 0 ? '+' : '') + r + '%', up: r > 0 ? true : (r < 0 ? false : null) };
     }
 
+    /* ---- report charts (worker 5): offline inline-SVG, black text on light bg ---- */
+    var chTxtCol = '#475569';
+    var chBilledCol = '#2563eb';
+    var chCollectedCol = '#10b981';
+    var chMethodCols = { Cash: '#10b981', Bank: '#2563eb', Card: '#f59e0b', Other: '#94a3b8' };
+
+    function chAxisLbl(v) {
+      v = +v || 0;
+      if (v >= 1000000) return (Math.round(v / 100000) / 10) + 'M';
+      if (v >= 1000) return (Math.round(v / 100) / 10) + 'k';
+      return String(Math.round(v));
+    }
+
+    /* daily billed/collected over [from,to]; weekly buckets when period > 31 days */
+    var chDays = [];
+    (function () {
+      var d = from;
+      while (d <= to && chDays.length < 2000) { chDays.push(d); d = addDays(d, 1); }
+    })();
+    var chBilledByDay = {}, chCollByDay = {};
+    invoices.forEach(function (iv) { var k = toDay(iv.createdAt); chBilledByDay[k] = (chBilledByDay[k] || 0) + (+iv.total || 0); });
+    payments.forEach(function (p) { var k = toDay(p.date || p.createdAt); chCollByDay[k] = (chCollByDay[k] || 0) + (+p.amount || 0); });
+    var chBuckets = [];
+    if (chDays.length > 31) {
+      for (var chBi = 0; chBi < chDays.length; chBi += 7) chBuckets.push(chDays.slice(chBi, chBi + 7));
+    } else {
+      chDays.forEach(function (d) { chBuckets.push([d]); });
+    }
+    var chTrend = chBuckets.map(function (b) {
+      var tBilled = 0, tColl = 0, j;
+      for (j = 0; j < b.length; j++) {
+        tBilled += (chBilledByDay[b[j]] || 0);
+        tColl += (chCollByDay[b[j]] || 0);
+      }
+      return {
+        label: b.length > 1 ? b[0].slice(5) + '-' + b[b.length - 1].slice(5) : b[0].slice(5),
+        billed: tBilled,
+        coll: tColl
+      };
+    });
+
+    /* grouped-bar trend: billed (blue) vs collected (green) per day/week */
+    function chTrendSvg(rows) {
+      var W = 560, H = 244, L = 52, R = 10, T = 14, B = 30;
+      var pw = W - L - R, ph = H - T - B;
+      var max = 1;
+      rows.forEach(function (r) { if (r.billed > max) max = r.billed; if (r.coll > max) max = r.coll; });
+      var n = Math.max(rows.length, 1);
+      var slot = pw / n, bw = Math.min(14, slot / 3);
+      var y = function (v) { return T + ph - (v / max) * ph; };
+      var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Revenue trend">';
+      var g, gy, step;
+      for (g = 4; g >= 0; g--) {
+        step = max * g / 4;
+        gy = y(step);
+        s += '<line x1="' + L + '" y1="' + gy.toFixed(1) + '" x2="' + (W - R) + '" y2="' + gy.toFixed(1) + '" stroke="#e2e8f0"/>'
+          + '<text x="' + (L - 6) + '" y="' + (gy + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="' + chTxtCol + '">' + chAxisLbl(step) + '</text>';
+      }
+      var every = Math.max(1, Math.ceil(rows.length / 10));
+      rows.forEach(function (r, i) {
+        var cx = L + slot * i + slot / 2;
+        var hb = r.billed > 0 ? Math.max((r.billed / max) * ph, 2) : 0;
+        var hc = r.coll > 0 ? Math.max((r.coll / max) * ph, 2) : 0;
+        s += '<rect x="' + (cx - bw - 1).toFixed(1) + '" y="' + (T + ph - hb).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hb.toFixed(1) + '" fill="' + chBilledCol + '" rx="2"/>'
+          + '<rect x="' + (cx + 1).toFixed(1) + '" y="' + (T + ph - hc).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hc.toFixed(1) + '" fill="' + chCollectedCol + '" rx="2"/>';
+        if (i % every === 0) {
+          s += '<text x="' + cx.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" fill="' + chTxtCol + '">' + App.esc(r.label) + '</text>';
+        }
+      });
+      if (!rows.length) s += '<text x="' + (L + pw / 2) + '" y="' + (T + ph / 2) + '" text-anchor="middle" font-size="13" fill="' + chTxtCol + '">No data in this period.</text>';
+      return s + '</svg>';
+    }
+
+    /* collection donut from methods {Cash,Bank,Card,Other} */
+    var chMethodRows = ['Cash', 'Bank', 'Card', 'Other'].map(function (m) {
+      return { label: m, value: methods[m] || 0 };
+    });
+    function chDonutSvg(rows) {
+      var W = 300, H = 220, cx = 95, cy = 110, Ro = 72, Ri = 46;
+      var total = 0;
+      rows.forEach(function (x) { total += x.value; });
+      var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Collection by payment method">';
+      if (total <= 0) {
+        return s + '<circle cx="' + cx + '" cy="' + cy + '" r="' + Ro + '" fill="none" stroke="#e2e8f0" stroke-width="24"/>'
+          + '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" font-size="13" fill="' + chTxtCol + '">No collection</text></svg>';
+      }
+      var a = -Math.PI / 2, k, x, frac, a2, large;
+      for (k = 0; k < rows.length; k++) {
+        x = rows[k];
+        if (x.value > 0) {
+          frac = x.value / total; a2 = a + frac * Math.PI * 2;
+          large = frac > 0.5 ? 1 : 0;
+          s += '<path d="M' + (cx + Ro * Math.cos(a)).toFixed(2) + ' ' + (cy + Ro * Math.sin(a)).toFixed(2)
+            + ' A' + Ro + ' ' + Ro + ' 0 ' + large + ' 1 ' + (cx + Ro * Math.cos(a2)).toFixed(2) + ' ' + (cy + Ro * Math.sin(a2)).toFixed(2)
+            + ' L' + (cx + Ri * Math.cos(a2)).toFixed(2) + ' ' + (cy + Ri * Math.sin(a2)).toFixed(2)
+            + ' A' + Ri + ' ' + Ri + ' 0 ' + large + ' 0 ' + (cx + Ri * Math.cos(a)).toFixed(2) + ' ' + (cy + Ri * Math.sin(a)).toFixed(2)
+            + ' Z" fill="' + chMethodCols[x.label] + '"/>';
+          a = a2;
+        }
+      }
+      s += '<text x="' + cx + '" y="' + (cy - 2) + '" text-anchor="middle" font-size="17" font-weight="700" fill="#1e293b">' + App.money(total) + '</text>'
+        + '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-size="11" fill="' + chTxtCol + '">Total</text>';
+      var ly = 44;
+      rows.forEach(function (x) {
+        var pct = Math.round(x.value / total * 100);
+        s += '<rect x="192" y="' + (ly - 10) + '" width="12" height="12" rx="3" fill="' + chMethodCols[x.label] + '"/>'
+          + '<text x="210" y="' + ly + '" font-size="12" fill="#1e293b">' + App.esc(x.label) + ' (' + pct + '%)</text>'
+          + '<text x="210" y="' + (ly + 15) + '" font-size="11" fill="' + chTxtCol + '">' + App.money(x.value) + '</text>';
+        ly += 40;
+      });
+      return s + '</svg>';
+    }
+
+    /* horizontal bars: revenue by test category, top 8 (reuses catRows) */
+    function chCatBarsSvg(rows) {
+      var top = rows.slice(0, 8);
+      var W = 560, rowH = 34, T = 12, B = 12, L = 140, R = 76;
+      var H = T + B + Math.max(top.length, 1) * rowH;
+      var max = 1;
+      top.forEach(function (r) { if (r.revenue > max) max = r.revenue; });
+      var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Revenue by test category">';
+      if (!top.length) {
+        return s + '<text x="16" y="30" font-size="13" fill="' + chTxtCol + '">No revenue in this period.</text></svg>';
+      }
+      top.forEach(function (r, i) {
+        var yy = T + i * rowH;
+        var bw = r.revenue > 0 ? Math.max((r.revenue / max) * (W - L - R), 3) : 0;
+        var lbl = r.cat.length > 20 ? r.cat.slice(0, 19) + '...' : r.cat;
+        s += '<text x="' + (L - 8) + '" y="' + (yy + 21) + '" text-anchor="end" font-size="12" fill="#1e293b">' + App.esc(lbl) + '</text>'
+          + '<rect x="' + L + '" y="' + (yy + 6) + '" width="' + bw.toFixed(1) + '" height="18" rx="4" fill="#0e7490"/>'
+          + '<text x="' + (L + bw + 6).toFixed(1) + '" y="' + (yy + 21) + '" font-size="11" fill="' + chTxtCol + '">' + App.money(r.revenue) + '</text>';
+      });
+      return s + '</svg>';
+    }
+
+    /* ---- custom report builder (worker 7) ---- */
+    var builderSources = {
+      invoices: {
+        label: 'Invoices',
+        dateOf: function (iv) { return iv.createdAt; },
+        recs: function () { return DB.all('invoices'); },
+        cols: [
+          { key: 'no', label: 'Invoice No', get: function (iv) { return iv.no || iv.id; } },
+          { key: 'patient', label: 'Patient', get: function (iv) { var p = iv.patientId ? DB.get('patients', iv.patientId) : null; return p ? p.name : 'Walk-in'; } },
+          { key: 'doctor', label: 'Doctor', get: function (iv) { var d = iv.doctorId ? DB.get('doctors', iv.doctorId) : null; return d ? d.name : '—'; } },
+          { key: 'date', label: 'Date', get: function (iv) { return App.d(iv.createdAt); } },
+          { key: 'total', label: 'Total', get: function (iv) { return +iv.total || 0; } },
+          { key: 'discount', label: 'Discount', get: function (iv) { return +iv.discount || 0; } },
+          { key: 'due', label: 'Due', get: function (iv) { return +iv.due || 0; } }
+        ]
+      },
+      payments: {
+        label: 'Payments',
+        dateOf: function (p) { return p.date || p.createdAt; },
+        recs: function () { return DB.all('payments'); },
+        cols: [
+          { key: 'date', label: 'Date', get: function (p) { return App.d(p.date || p.createdAt); } },
+          { key: 'invoice', label: 'Invoice', get: function (p) { var iv = p.invoiceId ? DB.get('invoices', p.invoiceId) : null; return iv ? (iv.no || iv.id) : '—'; } },
+          { key: 'method', label: 'Method', get: function (p) { return p.method || 'Cash'; } },
+          { key: 'amount', label: 'Amount', get: function (p) { return +p.amount || 0; } }
+        ]
+      },
+      expenses: {
+        label: 'Expenses',
+        dateOf: function (e) { return e.date; },
+        recs: function () { return DB.all('expenses'); },
+        cols: [
+          { key: 'date', label: 'Date', get: function (e) { return App.d(e.date); } },
+          { key: 'category', label: 'Category', get: function (e) { return e.category || 'Other'; } },
+          { key: 'title', label: 'Title', get: function (e) { return e.title || '—'; } },
+          { key: 'amount', label: 'Amount', get: function (e) { return +e.amount || 0; } }
+        ]
+      },
+      patients: {
+        label: 'Patients',
+        dateOf: function (p) { return p.createdAt; },
+        recs: function () { return DB.all('patients'); },
+        cols: [
+          { key: 'name', label: 'Name', get: function (p) { return p.name || '—'; } },
+          { key: 'phone', label: 'Phone', get: function (p) { return p.phone || '—'; } },
+          { key: 'agesex', label: 'Age/Sex', get: function (p) { return (p.age ? p.age + 'y' : '—') + ' / ' + (p.gender || '—'); } },
+          { key: 'registered', label: 'Registered', get: function (p) { return App.d(p.createdAt); } }
+        ]
+      }
+    };
+
+    /* tiny self-contained CSV escaper (quotes + embedded-quote doubling) */
+    function builderCsvEsc(v) {
+      var s = (v === null || v === undefined) ? '' : String(v);
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+
+    /* modal-driven ad-hoc report builder: pick source + columns + range, preview, export full CSV */
+    function openBuilder() {
+      var srcKeys = Object.keys(builderSources);
+      var body = ''
+        + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:12px">'
+        + '<div><label class="label">Data source</label><select class="input" id="rbSrc">'
+        + srcKeys.map(function (k) { return '<option value="' + k + '">' + builderSources[k].label + '</option>'; }).join('')
+        + '</select></div>'
+        + '<div><label class="label">From</label><input class="input" type="date" id="rbFrom" value="' + App.esc(from) + '"></div>'
+        + '<div><label class="label">To</label><input class="input" type="date" id="rbTo" value="' + App.esc(to) + '"></div>'
+        + '<div style="flex:1;min-width:160px"><label class="label">Search</label><input class="input" id="rbQ" placeholder="Type to filter rows..." style="width:100%"></div>'
+        + '<button class="btn btn-primary" id="rbPreview">Preview</button>'
+        + '<button class="btn btn-ghost" id="rbCsv">' + DL_ICON + ' Export CSV</button>'
+        + '</div>'
+        + '<div id="rbCols" style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px"></div>'
+        + '<div id="rbCount" class="muted" style="margin-bottom:8px;font-size:13px"></div>'
+        + '<div class="tbl-wrap" style="max-height:320px;overflow:auto"><table class="table" id="rbTable"></table></div>';
+      App.modal('Custom Report Builder', body, { wide: true, onOpen: function (ov, close) {
+        var srcEl = document.getElementById('rbSrc');
+        var fromEl = document.getElementById('rbFrom');
+        var toEl = document.getElementById('rbTo');
+        var qEl = document.getElementById('rbQ');
+        function srcCfg() { return builderSources[srcEl.value]; }
+        function selCols() {
+          var cfg = srcCfg(), on = {};
+          document.querySelectorAll('#rbCols [data-rbcol]').forEach(function (cb) {
+            if (cb.checked) on[cb.getAttribute('data-rbcol')] = true;
+          });
+          return cfg.cols.filter(function (c) { return on[c.key]; });
+        }
+        function runRows() {
+          var cfg = srcCfg();
+          var f = fromEl.value, t = toEl.value;
+          var q = qEl.value.trim().toLowerCase();
+          return cfg.recs()
+            .filter(function (rec) { return inRange(toDay(cfg.dateOf(rec)), f, t); })
+            .filter(function (rec) {
+              if (!q) return true;
+              return cfg.cols.some(function (c) { return String(c.get(rec)).toLowerCase().indexOf(q) > -1; });
+            })
+            .map(function (rec) {
+              return cfg.cols.map(function (c) { return c.get(rec); });
+            });
+        }
+        function paintCols() {
+          var cfg = srcCfg();
+          document.getElementById('rbCols').innerHTML = cfg.cols.map(function (c) {
+            return '<label style="display:inline-flex;gap:6px;align-items:center;font-size:13px;cursor:pointer">'
+              + '<input type="checkbox" data-rbcol="' + c.key + '" checked> ' + App.esc(c.label) + '</label>';
+          }).join('');
+        }
+        function cellHtml(v) { return App.esc(v === null || v === undefined ? '' : String(v)); }
+        function preview() {
+          var cfg = srcCfg();
+          var cols = selCols();
+          var idx = {};
+          cfg.cols.forEach(function (c, i) { idx[c.key] = i; });
+          var rows = runRows();
+          document.getElementById('rbCount').textContent = rows.length + ' rows match';
+          document.getElementById('rbTable').innerHTML =
+            '<thead><tr>' + cols.map(function (c) { return '<th>' + App.esc(c.label) + '</th>'; }).join('') + '</tr></thead>'
+            + '<tbody>'
+            + (rows.length
+                ? rows.slice(0, 50).map(function (r) {
+                    return '<tr>' + cols.map(function (c) { return '<td>' + cellHtml(r[idx[c.key]]) + '</td>'; }).join('') + '</tr>';
+                  }).join('')
+                : '<tr><td colspan="' + Math.max(cols.length, 1) + '">No matching rows.</td></tr>')
+            + '</tbody>';
+        }
+        function exportCsv() {
+          try {
+            var cfg = srcCfg();
+            var cols = selCols();
+            if (!cols.length) return App.toast('Select at least one column.', 'err');
+            var idx = {};
+            cfg.cols.forEach(function (c, i) { idx[c.key] = i; });
+            var L = [cols.map(function (c) { return builderCsvEsc(c.label); }).join(',')];
+            runRows().forEach(function (r) {
+              L.push(cols.map(function (c) { return builderCsvEsc(r[idx[c.key]]); }).join(','));
+            });
+            var blob = new Blob([L.join('\r\n')], { type: 'text/csv' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'custom-report-' + srcEl.value + '-' + fromEl.value + '-to-' + toEl.value + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+            App.toast('Report exported.');
+          } catch (e) { App.toast('Export failed: ' + e.message, 'err'); }
+        }
+        srcEl.addEventListener('change', function () { paintCols(); preview(); });
+        fromEl.addEventListener('change', preview);
+        toEl.addEventListener('change', preview);
+        qEl.addEventListener('input', preview);
+        document.getElementById('rbCols').addEventListener('change', preview);
+        document.getElementById('rbPreview').addEventListener('click', preview);
+        document.getElementById('rbCsv').addEventListener('click', exportCsv);
+        paintCols();
+        preview();
+      } });
+    }
+    /* ---- report templates (worker 8): saved {type,from,to,preset} presets ---- */
+    var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This month', lastMonth: 'Last month', custom: 'Custom range' };
+    var REP_TYPE_LBL = { all: 'All', tests: 'Tests', finance: 'Finance', dues: 'Dues', patients: 'Patients', labs: 'Labs' };
+    function repTplList() { return DB.all('report_templates') || []; }
+    function repTplDesc(t) {
+      var tl = REP_TYPE_LBL[t.type] || 'All';
+      var pl = REP_PRESET_LBL[t.preset] || ((t.from && t.to) ? App.d(t.from) + ' to ' + App.d(t.to) : 'Custom range');
+      return tl + ' · ' + pl;
+    }
+    function repTplSave() {
+      var inp = document.getElementById('repTplName');
+      var name = inp ? inp.value.trim() : '';
+      if (!name) { App.toast('Enter a template name first.', 'err'); if (inp) inp.focus(); return; }
+      var dup = repTplList().some(function (t) { return String(t.name).toLowerCase() === name.toLowerCase(); });
+      DB.insert('report_templates', { name: name, type: rep.type, from: rep.from, to: rep.to, preset: rep.preset, createdAt: new Date().toISOString() });
+      if (inp) inp.value = '';
+      App.toast(dup ? 'Template saved (duplicate name).' : 'Template saved.');
+      renderReports();
+    }
+    function repTplSelId() {
+      var sel = document.getElementById('repTplSel');
+      return sel ? sel.value : '';
+    }
+    function repTplApply() {
+      var id = repTplSelId();
+      if (!id) { App.toast('Select a template first.', 'err'); return; }
+      var t = repTplList().filter(function (x) { return String(x.id) === String(id); })[0];
+      if (!t) { App.toast('Template not found.', 'err'); return; }
+      rep.type = t.type || 'all';
+      rep.from = t.from || rep.from;
+      rep.to = t.to || rep.to;
+      rep.preset = t.preset || 'custom';
+      renderReports();
+    }
+    function repTplDel() {
+      var id = repTplSelId();
+      if (!id) { App.toast('Select a template first.', 'err'); return; }
+      DB.remove('report_templates', id);
+      App.toast('Template deleted.');
+      renderReports();
+    }
+
+    /* ---- multi-lab comparison (read-only: never calls DB.useLab()) ----
+       Each lab's store is read straight from localStorage ('labpos_db_' + id)
+       inside try/catch; missing/corrupt stores are skipped. */
+    function labCsvEsc(v) {
+      var s = (v === null || v === undefined) ? '' : String(v);
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    var labCmpRows = [], labCmpFrom = from, labCmpTo = to;
+    var _curLabId = null;
+    try { _curLabId = DB.currentLabId(); } catch (eLab1) { _curLabId = null; }
+    var _labList = [];
+    try { _labList = DB.labs() || []; } catch (eLab2) { _labList = []; }
+    _labList.forEach(function (lab) {
+      var store = null;
+      try { store = JSON.parse(localStorage.getItem('labpos_db_' + lab.id)); }
+      catch (eLab3) { store = null; }
+      if (!store || typeof store !== 'object') return;
+      var lInv = (store.invoices || []).filter(function (iv) { return inRange(toDay(iv.createdAt), from, to); });
+      var lPay = (store.payments || []).filter(function (p) { return inRange(toDay(p.date || p.createdAt), from, to); });
+      var lExp = (store.expenses || []).filter(function (e) { return inRange(toDay(e.date), from, to); });
+      var lBilled = lInv.reduce(function (s, iv) { return s + (+iv.total || 0); }, 0);
+      var lColl = lPay.reduce(function (s, p) { return s + (+p.amount || 0); }, 0);
+      var lExpT = lExp.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
+      labCmpRows.push({
+        name: lab.name || lab.id,
+        current: lab.id === _curLabId,
+        bills: lInv.length,
+        billed: lBilled,
+        collected: lColl,
+        expenses: lExpT,
+        net: lColl - lExpT,
+        tests: lInv.reduce(function (s, iv) { return s + ((iv.items || []).length); }, 0)
+      });
+    });
+    var labCmpTableRows = labCmpRows.map(function (r) {
+      return '<tr' + (r.current ? ' style="background:rgba(83,146,186,.12)"' : '') + '>'
+        + '<td><strong>' + App.esc(r.name) + '</strong>' + (r.current ? ' <span class="muted" style="font-size:11px">(current)</span>' : '') + '</td>'
+        + '<td style="text-align:right">' + r.bills + '</td>'
+        + '<td style="text-align:right">' + App.esc(App.money(r.billed)) + '</td>'
+        + '<td style="text-align:right">' + App.esc(App.money(r.collected)) + '</td>'
+        + '<td style="text-align:right">' + App.esc(App.money(r.expenses)) + '</td>'
+        + '<td style="text-align:right;font-weight:700;color:' + (r.net < 0 ? '#c0392b' : '#1e7e46') + '">' + App.esc(App.money(r.net)) + '</td>'
+        + '<td style="text-align:right">' + r.tests + '</td></tr>';
+    }).join('');
+    /* inline-SVG horizontal bar chart: net per lab, green >= 0, red < 0 */
+    var labCmpChart = '';
+    if (labCmpRows.length) {
+      var _nets = labCmpRows.map(function (r) { return r.net; });
+      var _max = Math.max.apply(null, _nets.concat([0]));
+      var _min = Math.min.apply(null, _nets.concat([0]));
+      var _rng = _max - _min;
+      if (!(_rng > 0)) _rng = 1;
+      var _rowH = 32, _top = 8, _lblW = 170, _barX = 180, _barW = 300, _valX = 500;
+      var _svgW = _valX + 120;
+      function _labX(v) { return _barX + (v - _min) / _rng * _barW; }
+      var _zeroX = _labX(0);
+      var _bars = labCmpRows.map(function (r, i) {
+        var y = _top + i * _rowH;
+        var x = _labX(r.net), bx = Math.min(_zeroX, x), bw = Math.abs(x - _zeroX);
+        if (bw < 2 && r.net !== 0) bw = 2;
+        var nm = r.name.length > 22 ? r.name.slice(0, 22) + '…' : r.name;
+        return '<text x="' + (_lblW - 8) + '" y="' + (y + 20) + '" text-anchor="end" font-size="12" fill="#333">' + App.esc(nm) + '</text>'
+          + '<line x1="' + _zeroX.toFixed(1) + '" y1="' + y + '" x2="' + _zeroX.toFixed(1) + '" y2="' + (y + _rowH - 6) + '" stroke="#ccc" stroke-width="1"/>'
+          + '<rect x="' + bx.toFixed(1) + '" y="' + (y + 8) + '" width="' + bw.toFixed(1) + '" height="14" rx="3" fill="' + (r.net < 0 ? '#d9534f' : '#2ca06b') + '"/>'
+          + '<text x="' + _valX + '" y="' + (y + 20) + '" font-size="12" fill="#555">' + App.esc(App.money(r.net)) + '</text>';
+      }).join('');
+      labCmpChart = '<svg viewBox="0 0 ' + _svgW + ' ' + (_top * 2 + labCmpRows.length * _rowH) + '" style="width:100%;height:auto;display:block">'
+        + _bars + '</svg>';
+    }
+    var labCmpNote = labCmpRows.length === 1
+      ? '<p class="muted" style="margin:12px 0 0;font-size:13px">Only one lab registered — add labs from the login screen to compare.</p>'
+      : (labCmpRows.length === 0
+        ? '<p class="muted" style="margin:12px 0 0;font-size:13px">No lab data found.</p>' : '');
+    var labsCardHtml = ''
+      + '<div class="card" style="margin-bottom:18px"><div class="card-h" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      + '<h3 style="margin:0">Lab Comparison</h3>'
+      + '<span class="muted" style="font-weight:500;font-size:13px">' + App.esc(App.d(from)) + ' – ' + App.esc(App.d(to)) + '</span>'
+      + '<button class="btn btn-ghost btn-sm" id="labCmpCsv" style="margin-left:auto">Export CSV</button>'
+      + '</div><div class="card-b">'
+      + (labCmpTableRows
+        ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Lab</th><th style="text-align:right">Bills</th><th style="text-align:right">Billed</th><th style="text-align:right">Collected</th><th style="text-align:right">Expenses</th><th style="text-align:right">Net</th><th style="text-align:right">Tests</th></tr></thead><tbody>'
+          + labCmpTableRows + '</tbody></table></div>'
+        : App.empty('No lab data available for this period.'))
+      + labCmpNote
+      + (labCmpChart ? '<h4 style="margin:18px 0 8px">Net per Lab</h4>' + labCmpChart : '')
+      + '</div></div>';
+    function labCmpExportCsv() {
+      var lines = ['Lab,Bills,Billed,Collected,Expenses,Net,Tests'];
+      labCmpRows.forEach(function (r) {
+        lines.push([r.name, r.bills, r.billed, r.collected, r.expenses, r.net, r.tests].map(labCsvEsc).join(','));
+      });
+      var blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'lab-comparison-' + labCmpFrom + '-to-' + labCmpTo + '.csv';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 200);
+    }
+
+    /* ---- Scheduled email reports (worker 6) ----
+       NOTE: true unattended sending needs a server-side cron on the VPS —
+       this app is client-side (localStorage via db.js) and has no mail
+       server. What IS fully functional here: the data model
+       (report_schedules), this UI, and manual "Run now", which opens the
+       user's email client with the report pre-composed via mailto:. */
+    var SCHED_PRESETS = { today: 'Today', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This Month', lastMonth: 'Last Month' };
+    var SCHED_TYPES = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports' };
+    var SCHED_FREQ = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+    var SCHED_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    function schedList() { return DB.all('report_schedules'); }
+
+    /* period math mirrors setPreset() so "Run now" covers the same range */
+    function schedPeriod(preset) {
+      var t = App.today(), f, to;
+      if (preset === 'today') { f = t; to = t; }
+      else if (preset === 'last7') { f = addDays(t, -6); to = t; }
+      else if (preset === 'last30') { f = addDays(t, -29); to = t; }
+      else if (preset === 'thisMonth') { f = t.slice(0, 8) + '01'; to = t; }
+      else if (preset === 'lastMonth') {
+        var pe = addDays(t.slice(0, 8) + '01', -1);
+        f = pe.slice(0, 8) + '01'; to = pe;
+      }
+      else { f = t; to = t; }
+      return { from: f, to: to };
+    }
+
+    function schedNextRun(s) {
+      var t = App.today();
+      if (s.frequency === 'daily') return addDays(t, 1);
+      if (s.frequency === 'weekly') return addDays(t, 7);
+      if (s.frequency === 'monthly') {
+        var y = +t.slice(0, 4), m = +t.slice(5, 7);
+        if (m === 12) { y += 1; m = 1; } else { m += 1; }
+        return y + '-' + String(m).padStart(2, '0') + '-01';
+      }
+      return t;
+    }
+
+    /* finance aggregates for an arbitrary period (same math as renderReports) */
+    function schedAggregate(from, to) {
+      var inv = DB.all('invoices').filter(function (iv) { return inRange(toDay(iv.createdAt), from, to); });
+      var pay = DB.all('payments').filter(function (p) { return inRange(toDay(p.date || p.createdAt), from, to); });
+      var exp = DB.all('expenses').filter(function (e) { return inRange(toDay(e.date), from, to); });
+      var billed = inv.reduce(function (s, iv) { return s + (+iv.total || 0); }, 0);
+      var collected = pay.reduce(function (s, p) { return s + (+p.amount || 0); }, 0);
+      var due = inv.reduce(function (s, iv) { return s + (+iv.due || 0); }, 0);
+      var expTotal = exp.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
+      return { invoices: inv.length, billed: billed, payments: pay.length, collected: collected, due: due, expenses: exp.length, expTotal: expTotal, net: collected - expTotal };
+    }
+
+    function runScheduleNow(id) {
+      var s = DB.get('report_schedules', id);
+      if (!s) return App.toast('Schedule not found.', 'err');
+      var per = schedPeriod(s.preset);
+      var a = schedAggregate(per.from, per.to);
+      var lab = ((DB.get('settings', 'main') || {}).labName) || 'Lab';
+      var lines = [
+        lab + ' — ' + (SCHED_TYPES[s.type] || s.type) + ' Report',
+        'Period: ' + per.from + ' to ' + per.to + ' (' + (SCHED_PRESETS[s.preset] || s.preset) + ')',
+        '',
+        'Invoices: ' + a.invoices + '  |  Billed: ' + App.money(a.billed),
+        'Payments: ' + a.payments + '  |  Collected: ' + App.money(a.collected),
+        'Outstanding due: ' + App.money(a.due),
+        'Expenses: ' + a.expenses + '  |  Total: ' + App.money(a.expTotal),
+        'Net collection: ' + App.money(a.net)
+      ];
+      var subject = lab + ' report — ' + (SCHED_TYPES[s.type] || s.type) + ' (' + per.from + ' to ' + per.to + ')';
+      window.location.href = 'mailto:' + s.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(lines.join('\n'));
+      App.toast('Opening email client…');
+    }
+
+    function schedOpts(map, sel) {
+      return Object.keys(map).map(function (k) {
+        return '<option value="' + k + '"' + (k === sel ? ' selected' : '') + '>' + App.esc(map[k]) + '</option>';
+      }).join('');
+    }
+
+    function schedModalBody() {
+      var rows = schedList().map(function (s) {
+        return '<tr>'
+          + '<td><strong>' + App.esc(s.name) + '</strong><div class="muted" style="font-size:12px">'
+          + App.esc(SCHED_PRESETS[s.preset] || s.preset) + ' · next run ' + App.d(schedNextRun(s)) + '</div></td>'
+          + '<td>' + App.esc(SCHED_TYPES[s.type] || s.type) + '</td>'
+          + '<td>' + App.esc(SCHED_FREQ[s.frequency] || s.frequency) + '</td>'
+          + '<td>' + App.esc(s.email) + '</td>'
+          + '<td style="text-align:center"><button class="btn btn-ghost btn-sm" data-sched-toggle="' + App.esc(s.id) + '">'
+          + (s.active ? '🟢 On' : '⚪ Off') + '</button></td>'
+          + '<td style="text-align:right;white-space:nowrap">'
+          + '<button class="btn btn-ghost btn-sm" data-sched-run="' + App.esc(s.id) + '">▶ Run now</button> '
+          + '<button class="btn btn-ghost btn-sm" data-sched-del="' + App.esc(s.id) + '" style="color:var(--red)">Delete</button>'
+          + '</td></tr>';
+      }).join('');
+      return '<div class="tbl-wrap" style="margin-bottom:18px"><table class="table"><thead><tr>'
+        + '<th>Name</th><th>Type</th><th>Frequency</th><th>Email</th><th style="text-align:center">Active</th><th style="text-align:right">Actions</th>'
+        + '</tr></thead><tbody>'
+        + (rows || '<tr><td colspan="6">No schedules yet — add one below.</td></tr>')
+        + '</tbody></table></div>'
+        + '<h4 style="margin:0 0 10px">Add schedule</h4>'
+        + '<div class="form-grid">'
+        + '<div><label class="label">Name *</label><input class="input" id="schedName" placeholder="e.g. Daily finance digest"></div>'
+        + '<div><label class="label">Report type</label><select class="select" id="schedType">' + schedOpts(SCHED_TYPES) + '</select></div>'
+        + '<div><label class="label">Period</label><select class="select" id="schedPreset">' + schedOpts(SCHED_PRESETS) + '</select></div>'
+        + '<div><label class="label">Frequency</label><select class="select" id="schedFreq">' + schedOpts(SCHED_FREQ) + '</select></div>'
+        + '<div style="grid-column:1/-1"><label class="label">Email *</label><input class="input" id="schedEmail" type="email" placeholder="you@example.com"></div>'
+        + '</div>'
+        + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">'
+        + '<button class="btn btn-ghost" id="schedCancel">Close</button>'
+        + '<button class="btn btn-primary" id="schedAdd">Add Schedule</button></div>';
+    }
+
+    function schedBind(ov) {
+      function refresh() {
+        renderReports(); /* keep the "Scheduled Reports" card behind the modal in sync */
+        ov.querySelector('.modal-b').innerHTML = schedModalBody();
+        schedBind(ov);
+      }
+      document.getElementById('schedCancel').addEventListener('click', function () { ov.querySelector('.modal-x').click(); });
+      document.getElementById('schedAdd').addEventListener('click', function () {
+        var name = document.getElementById('schedName').value.trim();
+        var email = document.getElementById('schedEmail').value.trim();
+        if (!name) return App.toast('Name is required.', 'err');
+        if (!SCHED_EMAIL_RE.test(email)) return App.toast('Enter a valid email address.', 'err');
+        DB.insert('report_schedules', {
+          name: name,
+          type: document.getElementById('schedType').value,
+          preset: document.getElementById('schedPreset').value,
+          email: email,
+          frequency: document.getElementById('schedFreq').value,
+          active: true,
+          createdAt: new Date().toISOString()
+        });
+        App.toast('Schedule added.');
+        refresh();
+      });
+      Array.prototype.forEach.call(ov.querySelectorAll('[data-sched-toggle]'), function (b) {
+        b.addEventListener('click', function () {
+          var s = DB.get('report_schedules', b.getAttribute('data-sched-toggle'));
+          if (s) { DB.update('report_schedules', s.id, { active: !s.active }); App.toast(s.active ? 'Schedule paused.' : 'Schedule activated.'); }
+          refresh();
+        });
+      });
+      Array.prototype.forEach.call(ov.querySelectorAll('[data-sched-run]'), function (b) {
+        b.addEventListener('click', function () { runScheduleNow(b.getAttribute('data-sched-run')); });
+      });
+      Array.prototype.forEach.call(ov.querySelectorAll('[data-sched-del]'), function (b) {
+        b.addEventListener('click', function () {
+          DB.remove('report_schedules', b.getAttribute('data-sched-del'));
+          App.toast('Schedule deleted.');
+          refresh();
+        });
+      });
+    }
+
+    function openSchedModal() {
+      App.modal('⏰ Scheduled Reports', schedModalBody(), {
+        wide: true,
+        onOpen: function (ov) { schedBind(ov); }
+      });
+    }
+
+    function schedCardHTML() {
+      var list = schedList();
+      var act = list.filter(function (s) { return s.active; });
+      var hint = act.length
+        ? act.map(function (s) { return App.esc(s.name) + ' → next run ' + App.d(schedNextRun(s)); }).join('<br>')
+        : 'No active schedules yet.';
+      return '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">⏰ Scheduled Reports</h3>'
+        + '<span class="muted" style="font-weight:500;font-size:13px">' + act.length + ' of ' + list.length + ' active</span></div>'
+        + '<div class="card-b"><div style="margin-bottom:12px">' + hint + '</div>'
+        + '<button class="btn btn-ghost" id="repSchedCardBtn">⏰ Manage Schedules</button>'
+        + '<div class="muted" style="font-size:12px;margin-top:10px">Note: true unattended email sending needs a server-side cron on the VPS — this app is client-side, so schedules run manually via “Run now”, which opens your email client with the report pre-composed.</div>'
+        + '</div></div>';
+    }
+
     function statCard(label, val, ic, bg, fg) {
       return '<div class="stat"><div class="stat-ic" style="background:' + bg + ';color:' + fg + '">' + ic + '</div>'
         + '<div><div class="stat-num">' + val + '</div><div class="stat-lbl">' + label + '</div></div></div>';
@@ -418,6 +1029,8 @@
       +       (rep.preset === 'custom' ? '<span class="muted" style="font-size:12px">Custom range</span>' : '')
       +     '</div>'
       +     '<button class="btn btn-ghost" id="repCsv" style="margin-left:auto">' + DL_ICON + ' Export CSV</button>'
+      +     '<button class="btn btn-ghost" id="repBuilder">🛠 Builder</button>'
+      +     '<button class="btn btn-ghost" id="repSchedBtn">⏰ Schedules</button>'
       +     '<button class="btn btn-ghost" id="repPrint">' + PRINT_ICON + ' Print Report</button>'
       +   '</div>'
       + '</div></div>';
@@ -594,16 +1207,57 @@
             + '<td style="text-align:right;font-weight:700">' + App.money(r.revenue) + '</td></tr>';
         }).join('');
 
+    /* ---- feature extension slots (workers 5-9 assign their cards here) ---- */
+    var repSlotCharts = '';
+    if (showTests || showFinance) {
+      repSlotCharts =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Revenue Trend</h3></div><div class="card-b">'
+      + '<div style="display:flex;gap:16px;margin-bottom:8px">'
+      + '<span style="font-size:12px;color:#1e293b"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + chBilledCol + ';margin-right:6px"></span>Billed</span>'
+      + '<span style="font-size:12px;color:#1e293b"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + chCollectedCol + ';margin-right:6px"></span>Collected</span>'
+      + '</div>'
+      + chTrendSvg(chTrend)
+      + '<div class="muted" style="font-size:11px;margin-top:6px">' + (chDays.length > 31 ? 'Grouped by week.' : 'Daily totals.') + ' ' + App.esc(from) + ' to ' + App.esc(to) + '</div>'
+      + '</div></div>'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Collection by Payment Method</h3></div><div class="card-b">'
+      + chDonutSvg(chMethodRows)
+      + '</div></div></div>'
+      + (showTests
+        ? '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Revenue by Test Category</h3></div><div class="card-b">'
+        + chCatBarsSvg(catRows)
+        + '</div></div>'
+        : '');
+    }
+    var repSlotSchedules = schedCardHTML();
+    var repSlotBuilder = '';
+    var repSlotTemplates = (function () {
+      var tpls = repTplList();
+      var opts = '<option value="">-- select template --</option>' + tpls.map(function (t) {
+        return '<option value="' + App.esc(String(t.id)) + '">' + App.esc(t.name) + ' — ' + App.esc(repTplDesc(t)) + '</option>';
+      }).join('');
+      return '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+        + '<span style="font-weight:700;margin-right:8px">Report Templates:</span>'
+        + '<select class="input" id="repTplSel" style="max-width:320px">' + opts + '</select>'
+        + '<button type="button" class="btn btn-sm btn-primary" id="tplApply">Apply</button>'
+        + '<button type="button" class="btn btn-sm btn-ghost" id="tplDel">Delete</button>'
+        + '<input class="input" id="repTplName" placeholder="Template name…" style="max-width:220px">'
+        + '<button type="button" class="btn btn-sm btn-ghost" id="tplSave">💾 Save current</button>'
+        + '</div></div>';
+    })();
+    var repSlotLabs = (rep.type === 'labs') ? labsCardHtml : '';
+
     var html = ''
       + '<style>' + ADM_STAT_CSS + '</style>'
       + ((showTests || showFinance) ? '<div class="stat-grid">' + repStats + '</div>' : '')
       + ((showTests || showFinance) ? cmpCard : '')
+      + repSlotCharts + repSlotSchedules + repSlotBuilder + repSlotTemplates + repSlotLabs
 
       /* report type selector */
       + '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
       + '<span style="font-weight:700;margin-right:8px">Report Type:</span>'
-      + ['all', 'tests', 'finance', 'dues', 'patients'].map(function (t) {
-          var lbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports' }[t];
+      + ['all', 'tests', 'finance', 'dues', 'patients', 'labs'].map(function (t) {
+          var lbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports', labs: 'Lab Comparison' }[t];
           var active = rep.type === t;
           return '<button type="button" class="btn ' + (active ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-reptype="' + t + '">' + lbl + '</button>';
         }).join('')
@@ -639,6 +1293,10 @@
     document.getElementById('view').innerHTML = html;
     admCountUp();
 
+    /* multi-lab comparison: own CSV export button inside the labs card */
+    var labCmpBtn = document.getElementById('labCmpCsv');
+    if (labCmpBtn) labCmpBtn.addEventListener('click', labCmpExportCsv);
+
     /* finalized reports archive: open the full report view (loads the results module on demand) */
     document.querySelectorAll('[data-finrep]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -665,12 +1323,17 @@
 
     document.getElementById('repFrom').addEventListener('change', function (e) { rep.from = e.target.value; rep.preset = 'custom'; renderReports(); });
     document.getElementById('repTo').addEventListener('change', function (e) { rep.to = e.target.value; rep.preset = 'custom'; renderReports(); });
+    /* report templates (worker 8) */
+    document.getElementById('tplApply').addEventListener('click', repTplApply);
+    document.getElementById('tplDel').addEventListener('click', repTplDel);
+    document.getElementById('tplSave').addEventListener('click', repTplSave);
     document.querySelectorAll('[data-preset]').forEach(function (b) {
       b.addEventListener('click', function () { setPreset(b.getAttribute('data-preset')); });
     });
     document.querySelectorAll('[data-reptype]').forEach(function (b) {
       b.addEventListener('click', function () { rep.type = b.getAttribute('data-reptype'); renderReports(); });
     });
+    document.getElementById('repBuilder').addEventListener('click', function () { openBuilder(); });
     document.getElementById('repCsv').addEventListener('click', function () {
       try {
         var L = [];
@@ -730,6 +1393,10 @@
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
         App.toast('Report exported.');
       } catch (e) { App.toast('Export failed: ' + e.message, 'err'); }
+    });
+    ['repSchedBtn', 'repSchedCardBtn'].forEach(function (id) {
+      var b = document.getElementById(id);
+      if (b) b.addEventListener('click', openSchedModal);
     });
     document.getElementById('repPrint').addEventListener('click', function () {
       var ph = '<p><strong>Type:</strong> ' + App.esc(repTypeLbl) + '<br><strong>Period:</strong> ' + App.esc(App.d(from)) + ' – ' + App.esc(App.d(to)) + '</p>';
