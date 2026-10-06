@@ -133,3 +133,18 @@ All data routes now require a signed token.
   (staff may edit their own profile, never their role). Passwords are stored as scrypt hashes and never returned by the API.
 - `POST /api/:table` returns `409` when the id already exists (two PCs generated the same record number); the web app
   then refreshes its data and asks the user to retry.
+
+## SaaS (multi-lab) endpoints
+
+One cloud serves many labs. Every lab ("tenant") has its own isolated data; the original single-lab data is the default lab (`main`).
+Sign-in: `POST /api/auth/login { username, password, lab }` — `lab` is the Lab ID (slug); empty = the default lab. The token carries the lab.
+
+Public: `GET /api/saas/plans` · `GET /api/saas/check-slug?slug=` · `POST /api/saas/signup { labName, ownerName, email, phone, slug, username, password }` (14-day trial, 5 sign-ups/hour/IP, `SAAS_SIGNUPS_PER_HOUR` to change)
+
+Signed-in lab: `GET /api/saas/me` (plan, status, usage, limits, payments) · `POST /api/saas/pay-request` (admin; manual JazzCash / Easypaisa / bank payment reference)
+
+Operator (`X-Superadmin-Key`): `GET /api/saas/stats` · `GET|POST /api/saas/labs` · `PUT /api/saas/labs/:id` · `POST /api/saas/labs/:id/extend` · `POST /api/saas/labs/:id/reset-admin` · `DELETE /api/saas/labs/:id` (header `X-Confirm-Slug`) · `GET /api/saas/payments` · `POST /api/saas/payments/:id/approve|reject` · `GET|PUT /api/saas/settings`
+
+Status: `trial` → `expired` after the trial; `active` (paid) → `expired` 3 days after `paidUntil`; `suspended` by the operator. Expired labs are read-only (writes return 402 `EXPIRED`); plan limits return 402 `LIMIT_USERS` / `LIMIT_INVOICES`; a suspended lab cannot sign in (403).
+
+Audit trail: `GET /api/audit?from=&to=&user=&table=&action=&q=&limit=&offset=` (admin). Written server-side, read-only, kept 365 days.

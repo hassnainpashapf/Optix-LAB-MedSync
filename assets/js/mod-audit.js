@@ -46,7 +46,7 @@
   }
   function api(path) {
     return fetch(window.LABPOS_API + '/api/' + path, { headers: DB.authHeaders ? DB.authHeaders({}) : {} }).then(function (r) {
-      return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || ('Request failed (' + r.status + ')')); return j; });
+      return r.json().catch(function () { return {}; }).then(function (j) { if (r.status === 404) throw new Error('The Audit Log needs the latest version of the desktop app — download and install the update from the Downloads page.'); if (!r.ok) throw new Error(j.error || ('Request failed (' + r.status + ')')); return j; });
     });
   }
   function load(more) {
