@@ -171,7 +171,7 @@ footer  { scroll-margin-top: 88px; }
 .modal.open .modal-card { transform: none; }
 .modal-x { transition: transform .2s ease, background .2s; }
 .modal-x:hover { transform: rotate(90deg); }
-@media (max-width: 900px) {
+@media (max-width: 1180px) {
   .nav-links {
     transform: translateY(-10px);
     opacity: 0;

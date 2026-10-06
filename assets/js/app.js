@@ -24,7 +24,8 @@
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
-    download: '<path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>'
+    download: '<path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+    card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>'
   };
   function icon(name, size) {
     size = size || 18;
@@ -43,6 +44,7 @@
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports',   color: '#6366f1' },
     { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads', color: '#06b6d4' },
+    { key: 'subscription', label: 'Subscription', icon: 'card',  route: '#/subscription', color: '#f59e0b', saas: true },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b' },
     { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
   ];
@@ -58,6 +60,7 @@
     expenses:  ['admin', 'reception'],
     reports:   ['admin'],
     downloads:  ['admin', 'reception', 'technician'],
+    subscription: ['admin'],
     settings:  ['admin'],
     profile:   ['admin', 'reception', 'technician']
   };
@@ -388,11 +391,12 @@
     }
 
     /* auth guard */
-    if (!s && hash !== '#/login') { location.hash = '#/login'; return; }
-    if (s && (hash === '#/login' || hash === '' || hash === '#')) { location.hash = '#/dashboard'; return; }
+    if (!s && hash !== '#/login' && hash !== '#/signup') { location.hash = '#/login'; return; }
+    if (s && (hash === '#/login' || hash === '#/signup' || hash === '' || hash === '#')) { location.hash = '#/dashboard'; return; }
     if (!hash) { location.hash = s ? '#/dashboard' : '#/login'; return; }
 
-    if (hash === '#/login') { renderLogin(); return; }
+    if (hash === '#/login') { if (window.App && App.renderLogin) App.renderLogin(); return; }
+    if (hash === '#/signup') { if (window.App && App.renderSignup) App.renderSignup(); return; }
 
     /* permission guard */
     var key = routeKey(hash);
@@ -436,6 +440,7 @@
     }
 
     renderShell(key);
+    paintSubBanner(); startSubWatch();
     var view = document.getElementById('view');
     view.innerHTML = '';
     window.scrollTo(0, 0);
@@ -448,6 +453,53 @@
       view.innerHTML = '<div class="card"><div class="card-b">' + empty('Something went wrong loading this page.') + '</div></div>';
     }
     markActive(key);
+  }
+
+  /* ---------------- SaaS subscription state (web / Android cloud app only) ---------------- */
+  var subInfo = null, subTimer = null;
+  function saasOn() {
+    try { return !!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop) && !!window.LABPOS_API; } catch (e) { return false; }
+  }
+  function paintSubBanner() {
+    var b = document.getElementById('subBanner');
+    if (!b) return;
+    var l = subInfo && subInfo.lab, s = session();
+    if (!l || !s || l.legacy) { b.hidden = true; return; }
+    var admin = s.role === 'admin', link = admin ? '<a href="#/subscription" class="sub-cta">' + (l.status === 'expired' ? 'Renew now' : 'Choose a plan') + '</a>' : '<span class="sub-note">Ask your lab admin to renew.</span>';
+    var html = '', cls = '';
+    if (l.status === 'expired') {
+      cls = 'bad';
+      html = '<b>Your ' + (l.plan === 'trial' ? 'free trial' : 'subscription') + ' has ended.</b> The app is now read-only &mdash; you can view and print everything, but new data cannot be saved. ' + link;
+    } else if (l.status === 'trial') {
+      var d = l.daysLeft == null ? 14 : l.daysLeft;
+      cls = d <= 3 ? 'bad' : (d <= 7 ? 'warn' : 'info');
+      html = '<b>Free trial: ' + Math.max(d, 0) + ' day' + (d === 1 ? '' : 's') + ' left.</b> ' + (d <= 7 ? 'Pick a plan to keep saving data without interruption. ' : 'Everything is unlocked. ') + link;
+    } else if (l.status === 'active' && l.daysLeft != null && l.daysLeft <= 5) {
+      cls = l.daysLeft <= 2 ? 'bad' : 'warn';
+      html = '<b>Your ' + esc(l.planName) + ' plan ends in ' + Math.max(l.daysLeft, 0) + ' day' + (l.daysLeft === 1 ? '' : 's') + '.</b> Renew to avoid interruption. ' + link;
+    }
+    if (!html) { b.hidden = true; return; }
+    b.className = 'sub-banner ' + cls; b.innerHTML = html; b.hidden = false;
+  }
+  function loadSub() {
+    if (!saasOn() || !session() || !window.DB || !DB.saas) return Promise.resolve(null);
+    return DB.saas('GET', 'me').then(function (j) { subInfo = j; paintSubBanner(); return j; }, function () { return null; });
+  }
+  function startSubWatch() {
+    if (subTimer || !saasOn()) return;
+    subTimer = setInterval(function () { if (!document.hidden) loadSub(); }, 300000);
+    loadSub().then(showWelcome);
+  }
+  function showWelcome() {
+    var w = null;
+    try { w = JSON.parse(sessionStorage.getItem('labpos_welcome') || 'null'); sessionStorage.removeItem('labpos_welcome'); } catch (e) {}
+    if (!w) return;
+    modal('Welcome to Optix LAB MedSync 🎉',
+      '<p style="margin:0 0 12px">Your lab <b>' + esc(w.name || '') + '</b> is ready. You have a <b>' + (w.days || 14) + '-day free trial</b> with everything unlocked.</p>' +
+      '<div style="background:#eef3fb;border:1px solid #cdd9f0;border-radius:12px;padding:12px 14px;margin-bottom:12px"><div class="muted" style="font-size:12px">Your Lab ID &mdash; your staff need it to sign in</div><div style="font-size:22px;font-weight:800;letter-spacing:.02em;color:#131845">' + esc(w.slug) + '</div></div>' +
+      '<ol style="margin:0 0 4px 18px;padding:0;line-height:1.9;font-size:14px"><li>Open <b>Settings</b> and add your lab logo, address and phone</li><li>Review the <b>Tests</b> list (5000+ test catalog can be imported)</li><li>Add your <b>staff</b> (reception / technician) in Settings &rarr; Users</li><li>Create your first <b>patient &amp; invoice</b></li></ol>' +
+      '<div class="modal-actions" style="margin-top:14px"><a class="btn btn-ghost" href="#/settings" id="wlSet">Open Settings</a><button class="btn btn-primary" id="wlOk">Get started</button></div>',
+      { onOpen: function (ov, close) { ov.querySelector('#wlOk').addEventListener('click', close); ov.querySelector('#wlSet').addEventListener('click', close); } });
   }
 
   /* ---------------- shell ---------------- */
@@ -464,6 +516,7 @@
           '<aside class="sidebar" id="sidebar"></aside>' +
           '<div class="maincol">' +
             '<header class="topbar" id="topbar"></header>' +
+            '<div class="sub-banner" id="subBanner" hidden></div>' +
             '<main class="view" id="view"></main>' +
           '</div>' +
         '</div>'
@@ -474,7 +527,7 @@
     var st = {};
     try { st = window.DB.get('settings', 'main') || {}; } catch (e) {}
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
-    var items = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role); }).map(function (n) {
+    var items = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()); }).map(function (n) {
       return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
         '<span class="nav-ic" style="background:' + (n.color || '#64748b') + '1a;color:' + (n.color || '#64748b') + '">' + icon(n.icon, 19) + '</span><span class="nav-lb">' + n.label + '</span></a>';
     }).join('');
@@ -594,136 +647,7 @@
     }
   }
 
-  /* ---------------- login ---------------- */
-  function renderLogin() {
-    var st = {};
-    try { st = window.DB.get('settings', 'main') || {}; } catch (e) {}
-    /* Cloud/web sign-in always shows the Optix brand; a lab's own logo + name appear only inside its dashboard.
-       The desktop app (local install) shows its own lab's logo + name on the sign-in page. */
-    var _desk = !!(window.labposDesktop && window.labposDesktop.isDesktop), _webCloud = false;
-    try { _webCloud = !!(window.DB.isCloud && window.DB.isCloud()) && !_desk; } catch (e) {}
-    if (_webCloud) st = {};
-    /* multi-tenant: list active labs for the selector */
-    var _labs = [];
-    try { _labs = window.DB.labs().filter(function (l) { return l.active !== false; }); } catch (e) {}
-    var _cur = null;
-    try { _cur = window.DB.currentLab(); } catch (e) {}
-    var _selId = (_cur && _cur.id) || (_labs[0] && _labs[0].id) || 'lab1';
-    document.body.className = 'login-mode';
-    document.body.innerHTML =
-      '<div class="login-wrap lg-split">' +
-        '<aside class="lg-brand" aria-hidden="true">' +
-          '<div class="lg-orbs"><i></i><i></i><i></i><i></i></div>' +
-          '<div class="lg-brand-in">' +
-            '<div class="lg-pill"><span class="lg-dot"></span>Optix LAB MedSync</div>' +
-            '<h2 class="lg-hero">Your lab,<br><span>always in sync.</span></h2>' +
-            '<p class="lg-lead">Patients, billing, results and reports &mdash; on desktop, web and mobile.</p>' +
-            '<ul class="lg-feat">' +
-          '<li style="--i:0"><span class="lg-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-15-6.7L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15 6.7L21 16"/><path d="M16 16h5v5"/></svg></span>Works offline, syncs to the cloud</li>' +
-          '<li style="--i:1"><span class="lg-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9V3"/><path d="M7 15h10"/></svg></span>5000+ ready lab test catalog</li>' +
-          '<li style="--i:2"><span class="lg-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M18 20h3v1"/></svg></span>QR-verified patient reports</li>' +
-          '<li style="--i:3"><span class="lg-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Secure role-based access</li>' +
-            '</ul>' +
-            '<svg class="lg-ecg" viewBox="0 0 400 80" preserveAspectRatio="none">' +
-              '<path class="lg-ecg-base" d="M0 40H60L72 40L80 14L92 66L102 28L110 40H200L212 40L220 14L232 66L242 28L250 40H400" pathLength="100"/>' +
-              '<path class="lg-ecg-live" d="M0 40H60L72 40L80 14L92 66L102 28L110 40H200L212 40L220 14L232 66L242 28L250 40H400" pathLength="100"/>' +
-            '</svg>' +
-          '</div>' +
-        '</aside>' +
-        '<div class="lg-form">' +
-        '<a class="lg-back" href="https://optix-lab-medsync.pages.dev/"' + ((window.labposDesktop && window.labposDesktop.isDesktop) ? ' target="_blank" rel="noopener"' : '') + '>' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Back to website</a>' +
-        '<form class="login-card" id="loginForm" autocomplete="off">' +
-          '<div class="login-logo">' +
-            '<span class="login-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 32)) + '</span>' +
-            '<h1>' + esc(st.labName || 'Optix LAB MedSync') + '</h1>' +
-            '<p class="login-tag">' + esc(st.tagline || 'Accurate • Fast • Trusted') + '</p>' +
-          '</div>' +
-          '<h2>Welcome back</h2>' +
-          '<p class="login-sub">Sign in to your lab workspace</p>' +
-          (_labs.length > 1
-            ? '<label class="label">Lab<select class="select" id="liLab">' +
-              _labs.map(function (l) {
-                return '<option value="' + esc(l.id) + '"' + (l.id === _selId ? ' selected' : '') + '>' + esc(l.name) + '</option>';
-              }).join('') + '</select></label>'
-            : '') +
-          '<div class="login-err" id="loginErr" hidden></div>' +
-          '<label class="label">Username<input class="input" id="liUser" placeholder="Enter username" autofocus></label>' +
-          '<label class="label">Password<input class="input" id="liPass" type="password" placeholder="Enter password"></label>' +
-          '<button class="btn login-signin btn-block" type="submit">Sign In</button>' +
-          '<div class="login-div"><span>or</span></div>' +
-          ((window.labposDesktop && window.labposDesktop.isDesktop)
-            ? '<a class="btn btn-ghost btn-block" href="https://optix-lab-medsync.pages.dev/superadmin/" target="_blank" rel="noopener">Superadmin Login</a>'
-            : '<a class="btn btn-ghost btn-block" href="/superadmin/">Superadmin Login</a>') +
-        '</form>' +
-        '<p class="login-foot">Powered by System Optix</p>' +
-        '</div>' +
-      '</div>';
-    /* switching labs swaps the isolated store + rebrands the card */
-    var _labSel = document.getElementById('liLab');
-    if (_labSel) _labSel.addEventListener('change', function () {
-      try {
-        window.DB.useLab(_labSel.value);
-        var ns = window.DB.get('settings', 'main') || {};
-        var h1 = document.querySelector('.login-card h1');
-        if (h1) h1.textContent = ns.labName || 'Optix LAB MedSync';
-        var tg = document.querySelector('.login-tag');
-        if (tg) tg.textContent = ns.tagline || 'Accurate • Fast • Trusted';
-        var lm = document.querySelector('.login-mark');
-        if (lm) lm.innerHTML = ns.logo ? '<img src="' + esc(ns.logo) + '" alt="Lab logo">' : icon('flask', 32);
-      } catch (e) {}
-    });
-    document.getElementById('loginForm').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var u = document.getElementById('liUser').value.trim();
-      var p = document.getElementById('liPass').value;
-      var err = document.getElementById('loginErr');
-      if (window.DB && DB.isCloud && DB.isCloud()) {
-        /* cloud: the server checks the password and returns a session token */
-        var btn = document.querySelector('.login-signin');
-        if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
-        DB.cloudLogin(u, p).then(function (j) {
-          localStorage.setItem(SKEY, JSON.stringify({
-            labId: 'cloud', userId: j.user.id, name: j.user.name, role: j.user.role,
-            token: j.token, loginAt: new Date().toISOString()
-          }));
-          location.hash = '#/dashboard';
-        }).catch(function (ex) {
-          if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
-          err.hidden = false;
-          err.textContent = (ex && ex.message) || 'Login failed. Please try again.';
-          var card2 = document.querySelector('.login-card');
-          card2.classList.remove('shake'); void card2.offsetWidth; card2.classList.add('shake');
-        });
-        return;
-      }
-      /* authenticate against the selected lab's isolated store */
-      var _ls2 = document.getElementById('liLab');
-      if (_ls2) { try { window.DB.useLab(_ls2.value); } catch (ex2) {} }
-      var users = [];
-      try { users = window.DB.all('users'); } catch (ex) {}
-      var found = null;
-      for (var i = 0; i < users.length; i++) {
-        if (users[i].username === u && users[i].password === p && users[i].active !== false) { found = users[i]; break; }
-      }
-      if (!found) {
-        err.hidden = false;
-        err.textContent = 'Invalid username or password. Please try again.';
-        var card = document.querySelector('.login-card');
-        card.classList.remove('shake');
-        void card.offsetWidth;
-        card.classList.add('shake');
-        return;
-      }
-      var _sessLab = 'lab1';
-      try { _sessLab = window.DB.currentLabId() || _sessLab; } catch (ex3) {}
-      localStorage.setItem(SKEY, JSON.stringify({
-        labId: _sessLab,
-        userId: found.id, name: found.name, role: found.role, loginAt: new Date().toISOString()
-      }));
-      location.hash = '#/dashboard';
-    });
-  }
+  /* ---------------- login / sign-up: see mod-auth.js (App.renderLogin / App.renderSignup) ---------------- */
 
   /* ---------------- keyboard shortcuts ----------------
      Ctrl/Cmd+K focuses the current page's search box (non-intrusive:
@@ -792,7 +716,10 @@
     session: session,
     logout: logout,
     can: can,
-    currentKey: currentKey
+    currentKey: currentKey,
+    loadSub: loadSub,
+    sub: function () { return subInfo; },
+    saasOn: saasOn
   };
 
   window.addEventListener('hashchange', render);
@@ -909,9 +836,18 @@
   /* cloud mode: surface failed saves, handle expired sessions, pick up other PCs' changes */
   if (window.DB) {
     var _lastWriteToast = 0;
-    DB.onWriteError = function (msg) {
+    DB.onWriteError = function (msg, code) {
       if (Date.now() - _lastWriteToast < 4000) return;
       _lastWriteToast = Date.now();
+      if (code === 'EXPIRED' || code === 'LIMIT_USERS' || code === 'LIMIT_INVOICES') {
+        var admin = session() && session().role === 'admin';
+        loadSub();
+        modal(code === 'EXPIRED' ? 'Subscription ended' : 'Plan limit reached',
+          '<p style="margin:0 0 12px">' + esc(msg) + '</p><p class="muted" style="margin:0;font-size:13px">Nothing was saved. Your existing data is safe and can still be viewed and printed.</p>' +
+          '<div class="modal-actions" style="margin-top:14px"><button class="btn btn-ghost" id="exOk">Close</button>' + (admin ? '<a class="btn btn-primary" href="#/subscription" id="exGo">View plans</a>' : '') + '</div>',
+          { onOpen: function (ov, close) { ov.querySelector('#exOk').addEventListener('click', close); var g = ov.querySelector('#exGo'); if (g) g.addEventListener('click', close); } });
+        return;
+      }
       toast(msg, 'err');
     };
     DB.onAuthError = function () {

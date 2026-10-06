@@ -116,6 +116,8 @@ function create(ctx) {
         .map(x => ({ t: x.t, id: x.row.id, _o: x.row._o, _c: x.row._c }));
       if (mine.length) {
         const cr = await cfetch('/api/sync/check', { method: 'POST', body: JSON.stringify({ rows: mine }) }, 30000);
+        if (cr.status === 402) throw new Error('Subscription expired — renew your plan to resume cloud sync (your data is safe on this PC)');
+        if (cr.status === 403) throw new Error('This lab account is suspended — contact support');
         if (!cr.ok) throw new Error('check ' + cr.status);
         const { conflicts } = await cr.json();
         if (conflicts && conflicts.length) {
@@ -126,6 +128,8 @@ function create(ctx) {
       /* 2) push + pull in one round trip */
       const resp = await cfetch('/api/sync', { method: 'POST', body: JSON.stringify({ since: st.since, rows: dirty.rows, deletes: dirty.deletes }) }, 120000);
       if (resp.status === 401) { token = ''; throw new Error('Cloud session expired — sign in again to resume syncing'); }
+      if (resp.status === 402) throw new Error('Subscription expired — renew your plan to resume cloud sync (your data is safe on this PC)');
+      if (resp.status === 403) throw new Error('This lab account is suspended — contact support');
       if (!resp.ok) throw new Error('sync ' + resp.status);
       const res = await resp.json();
       const pulled = await applyPulled(res);
@@ -187,17 +191,31 @@ function create(ctx) {
   }
 
   /* ---- sign-in: the cloud is authoritative while online; local hash is used offline ---- */
-  async function authenticate(username, password) {
+  async function authenticate(username, password, labSlug) {
     const users = await raw.all('users');
     let local = users.find(u => u.username === username && u.active !== false);
     let cloud = null, denied = false, offline = false;
+    /* this PC belongs to ONE lab (the first one it signed in to); the Lab ID can be left empty afterwards */
+    const bound = await raw.getMeta('lab');
+    const want = labSlug || (bound && bound.slug) || '';
+    if (bound && labSlug && labSlug !== bound.slug) return { status: 403, error: 'This PC is registered to "' + (bound.name || bound.slug) + '" (Lab ID: ' + bound.slug + '). Use that Lab ID, or install the app on another PC.' };
     try {
-      const r = await cfetch('/api/auth/login', { method: 'POST', noAuth: true, body: JSON.stringify({ username, password }) }, 8000);
+      const r = await cfetch('/api/auth/login', { method: 'POST', noAuth: true, body: JSON.stringify({ username, password, lab: want }) }, 8000);
       if (r.status === 200) cloud = await r.json();
-      else if (r.status === 401 || r.status === 400) denied = true;
+      else if (r.status === 401 || r.status === 400) { denied = true; try { const j = await r.json(); if (j && /Lab ID/.test(j.error || '')) return { status: 401, error: j.error }; } catch (e) {} }
+      else if (r.status === 403) { let m = 'This lab account is suspended. Please contact support.'; try { const j = await r.json(); if (j && j.error) m = j.error; } catch (e) {} return { status: 403, error: m }; }
       else if (r.status === 429) return { status: 429, error: 'Too many attempts. Try again in a few minutes.' };
       else offline = true;
     } catch (e) { offline = true; }
+    if (cloud && cloud.lab) {
+      const stx = await getState();
+      if (bound && bound.id !== cloud.lab.id) return { status: 403, error: 'This PC is registered to "' + (bound.name || bound.slug) + '". Use its Lab ID.' };
+      if (!bound) {
+        /* an install from before multi-lab only ever synced with the default lab */
+        if (stx.since && cloud.lab.id !== 'main') return { status: 403, error: 'This PC already holds another lab\'s data. Install the app on a different PC for "' + cloud.lab.name + '".' };
+        await raw.setMeta('lab', { id: cloud.lab.id, slug: cloud.lab.slug, name: cloud.lab.name });
+      }
+    }
 
     if (cloud) {
       setToken(cloud.token);

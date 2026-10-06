@@ -73,7 +73,7 @@
   }
   function clearSession() { try { localStorage.removeItem(SESS_KEY); } catch (e) {} }
   function fireAuthError() { try { if (window.DB && typeof window.DB.onAuthError === 'function') window.DB.onAuthError(); } catch (e) {} }
-  function fireWriteError(msg) { try { if (window.DB && typeof window.DB.onWriteError === 'function') window.DB.onWriteError(msg); } catch (e) {} }
+  function fireWriteError(msg, code) { try { if (window.DB && typeof window.DB.onWriteError === 'function') window.DB.onWriteError(msg, code); } catch (e) {} }
   var unreachable = false; /* the configured server did not answer (slow / offline): keep the session, offer Retry */
   function loadDump() {
     var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
@@ -107,7 +107,8 @@
           return;
         }
         return r.json().catch(function () { return {}; }).then(function (j) {
-          fireWriteError((j && j.error) || ('Server rejected the change (' + r.status + ')'));
+          fireWriteError((j && j.error) || ('Server rejected the change (' + r.status + ')'), j && j.code);
+          if (r.status === 402 && window.DB) setTimeout(function () { window.DB.refresh(); }, 300); /* subscription expired / plan limit: drop the unsaved local change */
         });
       }).catch(function () {
         inflight--;
@@ -140,7 +141,8 @@
             if (r.ok) return;
             if (r.status === 401) { fireAuthError(); return; }
             return r.json().catch(function () { return {}; }).then(function (j) {
-              fireWriteError((j && j.error) || ('Server rejected the import (' + r.status + ')'));
+              fireWriteError((j && j.error) || ('Server rejected the import (' + r.status + ')'), j && j.code);
+              if (r.status === 402 && window.DB) setTimeout(function () { window.DB.refresh(); }, 300);
             });
           }).catch(function () { inflight--; fireWriteError('Could not reach the server — the import was NOT saved.'); });
         })(rows.slice(i, i + 400));
@@ -159,9 +161,11 @@
     results:  { prefix: 'R',  digits: 4 },
     report_templates: { prefix: 'TPL', digits: 3 },
     report_schedules: { prefix: 'SCH', digits: 3 },
-    wa_log: { prefix: 'WAL', digits: 4 }
+    wa_log: { prefix: 'WAL', digits: 4 },
+    samples: { prefix: 'S', digits: 5 },
+    closings: { prefix: 'CL', digits: 4 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples', 'closings'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -640,10 +644,10 @@
     isRemote: function () { return remote; },
     isCloud: function () { return cloud; },
     /* Server-side login (cloud mode). Resolves {user, token}; rejects with a user-facing message. */
-    cloudLogin: function (username, password) {
+    cloudLogin: function (username, password, lab) {
       return window.fetch(API + '/api/auth/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username, password: password })
+        body: JSON.stringify({ username: username, password: password, lab: lab || '' })
       }).then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
           if (!r.ok) throw new Error(j.error || 'Login failed (' + r.status + ')');
@@ -653,6 +657,23 @@
         try { localStorage.setItem(SESS_KEY, JSON.stringify({ token: j.token })); } catch (e) {}
         return loadDump().then(function (dump) { store = dump; remote = true; return j; });
       });
+    },
+    /* SaaS endpoints (/api/saas/*): signup, plans, my subscription, payment requests. Resolves the JSON; rejects with a message. */
+    saas: function (method, path, body) {
+      if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));
+      return window.fetch(API + '/api/saas/' + path, {
+        method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: body === undefined ? undefined : JSON.stringify(body)
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) { var e = new Error(j.error || ('Request failed (' + r.status + ')')); e.code = j.code; e.status = r.status; throw e; }
+          return j;
+        });
+      }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
+    },
+    /* use the session returned by signup (same as a login) */
+    adoptSession: function (j) {
+      try { localStorage.setItem(SESS_KEY, JSON.stringify({ token: j.token })); } catch (e) {}
+      return loadDump().then(function (dump) { store = dump; remote = true; cloud = true; return j; });
     },
     changePassword: function (current, next) {
       return window.fetch(API + '/api/auth/change-password', {
