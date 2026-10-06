@@ -1398,11 +1398,11 @@
        date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
       return '<div style="border:1px solid #000;background:#fff;text-align:center;' +
-        'padding:2px 1px;line-height:1.3;font-size:0.85em;grid-row:span 2">' +
-        '<div style="font-weight:700;color:#000;font-size:0.95em">RESULT</div>' +
+        'padding:1px;line-height:1.2;font-size:0.75em;grid-row:span 2">' +
+        '<div style="font-weight:700;color:#000;font-size:0.85em">RESULT</div>' +
         barcodeHtml(invNo) +
-        '<div style="font-weight:700;color:#000;font-size:0.9em">' + App.esc(invNo) + '</div>' +
-        '<div style="font-size:0.85em;color:#000">' +
+        '<div style="font-weight:700;color:#000;font-size:0.8em">' + App.esc(invNo) + '</div>' +
+        '<div style="font-size:0.75em;color:#000">' +
           App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
         '</div>' +
       '</div>';
