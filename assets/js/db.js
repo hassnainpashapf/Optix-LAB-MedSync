@@ -191,7 +191,7 @@
         { name: 'Lymphocytes', unit: '%', ref: '20–40', type: 'number' },
         { name: 'Monocytes', unit: '%', ref: '2–8', type: 'number' },
         { name: 'Eosinophils', unit: '%', ref: '1–6', type: 'number' },
-        { name: 'Platelets', unit: '/µL', ref: '150,000–450,000', type: 'number' },
+        { name: 'Platelets', unit: 'x10^9/l', ref: '150 – 400', type: 'number' },
         { name: 'PCV', unit: '%', ref: '40–50', type: 'number' },
         { name: 'MCV', unit: 'fL', ref: '80–100', type: 'number' },
         { name: 'MCH', unit: 'pg', ref: '27–32', type: 'number' },
@@ -200,7 +200,7 @@
       ],
       'HB': [{ name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5', type: 'number' }],
       'ESR': [{ name: 'ESR', unit: 'mm/hr', ref: '0–20', type: 'number' }],
-      'PLT': [{ name: 'Platelet Count', unit: '/µL', ref: '150,000–450,000', type: 'number' }],
+      'PLT': [{ name: 'Platelet Count', unit: 'x10^9/l', ref: '150 – 400', type: 'number' }],
       'BGRP': [{ name: 'ABO Group', unit: '', ref: '', type: 'text' }, { name: 'Rh Factor', unit: '', ref: 'Positive / Negative', type: 'text' }],
       'PTINR': [
         { name: 'Prothrombin Time', unit: 'sec', ref: '11–13', type: 'number' },
@@ -355,7 +355,7 @@
     ];
     /* ready result values for param-based tests (older invoices) */
     var READY_VALS = {
-      'CBC': { 'Hemoglobin': '14.2', 'TLC': '7,600', 'Platelets': '248,000', 'ESR': '14' },
+      'CBC': { 'Hemoglobin': '14.2', 'TLC': '7,600', 'Platelets': '248', 'ESR': '14' },
       'HBA1C': { 'HbA1c': '6.8' },
       'LIPID': { 'Total Cholesterol': '198', 'Triglycerides': '142', 'HDL': '52', 'LDL': '118' },
       'ESR': { 'Result': '18 mm/hr' },
