@@ -193,7 +193,7 @@
 
   /* ---------- entry modal ---------- */
 
-  function openEntry(row) {
+  function openEntry(row, onSaved) {
     var test = row.test;
     var inv = row.invoice;
     var pat = row.patient;
@@ -236,13 +236,13 @@
       { onOpen: function (ov, close) {
           document.getElementById('resCancel').addEventListener('click', close);
           document.getElementById('resSave').addEventListener('click', function () {
-            saveResult(row, params, close);
+            saveResult(row, params, close, onSaved);
           });
         }
       });
   }
 
-  function saveResult(row, params, close) {
+  function saveResult(row, params, close, onSaved) {
     var vals = {};
     if (params.length) {
       var anyVal = false;
@@ -271,7 +271,8 @@
     else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy });
     close();
     App.toast('Result saved — marked ready');
-    render();
+    if (typeof onSaved === 'function') onSaved();
+    else render();
   }
 
   /* ---------- print report ---------- */
@@ -298,19 +299,63 @@
     };
   }
 
-  function reportHeadHtml(s) {
-    return '<div style="border-bottom:3px solid #131845;padding-bottom:12px;margin-bottom:16px;text-align:center">' +
-      (s.logo ? '<img src="' + App.esc(s.logo) + '" style="width:54px;height:54px;object-fit:contain;margin-bottom:6px" alt="">' : '') +
-      '<h1 style="margin:0;color:#131845">' + App.esc(s.labName || 'Lab') + '</h1>' +
-      '<div style="color:#64748b">' + App.esc(s.tagline || '') + '</div>' +
-      '<div style="color:#64748b">' + App.esc(s.address || '') + ' &nbsp;•&nbsp; ' + App.esc(s.phone || '') +
-      (s.email ? ' &nbsp;•&nbsp; ' + App.esc(s.email) : '') + '</div>' +
-    '</div>';
-  }
-
   function reportHtml(d) {
-    var inv = d.inv, pat = d.pat, s = d.s, readyRows = d.readyRows, pendingCount = d.pendingCount;
+    var inv = d.inv || {}, pat = d.pat || {}, s = d.s || {};
+    var readyRows = d.readyRows || [], pendingCount = d.pendingCount || 0;
+    var doc = d.doc || null;
+    var docName = doc ? doc.name : '';
 
+    /* ---------- header: lab logo + info left, patient/case/QR right ---------- */
+    var addrLine = [s.address, s.phone, s.email].filter(function (x) { return x; }).join(' • ');
+    var headHtml =
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:12px;margin-bottom:10px;border-bottom:2px solid #131845">' +
+        '<div style="display:flex;gap:12px;align-items:flex-start;min-width:0">' +
+          (s.logo ? '<img src="' + App.esc(s.logo) + '" style="width:54px;height:54px;object-fit:contain;flex:none" alt="">' : '') +
+          '<div style="min-width:0">' +
+            '<h1 style="margin:0;color:#131845;font-size:22px">' + App.esc(s.labName || 'Optix LAB MedSync') + '</h1>' +
+            (s.tagline ? '<div style="color:#555;font-size:12px">' + App.esc(s.tagline) + '</div>' : '') +
+            (addrLine ? '<div style="color:#555;font-size:11px">' + App.esc(addrLine) + '</div>' : '') +
+          '</div>' +
+        '</div>' +
+        '<div style="text-align:right;flex:none">' +
+          '<div style="font-size:12px;font-weight:700">Patient No.:</div>' +
+          '<div style="font-size:12px;margin:2px 0 6px">' + App.esc(pat.id || '—') + '</div>' +
+          '<div style="font-size:12px;font-weight:700">Case #:</div>' +
+          '<div style="font-size:12px;margin:2px 0 6px">' + App.esc(inv.no || inv.id || '—') + '</div>' +
+          '<img data-qr="1" style="width:110px;height:110px" alt="">' +
+        '</div>' +
+      '</div>';
+
+    /* ---------- patient info: 2 columns ---------- */
+    var ageSex = [pat.age ? pat.age + ' Yr(s)' : '', pat.gender || ''].filter(function (x) { return x; }).join(' / ');
+    var prow = function (k, v) {
+      return '<div style="display:flex;gap:10px;padding:3px 0;font-size:12.5px">' +
+        '<span style="font-weight:700;flex:none;min-width:170px">' + k + ':</span>' +
+        '<span>' + App.esc(v == null || v === '' ? '—' : String(v)) + '</span></div>';
+    };
+    var infoHtml =
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 40px;margin:4px 0 6px">' +
+        '<div>' +
+          prow('Patient Name', pat.name) +
+          prow('Father / Husband Name', pat.father) +
+          prow('Age / Sex', ageSex) +
+          prow('Blood Group', pat.blood || 'Unknown') +
+          prow('NIC', pat.cnic) +
+          prow('Phone', pat.phone) +
+          prow('Address', pat.address) +
+        '</div>' +
+        '<div>' +
+          prow('Registration Date', inv.createdAt ? App.dt(inv.createdAt) : '') +
+          prow('Collect Report At', d.maxReported ? App.dt(d.maxReported) : '') +
+          prow('Registration Location', s.headOffice) +
+          prow('Destination Location', s.mainLab) +
+          prow('Reference', docName) +
+          prow('Consultant', docName) +
+        '</div>' +
+      '</div>' +
+      '<hr style="border:none;border-top:1px solid #ccc;margin:8px 0 4px">';
+
+    /* ---------- test tables: TEST | NORMAL VALUE | UNIT | RESULT ---------- */
     var testsHtml = readyRows.map(function (r) {
       var test = r.test;
       var params = (test && Array.isArray(test.params)) ? test.params : [];
@@ -319,52 +364,126 @@
       if (params.length) {
         bodyRows = params.map(function (p) {
           return '<tr><td>' + App.esc(p.name) + '</td>' +
-            '<td><strong>' + App.esc(vals[p.name] != null ? String(vals[p.name]) : '') + '</strong></td>' +
-            '<td>' + App.esc(p.unit || '') + '</td>' +
-            '<td>' + App.esc(p.ref || '') + '</td></tr>';
+            '<td>' + App.esc(p.ref || '—') + '</td>' +
+            '<td>' + App.esc(p.unit || '—') + '</td>' +
+            '<td><strong>' + App.esc(vals[p.name] != null ? String(vals[p.name]) : '') + '</strong></td></tr>';
         }).join('');
         if (vals['Remarks']) {
           bodyRows += '<tr><td colspan="4"><em>Remarks: ' + App.esc(vals['Remarks']) + '</em></td></tr>';
         }
       } else {
-        bodyRows = '<tr><td>Result</td><td colspan="3"><strong>' + App.esc(vals['Result'] != null ? String(vals['Result']) : '') + '</strong></td></tr>';
+        bodyRows = '<tr><td>Result</td><td>—</td><td>—</td><td><strong>' +
+          App.esc(vals['Result'] != null ? String(vals['Result']) : '') + '</strong></td></tr>';
       }
-      return '<h3 style="margin:18px 0 6px">' + App.esc(testName(r)) +
+      return '<h3 style="margin:18px 0 6px;font-size:15px">' + App.esc(testName(r)) +
         (testCode(r) ? ' <span style="color:#64748b;font-weight:500">(' + App.esc(testCode(r)) + ')</span>' : '') + '</h3>' +
-        '<table class="table"><thead><tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Reference Range</th></tr></thead>' +
+        '<table class="table"><thead><tr><th>TEST</th><th>NORMAL VALUE</th><th>UNIT</th><th>RESULT</th></tr></thead>' +
         '<tbody>' + bodyRows + '</tbody></table>';
     }).join('');
 
-    var info = function (k, v) {
-      return '<div><span style="color:#64748b">' + k + ':</span> <strong>' + App.esc(v || '—') + '</strong></div>';
-    };
+    /* ---------- footer: verification note, signatories, address block ---------- */
+    var verNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
+    var sigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.qual || g.title); });
+    var sigHtml;
+    if (sigs.length) {
+      sigHtml = '<div style="display:flex;justify-content:space-between;gap:10px;border-top:2px solid #111;margin-top:22px;padding-top:14px">' +
+        sigs.map(function (g) {
+          return '<div style="flex:1;text-align:center">' +
+            '<div style="font-weight:800;font-size:12.5px">' + App.esc(g.name || '') + '</div>' +
+            (g.qual ? '<div style="font-size:10.5px;color:#444">' + App.esc(g.qual) + '</div>' : '') +
+            (g.title ? '<div style="font-size:10.5px;color:#444">' + App.esc(g.title) + '</div>' : '') +
+          '</div>';
+        }).join('') + '</div>';
+    } else {
+      sigHtml = '<div style="display:flex;justify-content:space-between;margin-top:40px">' +
+        '<div style="text-align:center;min-width:180px"><div style="border-top:1px solid #0f1e2e;padding-top:6px;font-size:12px">Lab Technologist</div></div>' +
+        '<div style="text-align:center;min-width:180px"><div style="border-top:1px solid #0f1e2e;padding-top:6px;font-size:12px">Pathologist</div></div>' +
+      '</div>';
+    }
+    var ab = [];
+    if (s.headOffice) ab.push('<div><strong>Head Office:</strong> ' + App.esc(s.headOffice) + (s.callCenter ? ' &nbsp;<strong>Call Center:</strong> ' + App.esc(s.callCenter) : '') + '</div>');
+    if (s.mainLab) ab.push('<div><strong>Main Lab:</strong> ' + App.esc(s.mainLab) + (s.mainLabPhone ? ' &nbsp;<strong>Ph:</strong> ' + App.esc(s.mainLabPhone) : '') + '</div>');
+    var abLast = [s.phone ? 'Phone: ' + App.esc(s.phone) : '', s.website ? 'Web: ' + App.esc(s.website) : '', s.email ? 'Email: ' + App.esc(s.email) : ''].filter(function (x) { return x; }).join(' &nbsp; ');
+    if (abLast) ab.push('<div>' + abLast + '</div>');
+    var addrHtml = ab.length ? '<div style="text-align:center;font-size:12px;margin-top:16px;line-height:1.8">' + ab.join('') + '</div>' : '';
 
-    return '<h2 style="text-align:center;margin:0 0 14px">LABORATORY REPORT</h2>' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;background:#f8fafc;border:1px solid #e8eef4;border-radius:10px;padding:12px 16px;margin-bottom:8px">' +
-        info('Patient', pat.name) +
-        info('Age / Gender', (pat.age || '') + (pat.gender ? ' / ' + pat.gender : '')) +
-        info('Phone', pat.phone) +
-        info('Invoice No', inv.no) +
-        info('Date', App.d(inv.createdAt)) +
-        info('Reported', d.maxReported ? App.dt(d.maxReported) : '—') +
-        info('Referred By', d.doc ? d.doc.name : 'Self') +
-        info('Tests', readyRows.length + (pendingCount ? ' (' + pendingCount + ' pending)' : '')) +
-      '</div>' +
-      testsHtml +
+    return headHtml + infoHtml + testsHtml +
       (pendingCount ? '<p style="color:#d97706"><em>Note: ' + pendingCount + ' test(s) from this invoice are still pending.</em></p>' : '') +
-      '<p style="color:#64748b;margin-top:18px;margin-bottom:4px"><em>' + App.esc(s.footerNote || '') + '</em></p>' +
-      '<p style="color:#999;font-size:11px;text-align:center;margin:0">Powered by System Optix</p>' +
-      '<div style="display:flex;justify-content:space-between;margin-top:48px">' +
-        '<div style="text-align:center;min-width:180px"><div style="border-top:1px solid #0f1e2e;padding-top:6px">Lab Technologist</div></div>' +
-        '<div style="text-align:center;min-width:180px"><div style="border-top:1px solid #0f1e2e;padding-top:6px">Pathologist</div></div>' +
-      '</div>' +
-      '<p style="text-align:center;color:#64748b;margin-top:32px">— End of Report —</p>';
+      (s.footerNote ? '<p style="color:#64748b;margin-top:18px;margin-bottom:4px"><em>' + App.esc(s.footerNote) + '</em></p>' : '') +
+      '<p style="text-align:center;font-weight:700;font-size:12.5px;margin:22px 0 0">' + App.esc(verNote) + '</p>' +
+      sigHtml + addrHtml +
+      '<p style="color:#999;font-size:11px;text-align:center;margin:14px 0 0">Powered by System Optix</p>';
   }
 
-  function printReport(invoiceId) {
+  /* ---------- QR-coded report PDF upload ---------- */
+  // The printed report carries a QR code that opens the report PDF on a phone.
+  // The PDF is uploaded once per invoice (stable key), then the URL is reused.
+
+  function rand6() {
+    var c = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789', s = '', i;
+    for (i = 0; i < 6; i++) s += c.charAt(Math.floor(Math.random() * c.length));
+    return s;
+  }
+
+  // Build the report PDF, upload it to the cloud API, return the public URL (or null).
+  function getReportPdfUrl(invoiceId) {
+    var inv = invOf(invoiceId);
+    if (!inv) return Promise.resolve(null);
+    var pdf = null;
+    try { pdf = buildReportPdf(invoiceId); } catch (e) { pdf = null; }
+    if (!pdf || !pdf.dataUri) return Promise.resolve(null);
+    var key = inv.reportPdfKey || ('rpt-' + invoiceId + '-' + rand6());
+    var rawUri = String(pdf.dataUri);
+    var b64 = rawUri.slice(rawUri.indexOf(',') + 1); // strip data:...;base64, prefix (jsPDF adds filename=)
+    var base = 'https://labpos-api.150.230.52.29.sslip.io';
+    try { if (window.LABPOS_API) base = window.LABPOS_API; } catch (e) {}
+    return fetch(base + '/api/report-pdfs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: key, pdfBase64: b64 })
+    }).then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && j.url) {
+          try { DB.update('invoices', invoiceId, { reportPdfKey: key }); } catch (e) {}
+          return j.url;
+        }
+        return null;
+      })
+      .catch(function () { return null; });
+  }
+  App.getReportPdfUrl = getReportPdfUrl;
+
+  function qrDataUrlFor(url) {
+    try {
+      if (!url || typeof qrcode === 'undefined') return null;
+      var qr = qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      return qr.createDataURL(4, 4);
+    } catch (e) { return null; }
+  }
+
+  function stripQrImg(html) {
+    return String(html).replace(/<img[^>]*data-qr="1"[^>]*>/, '');
+  }
+
+  async function printReport(invoiceId) {
     var d = reportData(invoiceId);
     if (!d) { App.toast('No ready results to print', 'err'); return; }
-    App.print('Lab Report — ' + d.inv.no, reportHtml(d));
+    var qrImg = null, uploadFailed = false;
+    try {
+      var jsOk = await App.ensureJsPDF();
+      if (jsOk) {
+        var url = await getReportPdfUrl(invoiceId);
+        if (url) qrImg = qrDataUrlFor(url);
+        else uploadFailed = true;
+      } else uploadFailed = true;
+    } catch (e) { uploadFailed = true; }
+    var html = reportHtml(d);
+    if (qrImg) html = html.replace('data-qr="1"', 'data-qr="1" src="' + qrImg + '"');
+    else html = stripQrImg(html);
+    if (uploadFailed) App.toast('Report printed without QR (upload failed)', 'err');
+    App.print('Lab Report — ' + d.inv.no, html, { noHeader: true });
   }
 
   // Report preview modal with Print + Share on WhatsApp actions
@@ -373,7 +492,7 @@
     if (!d) { App.toast('No ready results to view', 'err'); return; }
     var close = App.modal('Lab Report — ' + App.esc(d.inv.no),
       '<div class="report-preview" style="max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:20px;background:#fff">' +
-        reportHeadHtml(d.s) + reportHtml(d) +
+        stripQrImg(reportHtml(d)) +
       '</div>' +
       '<div class="actions" style="margin-top:16px">' +
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
@@ -390,8 +509,9 @@
 
   /* ---------- report PDF builder (jsPDF) ---------- */
 
-  // Returns { dataUri } or null (error toasted)
-  function buildReportPdf(invoiceId) {
+  // Returns { dataUri } or null (error toasted).
+  // qrDataUrl (optional): QR image data URL embedded in the header.
+  function buildReportPdf(invoiceId, qrDataUrl) {
     var d = reportData(invoiceId);
     if (!d) { App.toast('No ready results for PDF', 'err'); return null; }
     var JSPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
@@ -399,81 +519,117 @@
 
     var s = d.s, inv = d.inv, pat = d.pat;
     var doc = new JSPDF({ unit: 'mm', format: 'a4' });
-    var W = 210, M = 14, CW = W - 2 * M;
+    var W = 210, M = 12, CW = W - 2 * M;
     var y = M;
-    var TEAL = [19, 24, 69];
 
-    function need(h) { if (y + h > 282) { doc.addPage(); y = M; } }
+    function need(h) { if (y + h > 280) { doc.addPage(); y = M; } }
     function txt(t, x, yy, opts) { doc.text(String(t == null ? '' : t), x, yy, opts || {}); }
+    function dash(v) { return (v == null || v === '') ? '—' : String(v); }
+    function addImg(dataUrl, x, yy, w, h) {
+      try {
+        var fmt = /image\/png/i.test(dataUrl) ? 'PNG' : (/image\/gif/i.test(dataUrl) ? 'GIF' : 'JPEG');
+        doc.addImage(dataUrl, fmt, x, yy, w, h);
+        return true;
+      } catch (e) { return false; }
+    }
 
-    // header
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(TEAL[0], TEAL[1], TEAL[2]);
-    txt(s.labName || 'Optix LAB MedSync', W / 2, y, { align: 'center' }); y += 7;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(100, 100, 100);
-    if (s.tagline) { txt(s.tagline, W / 2, y, { align: 'center' }); y += 5; }
-    var addr = [s.address, s.phone, s.email].filter(function (x) { return x; }).join('  •  ');
-    if (addr) { doc.setFontSize(9); txt(addr, W / 2, y, { align: 'center' }); y += 6; }
-    doc.setDrawColor(TEAL[0], TEAL[1], TEAL[2]); doc.setLineWidth(0.8);
-    doc.line(M, y, W - M, y); y += 8;
+    /* ----- header: logo + lab (left), patient/case nos + QR (right) ----- */
+    var qrS = 26;
+    if (s.logo) addImg(s.logo, M, y, 15, 15);
+    var tx = M + (s.logo ? 19 : 0);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(27, 27, 110);
+    txt(s.labName || 'Optix LAB MedSync', tx, y + 6);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(70, 70, 70);
+    var ty = y + 11;
+    if (s.tagline) { txt(s.tagline, tx, ty); ty += 4.5; }
+    var sub = [s.address, s.phone, s.email].filter(function (x) { return x; }).join('  •  ');
+    if (sub) { doc.setFontSize(8); doc.setTextColor(120, 120, 120); txt(doc.splitTextToSize(sub, 105)[0], tx, ty); }
+    if (qrDataUrl) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
+    var nx = W - M - qrS - 3;
+    doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+    doc.setFont('helvetica', 'bold'); txt('Patient No.:', nx, y + 4, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); txt(dash(pat.id), nx, y + 8.5, { align: 'right' });
+    doc.setFont('helvetica', 'bold'); txt('Case #:', nx, y + 14, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); txt(dash(inv.no || inv.id), nx, y + 18.5, { align: 'right' });
+    y += qrS + 3;
+    doc.setDrawColor(19, 24, 69); doc.setLineWidth(0.7);
+    doc.line(M, y, W - M, y); y += 6;
 
-    // title
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(14); doc.setTextColor(20, 20, 20);
-    txt('LABORATORY REPORT', W / 2, y, { align: 'center' }); y += 8;
-
-    // patient box
-    var infoRows = [
-      ['Patient', pat.name || '—', 'Age / Gender', (pat.age || '') + (pat.gender ? ' / ' + pat.gender : '')],
-      ['Phone', pat.phone || '—', 'Invoice No', inv.no || '—'],
-      ['Date', App.d(inv.createdAt), 'Reported', d.maxReported ? App.dt(d.maxReported) : '—'],
-      ['Referred By', d.doc ? d.doc.name : 'Self', 'Tests', String(d.readyRows.length) + (d.pendingCount ? ' (' + d.pendingCount + ' pending)' : '')]
+    /* ----- patient info: two columns ----- */
+    var ageSex = (pat.age ? pat.age + ' Yr(s)' : '') + (pat.gender ? (pat.age ? ' / ' : '') + pat.gender : '');
+    var left = [
+      ['Patient Name', pat.name],
+      ['Father / Husband Name', pat.father || pat.fatherName],
+      ['Age / Sex', ageSex],
+      ['Blood Group', pat.blood || 'Unknown'],
+      ['NIC', pat.cnic],
+      ['Phone', pat.phone],
+      ['Address', pat.address]
     ];
-    var boxH = infoRows.length * 6.5 + 6;
-    need(boxH + 4);
-    doc.setDrawColor(220, 228, 235); doc.setFillColor(248, 250, 252); doc.setLineWidth(0.3);
-    doc.roundedRect(M, y, CW, boxH, 2, 2, 'FD');
-    var iy = y + 5.5;
-    infoRows.forEach(function (r) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(100, 116, 139);
-      txt(r[0] + ':', M + 5, iy);
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
-      txt(r[1], M + 38, iy);
-      doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-      txt(r[2] + ':', M + CW / 2 + 5, iy);
-      doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
-      txt(r[3], M + CW / 2 + 38, iy);
-      iy += 6.5;
-    });
-    y += boxH + 6;
+    var right = [
+      ['Registration Date', App.dt(inv.createdAt)],
+      ['Reported At', d.maxReported ? App.dt(d.maxReported) : null],
+      ['Referred By', d.doc ? d.doc.name : 'Self'],
+      ['Email', pat.email],
+      ['City', pat.city],
+      ['Tests', d.readyRows.length + (d.pendingCount ? ' (' + d.pendingCount + ' pending)' : '')]
+    ];
+    var rows = Math.max(left.length, right.length);
+    for (var i = 0; i < rows; i++) {
+      var lL = left[i] ? doc.splitTextToSize(dash(left[i][1]), 50) : [''];
+      var rL = right[i] ? doc.splitTextToSize(dash(right[i][1]), 50) : [''];
+      var hgt = Math.max(lL.length, rL.length) * 4.4 + 1.4;
+      need(hgt);
+      if (left[i]) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+        txt(left[i][0] + ':', M, y);
+        doc.setFont('helvetica', 'normal');
+        txt(lL, M + 36, y);
+      }
+      if (right[i]) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+        txt(right[i][0] + ':', M + CW / 2, y);
+        doc.setFont('helvetica', 'normal');
+        txt(rL, M + CW / 2 + 36, y);
+      }
+      y += hgt;
+    }
+    y += 2;
+    doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.3);
+    doc.line(M, y, W - M, y); y += 6;
 
-    // test tables
-    var COLS = [72, 52, 28, 30]; // param | result | unit | ref  (sum 182 = CW)
+    /* ----- test tables: TEST | NORMAL VALUE | UNIT | RESULT ----- */
+    var COLS = [64, 58, 28, 32]; // sums to 182 = CW
     function tableHead() {
       need(9);
-      doc.setFillColor(19, 24, 69); doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
-      var x = M, heads = ['Parameter', 'Result', 'Unit', 'Reference Range'];
-      var hh = 7;
-      doc.rect(M, y, CW, hh, 'F');
-      heads.forEach(function (h, i) { txt(h, x + 2, y + 4.8); x += COLS[i]; });
-      y += hh;
-      doc.setTextColor(20, 20, 20);
+      doc.setFillColor(154, 160, 166); doc.setTextColor(20, 20, 20);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      doc.rect(M, y, CW, 7, 'F');
+      var heads = ['TEST', 'NORMAL VALUE', 'UNIT', 'RESULT'], x = M;
+      heads.forEach(function (h, k) {
+        if (k === 3) txt(h, x + COLS[k] - 2, y + 4.8, { align: 'right' });
+        else txt(h, x + 2, y + 4.8);
+        x += COLS[k];
+      });
+      y += 7;
     }
-    function tableRow(cells, boldVal) {
-      doc.setFontSize(9.5);
-      var lines = cells.map(function (c, i) { return doc.splitTextToSize(String(c == null ? '' : c), COLS[i] - 4); });
-      var rh = Math.max.apply(null, lines.map(function (l) { return l.length; })) * 5 + 2.5;
+    function tableRow(cells) {
+      doc.setFontSize(9);
+      var lines = cells.map(function (c, k) { return doc.splitTextToSize(String(c == null ? '' : c), COLS[k] - 4); });
+      var rh = Math.max.apply(null, lines.map(function (l) { return l.length; })) * 4.4 + 2.5;
       need(rh);
       var x = M;
-      doc.setDrawColor(220, 228, 235); doc.setLineWidth(0.25);
+      doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.25);
       doc.rect(M, y, CW, rh);
-      lines.forEach(function (ln, i) {
-        doc.setFont('helvetica', (i === 1 && boldVal) ? 'bold' : 'normal');
-        txt(ln, x + 2, y + 4.6);
-        x += COLS[i];
+      lines.forEach(function (ln, k) {
+        doc.setFont('helvetica', (k === 0 || k === 3) ? 'bold' : 'normal');
+        doc.setTextColor(20, 20, 20);
+        if (k === 3) txt(ln, x + COLS[k] - 2, y + 4.6, { align: 'right' });
+        else txt(ln, x + 2, y + 4.6);
+        x += COLS[k];
       });
-      // vertical separators
       var sx = M;
-      for (var i = 0; i < 3; i++) { sx += COLS[i]; doc.line(sx, y, sx, y + rh); }
+      for (var k = 0; k < 3; k++) { sx += COLS[k]; doc.line(sx, y, sx, y + rh); }
       y += rh;
     }
 
@@ -481,51 +637,77 @@
       var test = r.test;
       var params = (test && Array.isArray(test.params)) ? test.params : [];
       var vals = (r.res && r.res.values) || {};
-      need(10);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(20, 20, 20);
-      var tname = testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : '');
-      txt(doc.splitTextToSize(tname, CW)[0], M, y); y += 6.5;
+      need(12);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(20, 20, 20);
+      txt(doc.splitTextToSize(testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : ''), CW)[0], M, y);
+      y += 6;
       tableHead();
       if (params.length) {
         params.forEach(function (p) {
-          tableRow([p.name, vals[p.name] != null ? String(vals[p.name]) : '', p.unit || '', p.ref || ''], true);
+          tableRow([p.name, p.ref || '—', p.unit || '—', vals[p.name] != null ? String(vals[p.name]) : '']);
         });
         if (vals['Remarks']) {
           need(8);
-          doc.setFont('helvetica', 'italic'); doc.setFontSize(9.5); doc.setTextColor(100, 100, 100);
-          txt('Remarks: ' + vals['Remarks'], M, y + 4.5);
-          doc.setTextColor(20, 20, 20);
-          y += 7;
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(100, 100, 100);
+          txt('Remarks: ' + vals['Remarks'], M, y + 4.5); y += 7;
         }
       } else {
-        tableRow(['Result', vals['Result'] != null ? String(vals['Result']) : '', '', ''], true);
+        tableRow(['Result', '—', '—', vals['Result'] != null ? String(vals['Result']) : '']);
       }
       y += 4;
     });
 
     if (d.pendingCount) {
       need(8);
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(10); doc.setTextColor(180, 120, 20);
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9.5); doc.setTextColor(180, 120, 20);
       txt('Note: ' + d.pendingCount + ' test(s) from this invoice are still pending.', M, y);
       y += 7;
     }
-
     if (s.footerNote) {
       need(8);
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(9.5); doc.setTextColor(120, 120, 120);
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(120, 120, 120);
       txt(doc.splitTextToSize(s.footerNote, CW), M, y);
       y += 6;
     }
 
-    // signatures
-    need(24);
-    y += 12;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-    doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.3);
-    doc.line(M, y, M + 55, y); doc.line(W - M - 55, y, W - M, y);
-    txt('Lab Technologist', M + 27.5, y + 5, { align: 'center' });
-    txt('Pathologist', W - M - 27.5, y + 5, { align: 'center' });
-    y += 10;
+    /* ----- footer: verification note, signatories, address block ----- */
+    need(42);
+    doc.setDrawColor(17, 17, 17); doc.setLineWidth(0.6);
+    doc.line(M, y, W - M, y); y += 6;
+    var verNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+    txt(verNote, W / 2, y, { align: 'center' }); y += 5;
+    txt('Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.', W / 2, y, { align: 'center' }); y += 9;
+    var sigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title); });
+    if (sigs.length) {
+      var sw = CW / sigs.length;
+      sigs.forEach(function (g, k) {
+        var cx = M + sw * (k + 0.5);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+        txt(g.name || '', cx, y, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 90);
+        var sy = y + 4;
+        if (g.qual) { txt(g.qual, cx, sy, { align: 'center' }); sy += 3.8; }
+        if (g.title) { txt(g.title, cx, sy, { align: 'center' }); }
+      });
+      y += 14;
+    } else {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+      doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.3);
+      doc.line(M, y, M + 52, y); doc.line(W - M - 52, y, W - M, y);
+      txt('Lab Technologist', M + 26, y + 5, { align: 'center' });
+      txt('Pathologist', W - M - 26, y + 5, { align: 'center' });
+      y += 11;
+    }
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+    txt('Head Office: ' + (s.headOffice || s.address || '—') + '    Call Center: ' + (s.callCenter || s.phone || '—'), W / 2, y, { align: 'center' }); y += 4.5;
+    var ab2 = [];
+    if (s.mainLab) ab2.push('Main Lab: ' + s.mainLab);
+    if (s.mainLabPhone) ab2.push('Ph: ' + s.mainLabPhone);
+    if (s.phone) ab2.push('Phone: ' + s.phone);
+    if (s.website) ab2.push('Web: ' + s.website);
+    if (s.email) ab2.push('Email: ' + s.email);
+    if (ab2.length) { txt(ab2.join('   '), W / 2, y, { align: 'center' }); y += 5; }
     doc.setFontSize(8); doc.setTextColor(150, 150, 150);
     txt('Powered by System Optix', W / 2, y, { align: 'center' });
 
@@ -707,4 +889,6 @@
   /* exposed so the Reports page "Finalized Patient Reports" archive can view/print */
   App.viewLabReport = viewReport;
   App.printLabReport = printReport;
+  /* exposed so the Patient Profile page can enter results directly */
+  App.enterLabResult = openEntry;
 })();

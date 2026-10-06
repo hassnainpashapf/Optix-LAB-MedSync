@@ -71,6 +71,15 @@ async function main() {
   const app = express();
   app.set('trust proxy', true); /* correct req.protocol behind Nginx Proxy Manager */
   app.use(express.json({ limit: '25mb' }));
+  /* CORS (manual, no extra deps): the static frontend and phone QR scanners
+     fetch /api/* and /r/* cross-origin */
+  app.use((req, res, next) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    if (req.method === 'OPTIONS') return res.sendStatus(204);
+    next();
+  });
   app.disable('x-powered-by');
 
   const okTable = (t) => TABLES.includes(t);
@@ -121,6 +130,43 @@ async function main() {
     labs[id].targetVersion = version;
     await store.setMeta('labs', labs);
     res.json({ ok: true, labId: id, targetVersion: version });
+  });
+
+  /* ---- report PDF hosting (QR printed on lab reports -> /r/<key>) ----
+     The web app uploads the generated report PDF here; scanning the QR on a
+     printed report opens this URL on the patient's phone with a download
+     option. NOTE: registered BEFORE the generic /api/:table routes. */
+  const REPORT_PDFS_DIR = path.join(__dirname, 'report-pdfs');
+  if (!fs.existsSync(REPORT_PDFS_DIR)) fs.mkdirSync(REPORT_PDFS_DIR, { recursive: true });
+  const REPORT_KEY_RE = /^[A-Za-z0-9_-]{4,64}$/;
+  const REPORT_PDF_MAX_BYTES = 15 * 1024 * 1024;
+  const PDF_DATA_PREFIX = 'data:application/pdf;base64,';
+  app.post('/api/report-pdfs', async (req, res) => {
+    try {
+      const { key, pdfBase64 } = req.body || {};
+      if (!key || !REPORT_KEY_RE.test(key)) return res.status(400).json({ error: 'key must match /^[A-Za-z0-9_-]{4,64}$/' });
+      if (typeof pdfBase64 !== 'string' || !pdfBase64.length) return res.status(400).json({ error: 'pdfBase64 required' });
+      let b64 = pdfBase64;
+      if (b64.startsWith(PDF_DATA_PREFIX)) b64 = b64.slice(PDF_DATA_PREFIX.length);
+      let buf;
+      try { buf = Buffer.from(b64, 'base64'); }
+      catch (e) { return res.status(400).json({ error: 'invalid base64 payload' }); }
+      if (!buf.length) return res.status(400).json({ error: 'empty pdf' });
+      if (buf.length > REPORT_PDF_MAX_BYTES) return res.status(400).json({ error: 'pdf too large (max 15MB)' });
+      /* key is regex-validated (no slashes/dots), so the join cannot escape REPORT_PDFS_DIR */
+      fs.writeFileSync(path.join(REPORT_PDFS_DIR, key + '.pdf'), buf);
+      res.json({ ok: true, key, url: (PUBLIC_API_URL || '') + '/r/' + key });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+  app.get('/r/:key', (req, res) => {
+    const key = req.params.key || '';
+    if (!REPORT_KEY_RE.test(key)) return res.status(400).json({ error: 'invalid key' });
+    const file = path.join(REPORT_PDFS_DIR, key + '.pdf');
+    if (!fs.existsSync(file)) return res.status(404).json({ error: 'not found' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="lab-report-' + key + '.pdf"');
+    res.setHeader('Cache-Control', 'public, max-age=31536000');
+    fs.createReadStream(file).pipe(res);
   });
 
   app.post('/api/restore', async (req, res) => {

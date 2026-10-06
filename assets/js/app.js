@@ -36,7 +36,6 @@
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results' },
-    { key: 'billing',   label: 'New Bill',   icon: 'receipt',   route: '#/billing' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices' },
     { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests' },
     { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues' },
@@ -198,13 +197,49 @@
     });
   }
 
+  /* ---------------- lab font (Settings → Lab Profile → Font) ---------------- */
+  var FONTS = {
+    inter:      { family: "'Inter',-apple-system,'Segoe UI',Roboto,Arial,sans-serif", url: null },
+    jakarta:    { family: "'Plus Jakarta Sans','Inter',sans-serif", url: null },
+    roboto:     { family: "'Roboto','Inter',sans-serif", url: 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap' },
+    poppins:    { family: "'Poppins','Inter',sans-serif", url: 'https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap' },
+    opensans:   { family: "'Open Sans','Inter',sans-serif", url: 'https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap' },
+    lato:       { family: "'Lato','Inter',sans-serif", url: 'https://fonts.googleapis.com/css2?family=Lato:wght@400;700;900&display=swap' },
+    montserrat: { family: "'Montserrat','Inter',sans-serif", url: 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap' }
+  };
+  function fontDef() {
+    var k = 'inter';
+    try { k = (window.DB.get('settings', 'main') || {}).font || 'inter'; } catch (e) {}
+    return FONTS[k] || FONTS.inter;
+  }
+  function applyFont() {
+    var d = fontDef();
+    try { document.documentElement.style.setProperty('--font', d.family); } catch (e) {}
+    var old = null;
+    try { old = document.querySelector('link[data-labfont]'); } catch (e) {}
+    if (d.url) {
+      if (!old || old.getAttribute('href') !== d.url) {
+        if (old && old.parentNode) old.parentNode.removeChild(old);
+        try {
+          var l = document.createElement('link');
+          l.rel = 'stylesheet'; l.href = d.url; l.setAttribute('data-labfont', '1');
+          document.head.appendChild(l);
+        } catch (e) {}
+      }
+    } else if (old && old.parentNode) {
+      old.parentNode.removeChild(old);
+    }
+  }
+
   /* ---------------- print ---------------- */
-  function printDoc(title, bodyHTML) {
+  function printDoc(title, bodyHTML, opts) {
     var s = {};
     try { s = window.DB.get('settings', 'main') || {}; } catch (e) {}
+    var noHeader = !!(opts && opts.noHeader);
+    var fd = fontDef();
     var css = '' +
       '*{margin:0;padding:0;box-sizing:border-box}' +
-      'body{font-family:Arial,Helvetica,sans-serif;color:#111;padding:28px;font-size:13px}' +
+      'body{font-family:' + fd.family + ';color:#111;padding:28px;font-size:13px}' +
       '.ph{text-align:center;border-bottom:3px double #131845;padding-bottom:12px;margin-bottom:16px}' +
       '.ph h1{font-size:24px;color:#131845;letter-spacing:.5px}' +
       '.ph .tag{font-size:12px;color:#555;margin:2px 0}' +
@@ -226,12 +261,14 @@
     var w = window.open('', '_blank', 'width=920,height=720');
     if (!w) { toast('Popup blocked — allow popups to print', 'err'); return; }
     w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
+      (fd.url ? '<link rel="stylesheet" href="' + fd.url + '">' : '') +
       '<style>' + css + '</style></head><body>' +
+      (noHeader ? '' :
       '<div class="ph">' + (s.logo ? '<img class="ph-logo" src="' + esc(s.logo) + '" alt="Lab logo">' : '') +
       '<h1>' + esc(s.labName || 'Optix LAB MedSync') + '</h1>' +
       '<div class="tag">' + esc(s.tagline || '') + '</div>' +
       '<div class="addr">' + esc(s.address || '') + ' &nbsp;•&nbsp; ' + esc(s.phone || '') +
-      (s.email ? ' &nbsp;•&nbsp; ' + esc(s.email) : '') + '</div></div>' +
+      (s.email ? ' &nbsp;•&nbsp; ' + esc(s.email) : '') + '</div></div>') +
       bodyHTML +
       '<div class="note">' + esc(s.footerNote || '') + ' &nbsp;•&nbsp; Printed: ' + esc(dt(new Date())) + '</div>' +
       '</body></html>');
@@ -378,6 +415,7 @@
   function renderShell(activeKey) {
     var s = session();
     if (!s) return;
+    applyFont();
     var shell = document.getElementById('shell');
     if (!shell) {
       document.body.innerHTML = '';
@@ -425,8 +463,7 @@
     var tbQa = isTech
       ? '<a class="btn btn-sm tb-qab tb-classic" href="#/results">' + icon('clipboard', 14) + '<span class="tb-qa-t">Lab Results</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/tests">' + icon('flask', 14) + '<span class="tb-qa-t">View Tests</span></a>'
-      : '<a class="btn btn-sm tb-qab tb-classic" href="#/billing">' + icon('plus', 14) + '<span class="tb-qa-t">New Bill</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/patients">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
+      : '<a class="btn btn-sm tb-qab tb-classic" href="#/patients">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses">' + icon('wallet', 14) + '<span class="tb-qa-t">Add Expense</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>';
     document.getElementById('topbar').innerHTML =
@@ -609,7 +646,6 @@
   /* ---------------- keyboard shortcuts ----------------
      Ctrl/Cmd+K focuses the current page's search box (non-intrusive:
      ignored when logged out, inside an input, or while a modal is open).
-     "n" jumps to New Bill, but only from the Invoices page.
      Escape already closes modals (see modal()) and the account menu. */
   function _isTyping(t) {
     if (!t) return false;
@@ -645,10 +681,6 @@
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (_isTyping(e.target) || _modalOpen()) return;
-      if ((e.key === 'n' || e.key === 'N') && currentKey() === 'invoices' && can('billing', s.role)) {
-        e.preventDefault();
-        nav('#/billing');
-      }
     });
   }
 
@@ -672,6 +704,7 @@
     badge: badge,
     icon: icon,
     renderShell: renderShell,
+    applyFont: applyFont,
     session: session,
     logout: logout,
     can: can,

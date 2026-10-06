@@ -496,6 +496,15 @@
       + '<div><label class="label">Phone</label><input class="input" id="spPhone" value="' + App.esc(s.phone || '') + '"></div>'
       + '<div><label class="label">Email</label><input class="input" id="spEmail" value="' + App.esc(s.email || '') + '"></div>'
       + '<div><label class="label">Invoice Prefix *</label><input class="input" id="spPref" value="' + App.esc(s.invoicePrefix || 'INV') + '" style="max-width:140px"></div>'
+      + '<div><label class="label">Font</label><select class="select" id="spFont">'
+      + '<option value="inter"' + ((!s.font || s.font === 'inter') ? ' selected' : '') + '>Inter (Default)</option>'
+      + '<option value="jakarta"' + (s.font === 'jakarta' ? ' selected' : '') + '>Plus Jakarta Sans</option>'
+      + '<option value="roboto"' + (s.font === 'roboto' ? ' selected' : '') + '>Roboto</option>'
+      + '<option value="poppins"' + (s.font === 'poppins' ? ' selected' : '') + '>Poppins</option>'
+      + '<option value="opensans"' + (s.font === 'opensans' ? ' selected' : '') + '>Open Sans</option>'
+      + '<option value="lato"' + (s.font === 'lato' ? ' selected' : '') + '>Lato</option>'
+      + '<option value="montserrat"' + (s.font === 'montserrat' ? ' selected' : '') + '>Montserrat</option>'
+      + '</select></div>'
       + '<div style="grid-column:1/-1"><label class="label">Report / Receipt Footer Note</label><input class="input" id="spFoot" value="' + App.esc(s.footerNote || '') + '"></div>'
       + '<div style="grid-column:1/-1"><label class="label">Lab Logo</label>'
       + '<div style="display:flex;align-items:center;gap:14px">'
@@ -504,6 +513,15 @@
       + '<div class="muted" style="font-size:12px;margin-top:6px">Shown on the login page, sidebar and print headers.</div></div>'
       + '<button class="btn btn-ghost" type="button" id="spLogoRm"' + (s.logo ? '' : ' hidden') + '>Remove</button>'
       + '</div></div>'
+      + '<div><label class="label">Website</label><input class="input" id="spWeb" placeholder="www.example.com" value="' + App.esc(s.website || '') + '"></div>'
+      + '<div><label class="label">Call Center Phone</label><input class="input" id="spCall" value="' + App.esc(s.callCenter || '') + '"></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Head Office</label><input class="input" id="spHead" placeholder="Head Office address" value="' + App.esc(s.headOffice || '') + '"></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Main Lab</label><input class="input" id="spMainLab" placeholder="Main Lab address" value="' + App.esc(s.mainLab || '') + '"></div>'
+      + '<div><label class="label">Main Lab Phone</label><input class="input" id="spMainPhone" value="' + App.esc(s.mainLabPhone || '') + '"></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Verification Note</label><textarea class="input" id="spVerNote" rows="2" maxlength="500">' + App.esc(s.verNote || 'Electronically verified report. No signatures necessary.') + '</textarea></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Signatory Doctors <span class="muted" style="font-weight:400">(shown on lab reports)</span></label>'
+      + '<div id="spSigList"></div>'
+      + '<button class="btn btn-ghost" type="button" id="spSigAdd" style="margin-top:8px">+ Add Signatory</button></div>'
       + '</div>'
       + '<div style="margin-top:18px"><button class="btn btn-primary" id="spSave">Save Profile</button></div>';
     document.getElementById('setBody').innerHTML = html;
@@ -549,6 +567,45 @@
       if (_logoInput) _logoInput.value = '';
       _paintLogo();
     });
+    /* signatory doctors: dynamic rows (add / remove) */
+    var _sigList = document.getElementById('spSigList');
+    function _sigRowHTML(sig) {
+      sig = sig || {};
+      return '<div class="sp-sig-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:8px">'
+        + '<input class="input sp-sig-name" placeholder="Name" maxlength="80" value="' + App.esc(sig.name || '') + '">'
+        + '<input class="input sp-sig-qual" placeholder="Qualification" maxlength="80" value="' + App.esc(sig.qual || '') + '">'
+        + '<input class="input sp-sig-title" placeholder="Title (e.g. Consultant Pathologist)" maxlength="80" value="' + App.esc(sig.title || '') + '">'
+        + '<button class="btn btn-ghost sp-sig-rm" type="button" title="Remove signatory">✕</button></div>';
+    }
+    function _syncSigs() {
+      var out = [];
+      if (!_sigList) return out;
+      var rows = _sigList.querySelectorAll('.sp-sig-row');
+      for (var i = 0; i < rows.length; i++) {
+        var nm = rows[i].querySelector('.sp-sig-name'), ql = rows[i].querySelector('.sp-sig-qual'), tt = rows[i].querySelector('.sp-sig-title');
+        var rec = {
+          name: nm ? nm.value.trim() : '',
+          qual: ql ? ql.value.trim() : '',
+          title: tt ? tt.value.trim() : ''
+        };
+        if (rec.name || rec.qual || rec.title) out.push(rec);
+      }
+      return out;
+    }
+    if (_sigList) {
+      _sigList.innerHTML = ((s.signatories && s.signatories.length) ? s.signatories : []).map(_sigRowHTML).join('');
+      /* delegated remove: direct DOM removal keeps other rows' typed values intact */
+      _sigList.addEventListener('click', function (e) {
+        var btn = e.target && e.target.closest ? e.target.closest('.sp-sig-rm') : null;
+        if (!btn) return;
+        var row = btn.closest('.sp-sig-row');
+        if (row && row.parentNode) row.parentNode.removeChild(row);
+      });
+    }
+    var _sigAdd = document.getElementById('spSigAdd');
+    if (_sigAdd) _sigAdd.addEventListener('click', function () {
+      if (_sigList) _sigList.insertAdjacentHTML('beforeend', _sigRowHTML({}));
+    });
     document.getElementById('spSave').addEventListener('click', function () {
       var name = document.getElementById('spName').value.trim();
       var pref = document.getElementById('spPref').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') || 'INV';
@@ -561,10 +618,19 @@
         email: document.getElementById('spEmail').value.trim(),
         invoicePrefix: pref,
         footerNote: document.getElementById('spFoot').value.trim(),
-        logo: _logoData
+        logo: _logoData,
+        website: document.getElementById('spWeb').value.trim(),
+        headOffice: document.getElementById('spHead').value.trim(),
+        mainLab: document.getElementById('spMainLab').value.trim(),
+        callCenter: document.getElementById('spCall').value.trim(),
+        mainLabPhone: document.getElementById('spMainPhone').value.trim(),
+        verNote: document.getElementById('spVerNote').value.trim(),
+        signatories: _syncSigs(),
+        font: document.getElementById('spFont').value
       });
       App.toast('Lab profile saved.');
       if (App.renderShell) App.renderShell();
+      if (App.applyFont) App.applyFont();
     });
   }
 
