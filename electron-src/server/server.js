@@ -75,6 +75,7 @@ function readReleases() {
       minRequired: r.minRequired || VERSION,
       bundleUrl: RELEASE_BUNDLE_URL || r.bundleUrl || '',
       changelog: Array.isArray(r.changelog) ? r.changelog : [],
+      sha256: r.sha256 || null,
     };
   } catch (e) {
     return { latest: VERSION, minRequired: VERSION, bundleUrl: RELEASE_BUNDLE_URL, changelog: [] };
