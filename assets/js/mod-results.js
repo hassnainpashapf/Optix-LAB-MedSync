@@ -1632,10 +1632,9 @@
       }));
     var nRes = cols.length;
 
-    /* column grid: TEST 30% | NORMAL VALUE 22% | UNIT 10% | results share the rest */
-    var resW = (38 / nRes).toFixed(2);
-    var gridCols = '30% 22% 10%';
-    for (var gi = 0; gi < nRes; gi++) gridCols += ' ' + resW + '%';
+    /* column grid: TEST 32% | NORMAL VALUE 24% | UNIT 12% | RESULT fixed 150px */
+    var gridCols = '32% 24% 12%';
+    for (var gi = 0; gi < nRes; gi++) gridCols += ' 150px';
 
     /* section title: "{Name} ({CODE})" — append REPORT unless already present */
     var tName = testName(r);
