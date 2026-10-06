@@ -771,6 +771,55 @@
   };
 
   window.addEventListener('hashchange', render);
+  /* phones: label every table cell with its column title so the card layout (app.css) can show it */
+  (function () {
+    var timer = null;
+    function labelTables() {
+      timer = null;
+      if (window.innerWidth > 640) return;
+      var view = document.getElementById('view');
+      if (!view) return;
+      var tables = view.querySelectorAll('.tbl-wrap table.table');
+      for (var t = 0; t < tables.length; t++) {
+        var tb = tables[t];
+        var ths = tb.querySelectorAll('thead tr:first-child th');
+        if (!ths.length) continue;
+        var labels = [];
+        for (var h = 0; h < ths.length; h++) {
+          var span = parseInt(ths[h].getAttribute('colspan') || '1', 10) || 1;
+          for (var k = 0; k < span; k++) labels.push((ths[h].textContent || '').replace(/\s+/g, ' ').trim());
+        }
+        var rows = tb.querySelectorAll('tbody tr');
+        var lim = Math.min(rows.length, 400);
+        for (var r = 0; r < lim; r++) {
+          var cells = rows[r].children;
+          if (cells.length === 1 && cells[0].hasAttribute('colspan')) continue;
+          for (var c = 0; c < cells.length; c++) {
+            if (!cells[c].hasAttribute('data-label') && labels[c]) cells[c].setAttribute('data-label', labels[c]);
+            /* keep a cell's mixed content (name + phone, badge + text...) together as one value block */
+            if (!cells[c].hasAttribute('data-w') && !/\bactions\b/.test(cells[c].className) && cells[c].childNodes.length > 1) {
+              var cv = document.createElement('span');
+              cv.className = 'cv';
+              while (cells[c].firstChild) cv.appendChild(cells[c].firstChild);
+              cells[c].appendChild(cv);
+              cells[c].setAttribute('data-w', '1');
+            }
+          }
+        }
+      }
+    }
+    function schedule() { if (!timer) timer = setTimeout(labelTables, 60); }
+    function watch() {
+      var view = document.getElementById('view');
+      if (!view || view.__lblObs) return;
+      view.__lblObs = true;
+      new MutationObserver(schedule).observe(view, { childList: true, subtree: true });
+      schedule();
+    }
+    window.addEventListener('hashchange', function () { setTimeout(watch, 0); schedule(); });
+    window.addEventListener('resize', schedule);
+    setInterval(watch, 1500); /* #view is re-created on login/logout */
+  })();
   /* desktop app: small badge showing whether this PC's data has reached the cloud */
   (function () {
     if (!(window.labposDesktop && window.labposDesktop.isDesktop)) return;
