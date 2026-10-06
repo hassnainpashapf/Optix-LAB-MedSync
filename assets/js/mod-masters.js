@@ -353,7 +353,7 @@ function drawTestRows(canEdit) {
     b.addEventListener('click', function () {
       var t = DB.get('tests', b.getAttribute('data-toggle'));
       if (!t) return;
-      DB.update(t.id, { active: !t.active });
+      DB.update('tests', t.id, { active: !t.active });
       App.toast(t.active ? 'Test deactivated.' : 'Test activated.');
       renderTests();
     });
@@ -768,7 +768,7 @@ function testModal(t) {
       };
       if (data.isPackage && !data.includes.length) { App.toast('Select at least one test for the package.', 'err'); return; }
       if (isNew) { DB.insert('tests', data); App.toast('Test added.'); }
-      else { DB.update(t.id, data); App.toast('Test updated.'); }
+      else { DB.update('tests', t.id, data); App.toast('Test updated.'); }
       close();
       renderTests();
     });
@@ -970,7 +970,7 @@ function doctorModal(d) {
         commissionPct: comm
       };
       if (isNew) { DB.insert('doctors', data); App.toast('Doctor added.'); }
-      else { DB.update(d.id, data); App.toast('Doctor updated.'); }
+      else { DB.update('doctors', d.id, data); App.toast('Doctor updated.'); }
       close();
       renderDoctors();
     });

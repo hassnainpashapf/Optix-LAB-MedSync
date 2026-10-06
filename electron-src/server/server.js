@@ -152,6 +152,19 @@ async function main() {
     }
   } catch (e) { console.log('[labpos-cloud] password migration skipped:', e.message); }
 
+  /* tests that have no report parameters (so no normal range would print) get the app's default templates by test code;
+     lab-edited tests are never touched (only empty ones are filled) */
+  if (!DESKTOP) try {
+    const defs = JSON.parse(fs.readFileSync(path.join(__dirname, 'default-params.json'), 'utf8'));
+    let n = 0;
+    for (const t of await store.all('tests')) {
+      if ((!Array.isArray(t.params) || !t.params.length) && defs[t.code] && !t.isPackage) {
+        await store.put('tests', Object.assign({}, t, { params: defs[t.code] })); n++;
+      }
+    }
+    if (n) console.log('[labpos-cloud] default normal ranges added to', n, 'tests');
+  } catch (e) { console.log('[labpos-cloud] default ranges skipped:', e.message); }
+
   /* one-time: rows written before sync existed have no _s cursor, so desktops would never pull them */
   try {
     let n = 0;
