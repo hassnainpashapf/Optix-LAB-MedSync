@@ -3032,77 +3032,41 @@
   App.compareReports = compareReports;
   /* exposed for Lab Profile preview QR */
   App.qrDataUrlFor = qrDataUrlFor;
-  /* sample report preview for Lab Profile settings (uses provided settings, not DB) */
-  /* sample report preview for Lab Profile settings (uses provided settings, not DB).
-     Redesigned demo (worker 18/20): Chughtai-like data exercising the new
-     features — 3 tests in 2 categories (department dividers), 1 abnormal
-     value (Hemoglobin 11.8 g/dL vs 13.0-17.0, auto-detected), 1 per-test
-     Note. `s` passes through untouched so every new setting key flows to
-     reportHtml. */
+  /* Report preview for Lab Profile settings. It shows REAL data (no demo patient/tests): the newest patient report that has
+     results; else the newest invoice's selected tests with empty result cells; else the first active tests of the catalog.
+     `s` = the (possibly unsaved) form settings, merged over the saved ones so every setting flows into reportHtml. */
   App.sampleReportPreview = function (s) {
     s = s || {};
     var now = new Date().toISOString();
-
-    var sampleRows = [
-      {
-        item: { name: 'Complete Blood Count', code: 'CBC', testId: 'sample1' },
-        test: {
-          /* category -> department divider (worker 05 sections convention) */
-          category: 'Haematology',
-          params: [
-            { name: 'Hemoglobin', unit: 'g/dL', ref: '13.0 – 17.0', type: 'number' },
-            { name: 'WBC Count', unit: '/µL', ref: '4,000 – 11,000', type: 'number' },
-            { name: 'Platelets', unit: '/µL', ref: '150,000 – 400,000', type: 'number' }
-          ]
-        },
-        res: {
-          values: { 'Hemoglobin': '11.8', 'WBC Count': '7,500', 'Platelets': '250,000' },
-          /* Abnormal demo: 11.8 g/dL is below the 13.0–17.0 reference range;
-             the report auto-detects it from value + ref (flags kept as hook). */
-          flags: { 'Hemoglobin': 'L' }
-        },
-        invoice: { id: 'preview', no: 'INV-0042' }
-      },
-      {
-        item: { name: 'Serum Electrolytes', code: 'ELEC', testId: 'sample2' },
-        test: {
-          /* second category -> second department divider */
-          category: 'Chemical Pathology',
-          params: [
-            { name: 'Sodium', unit: 'mmol/L', ref: '135 – 145', type: 'number' },
-            { name: 'Potassium', unit: 'mmol/L', ref: '3.5 – 5.5', type: 'number' },
-            { name: 'Chloride', unit: 'mmol/L', ref: '98 – 107', type: 'number' }
-          ]
-        },
-        res: { values: { 'Sodium': '140', 'Potassium': '4.2', 'Chloride': '103' } },
-        invoice: { id: 'preview', no: 'INV-0042' }
-      },
-      {
-        item: { name: 'Blood Sugar (Fasting)', code: 'BSF', testId: 'sample3' },
-        test: {
-          /* same category as above -> no extra divider; groups under it */
-          category: 'Chemical Pathology',
-          params: [
-            { name: 'Glucose', unit: 'mg/dL', ref: '70 – 100', type: 'number' }
-          ]
-        },
-        res: { values: { 'Glucose': '92' } },
-        invoice: { id: 'preview', no: 'INV-0042' }
-      }
-    ];
-
+    var saved = {};
+    try { saved = DB.get('settings', 'main') || {}; } catch (e) {}
+    var merged = Object.assign({}, saved, s);
+    var invs = DB.all('invoices').slice().sort(function (a, b) { return String(b.createdAt || '').localeCompare(String(a.createdAt || '')); });
+    var k, d;
+    /* 1) newest real report with results */
+    for (k = 0; k < invs.length; k++) {
+      try { d = reportData(invs[k].id); } catch (e) { d = null; }
+      if (d && d.readyRows && d.readyRows.length) { d.s = merged; return reportHtml(d); }
+    }
+    /* 2) newest invoice: its selected tests, results not entered yet */
+    var inv = invs.filter(function (i) { return i.items && i.items.length; })[0];
+    var rows, pat, doc;
+    if (inv) {
+      pat = DB.get('patients', inv.patientId) || {};
+      doc = inv.doctorId ? DB.get('doctors', inv.doctorId) : null;
+      rows = inv.items.map(function (it) {
+        return { item: it, test: DB.get('tests', it.testId) || {}, res: { values: {} }, invoice: { id: inv.id, no: inv.no } };
+      });
+    } else {
+      /* 3) nothing billed yet: layout with the first active tests of the catalog */
+      inv = { id: 'preview', no: '', createdAt: now };
+      pat = {}; doc = null;
+      rows = DB.all('tests').filter(function (t) { return t.active !== false && !t.isPackage && t.params && t.params.length; }).slice(0, 3)
+        .map(function (t) { return { item: { name: t.name, code: t.code, testId: t.id }, test: t, res: { values: {} }, invoice: { id: 'preview', no: '' } }; });
+    }
     return reportHtml({
-      inv: { id: 'preview', no: 'INV-0042', createdAt: now },
-      pat: {
-        id: 'P-10042', name: 'Muhammad Ahmad Khan', father: 'Muhammad Ashfaq Khan',
-        age: 42, gender: 'Male', blood: 'B+', cnic: '35202-3456789-1',
-        phone: '0301-4567890', address: 'House 14, Block C, Johar Town, Lahore'
-      },
-      s: s, /* pass-through: all new settings keys flow to reportHtml */
-      doc: { name: 'Dr. Ayesha Raza' },
-      readyRows: sampleRows,
-      pendingCount: 0,
-      maxReported: now
+      inv: inv, pat: pat, s: merged, doc: doc,
+      readyRows: rows, pendingCount: 0, maxReported: now, prevByTest: {}
     });
   };
 })();

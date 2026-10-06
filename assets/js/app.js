@@ -570,8 +570,7 @@
         });
       }
     })();
-    var nt = document.getElementById('navToggle');
-    if (nt) nt.addEventListener('click', function () { document.body.classList.toggle('side-open'); });
+    /* (#navToggle itself is handled by the delegated listener in index.html; a second handler here toggled it twice = menu never opened) */
     /* mobile drawer: close on nav tap, close button, backdrop tap, Escape (delegated once) */
     if (!window.__sideDrawerWired) {
       window.__sideDrawerWired = true;

@@ -1573,7 +1573,7 @@
         App.modal('Report Preview — Full Page', fullHtml, { wide: true, onOpen: function (ov) {
           var pb = ov.querySelector('#spPrevPrint');
           if (pb) pb.addEventListener('click', function () {
-            App.print('Sample Lab Report Preview', html, { noHeader: true });
+            App.print('Lab Report Preview', html, { noHeader: true });
           });
         }});
       });
