@@ -860,7 +860,7 @@
         var bar = document.createElement('div');
         bar.id = 'apkUpdate';
         bar.style.cssText = 'position:fixed;left:10px;right:10px;bottom:14px;z-index:99999;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#131845;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.35);font:600 13.5px/1.35 system-ui,sans-serif';
-        bar.innerHTML = '<div style="flex:1"><b>New app version ' + esc(v.apk.version) + ' available</b><div style="font-weight:500;opacity:.8;font-size:12px">Tap Update, open the downloaded file and press Install.</div></div>' +
+        bar.innerHTML = '<div style="flex:1"><b>New app version ' + esc(v.apk.version) + ' available</b><div style="font-weight:500;opacity:.8;font-size:12px">Tap Update &rarr; Download anyway &rarr; open the file &rarr; Install.</div></div>' +
           '<button id="apkLater" style="border:0;border-radius:9px;padding:9px 11px;background:rgba(255,255,255,.14);color:#fff;font-weight:700">Later</button>' +
           '<button id="apkGo" style="border:0;border-radius:9px;padding:9px 14px;background:#fff;color:#131845;font-weight:800">Update</button>';
         document.body.appendChild(bar);
