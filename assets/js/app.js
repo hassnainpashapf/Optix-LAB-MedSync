@@ -95,6 +95,16 @@
     t.innerHTML = html.trim();
     return t.content.firstChild;
   }
+  /* Normalize a phone number for WhatsApp (wa.me links / UltraMsg):
+     strips separators; PK mobile '0300-1234567'/'03001234567' -> '923001234567';
+     '+923001234567'/'923001234567' stay as-is. Returns '' when empty. */
+  function normWa(num) {
+    var d = String(num || '').replace(/\D/g, '');
+    if (!d) return '';
+    while (d.indexOf('00') === 0) d = d.slice(2); /* strip intl '00' prefix */
+    if (d.charAt(0) === '0') d = '92' + d.slice(1); /* PK mobile: 0xxx -> 92xxx */
+    return d;
+  }
   function money(n) {
     n = Number(n);
     if (!isFinite(n)) n = 0;
@@ -698,6 +708,7 @@
     print: printDoc,
     el: el,
     esc: esc,
+    normWa: normWa,
     empty: empty,
     badge: badge,
     icon: icon,

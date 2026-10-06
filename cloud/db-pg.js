@@ -8,7 +8,7 @@
 'use strict';
 const { Pool } = require('pg');
 
-const TABLES = ['settings', 'users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results'];
+const TABLES = ['settings', 'users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'wa_log'];
 
 async function openStore(connectionString) {
   const pool = new Pool(connectionString ? { connectionString } : {});

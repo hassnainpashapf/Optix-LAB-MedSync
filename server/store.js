@@ -5,7 +5,7 @@ const { DatabaseSync } = require('node:sqlite');
 const fs = require('fs');
 const path = require('path');
 
-const TABLES = ['settings', 'users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results'];
+const TABLES = ['settings', 'users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'wa_log'];
 
 function openStore(dbPath) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });

@@ -154,16 +154,13 @@
 
   /* ---------- WhatsApp helpers ---------- */
   function waPhone(p) {
-    var d = String(p || '').replace(/\D/g, '');
-    if (!d) return null;
-    if (d.charAt(0) === '0') d = '92' + d.slice(1);
-    return d;
+    return App.normWa(p); /* shared helper (app.js) */
   }
   function shareInvoiceWhatsApp(id) {
     var inv = DB.get('invoices', id);
     if (!inv) return;
     var p = patientOf(inv);
-    var ph = waPhone(p && p.phone);
+    var ph = waPhone(p && (p.whatsapp || p.phone)); /* dedicated WhatsApp no., else phone */
     if (!ph) { App.toast('No WhatsApp number on patient record', 'err'); return; }
     var s = DB.get('settings', 'main') || {};
     var tests = (inv.items || []).map(function (it) { return it.name; }).join(', ');

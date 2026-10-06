@@ -848,7 +848,7 @@ function drawDoctorRows() {
     return String(a.name || '').localeCompare(String(b.name || ''));
   }).filter(function (d) {
     if (!q) return true;
-    var h = ((d.name || '') + ' ' + (d.clinic || '') + ' ' + (d.phone || '')).toLowerCase();
+    var h = ((d.name || '') + ' ' + (d.clinic || '') + ' ' + (d.phone || '') + ' ' + (d.whatsapp || '')).toLowerCase();
     return h.indexOf(q) >= 0;
   });
 
@@ -864,7 +864,7 @@ function drawDoctorRows() {
     return '<tr>' +
       '<td><strong>' + App.esc(d.name || '') + '</strong></td>' +
       '<td>' + App.esc(d.clinic || '—') + '</td>' +
-      '<td>' + App.esc(d.phone || '—') + '</td>' +
+      '<td>' + App.esc(d.phone || '—') + (d.whatsapp ? '<div style="font-size:11.5px;color:var(--green)">💬 ' + App.esc(d.whatsapp) + '</div>' : '') + '</td>' +
       '<td style="text-align:right">' + App.esc(String(d.commissionPct == null ? 0 : d.commissionPct)) + '%</td>' +
       '<td style="text-align:right"><strong>' + mine.length + '</strong></td>' +
       '<td style="text-align:right"><strong>' + App.money(comm) + '</strong>' +
@@ -938,13 +938,14 @@ function openCommissionPay(doctorId, dueAmount) {
 
 function doctorModal(d) {
   var isNew = !d;
-  d = d || { name: '', clinic: '', phone: '', commissionPct: 10 };
+  d = d || { name: '', clinic: '', phone: '', whatsapp: '', commissionPct: 10 };
 
   var body =
     '<form id="dm-form"><div class="form-grid">' +
       '<div><label class="label">Doctor Name *</label><input id="dm-name" class="input" value="' + App.esc(d.name || '') + '" placeholder="e.g. Dr. Ahmed Khan" required></div>' +
       '<div><label class="label">Clinic / Hospital</label><input id="dm-clinic" class="input" value="' + App.esc(d.clinic || '') + '"></div>' +
       '<div><label class="label">Phone</label><input id="dm-phone" class="input" value="' + App.esc(d.phone || '') + '" placeholder="03xx-xxxxxxx"></div>' +
+      '<div><label class="label">WhatsApp No.</label><input id="dm-wa" class="input" value="' + App.esc(d.whatsapp || '') + '" placeholder="03xxxxxxxxx"></div>' +
       '<div><label class="label">Commission % *</label><input id="dm-comm" class="input" type="number" min="0" max="100" step="0.5" value="' + App.esc(String(d.commissionPct == null ? '' : d.commissionPct)) + '" required></div>' +
     '</div>' +
     '<div style="margin-top:18px;display:flex;justify-content:flex-end;gap:10px">' +
@@ -965,6 +966,7 @@ function doctorModal(d) {
         name: name,
         clinic: m.querySelector('#dm-clinic').value.trim(),
         phone: m.querySelector('#dm-phone').value.trim(),
+        whatsapp: m.querySelector('#dm-wa').value.trim(),
         commissionPct: comm
       };
       if (isNew) { DB.insert('doctors', data); App.toast('Doctor added.'); }

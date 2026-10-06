@@ -1647,8 +1647,8 @@
     var boxHtml = cols.map(function (c) {
       return '<div style="border:2px solid #131845;background:#eef2ff;text-align:center;' +
         'padding:2px 8px;line-height:1.1;font-size:0.65em;display:inline-flex;flex-direction:column;justify-content:center;align-items:center;border-radius:6px">' +
-        '<div style="font-weight:700;color:#131845;font-size:0.8em">RESULT</div>' +
         '<div style="margin:1px 0">' + barcodeHtml(invNo) + '</div>' +
+        '<div style="font-weight:700;color:#131845;font-size:0.8em">RESULT</div>' +
         '<div style="font-weight:700;color:#131845;font-size:0.75em">' + App.esc(invNo) + '</div>' +
         '<div style="font-size:0.7em;color:#131845">' +
           App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +

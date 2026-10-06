@@ -46,10 +46,11 @@
     '.ptf-phone-wrap .wa-btn{flex:0 0 auto}' +
     '</style>';
   function waNumber(phone) {
-    var d = String(phone || '').replace(/\D/g, '');
-    if (!d) return '';
-    if (d.charAt(0) === '0') d = '92' + d.slice(1); /* PK mobile: 0xxx -> 92xxx */
-    return d;
+    return App.normWa(phone); /* shared helper (app.js) */
+  }
+  /* Number a WhatsApp send should go to: dedicated whatsapp field, else phone. */
+  function waTarget(p) {
+    return (p && (p.whatsapp || p.phone)) || '';
   }
   function waBtn(phone, title) {
     var d = waNumber(phone);
@@ -185,8 +186,12 @@
       '</div>' +
       '<div class="form-row"><label class="label" for="ptf-phone">Phone</label>' +
       '<div class="ptf-phone-wrap"><input class="input" id="ptf-phone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + val('phone') + '">' +
-      '<span id="ptf-wa">' + waBtn(val('phone'), 'Chat on WhatsApp') + '</span></div>' +
+      '<span id="ptf-wa">' + waBtn(waTarget(p), 'Chat on WhatsApp') + '</span></div>' +
       '<div class="f-err" id="ptf-e-phone"></div></div>' +
+      '<div class="form-row"><label class="label" for="ptf-whatsapp">WhatsApp No.</label>' +
+      '<div class="ptf-phone-wrap"><input class="input" id="ptf-whatsapp" maxlength="20" placeholder="03xxxxxxxxx" value="' + val('whatsapp') + '">' +
+      '<span id="ptf-wa2">' + waBtn(waTarget(p), 'Chat on WhatsApp') + '</span></div>' +
+      '<div class="f-err" id="ptf-e-whatsapp"></div></div>' +
       '<div class="form-2col">' +
       '<div class="form-row"><label class="label" for="ptf-phone2">Alternate Phone</label>' +
       '<input class="input" id="ptf-phone2" maxlength="20" placeholder="e.g. 0321-7654321" value="' + val('phone2') + '"></div>' +
@@ -316,6 +321,14 @@
         checkDuplicate();
       });
     }
+    // live-update the WhatsApp button next to the WhatsApp field (falls back to phone)
+    var waInput = document.getElementById('ptf-whatsapp');
+    var waWrap2 = document.getElementById('ptf-wa2');
+    if (waInput && waWrap2) {
+      waInput.addEventListener('input', function () {
+        waWrap2.innerHTML = waBtn(waInput.value || (phoneInput ? phoneInput.value : ''), 'Chat on WhatsApp');
+      });
+    }
     // duplicate detection: warn if CNIC or phone matches an existing patient
     var cnicInput = document.getElementById('ptf-cnic');
     var dupWarn = document.createElement('div');
@@ -381,6 +394,7 @@
       var ageRaw = document.getElementById('ptf-age').value.trim();
       var gender = document.getElementById('ptf-gender').value;
       var phone = document.getElementById('ptf-phone').value.trim();
+      var whatsapp = document.getElementById('ptf-whatsapp').value.trim();
       var address = document.getElementById('ptf-address').value.trim();
       var father = document.getElementById('ptf-father').value.trim();
       var dob = document.getElementById('ptf-dob').value;
@@ -394,15 +408,16 @@
       var doctorId = document.getElementById('ptf-doctor').value || null;
       var notes = document.getElementById('ptf-notes').value.trim();
       var ok = true;
-      setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-phone', ''); setErr('ptf-e-email', '');
+      setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-phone', ''); setErr('ptf-e-email', ''); setErr('ptf-e-whatsapp', '');
       if (name.length < 2) { setErr('ptf-e-name', 'Please enter the full name.'); ok = false; }
       var age = parseInt(ageRaw, 10);
       if (!ageRaw || isNaN(age) || age < 1 || age > 120) { setErr('ptf-e-age', 'Enter a valid age (1–120).'); ok = false; }
       if (!gender) { setErr('ptf-e-gender', 'Please select gender.'); ok = false; }
       if (phone && !/^[+\d][\d\s\-()]{5,19}$/.test(phone)) { setErr('ptf-e-phone', 'Enter a valid phone number.'); ok = false; }
+      if (whatsapp && !/^[+\d][\d\s\-()]{5,19}$/.test(whatsapp)) { setErr('ptf-e-whatsapp', 'Enter a valid WhatsApp number.'); ok = false; }
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErr('ptf-e-email', 'Enter a valid email address.'); ok = false; }
       if (!ok) return;
-      var data = { name: name, age: age, gender: gender, phone: phone, address: address,
+      var data = { name: name, age: age, gender: gender, phone: phone, whatsapp: whatsapp, address: address,
         father: father, dob: dob, cnic: cnic, phone2: phone2, email: email, city: city,
         blood: blood, ecName: ecName, ecPhone: ecPhone, doctorId: doctorId, notes: notes };
       if (existing && existing.id) {
@@ -488,7 +503,7 @@
       '<td><a class="pt-name" href="#/patient/' + App.esc(p.id) + '">' + avatarHTML(p.name, 34) +
       '<span><strong>' + App.esc(p.name) + '</strong><small>' + App.esc(p.phone || '—') + '</small></span></a></td>' +
       '<td>' + App.esc(p.age) + ' yrs · ' + App.esc(p.gender) + '</td>' +
-      '<td>' + App.esc(p.phone || '—') + (p.phone ? ' ' + waBtn(p.phone, 'Chat on WhatsApp') : '') + '</td>' +
+      '<td>' + App.esc(p.phone || '—') + ((p.whatsapp || p.phone) ? ' ' + waBtn(waTarget(p), 'Chat on WhatsApp') : '') + '</td>' +
       '<td class="muted">' + App.esc(regDate || '—') + '</td>' +
       '<td class="num">' + st.visits + '</td>' +
       '<td class="num">' + App.money(st.spent) + '</td>' +
@@ -650,12 +665,13 @@
       '<div class="pt-id-block"><h2>' + App.esc(p.name) + ' <span class="badge b-id mono">' + App.esc(p.id) + '</span></h2>' +
       '<div class="pt-meta">' +
       '<span>🎂 ' + App.esc(p.age) + ' years</span><span>⚧ ' + App.esc(p.gender) + '</span>' +
-      '<span>📞 ' + App.esc(p.phone || '—') + ' ' + (p.phone ? waBtn(p.phone, 'Chat on WhatsApp') : '') + '</span>' +
+      '<span>📞 ' + App.esc(p.phone || '—') + ' ' + ((p.whatsapp || p.phone) ? waBtn(waTarget(p), 'Chat on WhatsApp') : '') + '</span>' +
       (p.father ? '<span>👤 ' + App.esc(p.father) + '</span>' : '') +
       (p.dob ? '<span>🎂 ' + App.esc(p.dob) + '</span>' : '') +
       (p.blood ? '<span>🩸 ' + App.esc(p.blood) + '</span>' : '') +
       (p.cnic ? '<span>🪪 ' + App.esc(p.cnic) + '</span>' : '') +
       (p.phone2 ? '<span>📞 ' + App.esc(p.phone2) + ' (alt)</span>' : '') +
+      (p.whatsapp ? '<span>💬 ' + App.esc(p.whatsapp) + ' ' + waBtn(p.whatsapp, 'Chat on WhatsApp') + '</span>' : '') +
       (p.email ? '<span>📧 ' + App.esc(p.email) + '</span>' : '') +
       (p.city ? '<span>🏙 ' + App.esc(p.city) + '</span>' : '') +
       ((p.ecName || p.ecPhone) ? '<span>🆘 ' + App.esc([p.ecName, p.ecPhone].filter(Boolean).join(' • ')) + '</span>' : '') +
