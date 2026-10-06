@@ -41,8 +41,8 @@
       return !!(s && s.role === 'technician');
     } catch (e) { return false; }
   }
-  function scCard(icon, tint, label, value, sub) {
-    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
+  function scCard(icon, tint, label, value, sub, full) {
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')' + (full ? ';background:var(--' + tint + '-soft);border-color:transparent' : '') + '">' +
       '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
       '<div class="lb">' + App.esc(label) + '</div>' +
       '<div class="vl">' + value + '</div>' +
@@ -343,16 +343,16 @@
     var bTestsToday = bTodayInv.reduce(function (s, i) { return s + ((i.items && i.items.length) || 0); }, 0);
     var billStats =
       scCard(SC_ICONS.doc, 'brand', "Today's Bills", String(bTodayInv.length),
-        bTodayInv.length === 1 ? 'bill created today' : 'bills created today') +
+        bTodayInv.length === 1 ? 'bill created today' : 'bills created today', true) +
       scCard(SC_ICONS.cash, 'green', "Today's Billed",
         isTech ? String(bTodayInv.length) : App.money(bTodayBilled),
-        isTech ? 'bills created today' : 'billed value today') +
+        isTech ? 'bills created today' : 'billed value today', true) +
       scCard(SC_ICONS.cal, 'blue', 'This Month Billed',
         isTech ? String(bMonthInv.length) : App.money(bMonthBilled),
-        isTech ? 'invoices this month' : 'billed value this month') +
+        isTech ? 'invoices this month' : 'billed value this month', true) +
       scCard(SC_ICONS.trend, 'amber', 'Avg Bill Today',
         isTech ? String(bTestsToday) : App.money(bAvgToday),
-        isTech ? 'tests billed today' : 'per bill average');
+        isTech ? 'tests billed today' : 'per bill average', true);
 
     view.innerHTML =
     SC_STYLE +
