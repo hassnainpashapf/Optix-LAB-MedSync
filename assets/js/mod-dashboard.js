@@ -606,6 +606,10 @@
       '.dbd-plain .dbd-legs{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 10px;margin:8px auto 0;max-width:180px}' +
       '.dbd-plain .dbd-leg{display:inline-flex;align-items:center;font-size:10.5px;color:#8a94a6;font-weight:600;white-space:nowrap}' +
       '.dbd-plain .dbd-dot{width:9px;height:9px;border-radius:3px;margin-right:4px;flex:none}' +
+      '.dbd-card{background:#fff;border:1px solid #eef3fa;border-radius:20px;box-shadow:0 18px 45px rgba(11,23,64,.10);padding:20px 14px;margin-bottom:18px}' +
+      '.dbd-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}' +
+      '@media(max-width:1100px){.dbd-row{grid-template-columns:repeat(2,1fr)}}' +
+      '@media(max-width:560px){.dbd-row{grid-template-columns:repeat(2,1fr)}}' +
       '@media(max-width:560px){.dbd-plain .dbd-amt{font-size:14px}}' +
       '</style>';
 
@@ -692,7 +696,7 @@
     '</style>' +
 
     donutCss +
-    '<div class="stat-grid">' + stats + '</div>' +
+    '<div class="dbd-card"><div class="dbd-row">' + stats + '</div></div>' +
 
     widgets +
     advSection +

@@ -34,12 +34,12 @@
   /* ---------------- nav + permissions ---------------- */
   var NAV = [
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard' },
-    { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests' },
+    { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients' },
     { key: 'billing',   label: 'New Bill',   icon: 'receipt',   route: '#/billing' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices' },
     { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues' },
-    { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients' },
+    { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests' },
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses' },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports' },
