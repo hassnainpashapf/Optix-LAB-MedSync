@@ -7,6 +7,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 const { wrapStore, sameRecord, DEL } = require('./sync-store');
 
 const VERSION = require('./package.json').version;
@@ -200,6 +201,22 @@ async function main() {
     next();
   });
   app.disable('x-powered-by');
+  /* gzip JSON API responses (the full dump with thousands of tests is ~2 MB) */
+  app.use((req, res, next) => {
+    if (!req.path.startsWith('/api/') || !/\bgzip\b/.test(req.get('Accept-Encoding') || '')) return next();
+    const orig = res.json.bind(res);
+    res.json = (obj) => {
+      const buf = Buffer.from(JSON.stringify(obj));
+      if (buf.length < 1500) return orig(obj);
+      zlib.gzip(buf, (e, z) => {
+        if (e) return orig(obj);
+        res.set({ 'Content-Encoding': 'gzip', 'Vary': 'Accept-Encoding' });
+        res.type('json').send(z);
+      });
+      return res;
+    };
+    next();
+  });
 
   const okTable = (t) => TABLES.includes(t);
 

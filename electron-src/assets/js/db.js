@@ -74,15 +74,19 @@
   function clearSession() { try { localStorage.removeItem(SESS_KEY); } catch (e) {} }
   function fireAuthError() { try { if (window.DB && typeof window.DB.onAuthError === 'function') window.DB.onAuthError(); } catch (e) {} }
   function fireWriteError(msg) { try { if (window.DB && typeof window.DB.onWriteError === 'function') window.DB.onWriteError(msg); } catch (e) {} }
+  var unreachable = false; /* the configured server did not answer (slow / offline): keep the session, offer Retry */
   function loadDump() {
-    return window.fetch(API + '/api/dump', { cache: 'no-store', headers: authHeaders() }).then(function (r) {
+    var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var to = ctl ? setTimeout(function () { ctl.abort(); }, 60000) : null;
+    return window.fetch(API + '/api/dump', { cache: 'no-store', headers: authHeaders(), signal: ctl ? ctl.signal : undefined }).then(function (r) {
+      if (to) clearTimeout(to);
       if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; }
       if (!r.ok) throw new Error('dump failed');
       return r.json();
     }).then(function (dump) {
       if (!dump || !dump.settings || !dump.seq) throw new Error('bad dump');
       return dump;
-    });
+    }, function (e) { if (to) clearTimeout(to); throw e; });
   }
   function apiWrite(method, table, id, body) {
     if (!remote || !API) return;
@@ -607,15 +611,16 @@
       var base = null;
       try { base = window.LABPOS_API || null; } catch (e) {}
       if (!base || !window.fetch) return Promise.resolve(false);
-      API = base;
+      API = base; unreachable = false;
       return loadDump().then(function (dump) {
         store = dump; remote = true;
         if (sessToken()) cloud = true; /* valid token = token-auth cloud API; no token = open desktop server */
         return true;
       }).catch(function (err) {
+        cloud = true; remote = false;
         if (err && err.auth) {
           /* token-auth cloud API: no valid session -> login page, data loads after sign-in */
-          cloud = true; remote = false; clearSession();
+          clearSession();
           return window.fetch(API + '/api/public-info').then(function (r) { return r.ok ? r.json() : null; }).then(function (info) {
             if (info && info.labName) {
               store.settings.labName = info.labName;
@@ -625,12 +630,13 @@
             return true;
           }).catch(function () { return true; });
         }
-        /* server configured but unreachable (offline / VPS down): do NOT fall back to the local demo store.
-           Show the login page; sign-in then reports 'cannot reach the server' and works once it is back. */
-        cloud = true; remote = false; clearSession();
+        /* server configured but slow / unreachable: never fall back to the local demo store and NEVER drop a valid session
+           just because the network is slow — the app shows "Retry" (or the login page when nobody is signed in). */
+        unreachable = true;
         return true;
       });
     },
+    isUnreachable: function () { return unreachable; },
     isRemote: function () { return remote; },
     isCloud: function () { return cloud; },
     /* Server-side login (cloud mode). Resolves {user, token}; rejects with a user-facing message. */

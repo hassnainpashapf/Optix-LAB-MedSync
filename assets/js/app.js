@@ -936,9 +936,38 @@
   }
   /* Load server data first when running under the LabPOS server/Electron app.
      Falls back to local boot after 3.5s no matter what (never a blank page). */
-  try {
-    var p = (window.DB && DB.init) ? DB.init() : Promise.resolve(false);
-    p.then(boot, boot);
-    setTimeout(boot, 3500);
-  } catch (e) { boot(); }
+  function bootSplash(on, msg, retry) {
+    var el = document.getElementById('bootSplash');
+    if (!on) { if (el) el.remove(); return; }
+    if (!el) {
+      el = document.createElement('div'); el.id = 'bootSplash';
+      el.style.cssText = 'position:fixed;inset:0;z-index:100001;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:linear-gradient(135deg,#131845,#1e2a6b 60%,#5392ba);color:#fff;font:600 15px system-ui,sans-serif;text-align:center;padding:24px';
+      document.body.appendChild(el);
+    }
+    el.innerHTML = (retry ? '' : '<div style="width:38px;height:38px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:bsSpin .8s linear infinite"></div>') +
+      '<div>' + msg + '</div>' +
+      (retry ? '<button id="bsRetry" style="border:0;border-radius:12px;padding:12px 26px;font-weight:800;background:#fff;color:#131845;font-size:15px">Retry</button>' : '') +
+      '<style>@keyframes bsSpin{to{transform:rotate(360deg)}}</style>';
+    if (retry) document.getElementById('bsRetry').onclick = function () { start(); };
+  }
+  /* Server configured (web / Android / desktop): wait for the data instead of guessing after 3.5s — a slow connection used to
+     boot with no data and sign the user out on reload. Without a server (plain local mode) boot as before. */
+  function start() {
+    try {
+      if (!(window.DB && DB.init)) { boot(); return; }
+      var hasApi = !!window.LABPOS_API;
+      if (hasApi) bootSplash(true, 'Loading your lab data…');
+      var t = hasApi ? null : setTimeout(boot, 3500);
+      DB.init().then(function () {
+        if (t) clearTimeout(t);
+        if (hasApi && DB.isUnreachable && DB.isUnreachable() && session()) {
+          bootSplash(true, 'Cannot reach the server.<br><span style="font-weight:500;opacity:.8;font-size:13px">You are still signed in. Check your internet connection and try again.</span>', true);
+          return;
+        }
+        bootSplash(false);
+        boot();
+      }, function () { if (t) clearTimeout(t); bootSplash(false); boot(); });
+    } catch (e) { boot(); }
+  }
+  start();
 })();
