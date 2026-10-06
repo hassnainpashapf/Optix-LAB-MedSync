@@ -1587,7 +1587,7 @@
         '<div class="rpt-sigs" style="display:flex;justify-content:space-between;gap:10px;margin:10px 0 8px">' +
           sigs.map(function (g) {
             return '<div class="rpt-sig" style="flex:1;text-align:left">' +
-              '<div style="font-weight:700;font-size:0.9em;border-bottom:1px solid #000;padding-bottom:4px;margin-bottom:4px">' + App.esc(g.name) + '</div>' +
+              '<div style="font-weight:700;font-size:0.9em">' + App.esc(g.name) + '</div>' +
               (g.qual ? '<div style="font-size:0.78em">' + App.esc(g.qual) + '</div>' : '') +
               (g.title ? '<div style="font-size:0.78em">' + App.esc(g.title) + '</div>' : '') +
             '</div>';
