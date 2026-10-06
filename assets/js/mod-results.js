@@ -1324,35 +1324,17 @@
         '</div>';
     }
 
-    /* RESULT box (right side, ~110px, top-aligned with grey bar) */
-    var bcHtml = '';
-    if (showBarcode) {
-      bcHtml = '<div style="margin:4px 6px 2px">' + barcodeHtml(String(caseNo)) + '</div>';
-    }
-    var resultBoxHtml =
-      '<div class="rpt-resultbox" style="width:110px;flex:none;border:1px solid #000">' +
-        '<div style="background:#A9A9A9;border-bottom:1px solid #000;' +
-          'font-weight:700;font-size:0.96em;text-align:center;color:#000;' +
-          'padding:2px 0">RESULT</div>' +
-        bcHtml +
-        '<div style="text-align:center;font-size:0.88em;padding:2px 2px 0">' +
-          App.esc(String(caseNo)) + '</div>' +
-        '<div style="text-align:center;font-size:0.88em;padding:0 2px 4px">' +
-          App.esc(ts) + '</div>' +
-      '</div>';
+    /* RESULT box removed per user request — QR code in header covers verification */
 
-    /* assemble: title, then flex row (bar+rows left, box right) */
+    /* assemble: title, then full-width table */
     return '<div class="rpt-section" style="margin:14px 0 4px">' +
       '<div style="font-weight:700;font-size:1.2em;color:#000;margin:0 0 4px">' +
         App.esc(testName(r)) +
       '</div>' +
-      '<div style="display:flex;align-items:flex-start;gap:6px">' +
-        '<div style="flex:1;min-width:0">' +
-          barHtml +
-          rowsHtml +
-          remarksHtml +
-        '</div>' +
-        resultBoxHtml +
+      '<div>' +
+        barHtml +
+        rowsHtml +
+        remarksHtml +
       '</div>' +
     '</div>';
   }

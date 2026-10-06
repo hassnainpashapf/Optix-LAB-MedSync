@@ -524,7 +524,6 @@
       + '<option value="large"' + (s.reportFontSize === 'large' ? ' selected' : '') + '>Large</option>'
       + '</select></div>'
       + '<div><label class="label" for="spShowQr">Show QR Code</label><input type="checkbox" id="spShowQr"' + (s.showQr === false ? '' : ' checked') + ' style="width:20px;height:20px;accent-color:var(--brand)"></div>'
-      + '<div><label class="label" for="spShowBarcode">Show Barcode in RESULT box</label><input type="checkbox" id="spShowBarcode"' + (s.showBarcode === false ? '' : ' checked') + ' style="width:20px;height:20px;accent-color:var(--brand)"></div>'
       + '<div><label class="label" for="spShowTagline">Show Tagline</label><input type="checkbox" id="spShowTagline"' + (s.showTagline === false ? '' : ' checked') + ' style="width:20px;height:20px;accent-color:var(--brand)"></div>'
       + '<div style="grid-column:1/-1"><label class="label">Report / Receipt Footer Note</label><input class="input" id="spFoot" value="' + App.esc(s.footerNote || '') + '"></div>'
       + '<div style="grid-column:1/-1"><label class="label">Lab Logo</label>'
@@ -662,7 +661,6 @@
         reportTitle: document.getElementById('spReportTitle').value.trim(),
         accent: document.getElementById('spAccent').value,
         showQr: document.getElementById('spShowQr').checked,
-        showBarcode: document.getElementById('spShowBarcode').checked,
         showTagline: document.getElementById('spShowTagline').checked,
         reportFontSize: document.getElementById('spFontSize').value,
         headerHtml: document.getElementById('spHeadHtml').value.trim(),
@@ -685,7 +683,7 @@
         mainLab: gv('spMainLab'), callCenter: gv('spCall'), mainLabPhone: gv('spMainPhone'),
         verNote: gv('spVerNote'), signatories: _syncSigs(), font: gv('spFont'),
         reportTitle: gv('spReportTitle'), accent: gv('spAccent'),
-        showQr: gc('spShowQr'), showBarcode: gc('spShowBarcode'), showTagline: gc('spShowTagline'),
+        showQr: gc('spShowQr'), showTagline: gc('spShowTagline'),
         reportFontSize: gv('spFontSize'),
         headerHtml: gv('spHeadHtml'), footerHtml: gv('spFootHtml')
       };
