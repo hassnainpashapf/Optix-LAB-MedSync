@@ -106,7 +106,7 @@
       if ($('blDisc')) $('blDisc').textContent = '− ' + App.money(t.discAmt);
       if ($('blTotal')) $('blTotal').textContent = App.money(t.total);
       if ($('blCount')) $('blCount').textContent = state.cart.length + (state.cart.length === 1 ? ' test' : ' tests');
-      if (!state.tenderDirty && $('blTendered')) $('blTendered').value = t.total > 0 ? t.total : '';
+      if (!state.tenderDirty && $('blTendered')) { $('blTendered').value = t.total > 0 ? t.total : ''; state.tendered = t.total; }
       var cr = $('blChangeRow');
       if (cr) {
         if (t.change > 0) {
