@@ -118,7 +118,9 @@
         }
       }
       var sb = $('blSave');
-      if (sb) sb.disabled = !(state.patient && state.cart.length);
+      /* never fully disable: a dead button gives zero feedback. The idle look
+         hints it's not ready; saveBill() toasts exactly what's missing. */
+      if (sb) sb.classList.toggle('is-idle', !(state.patient && state.cart.length));
     }
 
     /* ---------- patient panel ---------- */
@@ -409,7 +411,7 @@
     '.bl-disc-wrap .input{flex:1}' +
     '.bl-modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}' +
     '.bl-save{width:100%;padding:14px;font-size:15.5px;margin-top:12px}' +
-    '.bl-save:disabled{opacity:.45;cursor:not-allowed}' +
+    '.bl-save.is-idle{opacity:.45}' +
     '@media(max-width:1180px){.bl-pos{grid-template-columns:1fr 1fr}.bl-pos .bl-col-summary{grid-column:1/-1}}' +
     '@media(max-width:760px){.bl-pos{grid-template-columns:1fr}}' +
     '</style>' +
@@ -456,7 +458,7 @@
         '<div class="bl-sec"><label class="label">Amount tendered</label>' +
         '<input class="input" id="blTendered" type="number" min="0" placeholder="0"></div>' +
         '<div class="bl-row" id="blChangeRow" style="margin-top:6px"></div>' +
-        '<button class="btn btn-primary bl-save" id="blSave" disabled>' + PRINT_ICON + ' Save &amp; Print</button>' +
+        '<button class="btn btn-primary bl-save" id="blSave">' + PRINT_ICON + ' Save &amp; Print</button>' +
         '<button class="btn btn-ghost" id="blClear" style="width:100%;margin-top:8px">Clear Bill</button>' +
       '</div></div>' +
     '</div>';
