@@ -1347,6 +1347,16 @@
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#fff;color:#000;margin-top:-8px">' +
         leftHtml +
         rightHtml +
+      '</div>' +
+      '<div style="margin-top:8px;padding:6px 0;border-top:1px solid #000;border-bottom:1px solid #000;text-align:center;color:#000">' +
+        '<div style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap;font-size:0.75em;line-height:1.4">' +
+          '<div><div style="font-weight:700">DR. AAFRINISH AMANAT</div><div>MBBS, M.Phil (Histopathology)</div><div>Consultant Pathologist</div></div>' +
+          '<div><div style="font-weight:700">DR. YUMNA KHAN</div><div>B.Sc, MBBS, FCPS, RMP</div><div>&nbsp;</div></div>' +
+          '<div><div style="font-weight:700">ABDAL INAM UL HAQ KHANZADA</div><div>M.Phil (Microbiology)</div><div>Lab Technologist</div></div>' +
+          '<div><div style="font-weight:700">ABDUL WAHEED KHANZADA</div><div>MA, MLT (AFIP)</div><div>Lab Technologist</div></div>' +
+        '</div>' +
+        '<div style="margin-top:4px;font-size:0.7em">Main Road, Gulberg, Lahore | Phone: 0300-1234567 | Email: info@citybloodlab.pk</div>' +
+        '<div style="margin-top:4px;font-size:0.6em;line-height:1.4;text-align:justify">NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.</div>' +
       '</div>'
     );
   }
