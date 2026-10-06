@@ -1594,22 +1594,20 @@
           }).join('') + '</div>';
     }
 
-    /* 4: address block, centered bold-ish — always show lab address + contact */
-    var addrLines = [];
-    if (s.address) addrLines.push(s.address);
-    if (s.headOffice) addrLines.push('Head Office: ' + s.headOffice);
-    if (s.mainLab) addrLines.push('Previous Lab: ' + s.mainLab);
-    var contactParts = [];
-    if (s.phone) contactParts.push('Phone: ' + s.phone);
-    if (s.callCenter) contactParts.push('Call Center: ' + s.callCenter);
-    if (s.website) contactParts.push('Web: ' + s.website);
-    if (s.email) contactParts.push('Email: ' + s.email);
-    if (contactParts.length) addrLines.push(contactParts.join('   '));
+    /* 4: address block, centered bold-ish — all in ONE row */
+    var addrParts = [];
+    if (s.address) addrParts.push(s.address);
+    if (s.headOffice) addrParts.push('Head Office: ' + s.headOffice);
+    if (s.mainLab) addrParts.push('Previous Lab: ' + s.mainLab);
+    if (s.phone) addrParts.push('Phone: ' + s.phone);
+    if (s.callCenter) addrParts.push('Call Center: ' + s.callCenter);
+    if (s.website) addrParts.push('Web: ' + s.website);
+    if (s.email) addrParts.push('Email: ' + s.email);
     var addrHtml = '';
-    if (addrLines.length) {
+    if (addrParts.length) {
       addrHtml =
         '<div style="text-align:center;font-weight:600;font-size:0.85em;line-height:1.6;margin:6px 0">' +
-          addrLines.map(function (l) { return '<div>' + App.esc(l) + '</div>'; }).join('') +
+          App.esc(addrParts.join('   |   ')) +
         '</div>';
     }
 
