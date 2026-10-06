@@ -143,7 +143,7 @@
         phone: '0300-1234567',
         email: 'info@citybloodlab.pk',
         invoicePrefix: 'INV',
-        footerNote: 'Get well soon. Reports available on counter & phone.',
+        footerNote: '',
         currency: 'PKR',
         whatsapp: { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' },
         signatories: [

@@ -1522,8 +1522,10 @@
         '</div>';
     }
 
-    /* 5: disclaimer box */
-    var disc = s.disclaimer || s.footerNote ||
+    /* 5: disclaimer box — skip the old "Get well soon" default footer note */
+    var _fn = s.footerNote;
+    if (_fn === 'Get well soon. Reports available on counter & phone.') _fn = '';
+    var disc = s.disclaimer || _fn ||
       'NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.';
     var discHtml =
       '<div class="rpt-disc" style="border:1px solid #000;padding:6px 8px;font-size:0.72em;line-height:1.5;margin:8px 0 0">' +
@@ -1649,7 +1651,7 @@
         ? '<p style="color:#000;font-size:0.96em;margin:10px 0"><em>Note: ' +
           pendingCount + ' test(s) from this invoice are still pending.</em></p>'
         : '') +
-      (s.footerNote
+      (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.'
         ? '<p style="color:#000;margin-top:18px;margin-bottom:4px;font-size:0.92em"><em>' +
           App.esc(s.footerNote) + '</em></p>'
         : '') +
