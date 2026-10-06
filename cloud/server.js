@@ -351,6 +351,18 @@ async function main() {
     } else { delete b.password; if (!existing) throw new Error('Password required for a new user'); }
     return b;
   }
+  /* batched upsert (imports / bulk price updates). users + settings keep their dedicated, guarded routes */
+  app.post('/api/bulk/:table', tableGuard, async (req, res) => {
+    const t = req.params.table;
+    if (t === 'users' || t === 'settings') return res.status(400).json({ error: 'not allowed for ' + t });
+    const rows = req.body && req.body.rows;
+    if (!Array.isArray(rows) || rows.length > 2000) return res.status(400).json({ error: 'rows[] required (max 2000)' });
+    try {
+      let n = 0;
+      for (const r of rows) { if (r && r.id != null) { await store.put(t, r); n++; } }
+      res.json({ ok: true, saved: n });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
   app.get('/api/:table', tableGuard, async (req, res) => {
     const rows = await store.all(req.params.table);
     res.json(req.params.table === 'users' ? rows.map(stripUser) : rows);

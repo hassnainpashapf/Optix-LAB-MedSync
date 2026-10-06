@@ -112,6 +112,38 @@
     } catch (e) { inflight--; }
   }
 
+  /* bulk writes (CSV / 5000-test catalog import, price updates): rows are queued per table and sent
+     as a few batched requests instead of thousands of single ones */
+  var bulkQ = {}, bulkTimer = null;
+  function bulkWrite(table, row) {
+    if (!remote || !API) return;
+    (bulkQ[table] = bulkQ[table] || []).push(row);
+    if (!bulkTimer) bulkTimer = setTimeout(flushBulk, 60);
+  }
+  function flushBulk() {
+    bulkTimer = null;
+    var q = bulkQ; bulkQ = {};
+    Object.keys(q).forEach(function (table) {
+      var rows = q[table];
+      for (var i = 0; i < rows.length; i += 400) {
+        (function (chunk) {
+          inflight++;
+          fetch(API + '/api/bulk/' + table, {
+            method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ rows: chunk })
+          }).then(function (r) {
+            inflight--;
+            if (r.ok) return;
+            if (r.status === 401) { fireAuthError(); return; }
+            return r.json().catch(function () { return {}; }).then(function (j) {
+              fireWriteError((j && j.error) || ('Server rejected the import (' + r.status + ')'));
+            });
+          }).catch(function () { inflight--; fireWriteError('Could not reach the server — the import was NOT saved.'); });
+        })(rows.slice(i, i + 400));
+      }
+    });
+  }
+
   var ID_CONF = {
     users:    { prefix: 'U',  digits: 2 },
     doctors:  { prefix: 'D',  digits: 2 },
@@ -657,6 +689,20 @@
       (store[table] = store[table] || []).push(row);
       persist();
       apiWrite('POST', table, null, row);
+      return copy(row);
+    },
+
+    /* upsert a row (keeps its id, or generates one) — used by imports and bulk price updates */
+    put: function (table, obj) {
+      if (table === 'settings' || ARRAY_TABLES.indexOf(table) < 0 || !obj) return null;
+      var row = copy(obj) || {};
+      var rows = (store[table] = store[table] || []);
+      if (!row.id) row.id = nextId(store, table);
+      var at = -1;
+      for (var i = 0; i < rows.length; i++) { if (rows[i].id === row.id) { at = i; break; } }
+      if (at >= 0) rows[at] = row; else rows.push(row);
+      persist();
+      bulkWrite(table, row);
       return copy(row);
     },
 
