@@ -2037,7 +2037,7 @@
     try { if (window.LABPOS_API) base = window.LABPOS_API; } catch (e) {}
     return fetch(base + '/api/report-pdfs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: (DB.authHeaders ? DB.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ key: key, pdfBase64: b64 })
     }).then(function (r) { return r.json(); })
       .then(function (j) {

@@ -150,16 +150,20 @@
       if (clash) { App.toast('That username is already taken', 'err'); return; }
       if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { App.toast('Please enter a valid email', 'err'); return; }
 
+      var cloudMode = !!(DB.isCloud && DB.isCloud());
       var patch = { name: name, username: username, email: email, phone: phone, address: address };
       if (photoDirty) patch.photo = photo || null;
 
       if (curPw || newPw || cfmPw) {
         if (!curPw || !newPw || !cfmPw) { App.toast('Fill all three password fields to change your password', 'err'); return; }
-        if (curPw !== u.password) { App.toast('Current password is incorrect', 'err'); return; }
+        if (!cloudMode && curPw !== u.password) { App.toast('Current password is incorrect', 'err'); return; }
         if (newPw.length < 4) { App.toast('New password must be at least 4 characters', 'err'); return; }
         if (newPw !== cfmPw) { App.toast('New passwords do not match', 'err'); return; }
         patch.password = newPw;
       }
+      /* cloud: the server verifies the current password and hashes the new one */
+      var cloudPw = null;
+      if (cloudMode && patch.password) { cloudPw = { cur: curPw, nw: newPw }; delete patch.password; }
 
       var saved = DB.update('users', u.id, patch);
       if (!saved) { App.toast('Could not save changes', 'err'); return; }
@@ -171,7 +175,10 @@
         localStorage.setItem(SKEY, JSON.stringify(sess));
       } catch (e) {}
 
-      App.toast(patch.password ? 'Profile and password updated' : 'Profile updated');
+      if (cloudPw) {
+        DB.changePassword(cloudPw.cur, cloudPw.nw).then(function () { App.toast('Profile and password updated'); })
+          .catch(function (e) { App.toast(e.message || 'Could not change password', 'err'); });
+      } else App.toast(patch.password ? 'Profile and password updated' : 'Profile updated');
       App.nav('#/profile'); /* re-render shell (avatar/menu) + view */
     });
   }

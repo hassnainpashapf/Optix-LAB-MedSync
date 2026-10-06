@@ -64,14 +64,14 @@ The URL comes from env `LABPOS_CLOUD_URL` or `electron-src/cloud.json`
 | Frontend cloud sync (write-through) | ✅ Ready (needs `LABPOS_API` set) |
 | Superadmin fleet view wiring | ✅ Ready (needs `SUPERADMIN_API` + key set) |
 | **Deployed to a VPS** | ❌ **Not done** |
-| **Auth on data endpoints** | ❌ **Missing — see §4** |
+| **Auth on data endpoints** | ✅ Done (v1.1: signed tokens, scrypt hashes, roles — see API.md) |
 | Multi-lab data isolation | ❌ **Missing — see §4** |
 
 ---
 
 ## 4. Gaps to fix before production (in priority order)
 
-### 🔴 CRITICAL — Data API has no authentication
+### ✅ FIXED in v1.1 — Data API authentication (kept for history)
 `/api/dump`, `GET/POST/PUT/DELETE /api/:table`, `/api/restore`, and even
 `/api/admin/reseed` (full wipe!) are **open to the internet** once the API has a
 public URL. Only the lab-registry endpoints (`GET /api/labs`, `POST /api/labs/:id/target`)
@@ -87,7 +87,7 @@ The lab registry tracks labs but does not scope data.
 **Options:** (a) deploy one cloud stack per lab (simplest, matches current code);
 (b) add a `labId` tenant column to every table and scope all queries (bigger change).
 
-### 🟡 Passwords are plaintext
+### ✅ FIXED in v1.1 — passwords are now scrypt-hashed (history below)
 Login compares `u.password !== password` directly and seeds ship with
 `admin123`-style passwords. Acceptable for a LAN pilot; **hash passwords
 (bcrypt) and force a password change on first login before any internet exposure.**

@@ -116,3 +116,20 @@ unless `WWW_ROOT` points at a static frontend build, which is then served.
 | `LAB_NAME` | — | Stamped into seeded settings on first boot |
 | `RELEASE_BUNDLE_URL` | — | Overrides `releases.json` → `bundleUrl` |
 | `WWW_ROOT` | — | Optional static frontend dir to serve |
+
+
+## Authentication (v1.1)
+
+All data routes now require a signed token.
+
+- `POST /api/auth/login` `{username,password}` -> `{ok,user,token}` (public; rate-limited per IP+username: 8 failures / 15 min).
+  Send `Authorization: Bearer <token>` on every other `/api/*` call. Tokens last `TOKEN_TTL_HOURS` (default 12) and stop
+  working immediately if the user is deleted or disabled.
+- `POST /api/auth/change-password` `{current,next}` (any signed-in user).
+- Public (no token): `GET /api/health`, `GET /api/version`, `GET /api/public-info` (lab name/logo for the login page),
+  `POST /api/labs/heartbeat`, `GET /r/<key>` (report PDF behind the printed QR).
+- Superadmin key (`X-Superadmin-Key`): `GET /api/labs`, `POST /api/labs/:id/target`, `POST /api/admin/reseed`.
+- Roles: `settings` writes, `users` create/edit/delete, `POST /api/restore` and `POST /api/admin/reseed` are admin-only
+  (staff may edit their own profile, never their role). Passwords are stored as scrypt hashes and never returned by the API.
+- `POST /api/:table` returns `409` when the id already exists (two PCs generated the same record number); the web app
+  then refreshes its data and asks the user to retry.

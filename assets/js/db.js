@@ -58,17 +58,58 @@
      window.LABPOS_API and DB.init() loads the server dump into `store`.
      All reads stay synchronous; writes go to memory + fire-and-forget API. */
   var API = null;
-  var remote = false;
+  var remote = false;   /* server data loaded + authenticated: writes mirror to the API */
+  var cloud = false;    /* a token-auth cloud API is configured (login goes through the server) */
+  var inflight = 0;     /* unfinished API writes (the background refresh waits for 0) */
+  var SESS_KEY = 'labpos_session';
+  function sessToken() {
+    try { var s = JSON.parse(localStorage.getItem(SESS_KEY) || 'null'); return (s && s.token) || ''; } catch (e) { return ''; }
+  }
+  function authHeaders(extra) {
+    var h = extra || {};
+    var t = sessToken();
+    if (t) h['Authorization'] = 'Bearer ' + t;
+    return h;
+  }
+  function clearSession() { try { localStorage.removeItem(SESS_KEY); } catch (e) {} }
+  function fireAuthError() { try { if (window.DB && typeof window.DB.onAuthError === 'function') window.DB.onAuthError(); } catch (e) {} }
+  function fireWriteError(msg) { try { if (window.DB && typeof window.DB.onWriteError === 'function') window.DB.onWriteError(msg); } catch (e) {} }
+  function loadDump() {
+    return window.fetch(API + '/api/dump', { cache: 'no-store', headers: authHeaders() }).then(function (r) {
+      if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; }
+      if (!r.ok) throw new Error('dump failed');
+      return r.json();
+    }).then(function (dump) {
+      if (!dump || !dump.settings || !dump.seq) throw new Error('bad dump');
+      return dump;
+    });
+  }
   function apiWrite(method, table, id, body) {
     if (!remote || !API) return;
     var url = API + '/api/' + table + (id ? '/' + encodeURIComponent(id) : '');
+    inflight++;
     try {
       fetch(url, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: body === undefined ? undefined : JSON.stringify(body)
-      }).catch(function () { /* offline — memory still updated */ });
-    } catch (e) {}
+      }).then(function (r) {
+        inflight--;
+        if (r.ok) return;
+        if (r.status === 401) { fireAuthError(); return; }
+        if (r.status === 409) { /* another PC took this record number: pull fresh data */
+          fireWriteError('Another user saved at the same time. Data refreshed — please re-check and retry.');
+          if (window.DB) window.DB.refresh();
+          return;
+        }
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          fireWriteError((j && j.error) || ('Server rejected the change (' + r.status + ')'));
+        });
+      }).catch(function () {
+        inflight--;
+        fireWriteError('Could not reach the server — the last change was NOT saved. Check your connection.');
+      });
+    } catch (e) { inflight--; }
   }
 
   var ID_CONF = {
@@ -524,7 +565,7 @@
     useLab: useLab,
     currentLab: function () { var l = labById(currentLabId); return l ? copy(l) : null; },
     currentLabId: function () { return currentLabId; },
-    labs: function () { var r = loadRegistry(); return r ? copy(r.labs) : []; },
+    labs: function () { if (cloud) return []; var r = loadRegistry(); return r ? copy(r.labs) : []; },
     labById: function (id) { var l = labById(id); return l ? copy(l) : null; },
 
     /* Load server data when running under the LabPOS server/Electron app.
@@ -534,16 +575,61 @@
       var base = null;
       try { base = window.LABPOS_API || null; } catch (e) {}
       if (!base || !window.fetch) return Promise.resolve(false);
-      return window.fetch(base + '/api/dump', { cache: 'no-store' }).then(function (r) {
-        if (!r.ok) throw new Error('dump failed');
-        return r.json();
-      }).then(function (dump) {
-        if (!dump || !dump.settings || !dump.seq) throw new Error('bad dump');
-        API = base; remote = true; store = dump;
+      API = base;
+      return loadDump().then(function (dump) {
+        store = dump; remote = true;
+        if (sessToken()) cloud = true; /* valid token = token-auth cloud API; no token = open desktop server */
         return true;
-      }).catch(function () { API = null; remote = false; return false; });
+      }).catch(function (err) {
+        if (err && err.auth) {
+          /* token-auth cloud API: no valid session -> login page, data loads after sign-in */
+          cloud = true; remote = false; clearSession();
+          return window.fetch(API + '/api/public-info').then(function (r) { return r.ok ? r.json() : null; }).then(function (info) {
+            if (info && info.labName) {
+              store.settings.labName = info.labName;
+              if (info.tagline) store.settings.tagline = info.tagline;
+              if (info.logo) store.settings.logo = info.logo;
+            }
+            return true;
+          }).catch(function () { return true; });
+        }
+        API = null; remote = false; return false;
+      });
     },
     isRemote: function () { return remote; },
+    isCloud: function () { return cloud; },
+    /* Server-side login (cloud mode). Resolves {user, token}; rejects with a user-facing message. */
+    cloudLogin: function (username, password) {
+      return window.fetch(API + '/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error(j.error || 'Login failed (' + r.status + ')');
+          return j;
+        });
+      }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); }).then(function (j) {
+        try { localStorage.setItem(SESS_KEY, JSON.stringify({ token: j.token })); } catch (e) {}
+        return loadDump().then(function (dump) { store = dump; remote = true; return j; });
+      });
+    },
+    changePassword: function (current, next) {
+      return window.fetch(API + '/api/auth/change-password', {
+        method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ current: current, next: next })
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not change password'); return true; });
+      });
+    },
+    /* Pull fresh server data (other PCs' work). Skipped while our own writes are in flight. */
+    refresh: function () {
+      if (!remote || !API || inflight > 0) return Promise.resolve(false);
+      return loadDump().then(function (dump) { if (inflight === 0) { store = dump; return true; } return false; })
+        .catch(function (e) { if (e && e.auth) fireAuthError(); return false; });
+    },
+    authHeaders: authHeaders,
+    onAuthError: null,
+    onWriteError: null,
 
     all: function (table) {
       if (table === 'settings') return [copy(store.settings)];
@@ -589,6 +675,7 @@
           });
           persist();
           apiWrite('PUT', table, id, rows[i]);
+          if (remote && table === 'users') delete rows[i].password; /* never keep plaintext in memory */
           return copy(rows[i]);
         }
       }
@@ -606,7 +693,7 @@
 
     reset: function () {
       if (remote && API) {
-        return window.fetch(API + '/api/admin/reseed', { method: 'POST' }).then(function (r) {
+        return window.fetch(API + '/api/admin/reseed', { method: 'POST', headers: authHeaders() }).then(function (r) {
           if (!r.ok) throw new Error('reseed failed');
           return r.json();
         }).then(function (dump) { store = dump; return true; });
@@ -631,13 +718,13 @@
       if (remote && API) {
         return window.fetch(API + '/api/restore', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify(tables)
         }).then(function (r) {
           if (!r.ok) throw new Error('restore failed');
           return r.json();
         }).then(function () {
-          return window.fetch(API + '/api/dump', { cache: 'no-store' }).then(function (r) { return r.json(); });
+          return loadDump();
         }).then(function (dump) { store = dump; return true; });
       }
       store = {

@@ -80,8 +80,12 @@
     } catch (e) { return null; }
   }
   function logout() {
+    var wasCloud = false;
+    try { wasCloud = !!(window.DB && DB.isCloud && DB.isCloud()); } catch (e) {}
     localStorage.removeItem(SKEY);
     location.hash = '#/login';
+    /* cloud mode: drop the in-memory server data so nothing leaks to the next login */
+    if (wasCloud) location.reload();
   }
 
   /* ---------------- helpers ---------------- */
@@ -351,7 +355,9 @@
     var s = session();
 
     /* tenant guard: the session's lab must exist and be active; load its store */
-    if (s) {
+    var _isCloud = false;
+    try { _isCloud = !!(window.DB.isCloud && window.DB.isCloud()); } catch (e) {}
+    if (s && !_isCloud) {
       var _tlab = null;
       try { _tlab = window.DB.labById(s.labId); } catch (e) {}
       if (!_tlab || _tlab.active === false) { logout(); return; }
@@ -623,6 +629,25 @@
       var u = document.getElementById('liUser').value.trim();
       var p = document.getElementById('liPass').value;
       var err = document.getElementById('loginErr');
+      if (window.DB && DB.isCloud && DB.isCloud()) {
+        /* cloud: the server checks the password and returns a session token */
+        var btn = document.querySelector('.login-signin');
+        if (btn) { btn.disabled = true; btn.textContent = 'Signing in…'; }
+        DB.cloudLogin(u, p).then(function (j) {
+          localStorage.setItem(SKEY, JSON.stringify({
+            labId: 'cloud', userId: j.user.id, name: j.user.name, role: j.user.role,
+            token: j.token, loginAt: new Date().toISOString()
+          }));
+          location.hash = '#/dashboard';
+        }).catch(function (ex) {
+          if (btn) { btn.disabled = false; btn.textContent = 'Sign In'; }
+          err.hidden = false;
+          err.textContent = (ex && ex.message) || 'Login failed. Please try again.';
+          var card2 = document.querySelector('.login-card');
+          card2.classList.remove('shake'); void card2.offsetWidth; card2.classList.add('shake');
+        });
+        return;
+      }
       /* authenticate against the selected lab's isolated store */
       var _ls2 = document.getElementById('liLab');
       if (_ls2) { try { window.DB.useLab(_ls2.value); } catch (ex2) {} }
@@ -721,6 +746,24 @@
   };
 
   window.addEventListener('hashchange', render);
+  /* cloud mode: surface failed saves, handle expired sessions, pick up other PCs' changes */
+  if (window.DB) {
+    var _lastWriteToast = 0;
+    DB.onWriteError = function (msg) {
+      if (Date.now() - _lastWriteToast < 4000) return;
+      _lastWriteToast = Date.now();
+      toast(msg, 'err');
+    };
+    DB.onAuthError = function () {
+      if (!session()) return;
+      toast('Your session expired. Please sign in again.', 'err');
+      setTimeout(logout, 1200);
+    };
+    setInterval(function () {
+      if (document.hidden || !session() || !DB.isRemote || !DB.isRemote() || !DB.isCloud || !DB.isCloud()) return;
+      DB.refresh();
+    }, 30000);
+  }
   function boot() {
     if (boot.done) return;
     boot.done = true;

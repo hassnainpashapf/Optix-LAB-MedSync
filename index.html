@@ -31,7 +31,8 @@ document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') document.body.classList.remove('side-open');
 });
 </script>
-<!-- /api-config.js is served only by the LabPOS desktop server; omitted on web to avoid a 404 page error -->
+<!-- API base for the web build (Cloudflare Pages copies assets/); the desktop app serves its own /api-config.js -->
+<script src="assets/js/api-config.js"></script>
 <script>
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it

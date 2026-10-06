@@ -14,3 +14,5 @@ electron-tools/installer/app-stage/
 
 tmp-build/
 ~
+cloud/report-pdfs/
+cloud/*.db
