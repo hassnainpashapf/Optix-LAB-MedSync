@@ -501,6 +501,25 @@
   /* ---- Lab Profile ---- */
   function renderSetProfile() {
     var s = DB.get('settings', 'main') || {};
+    /* Sample custom header/footer HTML: realistic dummy content (passes mod-results.js hasRealHtml()).
+       Used to pre-fill the textareas when nothing is saved, and by the Load Sample buttons. */
+    var HEADER_SAMPLE =
+      '<div style="text-align:center;border-bottom:2px solid #131845;padding-bottom:10px;margin-bottom:10px">\n' +
+      '  <div style="font-size:24px;font-weight:800;color:#131845;letter-spacing:.5px">Optxic LAB</div>\n' +
+      '  <div style="color:#5392ba;font-size:13px;font-weight:600;margin-top:2px">Diagnostics &amp; Clinical Research</div>\n' +
+      '  <div style="color:#666;font-size:12px;margin-top:6px">154-A-HBFC, Opposite Jinnah Hospital, Lahore &nbsp;&bull;&nbsp; Ph: 0322-8441899 &nbsp;&bull;&nbsp; Call Center: 0311-1141899</div>\n' +
+      '</div>';
+    var FOOTER_SAMPLE =
+      '<div style="text-align:center;margin-top:18px">\n' +
+      '  <div style="font-weight:700;font-size:13px">Electronically verified report. No signatures necessary.</div>\n' +
+      '  <div style="font-size:12px;margin-top:4px">Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.</div>\n' +
+      '  <hr style="border:none;border-top:1px solid #131845;margin:10px 0">\n' +
+      '  <div style="display:flex;justify-content:space-around;font-size:12px">\n' +
+      '    <div><b>Dr. Ayesha Khan</b><br>MBBS, M.Phil<br>Consultant Pathologist</div>\n' +
+      '    <div><b>Dr. Bilal Ahmed</b><br>MBBS, FCPS<br>Consultant Microbiologist</div>\n' +
+      '  </div>\n' +
+      '  <div style="font-size:12px;margin-top:8px"><b>Head Office:</b> DHA Phase-1 F22 Commercial Lahore. <b>Call Center:</b> 0311-1141899<br><b>Main Lab:</b> 154-A-HBFC Opposite Jinnah Hospital, Lahore. <b>Ph:</b> 0322-8441899</div>\n' +
+      '</div>';
     var html =
       '<style>' +
       '.sp-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}' +
@@ -557,11 +576,11 @@
       + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(optional — HTML allowed, replaces the default header)</span></label>'
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spHeadSample">Load Sample</button>'
       + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Clear</button></div>'
-      + '<textarea class="input" id="spHeadHtml" rows="3" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.headerHtml || '') + '</textarea></div>'
+      + '<textarea class="input" id="spHeadHtml" rows="5" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.headerHtml || HEADER_SAMPLE) + '</textarea></div>'
       + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(optional — HTML allowed, replaces the default footer)</span></label>'
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spFootSample">Load Sample</button>'
       + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Clear</button></div>'
-      + '<textarea class="input" id="spFootHtml" rows="3" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.footerHtml || '') + '</textarea></div>'
+      + '<textarea class="input" id="spFootHtml" rows="5" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.footerHtml || FOOTER_SAMPLE) + '</textarea></div>'
       + '</div>'
       + '<div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" id="spSave">Save Profile</button>' +
         '<button class="btn btn-ghost" id="spPreviewBtn">👁 Preview Report</button></div>'
@@ -657,11 +676,7 @@
     /* sample header/footer loaders */
     var headSampleBtn = document.getElementById('spHeadSample');
     if (headSampleBtn) headSampleBtn.addEventListener('click', function () {
-      document.getElementById('spHeadHtml').value =
-        '<div style="text-align:center;border-bottom:2px solid #131845;padding-bottom:10px;margin-bottom:10px">\n' +
-        '  <h2 style="color:#131845;margin:0">Your Lab Name</h2>\n' +
-        '  <p style="color:#666;margin:4px 0">123 Main Street, Lahore • 0300-1234567</p>\n' +
-        '</div>';
+      document.getElementById('spHeadHtml').value = HEADER_SAMPLE;
       if (typeof _schedulePreview === 'function') _schedulePreview();
     });
     var headClearBtn = document.getElementById('spHeadClear');
@@ -671,11 +686,7 @@
     });
     var footSampleBtn = document.getElementById('spFootSample');
     if (footSampleBtn) footSampleBtn.addEventListener('click', function () {
-      document.getElementById('spFootHtml').value =
-        '<div style="text-align:center;border-top:2px solid #131845;padding-top:10px;margin-top:16px">\n' +
-        '  <p style="margin:0"><strong>Verified by:</strong> Dr. Example _________________</p>\n' +
-        '  <p style="color:#666;font-size:12px">Thank you for choosing our lab.</p>\n' +
-        '</div>';
+      document.getElementById('spFootHtml').value = FOOTER_SAMPLE;
       if (typeof _schedulePreview === 'function') _schedulePreview();
     });
     var footClearBtn = document.getElementById('spFootClear');
@@ -692,13 +703,23 @@
           var qrSrc = App.qrDataUrlFor('https://optix-lab-medsync.pages.dev/sample-report');
           if (qrSrc) html = html.replace('data-qr="1"', 'data-qr="1" src="' + qrSrc + '"');
         }
-        /* full-page PDF-like preview */
+        /* full-page PDF-like preview: A4-proportioned sheet on a grey backdrop */
+        /* mirror the font selected in the form so the preview matches the report */
+        var ff = "'Inter',-apple-system,'Segoe UI',Roboto,Arial,sans-serif";
+        try {
+          var fams = { inter: ff, jakarta: "'Plus Jakarta Sans','Inter',sans-serif",
+            roboto: "'Roboto','Inter',sans-serif", poppins: "'Poppins','Inter',sans-serif",
+            opensans: "'Open Sans','Inter',sans-serif", lato: "'Lato','Inter',sans-serif",
+            montserrat: "'Montserrat','Inter',sans-serif" };
+          ff = fams[ps.font] || ff;
+        } catch (e) {}
         var fullHtml =
-          '<div style="background:#525659;padding:20px;min-height:80vh">' +
-          '<div style="background:#fff;max-width:210mm;margin:0 auto;padding:15mm;box-shadow:0 4px 20px rgba(0,0,0,0.3);min-height:297mm">' +
+          '<div style="background:#525659;margin:-22px;padding:28px 20px;border-radius:0 0 18px 18px;min-height:60vh">' +
+          '<div style="background:#fff;color:#111;max-width:794px;width:100%;margin:0 auto;padding:46px 50px;box-shadow:0 8px 34px rgba(0,0,0,.45);font-family:' + ff + ';font-size:14px;line-height:1.55">' +
           html +
-          '</div></div>' +
-          '<div style="text-align:center;margin-top:16px"><button class="btn btn-primary" id="spPrevPrint">🖨 Print This Preview</button></div>';
+          '</div>' +
+          '<div style="text-align:center;margin-top:20px"><button class="btn btn-primary" id="spPrevPrint">🖨 Print This Preview</button></div>' +
+          '</div>';
         App.modal('Report Preview — Full Page', fullHtml, { wide: true, onOpen: function (ov) {
           var pb = ov.querySelector('#spPrevPrint');
           if (pb) pb.addEventListener('click', function () {

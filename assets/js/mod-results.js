@@ -456,7 +456,7 @@
     lightGrey: '#A9A9A9',  // hairline rules, dividers
     barGrey:   '#b5b5b5',  // TEST|NORMAL VALUE|UNIT header bar + RESULT box header
     line:      '#333',     // RESULT box border, thin dark rules
-    tableLine: '#8a8a8a',  // table header-bar outer border
+    tableLine: '#000',     // table header-bar outer border
     white:     '#ffffff',
     red:       '#c0392b',  // logo droplet accent
     powered:   '#999',     // "Powered by System Optix" footer line
@@ -542,8 +542,8 @@
     },
 
     bd: {
-      hairline:  '1px solid #A9A9A9',
-      thin:      '1px solid #8a8a8a',
+      hairline:  '1px solid #000',
+      thin:      '1px solid #000',
       resultBox: '1.5px solid #333',
       rule:      '2.5px solid #000',
       sigLine:   '1px solid #000'
@@ -806,7 +806,7 @@
 }
 .rpt-page th,
 .rpt-page td {
-  border: 1px solid #555;
+  border: 1px solid #000;
   padding: 6px 8px;
   font-size: 12px;
   text-align: left;
@@ -908,7 +908,7 @@
 }
 .rpt-page hr.rpt-rule {
   border: none;
-  border-top: 1px solid #999;
+  border-top: 1px solid #000;
   margin: 8px 0 4px;
 }
 
@@ -988,8 +988,10 @@
      The <img data-qr="1"> keeps the placeholder contract: printReport()
      injects the src with .replace('data-qr="1"', 'data-qr="1" src="..."')
      (first occurrence — the wrapper uses data-qr-wrap, not data-qr="1").
-     stripQrImg() removes the whole data-qr-wrap block on unpaid reports so
-     the "Scan to verify" caption never dangles without its QR. */
+     stripQrImg() only runs when QR generation itself fails (e.g., jsPDF/qrcode
+     library failed to load); unpaid invoices get a fallback-URL QR (invoice
+     page) rather than a stripped block, so the "Scan to verify" caption
+     never dangles without its QR. */
   function qrBlockHtml(d) {
     var s = (d && d.s) || {};
     if (s.showQr === false) return '';
@@ -1120,7 +1122,7 @@
         '<div style="flex:1;min-width:0">' + left + '</div>' +
         '<div style="flex:1;min-width:0">' + right + '</div>' +
       '</div>' +
-      '<hr style="border:none;border-top:1px solid #bbb;margin:6px 0 4px">'
+      '<hr style="border:none;border-top:1px solid #000;margin:6px 0 4px">'
     );
   }
 
@@ -1343,7 +1345,7 @@
      Emitted by reportHtml() when tests carry a category (grouped, stable
      sort). Until tests carry categories this is a safe no-op. */
   function sectionDividerHtml(title) {
-    return '<div style="background:#e8e8e8;border:1px solid #b5b5b5;' +
+    return '<div style="background:#e8e8e8;border:1px solid #000;' +
       'padding:7px 10px;margin:22px 0 10px;' +
       'font-size:1.12em;font-weight:700;color:#111;' +
       'page-break-after:avoid">' +
@@ -1486,8 +1488,8 @@
      - opts.noLabHeader (print-choice dialog: pre-printed letterhead) still
        suppresses the header.
      - The QR placeholder <img data-qr="1"> contract is unchanged:
-       printReport() injects the src; stripQrImg() removes the whole
-       data-qr-wrap block on unpaid reports.
+       printReport() injects the src; stripQrImg() only runs if QR
+       generation itself fails (unpaid invoices get a fallback-URL QR).
      - Output is wrapped in .rpt-page (print stylesheet governs page box,
        breaks and exact backgrounds) with the <style> prepended. */
   function reportHtml(d, opts) {
@@ -1607,8 +1609,8 @@
     // The data-qr-wrap block contains no nested <div> (the caption is a
     // <span>), so the first </div> the non-greedy match hits is the
     // wrapper's own closing tag — this removes the QR *and* its
-    // "Scan to verify" caption, so unpaid reports never show a
-    // dangling caption.
+    // "Scan to verify" caption, so a report whose QR generation failed
+    // never shows a dangling caption.
     h = h.replace(/<div[^>]*\bdata-qr-wrap\b[^>]*>[\s\S]*?<\/div>/, '');
     // Fallback: strip a bare QR img if the wrapper is ever absent.
     h = h.replace(/<img[^>]*data-qr="1"[^>]*>/, '');
@@ -1625,7 +1627,7 @@
       if (jsOk) {
         var url = await getReportPdfUrl(invoiceId);
         /* fallback: if backend upload fails or invoice unpaid, generate QR with invoice reference */
-        if (!url) url = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
+        if (!url) url = 'https://optix-lab-medsync.pages.dev/#/invoice/' + invoiceId;
         qrImg = qrDataUrlFor(url);
       }
     } catch (e) { qrImg = null; }
@@ -1637,18 +1639,122 @@
 
   /* print choice dialog: with or without the lab letterhead header */
   function printReportChoice(invoiceId) {
+    /* find previous report for this patient (for auto-comparison) */
+    var prevInvId = null;
+    try {
+      var curInv = invOf(invoiceId);
+      if (curInv && curInv.patientId) {
+        var prevs = DB.all('invoices')
+          .filter(function (inv) {
+            return inv.patientId === curInv.patientId && inv.id !== invoiceId &&
+              joinedRows('ready').some(function (r) { return r.invoice.id === inv.id; });
+          })
+          .sort(function (a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
+        if (prevs.length) prevInvId = prevs[0].id;
+      }
+    } catch (e) {}
+    var cmpHtml = prevInvId
+      ? '<label style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer;font-weight:600">' +
+        '<input type="checkbox" id="prCmp" style="width:18px;height:18px"> ' +
+        'Include previous report comparison on same page</label>' : '';
     App.modal('Print Report',
       '<p style="margin-bottom:16px">Print this report with or without the lab header?</p>' +
       '<div style="display:flex;gap:12px">' +
       '<button class="btn btn-primary" id="prWithHead" style="flex:1;padding:14px">With Header</button>' +
       '<button class="btn btn-ghost" id="prNoHead" style="flex:1;padding:14px">Without Header</button>' +
-      '</div>' +
+      '</div>' + cmpHtml +
       '<p class="muted" style="margin-top:12px;font-size:12px;margin-bottom:0">Use "Without Header" when printing on pre-printed letterhead paper.</p>',
       { onOpen: function (ov, close) {
-          ov.querySelector('#prWithHead').addEventListener('click', function () { close(); printReport(invoiceId, {}); });
-          ov.querySelector('#prNoHead').addEventListener('click', function () { close(); printReport(invoiceId, { noLabHeader: true }); });
+          function wantCmp() { var c = ov.querySelector('#prCmp'); return c && c.checked; }
+          ov.querySelector('#prWithHead').addEventListener('click', function () {
+            close();
+            if (wantCmp() && prevInvId) printWithComparison(invoiceId, prevInvId, {});
+            else printReport(invoiceId, {});
+          });
+          ov.querySelector('#prNoHead').addEventListener('click', function () {
+            close();
+            if (wantCmp() && prevInvId) printWithComparison(invoiceId, prevInvId, { noLabHeader: true });
+            else printReport(invoiceId, { noLabHeader: true });
+          });
         }
       });
+  }
+
+  /* print current + previous report with auto-comparison on one page */
+  async function printWithComparison(newInvId, oldInvId, opts) {
+    var dNew = reportData(newInvId), dOld = reportData(oldInvId);
+    if (!dNew || !dOld) { App.toast('Could not load both reports', 'err'); return; }
+    /* generate comparison table HTML */
+    var cmpHtml = buildComparisonTable(dOld, dNew);
+    /* full new report + comparison on one page */
+    var qrImg = null;
+    try {
+      var jsOk = await App.ensureJsPDF();
+      if (jsOk) {
+        var url = await getReportPdfUrl(newInvId);
+        if (!url) url = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + newInvId;
+        qrImg = qrDataUrlFor(url);
+      }
+    } catch (e) {}
+    var html = reportHtml(dNew, opts);
+    if (qrImg) html = html.replace('data-qr="1"', 'data-qr="1" src="' + qrImg + '"');
+    else html = stripQrImg(html);
+    html += '<div style="page-break-before:always"></div>' + cmpHtml;
+    App.print('Lab Report with Comparison — ' + dNew.inv.no, html, { noHeader: true });
+  }
+
+  /* build comparison table HTML from two report datasets (old vs new) */
+  function buildComparisonTable(dOld, dNew) {
+    function indexResults(d) {
+      var map = {};
+      (d.readyRows || []).forEach(function (r) {
+        var tid = (r.item && (r.item.testId || r.item.id)) || '';
+        var tname = (r.item && r.item.name) || (r.test && r.test.name) || tid;
+        var params = (r.test && r.test.params) || [];
+        var vals = (r.res && r.res.values) || {};
+        if (!map[tid]) map[tid] = { name: tname, params: {} };
+        params.forEach(function (p) {
+          map[tid].params[p.name] = { val: vals[p.name] || '—', unit: p.unit || '', ref: p.ref || '' };
+        });
+      });
+      return map;
+    }
+    var mOld = indexResults(dOld), mNew = indexResults(dNew);
+    var allTids = [];
+    Object.keys(mOld).forEach(function (k) { if (allTids.indexOf(k) < 0) allTids.push(k); });
+    Object.keys(mNew).forEach(function (k) { if (allTids.indexOf(k) < 0) allTids.push(k); });
+    function numVal(v) { var n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? null : n; }
+    var rowsHtml = '';
+    allTids.forEach(function (tid) {
+      var tO = mOld[tid], tN = mNew[tid];
+      var tname = (tN && tN.name) || (tO && tO.name) || tid;
+      rowsHtml += '<tr><td colspan="5" style="background:#eef;font-weight:800;padding:8px">' + App.esc(tname) + '</td></tr>';
+      var pnames = [];
+      [tO, tN].forEach(function (t) {
+        if (t) Object.keys(t.params).forEach(function (pn) { if (pnames.indexOf(pn) < 0) pnames.push(pn); });
+      });
+      pnames.forEach(function (pn) {
+        var pO = tO && tO.params[pn], pN = tN && tN.params[pn];
+        var vO = pO ? pO.val : '—', vN = pN ? pN.val : '—';
+        var ref = (pN && pN.ref) || (pO && pO.ref) || '', unit = (pN && pN.unit) || (pO && pO.unit) || '';
+        var changed = vO !== vN && vO !== '—' && vN !== '—';
+        var vs = changed ? ' style="color:#c00;font-weight:800"' : '';
+        var nO = numVal(vO), nN = numVal(vN), trend = '';
+        if (changed && nO !== null && nN !== null) trend = nN > nO ? ' ↑' : (nN < nO ? ' ↓' : ' =');
+        rowsHtml += '<tr' + (changed ? ' style="background:#fff8e1"' : '') + '>' +
+          '<td>' + App.esc(pn) + '</td><td class="muted">' + App.esc(ref) + '</td>' +
+          '<td class="muted">' + App.esc(unit) + '</td>' +
+          '<td' + vs + '><strong>' + App.esc(vO) + '</strong></td>' +
+          '<td' + vs + '><strong>' + App.esc(vN) + '</strong>' + trend + '</td></tr>';
+      });
+    });
+    return '<div style="font-family:inherit">' +
+      '<h2 style="text-align:center">Report Comparison</h2>' +
+      '<p style="text-align:center" class="muted">' + App.esc(dNew.pat.name || '') + '</p>' +
+      '<table class="table"><thead><tr><th>Parameter</th><th>Normal Value</th><th>Unit</th>' +
+      '<th>Previous<br><span class="muted">' + App.esc(dOld.inv.no) + ' (' + App.d(dOld.inv.createdAt) + ')</span></th>' +
+      '<th>Current<br><span class="muted">' + App.esc(dNew.inv.no) + ' (' + App.d(dNew.inv.createdAt) + ')</span></th>' +
+      '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
   }
 
   // Report preview modal with Print + Share on WhatsApp actions
@@ -2414,12 +2520,13 @@
         var v1 = p1 ? p1.val : '—', v2 = p2 ? p2.val : '—';
         var ref = (p1 && p1.ref) || (p2 && p2.ref) || '', unit = (p1 && p1.unit) || (p2 && p2.unit) || '';
         var changed = v1 !== v2 && v1 !== '—' && v2 !== '—';
+        var valStyle = changed ? ' style="color:#c00;font-weight:800"' : '';
         rowsHtml += '<tr' + (changed ? ' style="background:#fff8e1"' : '') + '>' +
           '<td>' + App.esc(pn) + '</td>' +
           '<td class="muted">' + App.esc(ref) + '</td>' +
           '<td class="muted">' + App.esc(unit) + '</td>' +
-          '<td><strong>' + App.esc(v1) + '</strong></td>' +
-          '<td><strong>' + App.esc(v2) + '</strong>' + trend(v1, v2) + '</td></tr>';
+          '<td' + valStyle + '><strong>' + App.esc(v1) + '</strong></td>' +
+          '<td' + valStyle + '><strong>' + App.esc(v2) + '</strong>' + trend(v1, v2) + '</td></tr>';
       });
     });
 
