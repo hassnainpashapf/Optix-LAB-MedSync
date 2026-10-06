@@ -547,7 +547,8 @@
       + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(optional — HTML allowed, replaces the default footer)</span></label>'
       + '<textarea class="input" id="spFootHtml" rows="3" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.footerHtml || '') + '</textarea></div>'
       + '</div>'
-      + '<div style="margin-top:18px"><button class="btn btn-primary" id="spSave">Save Profile</button></div>'
+      + '<div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" id="spSave">Save Profile</button>' +
+        '<button class="btn btn-ghost" id="spPreviewBtn">👁 Preview Report</button></div>'
       + '</div>'
       + '<div class="sp-preview">'
       + '<div class="sp-preview-head"><h3>Print Preview</h3><span class="muted" style="font-size:12px">Live — updates as you type</span></div>'
@@ -636,6 +637,18 @@
     var _sigAdd = document.getElementById('spSigAdd');
     if (_sigAdd) _sigAdd.addEventListener('click', function () {
       if (_sigList) _sigList.insertAdjacentHTML('beforeend', _sigRowHTML({}));
+    });
+    document.getElementById('spPreviewBtn').addEventListener('click', function () {
+      var ps = _collectPreviewSettings();
+      App.loadScript('assets/js/mod-results.js').then(function () {
+        var html = App.sampleReportPreview(ps);
+        /* inject a sample QR code in the preview so the user sees the layout */
+        if (ps.showQr !== false && App.qrDataUrlFor) {
+          var qrSrc = App.qrDataUrlFor('https://optix-lab-medsync.pages.dev/sample-report');
+          if (qrSrc) html = html.replace('data-qr="1"', 'data-qr="1" src="' + qrSrc + '"');
+        }
+        App.modal('Report Preview', '<div style="max-height:70vh;overflow:auto">' + html + '</div>', { wide: true });
+      });
     });
     document.getElementById('spSave').addEventListener('click', function () {
       var name = document.getElementById('spName').value.trim();

@@ -2443,6 +2443,8 @@
     }});
   }
   App.compareReports = compareReports;
+  /* exposed for Lab Profile preview QR */
+  App.qrDataUrlFor = qrDataUrlFor;
   /* sample report preview for Lab Profile settings (uses provided settings, not DB) */
   /* sample report preview for Lab Profile settings (uses provided settings, not DB).
      Redesigned demo (worker 18/20): Chughtai-like data exercising the new
