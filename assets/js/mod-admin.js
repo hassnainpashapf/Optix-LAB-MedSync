@@ -338,16 +338,6 @@
       + '<style>' + ADM_STAT_CSS + '</style>'
       + '<div class="stat-grid">' + repStats + '</div>'
 
-      + '<h3 style="margin:0 0 12px">Collection Summary <span class="muted" style="font-weight:500;font-size:13px">(' + App.esc(App.d(from)) + ' – ' + App.esc(App.d(to)) + ')</span></h3>'
-      + '<div class="stat-grid" style="margin-bottom:18px">'
-      +   statCard('Total Billed (' + invoices.length + ' bills)', App.money(billed), '₨', 'var(--blue-soft)', 'var(--blue)')
-      +   statCard('Discounts Given', App.money(discounts), '%', 'var(--amber-soft)', 'var(--amber)')
-      +   statCard('Collected', App.money(collected), '✓', 'var(--green-soft)', 'var(--green)')
-      +   statCard('Outstanding Due', App.money(due), '!', 'var(--red-soft)', 'var(--red)')
-      +   statCard('Expenses', App.money(expTotal), '−', 'var(--red-soft)', 'var(--red)')
-      +   statCard('Net Collection', App.money(net), '=', 'var(--brand-soft)', 'var(--brand-d)')
-      + '</div>'
-
       + filterCard
 
       + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Payment Methods</h3></div><div class="card-b">'
