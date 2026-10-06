@@ -25,10 +25,7 @@
   function patOf(pid) { return DB.get('patients', pid) || {}; }
 
   function waPhone(p) {
-    var d = String(p || '').replace(/\D/g, '');
-    if (!d) return null;
-    if (d.charAt(0) === '0') d = '92' + d.slice(1);
-    return d;
+    return App.normWa(p); /* shared helper (app.js) */
   }
 
   /* ---------- WhatsApp API (send report PDF) ---------- */
@@ -52,13 +49,105 @@
       'Your lab report is ready.\nInvoice: ' + inv.no + ' (' + App.d(inv.createdAt) + ')\n' +
       'Please collect it from the lab or reply here. Shukriya!';
   }
-  function waTextFallback(invoiceId) {
+  /* ---------- manual send buttons (finalized report view) ----------
+     Strict API send: no wa.me fallback. Reuses the same send helper
+     (waSendText), phone normalization (waPhone) and log writer
+     (waLogWaSend) as the auto-send flow. */
+
+  function waHistTs(ts) {
+    var t = new Date(ts);
+    if (isNaN(t.getTime())) return '';
+    var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    function p(n) { return (n < 10 ? '0' : '') + n; }
+    return p(t.getDate()) + '-' + MON[t.getMonth()] + ' ' + p(t.getHours()) + ':' + p(t.getMinutes());
+  }
+
+  /* compact "WhatsApp sent" history for one invoice, e.g.
+     "✓ Sent to patient 06-Oct 14:20" / "✓ Sent to Dr. Ahmed Khan 06-Oct 14:20" */
+  function waHistoryHtml(invoiceId) {
+    var logs = [];
+    try {
+      logs = (DB.all('wa_log') || []).filter(function (e) {
+        return e && e.kind === 'report' && e.invoiceId === invoiceId;
+      });
+    } catch (e) { logs = []; }
+    if (!logs.length) return '';
+    logs.sort(function (a, b) { return a.ts < b.ts ? 1 : (a.ts > b.ts ? -1 : 0); });
+    var rows = logs.slice(0, 4).map(function (e) {
+      var who = e.toRole === 'doctor' ? (e.toName || 'doctor') : 'patient';
+      var mark = e.status === 'sent' ? '✓' : '✗';
+      var verb = e.status === 'sent' ? 'Sent to' : 'Failed to';
+      return '<div style="padding:2px 0">' + mark + ' ' + verb + ' ' + App.esc(who) +
+        ' <span class="muted">' + App.esc(waHistTs(e.ts)) + '</span></div>';
+    }).join('');
+    if (logs.length > 4) rows += '<div class="muted">+' + (logs.length - 4) + ' more</div>';
+    return '<div style="font-size:12.5px;color:var(--ink,#1f2937);background:var(--soft,#f8fafc);' +
+      'border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin-bottom:4px">' + rows + '</div>';
+  }
+
+  /* refresh the history indicator inside the open report modal */
+  function waRefreshHistory(invoiceId) {
+    var box = document.getElementById('rvWaHist');
+    if (box) box.innerHTML = waHistoryHtml(invoiceId);
+  }
+
+  function waGoSettings() {
+    App.nav('#/settings');
+    setTimeout(function () { if (App.openWaSettingsTab) App.openWaSettingsTab(); }, 80);
+  }
+
+  /* Manual send of a finalized report to the patient or the referring doctor.
+     toRole: 'patient' | 'doctor'. Every attempt is recorded in wa_log. */
+  function waManualSend(invoiceId, toRole) {
     var inv = invOf(invoiceId);
-    if (!inv) return;
+    if (!inv) { App.toast('Invoice not found', 'err'); return; }
+    var cfg = waCfg();
+    if (!waReady(cfg)) {
+      App.toast('WhatsApp API is not configured', 'err');
+      App.confirm('WhatsApp sending is not set up yet. Open Settings to configure it now?').then(function (ok) {
+        if (ok) waGoSettings();
+      });
+      return;
+    }
     var pat = patOf(inv.patientId);
-    var ph = waPhone(pat.phone);
-    if (!ph) { App.toast('No WhatsApp number on patient record', 'err'); return; }
-    window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(waSummaryText(inv, pat)), '_blank');
+    var doc = toRole === 'doctor' ? (inv.doctorId ? DB.get('doctors', inv.doctorId) : null) : null;
+    if (toRole === 'doctor' && !doc) { App.toast('No referring doctor on this invoice', 'err'); return; }
+    var target = toRole === 'doctor' ? doc : pat;
+    var to = waPhone(target.whatsapp || target.phone); /* dedicated WhatsApp no., else phone */
+    if (!to) {
+      App.toast(toRole === 'doctor' ? 'No WhatsApp number on file' : 'No WhatsApp number on patient record', 'err');
+      return;
+    }
+    var rows = joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; });
+    var testNames = [];
+    rows.forEach(function (r) {
+      var nm = (r.item && r.item.name) || (r.test && r.test.name) || '';
+      if (nm && testNames.indexOf(nm) < 0) testNames.push(nm);
+    });
+    var fallbackLink = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
+    function doSend(link) {
+      var msg = toRole === 'doctor'
+        ? waDoctorMessage(inv, doc, pat, testNames, link)
+        : waPatientMessage(inv, pat, testNames, link);
+      var whoName = toRole === 'doctor' ? (doc.name || 'doctor') : (pat.name || 'patient');
+      App.toast('Sending report to ' + whoName + '…', 'info');
+      waSendText(cfg, to, msg, function (err) {
+        waLogWaSend({
+          invoiceId: invoiceId, to: to,
+          toName: toRole === 'doctor' ? (doc.name || '') : (pat.name || ''),
+          toRole: toRole, status: err ? 'failed' : 'sent',
+          error: err ? String(err.message || err).slice(0, 200) : ''
+        });
+        if (err) App.toast('WhatsApp send failed: ' + String(err.message || err).slice(0, 120), 'err');
+        else App.toast('Report sent to ' + whoName + ' on WhatsApp');
+        waRefreshHistory(invoiceId);
+      });
+    }
+    try {
+      getReportPdfUrl(invoiceId)
+        .then(function (url) { doSend(url || fallbackLink); })
+        .catch(function () { doSend(fallbackLink); });
+    } catch (e) { doSend(fallbackLink); }
   }
 
   // POST the PDF document to the configured provider. done(err)
@@ -99,35 +188,189 @@
       .catch(function (e) { clearTimeout(timer); done(e); });
   }
 
-  function shareReportWhatsApp(invoiceId) {
-    var inv = invOf(invoiceId);
-    if (!inv) { App.toast('Invoice not found', 'err'); return; }
-    var pat = patOf(inv.patientId);
-    var ph = waPhone(pat.phone);
-    if (!ph) { App.toast('No WhatsApp number on patient record', 'err'); return; }
+  /* ---------- Auto-send report on ready ---------- */
 
-    var cfg = waCfg();
-    if (!waReady(cfg)) { waTextFallback(invoiceId); return; } // API not configured → wa.me text
+  // TEXT message send (Ultramsg /messages/chat or custom provider). done(err)
+  function waSendText(cfg, to, text, done) {
+    var url, body, headers = {};
+    if (cfg.provider === 'custom' && cfg.baseUrl) {
+      url = cfg.baseUrl;
+      headers['Content-Type'] = 'application/json';
+      body = JSON.stringify({ to: to, text: text, token: cfg.token });
+    } else {
+      // Ultramsg-compatible
+      url = 'https://api.ultramsg.com/' + encodeURIComponent(cfg.instanceId) + '/messages/chat';
+      var fd = new FormData();
+      fd.append('token', cfg.token);
+      fd.append('to', to);
+      fd.append('body', text);
+      body = fd;
+    }
+    var timer = setTimeout(function () { done(new Error('Request timed out')); done = function () {}; }, 45000);
+    fetch(url, { method: 'POST', headers: headers, body: body })
+      .then(function (r) {
+        return r.text().then(function (t) {
+          var j = null;
+          try { j = JSON.parse(t); } catch (e) {}
+          return { status: r.status, json: j, text: t };
+        });
+      })
+      .then(function (res) {
+        clearTimeout(timer);
+        var j = res.json || {};
+        var ok = res.status >= 200 && res.status < 300 &&
+          (j.sent === true || j.sent === 'true' || j.status === 'sent' || j.success === true || res.status === 200);
+        if (ok) done(null);
+        else done(new Error((j.message || j.error || res.text || ('HTTP ' + res.status)).toString().slice(0, 140)));
+      })
+      .catch(function (e) { clearTimeout(timer); done(e); });
+  }
 
-    App.toast('Preparing PDF…', 'info');
-    App.ensureJsPDF().then(function (ok) {
-      if (!ok) { App.toast('PDF engine failed to load — check connection', 'err'); return; }
-      var pdf = buildReportPdf(invoiceId);
-      if (!pdf) return; // error already toasted
-
-      var fname = 'LabReport-' + String(inv.no || inv.id).replace(/[^A-Za-z0-9_-]/g, '') + '.pdf';
-      var caption = waSummaryText(inv, pat);
-      App.toast('Sending report on WhatsApp…', 'info');
-      waSendDocument(cfg, ph, fname, pdf.dataUri, caption, function (err) {
-        if (err) {
-          App.toast('WhatsApp API failed — opening chat instead', 'err');
-          waTextFallback(invoiceId);
-        } else {
-          App.toast('Report sent on WhatsApp');
-        }
+  function waLogWaSend(entry) {
+    try {
+      DB.insert('wa_log', {
+        kind: 'report',
+        invoiceId: entry.invoiceId || null,
+        to: entry.to || null,
+        toName: entry.toName || '',
+        toRole: entry.toRole === 'doctor' ? 'doctor' : 'patient',
+        status: entry.status === 'sent' ? 'sent' : 'failed',
+        error: entry.error || '',
+        ts: new Date().toISOString()
       });
+    } catch (e) {}
+  }
+
+  function waAlreadySent(invoiceId, toRole) {
+    try {
+      return DB.all('wa_log').some(function (e) {
+        return e.kind === 'report' && e.invoiceId === invoiceId && e.toRole === toRole && e.status === 'sent';
+      });
+    } catch (e) { return false; }
+  }
+
+  function waPatientMessage(inv, pat, testNames, link) {
+    var s = DB.get('settings', 'main') || {};
+    var lines = [
+      '*' + (s.labName || 'Lab') + '*',
+      'Assalam-o-Alaikum ' + (pat.name || '') + ',',
+      'Your lab report is ready.',
+      '',
+      'Invoice: ' + (inv.no || inv.id) + ' (' + App.d(inv.createdAt) + ')',
+      'Tests: ' + testNames.join(', ')
+    ];
+    if (link) { lines.push('', 'View / download report:', link); }
+    lines.push('', 'Shukriya!');
+    return lines.join('\n');
+  }
+
+  function waDoctorMessage(inv, doc, pat, testNames, link) {
+    var s = DB.get('settings', 'main') || {};
+    var lines = [
+      '*' + (s.labName || 'Lab') + '*',
+      'Assalam-o-Alaikum ' + (doc.name || '') + ',',
+      'Lab report of patient ' + (pat.name || '') + ' is ready.',
+      '',
+      'Invoice: ' + (inv.no || inv.id) + ' (' + App.d(inv.createdAt) + ')',
+      'Tests: ' + testNames.join(', ')
+    ];
+    if (link) { lines.push('', 'View / download report:', link); }
+    lines.push('', 'Shukriya!');
+    return lines.join('\n');
+  }
+
+  function waSendToPatient(invoiceId, inv, pat, testNames, link, cfg) {
+    var name = pat.name || '';
+    if (waAlreadySent(invoiceId, 'patient')) return;
+    var to = waPhone(pat.whatsapp || pat.phone);
+    if (!to) {
+      waLogWaSend({ invoiceId: invoiceId, to: null, toName: name, toRole: 'patient', status: 'failed', error: 'no WhatsApp number on patient record' });
+      App.toast('Auto-send skipped — no WhatsApp number for ' + (name || 'patient'), 'err');
+      return;
+    }
+    var msg = waPatientMessage(inv, pat, testNames, link);
+    waSendText(cfg, to, msg, function (err) {
+      waLogWaSend({
+        invoiceId: invoiceId, to: to, toName: name, toRole: 'patient',
+        status: err ? 'failed' : 'sent',
+        error: err ? String(err.message || err).slice(0, 200) : ''
+      });
+      if (err) App.toast('WhatsApp auto-send failed for ' + (name || 'patient'), 'err');
+      else App.toast('Report auto-sent on WhatsApp to ' + (name || 'patient'));
     });
   }
+
+  function waSendToDoctor(invoiceId, inv, pat, testNames, link, cfg) {
+    var doc = inv.doctorId ? DB.get('doctors', inv.doctorId) : null;
+    if (!doc) return;
+    var name = doc.name || '';
+    if (waAlreadySent(invoiceId, 'doctor')) return;
+    var to = waPhone(doc.whatsapp || doc.phone);
+    if (!to) {
+      waLogWaSend({ invoiceId: invoiceId, to: null, toName: name, toRole: 'doctor', status: 'failed', error: 'no WhatsApp number on doctor record' });
+      App.toast('Auto-send skipped — no WhatsApp number for ' + (name || 'doctor'), 'err');
+      return;
+    }
+    var msg = waDoctorMessage(inv, doc, pat, testNames, link);
+    waSendText(cfg, to, msg, function (err) {
+      waLogWaSend({
+        invoiceId: invoiceId, to: to, toName: name, toRole: 'doctor',
+        status: err ? 'failed' : 'sent',
+        error: err ? String(err.message || err).slice(0, 200) : ''
+      });
+      if (err) App.toast('WhatsApp auto-send failed for ' + (name || 'doctor'), 'err');
+      else App.toast('Report auto-sent on WhatsApp to ' + (name || 'doctor'));
+    });
+  }
+
+  function waTryAutoSendOne(invoiceId, cfg, autoPat, autoDoc) {
+    var inv = invOf(invoiceId);
+    if (!inv) return;
+    // send only when the whole report is ready (no pending results left)
+    var pending = DB.all('results').some(function (r) { return r.invoiceId === invoiceId && r.status !== 'ready'; });
+    if (pending) return;
+    var rows = joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; });
+    if (!rows.length) return;
+    var testNames = [];
+    rows.forEach(function (r) {
+      var nm = (r.item && r.item.name) || (r.test && r.test.name) || '';
+      if (nm && testNames.indexOf(nm) < 0) testNames.push(nm);
+    });
+    var pat = patOf(inv.patientId);
+    var fallbackLink = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
+    function finishSend(link) {
+      try { if (autoPat) waSendToPatient(invoiceId, inv, pat, testNames, link, cfg); } catch (e) {}
+      try { if (autoDoc && inv.doctorId) waSendToDoctor(invoiceId, inv, pat, testNames, link, cfg); } catch (e) {}
+    }
+    try {
+      // cloud PDF link when available (paid invoices); else the deep hash link
+      getReportPdfUrl(invoiceId)
+        .then(function (url) { finishSend(url || fallbackLink); })
+        .catch(function () { finishSend(fallbackLink); });
+    } catch (e) { finishSend(fallbackLink); }
+  }
+
+  /* Trigger: call after result saves. Sends only for invoices whose report is
+     now fully ready. Never throws — the result-save flow must not break. */
+  function waAutoSendReady(invoiceIds) {
+    try {
+      var ids = [];
+      (invoiceIds || []).forEach(function (id) { if (id && ids.indexOf(id) < 0) ids.push(id); });
+      if (!ids.length) return;
+      var cfg = waCfg();
+      var autoPat = cfg.autoPatient !== false;  /* default ON */
+      var autoDoc = cfg.autoDoctor === true;    /* default OFF */
+      if (!autoPat && !autoDoc) return;
+      if (!waReady(cfg)) { App.toast('WhatsApp API not configured — auto-send skipped', 'err'); return; }
+      ids.forEach(function (invoiceId) {
+        try { waTryAutoSendOne(invoiceId, cfg, autoPat, autoDoc); } catch (e) {}
+      });
+    } catch (e) {}
+  }
+
+  /* shareReportWhatsApp: superseded by waManualSend() (strict API send with
+     wa_log recording). Kept as a thin alias for any external callers. */
+  function shareReportWhatsApp(invoiceId) { waManualSend(invoiceId, 'patient'); }
   function deleteResult(resId) {
     var r = DB.get('results', resId);
     if (!r) return;
@@ -278,7 +521,7 @@
       { wide: true, onOpen: function (ov, close) {
           document.getElementById('bresCancel').addEventListener('click', close);
           document.getElementById('bresSave').addEventListener('click', function () {
-            var saved = 0, skipped = 0;
+            var saved = 0, skipped = 0, _waIds = [];
             rows.forEach(function (row, ti) {
               var test = row.test;
               var params = (test && Array.isArray(test.params)) ? test.params : [];
@@ -308,6 +551,7 @@
               if (row.res) DB.update('results', row.res.id, patch);
               else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy });
               saved++;
+              if (_waIds.indexOf(row.invoice.id) < 0) _waIds.push(row.invoice.id);
             });
             // payment: if "Mark as Paid" checked, collect full due on each invoice
             var payBox = ov.querySelector('#bresPaid');
@@ -344,6 +588,8 @@
             // offer print: switch to ready tab so the user can print
             tab = 'ready';
             render();
+            // auto-send reports that just became fully ready
+            waAutoSendReady(_waIds);
           });
         }
       });
@@ -459,6 +705,8 @@
     else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy });
     close();
     App.toast('Result saved — marked ready');
+    // auto-send if this invoice's report just became fully ready
+    waAutoSendReady([row.invoice.id]);
     if (typeof onSaved === 'function') onSaved();
     else render();
   }
@@ -1397,12 +1645,12 @@
        barcode of the case/invoice number, then the case number, then the
        date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
-      return '<div style="border:1px solid #000;background:#fff;text-align:center;' +
-        'padding:0 1px;line-height:1.1;font-size:0.65em;grid-row:span 2;display:flex;flex-direction:column;justify-content:center;align-items:center;max-width:110px;margin:0 auto;width:100%">' +
-        '<div style="font-weight:700;color:#000;font-size:0.8em">RESULT</div>' +
+      return '<div style="border:2px solid #131845;background:#eef2ff;text-align:center;' +
+        'padding:2px 8px;line-height:1.1;font-size:0.65em;display:inline-flex;flex-direction:column;justify-content:center;align-items:center;border-radius:6px">' +
+        '<div style="font-weight:700;color:#131845;font-size:0.8em">RESULT</div>' +
         '<div style="margin:1px 0">' + barcodeHtml(invNo) + '</div>' +
-        '<div style="font-weight:700;color:#000;font-size:0.75em">' + App.esc(invNo) + '</div>' +
-        '<div style="font-size:0.7em;color:#000">' +
+        '<div style="font-weight:700;color:#131845;font-size:0.75em">' + App.esc(invNo) + '</div>' +
+        '<div style="font-size:0.7em;color:#131845">' +
           App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
         '</div>' +
       '</div>';
@@ -1505,12 +1753,14 @@
 
     /* assemble: title + RESULT boxes row, then grey header row, body, graph, remarks */
     return '<div class="rpt-section" style="margin:14px 0 4px">' +
-      '<div style="display:grid;grid-template-columns:' + gridCols + '">' +
-        '<div style="grid-column:span 3;align-self:center;color:#000;font-weight:700;' +
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:2px">' +
+        '<div style="color:#000;font-weight:700;' +
           'font-size:1.15em;text-transform:uppercase;letter-spacing:0.02em">' +
           App.esc(title) +
         '</div>' +
         boxHtml +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:' + gridCols + '">' +
         headCells +
       '</div>' +
       rowsHtml +
@@ -1606,9 +1856,10 @@
     var addrHtml = '';
     if (addrParts.length) {
       addrHtml =
-        '<div style="text-align:center;font-weight:600;font-size:0.85em;line-height:1.6;margin:6px 0">' +
+        '<div style="border-top:1px solid #000;margin:8px 0 6px;padding-top:6px">' +
+        '<div style="text-align:center;font-weight:600;font-size:0.85em;line-height:1.6">' +
           App.esc(addrParts.join('   |   ')) +
-        '</div>';
+        '</div></div>';
     }
 
     /* 5: disclaimer box — skip the old "Get well soon" default footer note */
@@ -1969,19 +2220,33 @@
   function viewReport(invoiceId) {
     var d = reportData(invoiceId);
     if (!d) { App.toast('No ready results to view', 'err'); return; }
+    /* manual WhatsApp sends: patient button always shown; doctor button only
+       when the invoice has a referring doctor — disabled with a tooltip when
+       the doctor has no WhatsApp number on file */
+    var docWaBtn = '';
+    if (d.doc) {
+      var docPh = waPhone(d.doc.whatsapp || d.doc.phone);
+      docWaBtn = docPh
+        ? '<button class="btn btn-ghost" id="rvWaDoctor">' + WA_ICON + ' Send to Doctor (WhatsApp)</button>'
+        : '<button class="btn btn-ghost" id="rvWaDoctor" disabled title="No WhatsApp number on file" style="opacity:.45;cursor:not-allowed">' + WA_ICON + ' Send to Doctor (WhatsApp)</button>';
+    }
     var close = App.modal('Lab Report — ' + App.esc(d.inv.no),
       '<div class="report-preview" style="max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:20px;background:#fff">' +
         stripQrImg(reportHtml(d)) +
       '</div>' +
-      '<div class="actions" style="margin-top:16px">' +
+      '<div id="rvWaHist" style="margin-top:12px">' + waHistoryHtml(invoiceId) + '</div>' +
+      '<div class="actions" style="margin-top:12px">' +
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
-        '<button class="btn btn-ghost" id="rvWa">' + WA_ICON + ' Share on WhatsApp</button>' +
+        '<button class="btn btn-ghost" id="rvWaPatient">' + WA_ICON + ' Send to Patient (WhatsApp)</button>' +
+        docWaBtn +
         '<button class="btn btn-primary" id="rvPrint">' + PRINT_ICON + ' Print Report</button>' +
       '</div>',
       { wide: true, onOpen: function (ov, close) {
           document.getElementById('rvClose').addEventListener('click', close);
           document.getElementById('rvPrint').addEventListener('click', function () { close(); printReportChoice(invoiceId); });
-          document.getElementById('rvWa').addEventListener('click', function () { shareReportWhatsApp(invoiceId); });
+          document.getElementById('rvWaPatient').addEventListener('click', function () { waManualSend(invoiceId, 'patient'); });
+          var wdoc = document.getElementById('rvWaDoctor');
+          if (wdoc && !wdoc.disabled) wdoc.addEventListener('click', function () { waManualSend(invoiceId, 'doctor'); });
         }
       });
   }
