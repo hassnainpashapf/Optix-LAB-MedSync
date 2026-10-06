@@ -233,14 +233,15 @@
   /* ============================================================
      REPORTS  (#/reports) — admin only
      ============================================================ */
-  var rep = { from: null, to: null, type: 'all', preset: 'thisMonth' };
+  var rep = { from: null, to: null, type: null, preset: 'thisMonth' };
   function repInit() {
     if (!rep.from) {
       var t = App.today();
       rep.from = t.slice(0, 8) + '01'; // first of month
       rep.to = t;
     }
-    if (!rep.type) rep.type = 'all';
+    /* NOTE: rep.type intentionally NOT defaulted — the Reports page shows an
+       empty state until the user explicitly picks a report type. */
     if (!rep.preset) rep.preset = 'thisMonth';
   }
   function setPreset(p) {
@@ -392,141 +393,6 @@
       }
       var r = Math.round((cur - prev) / prev * 100 * 10) / 10;
       return { txt: (r > 0 ? '+' : '') + r + '%', up: r > 0 ? true : (r < 0 ? false : null) };
-    }
-
-    /* ---- report charts (worker 5): offline inline-SVG, black text on light bg ---- */
-    var chTxtCol = '#475569';
-    var chBilledCol = '#2563eb';
-    var chCollectedCol = '#10b981';
-    var chMethodCols = { Cash: '#10b981', Bank: '#2563eb', Card: '#f59e0b', Other: '#94a3b8' };
-
-    function chAxisLbl(v) {
-      v = +v || 0;
-      if (v >= 1000000) return (Math.round(v / 100000) / 10) + 'M';
-      if (v >= 1000) return (Math.round(v / 100) / 10) + 'k';
-      return String(Math.round(v));
-    }
-
-    /* daily billed/collected over [from,to]; weekly buckets when period > 31 days */
-    var chDays = [];
-    (function () {
-      var d = from;
-      while (d <= to && chDays.length < 2000) { chDays.push(d); d = addDays(d, 1); }
-    })();
-    var chBilledByDay = {}, chCollByDay = {};
-    invoices.forEach(function (iv) { var k = toDay(iv.createdAt); chBilledByDay[k] = (chBilledByDay[k] || 0) + (+iv.total || 0); });
-    payments.forEach(function (p) { var k = toDay(p.date || p.createdAt); chCollByDay[k] = (chCollByDay[k] || 0) + (+p.amount || 0); });
-    var chBuckets = [];
-    if (chDays.length > 31) {
-      for (var chBi = 0; chBi < chDays.length; chBi += 7) chBuckets.push(chDays.slice(chBi, chBi + 7));
-    } else {
-      chDays.forEach(function (d) { chBuckets.push([d]); });
-    }
-    var chTrend = chBuckets.map(function (b) {
-      var tBilled = 0, tColl = 0, j;
-      for (j = 0; j < b.length; j++) {
-        tBilled += (chBilledByDay[b[j]] || 0);
-        tColl += (chCollByDay[b[j]] || 0);
-      }
-      return {
-        label: b.length > 1 ? b[0].slice(5) + '-' + b[b.length - 1].slice(5) : b[0].slice(5),
-        billed: tBilled,
-        coll: tColl
-      };
-    });
-
-    /* grouped-bar trend: billed (blue) vs collected (green) per day/week */
-    function chTrendSvg(rows) {
-      var W = 560, H = 244, L = 52, R = 10, T = 14, B = 30;
-      var pw = W - L - R, ph = H - T - B;
-      var max = 1;
-      rows.forEach(function (r) { if (r.billed > max) max = r.billed; if (r.coll > max) max = r.coll; });
-      var n = Math.max(rows.length, 1);
-      var slot = pw / n, bw = Math.min(14, slot / 3);
-      var y = function (v) { return T + ph - (v / max) * ph; };
-      var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Revenue trend">';
-      var g, gy, step;
-      for (g = 4; g >= 0; g--) {
-        step = max * g / 4;
-        gy = y(step);
-        s += '<line x1="' + L + '" y1="' + gy.toFixed(1) + '" x2="' + (W - R) + '" y2="' + gy.toFixed(1) + '" stroke="#e2e8f0"/>'
-          + '<text x="' + (L - 6) + '" y="' + (gy + 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="' + chTxtCol + '">' + chAxisLbl(step) + '</text>';
-      }
-      var every = Math.max(1, Math.ceil(rows.length / 10));
-      rows.forEach(function (r, i) {
-        var cx = L + slot * i + slot / 2;
-        var hb = r.billed > 0 ? Math.max((r.billed / max) * ph, 2) : 0;
-        var hc = r.coll > 0 ? Math.max((r.coll / max) * ph, 2) : 0;
-        s += '<rect x="' + (cx - bw - 1).toFixed(1) + '" y="' + (T + ph - hb).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hb.toFixed(1) + '" fill="' + chBilledCol + '" rx="2"/>'
-          + '<rect x="' + (cx + 1).toFixed(1) + '" y="' + (T + ph - hc).toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + hc.toFixed(1) + '" fill="' + chCollectedCol + '" rx="2"/>';
-        if (i % every === 0) {
-          s += '<text x="' + cx.toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10" fill="' + chTxtCol + '">' + App.esc(r.label) + '</text>';
-        }
-      });
-      if (!rows.length) s += '<text x="' + (L + pw / 2) + '" y="' + (T + ph / 2) + '" text-anchor="middle" font-size="13" fill="' + chTxtCol + '">No data in this period.</text>';
-      return s + '</svg>';
-    }
-
-    /* collection donut from methods {Cash,Bank,Card,Other} */
-    var chMethodRows = ['Cash', 'Bank', 'Card', 'Other'].map(function (m) {
-      return { label: m, value: methods[m] || 0 };
-    });
-    function chDonutSvg(rows) {
-      var W = 300, H = 220, cx = 95, cy = 110, Ro = 72, Ri = 46;
-      var total = 0;
-      rows.forEach(function (x) { total += x.value; });
-      var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Collection by payment method">';
-      if (total <= 0) {
-        return s + '<circle cx="' + cx + '" cy="' + cy + '" r="' + Ro + '" fill="none" stroke="#e2e8f0" stroke-width="24"/>'
-          + '<text x="' + cx + '" y="' + (cy + 5) + '" text-anchor="middle" font-size="13" fill="' + chTxtCol + '">No collection</text></svg>';
-      }
-      var a = -Math.PI / 2, k, x, frac, a2, large;
-      for (k = 0; k < rows.length; k++) {
-        x = rows[k];
-        if (x.value > 0) {
-          frac = x.value / total; a2 = a + frac * Math.PI * 2;
-          large = frac > 0.5 ? 1 : 0;
-          s += '<path d="M' + (cx + Ro * Math.cos(a)).toFixed(2) + ' ' + (cy + Ro * Math.sin(a)).toFixed(2)
-            + ' A' + Ro + ' ' + Ro + ' 0 ' + large + ' 1 ' + (cx + Ro * Math.cos(a2)).toFixed(2) + ' ' + (cy + Ro * Math.sin(a2)).toFixed(2)
-            + ' L' + (cx + Ri * Math.cos(a2)).toFixed(2) + ' ' + (cy + Ri * Math.sin(a2)).toFixed(2)
-            + ' A' + Ri + ' ' + Ri + ' 0 ' + large + ' 0 ' + (cx + Ri * Math.cos(a)).toFixed(2) + ' ' + (cy + Ri * Math.sin(a)).toFixed(2)
-            + ' Z" fill="' + chMethodCols[x.label] + '"/>';
-          a = a2;
-        }
-      }
-      s += '<text x="' + cx + '" y="' + (cy - 2) + '" text-anchor="middle" font-size="17" font-weight="700" fill="#1e293b">' + App.money(total) + '</text>'
-        + '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-size="11" fill="' + chTxtCol + '">Total</text>';
-      var ly = 44;
-      rows.forEach(function (x) {
-        var pct = Math.round(x.value / total * 100);
-        s += '<rect x="192" y="' + (ly - 10) + '" width="12" height="12" rx="3" fill="' + chMethodCols[x.label] + '"/>'
-          + '<text x="210" y="' + ly + '" font-size="12" fill="#1e293b">' + App.esc(x.label) + ' (' + pct + '%)</text>'
-          + '<text x="210" y="' + (ly + 15) + '" font-size="11" fill="' + chTxtCol + '">' + App.money(x.value) + '</text>';
-        ly += 40;
-      });
-      return s + '</svg>';
-    }
-
-    /* horizontal bars: revenue by test category, top 8 (reuses catRows) */
-    function chCatBarsSvg(rows) {
-      var top = rows.slice(0, 8);
-      var W = 560, rowH = 34, T = 12, B = 12, L = 140, R = 76;
-      var H = T + B + Math.max(top.length, 1) * rowH;
-      var max = 1;
-      top.forEach(function (r) { if (r.revenue > max) max = r.revenue; });
-      var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto" role="img" aria-label="Revenue by test category">';
-      if (!top.length) {
-        return s + '<text x="16" y="30" font-size="13" fill="' + chTxtCol + '">No revenue in this period.</text></svg>';
-      }
-      top.forEach(function (r, i) {
-        var yy = T + i * rowH;
-        var bw = r.revenue > 0 ? Math.max((r.revenue / max) * (W - L - R), 3) : 0;
-        var lbl = r.cat.length > 20 ? r.cat.slice(0, 19) + '...' : r.cat;
-        s += '<text x="' + (L - 8) + '" y="' + (yy + 21) + '" text-anchor="end" font-size="12" fill="#1e293b">' + App.esc(lbl) + '</text>'
-          + '<rect x="' + L + '" y="' + (yy + 6) + '" width="' + bw.toFixed(1) + '" height="18" rx="4" fill="#0e7490"/>'
-          + '<text x="' + (L + bw + 6).toFixed(1) + '" y="' + (yy + 21) + '" font-size="11" fill="' + chTxtCol + '">' + App.money(r.revenue) + '</text>';
-      });
-      return s + '</svg>';
     }
 
     /* ---- custom report builder (worker 7) ---- */
@@ -773,31 +639,6 @@
         + '<td style="text-align:right;font-weight:700;color:' + (r.net < 0 ? '#c0392b' : '#1e7e46') + '">' + App.esc(App.money(r.net)) + '</td>'
         + '<td style="text-align:right">' + r.tests + '</td></tr>';
     }).join('');
-    /* inline-SVG horizontal bar chart: net per lab, green >= 0, red < 0 */
-    var labCmpChart = '';
-    if (labCmpRows.length) {
-      var _nets = labCmpRows.map(function (r) { return r.net; });
-      var _max = Math.max.apply(null, _nets.concat([0]));
-      var _min = Math.min.apply(null, _nets.concat([0]));
-      var _rng = _max - _min;
-      if (!(_rng > 0)) _rng = 1;
-      var _rowH = 32, _top = 8, _lblW = 170, _barX = 180, _barW = 300, _valX = 500;
-      var _svgW = _valX + 120;
-      function _labX(v) { return _barX + (v - _min) / _rng * _barW; }
-      var _zeroX = _labX(0);
-      var _bars = labCmpRows.map(function (r, i) {
-        var y = _top + i * _rowH;
-        var x = _labX(r.net), bx = Math.min(_zeroX, x), bw = Math.abs(x - _zeroX);
-        if (bw < 2 && r.net !== 0) bw = 2;
-        var nm = r.name.length > 22 ? r.name.slice(0, 22) + '…' : r.name;
-        return '<text x="' + (_lblW - 8) + '" y="' + (y + 20) + '" text-anchor="end" font-size="12" fill="#333">' + App.esc(nm) + '</text>'
-          + '<line x1="' + _zeroX.toFixed(1) + '" y1="' + y + '" x2="' + _zeroX.toFixed(1) + '" y2="' + (y + _rowH - 6) + '" stroke="#ccc" stroke-width="1"/>'
-          + '<rect x="' + bx.toFixed(1) + '" y="' + (y + 8) + '" width="' + bw.toFixed(1) + '" height="14" rx="3" fill="' + (r.net < 0 ? '#d9534f' : '#2ca06b') + '"/>'
-          + '<text x="' + _valX + '" y="' + (y + 20) + '" font-size="12" fill="#555">' + App.esc(App.money(r.net)) + '</text>';
-      }).join('');
-      labCmpChart = '<svg viewBox="0 0 ' + _svgW + ' ' + (_top * 2 + labCmpRows.length * _rowH) + '" style="width:100%;height:auto;display:block">'
-        + _bars + '</svg>';
-    }
     var labCmpNote = labCmpRows.length === 1
       ? '<p class="muted" style="margin:12px 0 0;font-size:13px">Only one lab registered — add labs from the login screen to compare.</p>'
       : (labCmpRows.length === 0
@@ -813,7 +654,6 @@
           + labCmpTableRows + '</tbody></table></div>'
         : App.empty('No lab data available for this period.'))
       + labCmpNote
-      + (labCmpChart ? '<h4 style="margin:18px 0 8px">Net per Lab</h4>' + labCmpChart : '')
       + '</div></div>';
     function labCmpExportCsv() {
       var lines = ['Lab,Bills,Billed,Collected,Expenses,Net,Tests'];
@@ -1208,27 +1048,6 @@
         }).join('');
 
     /* ---- feature extension slots (workers 5-9 assign their cards here) ---- */
-    var repSlotCharts = '';
-    if (showTests || showFinance) {
-      repSlotCharts =
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
-      + '<div class="card"><div class="card-h"><h3 style="margin:0">Revenue Trend</h3></div><div class="card-b">'
-      + '<div style="display:flex;gap:16px;margin-bottom:8px">'
-      + '<span style="font-size:12px;color:#1e293b"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + chBilledCol + ';margin-right:6px"></span>Billed</span>'
-      + '<span style="font-size:12px;color:#1e293b"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:' + chCollectedCol + ';margin-right:6px"></span>Collected</span>'
-      + '</div>'
-      + chTrendSvg(chTrend)
-      + '<div class="muted" style="font-size:11px;margin-top:6px">' + (chDays.length > 31 ? 'Grouped by week.' : 'Daily totals.') + ' ' + App.esc(from) + ' to ' + App.esc(to) + '</div>'
-      + '</div></div>'
-      + '<div class="card"><div class="card-h"><h3 style="margin:0">Collection by Payment Method</h3></div><div class="card-b">'
-      + chDonutSvg(chMethodRows)
-      + '</div></div></div>'
-      + (showTests
-        ? '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Revenue by Test Category</h3></div><div class="card-b">'
-        + chCatBarsSvg(catRows)
-        + '</div></div>'
-        : '');
-    }
     var repSlotSchedules = schedCardHTML();
     var repSlotBuilder = '';
     var repSlotTemplates = (function () {
@@ -1247,13 +1066,8 @@
     })();
     var repSlotLabs = (rep.type === 'labs') ? labsCardHtml : '';
 
-    var html = ''
-      + '<style>' + ADM_STAT_CSS + '</style>'
-      + ((showTests || showFinance) ? '<div class="stat-grid">' + repStats + '</div>' : '')
-      + ((showTests || showFinance) ? cmpCard : '')
-      + repSlotCharts + repSlotSchedules + repSlotBuilder + repSlotTemplates + repSlotLabs
-
-      /* report type selector */
+    /* report type selector: always visible at the top of the page */
+    var typeCardHtml = ''
       + '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
       + '<span style="font-weight:700;margin-right:8px">Report Type:</span>'
       + ['all', 'tests', 'finance', 'dues', 'patients', 'labs'].map(function (t) {
@@ -1261,37 +1075,64 @@
           var active = rep.type === t;
           return '<button type="button" class="btn ' + (active ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-reptype="' + t + '">' + lbl + '</button>';
         }).join('')
-      + '</div></div>'
+      + '</div></div>';
 
-      + filterCard
+    /* empty state: nothing below the selector until a type is explicitly chosen */
+    var repChosen = !!rep.type;
+    var repEmptyHtml = ''
+      + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
+      + '<div style="text-align:center;padding:44px 16px">'
+      + '<div style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:50%;background:var(--brand-soft,#e7f0fa);color:var(--brand,#1d4ed8);margin-bottom:14px">' + AICONS.list + '</div>'
+      + '<h3 style="margin:0 0 8px">Select a report type</h3>'
+      + '<p class="muted" style="margin:0">Choose a report type above to view reports for the selected period.</p>'
+      + '</div></div></div>';
 
-      + (showPatients ? finCard : '')
-      + (showFinance ? finSumCard : '')
-      + (showDues ? duesCard : '')
-      + (showPatients ? patCard : '')
+    var html = ''
+      + '<style>' + ADM_STAT_CSS + '</style>'
+      + typeCardHtml;
+    if (repChosen) {
+      html +=
+        ((showTests || showFinance) ? '<div class="stat-grid">' + repStats + '</div>' : '')
+        + ((showTests || showFinance) ? cmpCard : '')
+        + repSlotSchedules + repSlotBuilder + repSlotTemplates + repSlotLabs
 
-      + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
-      + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
-      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
-      + twRowsHtml
-      + '</tbody></table></div></div></div>'
-      + '<div class="card"><div class="card-h"><h3 style="margin:0">Doctor-wise Referrals</h3></div><div class="card-b">'
-      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
-      + dwRowsHtml
-      + '</tbody></table></div></div></div></div>' : '')
+        + filterCard
 
-      + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
-      + '<div class="card"><div class="card-h"><h3 style="margin:0">Revenue by Test Category</h3></div><div class="card-b">'
-      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Category</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
-      + catRowsHtml
-      + '</tbody></table></div></div></div>'
-      + '<div class="card"><div class="card-h"><h3 style="margin:0">Top 5 Tests by Count</h3></div><div class="card-b">'
-      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
-      + top5Html
-      + '</tbody></table></div></div></div></div>' : '');
+        + (showPatients ? finCard : '')
+        + (showFinance ? finSumCard : '')
+        + (showDues ? duesCard : '')
+        + (showPatients ? patCard : '')
+
+        + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
+        + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
+        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+        + twRowsHtml
+        + '</tbody></table></div></div></div>'
+        + '<div class="card"><div class="card-h"><h3 style="margin:0">Doctor-wise Referrals</h3></div><div class="card-b">'
+        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
+        + dwRowsHtml
+        + '</tbody></table></div></div></div></div>' : '')
+
+        + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
+        + '<div class="card"><div class="card-h"><h3 style="margin:0">Revenue by Test Category</h3></div><div class="card-b">'
+        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Category</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+        + catRowsHtml
+        + '</tbody></table></div></div></div>'
+        + '<div class="card"><div class="card-h"><h3 style="margin:0">Top 5 Tests by Count</h3></div><div class="card-b">'
+        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+        + top5Html
+        + '</tbody></table></div></div></div></div>' : '');
+    } else {
+      html += repEmptyHtml;
+    }
 
     document.getElementById('view').innerHTML = html;
     admCountUp();
+
+    /* report type selector: rendered in both the empty and chosen states */
+    document.querySelectorAll('[data-reptype]').forEach(function (b) {
+      b.addEventListener('click', function () { rep.type = b.getAttribute('data-reptype'); renderReports(); });
+    });
 
     /* multi-lab comparison: own CSV export button inside the labs card */
     var labCmpBtn = document.getElementById('labCmpCsv');
@@ -1321,6 +1162,8 @@
       });
     });
 
+    /* the controls below only exist after a report type is explicitly chosen */
+    if (repChosen) {
     document.getElementById('repFrom').addEventListener('change', function (e) { rep.from = e.target.value; rep.preset = 'custom'; renderReports(); });
     document.getElementById('repTo').addEventListener('change', function (e) { rep.to = e.target.value; rep.preset = 'custom'; renderReports(); });
     /* report templates (worker 8) */
@@ -1329,9 +1172,6 @@
     document.getElementById('tplSave').addEventListener('click', repTplSave);
     document.querySelectorAll('[data-preset]').forEach(function (b) {
       b.addEventListener('click', function () { setPreset(b.getAttribute('data-preset')); });
-    });
-    document.querySelectorAll('[data-reptype]').forEach(function (b) {
-      b.addEventListener('click', function () { rep.type = b.getAttribute('data-reptype'); renderReports(); });
     });
     document.getElementById('repBuilder').addEventListener('click', function () { openBuilder(); });
     document.getElementById('repCsv').addEventListener('click', function () {
@@ -1437,6 +1277,7 @@
       }
       App.print('Collection Report — ' + repTypeLbl + ' (' + App.d(from) + ' – ' + App.d(to) + ')', ph);
     });
+    } /* end if (repChosen) */
   }
 
   App.route('#/reports', renderReports);
@@ -1479,6 +1320,10 @@
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
   }
+
+  /* deep-link into the WhatsApp settings tab (used by report-view send buttons
+     when the WhatsApp API is not configured yet) */
+  App.openWaSettingsTab = function () { settingsTab = 'whatsapp'; renderSettings(); };
 
   /* ---- Lab Profile ---- */
   function renderSetProfile() {
@@ -2017,12 +1862,14 @@
 
   /* ---- WhatsApp API (admin only) ---- */
   function waDefaults() {
-    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' };
+    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false };
   }
   /* ---- WhatsApp: admin only sees/edits their lab number; API hidden ---- */
   function renderSetWhatsapp() {
     var s = DB.get('settings', 'main') || {};
     var w = Object.assign(waDefaults(), s.whatsapp || {});
+    var autoPat = w.autoPatient !== false;  /* default ON */
+    var autoDoc = w.autoDoctor === true;    /* default OFF */
     var html =
       '<div class="card" style="max-width:640px"><div class="card-h"><h3>Lab WhatsApp Number</h3></div>' +
       '<div class="card-b">' +
@@ -2030,16 +1877,29 @@
       '<div style="display:flex;gap:10px">' +
       '<input class="input" id="waLabNum" placeholder="e.g. 0300-1234567" value="' + App.esc(w.labNumber || '') + '" style="flex:1">' +
       '<button class="btn btn-primary" id="waLabNumSave">Save</button>' +
-      '</div></div></div>';
+      '</div></div></div>' +
+      '<div class="card" style="max-width:640px;margin-top:14px"><div class="card-h"><h3>Auto-send Reports</h3></div>' +
+      '<div class="card-b">' +
+      '<p class="muted" style="font-size:13px;margin-top:0">Automatically send the report on WhatsApp (via your UltraMsg number) when an invoice becomes ready. ' +
+      'A history of every auto-send is kept in the WhatsApp log.</p>' +
+      '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;margin-bottom:10px">' +
+      '<input type="checkbox" id="waAutoPatient"' + (autoPat ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green)"> ' +
+      'Auto-send report to <strong>patient</strong> on ready</label>' +
+      '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">' +
+      '<input type="checkbox" id="waAutoDoctor"' + (autoDoc ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green)"> ' +
+      'Auto-send report to <strong>referring doctor</strong> on ready</label>' +
+      '</div></div>';
     document.getElementById('setBody').innerHTML = html;
     document.getElementById('waLabNumSave').addEventListener('click', function () {
       var num = document.getElementById('waLabNum').value.trim();
       var st = DB.get('settings', 'main') || {};
       var ww = Object.assign(waDefaults(), st.whatsapp || {});
       ww.labNumber = num;
+      ww.autoPatient = document.getElementById('waAutoPatient').checked;
+      ww.autoDoctor = document.getElementById('waAutoDoctor').checked;
       st.whatsapp = ww;
-      DB.put('settings', st);
-      App.toast('Lab WhatsApp number saved');
+      DB.update('settings', 'main', st);
+      App.toast('WhatsApp settings saved');
       renderSetWhatsapp();
     });
   }

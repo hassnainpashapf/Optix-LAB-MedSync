@@ -672,13 +672,6 @@ body.modal-open{overflow:hidden}
   /* ---- Stat cards: keep 2 columns, stop long values overflowing ---- */
   .stat .vl{overflow:hidden;text-overflow:ellipsis}
 
-  /* ---- Dashboard donuts: rings must never exceed their column ----
-     .db-page prefix: mod-dashboard.js injects .dbd-* CSS after this
-     stylesheet, so the prefix is required to win on specificity ---- */
-  .db-page .dbd-card{padding:16px 10px}
-  .dbd-plain{min-width:0}
-  .dbd-plain svg{max-width:100%;height:auto}
-
   /* ---- Modals: fit the viewport, scrollable, tappable footer ----
      (modal-h/modal-b paddings now live in RESPONSIVE-7's flex-bounded
      rules below — those win the cascade with identical values) ---- */
@@ -707,10 +700,6 @@ body.modal-open{overflow:hidden}
   /* ---- Stat cards: single column on very small screens ---- */
   .stat-grid{grid-template-columns:1fr}
   .stat .vl{font-size:18px}
-  /* ---- Dashboard rings: shrink so 2 columns always fit ----
-     (legend width is governed by RESPONSIVE-6's .db-page rule below,
-     which wins on specificity) ---- */
-  .dbd-plain svg{width:120px;height:120px}
   .modal{width:100%}
   #view{padding:16px 12px 60px}
   main.view{padding:16px 12px 60px}
@@ -990,73 +979,12 @@ body.modal-open{overflow:hidden}
 }
 /* ====== END RESPONSIVE-5 ====== */
 
-/* ====== RESPONSIVE-6: dashboard charts (added 2026-10-06) ======
-   Scope: dashboard chart/graph blocks only (.dbd-*, .dbw-*, .db-*,
-   .dbx-*). Desktop (>1024px) layout is untouched — every rule below is
-   either breakpoint-scoped (<=1024px) or a harmless no-overflow guard.
-   NOTE: most dashboard chart styles are JS-injected <style> blocks that
-   land after this stylesheet in the DOM, so these overrides are
-   .db-page-prefixed for higher specificity (never use !important). */
-
-/* ---- 1) Donut rings (.dbd-row): 1-per-row on mobile (<768px) ---- */
-@media (max-width:767px){
-  .db-page .dbd-row{grid-template-columns:1fr;gap:14px}
-  .db-page .dbd-card{overflow:hidden}
-  .db-page .dbd-plain{max-width:340px;margin:0 auto}
-  .db-page .dbd-plain svg{max-width:100%;height:auto}
-  /* legibility floors: JS drops .dbd-amt to 14px at <=560px — keep it readable */
-  .db-page .dbd-plain .dbd-amt{font-size:15px}
-  .db-page .dbd-plain .dbd-pct{font-size:12px}
-  .db-page .dbd-plain .dbd-lb{font-size:11px}
-  .db-page .dbd-plain .dbd-sub{font-size:12px}
-  .db-page .dbd-plain .dbd-leg{font-size:11px}
-  .db-page .dbd-plain .dbd-legs{max-width:260px;gap:6px 12px}
-}
-
-/* ---- 2) Donut rings: 2-per-row on tablet (768px–1024px) ---- */
-@media (min-width:768px) and (max-width:1024px){
-  .db-page .dbd-row{grid-template-columns:repeat(2,1fr)}
-  .db-page .dbd-plain{min-width:0}
-}
-
-/* ---- 3) Chart widget grids (.dbw-grid, .dbx-grid): never overflow ----
-   .dbw-grid already goes 1-col at <=900px; .dbx-grid (advanced graphs)
-   had no mobile rule, so it gets one here. */
-.db-page .dbw-grid,
-.db-page .dbx-grid{min-width:0}
-.db-page .dbw-grid>.card,
-.db-page .dbx-grid>.card{min-width:0;overflow:hidden}
-@media (max-width:767px){
-  .db-page .dbx-grid{grid-template-columns:1fr}
-}
-
-/* ---- 4) Donut + legend split (.dbw-split): legs wrap BELOW the donut
-   on small screens instead of squeezing beside it ---- */
-.db-page .dbw-legs{min-width:0}
-.db-page .dbw-hbar{min-width:0}            /* bar never forces its row wider */
-.db-page .dbw-arow .dbw-alab{min-width:0}  /* label column may shrink */
-@media (max-width:640px){
-  .db-page .dbw-split{flex-wrap:wrap;justify-content:center;gap:12px}
-  .db-page .dbw-legs{flex:1 1 100%}
-  .db-page .dbw-row{font-size:12.5px}
-}
-
-/* ---- 5) Weekly bar chart (.db-cols/.db-col): 7 bars fit, labels stay
-   legible, hover tooltip never clipped ---- */
-.db-page .db-cols{min-width:0}
-.db-page .db-col{min-width:0}
-.db-page .db-val{max-width:100%}
-@media (max-width:767px){
-  .db-page .db-tip{font-size:11.5px}   /* tooltip legibility floor */
-  .db-page .db-val{font-size:11px}
-  .db-page .db-day{font-size:12px}
-}
-
-/* ---- 6) Chart canvases: scale down without distortion (defensive —
-   dashboard charts are currently SVG/div-based, this guards any future
-   canvas use inside dashboard cards) ---- */
-.db-page canvas{max-width:100%;height:auto;display:block;margin:0 auto}
-
+/* ====== RESPONSIVE-6: dashboard quick-access grid (added 2026-10-06, slimmed) ======
+   Scope: dashboard quick-access grid (.dbw-grid) only — all chart/graph
+   styles removed with the dashboard simplification. Desktop (>1024px)
+   layout is untouched. */
+.db-page .dbw-grid{min-width:0}
+.db-page .dbw-grid>.card{min-width:0;overflow:hidden}
 /* ====== END RESPONSIVE-6 ====== */
 
 /* ====== RESPONSIVE-8: print layout (added 2026-10-06) ======
