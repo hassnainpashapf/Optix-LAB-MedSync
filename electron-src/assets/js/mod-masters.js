@@ -378,11 +378,16 @@ function drawTestRows(canEdit) {
 
 function paramRow(p) {
   p = p || {};
-  return '<div class="tm-prow" style="display:grid;grid-template-columns:1fr 110px 1fr 36px;gap:8px;margin-bottom:8px">' +
+  return '<div class="tm-prow" data-type="' + App.esc(p.type || '') + '" style="display:grid;grid-template-columns:1fr 110px 1fr 36px;gap:8px;margin-bottom:8px">' +
     '<input class="input tm-pn" placeholder="Parameter (e.g. Hemoglobin)" value="' + App.esc(p.name || '') + '">' +
     '<input class="input tm-pu" placeholder="Unit" value="' + App.esc(p.unit || '') + '">' +
     '<input class="input tm-pr" placeholder="Reference range" value="' + App.esc(p.ref || '') + '">' +
     '<button type="button" class="btn btn-ghost btn-sm tm-prm" title="Remove">✕</button>' +
+    '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:-2px">' +
+      '<input class="input tm-pm" placeholder="Male range (optional)" value="' + App.esc(p.refMale || '') + '">' +
+      '<input class="input tm-pf" placeholder="Female range (optional)" value="' + App.esc(p.refFemale || '') + '">' +
+      '<input class="input tm-pc" placeholder="Child &lt; 13 yrs (optional)" value="' + App.esc(p.refChild || '') + '">' +
+    '</div>' +
   '</div>';
 }
 
@@ -751,11 +756,16 @@ function testModal(t) {
       rowsBox.querySelectorAll('.tm-prow').forEach(function (row) {
         var pn = row.querySelector('.tm-pn').value.trim();
         if (!pn) return;
-        params.push({
+        var pobj = {
           name: pn,
           unit: row.querySelector('.tm-pu').value.trim(),
           ref: row.querySelector('.tm-pr').value.trim()
+        };
+        if (row.getAttribute('data-type')) pobj.type = row.getAttribute('data-type');
+        [['.tm-pm', 'refMale'], ['.tm-pf', 'refFemale'], ['.tm-pc', 'refChild']].forEach(function (x) {
+          var v = row.querySelector(x[0]).value.trim(); if (v) pobj[x[1]] = v;
         });
+        params.push(pobj);
       });
       var data = {
         code: code, name: name, category: category, price: price,

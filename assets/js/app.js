@@ -25,7 +25,9 @@
     check: '<path d="M20 6 9 17l-5-5"/>',
     alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
     download: '<path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
-    card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>'
+    card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
+    chat: '<path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.5A8.4 8.4 0 1 1 21 11.5z"/><path d="M8.5 10.5h7M8.5 14h4"/>',
+    shield: '<path d="M12 3l8 3v6c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/>'
   };
   function icon(name, size) {
     size = size || 18;
@@ -44,6 +46,8 @@
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports',   color: '#6366f1' },
     { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads', color: '#06b6d4' },
+    { key: 'whatsapp',  label: 'WhatsApp',   icon: 'chat',      route: '#/whatsapp',  color: '#22c55e' },
+    { key: 'audit',     label: 'Audit Log',  icon: 'shield',    route: '#/audit',     color: '#0ea5e9' },
     { key: 'subscription', label: 'Subscription', icon: 'card',  route: '#/subscription', color: '#f59e0b', saas: true },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b' },
     { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
@@ -60,6 +64,8 @@
     expenses:  ['admin', 'reception'],
     reports:   ['admin'],
     downloads:  ['admin', 'reception', 'technician'],
+    whatsapp:  ['admin', 'reception'],
+    audit:     ['admin'],
     subscription: ['admin'],
     settings:  ['admin'],
     profile:   ['admin', 'reception', 'technician']

@@ -90,6 +90,13 @@
     var due = r2(inv.total - paid);
     DB.update('invoices', invoiceId, { paid: paid, due: due < 0.01 ? 0 : due, status: statusOf(paid, inv.total) });
     App.toast(App.money(amount) + ' collected for ' + inv.no);
+    /* a finished report that was waiting for this payment goes out on WhatsApp now */
+    try {
+      if (due < 0.01) {
+        if (App.waOnPaid) App.waOnPaid(invoiceId);
+        else if (App.session && DB.all('results').some(function (r) { return r.invoiceId === invoiceId; })) App.loadScript('assets/js/mod-results.js').then(function () { if (App.waOnPaid) App.waOnPaid(invoiceId); }, function () {});
+      }
+    } catch (e) {}
     return true;
   }
 

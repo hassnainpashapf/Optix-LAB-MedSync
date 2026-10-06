@@ -124,7 +124,6 @@
       var nm = (r.item && r.item.name) || (r.test && r.test.name) || '';
       if (nm && testNames.indexOf(nm) < 0) testNames.push(nm);
     });
-    var fallbackLink = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
     function doSend(link) {
       var msg = toRole === 'doctor'
         ? waDoctorMessage(inv, doc, pat, testNames, link)
@@ -143,11 +142,7 @@
         waRefreshHistory(invoiceId);
       });
     }
-    try {
-      getReportPdfUrl(invoiceId)
-        .then(function (url) { doSend(url || fallbackLink); })
-        .catch(function () { doSend(fallbackLink); });
-    } catch (e) { doSend(fallbackLink); }
+    waReportLink(invoiceId, true).then(doSend); /* a staff member pressed Send: give a real public link even if a balance is pending */
   }
 
   // POST the PDF document to the configured provider. done(err)
@@ -229,7 +224,7 @@
   function waLogWaSend(entry) {
     try {
       DB.insert('wa_log', {
-        kind: 'report',
+        kind: entry.kind || 'report',
         invoiceId: entry.invoiceId || null,
         to: entry.to || null,
         toName: entry.toName || '',
@@ -249,54 +244,74 @@
     } catch (e) { return false; }
   }
 
-  function waPatientMessage(inv, pat, testNames, link) {
+  /* ---------- message templates ----------
+     Editable in WhatsApp Center (settings.whatsapp.tplPatient / tplDoctor / tplDue). Placeholders:
+     {lab} {patient} {doctor} {invoice} {date} {tests} {total} {due} {link} {linkline}
+     {linkline} = "View / download: <link>" when a report link exists, otherwise "Please collect your report from the lab." */
+  var WA_TPL = {
+    tplPatient: '*{lab}*\nAssalam-o-Alaikum {patient},\nYour lab report is ready.\n\nInvoice: {invoice} ({date})\nTests: {tests}\n\n{linkline}\n\nShukriya!',
+    tplDoctor: '*{lab}*\nAssalam-o-Alaikum {doctor},\nLab report of patient {patient} is ready.\n\nInvoice: {invoice} ({date})\nTests: {tests}\n\n{linkline}\n\nShukriya!',
+    tplDue: '*{lab}*\nAssalam-o-Alaikum {patient},\nYour lab report (invoice {invoice}) is ready.\nA balance of {due} is pending. Please clear it at the lab and your report will be sent to you here automatically.\n\nShukriya!'
+  };
+  function waRenderTpl(tpl, v) {
+    v = v || {};
+    var lineText = v.link ? '📄 View / download: ' + v.link : 'Please collect your report from the lab.';
+    var vars = { lab: v.lab || 'Lab', patient: v.patient || '', doctor: v.doctor || '', invoice: v.invoice || '', date: v.date || '', tests: v.tests || '', total: v.total || '', due: v.due || '', link: v.link || '', linkline: lineText };
+    var out = String(tpl).replace(/\{(\w+)\}/g, function (m, k) { return Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m; });
+    return out.replace(/\n{3,}/g, '\n\n').replace(/^\s+|\s+$/g, '');
+  }
+  function waTplText(name) { var c = waCfg(); return (c && c[name] && String(c[name]).replace(/\s/g, '')) ? c[name] : WA_TPL[name]; }
+  function waVars(inv, pat, doc, testNames, link) {
     var s = DB.get('settings', 'main') || {};
-    var lines = [
-      '*' + (s.labName || 'Lab') + '*',
-      'Assalam-o-Alaikum ' + (pat.name || '') + ',',
-      'Your lab report is ready.',
-      '',
-      'Invoice: ' + (inv.no || inv.id) + ' (' + App.d(inv.createdAt) + ')',
-      'Tests: ' + testNames.join(', ')
-    ];
-    if (link) { lines.push('', 'View / download report:', link); }
-    lines.push('', 'Shukriya!');
-    return lines.join('\n');
+    return { lab: s.labName || 'Lab', patient: pat.name || '', doctor: (doc && doc.name) || '', invoice: inv.no || inv.id, date: App.d(inv.createdAt), tests: (testNames || []).join(', '), total: App.money(inv.total), due: App.money(inv.due), link: link || '' };
+  }
+  function waAlreadyNoted(invoiceId) {
+    try { return DB.all('wa_log').some(function (e) { return e.kind === 'due' && e.invoiceId === invoiceId && e.status === 'sent'; }); } catch (e) { return false; }
+  }
+  function waPatientMessage(inv, pat, testNames, link) { return waRenderTpl(waTplText('tplPatient'), waVars(inv, pat, null, testNames, link)); }
+  function waDoctorMessage(inv, doc, pat, testNames, link) { return waRenderTpl(waTplText('tplDoctor'), waVars(inv, pat, doc, testNames, link)); }
+  function waDueMessage(inv, pat, testNames) { return waRenderTpl(waTplText('tplDue'), waVars(inv, pat, null, testNames, '')); }
+
+  function waTestNames(invoiceId) {
+    var names = [];
+    joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; }).forEach(function (r) {
+      var nm = (r.item && r.item.name) || (r.test && r.test.name) || '';
+      if (nm && names.indexOf(nm) < 0) names.push(nm);
+    });
+    return names;
+  }
+  /* is every result of this invoice finished? */
+  function waAllReady(invoiceId) {
+    var all = DB.all('results').filter(function (r) { return r.invoiceId === invoiceId; });
+    return all.length > 0 && !all.some(function (r) { return r.status !== 'ready'; });
+  }
+  /* report link for the message: only a real, public PDF link (uploaded to the cloud). Unpaid invoices have no link
+     unless the lab chose "send anyway" (force). Never a login-gated app link — patients and doctors cannot open those. */
+  function waReportLink(invoiceId, force) {
+    try { return getReportPdfUrl(invoiceId, !!force).then(function (u) { return u || ''; }, function () { return ''; }); }
+    catch (e) { return Promise.resolve(''); }
   }
 
-  function waDoctorMessage(inv, doc, pat, testNames, link) {
-    var s = DB.get('settings', 'main') || {};
-    var lines = [
-      '*' + (s.labName || 'Lab') + '*',
-      'Assalam-o-Alaikum ' + (doc.name || '') + ',',
-      'Lab report of patient ' + (pat.name || '') + ' is ready.',
-      '',
-      'Invoice: ' + (inv.no || inv.id) + ' (' + App.d(inv.createdAt) + ')',
-      'Tests: ' + testNames.join(', ')
-    ];
-    if (link) { lines.push('', 'View / download report:', link); }
-    lines.push('', 'Shukriya!');
-    return lines.join('\n');
-  }
-
-  function waSendToPatient(invoiceId, inv, pat, testNames, link, cfg) {
+  function waSendToPatient(invoiceId, inv, pat, testNames, link, cfg, kind) {
     var name = pat.name || '';
-    if (waAlreadySent(invoiceId, 'patient')) return;
+    var isNote = kind === 'due';
+    if (!isNote && waAlreadySent(invoiceId, 'patient')) return;
+    if (isNote && waAlreadyNoted(invoiceId)) return;
     var to = waPhone(pat.whatsapp || pat.phone);
     if (!to) {
-      waLogWaSend({ invoiceId: invoiceId, to: null, toName: name, toRole: 'patient', status: 'failed', error: 'no WhatsApp number on patient record' });
+      waLogWaSend({ invoiceId: invoiceId, to: null, toName: name, toRole: 'patient', status: 'failed', error: 'no WhatsApp number on patient record', kind: isNote ? 'due' : 'report' });
       App.toast('Auto-send skipped — no WhatsApp number for ' + (name || 'patient'), 'err');
       return;
     }
-    var msg = waPatientMessage(inv, pat, testNames, link);
+    var msg = isNote ? waDueMessage(inv, pat, testNames) : waPatientMessage(inv, pat, testNames, link);
     waSendText(cfg, to, msg, function (err) {
       waLogWaSend({
-        invoiceId: invoiceId, to: to, toName: name, toRole: 'patient',
+        invoiceId: invoiceId, to: to, toName: name, toRole: 'patient', kind: isNote ? 'due' : 'report',
         status: err ? 'failed' : 'sent',
         error: err ? String(err.message || err).slice(0, 200) : ''
       });
       if (err) App.toast('WhatsApp auto-send failed for ' + (name || 'patient'), 'err');
-      else App.toast('Report auto-sent on WhatsApp to ' + (name || 'patient'));
+      else App.toast(isNote ? 'Balance reminder sent on WhatsApp to ' + (name || 'patient') : 'Report auto-sent on WhatsApp to ' + (name || 'patient'));
     });
   }
 
@@ -323,32 +338,37 @@
     });
   }
 
+  /* Sends for one invoice once its WHOLE report is ready.
+     Unpaid / part-paid invoice, by the lab's rule (WhatsApp Center): "note" (default) = tell the patient the report is ready and what
+     balance is pending, and send the report itself automatically the moment it is fully paid; "hold" = send nothing until paid;
+     "send" = send the report right away anyway. */
   function waTryAutoSendOne(invoiceId, cfg, autoPat, autoDoc) {
     var inv = invOf(invoiceId);
     if (!inv) return;
-    // send only when the whole report is ready (no pending results left)
-    var pending = DB.all('results').some(function (r) { return r.invoiceId === invoiceId && r.status !== 'ready'; });
-    if (pending) return;
-    var rows = joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; });
-    if (!rows.length) return;
-    var testNames = [];
-    rows.forEach(function (r) {
-      var nm = (r.item && r.item.name) || (r.test && r.test.name) || '';
-      if (nm && testNames.indexOf(nm) < 0) testNames.push(nm);
-    });
+    if (!waAllReady(invoiceId)) return;
+    var testNames = waTestNames(invoiceId);
+    if (!testNames.length) return;
     var pat = patOf(inv.patientId);
-    var fallbackLink = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
-    function finishSend(link) {
+    var owes = (+inv.due || 0) > 0.009;
+    var rule = cfg.dueRule || 'note';
+    if (owes && rule !== 'send') {
+      if (rule === 'note' && autoPat) { try { waSendToPatient(invoiceId, inv, pat, testNames, '', cfg, 'due'); } catch (e) {} }
+      return; /* the report goes out when the balance is paid (App.waOnPaid) */
+    }
+    waReportLink(invoiceId, owes).then(function (link) {
       try { if (autoPat) waSendToPatient(invoiceId, inv, pat, testNames, link, cfg); } catch (e) {}
       try { if (autoDoc && inv.doctorId) waSendToDoctor(invoiceId, inv, pat, testNames, link, cfg); } catch (e) {}
-    }
-    try {
-      // cloud PDF link when available (paid invoices); else the deep hash link
-      getReportPdfUrl(invoiceId)
-        .then(function (url) { finishSend(url || fallbackLink); })
-        .catch(function () { finishSend(fallbackLink); });
-    } catch (e) { finishSend(fallbackLink); }
+    });
   }
+  /* called when a payment is recorded: if that completes the payment of a finished report that was waiting, send it now */
+  App.waOnPaid = function (invoiceId) {
+    try {
+      var inv = invOf(invoiceId);
+      if (!inv || (+inv.due || 0) > 0.009 || !waReady(waCfg()) || !waAllReady(invoiceId)) return;
+      if (waAlreadySent(invoiceId, 'patient') && (!inv.doctorId || waAlreadySent(invoiceId, 'doctor'))) return;
+      waAutoSendReady([invoiceId]);
+    } catch (e) {}
+  };
 
   /* ---------- critical values ----------
      A numeric result is CRITICAL when it is far outside the patient's reference range (> 25% of the range width beyond
@@ -418,6 +438,10 @@
       '<div class="modal-actions" style="margin-top:14px"><button class="btn btn-primary" id="critOk">Noted</button></div>',
       { onOpen: function (ov, close) { ov.querySelector('#critOk').addEventListener('click', close); } });
   }
+  /* shared with WhatsApp Center (mod-whatsapp.js) */
+  App.wa = { cfg: waCfg, ready: waReady, phone: waPhone, send: waSendText, log: waLogWaSend, manual: waManualSend, alreadySent: waAlreadySent, alreadyNoted: waAlreadyNoted,
+    tpl: WA_TPL, tplText: waTplText, render: waRenderTpl, vars: waVars, allReady: waAllReady, testNames: waTestNames, autoOne: waTryAutoSendOne,
+    patientMsg: waPatientMessage, doctorMsg: waDoctorMessage, dueMsg: waDueMessage };
   App.criticalList = function () {
     try { return DB.all('results').filter(function (r) { return r.critical && r.critical.length && !r.criticalAck; }); } catch (e) { return []; }
   };

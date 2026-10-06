@@ -353,12 +353,14 @@ async function main() {
         return res.status(r.status || 401).json({ error: r.error || 'Invalid username or password' });
       }
       fails.delete(fk);
+      await auditLog(req, 'login', 'auth', r.user.id, { store, actor: r.user, label: username });
       const dtoken = signToken(SESSION_SECRET, { uid: r.user.id, role: r.user.role, exp: Date.now() + TOKEN_TTL_MS });
       return res.json({ ok: true, user: r.user, token: dtoken, offline: !!r.offline });
     }
     /* which lab? the Lab ID typed on the sign-in page; empty = the default lab (the original single-lab deployment) */
     const lab = labSlug ? await saas.findBySlug(labSlug) : await saas.getLab('main');
     const bad = () => {
+      if (lab) auditLog(req, 'login_failed', 'auth', username, { store: saas.storeFor(lab), actor: {}, username, label: username });
       const n = ((f && f.until > Date.now()) ? f.n : 0) + 1;
       fails.set(fk, { n, until: Date.now() + 15 * 60 * 1000 });
       return res.status(401).json({ error: labSlug && !lab ? 'Lab ID not found. Check the Lab ID and try again.' : 'Invalid username or password' });
@@ -371,9 +373,61 @@ async function main() {
     fails.delete(fk);
     if (!isHashed(u.password)) await lstore.put('users', Object.assign({}, u, { password: hashPassword(password) }));
     const user = { id: u.id, name: u.name, role: u.role };
+    await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username });
     const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, exp: Date.now() + TOKEN_TTL_MS });
     res.json({ ok: true, user, token, lab: await saas.view(lab) });
   });
+
+  /* ---- audit trail: who created / changed / deleted what, and when. Written server-side only (clients cannot POST to
+     /api/audit); passwords, logos and other binary fields are never stored. Kept 365 days per lab. ---- */
+  const AUDIT_SKIP = ['audit', 'wa_log', 'report_schedules', 'samples'];
+  const AUDIT_HIDE = /^(password|logo|photo|signature|stamp|image|img|dataUri|token)$/i;
+  const auditVal = (k, v) => {
+    if (AUDIT_HIDE.test(k)) return '•••';
+    if (v == null) return '';
+    if (typeof v === 'object') v = JSON.stringify(v);
+    v = String(v);
+    if (v.indexOf('data:') === 0) return '[file]';
+    return v.length > 140 ? v.slice(0, 137) + '…' : v;
+  };
+  function auditDiff(before, after, max) {
+    const out = [], b = before || {}, a = after || {};
+    new Set(Object.keys(b).concat(Object.keys(a))).forEach((k) => {
+      if (k.charAt(0) === '_' || k === 'id') return;
+      if (JSON.stringify(b[k]) !== JSON.stringify(a[k])) out.push({ f: k, from: auditVal(k, b[k]), to: auditVal(k, a[k]) });
+    });
+    return out.slice(0, max || 30);
+  }
+  function auditLabel(t, r) {
+    r = r || {};
+    if (t === 'results') return (r.invoiceId || '') + ' · ' + (r.testName || r.testId || r.id);
+    if (t === 'payments') return 'Rs ' + (r.amount != null ? r.amount : '') + (r.invoiceId ? ' on ' + r.invoiceId : '');
+    if (t === 'expenses') return (r.title || r.category || r.id) + (r.amount != null ? ' · Rs ' + r.amount : '');
+    return String(r.no || r.name || r.title || r.username || r.id || '');
+  }
+  async function auditLog(req, action, table, rowId, o) {
+    try {
+      if (AUDIT_SKIP.indexOf(table) >= 0) return;
+      o = o || {};
+      const u = o.actor || req.user || {};
+      await (o.store || req.store).put('audit', {
+        id: 'A-' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex'), ts: new Date().toISOString(),
+        uid: u.id || '', user: u.name || o.username || '', role: u.role || '', ip: req.ip || '',
+        action, table, rowId: String(rowId == null ? '' : rowId), label: o.label || '', changes: o.changes || [], note: o.note || '',
+      });
+    } catch (e) { /* the audit trail must never break a real write */ }
+  }
+  async function pruneAudit(st) {
+    try {
+      const cut = new Date(Date.now() - 365 * 86400000).toISOString();
+      for (const r of await st.all('audit')) if (r.ts && r.ts < cut) await st.raw.del('audit', String(r.id));
+    } catch (e) { /* retention is best effort */ }
+  }
+  setTimeout(() => { pruneAudit(store); }, 30000).unref();
+  setInterval(async () => {
+    await pruneAudit(store);
+    if (saas) for (const l of (await saas.loadLabs()).values()) if (l.id !== 'main') await pruneAudit(saas.storeFor(l));
+  }, 86400000).unref();
 
   /* ---- auth gate: everything registered below needs a valid token ---- */
   app.use('/api', async (req, res, next) => {
@@ -725,6 +779,7 @@ async function main() {
         return c;
       });
       await keepMeta(() => store.restore(body));
+      await auditLog(req, 'restore', 'system', '', { label: 'Data restored from a backup file' });
       res.json({ ok: true });
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
@@ -735,6 +790,7 @@ async function main() {
       const seed = JSON.parse(fs.readFileSync(path.join(__dirname, 'seed.json'), 'utf8'));
       (seed.users || []).forEach(u => { if (u.password && !isHashed(u.password)) u.password = hashPassword(u.password); });
       await keepMeta(() => store.seed(seed));
+      await auditLog(req, 'reseed', 'system', '', { label: 'Data reset to the demo data set' });
       res.json(sanitizeDump(await store.dump()));
     } catch (e) { res.status(500).json({ error: e.message }); }
   });
@@ -742,6 +798,7 @@ async function main() {
   /* ---- generic table CRUD (authenticated; users/settings are admin-managed) ---- */
   const tableGuard = (req, res, next) => {
     if (!okTable(req.params.table)) return res.status(404).json({ error: 'unknown table' });
+    if (req.params.table === 'audit') return res.status(403).json({ error: 'audit log is read-only (use GET /api/audit)' });
     if (!req.user) return res.status(401).json({ error: 'auth required' });
     const t = req.params.table, admin = req.user.role === 'admin';
     if (t === 'settings' && req.method !== 'GET' && !admin) return res.status(403).json({ error: 'admin only' });
@@ -760,6 +817,19 @@ async function main() {
     } else { delete b.password; if (!existing) throw new Error('Password required for a new user'); }
     return b;
   }
+  app.get('/api/audit', needAdmin, async (req, res) => {
+    const q = req.query || {}, lim = Math.max(1, Math.min(+q.limit || 100, 5000)), off = Math.max(0, +q.offset || 0);
+    let rows = await req.store.all('audit');
+    const users = {}, tables = {};
+    rows.forEach((r) => { if (r.uid || r.user) users[r.uid || r.user] = r.user || r.uid; if (r.table) tables[r.table] = 1; });
+    const from = q.from ? new Date(q.from + 'T00:00:00').toISOString() : '', to = q.to ? new Date(q.to + 'T23:59:59.999').toISOString() : '';
+    const needle = String(q.q || '').toLowerCase();
+    rows = rows.filter((r) => (!from || r.ts >= from) && (!to || r.ts <= to) && (!q.user || r.uid === q.user || r.user === q.user) && (!q.table || r.table === q.table) && (!q.action || r.action === q.action) &&
+      (!needle || (r.label + ' ' + r.user + ' ' + r.rowId + ' ' + (r.changes || []).map((c) => c.f + ' ' + c.from + ' ' + c.to).join(' ')).toLowerCase().indexOf(needle) >= 0));
+    rows.sort((a, b) => (a.ts < b.ts ? 1 : (a.ts > b.ts ? -1 : 0)));
+    const stats = { total: rows.length };
+    res.json({ total: rows.length, rows: rows.slice(off, off + lim).map((r) => { const c = Object.assign({}, r); delete c._o; delete c._c; delete c._u; delete c._s; return c; }), users, tables: Object.keys(tables).sort(), stats });
+  });
   /* batched upsert (imports / bulk price updates). users + settings keep their dedicated, guarded routes */
   app.post('/api/bulk/:table', tableGuard, async (req, res) => {
     const store = req.store;
@@ -770,6 +840,7 @@ async function main() {
     try {
       let n = 0;
       for (const r of rows) { if (r && r.id != null) { await store.put(t, r); n++; } }
+      if (n && ['tests', 'invoices', 'patients', 'doctors', 'expenses', 'payments', 'results'].indexOf(t) >= 0) await auditLog(req, 'bulk', t, '', { label: n + ' ' + t + ' saved in one batch' });
       res.json({ ok: true, saved: n });
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
@@ -785,6 +856,7 @@ async function main() {
       const body = t === 'users' ? await prepUserBody(req, null) : req.body;
       if (body && body.id != null && t !== 'settings' && await store.get(t, String(body.id))) return res.status(409).json({ error: 'id already exists', id: body.id });
       const out = await store.put(t, body);
+      await auditLog(req, 'create', t, out.id, { label: auditLabel(t, out), changes: auditDiff({}, out, 12) });
       res.json(t === 'users' ? stripUser(out) : out);
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
@@ -793,14 +865,19 @@ async function main() {
     try {
       const t = req.params.table;
       const body = t === 'users' ? await prepUserBody(req, true) : (req.body || {});
+      const before = await store.get(t, req.params.id);
       const out = await store.patch(t, req.params.id, body);
+      const ch = auditDiff(before, out);
+      if (ch.length) await auditLog(req, before ? 'update' : 'create', t, req.params.id, { label: auditLabel(t, out), changes: ch });
       res.json(t === 'users' ? stripUser(out) : out);
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
   app.delete('/api/:table/:id', tableGuard, async (req, res) => {
     const store = req.store;
     if (req.params.table === 'users' && req.params.id === req.user.id) return res.status(400).json({ error: 'You cannot delete your own account' });
+    const gone = await store.get(req.params.table, req.params.id);
     await store.del(req.params.table, req.params.id);
+    await auditLog(req, 'delete', req.params.table, req.params.id, { label: auditLabel(req.params.table, gone || { id: req.params.id }), changes: auditDiff(gone, {}, 14) });
     res.json({ ok: true });
   });
 
