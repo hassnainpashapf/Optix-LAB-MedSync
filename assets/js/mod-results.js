@@ -1030,16 +1030,18 @@
         '</div>';
     }
 
-    /* RIGHT: Patient No. / Case # rows (centered like Chughtai), then the QR */
+    /* RIGHT: QR on top, then Case # barcode + ID, then Patient ID barcode + ID */
+    var _caseNo = spacedNo(inv.no);
+    var _patId = String(pat.id == null ? '' : pat.id);
     var rightHtml =
-      '<div style="flex:none;text-align:center;color:#000;font-size:0.95em;line-height:1.7">' +
-        '<div><span style="font-weight:700">Patient No.:</span> ' +
-          App.esc(String(pat.id == null ? '' : pat.id)) + '</div>' +
-        '<div><span style="font-weight:700">Case #:</span> ' +
-          App.esc(spacedNo(inv.no)) + '</div>' +
+      '<div style="flex:none;text-align:center;color:#000;font-size:0.95em;line-height:1.5">' +
         (showQr
-          ? '<div style="margin-top:6px"><img data-qr="1" style="width:90px;height:90px" alt="QR"></div>'
+          ? '<div><img data-qr="1" style="width:90px;height:90px" alt="QR"></div>'
           : '') +
+        '<div style="margin-top:4px">' + barcodeHtml(_caseNo) +
+          '<div style="font-weight:700;letter-spacing:2px">' + App.esc(_caseNo) + '</div></div>' +
+        '<div style="margin-top:4px">' + barcodeHtml(_patId) +
+          '<div style="font-weight:700;letter-spacing:2px">' + App.esc(_patId) + '</div></div>' +
       '</div>';
 
     return (
