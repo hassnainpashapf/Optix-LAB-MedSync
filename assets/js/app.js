@@ -35,11 +35,11 @@
   var NAV = [
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients' },
-    { key: 'billing',   label: 'New Bill',   icon: 'receipt',   route: '#/billing' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results' },
+    { key: 'billing',   label: 'New Bill',   icon: 'receipt',   route: '#/billing' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices' },
-    { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues' },
     { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests' },
+    { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues' },
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses' },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports' },
@@ -208,6 +208,7 @@
       '.ph{text-align:center;border-bottom:3px double #131845;padding-bottom:12px;margin-bottom:16px}' +
       '.ph h1{font-size:24px;color:#131845;letter-spacing:.5px}' +
       '.ph .tag{font-size:12px;color:#555;margin:2px 0}' +
+      '.ph-logo{width:54px;height:54px;object-fit:contain;margin:0 auto 6px;display:block}' +
       '.ph .addr{font-size:11.5px;color:#555}' +
       '.pt{display:flex;justify-content:space-between;gap:12px;margin:12px 0;padding:10px;border:1px solid #ddd;border-radius:6px;background:#fafafa}' +
       '.pt div{font-size:12px;line-height:1.7}' +
@@ -226,7 +227,8 @@
     if (!w) { toast('Popup blocked — allow popups to print', 'err'); return; }
     w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
       '<style>' + css + '</style></head><body>' +
-      '<div class="ph"><h1>' + esc(s.labName || 'Optix LAB MedSync') + '</h1>' +
+      '<div class="ph">' + (s.logo ? '<img class="ph-logo" src="' + esc(s.logo) + '" alt="Lab logo">' : '') +
+      '<h1>' + esc(s.labName || 'Optix LAB MedSync') + '</h1>' +
       '<div class="tag">' + esc(s.tagline || '') + '</div>' +
       '<div class="addr">' + esc(s.address || '') + ' &nbsp;•&nbsp; ' + esc(s.phone || '') +
       (s.email ? ' &nbsp;•&nbsp; ' + esc(s.email) : '') + '</div></div>' +
@@ -400,7 +402,7 @@
         '<span class="nav-ic">' + icon(n.icon, 19) + '</span><span class="nav-lb">' + n.label + '</span></a>';
     }).join('');
     document.getElementById('sidebar').innerHTML =
-      '<div class="brand"><span class="brand-mark">' + icon('flask', 22) + '</span>' +
+      '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
       '<span class="brand-tx"><b>' + esc(st.labName || 'Optix LAB MedSync') + '</b><small>Diagnostic Lab</small></span>' +
       '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
       '<div class="nav-sec">Main Menu</div>' +
@@ -534,7 +536,7 @@
       '<div class="login-wrap">' +
         '<form class="login-card" id="loginForm" autocomplete="off">' +
           '<div class="login-logo">' +
-            '<span class="login-mark">' + icon('flask', 32) + '</span>' +
+            '<span class="login-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 32)) + '</span>' +
             '<h1>' + esc(st.labName || 'Optix LAB MedSync') + '</h1>' +
             '<p class="login-tag">' + esc(st.tagline || 'Accurate • Fast • Trusted') + '</p>' +
           '</div>' +
@@ -567,6 +569,8 @@
         if (h1) h1.textContent = ns.labName || 'Optix LAB MedSync';
         var tg = document.querySelector('.login-tag');
         if (tg) tg.textContent = ns.tagline || 'Accurate • Fast • Trusted';
+        var lm = document.querySelector('.login-mark');
+        if (lm) lm.innerHTML = ns.logo ? '<img src="' + esc(ns.logo) + '" alt="Lab logo">' : icon('flask', 32);
       } catch (e) {}
     });
     document.getElementById('loginForm').addEventListener('submit', function (e) {

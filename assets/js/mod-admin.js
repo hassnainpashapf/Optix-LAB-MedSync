@@ -497,9 +497,58 @@
       + '<div><label class="label">Email</label><input class="input" id="spEmail" value="' + App.esc(s.email || '') + '"></div>'
       + '<div><label class="label">Invoice Prefix *</label><input class="input" id="spPref" value="' + App.esc(s.invoicePrefix || 'INV') + '" style="max-width:140px"></div>'
       + '<div style="grid-column:1/-1"><label class="label">Report / Receipt Footer Note</label><input class="input" id="spFoot" value="' + App.esc(s.footerNote || '') + '"></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Lab Logo</label>'
+      + '<div style="display:flex;align-items:center;gap:14px">'
+      + '<img id="spLogoPrev" src="' + App.esc(s.logo || '') + '" alt="Lab logo" style="width:64px;height:64px;border-radius:12px;object-fit:cover;border:1px solid #e3ecf7;background:#f4f7fc;flex:none"' + (s.logo ? '' : ' hidden') + '>'
+      + '<div><input type="file" id="spLogo" accept="image/*">'
+      + '<div class="muted" style="font-size:12px;margin-top:6px">Shown on the login page, sidebar and print headers.</div></div>'
+      + '<button class="btn btn-ghost" type="button" id="spLogoRm"' + (s.logo ? '' : ' hidden') + '>Remove</button>'
+      + '</div></div>'
       + '</div>'
       + '<div style="margin-top:18px"><button class="btn btn-primary" id="spSave">Save Profile</button></div>';
     document.getElementById('setBody').innerHTML = html;
+    /* lab logo upload: downscale to max 256px PNG, keep in memory until Save */
+    var _logoData = s.logo || '';
+    var _logoPrev = document.getElementById('spLogoPrev');
+    var _logoRm = document.getElementById('spLogoRm');
+    var _logoInput = document.getElementById('spLogo');
+    function _paintLogo() {
+      if (_logoPrev) { _logoPrev.src = _logoData || ''; _logoPrev.hidden = !_logoData; }
+      if (_logoRm) _logoRm.hidden = !_logoData;
+    }
+    if (_logoInput) _logoInput.addEventListener('change', function () {
+      var f = _logoInput.files && _logoInput.files[0];
+      if (!f) return;
+      try {
+        var rd = new FileReader();
+        rd.onload = function () {
+          try {
+            var im = new Image();
+            im.onload = function () {
+              try {
+                var max = 256, w = im.width || max, h = im.height || max;
+                var sc = Math.min(1, max / Math.max(w, h));
+                var cw = Math.max(1, Math.round(w * sc)), ch = Math.max(1, Math.round(h * sc));
+                var cv = document.createElement('canvas');
+                cv.width = cw; cv.height = ch;
+                cv.getContext('2d').drawImage(im, 0, 0, cw, ch);
+                _logoData = cv.toDataURL('image/png');
+                _paintLogo();
+              } catch (e2) { App.toast('Could not process that image.', 'err'); }
+            };
+            im.onerror = function () { App.toast('Could not read that image.', 'err'); };
+            im.src = rd.result;
+          } catch (e1) { App.toast('Could not read that image.', 'err'); }
+        };
+        rd.onerror = function () { App.toast('Could not read that image.', 'err'); };
+        rd.readAsDataURL(f);
+      } catch (e0) { App.toast('Logo upload is not supported here.', 'err'); }
+    });
+    if (_logoRm) _logoRm.addEventListener('click', function () {
+      _logoData = '';
+      if (_logoInput) _logoInput.value = '';
+      _paintLogo();
+    });
     document.getElementById('spSave').addEventListener('click', function () {
       var name = document.getElementById('spName').value.trim();
       var pref = document.getElementById('spPref').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') || 'INV';
@@ -511,7 +560,8 @@
         phone: document.getElementById('spPhone').value.trim(),
         email: document.getElementById('spEmail').value.trim(),
         invoicePrefix: pref,
-        footerNote: document.getElementById('spFoot').value.trim()
+        footerNote: document.getElementById('spFoot').value.trim(),
+        logo: _logoData
       });
       App.toast('Lab profile saved.');
       if (App.renderShell) App.renderShell();

@@ -486,6 +486,8 @@ body.login-mode{background:#131845}
   background:linear-gradient(135deg,#131845,#5392ba);
   box-shadow:0 10px 24px -8px rgba(19,24,69,.55);margin-bottom:14px}
 .login-mark svg{width:32px;height:32px}
+.login-mark img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.brand-mark img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
 .login-logo h1{font-size:22px;font-weight:800;letter-spacing:-.02em;color:#131845}
 .login-tag{font-size:13px;color:var(--muted);margin-top:4px}
 .login-card h2{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px;text-align:center;color:#131845}
