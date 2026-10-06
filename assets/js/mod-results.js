@@ -1083,14 +1083,14 @@
     var _caseNo = spacedNo(inv.no);
     var _patId = String(pat.id == null ? '' : pat.id);
     var rightHtml =
-      '<div style="flex:none;text-align:center;color:#000;font-size:0.95em;line-height:1.5">' +
+      '<div style="flex:none;text-align:center;color:#000;font-size:0.95em;line-height:1.3">' +
         (showQr
-          ? '<div><img data-qr="1" style="width:90px;height:90px" alt="QR"></div>'
+          ? '<div><img data-qr="1" style="width:70px;height:70px" alt="QR"></div>'
           : '') +
-        '<div style="margin-top:4px">' + barcodeHtml(_caseNo) +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.75em">' + App.esc(_caseNo) + '</div></div>' +
-        '<div style="margin-top:4px">' + barcodeHtml(_patId) +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.75em">' + App.esc(_patId) + '</div></div>' +
+        '<div style="margin-top:2px">' + barcodeHtml(_caseNo) +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em">' + App.esc(_caseNo) + '</div></div>' +
+        '<div style="margin-top:2px">' + barcodeHtml(_patId) +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em">' + App.esc(_patId) + '</div></div>' +
       '</div>';
 
     return (
