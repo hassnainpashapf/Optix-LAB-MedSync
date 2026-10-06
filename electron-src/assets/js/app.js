@@ -272,9 +272,12 @@
       '.sig{margin-top:34px;text-align:right;font-size:12px}' +
       '.sig div{margin-top:36px;border-top:1px solid #333;display:inline-block;padding-top:4px;min-width:170px;text-align:center}' +
       '@media print{body{padding:10px}.noprint{display:none}}';
-    var w = window.open('', '_blank', 'width=920,height=720');
-    if (!w) { toast('Popup blocked — allow popups to print', 'err'); return; }
-    w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
+    var native = isNativeApp();
+    var w = native ? null : window.open('', '_blank', 'width=920,height=720');
+    if (!native && !w) { toast('Popup blocked — allow popups to print', 'err'); return; }
+    var _buf = '';
+    var out = { write: function (h) { _buf += h; } };
+    out.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + esc(title) + '</title>' +
       (fd.url ? '<link rel="stylesheet" href="' + fd.url + '">' : '') +
       '<style>' + css + '</style></head><body>' +
       (noHeader ? '' :
@@ -286,9 +289,29 @@
       bodyHTML +
       (noHeader ? '' : '<div class="note">' + esc(s.footerNote || '') + ' &nbsp;•&nbsp; Printed: ' + esc(dt(new Date())) + '</div>') +
       '</body></html>');
+    if (native) { showNativePrint(title, _buf); return; }
+    w.document.write(_buf);
     w.document.close();
     w.focus();
     setTimeout(function () { w.print(); }, 400);
+  }
+
+  /* Android app (WebView): popups / window.print() do not exist, so the document is shown full-screen to read or screenshot;
+     lab reports are opened in the phone browser from the cloud viewer instead (see mod-results printReport). */
+  function isNativeApp() { return /OptixApp/.test(navigator.userAgent || ''); }
+  function showNativePrint(title, html) {
+    var old = document.getElementById('nativePrint');
+    if (old) old.remove();
+    var ov = document.createElement('div');
+    ov.id = 'nativePrint';
+    ov.style.cssText = 'position:fixed;inset:0;z-index:100000;background:#2b2f36;display:flex;flex-direction:column';
+    ov.innerHTML = '<div style="flex:none;display:flex;align-items:center;gap:10px;padding:10px 14px;background:#131845;color:#fff;font:700 14px system-ui">' +
+      '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(title) + '</span>' +
+      '<button id="npClose" style="border:0;border-radius:10px;padding:8px 14px;font-weight:700;background:#fff;color:#131845">Close</button></div>' +
+      '<iframe id="npFrame" style="flex:1;border:0;background:#fff;width:100%"></iframe>';
+    document.body.appendChild(ov);
+    document.getElementById('npFrame').srcdoc = html;
+    document.getElementById('npClose').onclick = function () { ov.remove(); };
   }
 
   /* ---------------- router ---------------- */
@@ -763,6 +786,7 @@
     badge: badge,
     icon: icon,
     renderShell: renderShell,
+    isNative: isNativeApp,
     applyFont: applyFont,
     session: session,
     logout: logout,

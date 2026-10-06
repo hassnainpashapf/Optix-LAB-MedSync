@@ -2035,11 +2035,12 @@
   }
 
   // Build the report PDF, upload it to the cloud API, return the public URL (or null).
-  function getReportPdfUrl(invoiceId) {
+  function getReportPdfUrl(invoiceId, force) {
     var inv = invOf(invoiceId);
     if (!inv) return Promise.resolve(null);
     // QR goes live only when the invoice is fully paid; unpaid reports print without a live QR
-    if (inv.status !== 'paid') return Promise.resolve(null);
+    // (force = the Android app, which opens the PDF viewer instead of printing)
+    if (inv.status !== 'paid' && !force) return Promise.resolve(null);
     var pdf = null;
     try { pdf = buildReportPdf(invoiceId); } catch (e) { pdf = null; }
     if (!pdf || !pdf.dataUri) return Promise.resolve(null);
@@ -2092,6 +2093,17 @@
     if (!d) { App.toast('No ready results to print', 'err'); return; }
     var invPaid = d.inv && d.inv.status === 'paid';
     var qrImg = null;
+    /* Android app: no popups/printing in a WebView -> open the report in the phone browser (cloud viewer: print, share, download) */
+    if (App.isNative && App.isNative()) {
+      try {
+        if (await App.ensureJsPDF()) {
+          var nurl = await getReportPdfUrl(invoiceId, true);
+          if (nurl) { location.href = nurl; return; }
+        }
+      } catch (e) {}
+      App.toast('Could not open the report. Check your internet connection.', 'err');
+      return;
+    }
     try {
       var jsOk = await App.ensureJsPDF();
       if (jsOk) {
