@@ -680,7 +680,19 @@
           var qrSrc = App.qrDataUrlFor('https://optix-lab-medsync.pages.dev/sample-report');
           if (qrSrc) html = html.replace('data-qr="1"', 'data-qr="1" src="' + qrSrc + '"');
         }
-        App.modal('Report Preview', '<div style="max-height:70vh;overflow:auto">' + html + '</div>', { wide: true });
+        /* full-page PDF-like preview */
+        var fullHtml =
+          '<div style="background:#525659;padding:20px;min-height:80vh">' +
+          '<div style="background:#fff;max-width:210mm;margin:0 auto;padding:15mm;box-shadow:0 4px 20px rgba(0,0,0,0.3);min-height:297mm">' +
+          html +
+          '</div></div>' +
+          '<div style="text-align:center;margin-top:16px"><button class="btn btn-primary" id="spPrevPrint">🖨 Print This Preview</button></div>';
+        App.modal('Report Preview — Full Page', fullHtml, { wide: true, onOpen: function (ov) {
+          var pb = ov.querySelector('#spPrevPrint');
+          if (pb) pb.addEventListener('click', function () {
+            App.print('Sample Lab Report Preview', html, { noHeader: true });
+          });
+        }});
       });
     });
     document.getElementById('spSave').addEventListener('click', function () {
