@@ -1088,9 +1088,9 @@
           ? '<div><img data-qr="1" style="width:90px;height:90px" alt="QR"></div>'
           : '') +
         '<div style="margin-top:4px">' + barcodeHtml(_caseNo) +
-          '<div style="font-weight:700;letter-spacing:2px">' + App.esc(_caseNo) + '</div></div>' +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.75em">' + App.esc(_caseNo) + '</div></div>' +
         '<div style="margin-top:4px">' + barcodeHtml(_patId) +
-          '<div style="font-weight:700;letter-spacing:2px">' + App.esc(_patId) + '</div></div>' +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.75em">' + App.esc(_patId) + '</div></div>' +
       '</div>';
 
     return (

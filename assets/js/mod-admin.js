@@ -8,6 +8,7 @@
 
   /* ---------------- helpers ---------------- */
   var PRINT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
+  var DL_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>';
   function sess() {
     try { return JSON.parse(localStorage.getItem('labpos_session')) || null; }
     catch (e) { return null; }
@@ -232,7 +233,7 @@
   /* ============================================================
      REPORTS  (#/reports) — admin only
      ============================================================ */
-  var rep = { from: null, to: null, type: 'all' };
+  var rep = { from: null, to: null, type: 'all', preset: 'thisMonth' };
   function repInit() {
     if (!rep.from) {
       var t = App.today();
@@ -240,13 +241,23 @@
       rep.to = t;
     }
     if (!rep.type) rep.type = 'all';
+    if (!rep.preset) rep.preset = 'thisMonth';
   }
   function setPreset(p) {
     var t = App.today();
-    if (p === 'today') { rep.from = t; rep.to = t; }
-    else if (p === 'yesterday') { var y = addDays(t, -1); rep.from = y; rep.to = y; }
-    else if (p === 'week') { rep.from = addDays(t, -6); rep.to = t; }
-    else if (p === 'month') { rep.from = t.slice(0, 8) + '01'; rep.to = t; }
+    if (p === 'custom') { /* no-op: keep manual From/To, just re-render */ }
+    else if (p === 'today') { rep.from = t; rep.to = t; }
+    else if (p === 'yesterday') { rep.from = addDays(t, -1); rep.to = addDays(t, -1); }
+    else if (p === 'last7' || p === 'week') { rep.from = addDays(t, -6); rep.to = t; }
+    else if (p === 'last30') { rep.from = addDays(t, -29); rep.to = t; }
+    else if (p === 'thisMonth' || p === 'month') { rep.from = t.slice(0, 8) + '01'; rep.to = t; }
+    else if (p === 'lastMonth') {
+      var prevEnd = addDays(t.slice(0, 8) + '01', -1); // last day of previous month
+      rep.from = prevEnd.slice(0, 8) + '01';
+      rep.to = prevEnd;
+    }
+    else return; // unknown preset: leave state untouched
+    rep.preset = (p === 'week') ? 'last7' : (p === 'month') ? 'thisMonth' : p;
     renderReports();
   }
 
@@ -266,6 +277,27 @@
     var expTotal = expenses.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
     var net = collected - expTotal;
 
+    /* ---- previous-period comparison: same length, immediately before ---- */
+    var pLen = Math.round((new Date(to) - new Date(from)) / 86400000) + 1;
+    if (!(pLen > 0)) pLen = 1;
+    var pTo = addDays(from, -1), pFrom = addDays(from, -pLen);
+    var pInv = DB.all('invoices').filter(function (iv) { return inRange(toDay(iv.createdAt), pFrom, pTo); });
+    var pPay = DB.all('payments').filter(function (p) { return inRange(toDay(p.date || p.createdAt), pFrom, pTo); });
+    var pExp = DB.all('expenses').filter(function (e) { return inRange(toDay(e.date), pFrom, pTo); });
+    var pBilled = pInv.reduce(function (s, iv) { return s + (+iv.total || 0); }, 0);
+    var pCollected = pPay.reduce(function (s, p) { return s + (+p.amount || 0); }, 0);
+    var pExpTotal = pExp.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
+    var pNet = pCollected - pExpTotal;
+    var pTests = pInv.reduce(function (s, iv) { return s + ((iv.items || []).length); }, 0);
+    var pInvCount = pInv.length;
+
+    /* ---- report type visibility flags ---- */
+    var showAll = rep.type === 'all';
+    var showTests = showAll || rep.type === 'tests';
+    var showFinance = showAll || rep.type === 'finance';
+    var showDues = showAll || rep.type === 'dues';
+    var showPatients = showAll || rep.type === 'patients';
+
     /* ---- this-month snapshot row (real data) ---- */
     var mFrom = App.today().slice(0, 8) + '01', mTo = App.today();
     var mLbl2 = new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -277,11 +309,14 @@
     var mExpT = mExpenses.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
     var mNet = mColl - mExpT;
     var mTests = mInvoices.reduce(function (s, iv) { return s + ((iv.items || []).length); }, 0);
-    var repStats =
+    var repStats = '';
+    if (showTests || showFinance) {
+      repStats =
       admStat(AICONS.cash, 'green', 'Month Collection', App.money(mColl), 'collected in ' + mShort, mColl, true, null, true) +
       admStat(AICONS.receipt, 'red', 'Month Expenses', App.money(mExpT), mExpenses.length + ' entries in ' + mShort, mExpT, true, null, true) +
       admStat(AICONS.trend, 'brand', 'Net (This Month)', App.money(mNet), mNet >= 0 ? 'surplus so far' : 'deficit so far', mNet, true, null, true) +
       admStat(AICONS.flask, 'blue', 'Tests Billed', mTests, mInvoices.length + ' bills in ' + mShort, mTests, false, null, true);
+    }
 
     var methods = { Cash: 0, Bank: 0, Card: 0, Other: 0 };
     payments.forEach(function (p) {
@@ -303,6 +338,21 @@
     var twRows = Object.keys(tw).map(function (k) { return tw[k]; })
       .sort(function (a, b) { return b.revenue - a.revenue; });
 
+    // revenue by test category (via tests DB, fallback 'Other') + top 5 tests by count
+    var catRev = {};
+    invoices.forEach(function (iv) {
+      (iv.items || []).forEach(function (it) {
+        var tRec = it.testId ? DB.get('tests', it.testId) : null;
+        var cat = (tRec && tRec.category) ? tRec.category : 'Other';
+        if (!catRev[cat]) catRev[cat] = 0;
+        catRev[cat] += (+it.price || 0);
+      });
+    });
+    var catRows = Object.keys(catRev).map(function (c) { return { cat: c, revenue: catRev[c] }; })
+      .sort(function (a, b) { return b.revenue - a.revenue; });
+    var top5 = Object.keys(tw).map(function (k) { return tw[k]; })
+      .sort(function (a, b) { return b.count - a.count; }).slice(0, 5);
+
     // doctor-wise
     var dw = {};
     invoices.forEach(function (iv) {
@@ -316,23 +366,59 @@
     var dwRows = Object.keys(dw).map(function (k) { return dw[k]; })
       .sort(function (a, b) { return b.billed - a.billed; });
 
+    /* ---- report sections shared by CSV export + print ---- */
+    var repTypeLbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports' }[rep.type] || rep.type;
+    var repSecs = {
+      finance: rep.type === 'all' || rep.type === 'finance',
+      tests: rep.type === 'all' || rep.type === 'tests',
+      doctors: rep.type === 'all' || rep.type === 'tests',
+      dues: rep.type === 'all' || rep.type === 'dues',
+      patients: rep.type === 'all' || rep.type === 'patients'
+    };
+    function csvEsc(v) {
+      var s = (v === null || v === undefined) ? '' : String(v);
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    var repUnpaid = invoices.filter(function (iv) { return (+iv.due || 0) > 0; });
+    var repPatients = {};
+    invoices.forEach(function (iv) { if (iv.patientId) repPatients[iv.patientId] = true; });
+    var repPatientCount = Object.keys(repPatients).length;
+    /* ---- previous-period % change: {txt:'+12.5%', up:true/false/null} ---- */
+    function pctChg(cur, prev) {
+      cur = +cur || 0; prev = +prev || 0;
+      if (prev === 0) {
+        if (cur === 0) return { txt: '—', up: null };
+        return { txt: 'new', up: cur > 0 };
+      }
+      var r = Math.round((cur - prev) / prev * 100 * 10) / 10;
+      return { txt: (r > 0 ? '+' : '') + r + '%', up: r > 0 ? true : (r < 0 ? false : null) };
+    }
+
     function statCard(label, val, ic, bg, fg) {
       return '<div class="stat"><div class="stat-ic" style="background:' + bg + ';color:' + fg + '">' + ic + '</div>'
         + '<div><div class="stat-num">' + val + '</div><div class="stat-lbl">' + label + '</div></div></div>';
     }
 
+    function presetBtn(p, label) {
+      return '<button class="btn ' + (rep.preset === p ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-preset="' + p + '">'
+        + label + '</button>';
+    }
     var filterCard = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
       +   '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">'
       +     '<div><label class="label">From</label><input class="input" type="date" id="repFrom" value="' + App.esc(from) + '"></div>'
       +     '<div><label class="label">To</label><input class="input" type="date" id="repTo" value="' + App.esc(to) + '"></div>'
-      +     '<div style="display:flex;gap:8px;flex-wrap:wrap">'
-      +       '<button class="btn btn-ghost btn-sm" data-preset="today">Today</button>'
-      +       '<button class="btn btn-ghost btn-sm" data-preset="yesterday">Yesterday</button>'
-      +       '<button class="btn btn-ghost btn-sm" data-preset="week">Last 7 days</button>'
-      +       '<button class="btn btn-ghost btn-sm" data-preset="month">This month</button>'
+      +     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+      +       presetBtn('today', 'Today')
+      +       presetBtn('yesterday', 'Yesterday')
+      +       presetBtn('last7', 'Last 7 days')
+      +       presetBtn('last30', 'Last 30 days')
+      +       presetBtn('thisMonth', 'This Month')
+      +       presetBtn('lastMonth', 'Last Month')
+      +       (rep.preset === 'custom' ? '<span class="muted" style="font-size:12px">Custom range</span>' : '')
       +     '</div>'
-      +     '<button class="btn btn-ghost" id="repPrint" style="margin-left:auto">' + PRINT_ICON + ' Print Report</button>'
+      +     '<button class="btn btn-ghost" id="repCsv" style="margin-left:auto">' + DL_ICON + ' Export CSV</button>'
+      +     '<button class="btn btn-ghost" id="repPrint">' + PRINT_ICON + ' Print Report</button>'
       +   '</div>'
       + '</div></div>';
 
@@ -376,9 +462,142 @@
         : App.empty('No finalized reports yet. Finalize a patient report from Lab Results and it will be saved here.'))
       + '</div></div>';
 
+    /* ---- comparison badges: for expenses, down is good (invert) ---- */
+    function cmpBadge(label, cur, prev, invert) {
+      var c = pctChg(cur, prev);
+      var good = invert ? (c.up === false) : (c.up === true);
+      var col = c.up === null ? '#64748b' : (good ? '#15803d' : '#b91c1c');
+      var bgc = c.up === null ? '#f1f5f9' : (good ? '#dcfce7' : '#fee2e2');
+      var arrow = c.up === null ? '•' : (c.up ? '▲' : '▼');
+      return '<span style="display:inline-flex;align-items:center;gap:6px;background:' + bgc
+        + ';color:' + col + ';border:1px solid ' + col + ';border-radius:999px;padding:4px 10px;font-size:12px;font-weight:700">'
+        + label + ' <span>' + arrow + ' ' + c.txt + '</span></span>';
+    }
+
+    var cmpCard = ''
+      + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
+      + '<span class="muted" style="font-size:13px;font-weight:600;white-space:nowrap">vs previous period (' + App.esc(pFrom) + ' – ' + App.esc(pTo) + ')</span>'
+      + cmpBadge('Billed', billed, pBilled, false)
+      + cmpBadge('Collected', collected, pCollected, false)
+      + cmpBadge('Expenses', expTotal, pExpTotal, true)
+      + cmpBadge('Net', net, pNet, false)
+      + '</div></div>';
+
+    /* ---- on-screen Finance Summary card (same rows as the print handler) ---- */
+    var finSumCard = ''
+      + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Finance Summary</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><tbody>'
+      + '<tr><td>Total Billed (' + invoices.length + ' bills)</td><td style="text-align:right"><strong>' + App.money(billed) + '</strong></td></tr>'
+      + '<tr><td>Discounts Given</td><td style="text-align:right">' + App.money(discounts) + '</td></tr>'
+      + '<tr><td>Collected (Cash ' + App.money(methods.Cash) + ' / Bank ' + App.money(methods.Bank) + ' / Card ' + App.money(methods.Card) + ')</td><td style="text-align:right"><strong>' + App.money(collected) + '</strong></td></tr>'
+      + '<tr><td>Outstanding Due</td><td style="text-align:right">' + App.money(due) + '</td></tr>'
+      + '<tr><td>Expenses</td><td style="text-align:right">' + App.money(expTotal) + '</td></tr>'
+      + '<tr><td><strong>Net Collection</strong></td><td style="text-align:right"><strong>' + App.money(net) + '</strong></td></tr>'
+      + '</tbody></table></div></div></div>';
+
+    /* ---- Dues section: aging buckets (by invoice createdAt) + unpaid invoices ---- */
+    var duesUnpaid = DB.all('invoices').filter(function (iv) { return (+iv.due || 0) > 0; });
+    var buckets = [
+      { label: 'Current 0–30d', min: 0, max: 30, total: 0, count: 0 },
+      { label: '31–60 days', min: 31, max: 60, total: 0, count: 0 },
+      { label: '61–90 days', min: 61, max: 90, total: 0, count: 0 },
+      { label: '90+ days', min: 91, max: 1e9, total: 0, count: 0 }
+    ];
+    var todayMs = new Date(App.today()).getTime();
+    duesUnpaid.forEach(function (iv) {
+      var age = Math.max(0, Math.round((todayMs - new Date(toDay(iv.createdAt)).getTime()) / 86400000));
+      for (var bi = 0; bi < buckets.length; bi++) {
+        if (age >= buckets[bi].min && age <= buckets[bi].max) { buckets[bi].total += (+iv.due || 0); buckets[bi].count++; break; }
+      }
+    });
+    var duesRowsHtml = !duesUnpaid.length
+      ? '<tr><td colspan="6">' + App.empty('No outstanding dues.') + '</td></tr>'
+      : duesUnpaid.slice().sort(function (a, b) { return (+b.due || 0) - (+a.due || 0); }).map(function (iv) {
+          var pat = DB.get('patients', iv.patientId);
+          var paid = (+iv.total || 0) - (+iv.due || 0);
+          return '<tr>'
+            + '<td><strong>' + App.esc(iv.no || iv.id) + '</strong></td>'
+            + '<td>' + App.esc(pat ? pat.name : 'Walk-in') + '</td>'
+            + '<td>' + App.esc(App.d(iv.createdAt)) + '</td>'
+            + '<td style="text-align:right">' + App.money(+iv.total || 0) + '</td>'
+            + '<td style="text-align:right">' + App.money(paid) + '</td>'
+            + '<td style="text-align:right;font-weight:700">' + App.money(+iv.due || 0) + '</td>'
+            + '</tr>';
+        }).join('');
+    var duesCard = ''
+      + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Dues Aging</h3>'
+      + '<span class="muted" style="font-weight:500;font-size:13px">by invoice age</span></div><div class="card-b">'
+      + '<div class="stat-grid" style="margin-bottom:14px">'
+      + buckets.map(function (b) { return statCard(b.label + ' · ' + b.count + ' bill(s)', App.money(b.total), '', '#fef3c7', '#b45309'); }).join('')
+      + '</div>'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Invoice</th><th>Patient</th><th>Date</th><th style="text-align:right">Total</th><th style="text-align:right">Paid</th><th style="text-align:right">Due</th></tr></thead><tbody>'
+      + duesRowsHtml + '</tbody></table></div>'
+      + '</div></div>';
+
+    /* ---- Patient section: stats + new-vs-returning in the selected period ---- */
+    var allPatients = DB.all('patients');
+    var mNewCount = allPatients.filter(function (p) {
+      var d = p.createdAt ? toDay(p.createdAt) : null;
+      return d && inRange(d, mFrom, mTo);
+    }).length;
+    var invByPat = {};
+    DB.all('invoices').forEach(function (iv) {
+      if (!iv.patientId) return;
+      var d = toDay(iv.createdAt);
+      if (!invByPat[iv.patientId] || d < invByPat[iv.patientId]) invByPat[iv.patientId] = d;
+    });
+    var periodNew = 0, periodReturning = 0;
+    allPatients.forEach(function (p) {
+      var newDay = p.createdAt ? toDay(p.createdAt) : invByPat[p.id];
+      if (!newDay) return;
+      if (inRange(newDay, from, to)) periodNew++; else periodReturning++;
+    });
+    var patCard = ''
+      + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Patient Overview</h3></div><div class="card-b">'
+      + '<div class="stat-grid">'
+      + statCard('Total Patients', allPatients.length, '', '#dbeafe', '#1d4ed8')
+      + statCard('New This Month', mNewCount, '', '#dcfce7', '#15803d')
+      + statCard('New in Period', periodNew, '', '#fef3c7', '#b45309')
+      + statCard('Returning in Period', periodReturning, '', '#ede9fe', '#6d28d9')
+      + '</div>'
+      + '<p class="muted" style="margin:12px 0 0">New = first visit within ' + App.esc(App.d(from)) + ' – ' + App.esc(App.d(to)) + '.</p>'
+      + '</div></div>';
+
+    /* ---- pre-built row HTML for the test/doctor/category tables ---- */
+    var twRowsHtml = !twRows.length
+      ? '<tr><td colspan="3">' + App.empty('No tests billed in this period.') + '</td></tr>'
+      : twRows.map(function (r) {
+          return '<tr><td><strong>' + App.esc(r.code) + '</strong> <span class="muted">' + App.esc(r.name) + '</span></td>'
+            + '<td style="text-align:right">' + r.count + '</td>'
+            + '<td style="text-align:right;font-weight:700">' + App.money(r.revenue) + '</td></tr>';
+        }).join('');
+    var dwRowsHtml = !dwRows.length
+      ? '<tr><td colspan="4">' + App.empty('No doctor referrals in this period.') + '</td></tr>'
+      : dwRows.map(function (r) {
+          var comm = Math.round(r.billed * r.pct / 100);
+          return '<tr><td><strong>' + App.esc(r.name) + '</strong> <span class="muted">(' + r.pct + '%)</span></td>'
+            + '<td style="text-align:right">' + r.referrals + '</td>'
+            + '<td style="text-align:right">' + App.money(r.billed) + '</td>'
+            + '<td style="text-align:right;font-weight:700;color:var(--amber)">' + App.money(comm) + '</td></tr>';
+        }).join('');
+    var catRowsHtml = !catRows.length
+      ? '<tr><td colspan="2">' + App.empty('No category revenue in this period.') + '</td></tr>'
+      : catRows.map(function (c) {
+          return '<tr><td><strong>' + App.esc(c.cat) + '</strong></td>'
+            + '<td style="text-align:right;font-weight:700">' + App.money(c.revenue) + '</td></tr>';
+        }).join('');
+    var top5Html = !top5.length
+      ? '<tr><td colspan="3">' + App.empty('No tests billed in this period.') + '</td></tr>'
+      : top5.map(function (r) {
+          return '<tr><td><strong>' + App.esc(r.code) + '</strong> <span class="muted">' + App.esc(r.name) + '</span></td>'
+            + '<td style="text-align:right">' + r.count + '</td>'
+            + '<td style="text-align:right;font-weight:700">' + App.money(r.revenue) + '</td></tr>';
+        }).join('');
+
     var html = ''
       + '<style>' + ADM_STAT_CSS + '</style>'
-      + '<div class="stat-grid">' + repStats + '</div>'
+      + ((showTests || showFinance) ? '<div class="stat-grid">' + repStats + '</div>' : '')
+      + ((showTests || showFinance) ? cmpCard : '')
 
       /* report type selector */
       + '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
@@ -392,30 +611,30 @@
 
       + filterCard
 
-      + finCard
+      + (showPatients ? finCard : '')
+      + (showFinance ? finSumCard : '')
+      + (showDues ? duesCard : '')
+      + (showPatients ? patCard : '')
 
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
+      + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
       + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
-      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>';
-    if (!twRows.length) html += '<tr><td colspan="3">' + App.empty('No tests billed in this period.') + '</td></tr>';
-    twRows.forEach(function (r) {
-      html += '<tr><td><strong>' + App.esc(r.code) + '</strong> <span class="muted">' + App.esc(r.name) + '</span></td>'
-        + '<td style="text-align:right">' + r.count + '</td>'
-        + '<td style="text-align:right;font-weight:700">' + App.money(r.revenue) + '</td></tr>';
-    });
-    html += '</tbody></table></div></div></div>'
-
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+      + twRowsHtml
+      + '</tbody></table></div></div></div>'
       + '<div class="card"><div class="card-h"><h3 style="margin:0">Doctor-wise Referrals</h3></div><div class="card-b">'
-      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>';
-    if (!dwRows.length) html += '<tr><td colspan="4">' + App.empty('No doctor referrals in this period.') + '</td></tr>';
-    dwRows.forEach(function (r) {
-      var comm = Math.round(r.billed * r.pct / 100);
-      html += '<tr><td><strong>' + App.esc(r.name) + '</strong> <span class="muted">(' + r.pct + '%)</span></td>'
-        + '<td style="text-align:right">' + r.referrals + '</td>'
-        + '<td style="text-align:right">' + App.money(r.billed) + '</td>'
-        + '<td style="text-align:right;font-weight:700;color:var(--amber)">' + App.money(comm) + '</td></tr>';
-    });
-    html += '</tbody></table></div></div></div></div>';
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
+      + dwRowsHtml
+      + '</tbody></table></div></div></div></div>' : '')
+
+      + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Revenue by Test Category</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Category</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+      + catRowsHtml
+      + '</tbody></table></div></div></div>'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Top 5 Tests by Count</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+      + top5Html
+      + '</tbody></table></div></div></div></div>' : '');
 
     document.getElementById('view').innerHTML = html;
     admCountUp();
@@ -444,31 +663,112 @@
       });
     });
 
-    document.getElementById('repFrom').addEventListener('change', function (e) { rep.from = e.target.value; renderReports(); });
-    document.getElementById('repTo').addEventListener('change', function (e) { rep.to = e.target.value; renderReports(); });
+    document.getElementById('repFrom').addEventListener('change', function (e) { rep.from = e.target.value; rep.preset = 'custom'; renderReports(); });
+    document.getElementById('repTo').addEventListener('change', function (e) { rep.to = e.target.value; rep.preset = 'custom'; renderReports(); });
     document.querySelectorAll('[data-preset]').forEach(function (b) {
       b.addEventListener('click', function () { setPreset(b.getAttribute('data-preset')); });
     });
     document.querySelectorAll('[data-reptype]').forEach(function (b) {
       b.addEventListener('click', function () { rep.type = b.getAttribute('data-reptype'); renderReports(); });
     });
+    document.getElementById('repCsv').addEventListener('click', function () {
+      try {
+        var L = [];
+        function sec(t) { L.push(t); }
+        function row(a) { L.push(a.map(csvEsc).join(',')); }
+        sec('Optix LAB MedSync');
+        row(['Report Type', repTypeLbl]);
+        row(['Period', App.d(from) + ' to ' + App.d(to)]);
+        L.push('');
+        if (repSecs.finance) {
+          sec('Finance Summary');
+          row(['Metric', 'Amount']);
+          row(['Total Billed (' + invoices.length + ' bills)', billed]);
+          row(['Discounts Given', discounts]);
+          row(['Collected', collected]);
+          row(['Outstanding Due', due]);
+          row(['Expenses', expTotal]);
+          row(['Net Collection', net]);
+          L.push('');
+        }
+        if (repSecs.tests) {
+          sec('Test-wise Performance');
+          row(['Test', 'Count', 'Revenue']);
+          twRows.forEach(function (r) { row([r.code + ' ' + r.name, r.count, r.revenue]); });
+          L.push('');
+        }
+        if (repSecs.doctors) {
+          sec('Doctor-wise Referrals');
+          row(['Doctor', 'Referrals', 'Billed', 'Commission']);
+          dwRows.forEach(function (r) { row([r.name, r.referrals, r.billed, Math.round(r.billed * r.pct / 100)]); });
+          L.push('');
+        }
+        if (repSecs.dues) {
+          sec('Unpaid Invoices');
+          row(['Invoice', 'Patient', 'Date', 'Due']);
+          repUnpaid.forEach(function (iv) {
+            var pat = iv.patientId ? DB.get('patients', iv.patientId) : null;
+            row([iv.no || iv.id, pat ? pat.name : 'Walk-in', App.d(iv.createdAt), (+iv.due || 0)]);
+          });
+          L.push('');
+        }
+        if (repSecs.patients) {
+          sec('Patient Summary');
+          row(['Metric', 'Count']);
+          row(['Patients Billed', repPatientCount]);
+          row(['Invoices', invoices.length]);
+          row(['Finalized Reports', finList.length]);
+          L.push('');
+        }
+        var csv = L.join('\r\n');
+        var blob = new Blob([csv], { type: 'text/csv' });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'report-' + rep.type + '-' + from + '-to-' + to + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+        App.toast('Report exported.');
+      } catch (e) { App.toast('Export failed: ' + e.message, 'err'); }
+    });
     document.getElementById('repPrint').addEventListener('click', function () {
-      var ph = '<p><strong>Period:</strong> ' + App.esc(App.d(from)) + ' – ' + App.esc(App.d(to)) + '</p>'
-        + '<table class="table"><tbody>'
+      var ph = '<p><strong>Type:</strong> ' + App.esc(repTypeLbl) + '<br><strong>Period:</strong> ' + App.esc(App.d(from)) + ' – ' + App.esc(App.d(to)) + '</p>';
+      if (repSecs.finance) {
+        ph += '<h3>Finance Summary</h3><table class="table"><tbody>'
         + '<tr><td>Total Billed (' + invoices.length + ' bills)</td><td style="text-align:right"><strong>' + App.money(billed) + '</strong></td></tr>'
         + '<tr><td>Discounts Given</td><td style="text-align:right">' + App.money(discounts) + '</td></tr>'
         + '<tr><td>Collected (Cash ' + App.money(methods.Cash) + ' / Bank ' + App.money(methods.Bank) + ' / Card ' + App.money(methods.Card) + ')</td><td style="text-align:right"><strong>' + App.money(collected) + '</strong></td></tr>'
         + '<tr><td>Outstanding Due</td><td style="text-align:right">' + App.money(due) + '</td></tr>'
         + '<tr><td>Expenses</td><td style="text-align:right">' + App.money(expTotal) + '</td></tr>'
         + '<tr><td><strong>Net Collection</strong></td><td style="text-align:right"><strong>' + App.money(net) + '</strong></td></tr>'
-        + '</tbody></table>'
-        + '<h3>Test-wise</h3><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+        + '</tbody></table>';
+      }
+      if (repSecs.tests) {
+        ph += '<h3>Test-wise</h3><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
         + twRows.map(function (r) { return '<tr><td>' + App.esc(r.code + ' ' + r.name) + '</td><td style="text-align:right">' + r.count + '</td><td style="text-align:right">' + App.money(r.revenue) + '</td></tr>'; }).join('')
-        + '</tbody></table>'
-        + '<h3>Doctor-wise</h3><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
+        + '</tbody></table>';
+      }
+      if (repSecs.doctors) {
+        ph += '<h3>Doctor-wise</h3><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
         + dwRows.map(function (r) { return '<tr><td>' + App.esc(r.name) + '</td><td style="text-align:right">' + r.referrals + '</td><td style="text-align:right">' + App.money(r.billed) + '</td><td style="text-align:right">' + App.money(Math.round(r.billed * r.pct / 100)) + '</td></tr>'; }).join('')
         + '</tbody></table>';
-      App.print('Collection Report', ph);
+      }
+      if (repSecs.dues) {
+        ph += '<h3>Unpaid Invoices</h3><table class="table"><thead><tr><th>Invoice</th><th>Patient</th><th>Date</th><th style="text-align:right">Due</th></tr></thead><tbody>'
+        + (repUnpaid.length ? repUnpaid.map(function (iv) {
+            var pat = iv.patientId ? DB.get('patients', iv.patientId) : null;
+            return '<tr><td>' + App.esc(iv.no || iv.id) + '</td><td>' + App.esc(pat ? pat.name : 'Walk-in') + '</td><td>' + App.esc(App.d(iv.createdAt)) + '</td><td style="text-align:right">' + App.money(+iv.due || 0) + '</td></tr>';
+          }).join('') : '<tr><td colspan="4">No unpaid invoices in this period.</td></tr>')
+        + '</tbody></table>';
+      }
+      if (repSecs.patients) {
+        ph += '<h3>Patient Summary</h3><table class="table"><tbody>'
+        + '<tr><td>Patients Billed</td><td style="text-align:right"><strong>' + repPatientCount + '</strong></td></tr>'
+        + '<tr><td>Invoices</td><td style="text-align:right">' + invoices.length + '</td></tr>'
+        + '<tr><td>Finalized Reports</td><td style="text-align:right">' + finList.length + '</td></tr>'
+        + '</tbody></table>';
+      }
+      App.print('Collection Report — ' + repTypeLbl + ' (' + App.d(from) + ' – ' + App.d(to) + ')', ph);
     });
   }
 
@@ -731,8 +1031,13 @@
         var html = App.sampleReportPreview(ps);
         /* inject a sample QR code in the preview so the user sees the layout */
         if (ps.showQr !== false && App.qrDataUrlFor) {
-          var qrSrc = App.qrDataUrlFor('https://optix-lab-medsync.pages.dev/sample-report');
-          if (qrSrc) html = html.replace('data-qr="1"', 'data-qr="1" src="' + qrSrc + '"');
+          try {
+            var qrSrc = App.qrDataUrlFor('https://optix-lab-medsync.pages.dev/sample-report');
+            if (qrSrc) {
+              /* replace ALL data-qr images, not just the first */
+              html = html.split('data-qr="1"').join('data-qr="1" src="' + qrSrc + '"');
+            }
+          } catch (e) {}
         }
         /* full-page PDF-like preview: A4-proportioned sheet on a grey backdrop */
         /* mirror the font selected in the form so the preview matches the report */
