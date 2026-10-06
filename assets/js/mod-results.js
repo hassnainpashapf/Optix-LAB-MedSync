@@ -1619,19 +1619,19 @@
     var d = reportData(invoiceId);
     if (!d) { App.toast('No ready results to print', 'err'); return; }
     var invPaid = d.inv && d.inv.status === 'paid';
-    var qrImg = null, noQrReason = null;
+    var qrImg = null;
     try {
       var jsOk = await App.ensureJsPDF();
       if (jsOk) {
         var url = await getReportPdfUrl(invoiceId);
-        if (url) qrImg = qrDataUrlFor(url);
-        else noQrReason = invPaid ? 'upload failed' : 'payment pending — QR activates when paid';
-      } else noQrReason = 'upload failed';
-    } catch (e) { noQrReason = 'upload failed'; }
+        /* fallback: if backend upload fails or invoice unpaid, generate QR with invoice reference */
+        if (!url) url = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
+        qrImg = qrDataUrlFor(url);
+      }
+    } catch (e) { qrImg = null; }
     var html = reportHtml(d, opts);
     if (qrImg) html = html.replace('data-qr="1"', 'data-qr="1" src="' + qrImg + '"');
     else html = stripQrImg(html);
-    if (noQrReason) App.toast('Report printed without QR (' + noQrReason + ')', invPaid ? 'err' : 'info');
     App.print('Lab Report — ' + d.inv.no, html, { noHeader: true });
   }
 

@@ -149,6 +149,8 @@ function renderTests() {
             return '<option' + (testFilter.status === s ? ' selected' : '') + '>' + s + '</option>';
           }).join('') +
         '</select>' +
+        (canEdit ? '<button type="button" class="btn btn-ghost" id="t-import" style="margin-left:8px">📥 Import CSV</button>' : '') +
+        (canEdit ? '<button type="button" class="btn btn-ghost" id="t-seed" style="margin-left:8px" title="Create all template tests with price 0">🌱 Seed Templates (Rs 0)</button>' : '') +
         (canEdit ? '<button type="button" class="btn btn-primary" id="t-add" style="margin-left:auto">+ Add Test</button>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="t-chips">' + chips + '</div>' +
@@ -171,6 +173,39 @@ function renderTests() {
   });
   var addBtn = document.getElementById('t-add');
   if (addBtn) addBtn.addEventListener('click', function () { testModal(null); });
+  /* seed all template tests with price 0 */
+  var seedBtn = document.getElementById('t-seed');
+  if (seedBtn) seedBtn.addEventListener('click', function () {
+    if (!confirm('Create all ' + Object.keys(TEST_TEMPLATES).length + ' template tests with price Rs 0? You can edit prices later.')) return;
+    var existing = {};
+    DB.all('tests').forEach(function (t) { existing[(t.name || '').toLowerCase()] = 1; });
+    var added = 0;
+    Object.keys(TEST_TEMPLATES).forEach(function (name) {
+      if (existing[name.toLowerCase()]) return;
+      var params = TEST_TEMPLATES[name];
+      /* guess category from name */
+      var cat = 'General';
+      if (/cbc|blood count|esr|hb/i.test(name)) cat = 'Haematology';
+      else if (/lipid|cholesterol/i.test(name)) cat = 'Biochemistry';
+      else if (/liver|lft|sgpt|sgot/i.test(name)) cat = 'Biochemistry';
+      else if (/kidney|rft|urea|creatinine/i.test(name)) cat = 'Biochemistry';
+      else if (/thyroid|tsh/i.test(name)) cat = 'Hormones';
+      else if (/sugar|glucose|hba1c/i.test(name)) cat = 'Biochemistry';
+      else if (/urine/i.test(name)) cat = 'Pathology';
+      else if (/hepatitis|hiv|dengue|widal/i.test(name)) cat = 'Serology';
+      else if (/vitamin|iron/i.test(name)) cat = 'Biochemistry';
+      DB.put('tests', {
+        id: 't' + Date.now() + Math.random().toString(36).slice(2, 7),
+        code: name.split(' ').map(function (w) { return w[0]; }).join('').toUpperCase().slice(0, 6),
+        name: name, category: cat, price: 0,
+        sampleType: 'Blood', tat: 'Same day', active: true,
+        params: params
+      });
+      added++;
+    });
+    App.toast(added + ' tests created with price Rs 0');
+    drawTestRows(canEdit);
+  });
 
   drawTestRows(canEdit);
 }
@@ -342,6 +377,68 @@ var TEST_TEMPLATES = {
   'HbA1c': [
     { name: 'HbA1c', unit: '%', ref: '4.0 - 5.6', type: 'number' },
     { name: 'Avg. Blood Glucose', unit: 'mg/dL', ref: '', type: 'number' }
+  ],
+  'Urine Complete Examination': [
+    { name: 'Color', unit: '', ref: 'Pale yellow', type: 'text' },
+    { name: 'Appearance', unit: '', ref: 'Clear', type: 'text' },
+    { name: 'pH', unit: '', ref: '5.0 - 8.0', type: 'number' },
+    { name: 'Specific Gravity', unit: '', ref: '1.005 - 1.030', type: 'number' },
+    { name: 'Protein', unit: '', ref: 'Negative', type: 'text' },
+    { name: 'Glucose', unit: '', ref: 'Negative', type: 'text' },
+    { name: 'Ketones', unit: '', ref: 'Negative', type: 'text' },
+    { name: 'Blood', unit: '', ref: 'Negative', type: 'text' },
+    { name: 'Bilirubin', unit: '', ref: 'Negative', type: 'text' },
+    { name: 'Urobilinogen', unit: '', ref: 'Normal', type: 'text' },
+    { name: 'Nitrite', unit: '', ref: 'Negative', type: 'text' },
+    { name: 'Leukocyte Esterase', unit: '', ref: 'Negative', type: 'text' },
+    { name: 'Pus Cells', unit: '/HPF', ref: '0 - 5', type: 'text' },
+    { name: 'RBCs', unit: '/HPF', ref: '0 - 2', type: 'text' },
+    { name: 'Epithelial Cells', unit: '/HPF', ref: 'Few', type: 'text' }
+  ],
+  'Hepatitis B (HBsAg)': [
+    { name: 'HBsAg', unit: '', ref: 'Non-Reactive', type: 'text' }
+  ],
+  'Hepatitis C (Anti-HCV)': [
+    { name: 'Anti-HCV', unit: '', ref: 'Non-Reactive', type: 'text' }
+  ],
+  'HIV (Anti-HIV)': [
+    { name: 'Anti-HIV I & II', unit: '', ref: 'Non-Reactive', type: 'text' }
+  ],
+  'Dengue Profile': [
+    { name: 'NS1 Antigen', unit: '', ref: 'Negative', type: 'text' },
+    { name: 'IgG', unit: '', ref: 'Negative', type: 'text' },
+    { name: 'IgM', unit: '', ref: 'Negative', type: 'text' }
+  ],
+  'Widal Test': [
+    { name: 'S. Typhi O', unit: '', ref: '< 1:80', type: 'text' },
+    { name: 'S. Typhi H', unit: '', ref: '< 1:80', type: 'text' },
+    { name: 'S. Paratyphi AH', unit: '', ref: '< 1:80', type: 'text' },
+    { name: 'S. Paratyphi BH', unit: '', ref: '< 1:80', type: 'text' }
+  ],
+  'Coagulation (PT/INR)': [
+    { name: 'PT', unit: 'sec', ref: '11 - 13.5', type: 'number' },
+    { name: 'INR', unit: '', ref: '0.9 - 1.1', type: 'number' },
+    { name: 'APTT', unit: 'sec', ref: '25 - 35', type: 'number' }
+  ],
+  'Serum Electrolytes Extended': [
+    { name: 'Calcium', unit: 'mg/dL', ref: '8.5 - 10.5', type: 'number' },
+    { name: 'Magnesium', unit: 'mg/dL', ref: '1.7 - 2.2', type: 'number' },
+    { name: 'Phosphorus', unit: 'mg/dL', ref: '2.5 - 4.5', type: 'number' }
+  ],
+  'Vitamin D': [
+    { name: '25-OH Vitamin D', unit: 'ng/mL', ref: '30 - 100', type: 'number' }
+  ],
+  'Vitamin B12': [
+    { name: 'Vitamin B12', unit: 'pg/mL', ref: '200 - 900', type: 'number' }
+  ],
+  'Iron Studies': [
+    { name: 'Serum Iron', unit: 'ug/dL', ref: '60 - 170', type: 'number' },
+    { name: 'TIBC', unit: 'ug/dL', ref: '240 - 450', type: 'number' },
+    { name: 'Ferritin', unit: 'ng/mL', ref: '15 - 150', type: 'number' }
+  ],
+  'Cardiac Enzymes': [
+    { name: 'CK-MB', unit: 'ng/mL', ref: '0 - 5', type: 'number' },
+    { name: 'Troponin I', unit: 'ng/mL', ref: '< 0.04', type: 'number' }
   ]
 };
 
