@@ -1303,7 +1303,7 @@
         bars += '<span style="display:block;flex:0 0 auto;width:0;flex-grow:1;background:#fff;height:100%;"></span>';
       }
     }
-    return '<div style="display:flex;align-items:stretch;width:32px;height:18px;' +
+    return '<div style="display:flex;align-items:stretch;width:64px;height:12px;' +
       'background:#fff;padding:0;margin:0 auto;line-height:0;overflow:hidden;" ' +
       'aria-hidden="true">' + bars + '</div>';
   }
