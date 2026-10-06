@@ -17,17 +17,19 @@ for f in main.js preload.js server/server.js server/sync-store.js server/desktop
 done
 
 echo "== 2/3 packing win32 app (electron-builder --dir) =="
-rm -rf ../../dist-installer/win-unpacked
-CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --win --x64 --dir --config electron-builder.yml 2>&1 | tail -2
+ARCH="${ARCH:-x64}"
+if [ "$ARCH" = "ia32" ]; then UNP=win-ia32-unpacked; PF='$PROGRAMFILES'; SUF=-win10-x86; else UNP=win-unpacked; PF='$PROGRAMFILES64'; SUF=; fi
+rm -rf ../../dist-installer/$UNP
+CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --win --$ARCH --dir --config electron-builder.yml 2>&1 | tail -2
 
 echo "== 3/3 compiling NSIS installer =="
 VER=$(node -p "require('./app-stage/package.json').version")
-KB=$(du -sk ../../dist-installer/win-unpacked | cut -f1)
+KB=$(du -sk ../../dist-installer/$UNP | cut -f1)
 echo "version=$VER  installed-KB=$KB"
 cp -f ../../electron-src/icon.ico ./icon.ico
-sed -e "s/__APP_VERSION__/${VER}/g" -e "s/__ESTIMATED_KB__/${KB}/g" \
+sed -e "s/__APP_VERSION__/${VER}/g" -e "s/__ESTIMATED_KB__/${KB}/g" -e "s/__UNPACKED__/${UNP}/g" -e "s|__PF__|${PF}|g" -e "s/__SUFFIX__/${SUF}/g" \
   labpos-setup.nsi > labpos-setup.build.nsi
 makensis -V2 labpos-setup.build.nsi
 
 echo "== done =="
-ls -lh "../../dist-installer/Optix-LAB-MedSync-Setup-${VER}.exe"
+ls -lh ../../dist-installer/Optix-LAB-MedSync-Setup-${VER}${SUF}.exe

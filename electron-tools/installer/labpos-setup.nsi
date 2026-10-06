@@ -14,8 +14,8 @@
 !define APP_EXE       "Optix LAB MedSync.exe"
 
 Name "${APP_NAME} ${APP_VERSION}"
-OutFile "..\..\dist-installer\Optix-LAB-MedSync-Setup-${APP_VERSION}.exe"
-InstallDir "$PROGRAMFILES64\${APP_NAME}"
+OutFile "..\..\dist-installer\Optix-LAB-MedSync-Setup-${APP_VERSION}__SUFFIX__.exe"
+InstallDir "__PF__\${APP_NAME}"
 InstallDirRegKey HKLM "Software\${APP_NAME}" "InstallDir"
 RequestExecutionLevel admin
 SetCompressor /SOLID lzma
@@ -71,7 +71,7 @@ Section "${APP_NAME}" SecMain
   SetOutPath "$INSTDIR"
 
   ; App payload (Electron build: Optix LAB MedSync.exe + resources)
-  File /r "..\..\dist-installer\win-unpacked\*.*"
+  File /r "..\..\dist-installer\__UNPACKED__\*.*"
 
   ; Uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
