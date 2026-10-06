@@ -1397,10 +1397,12 @@
        barcode of the case/invoice number, then the case number, then the
        date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
+      /* left-align the barcode: override the centered margin */
+      var _bc = barcodeHtml(invNo).replace('margin:0 auto', 'margin:0');
       return '<div style="border:1px solid #000;background:#fff;text-align:center;' +
         'padding:2px 1px;line-height:1.3;font-size:0.85em;grid-row:span 2">' +
         '<div style="font-weight:700;color:#000;font-size:0.95em">RESULT</div>' +
-        barcodeHtml(invNo) +
+        '<div style="text-align:left">' + _bc + '</div>' +
         '<div style="font-weight:700;color:#000;font-size:0.9em">' + App.esc(invNo) + '</div>' +
         '<div style="font-size:0.85em;color:#000">' +
           App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
