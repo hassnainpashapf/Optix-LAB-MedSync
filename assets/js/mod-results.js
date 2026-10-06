@@ -1531,7 +1531,7 @@
 
     /* 5: powered-by (existing constraint) */
     var powered =
-      '<p class="rpt-powered" style="color:#999;font-size:0.88em;text-align:center;margin:14px 0 0">Powered by System Optix</p>';
+      '<p class="rpt-powered" style="color:#000;font-size:0.88em;text-align:center;margin:14px 0 0">Powered by System Optix</p>';
 
     return '<div class="rpt-footer">' + line1 + rule + sigHtml + discHtml + powered + '</div>';
   }

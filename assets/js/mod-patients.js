@@ -395,12 +395,21 @@
   function rowHTML(p) {
     var st = patientStats(p);
     var edit = canEdit();
+    var regDate = '';
+    try {
+      if (p.createdAt) {
+        var d = new Date(p.createdAt);
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        regDate = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+      }
+    } catch (e) {}
     return '<tr>' +
       '<td><span class="mono">' + App.esc(p.id) + '</span></td>' +
       '<td><a class="pt-name" href="#/patient/' + App.esc(p.id) + '">' + avatarHTML(p.name, 34) +
       '<span><strong>' + App.esc(p.name) + '</strong><small>' + App.esc(p.phone || '—') + '</small></span></a></td>' +
       '<td>' + App.esc(p.age) + ' yrs · ' + App.esc(p.gender) + '</td>' +
       '<td>' + App.esc(p.phone || '—') + (p.phone ? ' ' + waBtn(p.phone, 'Chat on WhatsApp') : '') + '</td>' +
+      '<td class="muted">' + App.esc(regDate || '—') + '</td>' +
       '<td class="num">' + st.visits + '</td>' +
       '<td class="num">' + App.money(st.spent) + '</td>' +
       '<td class="num">' + (st.due > 0
@@ -446,7 +455,7 @@
       (edit ? '<button class="btn btn-primary" id="pt-add" style="margin-left:auto;flex:none">+ Add Patient</button>' : '') + '</div>' +
       '<div class="muted" id="pt-count" style="font-size:12.5px;margin-bottom:10px">' + rows.length + ' shown</div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
-      '<th>ID</th><th>Patient</th><th>Age / Gender</th><th>Phone</th><th class="num">Visits</th>' +
+      '<th>ID</th><th>Patient</th><th>Age / Gender</th><th>Phone</th><th>Registered</th><th class="num">Visits</th>' +
       '<th class="num">Total Spent</th><th class="num">Due</th><th></th>' +
       '</tr></thead><tbody id="pt-rows">' +
       (rows.length ? rows.map(rowHTML).join('') : '') +
