@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Lab Report — Optix LAB MedSync</title>
+<meta name="theme-color" content="#131845">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lab Report">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#2b2f36;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior:none}
+body{display:flex;flex-direction:column;position:fixed;inset:0}
+.bar{flex:none;display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:linear-gradient(135deg,#131845,#1e2a6b);color:#fff;box-shadow:0 2px 12px rgba(0,0,0,.35);z-index:3}
+.logo{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);flex:none}
+.logo svg{width:20px;height:20px}
+.ttl{flex:1;min-width:0;line-height:1.15}.ttl b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ttl small{font-size:11.5px;opacity:.75}
+.btn{border:0;border-radius:10px;padding:9px 12px;font-weight:700;font-size:13px;background:#fff;color:#131845;display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer}
+.btn.g{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.btn svg{width:16px;height:16px}
+#scroller{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;padding:12px 0 90px;text-align:center}
+#pages{display:inline-block;text-align:left}
+.pg{display:block;margin:0 auto 12px;background:#fff;box-shadow:0 6px 24px rgba(0,0,0,.5);border-radius:2px}
+.pg canvas{display:block;width:100%;height:100%}
+.zoom{position:fixed;right:14px;bottom:calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;z-index:4}
+.zoom button{width:46px;height:46px;border-radius:50%;border:0;background:#fff;color:#131845;font-size:22px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.45)}
+.zoom button:active{transform:scale(.94)}
+.msg{color:#cbd5e1;text-align:center;padding:60px 24px;font-size:15px;line-height:1.6}
+.msg .sp{width:34px;height:34px;margin:0 auto 14px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:s .8s linear infinite}
+@keyframes s{to{transform:rotate(360deg)}}
+.foot{position:fixed;left:0;right:0;bottom:0;text-align:center;font-size:11px;color:rgba(255,255,255,.45);padding:6px 0 calc(6px + env(safe-area-inset-bottom));pointer-events:none}
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9V3"/><path d="M7 15h10"/></svg></div>
+  <div class="ttl"><b id="ttl">Lab Report</b><small>Optix LAB MedSync</small></div>
+  <button class="btn g" id="share" style="display:none"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>Share</button>
+  <a class="btn" id="dl" href="?raw=1&dl=1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>PDF</a>
+</div>
+<div id="scroller"><div id="pages"><div class="msg"><div class="sp"></div>Opening your report…</div></div></div>
+<div class="zoom"><button id="zin" aria-label="Zoom in">+</button><button id="zout" aria-label="Zoom out">&minus;</button></div>
+<div class="foot">Powered by System Optix</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+(function () {
+  var raw = location.pathname + '?raw=1';
+  var sc = document.getElementById('scroller'), pagesEl = document.getElementById('pages');
+  var pdf = null, zoom = 1, MIN = 1, MAX = 5, baseW = 0, pageEls = [], timer = null, renderTok = 0;
+  document.getElementById('dl').href = raw + '&dl=1';
+  function fail() {
+    pagesEl.innerHTML = '<div class="msg">We could not display this report here.<br><br><a class="btn" href="' + raw + '">Open the PDF</a></div>';
+  }
+  if (!window.pdfjsLib) { fail(); return; }
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  function fitWidth() { return Math.min(sc.clientWidth - 16, 900); }
+  function layout() {
+    baseW = fitWidth();
+    pageEls.forEach(function (o) {
+      var w = baseW * zoom, h = w * o.ratio;
+      o.el.style.width = w + 'px'; o.el.style.height = h + 'px';
+    });
+  }
+  /* sharp re-render at the current zoom: vector PDF is redrawn, never just stretched */
+  function render() {
+    var tok = ++renderTok, dpr = Math.min(window.devicePixelRatio || 1, 3);
+    pageEls.forEach(function (o) {
+      o.page.getPage ? 0 : 0;
+      var cssW = baseW * zoom;
+      var scale = Math.min((cssW * dpr) / o.vw, 4096 / o.vw);
+      var vp = o.page.getViewport({ scale: scale });
+      var cv = document.createElement('canvas'); cv.width = Math.floor(vp.width); cv.height = Math.floor(vp.height);
+      o.page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise.then(function () {
+        if (tok !== renderTok) return;
+        o.el.innerHTML = ''; o.el.appendChild(cv);
+      });
+    });
+  }
+  function setZoom(z, cx, cy) {
+    z = Math.max(MIN, Math.min(MAX, z)); if (z === zoom) return;
+    var rect = sc.getBoundingClientRect(), px = (cx == null ? rect.left + rect.width / 2 : cx), py = (cy == null ? rect.top + rect.height / 2 : cy);
+    var ox = sc.scrollLeft + (px - rect.left), oy = sc.scrollTop + (py - rect.top), k = z / zoom;
+    zoom = z; layout();
+    sc.scrollLeft = ox * k - (px - rect.left); sc.scrollTop = oy * k - (py - rect.top);
+    clearTimeout(timer); timer = setTimeout(render, 160);
+  }
+  document.getElementById('zin').onclick = function () { setZoom(zoom * 1.4); };
+  document.getElementById('zout').onclick = function () { setZoom(zoom / 1.4); };
+  /* pinch to zoom (two fingers) + double-tap */
+  var pts = {}, startD = 0, startZ = 1, lastTap = 0;
+  function dist() { var k = Object.keys(pts); if (k.length < 2) return 0; var a = pts[k[0]], b = pts[k[1]]; return Math.hypot(a.x - b.x, a.y - b.y); }
+  sc.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) { var a = e.touches[0], b = e.touches[1]; startD = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY); startZ = zoom; }
+    else if (e.touches.length === 1) { var n = Date.now(); if (n - lastTap < 300) { setZoom(zoom > 1.2 ? 1 : 2.5, e.touches[0].clientX, e.touches[0].clientY); } lastTap = n; }
+  }, { passive: true });
+  sc.addEventListener('touchmove', function (e) {
+    if (e.touches.length === 2 && startD) {
+      e.preventDefault();
+      var a = e.touches[0], b = e.touches[1], d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      setZoom(startZ * d / startD, (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+    }
+  }, { passive: false });
+  sc.addEventListener('touchend', function (e) { if (e.touches.length < 2) startD = 0; }, { passive: true });
+  window.addEventListener('resize', function () { layout(); clearTimeout(timer); timer = setTimeout(render, 200); });
+  /* share (native sheet on phones) */
+  var sh = document.getElementById('share');
+  if (navigator.share) { sh.style.display = ''; sh.onclick = function () { navigator.share({ title: 'Lab Report', url: location.href.split('?')[0] }).catch(function () {}); }; }
+  pdfjsLib.getDocument({ url: raw }).promise.then(function (doc) {
+    pdf = doc; pagesEl.innerHTML = '';
+    var chain = Promise.resolve();
+    for (var i = 1; i <= doc.numPages; i++) (function (n) {
+      chain = chain.then(function () { return doc.getPage(n); }).then(function (page) {
+        var v = page.getViewport({ scale: 1 }), el = document.createElement('div'); el.className = 'pg';
+        pagesEl.appendChild(el); pageEls.push({ el: el, page: page, vw: v.width, ratio: v.height / v.width });
+      });
+    })(i);
+    return chain;
+  }).then(function () { layout(); render(); }).catch(fail);
+})();
+</script>
+</body>
+</html>

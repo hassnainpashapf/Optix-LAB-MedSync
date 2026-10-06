@@ -3,13 +3,13 @@
   'use strict';
 
   var GH = 'https://labpos-api.150.230.52.29.sslip.io/releases/';
-  var DMG_URL = GH + 'Optix-LAB-MedSync-1.2.2-arm64.dmg.tar.gz';
+  var DMG_URL = GH + 'Optix-LAB-MedSync-1.2.3-arm64.dmg.tar.gz';
   /* TODO(parent): replace with the real published APK URL */
   var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.0.0.apk';
 
   /* 6 distinct installer binaries (Windows 11 and Windows 10 64-bit share one) */
   var WIN_OPTS = [
-    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.2-win10-11-x64.exe' },
+    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.3-win10-11-x64.exe' },
     { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win10-x86.exe' },
     { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win8-x64.exe' },
     { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win8-x86.exe' },
@@ -47,7 +47,7 @@
     }).join('');
     return '<div class="card dl-card">' +
       '<div class="card-h"><div class="dl-ico">' + ICO.win + '</div>' +
-      '<div><h3>Windows</h3><p class="dl-ver">Windows 10/11 64-bit: v1.2.2 (cloud sync) &middot; older Windows: v1.0.0</p></div></div>' +
+      '<div><h3>Windows</h3><p class="dl-ver">Windows 10/11 64-bit: v1.2.3 (cloud sync) &middot; older Windows: v1.0.0</p></div></div>' +
       '<div class="card-b">' +
       '<button type="button" class="btn btn-primary dl-btn dl-win-toggle">' + ICO.dl +
         '<span class="dl-win-toggle-tx">Choose your Windows version</span>' + ICO.chev + '</button>' +
@@ -55,7 +55,7 @@
         '<div class="dl-note">' + ICO.check + '<span><b>Not sure which to pick?</b> Most modern PCs use 64-bit. Windows 11 is 64-bit only.</span></div>' +
         '<div class="dl-os-grid">' + grid + '</div>' +
       '</div>' +
-      '<div class="dl-note">' + ICO.check + '<span>Windows 10/11 64-bit (v1.2.2) keeps its own copy of your data, works offline and syncs with the cloud. Older Windows builds (v1.0.0) work on that PC only, without cloud sync.</span></div>' +
+      '<div class="dl-note">' + ICO.check + '<span>Windows 10/11 64-bit (v1.2.3) keeps its own copy of your data, works offline and syncs with the cloud. Older Windows builds (v1.0.0) work on that PC only, without cloud sync.</span></div>' +
       '<ol class="dl-steps">' + steps + '</ol>' +
       '</div></div>';
   }
@@ -163,7 +163,7 @@
     '<div class="dl-grid">' +
     winCard() +
     dlCard({
-      title: 'Mac (Apple Silicon)', version: '1.2.2', size: '~119 MB', file: 'for Mac (.dmg)', url: DMG_URL, icon: ICO.mac,
+      title: 'Mac (Apple Silicon)', version: '1.2.3', size: '~119 MB', file: 'for Mac (.dmg)', url: DMG_URL, icon: ICO.mac,
       note: ICO.check + '<span>The download is a compressed <b>.dmg.tar.gz</b> — double-click it after downloading to extract the <b>.dmg</b> inside.</span>',
       steps: [
         'Download the <b>.dmg.tar.gz</b> file and double-click it to extract the .dmg.',

@@ -403,13 +403,22 @@ async function main() {
       res.json({ ok: true, key, url: (DESKTOP ? DESKTOP_CLOUD_URL : (PUBLIC_API_URL || (req.protocol + '://' + req.get('host')))) + '/r/' + key });
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
+  /* QR target: a phone-friendly, app-like viewer (sharp pinch-zoom, share/download). Scripts and the desktop
+     updater ask for the raw PDF with ?raw=1 or without an HTML Accept header. */
+  let viewerHtml = null;
+  try { viewerHtml = fs.readFileSync(path.join(__dirname, 'report-viewer.html'), 'utf8'); } catch (e) { viewerHtml = null; }
   app.get('/r/:key', async (req, res) => {
     const key = req.params.key || '';
     if (!REPORT_KEY_RE.test(key)) return res.status(400).json({ error: 'invalid key' });
     const file = path.join(REPORT_PDFS_DIR, key + '.pdf');
     if (!fs.existsSync(file) && !(DESKTOP && await desktop.fetchPdf(key))) return res.status(404).json({ error: 'not found' });
+    if (viewerHtml && !req.query.raw && /text\/html/.test(req.get('Accept') || '')) {
+      res.set('Cache-Control', 'public, max-age=300');
+      return res.type('html').send(viewerHtml);
+    }
+    if (req.query.dl) res.setHeader('Content-Disposition', 'attachment; filename="lab-report-' + key + '.pdf"');
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="lab-report-' + key + '.pdf"');
+    if (!req.query.dl) res.setHeader('Content-Disposition', 'inline; filename="lab-report-' + key + '.pdf"');
     res.setHeader('Cache-Control', 'public, max-age=31536000');
     fs.createReadStream(file).pipe(res);
   });
