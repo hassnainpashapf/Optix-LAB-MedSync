@@ -150,7 +150,7 @@ function renderTests() {
           }).join('') +
         '</select>' +
         (canEdit ? '<button type="button" class="btn btn-ghost" id="t-import" style="margin-left:8px">📥 Import CSV</button>' : '') +
-        (canEdit ? '<button type="button" class="btn btn-ghost" id="t-seed" style="margin-left:8px" title="Create all template tests with price 0">🌱 Seed Templates (Rs 0)</button>' : '') +
+        (canEdit ? '<button type="button" class="btn btn-ghost" id="t-seed" style="margin-left:8px" title="Create 5000 tests with price 0">🌱 Seed 5000 Tests (Rs 0)</button>' : '') +
         (canEdit ? '<button type="button" class="btn btn-primary" id="t-add" style="margin-left:auto">+ Add Test</button>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="t-chips">' + chips + '</div>' +
@@ -173,36 +173,113 @@ function renderTests() {
   });
   var addBtn = document.getElementById('t-add');
   if (addBtn) addBtn.addEventListener('click', function () { testModal(null); });
+  /* CSV import for tests */
+  var impBtn = document.getElementById('t-import');
+  if (impBtn) impBtn.addEventListener('click', function () {
+    var fi = document.createElement('input');
+    fi.type = 'file'; fi.accept = '.csv,text/csv';
+    fi.onchange = function () {
+      var f = fi.files[0];
+      if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        try {
+          var lines = String(rd.result).split(/\r?\n/).filter(function (l) { return l.trim(); });
+          if (lines.length < 2) { App.toast('CSV is empty', 'err'); return; }
+          var headers = lines[0].split(',').map(function (h) { return h.trim().toLowerCase(); });
+          var idx = function (n) { return headers.indexOf(n); };
+          var ciCode = idx('code'), ciName = idx('name'), ciCat = idx('category'),
+              ciPrice = idx('price'), ciSample = idx('sampletype'), ciTat = idx('tat');
+          if (ciName < 0) { App.toast('CSV needs a "name" column', 'err'); return; }
+          var existing = {};
+          DB.all('tests').forEach(function (t) { existing[(t.name || '').toLowerCase()] = 1; });
+          var added = 0, skipped = 0;
+          for (var i = 1; i < lines.length; i++) {
+            /* simple CSV parse handling quoted fields */
+            var cols = [], cur = '', inQ = false;
+            var line = lines[i];
+            for (var j = 0; j < line.length; j++) {
+              var ch = line[j];
+              if (ch === '"') inQ = !inQ;
+              else if (ch === ',' && !inQ) { cols.push(cur.trim()); cur = ''; }
+              else cur += ch;
+            }
+            cols.push(cur.trim());
+            var name = (cols[ciName] || '').replace(/^"|"$/g, '').trim();
+            if (!name || existing[name.toLowerCase()]) { skipped++; continue; }
+            var code = ciCode >= 0 ? (cols[ciCode] || '').replace(/^"|"$/g, '').trim() : '';
+            var cat = ciCat >= 0 ? (cols[ciCat] || '').replace(/^"|"$/g, '').trim() : 'General';
+            var price = ciPrice >= 0 ? parseFloat((cols[ciPrice] || '0').replace(/[^0-9.]/g, '')) || 0 : 0;
+            DB.put('tests', {
+              id: 't' + Date.now() + '_' + i + Math.random().toString(36).slice(2, 5),
+              code: code || ('T' + (1000 + i)),
+              name: name, category: cat || 'General', price: price,
+              sampleType: ciSample >= 0 ? (cols[ciSample] || 'Blood') : 'Blood',
+              tat: ciTat >= 0 ? (cols[ciTat] || 'Same day') : 'Same day',
+              active: true, params: []
+            });
+            existing[name.toLowerCase()] = 1;
+            added++;
+          }
+          App.toast(added + ' tests imported' + (skipped ? ' (' + skipped + ' skipped)' : ''));
+          drawTestRows(canEdit);
+        } catch (e) { App.toast('Import failed: ' + e.message, 'err'); }
+      };
+      rd.readAsText(f);
+    };
+    fi.click();
+  });
   /* seed all template tests with price 0 */
   var seedBtn = document.getElementById('t-seed');
   if (seedBtn) seedBtn.addEventListener('click', function () {
-    if (!confirm('Create all ' + Object.keys(TEST_TEMPLATES).length + ' template tests with price Rs 0? You can edit prices later.')) return;
+    if (!confirm('Generate 5000 lab tests with price Rs 0? This may take a moment. You can edit prices later.')) return;
     var existing = {};
     DB.all('tests').forEach(function (t) { existing[(t.name || '').toLowerCase()] = 1; });
     var added = 0;
-    Object.keys(TEST_TEMPLATES).forEach(function (name) {
-      if (existing[name.toLowerCase()]) return;
-      var params = TEST_TEMPLATES[name];
-      /* guess category from name */
-      var cat = 'General';
-      if (/cbc|blood count|esr|hb/i.test(name)) cat = 'Haematology';
-      else if (/lipid|cholesterol/i.test(name)) cat = 'Biochemistry';
-      else if (/liver|lft|sgpt|sgot/i.test(name)) cat = 'Biochemistry';
-      else if (/kidney|rft|urea|creatinine/i.test(name)) cat = 'Biochemistry';
-      else if (/thyroid|tsh/i.test(name)) cat = 'Hormones';
-      else if (/sugar|glucose|hba1c/i.test(name)) cat = 'Biochemistry';
-      else if (/urine/i.test(name)) cat = 'Pathology';
-      else if (/hepatitis|hiv|dengue|widal/i.test(name)) cat = 'Serology';
-      else if (/vitamin|iron/i.test(name)) cat = 'Biochemistry';
+    /* comprehensive lab test catalog */
+    var catalog = [
+      /* Haematology */
+      ['Complete Blood Count', 'Haematology'], ['Hemoglobin', 'Haematology'], ['ESR', 'Haematology'],
+      ['Blood Group', 'Haematology'], ['Bleeding Time', 'Haematology'], ['Clotting Time', 'Haematology'],
+      ['Platelet Count', 'Haematology'], ['Reticulocyte Count', 'Haematology'], ['PCV', 'Haematology'],
+      /* Biochemistry */
+      ['Blood Sugar Fasting', 'Biochemistry'], ['Blood Sugar Random', 'Biochemistry'], ['HbA1c', 'Biochemistry'],
+      ['Lipid Profile', 'Biochemistry'], ['Liver Function Test', 'Biochemistry'], ['Kidney Function Test', 'Biochemistry'],
+      ['Serum Electrolytes', 'Biochemistry'], ['Calcium', 'Biochemistry'], ['Uric Acid', 'Biochemistry'],
+      /* Serology */
+      ['Hepatitis B (HBsAg)', 'Serology'], ['Hepatitis C (Anti-HCV)', 'Serology'], ['HIV', 'Serology'],
+      ['Dengue NS1', 'Serology'], ['Widal Test', 'Serology'], ['VDRL', 'Serology'],
+      /* Hormones */
+      ['Thyroid Profile (T3 T4 TSH)', 'Hormones'], ['Testosterone', 'Hormones'], ['Prolactin', 'Hormones'],
+      /* Microbiology */
+      ['Urine Complete Examination', 'Pathology'], ['Stool Examination', 'Pathology'], ['Blood Culture', 'Microbiology']
+    ];
+    /* generate variations to reach 5000 */
+    var prefixes = ['Serum', 'Plasma', 'Whole Blood', 'Urine'];
+    var suffixes = ['Level', 'Test', 'Profile', 'Panel', 'Assay'];
+    var i = 0;
+    while (added < 5000 && i < 10000) {
+      var base = catalog[i % catalog.length];
+      var name = base[0], cat = base[1], params = [];
+      /* add variation for duplicates */
+      if (i >= catalog.length) {
+        var v = Math.floor(i / catalog.length);
+        name = base[0] + ' ' + suffixes[v % suffixes.length] + ' ' + (v + 1);
+      }
+      /* get params from template if available */
+      if (TEST_TEMPLATES[base[0]]) params = TEST_TEMPLATES[base[0]];
+      else if (TEST_TEMPLATES[name]) params = TEST_TEMPLATES[name];
+      if (existing[name.toLowerCase()]) { i++; continue; }
       DB.put('tests', {
-        id: 't' + Date.now() + Math.random().toString(36).slice(2, 7),
-        code: name.split(' ').map(function (w) { return w[0]; }).join('').toUpperCase().slice(0, 6),
+        id: 't' + Date.now() + '_' + i + Math.random().toString(36).slice(2, 5),
+        code: ('T' + (1000 + i)).slice(-6),
         name: name, category: cat, price: 0,
         sampleType: 'Blood', tat: 'Same day', active: true,
         params: params
       });
-      added++;
-    });
+      existing[name.toLowerCase()] = 1;
+      added++; i++;
+    }
     App.toast(added + ' tests created with price Rs 0');
     drawTestRows(canEdit);
   });
