@@ -1157,7 +1157,7 @@
       ['Father/Husband Name', val(pat.father)],
       ['Age/Sex', val(ageSex)],
       ['Blood Group', val(pat.blood)],
-      ['NIC', val(pat.cnic)],
+      ['CNIC', val(pat.cnic)],
       ['Phone', val(pat.phone)],
       ['Address', val(pat.address)]
     ];
@@ -2095,7 +2095,7 @@
         ['Father / Husband Name', pat.father || pat.fatherName],
         ['Age / Sex',             ageSex],
         ['Blood Group',           pat.blood || 'Unknown'],
-        ['NIC',                   pat.cnic],
+        ['CNIC',                  pat.cnic],
         ['Phone',                 pat.phone],
         ['Address',               pat.address]
       ];
