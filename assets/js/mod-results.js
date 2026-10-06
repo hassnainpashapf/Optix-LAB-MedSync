@@ -1059,17 +1059,13 @@
       return t.replace(/\s*-\s*/g, ' - ').replace(/\s*\/\s*/g, ' / ');
     }
 
-    /* LEFT: logo image (rectangular banner, may contain lab name) when set,
-       else large black serif lab name (+ tagline) */
-    var leftHtml;
-    if (s.logo) {
-      leftHtml =
-        '<div style="flex:1;min-width:0">' +
-          '<img src="' + App.esc(s.logo) + '" style="max-width:320px;max-height:84px" alt="">' +
-        '</div>';
-    } else {
-      leftHtml =
-        '<div style="flex:1;min-width:0">' +
+    /* LEFT: logo + lab name side by side */
+    var leftHtml =
+      '<div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0">' +
+        (s.logo
+          ? '<img src="' + App.esc(s.logo) + '" style="max-width:120px;max-height:72px;flex:none" alt="">'
+          : '') +
+        '<div style="min-width:0">' +
           '<div style="margin:0;color:#000;font-family:' + RPT.serif +
             ';font-weight:700;font-size:1.7em;line-height:1.2">' +
             App.esc(labName) +
@@ -1080,8 +1076,8 @@
                 App.esc(s.tagline) +
               '</div>'
             : '') +
-        '</div>';
-    }
+        '</div>' +
+      '</div>';
 
     /* RIGHT: QR on top, then Case # barcode + ID, then Patient ID barcode + ID */
     var _caseNo = spacedNo(inv.no);
@@ -1098,7 +1094,7 @@
       '</div>';
 
     return (
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;background:#fff;color:#000">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;background:#fff;color:#000;margin-top:-8px">' +
         leftHtml +
         rightHtml +
       '</div>'
