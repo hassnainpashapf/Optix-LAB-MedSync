@@ -1046,8 +1046,7 @@
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;background:#fff;color:#000">' +
         leftHtml +
         rightHtml +
-      '</div>' +
-      '<div style="border-top:2px solid #000;margin-top:10px"></div>'
+      '</div>'
     );
   }
 
