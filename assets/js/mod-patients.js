@@ -145,6 +145,14 @@
     p = p || {};
     function val(k) { return App.esc(p[k] == null ? '' : p[k]); }
     function sel(v) { return p.gender === v ? ' selected' : ''; }
+    var bloods = ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    var docOpts = '<option value="">Self / Walk-in</option>' +
+      DB.all('doctors').slice().sort(function (a, b) {
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      }).map(function (d) {
+        return '<option value="' + App.esc(d.id) + '"' + ((p.doctorId || '') === d.id ? ' selected' : '') + '>' +
+          App.esc(d.name) + '</option>';
+      }).join('');
     return '' +
       '<form id="ptf-form" class="form-grid" novalidate>' +
       '<div class="form-row"><label class="label" for="ptf-name">Full Name *</label>' +
@@ -162,12 +170,47 @@
       '<option value="Other"' + sel('Other') + '>Other</option>' +
       '</select><div class="f-err" id="ptf-e-gender"></div></div>' +
       '</div>' +
+      '<div class="form-row"><label class="label" for="ptf-father">Father / Husband Name</label>' +
+      '<input class="input" id="ptf-father" maxlength="80" placeholder="e.g. Muhammad Aslam" value="' + val('father') + '"></div>' +
+      '<div class="form-2col">' +
+      '<div class="form-row"><label class="label" for="ptf-dob">Date of Birth</label>' +
+      '<input class="input" id="ptf-dob" type="date" value="' + val('dob') + '"></div>' +
+      '<div class="form-row"><label class="label" for="ptf-cnic">CNIC</label>' +
+      '<input class="input" id="ptf-cnic" maxlength="15" placeholder="e.g. 35202-1234567-1" value="' + val('cnic') + '"></div>' +
+      '</div>' +
       '<div class="form-row"><label class="label" for="ptf-phone">Phone</label>' +
       '<div class="ptf-phone-wrap"><input class="input" id="ptf-phone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + val('phone') + '">' +
       '<span id="ptf-wa">' + waBtn(val('phone'), 'Chat on WhatsApp') + '</span></div>' +
       '<div class="f-err" id="ptf-e-phone"></div></div>' +
+      '<div class="form-2col">' +
+      '<div class="form-row"><label class="label" for="ptf-phone2">Alternate Phone</label>' +
+      '<input class="input" id="ptf-phone2" maxlength="20" placeholder="e.g. 0321-7654321" value="' + val('phone2') + '"></div>' +
+      '<div class="form-row"><label class="label" for="ptf-email">Email</label>' +
+      '<input class="input" id="ptf-email" type="email" maxlength="80" placeholder="e.g. name@mail.com" value="' + val('email') + '">' +
+      '<div class="f-err" id="ptf-e-email"></div></div>' +
+      '</div>' +
+      '<div class="form-2col">' +
+      '<div class="form-row"><label class="label" for="ptf-city">City</label>' +
+      '<input class="input" id="ptf-city" maxlength="60" placeholder="e.g. Lahore" value="' + val('city') + '"></div>' +
+      '<div class="form-row"><label class="label" for="ptf-blood">Blood Group</label>' +
+      '<select class="select" id="ptf-blood">' +
+      bloods.map(function (b) {
+        return '<option value="' + b + '"' + ((p.blood || '') === b ? ' selected' : '') + '>' + (b || 'Select…') + '</option>';
+      }).join('') +
+      '</select></div>' +
+      '</div>' +
+      '<div class="form-2col">' +
+      '<div class="form-row"><label class="label" for="ptf-ecname">Emergency Contact Name</label>' +
+      '<input class="input" id="ptf-ecname" maxlength="80" placeholder="e.g. Ayesha Khan" value="' + val('ecName') + '"></div>' +
+      '<div class="form-row"><label class="label" for="ptf-ecphone">Emergency Contact Phone</label>' +
+      '<input class="input" id="ptf-ecphone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + val('ecPhone') + '"></div>' +
+      '</div>' +
+      '<div class="form-row"><label class="label" for="ptf-doctor">Referred By</label>' +
+      '<select class="select" id="ptf-doctor">' + docOpts + '</select></div>' +
       '<div class="form-row"><label class="label" for="ptf-address">Address</label>' +
       '<textarea class="input" id="ptf-address" rows="2" maxlength="200" placeholder="Street, area, city">' + val('address') + '</textarea></div>' +
+      '<div class="form-row"><label class="label" for="ptf-notes">Notes / Medical History</label>' +
+      '<textarea class="input" id="ptf-notes" rows="2" maxlength="500" placeholder="Allergies, chronic conditions, remarks…">' + val('notes') + '</textarea></div>' +
       (!p.id ? orderTestsHTML() : '') +
       '<div class="modal-actions">' +
       '<button type="button" class="btn btn-ghost" id="ptf-cancel">Cancel</button>' +
@@ -222,15 +265,29 @@
       var gender = document.getElementById('ptf-gender').value;
       var phone = document.getElementById('ptf-phone').value.trim();
       var address = document.getElementById('ptf-address').value.trim();
+      var father = document.getElementById('ptf-father').value.trim();
+      var dob = document.getElementById('ptf-dob').value;
+      var cnic = document.getElementById('ptf-cnic').value.trim();
+      var phone2 = document.getElementById('ptf-phone2').value.trim();
+      var email = document.getElementById('ptf-email').value.trim();
+      var city = document.getElementById('ptf-city').value.trim();
+      var blood = document.getElementById('ptf-blood').value;
+      var ecName = document.getElementById('ptf-ecname').value.trim();
+      var ecPhone = document.getElementById('ptf-ecphone').value.trim();
+      var doctorId = document.getElementById('ptf-doctor').value || null;
+      var notes = document.getElementById('ptf-notes').value.trim();
       var ok = true;
-      setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-phone', '');
+      setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-phone', ''); setErr('ptf-e-email', '');
       if (name.length < 2) { setErr('ptf-e-name', 'Please enter the full name.'); ok = false; }
       var age = parseInt(ageRaw, 10);
       if (!ageRaw || isNaN(age) || age < 1 || age > 120) { setErr('ptf-e-age', 'Enter a valid age (1–120).'); ok = false; }
       if (!gender) { setErr('ptf-e-gender', 'Please select gender.'); ok = false; }
       if (phone && !/^[+\d][\d\s\-()]{5,19}$/.test(phone)) { setErr('ptf-e-phone', 'Enter a valid phone number.'); ok = false; }
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErr('ptf-e-email', 'Enter a valid email address.'); ok = false; }
       if (!ok) return;
-      var data = { name: name, age: age, gender: gender, phone: phone, address: address };
+      var data = { name: name, age: age, gender: gender, phone: phone, address: address,
+        father: father, dob: dob, cnic: cnic, phone2: phone2, email: email, city: city,
+        blood: blood, ecName: ecName, ecPhone: ecPhone, doctorId: doctorId, notes: notes };
       if (existing && existing.id) {
         DB.update('patients', existing.id, data);
         App.toast('Patient details updated.');
@@ -422,6 +479,9 @@
         '<td class="actions"><a class="btn btn-ghost btn-sm" href="#/invoice/' + App.esc(inv.id) + '">View</a></td></tr>';
     }).join('');
 
+    var docName = 'Self';
+    if (p.doctorId) { var _dd = DB.get('doctors', p.doctorId); if (_dd && _dd.name) docName = _dd.name; }
+
     var html = '' + WA_CSS +
       '<div class="page-head"><div><a class="back-link" href="#/patients">← All Patients</a><h1>Patient Profile</h1></div>' +
       (edit ? '<div class="head-actions"><button class="btn btn-ghost" id="pt-edit">Edit Details</button>' +
@@ -433,9 +493,20 @@
       '<div class="pt-meta">' +
       '<span>🎂 ' + App.esc(p.age) + ' years</span><span>⚧ ' + App.esc(p.gender) + '</span>' +
       '<span>📞 ' + App.esc(p.phone || '—') + ' ' + (p.phone ? waBtn(p.phone, 'Chat on WhatsApp') : '') + '</span>' +
+      (p.father ? '<span>👤 ' + App.esc(p.father) + '</span>' : '') +
+      (p.dob ? '<span>🎂 ' + App.esc(p.dob) + '</span>' : '') +
+      (p.blood ? '<span>🩸 ' + App.esc(p.blood) + '</span>' : '') +
+      (p.cnic ? '<span>🪪 ' + App.esc(p.cnic) + '</span>' : '') +
+      (p.phone2 ? '<span>📞 ' + App.esc(p.phone2) + ' (alt)</span>' : '') +
+      (p.email ? '<span>📧 ' + App.esc(p.email) + '</span>' : '') +
+      (p.city ? '<span>🏙 ' + App.esc(p.city) + '</span>' : '') +
+      ((p.ecName || p.ecPhone) ? '<span>🆘 ' + App.esc([p.ecName, p.ecPhone].filter(Boolean).join(' • ')) + '</span>' : '') +
+      '<span>👨‍⚕️ ' + App.esc(docName) + '</span>' +
       (p.address ? '<span>📍 ' + App.esc(p.address) + '</span>' : '') +
       '<span>🗓 Registered ' + App.d(p.createdAt) + '</span>' +
-      '</div></div></div></div>' +
+      '</div>' +
+      (p.notes ? '<div class="pt-notes" style="margin-top:10px;font-size:13px;color:#5b6b80">📝 ' + App.esc(p.notes) + '</div>' : '') +
+      '</div></div></div>' +
 
       '<div class="stat-grid stat-grid-3">' +
       '<div class="stat"><div class="stat-ic blue">🧾</div><div><div class="stat-v">' + st.visits + '</div><div class="stat-l">Total Visits</div></div></div>' +
