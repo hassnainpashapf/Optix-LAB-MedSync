@@ -258,7 +258,7 @@
       '<div class="actions" style="margin-top:16px;position:sticky;bottom:0;background:#fff;padding-top:12px;border-top:1px solid var(--line)">' +
       '<button class="btn btn-ghost" id="bresCancel">Cancel</button>' +
       '<button class="btn btn-primary" id="bresSave">Save All Results</button></div>',
-      { onOpen: function (ov, close) {
+      { wide: true, onOpen: function (ov, close) {
           document.getElementById('bresCancel').addEventListener('click', close);
           document.getElementById('bresSave').addEventListener('click', function () {
             var saved = 0, skipped = 0;
@@ -860,8 +860,8 @@
   function render() {
     var pendingRows = joinedRows('pending');
     var readyRows = joinedRows('ready');
-    var readyGroups = groupByInvoice(readyRows);
     var pendingPatientGroups = [];
+    var readyPatientGroups = [];
 
     // ---- dashboard-style stat cards (real data) ----
     var today = App.today();
@@ -934,35 +934,57 @@
           '</div></div>';
       }
     } else {
-      var rgroups = readyGroups.filter(function (g) {
+      var rpgroups = groupByPatient(readyRows).filter(function (pg) {
         if (!q) return true;
-        return (g.invoice.no || '').toLowerCase().indexOf(q) > -1 ||
-               (g.patient.name || '').toLowerCase().indexOf(q) > -1 ||
-               ((g.patient.phone || '')).indexOf(q) > -1;
+        var p = pg.patient || {};
+        var invMatch = pg.rows.some(function (r) { return (r.invoice.no || '').toLowerCase().indexOf(q) > -1; });
+        return invMatch ||
+               (p.name || '').toLowerCase().indexOf(q) > -1 ||
+               (p.phone || '').indexOf(q) > -1 ||
+               (p.id || '').toLowerCase().indexOf(q) > -1;
       });
-      if (!rgroups.length) {
+      if (!rpgroups.length) {
         bodyHtml = App.empty(query ? 'No ready reports match your search.' : 'No ready reports yet.');
       } else {
-        bodyHtml = rgroups.map(function (g) {
-          var inv = g.invoice, pat = g.patient;
-          var rowsHtml = g.rows.map(function (r) {
-            var rep = r.res ? (App.dt(r.res.reportedAt) + (r.res.reportedBy ? ' • ' + App.esc(r.res.reportedBy) : '')) : '';
-            return '<tr><td><strong>' + App.esc(testName(r)) + '</strong>' +
-              (testCode(r) ? ' <span class="muted">(' + App.esc(testCode(r)) + ')</span>' : '') + '</td>' +
-              '<td><span class="badge b-ready">Ready</span></td>' +
-              '<td class="muted">' + App.esc(rep) + '</td>' +
-              '<td class="actions"><button class="btn btn-ghost btn-sm" data-view="' + App.esc(r.res ? r.res.id : '') + '|' + App.esc(inv.id) + '|' + App.esc(r.item.testId) + '">View / Edit</button> ' +
-              '<button class="btn btn-ghost btn-sm" data-delres="' + App.esc(r.res ? r.res.id : '') + '" style="color:var(--red)">Delete</button></td></tr>';
+        var rprowsHtml = rpgroups.map(function (pg, pi) {
+          var pat = pg.patient || {};
+          // group this patient's ready rows by invoice for per-report actions
+          var invMap = {}, invOrder = [];
+          pg.rows.forEach(function (r) {
+            var iid = r.invoice.id;
+            if (!invMap[iid]) { invMap[iid] = { invoice: r.invoice, rows: [], maxRep: '' }; invOrder.push(iid); }
+            invMap[iid].rows.push(r);
+            if (r.res && r.res.reportedAt && r.res.reportedAt > invMap[iid].maxRep) invMap[iid].maxRep = r.res.reportedAt;
+          });
+          var invCells = invOrder.map(function (iid) {
+            return '<span class="mono">' + App.esc(invMap[iid].invoice.no || iid) + '</span>';
+          }).join('<br>');
+          var testCount = pg.rows.length;
+          var lastRep = '';
+          pg.rows.forEach(function (r) { if (r.res && r.res.reportedAt && r.res.reportedAt > lastRep) lastRep = r.res.reportedAt; });
+          var actHtml = invOrder.map(function (iid) {
+            var inv = invMap[iid].invoice;
+            return '<div style="margin-bottom:4px;white-space:nowrap">' +
+              '<button class="btn btn-ghost btn-sm" data-rview="' + App.esc(inv.id) + '">View</button> ' +
+              '<button class="btn btn-primary btn-sm" data-rprint="' + App.esc(inv.id) + '">' + PRINT_ICON + ' Print</button></div>';
           }).join('');
-          return '<div class="card" style="margin-bottom:14px">' +
-            '<div class="card-h"><div><strong>' + App.esc(inv.no) + '</strong> — ' + App.esc(pat.name || '—') + '</div>' +
-            '<div class="actions"><span class="muted">' + App.d(inv.createdAt) + '</span>' +
-            '<button class="btn btn-ghost btn-sm" data-viewrep="' + App.esc(inv.id) + '">View</button>' +
-            '<button class="btn btn-ghost btn-sm" data-wa="' + App.esc(inv.id) + '">' + WA_ICON + ' Share on WhatsApp</button>' +
-            '<button class="btn btn-primary btn-sm" data-print="' + App.esc(inv.id) + '">' + PRINT_ICON + ' Print Report</button></div></div>' +
-            '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th>Status</th><th>Reported</th><th></th></tr></thead>' +
-            '<tbody>' + rowsHtml + '</tbody></table></div></div>';
+          return '<tr>' +
+            '<td><span class="mono">' + App.esc(pat.id || '—') + '</span></td>' +
+            '<td><a class="link" data-rviewfirst="' + pi + '" href="javascript:void(0)"><strong>' + App.esc(pat.name || '—') + '</strong></a></td>' +
+            '<td class="muted">' + App.esc([pat.age ? pat.age + ' yrs' : '', pat.gender || ''].filter(Boolean).join(' / ') || '—') + '</td>' +
+            '<td class="muted">' + App.esc(pat.phone || '—') + '</td>' +
+            '<td>' + invCells + '</td>' +
+            '<td><span class="badge b-ready">' + testCount + ' done</span></td>' +
+            '<td class="muted">' + App.esc(lastRep ? App.dt(lastRep) : '—') + '</td>' +
+            '<td class="actions">' + actHtml + '</td></tr>';
         }).join('');
+        readyPatientGroups = rpgroups;
+        bodyHtml =
+          '<div class="card"><div class="card-b">' +
+          '<div class="tbl-wrap"><table class="table"><thead><tr>' +
+          '<th>Patient ID</th><th>Patient Name</th><th>Age / Gender</th><th>Phone</th><th>Invoice(s)</th><th>Status</th><th>Reported</th><th></th>' +
+          '</tr></thead><tbody>' + rprowsHtml + '</tbody></table></div>' +
+          '</div></div>';
       }
     }
 
@@ -984,29 +1006,18 @@
         if (pg && pg.rows.length) openBulkEntry(pg.patient || {}, pg.rows);
       });
     });
-    // wire view/edit + print (ready tab)
-    v.querySelectorAll('[data-view]').forEach(function (b) {
+    // wire view/print (ready tab patient list)
+    v.querySelectorAll('[data-rview]').forEach(function (b) {
+      b.addEventListener('click', function () { viewReport(b.getAttribute('data-rview')); });
+    });
+    v.querySelectorAll('[data-rprint]').forEach(function (b) {
+      b.addEventListener('click', function () { printReport(b.getAttribute('data-rprint')); });
+    });
+    v.querySelectorAll('[data-rviewfirst]').forEach(function (b) {
       b.addEventListener('click', function () {
-        var parts = b.getAttribute('data-view').split('|');
-        var res = parts[0] ? DB.get('results', parts[0]) : null;
-        var inv = invOf(parts[1]);
-        if (!inv) return;
-        var item = (inv.items || []).filter(function (it) { return it.testId === parts[2]; })[0];
-        if (!item) return;
-        openEntry({ res: res, invoice: inv, patient: patOf(inv.patientId), item: item, test: DB.get('tests', parts[2]) });
+        var pg = readyPatientGroups[+b.getAttribute('data-rviewfirst')];
+        if (pg && pg.rows.length) viewReport(pg.rows[0].invoice.id);
       });
-    });
-    v.querySelectorAll('[data-print]').forEach(function (b) {
-      b.addEventListener('click', function () { printReport(b.getAttribute('data-print')); });
-    });
-    v.querySelectorAll('[data-viewrep]').forEach(function (b) {
-      b.addEventListener('click', function () { viewReport(b.getAttribute('data-viewrep')); });
-    });
-    v.querySelectorAll('[data-wa]').forEach(function (b) {
-      b.addEventListener('click', function () { shareReportWhatsApp(b.getAttribute('data-wa')); });
-    });
-    v.querySelectorAll('[data-delres]').forEach(function (b) {
-      b.addEventListener('click', function () { var id = b.getAttribute('data-delres'); if (id) deleteResult(id); });
     });
   }
 
