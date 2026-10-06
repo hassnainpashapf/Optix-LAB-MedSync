@@ -591,8 +591,10 @@
       stats =
         donutStat(bucketByMethod(payToday), "Today's Collection", App.money(todayCol), goalTarget > 0 ? todayCol / goalTarget * 100 : 0, payToday.length + ' payments today', todayCol, true) +
         donutStat(todayTestSegs, "Today's Tests", String(testsToday), monthTests > 0 ? testsToday / monthTests * 100 : 0, invToday.length + ' invoices today', testsToday, false) +
-        donutStat(ageB.map(function (b) { return { label: b.label, color: b.color, frac: b.amt }; }), 'Pending Dues', App.money(duesTotal), monthBilled > 0 ? duesTotal / monthBilled * 100 : 0, dueInvs.length + ' invoices unpaid', duesTotal, true) +
-        donutStat(mBuckets.map(function (b) { return { label: b.label, color: b.color, frac: b.amt }; }), monthName + ' Collection', App.money(monthCol), goalTarget > 0 ? monthCol / goalTarget * 100 : 0, 'of ' + App.money(goalTarget) + ' goal', monthCol, true);
+        donutStat(segsByCategory(pendingRes, [NAVY, BLUE, AMBER, GREY]), 'Pending Results', String(pendingRes.length), results.length > 0 ? pendingRes.length / results.length * 100 : 0, 'awaiting entry', pendingRes.length, false) +
+        donutStat([{ label: 'New this month', color: GREEN, frac: monthPatients },
+                   { label: 'Existing', color: BLUE, frac: Math.max(0, patients.length - monthPatients) }],
+                  'Total Patients', String(patients.length), patients.length > 0 ? monthPatients / patients.length * 100 : 0, monthPatients + ' new this month', patients.length, false);
     }
 
     var donutCss =
