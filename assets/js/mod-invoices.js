@@ -148,7 +148,8 @@
         .forEach(function (r) { DB.remove('results', r.id); });
       DB.remove('invoices', id);
       App.toast('Invoice ' + inv.no + ' deleted');
-      App.nav('#/invoices');
+      /* from the invoice page go back to the list; from a list (invoices / dues) just refresh it in place */
+      if (/^#\/invoice\//.test(location.hash) || !refreshCurrent) App.nav('#/invoices'); else refresh();
     });
   }
 
@@ -458,6 +459,8 @@
         '<td>' + App.badge(inv.status) + '</td>' +
         '<td class="actions"><a class="btn btn-sm btn-ghost" href="#/invoice/' + App.esc(inv.id) + '">View</a>' +
         (r2(inv.due) > 0 ? ' <button class="btn btn-sm btn-primary" data-collect="' + App.esc(inv.id) + '">Collect</button>' : '') +
+        ' <button class="btn btn-sm btn-ghost" data-edit="' + App.esc(inv.id) + '">Edit</button>' +
+        ' <button class="btn btn-sm btn-danger" data-del="' + App.esc(inv.id) + '">Delete</button>' +
         '</td></tr>';
     }).join('');
   }
@@ -520,6 +523,12 @@
       document.getElementById('inv-rows').innerHTML = invoiceRows(list);
       view.querySelectorAll('[data-collect]').forEach(function (btn) {
         btn.addEventListener('click', function () { openPaymentModal(btn.getAttribute('data-collect')); });
+      });
+      view.querySelectorAll('[data-edit]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openEditInvoice(btn.getAttribute('data-edit')); });
+      });
+      view.querySelectorAll('[data-del]').forEach(function (btn) {
+        btn.addEventListener('click', function () { deleteInvoice(btn.getAttribute('data-del')); });
       });
     }
     document.getElementById('f-q').addEventListener('input', function (e) { F.q = e.target.value; update(); });
@@ -674,7 +683,9 @@
         '<td style="text-align:right;font-weight:800;color:var(--red)">' + App.money(inv.due) + '</td>' +
         '<td>' + App.badge(inv.status) + '</td>' +
         '<td class="actions"><button class="btn btn-sm btn-primary" data-collect="' + App.esc(inv.id) + '">Collect</button> ' +
-        '<a class="btn btn-sm btn-ghost" href="#/invoice/' + App.esc(inv.id) + '">View</a></td></tr>';
+        '<a class="btn btn-sm btn-ghost" href="#/invoice/' + App.esc(inv.id) + '">View</a> ' +
+        '<button class="btn btn-sm btn-ghost" data-edit="' + App.esc(inv.id) + '">Edit</button> ' +
+        '<button class="btn btn-sm btn-danger" data-del="' + App.esc(inv.id) + '">Delete</button></td></tr>';
     }).join('') : '<tr><td colspan="8">' + App.empty('🎉 No outstanding dues. All invoices are paid.') + '</td></tr>';
 
     document.getElementById('view').innerHTML =
@@ -687,6 +698,12 @@
 
     document.getElementById('view').querySelectorAll('[data-collect]').forEach(function (btn) {
       btn.addEventListener('click', function () { openPaymentModal(btn.getAttribute('data-collect')); });
+    });
+    document.getElementById('view').querySelectorAll('[data-edit]').forEach(function (btn) {
+      btn.addEventListener('click', function () { openEditInvoice(btn.getAttribute('data-edit')); });
+    });
+    document.getElementById('view').querySelectorAll('[data-del]').forEach(function (btn) {
+      btn.addEventListener('click', function () { deleteInvoice(btn.getAttribute('data-del')); });
     });
   }
 

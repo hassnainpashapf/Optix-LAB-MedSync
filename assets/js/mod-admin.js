@@ -566,6 +566,7 @@
       var inp = document.getElementById('repTplName');
       var name = inp ? inp.value.trim() : '';
       if (!name) { App.toast('Enter a template name first.', 'err'); if (inp) inp.focus(); return; }
+      if (!rep.type) { App.toast('Choose a report type first, then save it as a template.', 'err'); return; }
       var dup = repTplList().some(function (t) { return String(t.name).toLowerCase() === name.toLowerCase(); });
       DB.insert('report_templates', { name: name, type: rep.type, from: rep.from, to: rep.to, preset: rep.preset, createdAt: new Date().toISOString() });
       if (inp) inp.value = '';
@@ -1089,7 +1090,8 @@
 
     var html = ''
       + '<style>' + ADM_STAT_CSS + '</style>'
-      + typeCardHtml;
+      + typeCardHtml
+      + (repChosen ? '' : repSlotTemplates); /* saved report templates are available before a type is picked, too */
     if (repChosen) {
       html +=
         ((showTests || showFinance) ? '<div class="stat-grid">' + repStats + '</div>' : '')
