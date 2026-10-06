@@ -3,13 +3,13 @@
   'use strict';
 
   var GH = 'https://labpos-api.150.230.52.29.sslip.io/releases/';
-  var DMG_URL = GH + 'Optix-LAB-MedSync-1.0.0-arm64.dmg.tar.gz';
+  var DMG_URL = GH + 'Optix-LAB-MedSync-1.2.0-arm64.dmg.tar.gz';
   /* TODO(parent): replace with the real published APK URL */
   var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-debug.apk';
 
   /* 6 distinct installer binaries (Windows 11 and Windows 10 64-bit share one) */
   var WIN_OPTS = [
-    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.1.0-win10-11-x64.exe' },
+    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.0-win10-11-x64.exe' },
     { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win10-x86.exe' },
     { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win8-x64.exe' },
     { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win8-x86.exe' },
@@ -130,7 +130,7 @@
     '<div class="dl-grid">' +
     winCard() +
     dlCard({
-      title: 'Mac (Apple Silicon)', version: '1.0.0', size: '~109 MB', file: 'for Mac (.dmg)', url: DMG_URL, icon: ICO.mac,
+      title: 'Mac (Apple Silicon)', version: '1.2.0', size: '~119 MB', file: 'for Mac (.dmg)', url: DMG_URL, icon: ICO.mac,
       note: ICO.check + '<span>The download is a compressed <b>.dmg.tar.gz</b> — double-click it after downloading to extract the <b>.dmg</b> inside.</span>',
       steps: [
         'Download the <b>.dmg.tar.gz</b> file and double-click it to extract the .dmg.',
