@@ -368,8 +368,9 @@
     var finCard = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Finalized Patient Reports</h3>'
       + '<span class="muted" style="font-weight:500;font-size:13px">Finalized reports are saved here</span></div><div class="card-b">'
+      + '<div style="margin-bottom:12px"><input class="input search" id="finSearch" placeholder="Search by patient name, invoice no, or test..." style="max-width:320px"></div>'
       + (finRows
-        ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Reported</th><th>Invoice</th><th>Patient</th><th>Tests</th><th></th></tr></thead><tbody>' + finRows + '</tbody></table></div>'
+        ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Reported</th><th>Invoice</th><th>Patient</th><th>Tests</th><th></th></tr></thead><tbody id="finTbody">' + finRows + '</tbody></table></div>'
         : App.empty('No finalized reports yet. Finalize a patient report from Lab Results and it will be saved here.'))
       + '</div></div>';
 
@@ -417,6 +418,17 @@
         }
         if (App.viewLabReport) go();
         else App.loadScript('assets/js/mod-results.js').then(go, function () { App.toast('Could not load report viewer', 'err'); });
+      });
+    });
+    /* search filter for finalized reports */
+    var finSearch = document.getElementById('finSearch');
+    if (finSearch) finSearch.addEventListener('input', function () {
+      var q = finSearch.value.trim().toLowerCase();
+      var tb = document.getElementById('finTbody');
+      if (!tb) return;
+      Array.prototype.forEach.call(tb.rows, function (tr) {
+        var txt = tr.textContent.toLowerCase();
+        tr.style.display = !q || txt.indexOf(q) > -1 ? '' : 'none';
       });
     });
 
