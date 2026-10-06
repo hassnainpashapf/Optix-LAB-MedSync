@@ -152,8 +152,8 @@ function renderTests() {
             return '<option' + (testFilter.status === s ? ' selected' : '') + '>' + s + '</option>';
           }).join('') +
         '</select>' +
-        (canEdit ? '<button type="button" class="btn btn-ghost" id="t-import" style="margin-left:8px">📥 Import CSV</button>' : '') +
-        (canEdit ? '<button type="button" class="btn btn-ghost" id="t-bulkprice" style="margin-left:8px">💰 Bulk Prices</button>' : '') +
+        (canEdit ? '<button type="button" class="btn" id="t-import" style="margin-left:8px;border:2px solid #000">📥 Import CSV</button>' : '') +
+        (canEdit ? '<button type="button" class="btn" id="t-bulkprice" style="margin-left:8px;border:2px solid #000">💰 Bulk Prices</button>' : '') +
         (canEdit ? '' : '') +
         (canEdit ? '<button type="button" class="btn btn-primary" id="t-add" style="margin-left:auto">+ Add Test</button>' : '') +
       '</div>' +
