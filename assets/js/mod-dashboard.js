@@ -138,7 +138,7 @@
     // ---- quick-access cards — 6 shortcuts ----
     var quickCss =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}' +
+    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 6 : 7) + ',1fr);gap:12px;margin-bottom:14px}' +
     '.dbq-card{transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
     '.dbq-card .card-b{padding:10px 12px!important}' +
     '.dbq-card b{font-size:13px!important}.dbq-card small{font-size:11px!important}' +
@@ -172,6 +172,11 @@
           '<span style="width:44px;height:44px;border-radius:12px;background:#6366f11a;color:#6366f1;display:grid;place-items:center;flex:none">' + App.icon('chart', 22) + '</span>' +
           '<span><b style="font-size:15px;color:var(--ink)">Reports</b><br><small style="color:var(--muted)">Analytics & insights</small></span>' +
         '</div></a>' +
+      (isTech ? '' : '<a href="#/finance" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#0ea5a41a;color:#0ea5a4;display:grid;place-items:center;flex:none">' + App.icon('finance', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Cash &amp; Profit</b><br><small style="color:var(--muted)">Day closing &amp; P&amp;L</small></span>' +
+        '</div></a>') +
       '<a href="#/settings" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
           '<span style="width:44px;height:44px;border-radius:12px;background:#64748b1a;color:#64748b;display:grid;place-items:center;flex:none">' + App.icon('gear', 22) + '</span>' +

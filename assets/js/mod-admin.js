@@ -200,6 +200,7 @@
       + '</select></div>'
       + '<div><label class="label">Amount (Rs) *</label><input class="input" id="exfAmt" type="number" min="1" step="any" value="' + App.esc(exp.amount) + '" placeholder="0"></div>'
       + '<div><label class="label">Date *</label><input class="input" id="exfDate" type="date" value="' + App.esc(toDay(exp.date) || App.today()) + '"></div>'
+      + '<div><label class="label">Paid from</label><select class="select" id="exfMethod"><option value="Cash"' + (!exp.method || exp.method === 'Cash' ? ' selected' : '') + '>Cash (drawer)</option><option value="Bank"' + (exp.method === 'Bank' ? ' selected' : '') + '>Bank / online</option></select></div>'
       + '<div style="grid-column:1/-1"><label class="label">Note</label><input class="input" id="exfNote" value="' + App.esc(exp.note || '') + '" placeholder="Optional note"></div>'
       + '</div>'
       + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">'
@@ -218,7 +219,7 @@
           if (!title) return App.toast('Title is required.', 'err');
           if (!(amt > 0)) return App.toast('Enter a valid amount.', 'err');
           if (!date) return App.toast('Date is required.', 'err');
-          var data = { title: title, category: cat, amount: amt, date: date, note: note, createdBy: userName() };
+          var data = { title: title, category: cat, amount: amt, date: date, note: note, method: document.getElementById('exfMethod').value, createdBy: userName() };
           if (isEdit) { DB.update('expenses', exp.id, data); App.toast('Expense updated.'); }
           else { DB.insert('expenses', data); App.toast('Expense added.'); }
           close();
@@ -1076,6 +1077,7 @@
           var active = rep.type === t;
           return '<button type="button" class="btn ' + (active ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-reptype="' + t + '">' + lbl + '</button>';
         }).join('')
+      + '<a class="btn btn-sm" id="repFinance" href="#/finance/profit" style="margin-left:auto">Profit &amp; Loss / Cash Closing &rarr;</a>'
       + '</div></div>';
 
     /* empty state: nothing below the selector until a type is explicitly chosen */

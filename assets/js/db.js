@@ -541,6 +541,13 @@
       if (store.seq.samples == null) store.seq.samples = 0;
       save(store);
     }
+    /* existing installs lack the daily cash-closing table */
+    if (store && !Array.isArray(store.closings)) {
+      store.closings = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.closings == null) store.seq.closings = 0;
+      save(store);
+    }
     /* existing installs lack default signatory doctors — seed from reference */
     if (store && store.settings && (!store.settings.signatories || !store.settings.signatories.length)) {
       store.settings.signatories = [
@@ -816,7 +823,7 @@
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
         expenses: tables.expenses, results: tables.results,
         report_templates: tables.report_templates, report_schedules: tables.report_schedules,
-        wa_log: tables.wa_log, samples: tables.samples
+        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings
       };
       normalizeSeq(store);
       persist();
