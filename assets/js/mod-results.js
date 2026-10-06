@@ -984,29 +984,12 @@
 }
   `;
 
-  /* ---------- worker 8/20: QR block (header, top-right) ----------
-     The <img data-qr="1"> keeps the placeholder contract: printReport()
-     injects the src with .replace('data-qr="1"', 'data-qr="1" src="..."')
-     (first occurrence — the wrapper uses data-qr-wrap, not data-qr="1").
-     stripQrImg() only runs when QR generation itself fails (e.g., jsPDF/qrcode
-     library failed to load); unpaid invoices get a fallback-URL QR (invoice
-     page) rather than a stripped block, so the "Scan to verify" caption
-     never dangles without its QR. */
-  function qrBlockHtml(d) {
-    var s = (d && d.s) || {};
-    if (s.showQr === false) return '';
-    return (
-      '<div data-qr-wrap style="display:flex;flex-direction:column;align-items:center;flex:none;margin-left:18px">' +
-        '<img data-qr="1" style="width:130px;height:130px;display:block" alt="QR code - scan to verify report">' +
-        '<span style="font-size:0.76em;color:#8a8a8a;letter-spacing:0.4px;margin-top:4px;white-space:nowrap">Scan to verify</span>' +
-      '</div>'
-    );
-  }
-
-  /* ---------- worker 2/20: report header ----------
-     Logo + navy serif lab name/tagline (left); Patient No. / Case # with
-     wide-spaced numbers + QR block (right); optional reportTitle banner.
-     The custom s.headerHtml override is applied by reportHtml(), not here. */
+  /* ---------- worker 1/4: report header (Chughtai-style) ----------
+     Decorative grey-to-blue top bar; circular logo; large serif lab name +
+     tagline highlight box + address/Tel/Email (center); MR / Lab # and
+     Case # with Code39 barcodes + 90px QR placeholder (right); thin black
+     rule below. The custom s.headerHtml override is applied by
+     reportHtml(), not here. */
   function reportHeaderHtml(d) {
     var inv = (d && d.inv) || {};
     var pat = (d && d.pat) || {};
@@ -1014,65 +997,68 @@
 
     var accent = s.accent || RPT.navy;
     var showTagline = s.showTagline !== false;   /* default true */
-    var escAccent = App.esc(accent);
+    var showQr = s.showQr !== false;             /* default true */
+    var labName = s.labName || 'Optix LAB MedSync';
 
-    /* left: logo + lab identity */
-    var leftHtml =
-      '<div style="display:flex;align-items:center;gap:14px;min-width:0">' +
-        (s.logo
-          ? '<img src="' + App.esc(s.logo) + '" style="width:70px;height:70px;object-fit:contain;flex:none" alt="">'
+    /* "6-7/2025" -> "6 - 7 / 2025" spaced style like the reference */
+    function spacedNo(v) {
+      var t = String(v == null ? '' : v);
+      if (!t) return '';
+      return t.replace(/\s*-\s*/g, ' - ').replace(/\s*\/\s*/g, ' / ');
+    }
+
+    /* left: circular logo (photo, or the lab's initial when unset) */
+    var logoHtml = s.logo
+      ? '<img src="' + App.esc(s.logo) + '" style="width:84px;height:84px;border-radius:50%;object-fit:cover;flex:none" alt="">'
+      : '<div style="width:84px;height:84px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;' +
+          'background:' + App.esc(accent) + ';color:#ffffff;font-size:2.2em;font-weight:700;font-family:' + RPT.serif + '">' +
+          App.esc((labName.charAt(0) || 'L').toUpperCase()) +
+        '</div>';
+
+    /* center: large serif lab name, tagline highlight box, address lines */
+    var centerHtml =
+      '<div style="flex:1;min-width:0;border-left:2px solid #c0392b;padding-left:12px">' +
+        '<div style="margin:0;color:#111;font-family:' + RPT.serif +
+          ';font-weight:700;font-size:1.6em;line-height:1.2">' +
+          App.esc(labName) +
+        '</div>' +
+        ((showTagline && s.tagline)
+          ? '<div style="display:inline-block;background:#d9f2fb;font-style:italic;color:#111;' +
+              'font-family:' + RPT.serif + ';font-size:1.05em;padding:2px 10px;margin-top:4px">' +
+              App.esc(s.tagline) +
+            '</div>'
           : '') +
-        '<div style="min-width:0">' +
-          '<div style="margin:0;color:' + escAccent + ';font-family:' + RPT.serif +
-            ';font-weight:700;font-size:2em;letter-spacing:0.08em;text-transform:uppercase;line-height:1.15">' +
-            App.esc(s.labName || 'Optix LAB MedSync') +
-          '</div>' +
-          ((showTagline && s.tagline)
-            ? '<div style="color:' + escAccent + ';font-family:' + RPT.serif + ';font-size:1.36em;margin-top:2px">' +
-                App.esc(s.tagline) +
-              '</div>'
-            : '') +
+        '<div style="font-size:0.92em;color:#111;line-height:1.5;margin-top:4px">' +
+          (s.address ? App.esc(s.address) + '<br>' : '') +
+          (s.phone ? 'Tel: ' + App.esc(s.phone) + '<br>' : '') +
+          (s.email ? 'Email: ' + App.esc(s.email) : '') +
         '</div>' +
       '</div>';
 
-    /* right: Patient No. / Case # + QR.
-       margin-right:-4px compensates the trailing letter-spacing so the
-       wide-spaced numbers stay flush right under their labels. */
+    /* right: QR only (MR/Case # removed per user request) */
     var rightHtml =
-      '<div style="display:flex;align-items:flex-start;gap:16px;flex:none">' +
-        '<div style="text-align:right">' +
-          '<div style="font-size:1.12em;font-weight:700">Patient No.:</div>' +
-          '<div style="font-size:1.04em;letter-spacing:0.31em;margin:3px -4px 8px 0">' +
-            App.esc(pat.id || '—') +
-          '</div>' +
-          '<div style="font-size:1.12em;font-weight:700">Case #:</div>' +
-          '<div style="font-size:1.04em;letter-spacing:0.31em;margin:3px -4px 0 0">' +
-            App.esc(inv.no || inv.id || '—') +
-          '</div>' +
-        '</div>' +
-        qrBlockHtml(d) +
+      '<div style="display:flex;align-items:flex-start;gap:14px;flex:none">' +
+        (showQr
+          ? '<img data-qr="1" style="width:90px;height:90px" alt="QR">'
+          : '') +
       '</div>';
-
-    /* optional report title banner */
-    var bannerHtml = s.reportTitle
-      ? '<div style="margin:4px 0 10px;padding:7px 10px;background:' + escAccent +
-        ';color:#ffffff;text-align:center;font-weight:700;font-size:1.2em;letter-spacing:0.27em;text-transform:uppercase">' +
-          App.esc(s.reportTitle) +
-        '</div>'
-      : '';
 
     return (
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding-bottom:10px">' +
-        leftHtml +
+      '<div style="height:10px;background:linear-gradient(to right,#8f8f8f 0%,#b5b5b5 45%,#cfe9f5 100%);margin-bottom:8px"></div>' +
+      '<div style="display:flex;align-items:flex-start;gap:14px;padding-bottom:8px">' +
+        logoHtml +
+        centerHtml +
         rightHtml +
       '</div>' +
-      bannerHtml
+      '<div style="border-bottom:2px solid #000"></div>'
     );
   }
 
-  /* ---------- worker 3/20: patient info grid ----------
-     2 columns; labels BOLD black with a fixed-width label column; values
-     regular. Thin rule below the grid. */
+  /* ---------- worker 2/4: patient info grid ----------
+     Reference layout: 2 columns; each row is "Label : value" with the
+     colon separator; labels BOLD black (#000). Reg. Date comes from
+     inv.createdAt (registration time), formatted "11-Jul-25 3:33:30 pm".
+     Thin black rule below the grid. */
   function patientGridHtml(d) {
     d = d || {};
     var inv = d.inv || {};
@@ -1080,42 +1066,67 @@
     var s = d.s || {};
     var doc = d.doc || null;
 
-    var LABEL_W = '230px';        /* fixed label column width (layout: not scaled) */
+    var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
 
+    /* day-Mon-yy, e.g. '11-Jul-25'; '—' when missing/invalid */
+    var fmtDT = function (iso) {
+      if (!iso) return '—';
+      var t = new Date(iso);
+      if (isNaN(t.getTime())) return '—';
+      return t.getDate() + '-' + MON[t.getMonth()] + '-' + pad2(t.getFullYear() % 100);
+    };
+
+    /* 12-hour clock with seconds, e.g. '3:33:30 pm'; '—' when missing/invalid */
+    var fmtTime = function (iso) {
+      if (!iso) return '—';
+      var t = new Date(iso);
+      if (isNaN(t.getTime())) return '—';
+      var h = t.getHours();
+      var ap = h >= 12 ? 'pm' : 'am';
+      h = h % 12;
+      if (h === 0) h = 12;
+      return h + ':' + pad2(t.getMinutes()) + ':' + pad2(t.getSeconds()) + ' ' + ap;
+    };
+
+    var val = function (v) {
+      return App.esc(v == null || v === '' ? '—' : String(v));
+    };
+
+    /* "Label : value" row; label bold black with fixed width so the
+       colons align like the reference. */
     var row = function (label, value) {
       return (
         '<div style="display:flex;gap:0;padding:2.5px 0;font-size:0.88em;line-height:1.5">' +
-          '<span style="font-weight:700;color:#000;flex:none;width:' + LABEL_W + '">' +
-            App.esc(label) + ':' +
+          '<span style="font-weight:700;color:#000;flex:none;width:140px">' +
+            App.esc(label) +
           '</span>' +
-          '<span style="color:#000;flex:1;min-width:0">' +
-            App.esc(value == null || value === '' ? '—' : String(value)) +
-          '</span>' +
+          '<span style="color:#000;flex:none">:&#160;</span>' +
+          '<span style="color:#000;flex:1;min-width:0">' + value + '</span>' +
         '</div>'
       );
     };
 
-    var ageSex = [pat.age ? pat.age + ' Yr(s)' : '', pat.gender || '']
+    var ageSex = [pat.age ? pat.age + ' Years' : '', pat.gender || '']
       .filter(function (x) { return x; })
       .join(' / ');
-    var docName = doc && doc.name ? doc.name : 'Standard.';
+    var docName = doc && doc.name ? doc.name : 'SELF';
+    var regDate = inv.createdAt
+      ? fmtDT(inv.createdAt) + '  ' + fmtTime(inv.createdAt)
+      : '—';
 
     var left =
-      row('Patient Name', pat.name) +
-      row('Father / Husband Name', pat.father) +
-      row('Age / Sex', ageSex) +
-      row('Blood Group', pat.blood || 'Unknown') +
-      row('NIC', pat.cnic) +
-      row('Phone', pat.phone) +
-      row('Address', pat.address);
+      row("Patient's Name", val(pat.name)) +
+      row('Father/Husband', val(pat.father)) +
+      row('Age/Sex', val(ageSex)) +
+      row('NIC No', val(pat.cnic));
 
     var right =
-      row('Registration Date', inv.createdAt ? App.dt(inv.createdAt) : '') +
-      row('Collect Report At', d.maxReported ? App.dt(d.maxReported) : '') +
-      row('Registration Location', s.headOffice) +
-      row('Destination Location', s.mainLab) +
-      row('Reference', docName) +
-      row('Consultant', docName);
+      row('Reg. Date', val(regDate)) +
+      row('Reg. Centre', val(s.headOffice || 'Main')) +
+      row('Specimen', val('Taken in Lab')) +
+      row('Consultant', val(docName)) +
+      row('Contact No', val(pat.phone));
 
     return (
       '<div style="display:flex;gap:40px;margin:2px 0 6px">' +
@@ -1266,57 +1277,128 @@
            p(t.getHours()) + ':' + p(t.getMinutes());
   }
 
+  /* ---------- worker 3/4: date helpers for integrated comparison columns ---------- */
+  var CMP_MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  function fmtD(iso) {   /* "11-Jul-25" (day-Mon-yy) */
+    var t = iso instanceof Date ? iso : new Date(iso);
+    if (isNaN(t.getTime())) return '';
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p(t.getDate()) + '-' + CMP_MON[t.getMonth()] + '-' + String(t.getFullYear()).slice(2);
+  }
+  function fmtDMY(iso) { /* "6:7:2025" (d:m:yyyy) */
+    var t = iso instanceof Date ? iso : new Date(iso);
+    if (isNaN(t.getTime())) return '';
+    return t.getDate() + ':' + (t.getMonth() + 1) + ':' + t.getFullYear();
+  }
+  function fmtDTm(iso) {  /* "11-Jul-25  15:33" */
+    var t = iso instanceof Date ? iso : new Date(iso);
+    if (isNaN(t.getTime())) return '';
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return fmtD(iso) + '  ' + p(t.getHours()) + ':' + p(t.getMinutes());
+  }
+
+  /* ---------- worker 3/4: per-test table with INTEGRATED comparison columns ----------
+     Target design (reference: Waheed Khanzada style):
+     - Blue bold caps section title: "{Test Name} ({CODE}) REPORT" — test code
+       from r.item.code (fallback r.test.code) shown with the test name.
+     - Light-blue (#d9f2fb) header row (TEST | REFERENCE RANGE | UNIT, dark
+       borders) plus one RESULT box per report: the current report first,
+       then one per previous report of the same test for this patient
+       (newest first, capped at 2). Each box shows:
+         line 1: RESULT (bold), line 2: 6:7:2025 (d:m:yyyy),
+         line 3: 11-Jul-25  15:33
+     - Body rows with dotted separators; param name regular weight.
+     - Abnormal values (abnormalDir): red (#c00) bold with ↑ (high) or ↓
+       (low) before the value — current and previous columns alike.
+     - Tests with no params (free-text): single row labeled "Result" with
+       the value spanning the result columns. */
   function testSectionHtml(r, d) {
     d = d || {};
-    var inv = d.inv || {};
-    var s = d.s || {};
     var test = r.test || {};
     var params = Array.isArray(test.params) ? test.params : [];
     var vals = (r.res && r.res.values) || {};
+    var testId = (r.item && (r.item.testId || r.item.id)) || '';
+    var prev = (d.prevByTest && testId && d.prevByTest[testId]) || [];
 
-    var caseNo = inv.no || inv.id || '';
-    // Reference timestamp = report/collection time; fall back to registration.
-    var ts = chughtaiTs(d.maxReported || inv.createdAt);
-    var showBarcode = s.showBarcode !== false;
+    /* result columns: current report first, then previous (newest first) */
+    var cols = [{ reportedAt: (r.res && r.res.reportedAt) || d.maxReported || '', values: vals }]
+      .concat(prev.map(function (p) {
+        return { reportedAt: p.reportedAt || '', values: p.values || {} };
+      }));
+    var nRes = cols.length;
 
-    // Column grid shared by the grey header bar and every body row so the
-    // columns line up exactly. The result value is right-aligned in the
-    // 4th column, which sits in the RESULT box zone.
-    var COLS = '40% 24% 14% 1fr';
+    /* column grid: TEST 30% | REFERENCE RANGE 22% | UNIT 10% | results share the rest */
+    var resW = (38 / nRes).toFixed(2);
+    var gridCols = '30% 22% 10%';
+    for (var gi = 0; gi < nRes; gi++) gridCols += ' ' + resW + '%';
 
-    /* grey header bar: TEST | NORMAL VALUE | UNIT (+ empty result zone) */
-    var barHtml =
-      '<div class="rpt-greybar" style="background:#A9A9A9;border:1px solid #000;display:grid;' +
-        'grid-template-columns:' + COLS + ';font-weight:700;color:#000;' +
-        'font-size:1em;padding:3px 6px">' +
-        '<div>TEST</div><div>NORMAL VALUE</div><div>UNIT</div><div></div>' +
+    /* section title: "{Name} ({CODE})" — append REPORT unless already present */
+    var tName = testName(r);
+    var tCode = (r.item && r.item.code) || (test && test.code) || '';
+    var title = tName + (tCode ? ' (' + tCode + ')' : '');
+    if (!/report\s*:?\s*$/i.test(title)) title += ' REPORT';
+
+    /* RESULT header boxes (span the title row + header row) */
+    var boxHtml = cols.map(function (c, ci) {
+      var lbl = ci === 0 ? 'CURRENT' : 'PREVIOUS';
+      var lblColor = '#000';
+      return '<div style="border:1px solid #000;background:#d9f2fb;text-align:center;' +
+        'padding:4px 2px;line-height:1.5;font-size:0.95em;grid-row:span 2">' +
+        '<div style="font-weight:700;color:' + lblColor + ';font-size:0.85em">' + lbl + '</div>' +
+        '<div style="font-weight:700">RESULT</div>' +
+        '<div style="font-weight:700">' + App.esc(fmtDMY(c.reportedAt)) + '</div>' +
+        '<div>' + App.esc(fmtDTm(c.reportedAt)).replace(/ /g, '&nbsp;') + '</div>' +
       '</div>';
+    }).join('');
 
-    /* body rows: no visible borders, param name bold */
+    /* light-blue header cells for the 3 label columns */
+    var headCells = ['TEST', 'REFERENCE RANGE', 'UNIT'].map(function (h, i) {
+      return '<div style="border:1px solid #000;' + (i ? 'border-left:none;' : '') +
+        'background:#d9f2fb;font-weight:700;padding:4px 6px;font-size:1em">' + h + '</div>';
+    }).join('');
+
+    /* value cell: centered; abnormal = red bold with ↑/↓ before the value */
+    function valCell(valueStr, refStr) {
+      var disp = (valueStr == null) ? '' : String(valueStr);
+      var dir = abnormalDir(disp, refStr);
+      if (dir) {
+        var arrow = dir === 'high' ? '↑' : '↓';
+        return '<div style="text-align:center;color:#c00;font-weight:700">' +
+          arrow + ' ' + App.esc(disp) + '</div>';
+      }
+      return '<div style="text-align:center">' + App.esc(disp) + '</div>';
+    }
+
+    /* body rows: dotted bottom separators, param name regular weight */
     var rowsHtml;
     if (params.length) {
       rowsHtml = params.map(function (p) {
-        var v = vals[p.name];
-        return '<div style="display:grid;grid-template-columns:' + COLS + ';' +
-          'font-size:1.04em;padding:3px 6px">' +
-          '<div style="font-weight:700">' + App.esc(p.name || '') + '</div>' +
+        var cells = cols.map(function (c) {
+          return valCell((c.values || {})[p.name], p.ref);
+        }).join('');
+        return '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
+          'border-bottom:1px dotted #999;font-size:1.04em;padding:4px 6px">' +
+          '<div>' + App.esc(p.name || '') + '</div>' +
           '<div>' + App.esc(p.ref != null && p.ref !== '' ? String(p.ref) : '—') + '</div>' +
           '<div>' + App.esc(p.unit != null && p.unit !== '' ? String(p.unit) : '') + '</div>' +
-          resultCellDiv(v, p.ref) +
+          cells +
         '</div>';
       }).join('');
     } else {
-      // Test with no params: single row with a "Result" label.
+      // Test with no params: single row labeled "Result", value spans the result columns.
+      var ftVal = vals['Result'];
       rowsHtml =
-        '<div style="display:grid;grid-template-columns:' + COLS + ';' +
-          'font-size:1.04em;padding:3px 6px">' +
-          '<div style="font-weight:700">Result</div>' +
+        '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
+          'border-bottom:1px dotted #999;font-size:1.04em;padding:4px 6px">' +
+          '<div>Result</div>' +
           '<div></div><div></div>' +
-          resultCellDiv(vals['Result'], '') +
+          '<div style="grid-column:span ' + nRes + ';text-align:center">' +
+            App.esc(ftVal == null ? '' : String(ftVal)) +
+          '</div>' +
         '</div>';
     }
 
-    /* remarks below the table */
+    /* remarks below the table (kept from previous design) */
     var remarksHtml = '';
     if (vals['Remarks']) {
       remarksHtml =
@@ -1326,18 +1408,18 @@
         '</div>';
     }
 
-    /* RESULT box removed per user request — QR code in header covers verification */
-
-    /* assemble: title, then full-width table */
+    /* assemble: title + RESULT boxes row, then light-blue header row, body, remarks */
     return '<div class="rpt-section" style="margin:14px 0 4px">' +
-      '<div style="font-weight:700;font-size:1.2em;color:#000;margin:0 0 4px">' +
-        App.esc(testName(r)) +
+      '<div style="display:grid;grid-template-columns:' + gridCols + '">' +
+        '<div style="grid-column:span 3;align-self:center;color:#000;font-weight:700;' +
+          'font-size:1.15em;text-transform:uppercase;letter-spacing:0.02em">' +
+          App.esc(title) +
+        '</div>' +
+        boxHtml +
+        headCells +
       '</div>' +
-      '<div>' +
-        barHtml +
-        rowsHtml +
-        remarksHtml +
-      '</div>' +
+      rowsHtml +
+      remarksHtml +
     '</div>';
   }
 
@@ -1364,7 +1446,7 @@
   function testNoteHtml(test) {
     var note = test && (test.note || '');
     if (!note) return '';
-    return '<div class="rpt-note" style="margin:8px 0 2px;font-size:0.88em;line-height:1.5;color:#222;' +
+    return '<div class="rpt-note" style="margin:8px 0 2px;font-size:0.88em;line-height:1.5;color:#000;' +
       'page-break-inside:avoid">' +
       '<strong>Note:</strong><br>' +
       App.esc(note) + '</div>';
@@ -1382,81 +1464,60 @@
   App.testNoteHtml = testNoteHtml;
   App.sectionCatOf = sectionCatOf;
 
-  /* ---------- worker 6/20: report footer ----------
-     Bold centered verification note, thick rule, physician note, thick
-     rule, signatories (from s.signatories) spread in a row, bold centered
-     address block, "Powered by System Optix". Used only when the custom
-     s.footerHtml override is NOT set. */
+  /* ---------- worker 4/4: report footer (redesign) ----------
+     Centered bold verification line, thick black rule, signatories in
+     one row spread across (from s.signatories), bordered disclaimer box,
+     "Powered by System Optix". Used only when the custom s.footerHtml
+     override is NOT set. */
   function reportFooterHtml(d) {
     var s = (d && d.s) || {};
 
-    /* line 1: verification note (bold, centered) */
+    /* 1: centered bold verification line */
     var verNote = s.verNote || s.verificationNote ||
-      'Electronically verified report. No signatures necessary. Sample brought to the main lab.';
+      'Electronically Verified Report, No Signature(s) Required.';
     var line1 =
       '<p class="rpt-ver" style="text-align:center;font-weight:700;font-size:0.96em;margin:22px 0 4px;line-height:1.5">' +
         App.esc(verNote) + '</p>';
 
-    /* thick black rule */
+    /* 2: thick black rule */
     var rule = '<hr class="rpt-footrule" style="border:none;border-top:2.5px solid #000;margin:6px 0">';
 
-    /* line 2: physician interpretation note (bold, centered) */
-    var line2 =
-      '<p style="text-align:center;font-weight:700;font-size:0.96em;margin:6px 0 4px;line-height:1.5">' +
-        'Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.</p>';
-
-    /* signatories: spread in one row; fallback signature lines when empty */
+    /* 3: signatories in one row, spread across; fallback signature lines when empty */
     var sigs = (Array.isArray(s.signatories) ? s.signatories : [])
       .filter(function (g) { return g && (g.name || g.qual || g.title); });
     var sigHtml;
     if (sigs.length) {
       sigHtml =
-        '<div class="rpt-sigs" style="display:flex;justify-content:space-between;gap:8px;margin:10px 0 6px">' +
+        '<div class="rpt-sigs" style="display:flex;justify-content:space-between;gap:10px;margin:10px 0 8px">' +
           sigs.map(function (g) {
-            return '<div class="rpt-sig" style="flex:1;text-align:center">' +
-              '<div class="n" style="font-weight:700;font-size:0.96em">' + App.esc(g.name || '') + '</div>' +
-              (g.qual ? '<div class="q" style="font-size:0.8em">' + App.esc(g.qual) + '</div>' : '') +
-              (g.title ? '<div class="t" style="font-size:0.8em">' + App.esc(g.title) + '</div>' : '') +
+            return '<div class="rpt-sig" style="flex:1;text-align:left">' +
+              '<div class="n" style="font-weight:700;font-size:0.9em">' + App.esc(g.name || '') + '</div>' +
+              (g.qual ? '<div class="q" style="font-size:0.78em">' + App.esc(g.qual) + '</div>' : '') +
+              (g.title ? '<div class="t" style="font-size:0.78em">' + App.esc(g.title) + '</div>' : '') +
             '</div>';
           }).join('') + '</div>';
     } else {
       sigHtml =
-        '<div style="display:flex;justify-content:space-between;margin:34px 0 6px">' +
+        '<div style="display:flex;justify-content:space-between;margin:30px 0 6px">' +
           '<div style="text-align:center;min-width:180px">' +
-            '<div style="border-top:1px solid #000;padding-top:6px;font-size:0.96em">Lab Technologist</div></div>' +
+            '<div style="border-top:1px solid #000;padding-top:6px;font-size:0.9em">Lab Technologist</div></div>' +
           '<div style="text-align:center;min-width:180px">' +
-            '<div style="border-top:1px solid #000;padding-top:6px;font-size:0.96em">Pathologist</div></div>' +
+            '<div style="border-top:1px solid #000;padding-top:6px;font-size:0.9em">Pathologist</div></div>' +
         '</div>';
     }
 
-    /* address block (centered, BOLD) */
-    var ab = [];
-    if (s.headOffice) {
-      var ab1 = 'Head Office: ' + App.esc(s.headOffice);
-      if (s.callCenter) ab1 += ' &nbsp;Call Center: ' + App.esc(s.callCenter);
-      ab.push('<div>' + ab1 + '</div>');
-    }
-    if (s.mainLab) {
-      var ab2 = 'Main Lab: ' + App.esc(s.mainLab);
-      if (s.mainLabPhone) ab2 += ' &nbsp;Ph: ' + App.esc(s.mainLabPhone);
-      ab.push('<div>' + ab2 + '</div>');
-    }
-    var abLast = [
-      s.phone ? 'Phone: ' + App.esc(s.phone) : '',
-      s.website ? 'Web: ' + App.esc(s.website) : '',
-      s.email ? 'Email: ' + App.esc(s.email) : ''
-    ].filter(function (x) { return x; }).join(' &nbsp; ');
-    if (abLast) ab.push('<div>' + abLast + '</div>');
-    var addrHtml = ab.length
-      ? '<div class="rpt-addrblock" style="text-align:center;font-weight:700;font-size:1em;margin:10px 0 0;line-height:1.9">' +
-          ab.join('') + '</div>'
-      : '';
+    /* 4: disclaimer note inside a bordered box */
+    var disc = s.disclaimer || s.footerNote ||
+      'NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.';
+    var discHtml =
+      '<div class="rpt-disc" style="border:1px solid #000;padding:6px 8px;font-size:0.72em;line-height:1.5;margin:8px 0 0">' +
+        App.esc(disc) + '</div>';
 
-    /* powered-by */
+    /* 5: powered-by (existing constraint) */
     var powered =
       '<p class="rpt-powered" style="color:#999;font-size:0.88em;text-align:center;margin:14px 0 0">Powered by System Optix</p>';
 
-    return '<div class="rpt-footer">' + line1 + rule + line2 + rule + sigHtml + addrHtml + powered + '</div>';
+    return '<div class="rpt-footer">' + line1 + rule + sigHtml + discHtml + powered + '</div>';
   }
 
   function reportData(invoiceId) {
@@ -1469,6 +1530,33 @@
     readyRows.forEach(function (r) {
       if (r.res && r.res.reportedAt && r.res.reportedAt > maxReported) maxReported = r.res.reportedAt;
     });
+
+    /* ---------- worker 3/4: integrated comparison data ----------
+       Previous-report data: for the same patient (inv.patientId), find OTHER
+       invoices (id !== invoiceId) with ready results, newest first.
+       d.prevByTest = map testId -> array of { invoiceNo, reportedAt, values }
+       (capped at 2 previous columns per test for readability). */
+    var prevByTest = {};
+    var otherInvRows = joinedRows('ready').filter(function (r) {
+      return r.invoice.id !== invoiceId && r.invoice.patientId === inv.patientId;
+    });
+    otherInvRows.sort(function (a, b) {
+      var da = (a.res && a.res.reportedAt) || a.invoice.createdAt || '';
+      var db = (b.res && b.res.reportedAt) || b.invoice.createdAt || '';
+      return db < da ? -1 : (db > da ? 1 : 0);
+    });
+    otherInvRows.forEach(function (r) {
+      var tid = (r.item && (r.item.testId || r.item.id)) || (r.res && r.res.testId);
+      if (!tid) return;
+      if (!prevByTest[tid]) prevByTest[tid] = [];
+      if (prevByTest[tid].length >= 2) return;  /* cap: 2 previous columns */
+      prevByTest[tid].push({
+        invoiceNo: r.invoice.no || r.invoice.id,
+        reportedAt: (r.res && r.res.reportedAt) || r.invoice.createdAt || '',
+        values: (r.res && r.res.values) || {}
+      });
+    });
+
     return {
       inv: inv,
       pat: patOf(inv.patientId),
@@ -1476,7 +1564,8 @@
       doc: inv.doctorId ? DB.get('doctors', inv.doctorId) : null,
       readyRows: readyRows,
       pendingCount: pendingCount,
-      maxReported: maxReported
+      maxReported: maxReported,
+      prevByTest: prevByTest
     };
   }
 

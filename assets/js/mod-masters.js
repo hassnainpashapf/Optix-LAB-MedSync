@@ -232,56 +232,35 @@ function renderTests() {
   /* seed all template tests with price 0 */
   var seedBtn = document.getElementById('t-seed');
   if (seedBtn) seedBtn.addEventListener('click', function () {
-    if (!confirm('Generate 5000 lab tests with price Rs 0? This may take a moment. You can edit prices later.')) return;
-    var existing = {};
-    DB.all('tests').forEach(function (t) { existing[(t.name || '').toLowerCase()] = 1; });
-    var added = 0;
-    /* comprehensive lab test catalog */
-    var catalog = [
-      /* Haematology */
-      ['Complete Blood Count', 'Haematology'], ['Hemoglobin', 'Haematology'], ['ESR', 'Haematology'],
-      ['Blood Group', 'Haematology'], ['Bleeding Time', 'Haematology'], ['Clotting Time', 'Haematology'],
-      ['Platelet Count', 'Haematology'], ['Reticulocyte Count', 'Haematology'], ['PCV', 'Haematology'],
-      /* Biochemistry */
-      ['Blood Sugar Fasting', 'Biochemistry'], ['Blood Sugar Random', 'Biochemistry'], ['HbA1c', 'Biochemistry'],
-      ['Lipid Profile', 'Biochemistry'], ['Liver Function Test', 'Biochemistry'], ['Kidney Function Test', 'Biochemistry'],
-      ['Serum Electrolytes', 'Biochemistry'], ['Calcium', 'Biochemistry'], ['Uric Acid', 'Biochemistry'],
-      /* Serology */
-      ['Hepatitis B (HBsAg)', 'Serology'], ['Hepatitis C (Anti-HCV)', 'Serology'], ['HIV', 'Serology'],
-      ['Dengue NS1', 'Serology'], ['Widal Test', 'Serology'], ['VDRL', 'Serology'],
-      /* Hormones */
-      ['Thyroid Profile (T3 T4 TSH)', 'Hormones'], ['Testosterone', 'Hormones'], ['Prolactin', 'Hormones'],
-      /* Microbiology */
-      ['Urine Complete Examination', 'Pathology'], ['Stool Examination', 'Pathology'], ['Blood Culture', 'Microbiology']
-    ];
-    /* generate variations to reach 5000 */
-    var prefixes = ['Serum', 'Plasma', 'Whole Blood', 'Urine'];
-    var suffixes = ['Level', 'Test', 'Profile', 'Panel', 'Assay'];
-    var i = 0;
-    while (added < 5000 && i < 10000) {
-      var base = catalog[i % catalog.length];
-      var name = base[0], cat = base[1], params = [];
-      /* add variation for duplicates */
-      if (i >= catalog.length) {
-        var v = Math.floor(i / catalog.length);
-        name = base[0] + ' ' + suffixes[v % suffixes.length] + ' ' + (v + 1);
-      }
-      /* get params from template if available */
-      if (TEST_TEMPLATES[base[0]]) params = TEST_TEMPLATES[base[0]];
-      else if (TEST_TEMPLATES[name]) params = TEST_TEMPLATES[name];
-      if (existing[name.toLowerCase()]) { i++; continue; }
-      DB.put('tests', {
-        id: 't' + Date.now() + '_' + i + Math.random().toString(36).slice(2, 5),
-        code: ('T' + (1000 + i)).slice(-6),
-        name: name, category: cat, price: 0,
-        sampleType: 'Blood', tat: 'Same day', active: true,
-        params: params
+    if (!confirm('Import 5000 realistic Pakistani lab tests with price Rs 0? This may take a moment. You can edit prices later.')) return;
+    App.toast('Loading test catalog...', 'info');
+    /* load the 5000-test catalog if not already loaded */
+    function doSeed() {
+      var catalog = (typeof TEST_CATALOG_5000 !== 'undefined') ? TEST_CATALOG_5000 : [];
+      if (!catalog.length) { App.toast('Catalog not loaded', 'err'); return; }
+      var existing = {};
+      DB.all('tests').forEach(function (t) { existing[(t.name || '').toLowerCase()] = 1; });
+      var added = 0, skipped = 0;
+      catalog.forEach(function (ct, i) {
+        var name = ct.name;
+        if (!name || existing[name.toLowerCase()]) { skipped++; return; }
+        DB.put('tests', {
+          id: 't' + Date.now() + '_' + i + Math.random().toString(36).slice(2, 5),
+          code: 'T' + (10000 + i),
+          name: name, category: ct.category || 'General', price: 0,
+          sampleType: 'Blood', tat: 'Same day', active: true,
+          params: ct.params || []
+        });
+        existing[name.toLowerCase()] = 1;
+        added++;
       });
-      existing[name.toLowerCase()] = 1;
-      added++; i++;
+      App.toast(added + ' tests imported' + (skipped ? ' (' + skipped + ' already exist)' : ''));
+      drawTestRows(canEdit);
     }
-    App.toast(added + ' tests created with price Rs 0');
-    drawTestRows(canEdit);
+    if (typeof TEST_CATALOG_5000 !== 'undefined') doSeed();
+    else App.loadScript('assets/js/test-catalog-5000.js').then(doSeed).catch(function () {
+      App.toast('Failed to load catalog', 'err');
+    });
   });
 
   drawTestRows(canEdit);
