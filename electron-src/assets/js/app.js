@@ -584,7 +584,26 @@
     var _selId = (_cur && _cur.id) || (_labs[0] && _labs[0].id) || 'lab1';
     document.body.className = 'login-mode';
     document.body.innerHTML =
-      '<div class="login-wrap">' +
+      '<div class="login-wrap lg-split">' +
+        '<aside class="lg-brand" aria-hidden="true">' +
+          '<div class="lg-orbs"><i></i><i></i><i></i><i></i></div>' +
+          '<div class="lg-brand-in">' +
+            '<div class="lg-pill"><span class="lg-dot"></span>Optix LAB MedSync</div>' +
+            '<h2 class="lg-hero">Your lab,<br><span>always in sync.</span></h2>' +
+            '<p class="lg-lead">Patients, billing, results and reports &mdash; on desktop, web and mobile.</p>' +
+            '<ul class="lg-feat">' +
+          '<li style="--i:0"><span class="lg-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-15-6.7L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 15 6.7L21 16"/><path d="M16 16h5v5"/></svg></span>Works offline, syncs to the cloud</li>' +
+          '<li style="--i:1"><span class="lg-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9V3"/><path d="M7 15h10"/></svg></span>5000+ ready lab test catalog</li>' +
+          '<li style="--i:2"><span class="lg-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v1M14 20h1M18 20h3v1"/></svg></span>QR-verified patient reports</li>' +
+          '<li style="--i:3"><span class="lg-fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></span>Secure role-based access</li>' +
+            '</ul>' +
+            '<svg class="lg-ecg" viewBox="0 0 400 80" preserveAspectRatio="none">' +
+              '<path class="lg-ecg-base" d="M0 40H60L72 40L80 14L92 66L102 28L110 40H200L212 40L220 14L232 66L242 28L250 40H400" pathLength="100"/>' +
+              '<path class="lg-ecg-live" d="M0 40H60L72 40L80 14L92 66L102 28L110 40H200L212 40L220 14L232 66L242 28L250 40H400" pathLength="100"/>' +
+            '</svg>' +
+          '</div>' +
+        '</aside>' +
+        '<div class="lg-form">' +
         '<form class="login-card" id="loginForm" autocomplete="off">' +
           '<div class="login-logo">' +
             '<span class="login-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 32)) + '</span>' +
@@ -609,6 +628,7 @@
             : '<a class="btn btn-ghost btn-block" href="/superadmin/">Superadmin Login</a>') +
         '</form>' +
         '<p class="login-foot">Powered by System Optix</p>' +
+        '</div>' +
       '</div>';
     /* switching labs swaps the isolated store + rebrands the card */
     var _labSel = document.getElementById('liLab');

@@ -525,6 +525,71 @@ body.login-mode{background:#131845}
 .login-hint b{color:#4b5563;font-weight:700}
 .login-foot{position:relative;z-index:1;font-size:11.5px;color:rgba(255,255,255,.6);letter-spacing:.04em}
 
+/* ---- Login: split layout — animated navy brand half + white form half ---- */
+.login-wrap.lg-split{flex-direction:row;gap:0;padding:0;align-items:stretch;justify-content:stretch;overflow:auto;background:#fff}
+.login-wrap.lg-split::before,.login-wrap.lg-split::after{display:none}
+.lg-brand{position:relative;flex:1 1 50%;min-width:0;overflow:hidden;color:#fff;display:flex;align-items:center;justify-content:center;
+  padding:48px clamp(28px,5vw,72px);
+  background:linear-gradient(135deg,#131845 0%,#1e2a6b 50%,#2f4f9c 80%,#5392ba 115%);background-size:220% 220%;
+  animation:lgShift 16s ease-in-out infinite}
+.lg-brand::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(60% 50% at 80% 10%,rgba(83,146,186,.35),transparent 70%),radial-gradient(50% 45% at 10% 95%,rgba(255,255,255,.10),transparent 70%)}
+.lg-orbs i{position:absolute;border-radius:50%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.10);animation:lgFloat 14s ease-in-out infinite}
+.lg-orbs i:nth-child(1){width:360px;height:360px;top:-120px;right:-100px}
+.lg-orbs i:nth-child(2){width:220px;height:220px;bottom:-70px;left:-60px;animation-duration:18s;animation-delay:-4s}
+.lg-orbs i:nth-child(3){width:90px;height:90px;top:58%;right:12%;animation-duration:11s;animation-delay:-2s;background:rgba(83,146,186,.25)}
+.lg-orbs i:nth-child(4){width:46px;height:46px;top:16%;left:14%;animation-duration:9s;animation-delay:-6s}
+.lg-brand-in{position:relative;z-index:1;max-width:460px;width:100%}
+.lg-pill{display:inline-flex;align-items:center;gap:9px;padding:7px 14px;border-radius:999px;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.22);font-size:12.5px;font-weight:700;letter-spacing:.04em;backdrop-filter:blur(6px);
+  animation:lgUp .7s .05s both}
+.lg-dot{width:8px;height:8px;border-radius:50%;background:#7ee0b4;box-shadow:0 0 0 0 rgba(126,224,180,.7);animation:lgPulse 2s infinite}
+.lg-hero{margin:22px 0 12px;font-size:clamp(30px,3.4vw,46px);line-height:1.08;font-weight:800;letter-spacing:-.03em;animation:lgUp .8s .15s both}
+.lg-hero span{background:linear-gradient(90deg,#fff,#a9d2ee,#fff);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:lgShine 5s linear infinite}
+.lg-lead{font-size:15.5px;line-height:1.55;color:rgba(255,255,255,.78);max-width:400px;animation:lgUp .8s .3s both}
+.lg-feat{list-style:none;margin:28px 0 0;padding:0;display:flex;flex-direction:column;gap:12px}
+.lg-feat li{display:flex;align-items:center;gap:12px;font-size:14px;font-weight:600;color:rgba(255,255,255,.92);
+  opacity:0;animation:lgSlide .6s calc(.5s + var(--i)*.13s) both}
+.lg-fi{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;flex:none;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2)}
+.lg-fi svg{width:18px;height:18px}
+.lg-ecg{display:block;width:100%;height:64px;margin-top:34px;overflow:visible;opacity:0;animation:lgUp .8s 1.1s both}
+.lg-ecg path{fill:none;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.lg-ecg-base{stroke:rgba(255,255,255,.18);stroke-width:2}
+.lg-ecg-live{stroke:#8fe3ff;stroke-width:2.6;stroke-dasharray:22 78;stroke-dashoffset:100;filter:drop-shadow(0 0 6px rgba(143,227,255,.9));animation:lgEcg 3.2s linear infinite}
+.lg-form{position:relative;flex:1 1 50%;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:32px 24px;background:#fff}
+.lg-form::before{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(55% 40% at 100% 0%,rgba(83,146,186,.10),transparent 70%),radial-gradient(45% 35% at 0% 100%,rgba(19,24,69,.06),transparent 70%)}
+.lg-split .login-card{background:transparent;box-shadow:none;border-radius:0;padding:0;width:400px;animation:lgUp .8s .2s both}
+.lg-split .login-mark{animation:lgBob 5s ease-in-out infinite}
+.lg-split .login-card .input{transition:box-shadow .2s,transform .2s,border-color .2s}
+.lg-split .login-card .input:focus{box-shadow:0 0 0 4px rgba(83,146,186,.25);transform:translateY(-1px)}
+.lg-split .login-signin{position:relative;overflow:hidden}
+.lg-split .login-signin::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;
+  background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:lgSweep 3.8s 1.2s infinite}
+.lg-split .login-foot{color:#8b94a7}
+@keyframes lgShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+@keyframes lgFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(-18px,22px)}}
+@keyframes lgUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes lgSlide{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
+@keyframes lgPulse{0%{box-shadow:0 0 0 0 rgba(126,224,180,.6)}70%{box-shadow:0 0 0 9px rgba(126,224,180,0)}100%{box-shadow:0 0 0 0 rgba(126,224,180,0)}}
+@keyframes lgShine{to{background-position:-200% 0}}
+@keyframes lgEcg{to{stroke-dashoffset:-22}}
+@keyframes lgBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes lgSweep{0%,60%{left:-60%}100%{left:130%}}
+@media (max-width:900px){
+  .login-wrap.lg-split{flex-direction:column}
+  .lg-brand{flex:0 0 auto;padding:30px 24px 34px}
+  .lg-feat,.lg-lead{display:none}
+  .lg-hero{margin:14px 0 4px;font-size:28px}
+  .lg-ecg{height:44px;margin-top:16px}
+  .lg-form{flex:1 0 auto;padding:26px 18px 30px;border-radius:24px 24px 0 0;margin-top:-18px;z-index:2}
+  .lg-split .login-card{width:100%;max-width:420px}
+}
+@media (prefers-reduced-motion:reduce){
+  .lg-brand,.lg-orbs i,.lg-dot,.lg-hero span,.lg-ecg-live,.lg-split .login-mark,.lg-split .login-signin::after{animation:none!important}
+  .lg-pill,.lg-hero,.lg-lead,.lg-feat li,.lg-ecg,.lg-split .login-card{animation:none!important;opacity:1}
+}
+
 @media (max-width:900px){
   .nav-toggle{display:inline-grid}
   .login-card{padding:28px 22px}
