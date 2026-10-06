@@ -454,6 +454,7 @@
                   status: 'pending', reportedAt: null, reportedBy: null });
               });
             });
+            try { if (window.Samples) Samples.createForInvoice(inv); } catch (e) { if (window.console) console.error(e); }
             tMsg = 'Patient added — ' + items.length + ' test(s) sent to Lab Results.';
           }
         }
@@ -607,6 +608,8 @@
     var st = patientStats(p);
     var edit = canEdit();
 
+    var smpSum = {};
+    try { if (window.Samples) smpSum = Samples.summaryMap(); } catch (e) {}
     var invRows = st.invoices.map(function (inv) {
       var testNames = (inv.items || []).map(function (it) { return it.name || it.code; }).join(', ');
       return '<tr>' +
@@ -617,7 +620,7 @@
         '<td class="num">' + App.money(inv.total) + '</td>' +
         '<td class="num">' + App.money(inv.paid) + '</td>' +
         '<td class="num">' + ((+inv.due || 0) > 0 ? '<span class="due-amt">' + App.money(inv.due) + '</span>' : '<span class="muted">—</span>') + '</td>' +
-        '<td>' + App.badge(inv.status) + '</td>' +
+        '<td>' + App.badge(inv.status) + (window.Samples ? Samples.chipHTML(smpSum[inv.id]) : '') + '</td>' +
         '<td class="actions"><a class="btn btn-ghost btn-sm" href="#/invoice/' + App.esc(inv.id) + '">View</a></td></tr>';
     }).join('');
 

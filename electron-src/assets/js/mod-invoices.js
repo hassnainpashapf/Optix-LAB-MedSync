@@ -153,6 +153,7 @@
       paymentsOf(id).forEach(function (p) { DB.remove('payments', p.id); });
       DB.all('results').filter(function (r) { return r.invoiceId === id; })
         .forEach(function (r) { DB.remove('results', r.id); });
+      try { if (window.Samples) Samples.removeForInvoice(id); } catch (e) {}
       DB.remove('invoices', id);
       App.toast('Invoice ' + inv.no + ' deleted');
       /* from the invoice page go back to the list; from a list (invoices / dues) just refresh it in place */
@@ -349,6 +350,7 @@
             due: due < 0.01 ? 0 : due, status: statusOf(+inv.paid || 0, t.total),
             doctorId: doctorId || null
           });
+          try { if (window.Samples) Samples.syncInvoice(DB.get('invoices', id)); } catch (e) { if (window.console) console.error(e); }
           App.toast('Invoice ' + inv.no + ' updated');
           close(); refresh();
         });
@@ -450,7 +452,11 @@
     return list;
   }
 
+  /* sample-status chip (Samples module); the summary map is rebuilt once per list render */
+  var smpMap = {};
+  function smpChip(invId) { return window.Samples ? Samples.chipHTML(smpMap[invId]) : ''; }
   function invoiceRows(list) {
+    try { smpMap = window.Samples ? Samples.summaryMap() : {}; } catch (e) { smpMap = {}; }
     if (!list.length) return '<tr><td colspan="9">' + App.empty('No invoices found. Adjust filters or create a new bill.') + '</td></tr>';
     return list.map(function (inv) {
       var p = patientOf(inv);
@@ -463,7 +469,7 @@
         '<td style="text-align:right">' + App.money(inv.total) + '</td>' +
         '<td style="text-align:right;color:var(--green)">' + App.money(inv.paid) + '</td>' +
         '<td style="text-align:right;font-weight:700;color:' + (inv.due > 0 ? 'var(--red)' : 'var(--muted)') + '">' + App.money(inv.due) + '</td>' +
-        '<td>' + App.badge(inv.status) + '</td>' +
+        '<td>' + App.badge(inv.status) + smpChip(inv.id) + '</td>' +
         '<td class="actions"><a class="btn btn-sm btn-ghost" href="#/invoice/' + App.esc(inv.id) + '">View</a>' +
         (r2(inv.due) > 0 ? ' <button class="btn btn-sm btn-primary" data-collect="' + App.esc(inv.id) + '">Collect</button>' : '') +
         ' <button class="btn btn-sm btn-ghost" data-edit="' + App.esc(inv.id) + '">Edit</button>' +
@@ -571,6 +577,26 @@
         '<button class="btn btn-sm btn-ghost" data-void="' + App.esc(py.id) + '" style="color:var(--red)">Void</button></td></tr>';
     }).join('') : '<tr><td colspan="7">' + App.empty('No payments recorded yet.') + '</td></tr>';
 
+    var smpList = [];
+    try { if (window.Samples) smpList = Samples.forInvoice(inv.id).sort(function (a, b) { return String(a.barcode).localeCompare(String(b.barcode), undefined, { numeric: true }); }); } catch (e) {}
+    var smpSum = window.Samples ? Samples.summaryMap(smpList)[inv.id] : null;
+    var smpCard = !window.Samples ? '' :
+      '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3>Samples' + (smpList.length ? ' (' + smpList.length + ')' : '') + '</h3><div class="sp"></div>' +
+        (smpList.length
+          ? '<button class="btn btn-sm btn-ghost" id="iv-smp-print">' + SC_ICONS.printer + ' Print labels</button><a class="btn btn-sm btn-ghost" href="#/samples" id="iv-smp-open">Open Samples</a>'
+          : '<button class="btn btn-sm btn-primary" id="iv-smp-gen">Generate samples</button>') +
+      '</div>' +
+      (smpList.length
+        ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Barcode</th><th>Tube</th><th>Tests</th><th>Status</th></tr></thead><tbody>' +
+          smpList.map(function (s) {
+            return '<tr><td><span class="mono" style="font-weight:700">' + App.esc(s.barcode) + '</span></td>' +
+              '<td>' + Samples.tubeDot(s.tube) + App.esc(s.tube) + '</td>' +
+              '<td>' + App.esc((s.testNames || []).join(', ')) + '</td>' +
+              '<td>' + Samples.badge(s.status) + '</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div class="card-b"><div style="color:var(--muted);font-size:13.5px">No sample tubes were created for this invoice (it was billed before sample tracking was enabled).</div></div>') +
+      '</div>';
+
     view.innerHTML =
       '<div class="toolbar">' +
         '<a class="btn btn-ghost" href="#/invoices">← Back to Invoices</a>' +
@@ -589,7 +615,7 @@
             '<h2 style="margin:4px 0">Invoice ' + App.esc(inv.no) + '</h2>' +
             '<div style="color:var(--muted);font-size:13px">' + App.esc(s.address || '') + ' &nbsp;•&nbsp; ' + App.esc(s.phone || '') + '</div>' +
           '</div>' +
-          '<div style="text-align:right">' + App.badge(inv.status) +
+          '<div style="text-align:right">' + App.badge(inv.status) + (smpSum ? Samples.chipHTML(smpSum) : '') +
             '<div style="margin-top:8px;font-size:13px;color:var(--muted)">Date: <strong style="color:var(--ink)">' + App.d(inv.createdAt) + '</strong></div>' +
             (inv.createdBy ? '<div style="font-size:12px;color:var(--muted)">By: ' + App.esc(inv.createdBy) + '</div>' : '') +
           '</div>' +
@@ -629,6 +655,8 @@
         '</div>' +
       '</div>' +
 
+      smpCard +
+
       '<div class="card"><div class="card-h">Payment History</div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr><th>#</th><th>Date</th>' +
         '<th style="text-align:right">Amount</th><th>Method</th><th>Note</th><th>By</th><th>Actions</th></tr></thead>' +
@@ -640,6 +668,16 @@
     var cBtn = document.getElementById('iv-collect');
     if (cBtn) cBtn.addEventListener('click', function () { openPaymentModal(inv.id); });
     document.getElementById('iv-del').addEventListener('click', function () { deleteInvoice(inv.id); });
+    var spBtn = document.getElementById('iv-smp-print');
+    if (spBtn) spBtn.addEventListener('click', function () { Samples.printLabels(smpList.map(function (s) { return s.id; })); });
+    var soBtn = document.getElementById('iv-smp-open');
+    if (soBtn) soBtn.addEventListener('click', function () { try { sessionStorage.setItem('labpos_smp_q', inv.no || inv.id); } catch (e) {} });
+    var sgBtn = document.getElementById('iv-smp-gen');
+    if (sgBtn) sgBtn.addEventListener('click', function () {
+      var made = Samples.createForInvoice(inv);
+      App.toast(made.length ? made.length + ' sample(s) generated' : 'No samples could be generated', made.length ? 'ok' : 'err');
+      refresh();
+    });
     view.querySelectorAll('[data-receipt]').forEach(function (b) {
       b.addEventListener('click', function () { printReceipt(b.getAttribute('data-receipt')); });
     });

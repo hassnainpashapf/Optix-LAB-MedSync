@@ -1260,3 +1260,16 @@ body.modal-open{overflow:hidden}
 .lg-secure{max-width:100%;text-align:center;line-height:1.35}
 .lg-split .login-foot{max-width:100%;padding:0 6px;text-align:center}
 .lg-two{gap:0 12px}
+/* ============ Sample tracking (#/samples, invoice / results chips) ============ */
+.b-violet{background:var(--violet-soft);color:var(--violet)}
+.smp-chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;border-radius:999px;padding:3px 10px 3px 8px;white-space:nowrap;line-height:1.4;margin-left:6px}
+.smp-chip svg{flex:none}
+td .smp-chip{display:flex;width:fit-content;margin:5px 0 0}
+.smp-c-pend{background:var(--amber-soft);color:var(--amber)}
+.smp-c-col{background:var(--blue-soft);color:var(--blue)}
+.smp-c-lab{background:var(--brand-soft);color:var(--brand-d)}
+.smp-c-proc{background:var(--violet-soft);color:var(--violet)}
+.smp-c-done{background:var(--green-soft);color:var(--green)}
+.smp-c-rej{background:var(--red-soft);color:var(--red)}
+.smp-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;flex:none;vertical-align:-1px;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.18)}
+@media(max-width:640px){td .smp-chip{margin-left:auto}}

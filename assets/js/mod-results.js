@@ -552,6 +552,17 @@
   /* Bulk entry: all pending tests for a patient in one form, then print */
   function openBulkEntry(patient, rows) {
     if (!rows.length) return;
+    /* Settings -> "Require sample to be collected before result entry": leave out tests whose sample is not collected */
+    if (window.Samples && Samples.requireCollected()) {
+      var _smpAll = Samples.all();
+      var _okRows = rows.filter(function (r) { return !Samples.blockedReason(r.invoice.id, r.res ? r.res.testId : r.item.testId, _smpAll); });
+      if (!_okRows.length) {
+        App.toast(Samples.blockedReason(rows[0].invoice.id, rows[0].res ? rows[0].res.testId : rows[0].item.testId, _smpAll) || 'Collect the sample first', 'err');
+        return;
+      }
+      if (_okRows.length < rows.length) App.toast((rows.length - _okRows.length) + ' test(s) skipped: sample not collected yet', 'info');
+      rows = _okRows;
+    }
     var invNos = {};
     rows.forEach(function (r) { invNos[r.invoice.no || r.invoice.id] = true; });
     var invList = Object.keys(invNos).join(', ');
@@ -680,6 +691,7 @@
               });
               if (pTotal > 0) paidMsg = ' • ' + App.money(pTotal) + ' collected — QR code activated';
             }
+            try { if (window.Samples && saved) Samples.onResultsSaved(_waIds); } catch (e) {}
             close();
             if (!saved) { App.toast('Enter at least one result value', 'err'); return; }
             App.toast(saved + ' result(s) saved — marked ready' + (skipped ? ' (' + skipped + ' skipped — empty)' : '') + paidMsg);
@@ -696,6 +708,10 @@
   }
 
   function openEntry(row, onSaved) {
+    if (window.Samples && Samples.requireCollected()) {
+      var _why = Samples.blockedReason(row.invoice.id, row.res ? row.res.testId : row.item.testId);
+      if (_why) { App.toast(_why, 'err'); return; }
+    }
     var test = row.test;
     var inv = row.invoice;
     var pat = row.patient;
@@ -806,6 +822,7 @@
     if (crit.length) patch.criticalAck = null;
     if (row.res) DB.update('results', row.res.id, patch);
     else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy, critical: patch.critical, criticalAck: patch.criticalAck || null });
+    try { if (window.Samples) Samples.onResultsSaved([row.invoice.id]); } catch (e) {}
     close();
     App.toast('Result saved — marked ready');
     if (crit.length) criticalNotify([{ row: row, crits: crit }]);
@@ -3021,6 +3038,17 @@
 
   /* ---------- main render ---------- */
 
+  /* warning chip: tests of this patient whose sample tube has not been collected yet (entry is still allowed unless the setting blocks it) */
+  function smpWarn(rows) {
+    try {
+      if (!window.Samples) return '';
+      var n = Samples.uncollectedCount(rows);
+      if (!n) return '';
+      return '<span class="smp-chip smp-c-pend" title="' + (Samples.requireCollected() ? 'Result entry is blocked until the sample is collected' : 'Sample not collected yet') + '">' +
+        Samples.tubeIcon(12) + n + ' sample' + (n === 1 ? '' : 's') + ' not collected</span>';
+    } catch (e) { return ''; }
+  }
+
   function render() {
     var pendingRows = joinedRows('pending');
     var readyRows = joinedRows('ready');
@@ -3088,7 +3116,7 @@
             '<td class="muted">' + App.esc([pat.age ? pat.age + ' yrs' : '', pat.gender || ''].filter(Boolean).join(' / ') || '—') + '</td>' +
             '<td class="muted">' + App.esc(pat.phone || '—') + '</td>' +
             '<td class="muted">' + App.esc(Object.keys(invNos).join(', ')) + '</td>' +
-            '<td><span class="badge b-pending">' + pg.rows.length + ' pending</span></td>' +
+            '<td><span class="badge b-pending">' + pg.rows.length + ' pending</span>' + smpWarn(pg.rows) + '</td>' +
             '<td class="actions"><button class="btn btn-primary btn-sm" data-patenter="' + pi + '">Enter Results</button></td></tr>';
         }).join('');
         // stash for the click handlers below
