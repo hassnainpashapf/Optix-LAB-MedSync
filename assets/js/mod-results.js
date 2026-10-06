@@ -1018,26 +1018,39 @@
     /* center: large serif lab name, tagline highlight box, address lines */
     var centerHtml =
       '<div style="flex:1;min-width:0;border-left:2px solid #c0392b;padding-left:12px">' +
-        '<div style="margin:0;color:#111;font-family:' + RPT.serif +
+        '<div style="margin:0;color:#000;font-family:' + RPT.serif +
           ';font-weight:700;font-size:1.6em;line-height:1.2">' +
           App.esc(labName) +
         '</div>' +
         ((showTagline && s.tagline)
-          ? '<div style="display:inline-block;background:#d9f2fb;font-style:italic;color:#111;' +
+          ? '<div style="display:inline-block;background:#d9f2fb;font-style:italic;color:#000;' +
               'font-family:' + RPT.serif + ';font-size:1.05em;padding:2px 10px;margin-top:4px">' +
               App.esc(s.tagline) +
             '</div>'
           : '') +
-        '<div style="font-size:0.92em;color:#111;line-height:1.5;margin-top:4px">' +
+        '<div style="font-size:0.92em;color:#000;line-height:1.5;margin-top:4px">' +
           (s.address ? App.esc(s.address) + '<br>' : '') +
           (s.phone ? 'Tel: ' + App.esc(s.phone) + '<br>' : '') +
           (s.email ? 'Email: ' + App.esc(s.email) : '') +
         '</div>' +
       '</div>';
 
-    /* right: QR only (MR/Case # removed per user request) */
+    /* right: report date/time + QR (Case # replaced with date per user request) */
+    var rptDt = '';
+    try {
+      var rdt = new Date(inv.createdAt);
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var hh = rdt.getHours(), ap = hh >= 12 ? 'PM' : 'AM';
+      hh = hh % 12 || 12;
+      var mm = String(rdt.getMinutes()).padStart(2, '0');
+      rptDt = rdt.getDate() + ' ' + months[rdt.getMonth()] + ' ' + rdt.getFullYear() + ', ' + hh + ':' + mm + ' ' + ap;
+    } catch (e) {}
     var rightHtml =
       '<div style="display:flex;align-items:flex-start;gap:14px;flex:none">' +
+        '<div style="text-align:center;margin-right:8px">' +
+          '<div style="font-size:1.02em;font-weight:700;margin-bottom:4px">Report Date:</div>' +
+          '<div style="font-size:1.06em;font-weight:700">' + App.esc(rptDt || '—') + '</div>' +
+        '</div>' +
         (showQr
           ? '<img data-qr="1" style="width:90px;height:90px" alt="QR">'
           : '') +
@@ -1151,39 +1164,48 @@
 
   /* Returns 'high' | 'low' | null — the direction tells which arrow to show. */
   function abnormalDir(valueStr, refStr) {
+    var sev = abnormalSeverity(valueStr, refStr);
+    return sev ? sev.dir : null;
+  }
+
+  /* returns { dir: 'high'|'low', severity: 'mild'|'moderate'|'critical' } or null */
+  function abnormalSeverity(valueStr, refStr) {
     var v = parseAbnNum(valueStr);
     if (isNaN(v)) return null;
     if (refStr == null) return null;
-    var ref = String(refStr).replace(/[–—]/g, '-').trim();  // en/em dash -> hyphen
-    if (!ref || /see\s*below/i.test(ref)) return null;      // "(See Below)" etc.
-    ref = ref.replace(/,/g, '');                            // "4,000 - 11,000"
+    var ref = String(refStr).replace(/[–—]/g, '-').trim();
+    if (!ref || /see\s*below/i.test(ref)) return null;
+    ref = ref.replace(/,/g, '');
 
-    /* single-sided bounds: "< X", "<= X", "≤ X", "> X", ">= X", "≥ X" */
+    var dir = null, lo = null, hi = null;
     var op = ref.match(/^\s*(<=|>=|<|>|≤|≥)\s*(.+)$/);
     if (op) {
       var bound = parseAbnNum(op[2]);
       if (isNaN(bound)) return null;
       switch (op[1]) {
-        case '<':  return v >= bound ? 'high' : null;  // abnormal if >= X
-        case '<=': case '≤': return v > bound ? 'high' : null;
-        case '>':  return v <= bound ? 'low' : null;   // abnormal if <= X
-        case '>=': case '≥': return v < bound ? 'low' : null;
+        case '<':  if (v >= bound) { dir = 'high'; lo = bound * 0.9; hi = bound; } break;
+        case '<=': case '≤': if (v > bound) { dir = 'high'; lo = bound * 0.9; hi = bound; } break;
+        case '>':  if (v <= bound) { dir = 'low'; lo = bound; hi = bound * 1.1; } break;
+        case '>=': case '≥': if (v < bound) { dir = 'low'; lo = bound; hi = bound * 1.1; } break;
       }
-      return null;
-    }
-
-    /* "low - high" ranges: "135 - 150", "3.5 - 5.4", "0.8 - 2.11" */
-    if (ref.indexOf('-') > -1) {
+      if (!dir) return null;
+    } else if (ref.indexOf('-') > -1) {
       var nums = ref.match(/-?\d+(\.\d+)?/g);
       if (nums && nums.length >= 2) {
-        var lo = parseFloat(nums[0]), hi = parseFloat(nums[1]);
-        if (lo > hi) { var t = lo; lo = hi; hi = t; }        // defensive swap
-        if (v < lo) return 'low';
-        if (v > hi) return 'high';
-        return null;
-      }
-    }
-    return null;  // unknown/non-numeric ref ("Negative", "200", ...)
+        lo = parseFloat(nums[0]); hi = parseFloat(nums[1]);
+        if (lo > hi) { var t = lo; lo = hi; hi = t; }
+        if (v < lo) dir = 'low';
+        else if (v > hi) dir = 'high';
+        else return null;
+      } else return null;
+    } else return null;
+
+    /* calculate severity based on % outside range */
+    var range = hi - lo;
+    if (range <= 0) range = Math.abs(hi) || 1;
+    var pct = dir === 'high' ? ((v - hi) / range) * 100 : ((lo - v) / range) * 100;
+    var severity = pct <= 10 ? 'mild' : (pct <= 25 ? 'moderate' : 'critical');
+    return { dir: dir, severity: severity };
   }
 
   function isAbnormal(valueStr, refStr) {
@@ -1338,16 +1360,13 @@
     var title = tName + (tCode ? ' (' + tCode + ')' : '');
     if (!/report\s*:?\s*$/i.test(title)) title += ' REPORT';
 
-    /* RESULT header boxes (span the title row + header row) */
-    var boxHtml = cols.map(function (c, ci) {
-      var lbl = ci === 0 ? 'CURRENT' : 'PREVIOUS';
-      var lblColor = '#000';
+    /* RESULT header boxes — match reference: RESULT / d:m:yyyy / dd-Mmm-yy hh:mm */
+    var boxHtml = cols.map(function (c) {
       return '<div style="border:1px solid #000;background:#d9f2fb;text-align:center;' +
-        'padding:4px 2px;line-height:1.5;font-size:0.95em;grid-row:span 2">' +
-        '<div style="font-weight:700;color:' + lblColor + ';font-size:0.85em">' + lbl + '</div>' +
+        'padding:4px 2px;line-height:1.4;font-size:0.95em;grid-row:span 2">' +
         '<div style="font-weight:700">RESULT</div>' +
         '<div style="font-weight:700">' + App.esc(fmtDMY(c.reportedAt)) + '</div>' +
-        '<div>' + App.esc(fmtDTm(c.reportedAt)).replace(/ /g, '&nbsp;') + '</div>' +
+        '<div style="font-size:0.9em">' + App.esc(fmtDTm(c.reportedAt)).replace(/ /g, '&nbsp;') + '</div>' +
       '</div>';
     }).join('');
 
@@ -1357,13 +1376,15 @@
         'background:#d9f2fb;font-weight:700;padding:4px 6px;font-size:1em">' + h + '</div>';
     }).join('');
 
-    /* value cell: centered; abnormal = red bold with ↑/↓ before the value */
+    /* value cell: centered; abnormal = color by severity with ↑/↓ before the value */
+    /* mild (≤10% out) = amber #e65100, moderate (≤25%) = orange #ef6c00, critical = red #c00 */
     function valCell(valueStr, refStr) {
       var disp = (valueStr == null) ? '' : String(valueStr);
-      var dir = abnormalDir(disp, refStr);
-      if (dir) {
-        var arrow = dir === 'high' ? '↑' : '↓';
-        return '<div style="text-align:center;color:#c00;font-weight:700">' +
+      var sev = abnormalSeverity(disp, refStr);
+      if (sev) {
+        var arrow = sev.dir === 'high' ? '↑' : '↓';
+        var color = sev.severity === 'critical' ? '#c00' : (sev.severity === 'moderate' ? '#ef6c00' : '#e65100');
+        return '<div style="text-align:center;color:' + color + ';font-weight:700">' +
           arrow + ' ' + App.esc(disp) + '</div>';
       }
       return '<div style="text-align:center">' + App.esc(disp) + '</div>';
@@ -1429,14 +1450,14 @@
   function sectionDividerHtml(title) {
     return '<div style="background:#e8e8e8;border:1px solid #000;' +
       'padding:7px 10px;margin:22px 0 10px;' +
-      'font-size:1.12em;font-weight:700;color:#111;' +
+      'font-size:1.12em;font-weight:700;color:#000;' +
       'page-break-after:avoid">' +
       App.esc(title || '') + '</div>';
   }
 
   function subsectionHeaderHtml(title) {
     return '<h3 style="margin:20px 0 8px;font-size:1em;font-weight:700;' +
-      'letter-spacing:0.05em;color:#111;text-transform:uppercase;' +
+      'letter-spacing:0.05em;color:#000;text-transform:uppercase;' +
       'page-break-after:avoid">' +
       App.esc(String(title || '').toUpperCase()) + '</h3>';
   }
@@ -1497,13 +1518,8 @@
             '</div>';
           }).join('') + '</div>';
     } else {
-      sigHtml =
-        '<div style="display:flex;justify-content:space-between;margin:30px 0 6px">' +
-          '<div style="text-align:center;min-width:180px">' +
-            '<div style="border-top:1px solid #000;padding-top:6px;font-size:0.9em">Lab Technologist</div></div>' +
-          '<div style="text-align:center;min-width:180px">' +
-            '<div style="border-top:1px solid #000;padding-top:6px;font-size:0.9em">Pathologist</div></div>' +
-        '</div>';
+      /* signature lines removed per user request */
+      sigHtml = '';
     }
 
     /* 4: disclaimer note inside a bordered box */
@@ -1630,11 +1646,11 @@
 
     var bodyHtml = headOut + infoHtml + testsHtml +
       (pendingCount
-        ? '<p style="color:#d97706;font-size:0.96em;margin:10px 0"><em>Note: ' +
+        ? '<p style="color:#000;font-size:0.96em;margin:10px 0"><em>Note: ' +
           pendingCount + ' test(s) from this invoice are still pending.</em></p>'
         : '') +
       (s.footerNote
-        ? '<p style="color:#64748b;margin-top:18px;margin-bottom:4px;font-size:0.92em"><em>' +
+        ? '<p style="color:#000;margin-top:18px;margin-bottom:4px;font-size:0.92em"><em>' +
           App.esc(s.footerNote) + '</em></p>'
         : '') +
       footOut;
@@ -1728,24 +1744,30 @@
 
   /* print choice dialog: with or without the lab letterhead header */
   function printReportChoice(invoiceId) {
-    /* find previous report for this patient (for auto-comparison) */
-    var prevInvId = null;
+    /* find all previous reports for this patient */
+    var prevList = [];
     try {
       var curInv = invOf(invoiceId);
       if (curInv && curInv.patientId) {
-        var prevs = DB.all('invoices')
+        prevList = DB.all('invoices')
           .filter(function (inv) {
             return inv.patientId === curInv.patientId && inv.id !== invoiceId &&
               joinedRows('ready').some(function (r) { return r.invoice.id === inv.id; });
           })
           .sort(function (a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
-        if (prevs.length) prevInvId = prevs[0].id;
       }
     } catch (e) {}
-    var cmpHtml = prevInvId
-      ? '<label style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer;font-weight:600">' +
-        '<input type="checkbox" id="prCmp" style="width:18px;height:18px"> ' +
-        'Include previous report comparison on same page</label>' : '';
+    var cmpHtml = '';
+    if (prevList.length) {
+      cmpHtml = '<div style="margin-top:14px;border:1px solid var(--line);border-radius:8px;padding:10px;max-height:180px;overflow:auto">' +
+        '<div style="font-weight:700;margin-bottom:8px">Previous Reports <span class="muted" style="font-weight:400">(select to include in comparison)</span></div>';
+      prevList.forEach(function (p, i) {
+        cmpHtml += '<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;border-bottom:1px solid var(--line)">' +
+          '<input type="checkbox" class="prCmpSel" value="' + App.esc(p.id) + '"' + (i === 0 ? ' checked' : '') + ' style="width:16px;height:16px"> ' +
+          '<span><strong>' + App.esc(p.no || p.id) + '</strong> <span class="muted">' + App.esc(App.d(p.createdAt)) + '</span></span></label>';
+      });
+      cmpHtml += '</div>';
+    }
     App.modal('Print Report',
       '<p style="margin-bottom:16px">Print this report with or without the lab header?</p>' +
       '<div style="display:flex;gap:12px">' +
@@ -1754,15 +1776,21 @@
       '</div>' + cmpHtml +
       '<p class="muted" style="margin-top:12px;font-size:12px;margin-bottom:0">Use "Without Header" when printing on pre-printed letterhead paper.</p>',
       { onOpen: function (ov, close) {
-          function wantCmp() { var c = ov.querySelector('#prCmp'); return c && c.checked; }
+          function selCmps() {
+            var out = [];
+            ov.querySelectorAll('.prCmpSel:checked').forEach(function (c) { out.push(c.value); });
+            return out;
+          }
           ov.querySelector('#prWithHead').addEventListener('click', function () {
             close();
-            if (wantCmp() && prevInvId) printWithComparison(invoiceId, prevInvId, {});
+            var sels = selCmps();
+            if (sels.length) printWithComparison(invoiceId, sels[0], {});
             else printReport(invoiceId, {});
           });
           ov.querySelector('#prNoHead').addEventListener('click', function () {
             close();
-            if (wantCmp() && prevInvId) printWithComparison(invoiceId, prevInvId, { noLabHeader: true });
+            var sels = selCmps();
+            if (sels.length) printWithComparison(invoiceId, sels[0], { noLabHeader: true });
             else printReport(invoiceId, { noLabHeader: true });
           });
         }
@@ -2320,14 +2348,7 @@
       });
       y += fSigBlockH + 5;
     } else {
-      // Fallback: handwritten signature lines when no signatories are configured
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-      doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.3);
-      doc.line(M, y, M + 52, y);
-      doc.line(W - M - 52, y, W - M, y);
-      txt('Lab Technologist', M + 26, y + 5, { align: 'center' });
-      txt('Pathologist', W - M - 26, y + 5, { align: 'center' });
-      y += 12;
+      // Signature lines removed per user request — no fallback
     }
 
     // 4) Address block — bold, centered (3 lines as in the reference report)
@@ -2496,9 +2517,23 @@
           pg.rows.forEach(function (r) { if (r.res && r.res.reportedAt && r.res.reportedAt > lastRep) lastRep = r.res.reportedAt; });
           var actHtml = invOrder.map(function (iid) {
             var inv = invMap[iid].invoice;
+            /* check if patient has an older report for comparison */
+            var hasOld = false, oldInvId = null;
+            try {
+              var allInvs = DB.all('invoices')
+                .filter(function (x) {
+                  return x.patientId === pat.id && x.id !== iid &&
+                    joinedRows('ready').some(function (r) { return r.invoice.id === x.id; });
+                })
+                .sort(function (a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
+              if (allInvs.length) { hasOld = true; oldInvId = allInvs[0].id; }
+            } catch (e) {}
+            var cmpBtn = hasOld
+              ? ' <button class="btn btn-ghost btn-sm" data-rcmp="' + App.esc(inv.id) + '|' + App.esc(oldInvId) + '" style="background:#e3f2fd;color:#1565c0;border:1px solid #bbdefb">⇄ Compare</button>'
+              : '';
             return '<div style="margin-bottom:4px;white-space:nowrap">' +
               '<button class="btn btn-ghost btn-sm" data-rview="' + App.esc(inv.id) + '">View</button> ' +
-              '<button class="btn btn-primary btn-sm" data-rprint="' + App.esc(inv.id) + '">' + PRINT_ICON + ' Print</button></div>';
+              '<button class="btn btn-primary btn-sm" data-rprint="' + App.esc(inv.id) + '">' + PRINT_ICON + ' Print</button>' + cmpBtn + '</div>';
           }).join('');
           return '<tr>' +
             '<td><span class="mono">' + App.esc(pat.id || '—') + '</span></td>' +
@@ -2544,6 +2579,12 @@
     });
     v.querySelectorAll('[data-rprint]').forEach(function (b) {
       b.addEventListener('click', function () { printReportChoice(b.getAttribute('data-rprint')); });
+    });
+    v.querySelectorAll('[data-rcmp]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var ids = (b.getAttribute('data-rcmp') || '').split('|');
+        if (ids.length === 2) compareReports(ids[1], ids[0]);
+      });
     });
     v.querySelectorAll('[data-rviewfirst]').forEach(function (b) {
       b.addEventListener('click', function () {

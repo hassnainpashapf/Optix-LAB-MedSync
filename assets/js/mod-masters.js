@@ -150,7 +150,7 @@ function renderTests() {
           }).join('') +
         '</select>' +
         (canEdit ? '<button type="button" class="btn btn-ghost" id="t-import" style="margin-left:8px">📥 Import CSV</button>' : '') +
-        (canEdit ? '<button type="button" class="btn btn-ghost" id="t-seed" style="margin-left:8px" title="Create 5000 tests with price 0">🌱 Seed 5000 Tests (Rs 0)</button>' : '') +
+        (canEdit ? '' : '') +
         (canEdit ? '<button type="button" class="btn btn-primary" id="t-add" style="margin-left:auto">+ Add Test</button>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="t-chips">' + chips + '</div>' +

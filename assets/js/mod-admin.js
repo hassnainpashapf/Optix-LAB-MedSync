@@ -573,14 +573,14 @@
       + '<div style="grid-column:1/-1"><label class="label">Signatory Doctors <span class="muted" style="font-weight:400">(shown on lab reports)</span></label>'
       + '<div id="spSigList"></div>'
       + '<button class="btn btn-ghost" type="button" id="spSigAdd" style="margin-top:8px">+ Add Signatory</button></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(optional — HTML allowed, replaces the default header)</span></label>'
+      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(advanced — only if you need full control; leave empty to use the automatic header above)</span></label>'
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spHeadSample">Load Sample</button>'
       + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Clear</button></div>'
-      + '<textarea class="input" id="spHeadHtml" rows="5" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.headerHtml || HEADER_SAMPLE) + '</textarea></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(optional — HTML allowed, replaces the default footer)</span></label>'
+      + '<textarea class="input" id="spHeadHtml" rows="3" placeholder="Leave empty for automatic header">' + App.esc(s.headerHtml || '') + '</textarea></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(advanced — only if you need full control; leave empty to use the automatic footer above)</span></label>'
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spFootSample">Load Sample</button>'
       + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Clear</button></div>'
-      + '<textarea class="input" id="spFootHtml" rows="5" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.footerHtml || FOOTER_SAMPLE) + '</textarea></div>'
+      + '<textarea class="input" id="spFootHtml" rows="3" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea></div>'
       + '</div>'
       + '<div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" id="spSave">Save Profile</button>' +
         '<button class="btn btn-ghost" id="spPreviewBtn">👁 Preview Report</button></div>'
@@ -638,10 +638,12 @@
     var _sigList = document.getElementById('spSigList');
     function _sigRowHTML(sig) {
       sig = sig || {};
-      return '<div class="sp-sig-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;margin-bottom:8px">'
+      return '<div class="sp-sig-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto auto auto;gap:8px;margin-bottom:8px;align-items:center">'
         + '<input class="input sp-sig-name" placeholder="Name" maxlength="80" value="' + App.esc(sig.name || '') + '">'
         + '<input class="input sp-sig-qual" placeholder="Qualification" maxlength="80" value="' + App.esc(sig.qual || '') + '">'
         + '<input class="input sp-sig-title" placeholder="Title (e.g. Consultant Pathologist)" maxlength="80" value="' + App.esc(sig.title || '') + '">'
+        + '<button class="btn btn-ghost sp-sig-up" type="button" title="Move up">↑</button>'
+        + '<button class="btn btn-ghost sp-sig-dn" type="button" title="Move down">↓</button>'
         + '<button class="btn btn-ghost sp-sig-rm" type="button" title="Remove signatory">✕</button></div>';
     }
     function _syncSigs() {
@@ -661,12 +663,21 @@
     }
     if (_sigList) {
       _sigList.innerHTML = ((s.signatories && s.signatories.length) ? s.signatories : []).map(_sigRowHTML).join('');
-      /* delegated remove: direct DOM removal keeps other rows' typed values intact */
+      /* delegated: remove, move up, move down */
       _sigList.addEventListener('click', function (e) {
-        var btn = e.target && e.target.closest ? e.target.closest('.sp-sig-rm') : null;
+        var btn = e.target && e.target.closest ? e.target.closest('button') : null;
         if (!btn) return;
         var row = btn.closest('.sp-sig-row');
-        if (row && row.parentNode) row.parentNode.removeChild(row);
+        if (!row || !row.parentNode) return;
+        if (btn.classList.contains('sp-sig-rm')) {
+          row.parentNode.removeChild(row);
+        } else if (btn.classList.contains('sp-sig-up')) {
+          var prev = row.previousElementSibling;
+          if (prev) row.parentNode.insertBefore(row, prev);
+        } else if (btn.classList.contains('sp-sig-dn')) {
+          var next = row.nextElementSibling;
+          if (next) row.parentNode.insertBefore(next, row);
+        }
       });
     }
     var _sigAdd = document.getElementById('spSigAdd');

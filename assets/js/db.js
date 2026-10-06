@@ -145,7 +145,13 @@
         invoicePrefix: 'INV',
         footerNote: 'Get well soon. Reports available on counter & phone.',
         currency: 'PKR',
-        whatsapp: { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' }
+        whatsapp: { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' },
+        signatories: [
+          { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
+          { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: '' },
+          { name: 'ABDAL INAM UL HAQ KHANZADA', qual: 'M.Phil (Microbiology)', title: 'Lab Technologist' },
+          { name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Lab Technologist' }
+        ]
       },
       users: [], patients: [], tests: [], doctors: [],
       invoices: [], payments: [], expenses: [], results: []
@@ -428,6 +434,16 @@
       store.settings.whatsapp = { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' };
       save(store);
     }
+    /* existing installs lack default signatory doctors — seed from reference */
+    if (store && store.settings && (!store.settings.signatories || !store.settings.signatories.length)) {
+      store.settings.signatories = [
+        { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
+        { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: '' },
+        { name: 'ABDAL INAM UL HAQ KHANZADA', qual: 'M.Phil (Microbiology)', title: 'Lab Technologist' },
+        { name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Lab Technologist' }
+      ];
+      save(store);
+    }
   }
 
   /* Switch to a lab's isolated store. Falls back to the first registered lab.
@@ -444,6 +460,31 @@
       save(store);
     }
     applyMigrations();
+    /* auto-seed 5000 tests if catalog is loaded and fewer than 100 tests exist */
+    try {
+      if (store && typeof TEST_CATALOG_5000 !== 'undefined' && TEST_CATALOG_5000.length) {
+        var existingNames = {};
+        (store.tests || []).forEach(function (t) { existingNames[(t.name || '').toLowerCase()] = 1; });
+        if (Object.keys(existingNames).length < 100) {
+          var added = 0;
+          TEST_CATALOG_5000.forEach(function (ct, i) {
+            var nm = (ct.name || '').toLowerCase();
+            if (!ct.name || existingNames[nm]) return;
+            existingNames[nm] = 1;
+            store.seq.tests++;
+            store.tests.push({
+              id: 't' + Date.now() + '_' + i + '_' + added,
+              code: 'T' + (10000 + i),
+              name: ct.name, category: ct.category || 'General', price: 0,
+              sampleType: 'Blood', tat: 'Same day', active: true,
+              params: ct.params || []
+            });
+            added++;
+          });
+          if (added) save(store);
+        }
+      }
+    } catch (e) {}
     try { localStorage.setItem(LAST_KEY, lab.id); } catch (e) {}
     return copy(lab);
   }
