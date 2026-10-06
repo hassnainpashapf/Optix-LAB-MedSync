@@ -8,10 +8,11 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
+echo "== 0/3 syncing embedded server =="; ../sync-server.sh
 echo "== 1/3 staging app source =="
 rm -rf app-stage
 cp -a ../../electron-src app-stage 2>/dev/null || cp -r ../../electron-src app-stage
-for f in main.js preload.js server/index.js server/store.js; do
+for f in main.js preload.js server/server.js server/sync-store.js server/desktop-sync.js server/db-sqlite.js; do
   node --check "app-stage/$f" || { echo "SYNTAX ERROR in $f"; exit 1; }
 done
 

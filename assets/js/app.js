@@ -746,6 +746,38 @@
   };
 
   window.addEventListener('hashchange', render);
+  /* desktop app: small badge showing whether this PC's data has reached the cloud */
+  (function () {
+    if (!(window.labposDesktop && window.labposDesktop.isDesktop)) return;
+    var badge = null;
+    function paint(st) {
+      if (!session()) { if (badge) badge.style.display = 'none'; return; }
+      if (!badge) {
+        badge = document.createElement('div');
+        badge.id = 'syncBadge';
+        badge.style.cssText = 'position:fixed;right:14px;bottom:10px;z-index:9998;font:600 11.5px/1.2 system-ui,sans-serif;padding:6px 10px;border-radius:999px;background:#fff;border:1px solid #d6dde6;box-shadow:0 2px 8px rgba(0,0,0,.08);cursor:pointer;color:#334155';
+        badge.title = 'Click to sync now';
+        badge.onclick = function () { poll(true); };
+        document.body.appendChild(badge);
+      }
+      badge.style.display = '';
+      var pend = st && st.pending ? ' · ' + st.pending + ' pending' : '';
+      if (st && st.syncing) { badge.textContent = '⟳ Syncing…'; badge.style.color = '#0369a1'; }
+      else if (st && st.hasSession && st.online && !st.lastError) { badge.textContent = '● Synced to cloud' + pend; badge.style.color = '#15803d'; }
+      else if (st && st.lastError && st.hasSession === false && /expired/i.test(st.lastError)) { badge.textContent = '○ Sign in again to sync' + pend; badge.style.color = '#b45309'; }
+      else { badge.textContent = '○ Offline — saved on this PC' + pend; badge.style.color = '#b45309'; }
+    }
+    function poll(now) {
+      if (!session() || !window.LABPOS_API) return paint(null);
+      var h = window.DB && DB.authHeaders ? DB.authHeaders({}) : {};
+      fetch(window.LABPOS_API + '/api/sync/' + (now ? 'now' : 'status'), { method: now ? 'POST' : 'GET', headers: h })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function () { return fetch(window.LABPOS_API + '/api/sync/status', { headers: h }).then(function (r) { return r.ok ? r.json() : null; }); })
+        .then(paint).catch(function () { paint(null); });
+    }
+    setInterval(function () { poll(false); }, 15000);
+    window.addEventListener('hashchange', function () { setTimeout(function () { poll(false); }, 800); });
+  })();
   /* cloud mode: surface failed saves, handle expired sessions, pick up other PCs' changes */
   if (window.DB) {
     var _lastWriteToast = 0;

@@ -13,26 +13,27 @@ let win = null;
 
 async function boot() {
   updater.applyPendingUpdate(); /* swap in any staged update BEFORE the server starts */
-  const { start } = require('./server/index.js');
-  const dbPath = path.join(app.getPath('userData'), 'labpos.db');
-  /* one-time rebrand migration: productName changed LabPOS -> Optix LAB MedSync,
-     so userData moved from %APPDATA%/LabPOS to %APPDATA%/Optix LAB MedSync.
-     Carry the existing database over so no lab records are lost. */
-  try {
-    if (!fs.existsSync(dbPath)) {
-      const legacyDb = path.join(app.getPath('appData'), 'LabPOS', 'labpos.db');
-      if (fs.existsSync(legacyDb)) {
-        fs.mkdirSync(path.dirname(dbPath), { recursive: true });
-        fs.copyFileSync(legacyDb, dbPath);
-        console.log('[labpos] migrated database from', legacyDb);
-      }
-    }
-  } catch (e) { console.error('[labpos] db migration failed:', e && e.message); }
-
+  const userData = app.getPath('userData');
+  const cfg = updater.getConfig ? updater.getConfig() : {};
+  const cloudUrl = String(cfg.cloudUrl || '').replace(/\/+$/, '');
+  /* The embedded server is the cloud server running locally on SQLite: the app works fully offline and,
+     when cloud.json has a cloudUrl, syncs with the cloud (see server/desktop-sync.js). */
+  Object.assign(process.env, {
+    DB_ADAPTER: 'sqlite',
+    SQLITE_PATH: path.join(userData, 'labpos-sync.db'),
+    DATA_DIR: userData,
+    BIND_HOST: '127.0.0.1',
+    WWW_ROOT: __dirname,
+    DESKTOP_CLOUD_URL: cloudUrl,
+    SUPERADMIN_KEY: '',
+  });
   let started = null;
   let lastErr = null;
+  const serverPath = require.resolve('./server/server.js');
   for (let p = 3765; p < 3785; p++) {
-    try { started = await start({ port: p, dbPath, wwwRoot: __dirname, cloudUrl: (updater.getConfig && updater.getConfig().cloudUrl) || '' }); break; }
+    process.env.PORT = String(p);
+    delete require.cache[serverPath]; /* server.js reads its config at load time */
+    try { started = await require('./server/server.js').main(); started.port = p; break; }
     catch (e) { lastErr = e; }
   }
   if (!started) {

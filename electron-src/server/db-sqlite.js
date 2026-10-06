@@ -1,5 +1,7 @@
-/* LabPOS storage — SQLite via node:sqlite (zero native deps).
-   Document-style: every row stored as JSON in kv(t, id, data). */
+/* LabPOS cloud storage — SQLite via node:sqlite (zero native deps).
+   Document-style: every row stored as JSON in kv(t, id, data).
+   Interface matches db-pg.js exactly; all methods are async so the server
+   can await both adapters uniformly. */
 'use strict';
 const { DatabaseSync } = require('node:sqlite');
 const fs = require('fs');
@@ -7,7 +9,7 @@ const path = require('path');
 
 const TABLES = ['settings', 'users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'wa_log', 'report_templates', 'report_schedules'];
 
-function openStore(dbPath) {
+async function openStore(dbPath) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });
   const db = new DatabaseSync(dbPath);
   db.exec(`CREATE TABLE IF NOT EXISTS kv (t TEXT NOT NULL, id TEXT NOT NULL, data TEXT NOT NULL, PRIMARY KEY (t, id));
@@ -23,28 +25,30 @@ function openStore(dbPath) {
 
   function parse(s) { try { return JSON.parse(s); } catch (e) { return null; } }
 
-  return {
-    isEmpty() { return qCount.get().c === 0; },
-    all(t) { return qAll.all(t).map(r => parse(r.data)).filter(Boolean); },
-    get(t, id) { const r = qGet.get(t, id); return r ? parse(r.data) : null; },
-    put(t, row) {
+  const store = {
+    async isEmpty() { return qCount.get().c === 0; },
+    async all(t) { return qAll.all(t).map(r => parse(r.data)).filter(Boolean); },
+    async get(t, id) { const r = qGet.get(t, id); return r ? parse(r.data) : null; },
+    async put(t, row) {
       if (!row || row.id == null) throw new Error('row.id required');
       qPut.run(t, String(row.id), JSON.stringify(row));
       return row;
     },
-    patch(t, id, p) {
-      const cur = this.get(t, id) || { id };
+    async patch(t, id, p) {
+      const cur = await this.get(t, id) || { id };
       const next = Object.assign({}, cur, p, { id });
       return this.put(t, next);
     },
-    del(t, id) { qDel.run(t, id); },
-    getSeq() { const r = qMetaGet.get('seq'); return r ? parse(r.v) : {}; },
-    setSeq(s) { qMetaPut.run('seq', JSON.stringify(s || {})); },
-    dump() {
-      const out = { seq: this.getSeq() };
+    async del(t, id) { qDel.run(t, id); },
+    async getSeq() { const r = qMetaGet.get('seq'); return r ? parse(r.v) : {}; },
+    async setSeq(s) { qMetaPut.run('seq', JSON.stringify(s || {})); },
+    async getMeta(k) { const r = qMetaGet.get(k); return r ? parse(r.v) : null; },
+    async setMeta(k, v) { qMetaPut.run(k, JSON.stringify(v === undefined ? null : v)); },
+    async dump() {
+      const out = { seq: await this.getSeq() };
       for (const t of TABLES) {
-        if (t === 'settings') { out.settings = this.get('settings', 'main') || null; }
-        else out[t] = this.all(t);
+        if (t === 'settings') { out.settings = await this.get('settings', 'main'); }
+        else out[t] = await this.all(t);
       }
       /* normalize seq from existing ids so client-generated ids never collide after restart */
       for (const t of TABLES) {
@@ -58,7 +62,7 @@ function openStore(dbPath) {
       }
       return out;
     },
-    restore(d) {
+    async restore(d) {
       if (!d || typeof d !== 'object') throw new Error('bad dump');
       db.exec('DELETE FROM kv; DELETE FROM meta;');
       const putAll = db.prepare('INSERT INTO kv (t, id, data) VALUES (?, ?, ?)');
@@ -68,11 +72,12 @@ function openStore(dbPath) {
         else if (Array.isArray(d[t])) for (const row of d[t]) if (row && row.id != null) rows.push({ t, id: String(row.id), data: JSON.stringify(row) });
       }
       for (const r of rows) putAll.run(r.t, r.id, r.data);
-      if (d.seq) this.setSeq(d.seq);
+      if (d.seq) await this.setSeq(d.seq);
     },
-    seed(seedObj) { this.restore(seedObj); },
-    close() { db.close(); },
+    async seed(seedObj) { return this.restore(seedObj); },
+    async close() { db.close(); },
   };
+  return store;
 }
 
 module.exports = { openStore, TABLES };
