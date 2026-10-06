@@ -253,8 +253,25 @@
       (patient.age ? ' <span class="muted">(' + App.esc(String(patient.age)) + (patient.gender ? '/' + App.esc(patient.gender) : '') + ')</span>' : '') +
       ' <span class="muted">• ' + App.esc(invList) + ' • ' + rows.length + ' test(s)</span>';
 
+    // payment section: if any invoice has a due, offer to collect it now
+    var _invSeen = {}, _totalDue = 0;
+    rows.forEach(function (r) {
+      var iid = r.invoice.id;
+      if (!_invSeen[iid]) { _invSeen[iid] = true; _totalDue += (+r.invoice.due || 0); }
+    });
+    var payHtml = '';
+    if (_totalDue > 0) {
+      payHtml = '<div class="card" style="margin-bottom:14px;border:1.5px solid var(--amber)">' +
+        '<div class="card-b"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">' +
+        '<div><strong style="font-size:15px">Payment Due: ' + App.money(_totalDue) + '</strong>' +
+        '<div class="muted" style="font-size:12px">Mark as paid now to activate the QR code on the report. Otherwise it stays in Dues.</div></div>' +
+        '<label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer;font-size:14px">' +
+        '<input type="checkbox" id="bresPaid" style="width:20px;height:20px;accent-color:var(--green)"> Mark as Paid</label>' +
+        '</div></div></div>';
+    }
+
     App.modal('Enter Results — ' + App.esc(patient.name || 'Patient'),
-      '<p class="muted" style="margin-bottom:14px">' + sub + '</p>' + sectionsHtml +
+      '<p class="muted" style="margin-bottom:14px">' + sub + '</p>' + sectionsHtml + payHtml +
       '<div class="actions" style="margin-top:16px;position:sticky;bottom:0;background:#fff;padding-top:12px;border-top:1px solid var(--line)">' +
       '<button class="btn btn-ghost" id="bresCancel">Cancel</button>' +
       '<button class="btn btn-primary" id="bresSave">Save All Results</button></div>',
@@ -292,9 +309,37 @@
               else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy });
               saved++;
             });
+            // payment: if "Mark as Paid" checked, collect full due on each invoice
+            var payBox = ov.querySelector('#bresPaid');
+            var paidMsg = '';
+            if (payBox && payBox.checked) {
+              var pSeen = {}, pTotal = 0;
+              rows.forEach(function (r) {
+                var iid = r.invoice.id;
+                if (pSeen[iid]) return;
+                pSeen[iid] = true;
+                var inv = null;
+                try { inv = DB.get('invoices', iid); } catch (e) {}
+                if (!inv) return;
+                var due = Math.round((+inv.due || 0) * 100) / 100;
+                if (due > 0) {
+                  try {
+                    DB.insert('payments', {
+                      invoiceId: iid, amount: due, method: 'Cash',
+                      date: new Date().toISOString(),
+                      note: 'Collected at result entry', createdBy: sessionUser()
+                    });
+                  } catch (e) {}
+                  var newPaid = Math.round(((+inv.paid || 0) + due) * 100) / 100;
+                  try { DB.update('invoices', iid, { paid: newPaid, due: 0, status: 'paid' }); } catch (e) {}
+                  pTotal += due;
+                }
+              });
+              if (pTotal > 0) paidMsg = ' • ' + App.money(pTotal) + ' collected — QR code activated';
+            }
             close();
             if (!saved) { App.toast('Enter at least one result value', 'err'); return; }
-            App.toast(saved + ' result(s) saved — marked ready' + (skipped ? ' (' + skipped + ' skipped — empty)' : ''));
+            App.toast(saved + ' result(s) saved — marked ready' + (skipped ? ' (' + skipped + ' skipped — empty)' : '') + paidMsg);
             render();
             // offer print: switch to ready tab so the user can print
             tab = 'ready';
@@ -544,6 +589,8 @@
   function getReportPdfUrl(invoiceId) {
     var inv = invOf(invoiceId);
     if (!inv) return Promise.resolve(null);
+    // QR goes live only when the invoice is fully paid; unpaid reports print without a live QR
+    if (inv.status !== 'paid') return Promise.resolve(null);
     var pdf = null;
     try { pdf = buildReportPdf(invoiceId); } catch (e) { pdf = null; }
     if (!pdf || !pdf.dataUri) return Promise.resolve(null);
@@ -585,19 +632,20 @@
   async function printReport(invoiceId) {
     var d = reportData(invoiceId);
     if (!d) { App.toast('No ready results to print', 'err'); return; }
-    var qrImg = null, uploadFailed = false;
+    var invPaid = d.inv && d.inv.status === 'paid';
+    var qrImg = null, noQrReason = null;
     try {
       var jsOk = await App.ensureJsPDF();
       if (jsOk) {
         var url = await getReportPdfUrl(invoiceId);
         if (url) qrImg = qrDataUrlFor(url);
-        else uploadFailed = true;
-      } else uploadFailed = true;
-    } catch (e) { uploadFailed = true; }
+        else noQrReason = invPaid ? 'upload failed' : 'payment pending — QR activates when paid';
+      } else noQrReason = 'upload failed';
+    } catch (e) { noQrReason = 'upload failed'; }
     var html = reportHtml(d);
     if (qrImg) html = html.replace('data-qr="1"', 'data-qr="1" src="' + qrImg + '"');
     else html = stripQrImg(html);
-    if (uploadFailed) App.toast('Report printed without QR (upload failed)', 'err');
+    if (noQrReason) App.toast('Report printed without QR (' + noQrReason + ')', invPaid ? 'err' : 'info');
     App.print('Lab Report — ' + d.inv.no, html, { noHeader: true });
   }
 
