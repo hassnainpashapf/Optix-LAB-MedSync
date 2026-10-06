@@ -506,6 +506,7 @@
     var invRows = st.invoices.map(function (inv) {
       var testNames = (inv.items || []).map(function (it) { return it.name || it.code; }).join(', ');
       return '<tr>' +
+        '<td><input type="checkbox" class="cmp-chk" data-inv="' + App.esc(inv.id) + '" title="Select for comparison"></td>' +
         '<td><a class="link" href="#/invoice/' + App.esc(inv.id) + '"><span class="mono">' + App.esc(inv.no || inv.id) + '</span></a></td>' +
         '<td>' + App.d(inv.createdAt) + '</td>' +
         '<td class="tests-cell">' + App.esc(testNames || '—') + '</td>' +
@@ -590,10 +591,12 @@
         : App.empty('No tests ordered yet for this patient.')) +
       '</div></div>' +
 
-      '<div class="card"><div class="card-h"><h3>Invoice History</h3><span class="muted">' + st.visits + ' invoice(s)</span></div>' +
+      '<div class="card"><div class="card-h"><h3>Invoice History</h3><span class="muted">' + st.visits + ' invoice(s)</span>' +
+      '<button class="btn btn-primary btn-sm" id="cmpBtn" style="display:none;margin-left:auto">Compare Selected (2)</button></div>' +
       '<div class="card-b">' +
       (st.invoices.length
-        ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Invoice No</th><th>Date</th><th>Tests</th>' +
+        ? '<p class="muted" style="font-size:12px;margin-top:0">Tick any 2 invoices to compare their reports side by side.</p>' +
+          '<div class="tbl-wrap"><table class="table"><thead><tr><th></th><th>Invoice No</th><th>Date</th><th>Tests</th>' +
           '<th class="num">Total</th><th class="num">Paid</th><th class="num">Due</th><th>Status</th><th></th></tr></thead>' +
           '<tbody>' + invRows + '</tbody></table></div>'
         : App.empty('No invoices yet for this patient.')) +
@@ -633,6 +636,29 @@
           ensureResultsMod(function () { App.printLabReport(invId); });
         });
       });
+      /* report comparison: select 2 invoices, compare side by side */
+      var cmpBtn = document.getElementById('cmpBtn');
+      var cmpChks = Array.prototype.slice.call(document.querySelectorAll('.cmp-chk'));
+      function paintCmpBtn() {
+        var sel = cmpChks.filter(function (c) { return c.checked; });
+        if (cmpBtn) {
+          cmpBtn.style.display = sel.length === 2 ? '' : 'none';
+          cmpBtn.textContent = 'Compare Selected (' + sel.length + '/2)';
+        }
+      }
+      cmpChks.forEach(function (c) {
+        c.addEventListener('change', function () {
+          var sel = cmpChks.filter(function (x) { return x.checked; });
+          if (sel.length > 2) { c.checked = false; App.toast('Select only 2 invoices to compare', 'err'); return; }
+          paintCmpBtn();
+        });
+      });
+      if (cmpBtn) cmpBtn.addEventListener('click', function () {
+        var sel = cmpChks.filter(function (x) { return x.checked; }).map(function (x) { return x.getAttribute('data-inv'); });
+        if (sel.length !== 2) return;
+        ensureResultsMod(function () { App.compareReports(sel[0], sel[1]); });
+      });
+      paintCmpBtn();
       if (!edit) return;
       document.getElementById('pt-edit').addEventListener('click', function () {
         openPatientModal(p, function () { renderDetail({ id: p.id }); });

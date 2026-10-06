@@ -2377,6 +2377,84 @@
   App.printLabReport = printReportChoice;
   /* exposed so the Patient Profile page can enter results directly */
   App.enterLabResult = openEntry;
+
+  /* ---- report comparison: 2 invoices side by side with auto-diff ---- */
+  function compareReports(invId1, invId2) {
+    var d1 = reportData(invId1), d2 = reportData(invId2);
+    if (!d1 || !d2) { App.toast('Both reports need ready results to compare', 'err'); return; }
+    var s = d1.s || {};
+    /* index results by testId -> param name -> value */
+    function indexResults(d) {
+      var map = {};
+      (d.readyRows || []).forEach(function (r) {
+        var tid = (r.item && (r.item.testId || r.item.id)) || '';
+        var tname = (r.item && r.item.name) || (r.test && r.test.name) || tid;
+        var params = (r.test && r.test.params) || [];
+        var vals = (r.res && r.res.values) || {};
+        if (!map[tid]) map[tid] = { name: tname, params: {} };
+        params.forEach(function (p) {
+          map[tid].params[p.name] = { val: vals[p.name] || '—', unit: p.unit || '', ref: p.ref || '' };
+        });
+      });
+      return map;
+    }
+    var m1 = indexResults(d1), m2 = indexResults(d2);
+    var allTids = [];
+    Object.keys(m1).forEach(function (k) { if (allTids.indexOf(k) < 0) allTids.push(k); });
+    Object.keys(m2).forEach(function (k) { if (allTids.indexOf(k) < 0) allTids.push(k); });
+
+    function numVal(v) { var n = parseFloat(String(v).replace(/[^0-9.\-]/g, '')); return isNaN(n) ? null : n; }
+    function trend(v1, v2) {
+      var n1 = numVal(v1), n2 = numVal(v2);
+      if (n1 === null || n2 === null || v1 === '—' || v2 === '—') return '';
+      if (n2 > n1) return ' <span style="color:#c00;font-weight:700">↑</span>';
+      if (n2 < n1) return ' <span style="color:#c00;font-weight:700">↓</span>';
+      return ' <span style="color:#090">=</span>';
+    }
+
+    var rowsHtml = '';
+    allTids.forEach(function (tid) {
+      var t1 = m1[tid], t2 = m2[tid];
+      var tname = (t1 && t1.name) || (t2 && t2.name) || tid;
+      rowsHtml += '<tr><td colspan="5" style="background:#eef;font-weight:800;padding:8px">' + App.esc(tname) + '</td></tr>';
+      var pnames = [];
+      [t1, t2].forEach(function (t) {
+        if (t) Object.keys(t.params).forEach(function (pn) { if (pnames.indexOf(pn) < 0) pnames.push(pn); });
+      });
+      pnames.forEach(function (pn) {
+        var p1 = t1 && t1.params[pn], p2 = t2 && t2.params[pn];
+        var v1 = p1 ? p1.val : '—', v2 = p2 ? p2.val : '—';
+        var ref = (p1 && p1.ref) || (p2 && p2.ref) || '', unit = (p1 && p1.unit) || (p2 && p2.unit) || '';
+        var changed = v1 !== v2 && v1 !== '—' && v2 !== '—';
+        rowsHtml += '<tr' + (changed ? ' style="background:#fff8e1"' : '') + '>' +
+          '<td>' + App.esc(pn) + '</td>' +
+          '<td class="muted">' + App.esc(ref) + '</td>' +
+          '<td class="muted">' + App.esc(unit) + '</td>' +
+          '<td><strong>' + App.esc(v1) + '</strong></td>' +
+          '<td><strong>' + App.esc(v2) + '</strong>' + trend(v1, v2) + '</td></tr>';
+      });
+    });
+
+    var html =
+      '<div style="font-family:inherit;max-width:900px;margin:0 auto">' +
+      '<h2 style="text-align:center">Report Comparison</h2>' +
+      '<p style="text-align:center" class="muted">' + App.esc(d1.pat.name || '') + ' — ' +
+      App.esc(d1.inv.no) + ' (' + App.d(d1.inv.createdAt) + ') vs ' +
+      App.esc(d2.inv.no) + ' (' + App.d(d2.inv.createdAt) + ')</p>' +
+      '<table class="table"><thead><tr><th>Parameter</th><th>Normal Value</th><th>Unit</th>' +
+      '<th>' + App.esc(d1.inv.no) + '<br><span class="muted">' + App.d(d1.inv.createdAt) + '</span></th>' +
+      '<th>' + App.esc(d2.inv.no) + '<br><span class="muted">' + App.d(d2.inv.createdAt) + '</span></th>' +
+      '</tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
+      '<p class="muted" style="font-size:12px">↑ increased &nbsp; ↓ decreased &nbsp; = unchanged &nbsp; highlighted rows differ between reports</p>' +
+      '<div style="text-align:center;margin-top:16px"><button class="btn btn-primary" id="cmpPrint">Print Comparison</button></div>' +
+      '</div>';
+    App.modal('Compare Reports', html, { wide: true, onOpen: function (ov, close) {
+      ov.querySelector('#cmpPrint').addEventListener('click', function () {
+        App.print('Report Comparison — ' + (d1.pat.name || ''), html, { noHeader: true });
+      });
+    }});
+  }
+  App.compareReports = compareReports;
   /* sample report preview for Lab Profile settings (uses provided settings, not DB) */
   /* sample report preview for Lab Profile settings (uses provided settings, not DB).
      Redesigned demo (worker 18/20): Chughtai-like data exercising the new
