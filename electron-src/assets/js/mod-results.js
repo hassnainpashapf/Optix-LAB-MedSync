@@ -350,6 +350,78 @@
     } catch (e) { finishSend(fallbackLink); }
   }
 
+  /* ---------- critical values ----------
+     A numeric result is CRITICAL when it is far outside the patient's reference range (> 25% of the range width beyond
+     either limit, see abnormalSeverity). Saving such a result raises an immediate alert: a red pop-up for the technician,
+     a WhatsApp to the referring doctor and to the lab's own number (Settings > WhatsApp > "critical alerts", default ON),
+     and a "Critical results" card on every dashboard until someone acknowledges it. */
+  function criticalOf(row, vals) {
+    var out = [];
+    try {
+      var params = (row.test && Array.isArray(row.test.params)) ? row.test.params : [];
+      var pat = row.patient || patOf(row.invoice && row.invoice.patientId);
+      params.forEach(function (p) {
+        var v = vals[p.name];
+        if (v == null || v === '') return;
+        var ref = refFor(p, pat);
+        var sev = abnormalSeverity(String(v), ref);
+        if (sev && sev.severity === 'critical') out.push({ name: p.name, value: String(v), unit: p.unit || '', dir: sev.dir, ref: ref });
+      });
+    } catch (e) {}
+    return out;
+  }
+  function criticalMessage(inv, pat, crits, testName) {
+    var s = DB.get('settings', 'main') || {};
+    var lines = crits.map(function (c) {
+      return '• ' + c.name + ': ' + c.value + (c.unit ? ' ' + c.unit : '') + (c.dir === 'high' ? ' ↑ HIGH' : ' ↓ LOW') + (c.ref ? '  (normal ' + c.ref + ')' : '');
+    });
+    return '🚨 CRITICAL RESULT — ' + (s.labName || 'Lab') + '\nPatient: ' + (pat.name || '—') +
+      (pat.age ? ' (' + pat.age + ' yrs' + (pat.gender ? ', ' + pat.gender : '') + ')' : '') + '\nInvoice: ' + (inv.no || inv.id) +
+      (testName ? '\nTest: ' + testName : '') + '\n' + lines.join('\n') + '\nPlease review and act immediately.';
+  }
+  function criticalNotify(items) { /* items: [{row, crits}] */
+    if (!items || !items.length) return;
+    var cfg = waCfg();
+    var canWa = waReady(cfg) && cfg.autoCritical !== false;
+    var sent = [];
+    items.forEach(function (it) {
+      var inv = it.row.invoice, pat = it.row.patient || patOf(inv.patientId), doc = inv.doctorId ? DB.get('doctors', inv.doctorId) : null;
+      var msg = criticalMessage(inv, pat, it.crits, testName(it.row));
+      var targets = [];
+      if (doc && waPhone(doc.whatsapp || doc.phone)) targets.push({ to: waPhone(doc.whatsapp || doc.phone), name: doc.name || 'doctor', role: 'doctor' });
+      if (cfg.labNumber && waPhone(cfg.labNumber)) targets.push({ to: waPhone(cfg.labNumber), name: 'Lab', role: 'lab' });
+      it.targets = targets.map(function (t) { return t.name; });
+      if (!canWa) return;
+      targets.forEach(function (t) {
+        waSendText(cfg, t.to, msg, function (err) {
+          try { DB.insert('wa_log', { kind: 'critical', invoiceId: inv.id, to: t.to, toName: t.name, toRole: t.role, status: err ? 'failed' : 'sent', error: err ? String(err.message || err).slice(0, 200) : '', ts: new Date().toISOString() }); } catch (e) {}
+          if (err) App.toast('Critical alert WhatsApp failed for ' + t.name, 'err');
+        });
+        sent.push(t.name);
+      });
+    });
+    var body = items.map(function (it) {
+      var inv = it.row.invoice, pat = it.row.patient || patOf(inv.patientId);
+      return '<div style="border:1px solid #fecaca;background:#fef2f2;border-radius:12px;padding:12px 14px;margin-bottom:10px">' +
+        '<div style="font-weight:800;color:#991b1b">' + App.esc(pat.name || '—') + ' <span style="font-weight:600;color:#7f1d1d">· ' + App.esc(inv.no || inv.id) + ' · ' + App.esc(testName(it.row)) + '</span></div>' +
+        it.crits.map(function (c) {
+          return '<div style="margin-top:6px;font-size:15px"><b>' + App.esc(c.name) + '</b>: <span style="color:#b91c1c;font-weight:800">' + (c.dir === 'high' ? '&uarr; ' : '&darr; ') +
+            App.esc(c.value) + ' ' + App.esc(c.unit) + '</span> <span class="muted" style="font-size:12.5px">(normal ' + App.esc(c.ref || '—') + ')</span></div>';
+        }).join('') + '</div>';
+    }).join('');
+    var tgt = []; items.forEach(function (it) { (it.targets || []).forEach(function (n) { if (tgt.indexOf(n) < 0) tgt.push(n); }); });
+    var note = canWa
+      ? (tgt.length ? 'WhatsApp alert sent to: <b>' + tgt.map(App.esc).join(', ') + '</b>.' : 'No doctor / lab WhatsApp number on file — please inform the doctor directly.')
+      : 'WhatsApp is not configured or critical alerts are off — please inform the doctor directly.';
+    App.modal('🚨 Critical value' + (items.length > 1 ? 's' : ''),
+      body + '<p style="margin:6px 0 0;font-size:13px">' + note + '</p>' +
+      '<div class="modal-actions" style="margin-top:14px"><button class="btn btn-primary" id="critOk">Noted</button></div>',
+      { onOpen: function (ov, close) { ov.querySelector('#critOk').addEventListener('click', close); } });
+  }
+  App.criticalList = function () {
+    try { return DB.all('results').filter(function (r) { return r.critical && r.critical.length && !r.criticalAck; }); } catch (e) { return []; }
+  };
+
   /* Trigger: call after result saves. Sends only for invoices whose report is
      now fully ready. Never throws — the result-save flow must not break. */
   function waAutoSendReady(invoiceIds) {
@@ -474,7 +546,7 @@
             '<td><strong>' + App.esc(p.name) + '</strong></td>' +
             '<td><input class="input" data-bt="' + ti + '" data-bpi="' + pi + '"' + (isNum ? ' type="number" step="any" inputmode="decimal"' : '') + ' value="' + App.esc(v) + '" placeholder="Enter value"></td>' +
             '<td class="muted">' + App.esc(p.unit || '') + '</td>' +
-            '<td class="muted">' + App.esc(p.ref || '') + '</td></tr>';
+            '<td class="muted">' + App.esc(refFor(p, patient)) + '</td></tr>';
         }).join('');
         fieldsHtml =
           '<table class="table"><thead><tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Reference Range</th></tr></thead>' +
@@ -521,7 +593,7 @@
       { wide: true, onOpen: function (ov, close) {
           document.getElementById('bresCancel').addEventListener('click', close);
           document.getElementById('bresSave').addEventListener('click', function () {
-            var saved = 0, skipped = 0, _waIds = [];
+            var saved = 0, skipped = 0, _waIds = [], _crit = [];
             rows.forEach(function (row, ti) {
               var test = row.test;
               var params = (test && Array.isArray(test.params)) ? test.params : [];
@@ -548,8 +620,11 @@
                 reportedAt: new Date().toISOString(),
                 reportedBy: sessionUser()
               };
+              var bcrit = criticalOf(row, vals);
+              patch.critical = bcrit.length ? bcrit : null;
+              if (bcrit.length) { patch.criticalAck = null; _crit.push({ row: row, crits: bcrit }); }
               if (row.res) DB.update('results', row.res.id, patch);
-              else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy });
+              else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy, critical: patch.critical, criticalAck: patch.criticalAck || null });
               saved++;
               if (_waIds.indexOf(row.invoice.id) < 0) _waIds.push(row.invoice.id);
             });
@@ -589,6 +664,7 @@
             tab = 'ready';
             render();
             // auto-send reports that just became fully ready
+            if (_crit.length) criticalNotify(_crit);
             waAutoSendReady(_waIds);
           });
         }
@@ -619,7 +695,7 @@
           '<td><strong>' + App.esc(p.name) + '</strong></td>' +
           '<td><input class="input" data-pi="' + i + '"' + (isNum ? ' type="number" step="any" inputmode="decimal"' : '') + ' value="' + App.esc(v) + '" placeholder="Enter value"></td>' +
           '<td class="muted">' + App.esc(p.unit || '') + '</td>' +
-          '<td class="muted">' + App.esc(p.ref || '') + '</td></tr>';
+          '<td class="muted">' + App.esc(refFor(p, pat)) + '</td></tr>';
       }).join('');
       body =
         '<table class="table"><thead><tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Reference Range</th></tr></thead>' +
@@ -701,10 +777,14 @@
       reportedAt: new Date().toISOString(),
       reportedBy: sessionUser()
     };
+    var crit = criticalOf(row, vals);
+    patch.critical = crit.length ? crit : null;
+    if (crit.length) patch.criticalAck = null;
     if (row.res) DB.update('results', row.res.id, patch);
-    else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy });
+    else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy, critical: patch.critical, criticalAck: patch.criticalAck || null });
     close();
     App.toast('Result saved — marked ready');
+    if (crit.length) criticalNotify([{ row: row, crits: crit }]);
     // auto-send if this invoice's report just became fully ready
     waAutoSendReady([row.invoice.id]);
     if (typeof onSaved === 'function') onSaved();
@@ -1720,13 +1800,14 @@
     var rowsHtml;
     if (params.length) {
       rowsHtml = params.map(function (p) {
+        var pref = refFor(p, d.pat);
         var cells = cols.map(function (c, ci) {
-          return valCell((c.values || {})[p.name], p.ref, ci === 0);
+          return valCell((c.values || {})[p.name], pref, ci === 0);
         }).join('');
         return '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
           'border-bottom:1px solid #ddd;font-size:1.04em;padding:2px 6px">' +
           '<div>' + App.esc(p.name || '') + '</div>' +
-          '<div>' + App.esc(p.ref != null && p.ref !== '' ? String(p.ref) : '—') + '</div>' +
+          '<div>' + App.esc(pref !== '' ? String(pref) : '—') + '</div>' +
           '<div>' + App.esc(p.unit != null && p.unit !== '' ? String(p.unit) : '') + '</div>' +
           cells +
         '</div>';
@@ -1916,6 +1997,17 @@
 
     return '<div class="rpt-footer">' + line1 + rule + sigHtml + addrHtml + discHtml + powered + '</div>';
   }
+
+  /* Reference range of a parameter for THIS patient: child (< 13 yrs) -> male / female -> general range. */
+  function refFor(p, pat) {
+    if (!p) return '';
+    var age = parseFloat(pat && pat.age), g = String((pat && pat.gender) || '').toLowerCase().charAt(0);
+    if (!isNaN(age) && age < 13 && p.refChild) return p.refChild;
+    if (g === 'm' && p.refMale) return p.refMale;
+    if (g === 'f' && p.refFemale) return p.refFemale;
+    return p.ref || '';
+  }
+  App.refFor = refFor;
 
   function reportData(invoiceId, ropts) {
     var inv = invOf(invoiceId);
@@ -2577,7 +2669,7 @@
       // ---- build one param row (lines pre-wrapped, height pre-computed) ----
       function buildRow(p, vals) {
         var valStr = vals[p.name] != null ? String(vals[p.name]) : '';
-        var refStr = p.ref || '—';
+        var refStr = refFor(p, d.pat) || '—';
         var nameW = CX_REF - CX_TEST - 2;
         var refW  = CX_UNIT - CX_REF - 2;
         var unitW = RX - 36 - CX_UNIT - 2;   // keep clear of right-aligned value

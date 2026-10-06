@@ -242,15 +242,42 @@
 
     quickCss + quickAccess +
 
+    critCard() +
     '<div class="db-grid">' + patCard + pendCard + '</div>' +
     '</div>';
     } /* end buildDashboard */
+
+    /* Critical results nobody has acknowledged yet (set when a result far outside the normal range is saved) */
+    function critCard() {
+      var crits = DB.all('results').filter(function (r) { return r.critical && r.critical.length && !r.criticalAck; })
+        .sort(function (a, b) { return String(b.reportedAt || '').localeCompare(String(a.reportedAt || '')); });
+      if (!crits.length) return '';
+      var rows = crits.slice(0, 8).map(function (r) {
+        var inv = DB.get('invoices', r.invoiceId) || {}, p = DB.get('patients', inv.patientId) || {}, t = DB.get('tests', r.testId) || {};
+        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #fecaca;flex-wrap:wrap">' +
+          '<div style="flex:1;min-width:200px"><b style="color:#991b1b">' + App.esc(p.name || '—') + '</b> <span style="color:#7f1d1d;font-size:12.5px">· ' + App.esc(inv.no || inv.id || '') + ' · ' + App.esc(t.name || '') + '</span><br>' +
+          r.critical.map(function (c) { return '<span style="display:inline-block;margin:3px 8px 0 0;font-size:13px"><b>' + App.esc(c.name) + '</b> <span style="color:#b91c1c;font-weight:800">' + (c.dir === 'high' ? '&uarr; ' : '&darr; ') + App.esc(c.value) + ' ' + App.esc(c.unit || '') + '</span></span>'; }).join('') + '</div>' +
+          '<small style="color:#7f1d1d">' + App.esc(App.dt(r.reportedAt) || '') + '</small>' +
+          '<button class="btn btn-sm btn-danger" data-ack="' + App.esc(r.id) + '">Acknowledge</button></div>';
+      }).join('');
+      return '<div class="card" style="margin-bottom:16px;background:#fff5f5"><div class="card-h"><h3 style="color:#991b1b">🚨 Critical results (' + crits.length + ')</h3>' +
+        '<span class="muted" style="font-size:12.5px">Inform the doctor, then acknowledge.</span></div><div class="card-b">' + rows + '</div></div>';
+    }
+    function wireCrit(v) {
+      v.querySelectorAll('[data-ack]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          DB.update('results', b.getAttribute('data-ack'), { criticalAck: { by: (session() || {}).name || 'user', at: new Date().toISOString() } });
+          v.innerHTML = buildDashboard(); wireCrit(v); scheduleCountUp();
+        });
+      });
+    }
 
     /* paint skeleton now; render full content right after it paints */
     setTimeout(function () {
       var v = document.getElementById('view');
       if (!v || !v.querySelector('[data-db-skel]')) return; /* user navigated away */
       v.innerHTML = buildDashboard();
+      wireCrit(v);
       scheduleCountUp();
     }, 120);
 

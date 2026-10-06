@@ -1767,7 +1767,12 @@
         + '<input class="input rt-fr" placeholder="Reference range" value="' + App.esc(p.ref || '') + '">'
         + '<select class="input rt-ft"><option value="text"' + (isNum ? '' : ' selected') + '>Text</option>'
         + '<option value="number"' + (isNum ? ' selected' : '') + '>Number</option></select>'
-        + '<button type="button" class="btn btn-ghost btn-sm rt-frm" title="Remove">✕</button></div>';
+        + '<button type="button" class="btn btn-ghost btn-sm rt-frm" title="Remove">✕</button>'
+        + '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:-2px">'
+        +   '<input class="input rt-xm" placeholder="Male range (optional)" value="' + App.esc(p.refMale || '') + '">'
+        +   '<input class="input rt-xf" placeholder="Female range (optional)" value="' + App.esc(p.refFemale || '') + '">'
+        +   '<input class="input rt-xc" placeholder="Child &lt; 13 yrs (optional)" value="' + App.esc(p.refChild || '') + '">'
+        + '</div></div>';
     }
     function wireRemovals() {
       box.querySelectorAll('.rt-frm').forEach(function (b) {
@@ -1780,11 +1785,13 @@
       box.querySelectorAll('.rt-frow').forEach(function (row) {
         var n = row.querySelector('.rt-fn').value.trim();
         if (!n) return;
-        out.push({
+        var o = {
           name: n,
           unit: row.querySelector('.rt-fu').value.trim(),
           ref: row.querySelector('.rt-fr').value.trim()
-        });
+        };
+        [['.rt-xm', 'refMale'], ['.rt-xf', 'refFemale'], ['.rt-xc', 'refChild']].forEach(function (x) { var v = row.querySelector(x[0]).value.trim(); if (v) o[x[1]] = v; });
+        out.push(o);
       });
       return out;
     }
@@ -1839,12 +1846,14 @@
       box.querySelectorAll('.rt-frow').forEach(function (row) {
         var n = row.querySelector('.rt-fn').value.trim();
         if (!n) return;
-        params.push({
+        var po = {
           name: n,
           unit: row.querySelector('.rt-fu').value.trim(),
           ref: row.querySelector('.rt-fr').value.trim(),
           type: row.querySelector('.rt-ft').value === 'number' ? 'number' : 'text'
-        });
+        };
+        [['.rt-xm', 'refMale'], ['.rt-xf', 'refFemale'], ['.rt-xc', 'refChild']].forEach(function (x) { var v = row.querySelector(x[0]).value.trim(); if (v) po[x[1]] = v; });
+        params.push(po);
       });
       DB.update('tests', tid, { params: params });
       App.toast('Report template saved — ' + params.length + ' field(s).');
@@ -1864,7 +1873,7 @@
 
   /* ---- WhatsApp API (admin only) ---- */
   function waDefaults() {
-    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false };
+    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true };
   }
   /* ---- WhatsApp: admin only sees/edits their lab number; API hidden ---- */
   function renderSetWhatsapp() {
@@ -1890,6 +1899,14 @@
       '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">' +
       '<input type="checkbox" id="waAutoDoctor"' + (autoDoc ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green)"> ' +
       'Auto-send report to <strong>referring doctor</strong> on ready</label>' +
+      '</div></div>' +
+      '<div class="card" style="max-width:640px;margin-top:14px"><div class="card-h"><h3>Critical Value Alerts</h3></div>' +
+      '<div class="card-b">' +
+      '<p class="muted" style="font-size:13px;margin-top:0">When a saved result is far outside the normal range, show a red alert to the technician and send a WhatsApp ' +
+      'to the <strong>referring doctor</strong> and to your <strong>lab number</strong> above, right away.</p>' +
+      '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">' +
+      '<input type="checkbox" id="waAutoCritical"' + (w.autoCritical !== false ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--red)"> ' +
+      'Send <strong>critical value</strong> alerts on WhatsApp</label>' +
       '</div></div>';
     document.getElementById('setBody').innerHTML = html;
     document.getElementById('waLabNumSave').addEventListener('click', function () {
@@ -1899,6 +1916,7 @@
       ww.labNumber = num;
       ww.autoPatient = document.getElementById('waAutoPatient').checked;
       ww.autoDoctor = document.getElementById('waAutoDoctor').checked;
+      ww.autoCritical = document.getElementById('waAutoCritical').checked;
       st.whatsapp = ww;
       DB.update('settings', 'main', st);
       App.toast('WhatsApp settings saved');

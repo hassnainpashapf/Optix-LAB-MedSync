@@ -919,10 +919,26 @@
       toast('Your session expired. Please sign in again.', 'err');
       setTimeout(logout, 1200);
     };
+    /* new CRITICAL results saved on another PC/phone: alert here too (toast + browser notification when allowed) */
+    var _critSeen = null;
+    function critWatch() {
+      try {
+        var list = DB.all('results').filter(function (r) { return r.critical && r.critical.length && !r.criticalAck; });
+        var ids = list.map(function (r) { return r.id; });
+        var fresh = _critSeen === null ? [] : list.filter(function (r) { return _critSeen.indexOf(r.id) < 0; });
+        _critSeen = ids;
+        if (!fresh.length) return;
+        var msg = '🚨 ' + fresh.length + ' new critical result' + (fresh.length > 1 ? 's' : '') + ' — open the Dashboard';
+        toast(msg, 'err');
+        if (window.Notification && Notification.permission === 'granted') { try { new Notification('Critical result', { body: msg }); } catch (e) {} }
+      } catch (e) {}
+    }
+    window.__critWatch = critWatch;
     setInterval(function () {
       if (document.hidden || !session() || !DB.isRemote || !DB.isRemote() || !DB.isCloud || !DB.isCloud()) return;
-      DB.refresh();
+      DB.refresh().then(function (ok) { if (ok) critWatch(); });
     }, 30000);
+    setInterval(function () { if (_critSeen === null && session() && DB.isRemote && DB.isRemote()) critWatch(); }, 5000); /* baseline once signed in */
   }
   function boot() {
     if (boot.done) return;

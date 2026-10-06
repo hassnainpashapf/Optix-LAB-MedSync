@@ -1873,7 +1873,7 @@
 
   /* ---- WhatsApp API (admin only) ---- */
   function waDefaults() {
-    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false };
+    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true };
   }
   /* ---- WhatsApp: admin only sees/edits their lab number; API hidden ---- */
   function renderSetWhatsapp() {
@@ -1899,6 +1899,14 @@
       '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">' +
       '<input type="checkbox" id="waAutoDoctor"' + (autoDoc ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green)"> ' +
       'Auto-send report to <strong>referring doctor</strong> on ready</label>' +
+      '</div></div>' +
+      '<div class="card" style="max-width:640px;margin-top:14px"><div class="card-h"><h3>Critical Value Alerts</h3></div>' +
+      '<div class="card-b">' +
+      '<p class="muted" style="font-size:13px;margin-top:0">When a saved result is far outside the normal range, show a red alert to the technician and send a WhatsApp ' +
+      'to the <strong>referring doctor</strong> and to your <strong>lab number</strong> above, right away.</p>' +
+      '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">' +
+      '<input type="checkbox" id="waAutoCritical"' + (w.autoCritical !== false ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--red)"> ' +
+      'Send <strong>critical value</strong> alerts on WhatsApp</label>' +
       '</div></div>';
     document.getElementById('setBody').innerHTML = html;
     document.getElementById('waLabNumSave').addEventListener('click', function () {
@@ -1908,6 +1916,7 @@
       ww.labNumber = num;
       ww.autoPatient = document.getElementById('waAutoPatient').checked;
       ww.autoDoctor = document.getElementById('waAutoDoctor').checked;
+      ww.autoCritical = document.getElementById('waAutoCritical').checked;
       st.whatsapp = ww;
       DB.update('settings', 'main', st);
       App.toast('WhatsApp settings saved');
