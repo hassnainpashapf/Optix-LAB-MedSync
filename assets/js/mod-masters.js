@@ -46,7 +46,7 @@ var TICONS = {
 
 /* dashboard-style stat card — reuses global .stat classes from app.css */
 function tStat(icon, tint, label, value, sub) {
-  return '<div class="stat">' +
+  return '<div class="stat" data-tint="' + tint + '">' +
     '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft);--sc-c:var(--' + tint + ')">' + icon + '</div>' +
     '<div class="stat-tx" style="flex:1;min-width:0"><div class="lb">' + App.esc(label) + '</div>' +
     '<div class="vl">' + value + '</div>' +
