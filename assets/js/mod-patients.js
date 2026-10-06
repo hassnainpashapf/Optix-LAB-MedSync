@@ -233,8 +233,45 @@
     if (phoneInput && waWrap) {
       phoneInput.addEventListener('input', function () {
         waWrap.innerHTML = waBtn(phoneInput.value, 'Chat on WhatsApp');
+        checkDuplicate();
       });
     }
+    // duplicate detection: warn if CNIC or phone matches an existing patient
+    var cnicInput = document.getElementById('ptf-cnic');
+    var dupWarn = document.createElement('div');
+    dupWarn.id = 'ptf-dupwarn';
+    dupWarn.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid var(--amber);border-radius:8px;background:var(--amber-soft)';
+    if (form) form.insertBefore(dupWarn, form.firstChild);
+    function normPhone(p) { return (p || '').replace(/\D/g, '').replace(/^92/, '0'); }
+    function checkDuplicate() {
+      if (!dupWarn) return;
+      var cnic = (cnicInput ? cnicInput.value.trim() : '');
+      var phone = normPhone(phoneInput ? phoneInput.value : '');
+      var found = null, matchBy = '';
+      if (cnic || phone) {
+        var all = DB.all('patients');
+        for (var i = 0; i < all.length; i++) {
+          var p = all[i];
+          if (existing && p.id === existing.id) continue;
+          if (cnic && p.cnic && p.cnic.replace(/\D/g, '') === cnic.replace(/\D/g, '')) { found = p; matchBy = 'CNIC'; break; }
+          if (phone && phone.length >= 10 && p.phone && normPhone(p.phone) === phone) { found = p; matchBy = phone; break; }
+        }
+      }
+      if (found) {
+        var invCount = DB.all('invoices').filter(function (inv) { return inv.patientId === found.id; }).length;
+        dupWarn.style.display = 'block';
+        dupWarn.innerHTML = '<strong>⚠️ Possible duplicate:</strong> ' + App.esc(found.name || '') +
+          ' (matched by ' + App.esc(matchBy) + ') already exists with ' + invCount + ' invoice(s). ' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="ptf-dupview" style="margin-left:8px">View existing patient</button>';
+        var dv = document.getElementById('ptf-dupview');
+        if (dv) dv.addEventListener('click', function () { App.nav('#/patients/' + found.id); });
+      } else {
+        dupWarn.style.display = 'none';
+        dupWarn.innerHTML = '';
+      }
+    }
+    if (cnicInput) cnicInput.addEventListener('input', checkDuplicate);
+    setTimeout(checkDuplicate, 300);
     // order-tests picker (add mode only): search filter + live selection summary
     var tSearch = document.getElementById('ptf-tsearch');
     var tList = document.getElementById('ptf-tlist');
