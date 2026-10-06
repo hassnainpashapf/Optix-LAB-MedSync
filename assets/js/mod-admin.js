@@ -543,8 +543,12 @@
       + '<div id="spSigList"></div>'
       + '<button class="btn btn-ghost" type="button" id="spSigAdd" style="margin-top:8px">+ Add Signatory</button></div>'
       + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(optional — HTML allowed, replaces the default header)</span></label>'
+      + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spHeadSample">Load Sample</button>'
+      + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Clear</button></div>'
       + '<textarea class="input" id="spHeadHtml" rows="3" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.headerHtml || '') + '</textarea></div>'
       + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(optional — HTML allowed, replaces the default footer)</span></label>'
+      + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spFootSample">Load Sample</button>'
+      + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Clear</button></div>'
       + '<textarea class="input" id="spFootHtml" rows="3" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.footerHtml || '') + '</textarea></div>'
       + '</div>'
       + '<div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" id="spSave">Save Profile</button>' +
@@ -637,6 +641,35 @@
     var _sigAdd = document.getElementById('spSigAdd');
     if (_sigAdd) _sigAdd.addEventListener('click', function () {
       if (_sigList) _sigList.insertAdjacentHTML('beforeend', _sigRowHTML({}));
+    });
+    /* sample header/footer loaders */
+    var headSampleBtn = document.getElementById('spHeadSample');
+    if (headSampleBtn) headSampleBtn.addEventListener('click', function () {
+      document.getElementById('spHeadHtml').value =
+        '<div style="text-align:center;border-bottom:2px solid #131845;padding-bottom:10px;margin-bottom:10px">\n' +
+        '  <h2 style="color:#131845;margin:0">Your Lab Name</h2>\n' +
+        '  <p style="color:#666;margin:4px 0">123 Main Street, Lahore • 0300-1234567</p>\n' +
+        '</div>';
+      if (typeof _schedulePreview === 'function') _schedulePreview();
+    });
+    var headClearBtn = document.getElementById('spHeadClear');
+    if (headClearBtn) headClearBtn.addEventListener('click', function () {
+      document.getElementById('spHeadHtml').value = '';
+      if (typeof _schedulePreview === 'function') _schedulePreview();
+    });
+    var footSampleBtn = document.getElementById('spFootSample');
+    if (footSampleBtn) footSampleBtn.addEventListener('click', function () {
+      document.getElementById('spFootHtml').value =
+        '<div style="text-align:center;border-top:2px solid #131845;padding-top:10px;margin-top:16px">\n' +
+        '  <p style="margin:0"><strong>Verified by:</strong> Dr. Example _________________</p>\n' +
+        '  <p style="color:#666;font-size:12px">Thank you for choosing our lab.</p>\n' +
+        '</div>';
+      if (typeof _schedulePreview === 'function') _schedulePreview();
+    });
+    var footClearBtn = document.getElementById('spFootClear');
+    if (footClearBtn) footClearBtn.addEventListener('click', function () {
+      document.getElementById('spFootHtml').value = '';
+      if (typeof _schedulePreview === 'function') _schedulePreview();
     });
     document.getElementById('spPreviewBtn').addEventListener('click', function () {
       var ps = _collectPreviewSettings();
