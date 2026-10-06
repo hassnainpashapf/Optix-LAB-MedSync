@@ -1422,6 +1422,8 @@
 
     var i, html = '<div style="display:flex;color:#000;font-size:12px">';
     html += '<div style="flex:1;padding-right:10px">';
+    var _has = function (x) { return x[1] !== em; }; /* rows with no value are not printed */
+    left = left.filter(_has); right = right.filter(_has);
     for (i = 0; i < left.length; i++) { html += row(left[i][0], left[i][1]); }
     html += '</div>';
     html += '<div style="flex:1;padding-left:10px">';
@@ -1685,7 +1687,7 @@
           return valCell((c.values || {})[p.name], p.ref);
         }).join('');
         return '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
-          'border-bottom:1px solid #ddd;font-size:1.04em;padding:4px 6px">' +
+          'border-bottom:1px solid #ddd;font-size:1.04em;padding:2px 6px">' +
           '<div>' + App.esc(p.name || '') + '</div>' +
           '<div>' + App.esc(p.ref != null && p.ref !== '' ? String(p.ref) : '—') + '</div>' +
           '<div>' + App.esc(p.unit != null && p.unit !== '' ? String(p.unit) : '') + '</div>' +
@@ -1697,7 +1699,7 @@
       var ftVal = vals['Result'];
       rowsHtml =
         '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
-          'border-bottom:1px solid #ddd;font-size:1.04em;padding:4px 6px">' +
+          'border-bottom:1px solid #ddd;font-size:1.04em;padding:2px 6px">' +
           '<div>Result</div>' +
           '<div></div><div></div>' +
           '<div style="grid-column:span ' + nRes + ';text-align:center">' +
@@ -1754,7 +1756,7 @@
     } catch (e) { graphHtml = ''; }
 
     /* assemble: title + RESULT boxes row, then grey header row, body, graph, remarks */
-    return '<div class="rpt-section" style="margin:14px 0 4px">' +
+    return '<div class="rpt-section" style="margin:8px 0 2px">' +
       '<div style="display:grid;grid-template-columns:' + gridCols + ';grid-template-rows:1fr auto">' + /* title row absorbs the RESULT box height; the heading bar stays slim */
         '<div style="grid-column:span 3;align-self:center;color:#000;font-weight:700;' +
           'font-size:1.15em;text-transform:uppercase;letter-spacing:0.02em">' +
@@ -1822,11 +1824,11 @@
     var verNote = s.verNote || s.verificationNote ||
       'Electronically verified report. No signatures necessary. Sample brought to the main lab. Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.';
     var line1 =
-      '<p class="rpt-ver" style="text-align:center;font-weight:700;font-size:0.96em;margin:22px 0 4px;line-height:1.5">' +
+      '<p class="rpt-ver" style="text-align:center;font-weight:700;font-size:0.96em;margin:8px 0 2px;line-height:1.4">' +
         App.esc(verNote) + '</p>';
 
     /* 2: thin black rule */
-    var rule = '<hr class="rpt-footrule" style="border:none;border-top:1px solid #000;margin:6px 0">';
+    var rule = '<hr class="rpt-footrule" style="border:none;border-top:1px solid #000;margin:3px 0">';
 
     /* 3: signatory doctors in one row, spread across */
     var sigs = (Array.isArray(s.signatories) ? s.signatories : [])
@@ -1834,7 +1836,7 @@
     var sigHtml = '';
     if (sigs.length) {
       sigHtml =
-        '<div class="rpt-sigs" style="display:flex;justify-content:space-between;gap:10px;margin:10px 0 8px">' +
+        '<div class="rpt-sigs" style="display:flex;justify-content:space-between;gap:10px;margin:6px 0 4px">' +
           sigs.map(function (g) {
             return '<div class="rpt-sig" style="flex:1;text-align:center">' +
               '<div style="font-weight:700;font-size:0.9em">' + App.esc(g.name) + '</div>' +
@@ -1856,7 +1858,7 @@
     var addrHtml = '';
     if (addrParts.length) {
       addrHtml =
-        '<div style="border-top:1px solid #000;margin:8px 0 6px;padding-top:6px">' +
+        '<div style="border-top:1px solid #000;margin:4px 0 3px;padding-top:3px">' +
         '<div style="text-align:center;font-weight:400;font-size:0.85em;line-height:1.6">' +
           App.esc(addrParts.join(' | ')) +
         '</div></div>';
@@ -1873,7 +1875,7 @@
 
     /* 6: powered-by (existing constraint) */
     var powered =
-      '<p class="rpt-powered" style="color:#000;font-size:0.88em;text-align:center;margin:14px 0 0">Powered by System Optix</p>';
+      '<p class="rpt-powered" style="color:#000;font-size:0.88em;text-align:center;margin:5px 0 0">Powered by System Optix</p>';
 
     return '<div class="rpt-footer">' + line1 + rule + sigHtml + addrHtml + discHtml + powered + '</div>';
   }
@@ -1972,13 +1974,7 @@
     var testsHtml = '', lastCat = null;
     rows.forEach(function (r) {
       var cat = sectionCatOf(r);
-      if (cat && cat !== lastCat) {
-        // Department divider on category change; categories that already
-        // read like a department ("Department of X") render as the divider,
-        // otherwise as an ALL-CAPS subsection header.
-        testsHtml += (/^department of/i.test(cat) ? sectionDividerHtml(cat) : subsectionHeaderHtml(cat));
-        lastCat = cat;
-      }
+      lastCat = cat; /* category headings (HAEMATOLOGY / CHEMICAL PATHOLOGY ...) are intentionally not printed */
       testsHtml += testSectionHtml(r, d);
       testsHtml += testNoteHtml(r.test);
     });
@@ -1988,7 +1984,7 @@
 
     var bodyHtml = headOut + infoHtml + testsHtml +
       (pendingCount
-        ? '<p style="color:#000;font-size:0.96em;margin:10px 0"><em>Note: ' +
+        ? '<p style="color:#000;font-size:0.96em;margin:6px 0"><em>Note: ' +
           pendingCount + ' test(s) from this invoice are still pending.</em></p>'
         : '') +
       (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.'
