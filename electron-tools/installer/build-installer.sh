@@ -17,7 +17,7 @@ done
 
 echo "== 2/3 packing win32 app (electron-builder --dir) =="
 rm -rf ../../dist-installer/win-unpacked
-CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --win --dir --config electron-builder.yml 2>&1 | tail -2
+CSC_IDENTITY_AUTO_DISCOVERY=false npx electron-builder --win --x64 --dir --config electron-builder.yml 2>&1 | tail -2
 
 echo "== 3/3 compiling NSIS installer =="
 VER=$(node -p "require('./app-stage/package.json').version")

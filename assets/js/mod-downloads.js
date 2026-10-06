@@ -2,14 +2,14 @@
 (function () {
   'use strict';
 
-  var GH = 'https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/';
+  var GH = 'https://labpos-api.150.230.52.29.sslip.io/releases/';
   var DMG_URL = GH + 'Optix-LAB-MedSync-1.0.0-arm64.dmg.tar.gz';
   /* TODO(parent): replace with the real published APK URL */
-  var APK_URL = 'https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-debug.apk';
+  var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-debug.apk';
 
   /* 6 distinct installer binaries (Windows 11 and Windows 10 64-bit share one) */
   var WIN_OPTS = [
-    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win10-11-x64.exe' },
+    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.1.0-win10-11-x64.exe' },
     { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win10-x86.exe' },
     { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win8-x64.exe' },
     { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win8-x86.exe' },

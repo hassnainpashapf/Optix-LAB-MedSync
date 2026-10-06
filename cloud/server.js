@@ -110,6 +110,19 @@ async function main() {
     } catch (e) { console.log('[labpos-cloud] LAB_NAME skipped:', e.message); }
   }
 
+  /* report footer signatories: give a fresh/old database the default doctors once (editable in Settings afterwards) */
+  try {
+    const st = (await store.get('settings', 'main')) || null;
+    if (st && (!Array.isArray(st.signatories) || !st.signatories.length)) {
+      await store.put('settings', Object.assign({}, st, { id: 'main', signatories: [
+        { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
+        { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: '' },
+        { name: 'ABDAL INAM UL HAQ KHANZADA', qual: 'M.Phil (Microbiology)', title: 'Lab Technologist' },
+        { name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Lab Technologist' }] }));
+      console.log('[labpos-cloud] default report signatories applied');
+    }
+  } catch (e) { console.log('[labpos-cloud] signatories skipped:', e.message); }
+
   /* ---- auth bootstrap: signing secret, hash legacy plaintext passwords ---- */
   let SESSION_SECRET = process.env.SESSION_SECRET || '';
   if (!SESSION_SECRET) {
