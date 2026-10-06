@@ -1006,12 +1006,13 @@
       return t.replace(/\s*-\s*/g, ' - ').replace(/\s*\/\s*/g, ' / ');
     }
 
-    /* LEFT: logo image when set, else large black serif lab name (+ tagline) */
+    /* LEFT: logo image (rectangular banner, may contain lab name) when set,
+       else large black serif lab name (+ tagline) */
     var leftHtml;
     if (s.logo) {
       leftHtml =
-        '<div style="flex:none">' +
-          '<img src="' + App.esc(s.logo) + '" style="max-width:220px;max-height:84px" alt="">' +
+        '<div style="flex:1;min-width:0">' +
+          '<img src="' + App.esc(s.logo) + '" style="max-width:320px;max-height:84px" alt="">' +
         '</div>';
     } else {
       leftHtml =
