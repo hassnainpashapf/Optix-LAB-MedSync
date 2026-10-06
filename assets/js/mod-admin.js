@@ -1048,7 +1048,7 @@
         }).join('');
 
     /* ---- feature extension slots (workers 5-9 assign their cards here) ---- */
-    var repSlotSchedules = schedCardHTML();
+    var repSlotSchedules = '';
     var repSlotBuilder = '';
     var repSlotTemplates = (function () {
       var tpls = repTplList();
@@ -1093,7 +1093,7 @@
     if (repChosen) {
       html +=
         ((showTests || showFinance) ? '<div class="stat-grid">' + repStats + '</div>' : '')
-        + ((showTests || showFinance) ? cmpCard : '')
+        + ((showTests || showFinance) ? '' : '')
         + repSlotSchedules + repSlotBuilder + repSlotTemplates + repSlotLabs
 
         + filterCard
