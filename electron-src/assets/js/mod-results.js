@@ -1632,9 +1632,9 @@
       }));
     var nRes = cols.length;
 
-    /* column grid: TEST 32% | NORMAL VALUE 24% | UNIT 12% | RESULT fixed 150px */
+    /* column grid: TEST 32% | NORMAL VALUE 24% | UNIT (rest) | RESULT fixed 120px */
     var gridCols = '32% 24% minmax(0,1fr)'; /* UNIT column absorbs the slack so the RESULT box sits at the right edge */
-    for (var gi = 0; gi < nRes; gi++) gridCols += ' 150px';
+    for (var gi = 0; gi < nRes; gi++) gridCols += ' 120px';
 
     /* section title: "{Name} ({CODE})" — append REPORT unless already present */
     var tName = testName(r);
@@ -1647,10 +1647,10 @@
        date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
       return '<div style="border:2px solid #000;background:#fff;box-sizing:border-box;' +
-        'padding:0;line-height:1.3;font-size:0.9em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%">' +
-        '<div style="font-weight:700;color:#000;font-size:1.05em;background:#bfbfbf;padding:5px 0;border-bottom:2px solid #000;text-align:center;width:100%">RESULT</div>' +
-        '<div style="padding:5px 4px 4px;display:flex;flex-direction:column;align-items:center;width:100%;box-sizing:border-box">' +
-        '<div style="width:100%;margin:0 0 3px">' + barcodeHtml(invNo, '100%', '16px') + '</div>' +
+        'padding:0;line-height:1.25;font-size:0.76em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%">' +
+        '<div style="font-weight:700;color:#000;font-size:1em;background:#bfbfbf;padding:3px 0;border-bottom:2px solid #000;text-align:center;width:100%">RESULT</div>' +
+        '<div style="padding:3px 3px 2px;display:flex;flex-direction:column;align-items:center;width:100%;box-sizing:border-box">' +
+        '<div style="width:100%;margin:0 0 2px">' + barcodeHtml(invNo, '100%', '11px') + '</div>' +
         '<div style="color:#000;font-size:1em;white-space:nowrap">' + App.esc(invNo) + '</div>' +
         '<div style="font-size:1em;color:#000;white-space:nowrap">' +
           App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
