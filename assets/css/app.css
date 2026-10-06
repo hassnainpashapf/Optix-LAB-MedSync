@@ -419,7 +419,7 @@ table.print-tbl{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px
     box-shadow:var(--sh-lg);z-index:60;width:min(280px,84vw)}
   body.side-open{overflow:hidden}
   body.side-open .sidebar{transform:none}
-  /* backdrop: scale(1.3) compensates body{zoom:.8} so it truly covers the viewport */
+  /* backdrop: scale(1.15) compensates body{zoom:0.9} so it truly covers the viewport */
   body.side-open::after{content:'';position:fixed;inset:0;background:rgba(15,30,46,.45);z-index:55;
     transform:scale(1.3);transform-origin:top left}
   body .side-close{display:grid}
@@ -532,9 +532,9 @@ body.login-mode{background:#131845}
 }
 
 /* ============ 20% zoom-out (agent-appended) ============ */
-body{zoom:0.8}
-.app,.shell{min-height:calc(100vh/0.8)}
-.sidebar{height:calc(100vh/0.8)}
+body{zoom:1.0}
+.app,.shell{min-height:calc(100vh/1.0)}
+.sidebar{height:calc(100vh/1.0)}
 
 /* ============ Compact stat cards (shared across all pages) ============ */
 .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
@@ -552,7 +552,7 @@ body{zoom:0.8}
 }
 @keyframes scRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes dbRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.stat{display:block;position:relative;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:13px 14px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards}
+.stat{display:block;position:relative;background:var(--card);border:2px solid #000;border-radius:12px;padding:13px 14px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards}
 .stat:nth-child(2){animation-delay:.07s}
 .stat:nth-child(3){animation-delay:.14s}
 .stat:nth-child(4){animation-delay:.21s}

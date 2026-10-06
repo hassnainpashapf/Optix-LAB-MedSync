@@ -677,7 +677,12 @@
       return out;
     }
     if (_sigList) {
-      _sigList.innerHTML = ((s.signatories && s.signatories.length) ? s.signatories : []).map(_sigRowHTML).join('');
+      _sigList.innerHTML = ((s.signatories && s.signatories.length) ? s.signatories : [
+        { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
+        { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: '' },
+        { name: 'ABDAL INAM UL HAQ KHANZADA', qual: 'M.Phil (Microbiology)', title: 'Lab Technologist' },
+        { name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Lab Technologist' }
+      ]).map(_sigRowHTML).join('');
       /* delegated: remove, move up, move down */
       _sigList.addEventListener('click', function (e) {
         var btn = e.target && e.target.closest ? e.target.closest('button') : null;
@@ -793,12 +798,22 @@
     function _collectPreviewSettings() {
       function gv(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; }
       function gc(id) { var e = document.getElementById(id); return e ? e.checked : false; }
+      var sigs = _syncSigs();
+      /* fallback to default doctors if none entered */
+      if (!sigs.length) {
+        sigs = [
+          { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
+          { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: '' },
+          { name: 'ABDAL INAM UL HAQ KHANZADA', qual: 'M.Phil (Microbiology)', title: 'Lab Technologist' },
+          { name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Lab Technologist' }
+        ];
+      }
       return {
         labName: gv('spName'), tagline: gv('spTag'), address: gv('spAddr'),
         phone: gv('spPhone'), email: gv('spEmail'), footerNote: gv('spFoot'),
         logo: _logoData, website: gv('spWeb'), headOffice: gv('spHead'),
         mainLab: gv('spMainLab'), callCenter: gv('spCall'), mainLabPhone: gv('spMainPhone'),
-        verNote: gv('spVerNote'), signatories: _syncSigs(), font: gv('spFont'),
+        verNote: gv('spVerNote'), signatories: sigs, font: gv('spFont'),
         reportTitle: gv('spReportTitle'), accent: gv('spAccent'),
         showQr: gc('spShowQr'), showTagline: gc('spShowTagline'),
         reportFontSize: gv('spFontSize'),
