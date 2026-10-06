@@ -3,13 +3,13 @@
   'use strict';
 
   var GH = 'https://labpos-api.150.230.52.29.sslip.io/releases/';
-  var DMG_URL = GH + 'Optix-LAB-MedSync-1.2.1-arm64.dmg.tar.gz';
+  var DMG_URL = GH + 'Optix-LAB-MedSync-1.2.2-arm64.dmg.tar.gz';
   /* TODO(parent): replace with the real published APK URL */
   var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-debug.apk';
 
   /* 6 distinct installer binaries (Windows 11 and Windows 10 64-bit share one) */
   var WIN_OPTS = [
-    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.1-win10-11-x64.exe' },
+    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.2-win10-11-x64.exe' },
     { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win10-x86.exe' },
     { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win8-x64.exe' },
     { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win8-x86.exe' },
@@ -47,7 +47,7 @@
     }).join('');
     return '<div class="card dl-card">' +
       '<div class="card-h"><div class="dl-ico">' + ICO.win + '</div>' +
-      '<div><h3>Windows</h3><p class="dl-ver">Windows 7, 8.1, 10, 11 &middot; Version 1.0.0</p></div></div>' +
+      '<div><h3>Windows</h3><p class="dl-ver">Windows 10/11 64-bit: v1.2.2 (cloud sync) &middot; older Windows: v1.0.0</p></div></div>' +
       '<div class="card-b">' +
       '<button type="button" class="btn btn-primary dl-btn dl-win-toggle">' + ICO.dl +
         '<span class="dl-win-toggle-tx">Choose your Windows version</span>' + ICO.chev + '</button>' +
@@ -55,7 +55,7 @@
         '<div class="dl-note">' + ICO.check + '<span><b>Not sure which to pick?</b> Most modern PCs use 64-bit. Windows 11 is 64-bit only.</span></div>' +
         '<div class="dl-os-grid">' + grid + '</div>' +
       '</div>' +
-      '<div class="dl-note">' + ICO.check + '<span>The installer guides you through setup. Your existing data is kept when you reinstall.</span></div>' +
+      '<div class="dl-note">' + ICO.check + '<span>Windows 10/11 64-bit (v1.2.2) keeps its own copy of your data, works offline and syncs with the cloud. Older Windows builds (v1.0.0) work on that PC only, without cloud sync.</span></div>' +
       '<ol class="dl-steps">' + steps + '</ol>' +
       '</div></div>';
   }
@@ -87,6 +87,39 @@
     var tx = t.querySelector('.dl-win-toggle-tx');
     if (tx) tx.textContent = open ? 'Hide Windows versions' : 'Choose your Windows version';
   });
+
+  /* installable web app: capture the browser's install prompt */
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); window.__pwaPrompt = e; });
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('#dlPwaInstall') : null;
+    if (!b) return;
+    var hint = document.getElementById('dlPwaHint');
+    if (window.__pwaPrompt) {
+      window.__pwaPrompt.prompt();
+      window.__pwaPrompt.userChoice.then(function () { window.__pwaPrompt = null; });
+    } else if (hint) {
+      hint.style.display = '';
+    }
+  });
+  function pwaCard() {
+    var steps = [
+      'Open <b>optix-lab-medsync.pages.dev/app/</b> in Chrome / Edge (PC or Android) or Safari (iPhone).',
+      'Tap <b>Install Web App</b> below, or use the browser menu &rarr; <b>Install app</b> / <b>Add to Home Screen</b>.',
+      'Open <b>Optix LAB MedSync</b> from your desktop or home screen.',
+      'Log in with your lab account credentials.'
+    ].map(function (s, i) {
+      return '<li><span class="dl-step-n">' + (i + 1) + '</span><span>' + s + '</span></li>';
+    }).join('');
+    return '<div class="card dl-card">' +
+      '<div class="card-h"><div class="dl-ico">' + ICO.dl + '</div>' +
+      '<div><h3>Web App</h3><p class="dl-ver">Any PC or phone &middot; no download</p></div></div>' +
+      '<div class="card-b">' +
+      '<button type="button" id="dlPwaInstall" class="btn btn-primary dl-btn">' + ICO.dl + '<span>Install Web App</span></button>' +
+      '<div class="dl-note" id="dlPwaHint" style="display:none">' + ICO.check + '<span>Use your browser menu &rarr; <b>Install app</b> (Chrome/Edge) or <b>Share &rarr; Add to Home Screen</b> (iPhone).</span></div>' +
+      '<div class="dl-note">' + ICO.check + '<span>Always up to date and uses the same cloud data as the desktop app. Needs an internet connection.</span></div>' +
+      '<ol class="dl-steps">' + steps + '</ol>' +
+      '</div></div>';
+  }
 
   function render() {
     return '<style>' +
@@ -130,7 +163,7 @@
     '<div class="dl-grid">' +
     winCard() +
     dlCard({
-      title: 'Mac (Apple Silicon)', version: '1.2.1', size: '~119 MB', file: 'for Mac (.dmg)', url: DMG_URL, icon: ICO.mac,
+      title: 'Mac (Apple Silicon)', version: '1.2.2', size: '~119 MB', file: 'for Mac (.dmg)', url: DMG_URL, icon: ICO.mac,
       note: ICO.check + '<span>The download is a compressed <b>.dmg.tar.gz</b> — double-click it after downloading to extract the <b>.dmg</b> inside.</span>',
       steps: [
         'Download the <b>.dmg.tar.gz</b> file and double-click it to extract the .dmg.',
@@ -149,14 +182,15 @@
         'Log in with your lab account credentials.'
       ]
     }) +
+    pwaCard() +
     '</div>' +
 
     '<div class="card dl-sys"><div class="card-h"><h3>System requirements</h3></div>' +
     '<div class="card-b"><div class="tbl-wrap"><table class="table"><tbody>' +
     '<tr><th style="width:140px">Windows</th><td>Windows 7, 8.1, 10 or 11 (64-bit and 32-bit builds available), 4 GB RAM, 500 MB free disk space</td></tr>' +
-    '<tr><th>Mac</th><td>macOS 12 or newer, Apple Silicon (M1/M2/M3) — Intel build available on the GitHub release page</td></tr>' +
-    '<tr><th>Android</th><td>Android 7.0 or newer, ~50 MB free space</td></tr>' +
-    '<tr><th>Network</th><td>Internet needed only for the first download; the app works fully offline</td></tr>' +
+    '<tr><th>Mac</th><td>macOS 12 or newer, Apple Silicon (M1/M2/M3)</td></tr>' +
+    '<tr><th>Web App</th><td>Chrome, Edge or Safari on any PC or phone</td></tr><tr><th>Android</th><td>Android 7.0 or newer, ~50 MB free space</td></tr>' +
+    '<tr><th>Network</th><td>Desktop apps work offline and sync with the cloud when online (first sign-in on a new PC needs internet). The Web App needs internet. The Android app keeps its data on the phone only (no cloud sync)</td></tr>' +
     '</tbody></table></div></div></div>' +
 
     '</div>';

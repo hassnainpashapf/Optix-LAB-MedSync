@@ -1660,7 +1660,7 @@
 
     /* ONE grey header bar (heavy black outline, no inner dividers) like the reference:
        spaced "T E S T" | NORMAL VALUE | UNIT, columns aligned with the body rows */
-    var _hc = 'background:#cfe4f6;color:#0b1740;font-weight:700;padding:2px 4px;box-sizing:border-box;border-top:2px solid #000;border-bottom:2px solid #000;display:flex;align-items:center;';
+    var _hc = 'background:#cfe4f6;color:#0b1740;font-weight:700;font-size:0.92em;line-height:1.2;padding:3px 4px;box-sizing:border-box;border-top:2px solid #000;border-bottom:2px solid #000;display:flex;align-items:center;';
     var headCells =
       '<div style="' + _hc + 'border-left:2px solid #000;letter-spacing:0.35em">TEST</div>' +
       '<div style="' + _hc + '">NORMAL VALUE</div>' +
@@ -1755,7 +1755,7 @@
 
     /* assemble: title + RESULT boxes row, then grey header row, body, graph, remarks */
     return '<div class="rpt-section" style="margin:14px 0 4px">' +
-      '<div style="display:grid;grid-template-columns:' + gridCols + '">' +
+      '<div style="display:grid;grid-template-columns:' + gridCols + ';grid-template-rows:1fr auto">' + /* title row absorbs the RESULT box height; the heading bar stays slim */
         '<div style="grid-column:span 3;align-self:center;color:#000;font-weight:700;' +
           'font-size:1.15em;text-transform:uppercase;letter-spacing:0.02em">' +
           App.esc(title) +

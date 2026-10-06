@@ -1,6 +1,6 @@
 ; =====================================================================
 ; Optix LAB MedSync Setup — hand-written NSIS installer (compiled with native makensis)
-;   Placeholders 1.1.0 and 342456 are filled in by
+;   Placeholders 1.2.2 and 342532 are filled in by
 ;   build-installer.sh before compiling. Do not edit the built .nsi by hand.
 ; =====================================================================
 !include "MUI2.nsh"
@@ -9,7 +9,7 @@
 
 ; ---- App info ---------------------------------------------------------
 !define APP_NAME      "Optix LAB MedSync"
-!define APP_VERSION   "1.1.0"
+!define APP_VERSION   "1.2.2"
 !define APP_PUBLISHER "System Optix"
 !define APP_EXE       "Optix LAB MedSync.exe"
 
@@ -86,7 +86,7 @@ Section "${APP_NAME}" SecMain
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayIcon" "$INSTDIR\${APP_EXE},0"
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "Publisher" "${APP_PUBLISHER}"
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayVersion" "${APP_VERSION}"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "EstimatedSize" 342456
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "EstimatedSize" 342532
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoRepair" 1
 
