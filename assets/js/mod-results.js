@@ -1868,7 +1868,7 @@
     var disc = s.disclaimer || _fn ||
       'NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.';
     var discHtml =
-      '<div class="rpt-disc" style="border:1px solid #000;padding:6px 8px;font-size:0.72em;line-height:1.5;margin:8px 0 0">' +
+      '<div class="rpt-disc" style="border:1px solid #000;padding:4px 6px;font-size:0.55em;line-height:1.4;margin:6px 0 0">' +
         App.esc(disc) + '</div>';
 
     /* 6: powered-by (existing constraint) */
