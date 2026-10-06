@@ -46,10 +46,11 @@
     '.ptf-phone-wrap .wa-btn{flex:0 0 auto}' +
     '</style>';
   function waNumber(phone) {
-    var d = String(phone || '').replace(/\D/g, '');
-    if (!d) return '';
-    if (d.charAt(0) === '0') d = '92' + d.slice(1); /* PK mobile: 0xxx -> 92xxx */
-    return d;
+    return App.normWa(phone); /* shared helper (app.js) */
+  }
+  /* Number a WhatsApp send should go to: dedicated whatsapp field, else phone. */
+  function waTarget(p) {
+    return (p && (p.whatsapp || p.phone)) || '';
   }
   function waBtn(phone, title) {
     var d = waNumber(phone);
@@ -99,12 +100,67 @@
   var listQuery = '';
 
   /* ---------- patient form (add / edit) ---------- */
+  function ptUser() {
+    try {
+      if (window.App && App.session) {
+        var as = (typeof App.session === 'function') ? App.session() : App.session;
+        if (as && as.name) return as.name;
+      }
+      var s = JSON.parse(localStorage.getItem('labpos_session') || 'null');
+      if (s && s.name) return s.name;
+    } catch (e) {}
+    return 'system';
+  }
+  /* Order-tests picker (add mode only): checkbox list of active tests */
+  var PTF_TSTYLE =
+    '<style>' +
+    '.ptf-tlist{max-height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px;background:#fff}' +
+    '.ptf-trow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}' +
+    '.ptf-trow:last-child{border-bottom:none}' +
+    '.ptf-trow:hover{background:#f4f9fd}' +
+    '.ptf-tchk{width:16px;height:16px;accent-color:var(--brand);flex:none;cursor:pointer}' +
+    '.ptf-tinfo{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.ptf-tprice{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}' +
+    '.ptf-tsum{font-size:12px;color:var(--muted);font-weight:600;margin-top:6px}' +
+    '.ptf-opt{font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;font-size:10px}' +
+    '.ptf-tempty{padding:12px;font-size:12.5px;color:var(--muted);text-align:center}' +
+    '</style>';
+  function orderTestsHTML() {
+    var tests = DB.all('tests').filter(function (t) { return t.active !== false; })
+      .sort(function (a, b) { return String(a.code || a.name || '').localeCompare(String(b.code || b.name || '')); });
+    var rows = tests.map(function (t) {
+      var nm = (t.code ? t.code + ' — ' : '') + (t.name || 'Test');
+      return '<label class="ptf-trow" data-tname="' + App.esc(nm.toLowerCase()) + '">' +
+        '<input type="checkbox" class="ptf-tchk" value="' + App.esc(t.id) + '" data-price="' + (+t.price || 0) + '">' +
+        '<span class="ptf-tinfo"><strong>' + App.esc(nm) + '</strong>' +
+        (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') + '</span>' +
+        '<span class="ptf-tprice">' + App.money(+t.price || 0) + '</span></label>';
+    }).join('');
+    return PTF_TSTYLE +
+      '<div class="form-row"><label class="label" for="ptf-tsearch">Order Tests <span class="ptf-opt">(optional — sent to Lab Results)</span></label>' +
+      '<input class="input" id="ptf-tsearch" placeholder="Search tests…" autocomplete="off">' +
+      '<div class="ptf-tlist" id="ptf-tlist">' + (rows || '<div class="ptf-tempty">No active tests found.</div>') + '</div>' +
+      '<div class="ptf-tsum" id="ptf-tsum">0 selected • Rs 0</div></div>';
+  }
   function formHTML(p) {
     p = p || {};
     function val(k) { return App.esc(p[k] == null ? '' : p[k]); }
     function sel(v) { return p.gender === v ? ' selected' : ''; }
+    var bloods = ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+    var docOpts = '<option value="">Self / Walk-in</option>' +
+      DB.all('doctors').slice().sort(function (a, b) {
+        return String(a.name || '').localeCompare(String(b.name || ''));
+      }).map(function (d) {
+        return '<option value="' + App.esc(d.id) + '"' + ((p.doctorId || '') === d.id ? ' selected' : '') + '>' +
+          App.esc(d.name) + '</option>';
+      }).join('');
     return '' +
       '<form id="ptf-form" class="form-grid" novalidate>' +
+      '<div class="form-row" style="grid-column:1/-1">' +
+      '<button type="button" class="btn btn-ghost" id="ptf-scan" style="width:auto">📷 Scan CNIC Photo</button>' +
+      '<span class="muted" style="font-size:12px;margin-left:8px">Upload a CNIC photo to auto-fill name, CNIC & DOB</span>' +
+      '<input type="file" id="ptf-scanfile" accept="image/*" style="display:none">' +
+      '<div id="ptf-scanstat" class="muted" style="font-size:12px;margin-top:4px"></div></div>' +
       '<div class="form-row"><label class="label" for="ptf-name">Full Name *</label>' +
       '<input class="input" id="ptf-name" maxlength="80" placeholder="e.g. Muhammad Ali" value="' + val('name') + '">' +
       '<div class="f-err" id="ptf-e-name"></div></div>' +
@@ -120,12 +176,52 @@
       '<option value="Other"' + sel('Other') + '>Other</option>' +
       '</select><div class="f-err" id="ptf-e-gender"></div></div>' +
       '</div>' +
+      '<div class="form-row"><label class="label" for="ptf-father">Father / Husband Name</label>' +
+      '<input class="input" id="ptf-father" maxlength="80" placeholder="e.g. Muhammad Aslam" value="' + val('father') + '"></div>' +
+      '<div class="form-2col">' +
+      '<div class="form-row"><label class="label" for="ptf-dob">Date of Birth</label>' +
+      '<input class="input" id="ptf-dob" type="date" value="' + val('dob') + '"></div>' +
+      '<div class="form-row"><label class="label" for="ptf-cnic">CNIC</label>' +
+      '<input class="input" id="ptf-cnic" maxlength="15" placeholder="e.g. 35202-1234567-1" value="' + val('cnic') + '"></div>' +
+      '</div>' +
       '<div class="form-row"><label class="label" for="ptf-phone">Phone</label>' +
       '<div class="ptf-phone-wrap"><input class="input" id="ptf-phone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + val('phone') + '">' +
-      '<span id="ptf-wa">' + waBtn(val('phone'), 'Chat on WhatsApp') + '</span></div>' +
+      '<span id="ptf-wa">' + waBtn(waTarget(p), 'Chat on WhatsApp') + '</span></div>' +
       '<div class="f-err" id="ptf-e-phone"></div></div>' +
+      '<div class="form-row"><label class="label" for="ptf-whatsapp">WhatsApp No.</label>' +
+      '<div class="ptf-phone-wrap"><input class="input" id="ptf-whatsapp" maxlength="20" placeholder="03xxxxxxxxx" value="' + val('whatsapp') + '">' +
+      '<span id="ptf-wa2">' + waBtn(waTarget(p), 'Chat on WhatsApp') + '</span></div>' +
+      '<div class="f-err" id="ptf-e-whatsapp"></div></div>' +
+      '<div class="form-2col">' +
+      '<div class="form-row"><label class="label" for="ptf-phone2">Alternate Phone</label>' +
+      '<input class="input" id="ptf-phone2" maxlength="20" placeholder="e.g. 0321-7654321" value="' + val('phone2') + '"></div>' +
+      '<div class="form-row"><label class="label" for="ptf-email">Email</label>' +
+      '<input class="input" id="ptf-email" type="email" maxlength="80" placeholder="e.g. name@mail.com" value="' + val('email') + '">' +
+      '<div class="f-err" id="ptf-e-email"></div></div>' +
+      '</div>' +
+      '<div class="form-2col">' +
+      '<div class="form-row"><label class="label" for="ptf-city">City</label>' +
+      '<input class="input" id="ptf-city" maxlength="60" placeholder="e.g. Lahore" value="' + val('city') + '"></div>' +
+      '<div class="form-row"><label class="label" for="ptf-blood">Blood Group</label>' +
+      '<select class="select" id="ptf-blood">' +
+      bloods.map(function (b) {
+        return '<option value="' + b + '"' + ((p.blood || '') === b ? ' selected' : '') + '>' + (b || 'Select…') + '</option>';
+      }).join('') +
+      '</select></div>' +
+      '</div>' +
+      '<div class="form-2col">' +
+      '<div class="form-row"><label class="label" for="ptf-ecname">Emergency Contact Name</label>' +
+      '<input class="input" id="ptf-ecname" maxlength="80" placeholder="e.g. Ayesha Khan" value="' + val('ecName') + '"></div>' +
+      '<div class="form-row"><label class="label" for="ptf-ecphone">Emergency Contact Phone</label>' +
+      '<input class="input" id="ptf-ecphone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + val('ecPhone') + '"></div>' +
+      '</div>' +
+      '<div class="form-row"><label class="label" for="ptf-doctor">Referred By</label>' +
+      '<select class="select" id="ptf-doctor">' + docOpts + '</select></div>' +
       '<div class="form-row"><label class="label" for="ptf-address">Address</label>' +
       '<textarea class="input" id="ptf-address" rows="2" maxlength="200" placeholder="Street, area, city">' + val('address') + '</textarea></div>' +
+      '<div class="form-row"><label class="label" for="ptf-notes">Notes / Medical History</label>' +
+      '<textarea class="input" id="ptf-notes" rows="2" maxlength="500" placeholder="Allergies, chronic conditions, remarks…">' + val('notes') + '</textarea></div>' +
+      (!p.id ? orderTestsHTML() : '') +
       '<div class="modal-actions">' +
       '<button type="button" class="btn btn-ghost" id="ptf-cancel">Cancel</button>' +
       '<button type="submit" class="btn btn-primary">' + (p.id ? 'Save Changes' : 'Add Patient') + '</button>' +
@@ -140,6 +236,81 @@
   function bindForm(close, existing, afterSave) {
     var form = document.getElementById('ptf-form');
     if (!form) return;
+    /* CNIC photo scan with OCR */
+    var scanBtn = document.getElementById('ptf-scan');
+    var scanFile = document.getElementById('ptf-scanfile');
+    var scanStat = document.getElementById('ptf-scanstat');
+    if (scanBtn && scanFile) {
+      scanBtn.addEventListener('click', function () { scanFile.click(); });
+      scanFile.addEventListener('change', function () {
+        var f = scanFile.files[0];
+        if (!f) return;
+        if (scanStat) scanStat.textContent = 'Loading OCR engine...';
+        /* load Tesseract.js dynamically */
+        function runOCR() {
+          if (scanStat) scanStat.textContent = 'Scanning CNIC... (this may take 10-20 seconds)';
+          var img = new Image();
+          img.onload = function () {
+            try {
+              Tesseract.recognize(img, 'eng').then(function (result) {
+                var text = result.data.text || '';
+                if (scanStat) scanStat.textContent = 'Processing...';
+                /* extract CNIC number (13 digits) */
+                var cnicM = text.match(/(\d{5})[-\s]?(\d{7})[-\s]?(\d)/);
+                if (cnicM) {
+                  var cnic = cnicM[1] + '-' + cnicM[2] + '-' + cnicM[3];
+                  var ci = document.getElementById('ptf-cnic');
+                  if (ci) ci.value = cnic;
+                }
+                /* extract DOB (look for date patterns) */
+                var dobM = text.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+                if (dobM) {
+                  var dobStr = dobM[3] + '-' + String(dobM[2]).padStart(2, '0') + '-' + String(dobM[1]).padStart(2, '0');
+                  var di = document.getElementById('ptf-dob');
+                  if (di) {
+                    di.value = dobStr;
+                    /* calculate age */
+                    try {
+                      var bd = new Date(dobStr), now = new Date();
+                      var age = now.getFullYear() - bd.getFullYear();
+                      if (now.getMonth() < bd.getMonth() || (now.getMonth() === bd.getMonth() && now.getDate() < bd.getDate())) age--;
+                      var ai = document.getElementById('ptf-age');
+                      if (ai && age > 0 && age < 120) ai.value = age;
+                    } catch (e) {}
+                  }
+                }
+                /* extract name (line after "Name" label) */
+                var lines = text.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+                for (var i = 0; i < lines.length; i++) {
+                  if (/^name/i.test(lines[i]) && lines[i + 1]) {
+                    var nm = lines[i + 1].replace(/[^A-Za-z ]/g, '').trim();
+                    if (nm.length > 2) {
+                      var ni = document.getElementById('ptf-name');
+                      if (ni && !ni.value) ni.value = nm;
+                      break;
+                    }
+                  }
+                }
+                if (scanStat) scanStat.textContent = '✓ Scan complete. Please verify the filled fields.';
+                App.toast('CNIC scanned', 'ok');
+              }).catch(function () {
+                if (scanStat) scanStat.textContent = 'Scan failed. Please enter manually.';
+              });
+            } catch (e) {
+              if (scanStat) scanStat.textContent = 'Scan failed. Please enter manually.';
+            }
+          };
+          img.src = URL.createObjectURL(f);
+        }
+        if (typeof Tesseract === 'undefined') {
+          var sc = document.createElement('script');
+          sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
+          sc.onload = runOCR;
+          sc.onerror = function () { if (scanStat) scanStat.textContent = 'Could not load OCR. Check internet.'; };
+          document.head.appendChild(sc);
+        } else runOCR();
+      });
+    }
     document.getElementById('ptf-cancel').addEventListener('click', close);
     // live-update the WhatsApp button next to the phone field as the user types
     var phoneInput = document.getElementById('ptf-phone');
@@ -147,7 +318,75 @@
     if (phoneInput && waWrap) {
       phoneInput.addEventListener('input', function () {
         waWrap.innerHTML = waBtn(phoneInput.value, 'Chat on WhatsApp');
+        checkDuplicate();
       });
+    }
+    // live-update the WhatsApp button next to the WhatsApp field (falls back to phone)
+    var waInput = document.getElementById('ptf-whatsapp');
+    var waWrap2 = document.getElementById('ptf-wa2');
+    if (waInput && waWrap2) {
+      waInput.addEventListener('input', function () {
+        waWrap2.innerHTML = waBtn(waInput.value || (phoneInput ? phoneInput.value : ''), 'Chat on WhatsApp');
+      });
+    }
+    // duplicate detection: warn if CNIC or phone matches an existing patient
+    var cnicInput = document.getElementById('ptf-cnic');
+    var dupWarn = document.createElement('div');
+    dupWarn.id = 'ptf-dupwarn';
+    dupWarn.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid var(--amber);border-radius:8px;background:var(--amber-soft)';
+    if (form) form.insertBefore(dupWarn, form.firstChild);
+    function normPhone(p) { return (p || '').replace(/\D/g, '').replace(/^92/, '0'); }
+    function checkDuplicate() {
+      if (!dupWarn) return;
+      var cnic = (cnicInput ? cnicInput.value.trim() : '');
+      var phone = normPhone(phoneInput ? phoneInput.value : '');
+      var found = null, matchBy = '';
+      if (cnic || phone) {
+        var all = DB.all('patients');
+        for (var i = 0; i < all.length; i++) {
+          var p = all[i];
+          if (existing && p.id === existing.id) continue;
+          if (cnic && p.cnic && p.cnic.replace(/\D/g, '') === cnic.replace(/\D/g, '')) { found = p; matchBy = 'CNIC'; break; }
+          if (phone && phone.length >= 10 && p.phone && normPhone(p.phone) === phone) { found = p; matchBy = phone; break; }
+        }
+      }
+      if (found) {
+        var invCount = DB.all('invoices').filter(function (inv) { return inv.patientId === found.id; }).length;
+        dupWarn.style.display = 'block';
+        dupWarn.innerHTML = '<strong>⚠️ Possible duplicate:</strong> ' + App.esc(found.name || '') +
+          ' (matched by ' + App.esc(matchBy) + ') already exists with ' + invCount + ' invoice(s). ' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="ptf-dupview" style="margin-left:8px">View existing patient</button>';
+        var dv = document.getElementById('ptf-dupview');
+        if (dv) dv.addEventListener('click', function () { App.nav('#/patients/' + found.id); });
+      } else {
+        dupWarn.style.display = 'none';
+        dupWarn.innerHTML = '';
+      }
+    }
+    if (cnicInput) cnicInput.addEventListener('input', checkDuplicate);
+    setTimeout(checkDuplicate, 300);
+    // order-tests picker (add mode only): search filter + live selection summary
+    var tSearch = document.getElementById('ptf-tsearch');
+    var tList = document.getElementById('ptf-tlist');
+    var tSum = document.getElementById('ptf-tsum');
+    function paintTSum() {
+      if (!tList || !tSum) return;
+      var n = 0, amt = 0;
+      var chks = tList.querySelectorAll('.ptf-tchk:checked');
+      for (var i = 0; i < chks.length; i++) { n++; amt += (+chks[i].getAttribute('data-price') || 0); }
+      tSum.textContent = n + ' selected • ' + App.money(amt);
+    }
+    if (tSearch && tList) {
+      tSearch.addEventListener('input', function () {
+        var q = tSearch.value.trim().toLowerCase();
+        var rows = tList.querySelectorAll('.ptf-trow');
+        for (var i = 0; i < rows.length; i++) {
+          var nm = rows[i].getAttribute('data-tname') || '';
+          rows[i].style.display = (!q || nm.indexOf(q) >= 0) ? '' : 'none';
+        }
+      });
+      tList.addEventListener('change', paintTSum);
+      paintTSum();
     }
     form.addEventListener('submit', function (ev) {
       ev.preventDefault();
@@ -155,26 +394,73 @@
       var ageRaw = document.getElementById('ptf-age').value.trim();
       var gender = document.getElementById('ptf-gender').value;
       var phone = document.getElementById('ptf-phone').value.trim();
+      var whatsapp = document.getElementById('ptf-whatsapp').value.trim();
       var address = document.getElementById('ptf-address').value.trim();
+      var father = document.getElementById('ptf-father').value.trim();
+      var dob = document.getElementById('ptf-dob').value;
+      var cnic = document.getElementById('ptf-cnic').value.trim();
+      var phone2 = document.getElementById('ptf-phone2').value.trim();
+      var email = document.getElementById('ptf-email').value.trim();
+      var city = document.getElementById('ptf-city').value.trim();
+      var blood = document.getElementById('ptf-blood').value;
+      var ecName = document.getElementById('ptf-ecname').value.trim();
+      var ecPhone = document.getElementById('ptf-ecphone').value.trim();
+      var doctorId = document.getElementById('ptf-doctor').value || null;
+      var notes = document.getElementById('ptf-notes').value.trim();
       var ok = true;
-      setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-phone', '');
+      setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-phone', ''); setErr('ptf-e-email', ''); setErr('ptf-e-whatsapp', '');
       if (name.length < 2) { setErr('ptf-e-name', 'Please enter the full name.'); ok = false; }
       var age = parseInt(ageRaw, 10);
       if (!ageRaw || isNaN(age) || age < 1 || age > 120) { setErr('ptf-e-age', 'Enter a valid age (1–120).'); ok = false; }
       if (!gender) { setErr('ptf-e-gender', 'Please select gender.'); ok = false; }
       if (phone && !/^[+\d][\d\s\-()]{5,19}$/.test(phone)) { setErr('ptf-e-phone', 'Enter a valid phone number.'); ok = false; }
+      if (whatsapp && !/^[+\d][\d\s\-()]{5,19}$/.test(whatsapp)) { setErr('ptf-e-whatsapp', 'Enter a valid WhatsApp number.'); ok = false; }
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErr('ptf-e-email', 'Enter a valid email address.'); ok = false; }
       if (!ok) return;
-      var data = { name: name, age: age, gender: gender, phone: phone, address: address };
+      var data = { name: name, age: age, gender: gender, phone: phone, whatsapp: whatsapp, address: address,
+        father: father, dob: dob, cnic: cnic, phone2: phone2, email: email, city: city,
+        blood: blood, ecName: ecName, ecPhone: ecPhone, doctorId: doctorId, notes: notes };
       if (existing && existing.id) {
         DB.update('patients', existing.id, data);
         App.toast('Patient details updated.');
       } else {
         data.createdAt = new Date().toISOString();
-        DB.insert('patients', data);
-        App.toast('Patient added successfully.');
+        var np = DB.insert('patients', data);
+        // order tests → unpaid invoice + pending lab results (add mode only)
+        var tMsg = 'Patient added successfully.';
+        var tListEl = document.getElementById('ptf-tlist');
+        if (tListEl && np && np.id) {
+          var tIds = [];
+          var chks = tListEl.querySelectorAll('.ptf-tchk:checked');
+          for (var ci = 0; ci < chks.length; ci++) tIds.push(chks[ci].value);
+          var items = [];
+          tIds.forEach(function (tid) {
+            var t = DB.get('tests', tid);
+            if (!t) return;
+            items.push({ testId: t.id, code: t.code, name: t.name, price: +t.price || 0,
+              isPackage: !!t.isPackage, includes: t.isPackage ? (t.includes || []) : null });
+          });
+          if (items.length) {
+            var bTotal = items.reduce(function (a, l) { return a + (+l.price || 0); }, 0);
+            var inv = DB.insert('invoices', {
+              patientId: np.id, doctorId: null, items: items,
+              subtotal: bTotal, discount: 0, total: bTotal, paid: 0, due: bTotal,
+              status: 'unpaid', createdAt: new Date().toISOString(), createdBy: ptUser()
+            });
+            items.forEach(function (l) {
+              var tids = (l.isPackage && l.includes && l.includes.length) ? l.includes : [l.testId];
+              tids.forEach(function (tid) {
+                DB.insert('results', { invoiceId: inv.id, testId: tid, values: {},
+                  status: 'pending', reportedAt: null, reportedBy: null });
+              });
+            });
+            tMsg = 'Patient added — ' + items.length + ' test(s) sent to Lab Results.';
+          }
+        }
+        App.toast(tMsg);
       }
       close();
-      if (afterSave) afterSave();
+      if (afterSave) afterSave(np || existing || null);
     });
   }
   function openPatientModal(existing, afterSave) {
@@ -204,12 +490,21 @@
   function rowHTML(p) {
     var st = patientStats(p);
     var edit = canEdit();
+    var regDate = '';
+    try {
+      if (p.createdAt) {
+        var d = new Date(p.createdAt);
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        regDate = d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+      }
+    } catch (e) {}
     return '<tr>' +
       '<td><span class="mono">' + App.esc(p.id) + '</span></td>' +
       '<td><a class="pt-name" href="#/patient/' + App.esc(p.id) + '">' + avatarHTML(p.name, 34) +
       '<span><strong>' + App.esc(p.name) + '</strong><small>' + App.esc(p.phone || '—') + '</small></span></a></td>' +
       '<td>' + App.esc(p.age) + ' yrs · ' + App.esc(p.gender) + '</td>' +
-      '<td>' + App.esc(p.phone || '—') + (p.phone ? ' ' + waBtn(p.phone, 'Chat on WhatsApp') : '') + '</td>' +
+      '<td>' + App.esc(p.phone || '—') + ((p.whatsapp || p.phone) ? ' ' + waBtn(waTarget(p), 'Chat on WhatsApp') : '') + '</td>' +
+      '<td class="muted">' + App.esc(regDate || '—') + '</td>' +
       '<td class="num">' + st.visits + '</td>' +
       '<td class="num">' + App.money(st.spent) + '</td>' +
       '<td class="num">' + (st.due > 0
@@ -251,11 +546,11 @@
       statCard(STAT_ICONS.receipt, 'brand', 'Walk-in Bills This Month', walkinThisMonth, 'unregistered patients') +
       '</div></div>' +
       '<div class="card"><div class="card-b">' +
-      '<div class="toolbar"><input class="input search" id="pt-search" placeholder="Search by name, phone or patient ID…" value="' + App.esc(listQuery) + '">' +
-      '<span class="muted" id="pt-count">' + rows.length + ' shown</span>' +
-      (edit ? '<button class="btn btn-primary" id="pt-add" style="margin-left:auto">+ Add Patient</button>' : '') + '</div>' +
+      '<div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><input class="input search" id="pt-search" placeholder="Search by name, phone or patient ID…" value="' + App.esc(listQuery) + '" style="flex:1;min-width:0">' +
+      (edit ? '<button class="btn btn-primary" id="pt-add" style="margin-left:auto;flex:none">+ Add Patient</button>' : '') + '</div>' +
+      '<div class="muted" id="pt-count" style="font-size:12.5px;margin-bottom:10px">' + rows.length + ' shown</div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
-      '<th>ID</th><th>Patient</th><th>Age / Gender</th><th>Phone</th><th class="num">Visits</th>' +
+      '<th>ID</th><th>Patient</th><th>Age / Gender</th><th>Phone</th><th>Registered</th><th class="num">Visits</th>' +
       '<th class="num">Total Spent</th><th class="num">Due</th><th></th>' +
       '</tr></thead><tbody id="pt-rows">' +
       (rows.length ? rows.map(rowHTML).join('') : '') +
@@ -284,7 +579,7 @@
       search.focus();
       search.setSelectionRange(search.value.length, search.value.length);
       var addBtn = document.getElementById('pt-add');
-      if (addBtn) addBtn.addEventListener('click', function () { openPatientModal(null, renderList); });
+      if (addBtn) addBtn.addEventListener('click', function () { App.nav('#/patients/new'); });
       bindRowButtons();
     });
 
@@ -315,6 +610,7 @@
     var invRows = st.invoices.map(function (inv) {
       var testNames = (inv.items || []).map(function (it) { return it.name || it.code; }).join(', ');
       return '<tr>' +
+        '<td><input type="checkbox" class="cmp-chk" data-inv="' + App.esc(inv.id) + '" title="Select for comparison"></td>' +
         '<td><a class="link" href="#/invoice/' + App.esc(inv.id) + '"><span class="mono">' + App.esc(inv.no || inv.id) + '</span></a></td>' +
         '<td>' + App.d(inv.createdAt) + '</td>' +
         '<td class="tests-cell">' + App.esc(testNames || '—') + '</td>' +
@@ -325,9 +621,43 @@
         '<td class="actions"><a class="btn btn-ghost btn-sm" href="#/invoice/' + App.esc(inv.id) + '">View</a></td></tr>';
     }).join('');
 
+    var docName = 'Self';
+    if (p.doctorId) { var _dd = DB.get('doctors', p.doctorId); if (_dd && _dd.name) docName = _dd.name; }
+
+    /* lab tests for this patient: each ordered test with its result status */
+    var testRows = [];
+    st.invoices.forEach(function (inv) {
+      (inv.items || []).forEach(function (item) {
+        var res = null;
+        try {
+          res = DB.all('results').filter(function (r) { return r.invoiceId === inv.id && r.testId === item.testId; })[0] || null;
+        } catch (e) { res = null; }
+        testRows.push({ res: res, invoice: inv, item: item, test: DB.get('tests', item.testId) });
+      });
+    });
+    testRows.sort(function (a, b) {
+      var da = a.invoice.createdAt || '', db = b.invoice.createdAt || '';
+      return db < da ? -1 : (db > da ? 1 : 0);
+    });
+    var labTestRowsHtml = testRows.map(function (tr, i) {
+      var tName = App.esc(tr.item.name || (tr.test && tr.test.name) || 'Test');
+      var ready = tr.res && tr.res.status === 'ready';
+      var status = ready ? '<span class="badge b-ok">Ready</span>' : '<span class="badge b-warn">Pending</span>';
+      var actions = ready
+        ? '<button class="btn btn-ghost btn-sm" data-ptview="' + i + '">View</button> ' +
+          '<button class="btn btn-ghost btn-sm" data-ptprint="' + i + '">Print</button>'
+        : '<button class="btn btn-primary btn-sm" data-ptenter="' + i + '">Enter Result</button>';
+      return '<tr><td><strong>' + tName + '</strong></td>' +
+        '<td><span class="mono">' + App.esc(tr.invoice.no || tr.invoice.id) + '</span></td>' +
+        '<td>' + App.d(tr.invoice.createdAt) + '</td>' +
+        '<td>' + status + '</td>' +
+        '<td class="actions">' + actions + '</td></tr>';
+    }).join('');
+
     var html = '' + WA_CSS +
       '<div class="page-head"><div><a class="back-link" href="#/patients">← All Patients</a><h1>Patient Profile</h1></div>' +
-      (edit ? '<div class="head-actions"><button class="btn btn-ghost" id="pt-edit">Edit Details</button>' +
+      (edit ? '<div class="head-actions"><a class="btn btn-primary" href="#/billing/' + App.esc(p.id) + '">+ New Bill</a>' +
+        '<button class="btn btn-ghost" id="pt-edit">Edit Details</button>' +
         '<button class="btn btn-danger" id="pt-del">Delete</button></div>' : '') + '</div>' +
 
       '<div class="card pt-profile"><div class="card-b pt-profile-in">' +
@@ -335,10 +665,22 @@
       '<div class="pt-id-block"><h2>' + App.esc(p.name) + ' <span class="badge b-id mono">' + App.esc(p.id) + '</span></h2>' +
       '<div class="pt-meta">' +
       '<span>🎂 ' + App.esc(p.age) + ' years</span><span>⚧ ' + App.esc(p.gender) + '</span>' +
-      '<span>📞 ' + App.esc(p.phone || '—') + ' ' + (p.phone ? waBtn(p.phone, 'Chat on WhatsApp') : '') + '</span>' +
+      '<span>📞 ' + App.esc(p.phone || '—') + ' ' + ((p.whatsapp || p.phone) ? waBtn(waTarget(p), 'Chat on WhatsApp') : '') + '</span>' +
+      (p.father ? '<span>👤 ' + App.esc(p.father) + '</span>' : '') +
+      (p.dob ? '<span>🎂 ' + App.esc(p.dob) + '</span>' : '') +
+      (p.blood ? '<span>🩸 ' + App.esc(p.blood) + '</span>' : '') +
+      (p.cnic ? '<span>🪪 ' + App.esc(p.cnic) + '</span>' : '') +
+      (p.phone2 ? '<span>📞 ' + App.esc(p.phone2) + ' (alt)</span>' : '') +
+      (p.whatsapp ? '<span>💬 ' + App.esc(p.whatsapp) + ' ' + waBtn(p.whatsapp, 'Chat on WhatsApp') + '</span>' : '') +
+      (p.email ? '<span>📧 ' + App.esc(p.email) + '</span>' : '') +
+      (p.city ? '<span>🏙 ' + App.esc(p.city) + '</span>' : '') +
+      ((p.ecName || p.ecPhone) ? '<span>🆘 ' + App.esc([p.ecName, p.ecPhone].filter(Boolean).join(' • ')) + '</span>' : '') +
+      '<span>👨‍⚕️ ' + App.esc(docName) + '</span>' +
       (p.address ? '<span>📍 ' + App.esc(p.address) + '</span>' : '') +
       '<span>🗓 Registered ' + App.d(p.createdAt) + '</span>' +
-      '</div></div></div></div>' +
+      '</div>' +
+      (p.notes ? '<div class="pt-notes" style="margin-top:10px;font-size:13px;color:#5b6b80">📝 ' + App.esc(p.notes) + '</div>' : '') +
+      '</div></div></div>' +
 
       '<div class="stat-grid stat-grid-3">' +
       '<div class="stat"><div class="stat-ic blue">🧾</div><div><div class="stat-v">' + st.visits + '</div><div class="stat-l">Total Visits</div></div></div>' +
@@ -346,16 +688,82 @@
       '<div class="stat"><div class="stat-ic ' + (st.due > 0 ? 'red' : 'green') + '">⏳</div><div><div class="stat-v">' + App.money(st.due) + '</div><div class="stat-l">Outstanding Due</div></div></div>' +
       '</div>' +
 
-      '<div class="card"><div class="card-h"><h3>Invoice History</h3><span class="muted">' + st.visits + ' invoice(s)</span></div>' +
+      '<div class="card"><div class="card-h"><h3>Lab Tests</h3><span class="muted">' + testRows.length + ' test(s)</span></div>' +
+      '<div class="card-b">' +
+      (testRows.length
+        ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th>Invoice No</th><th>Date</th><th>Status</th><th></th></tr></thead>' +
+          '<tbody>' + labTestRowsHtml + '</tbody></table></div>'
+        : App.empty('No tests ordered yet for this patient.')) +
+      '</div></div>' +
+
+      '<div class="card"><div class="card-h"><h3>Invoice History</h3><span class="muted">' + st.visits + ' invoice(s)</span>' +
+      '<button class="btn btn-primary btn-sm" id="cmpBtn" style="display:none;margin-left:auto">Compare Selected (2)</button></div>' +
       '<div class="card-b">' +
       (st.invoices.length
-        ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Invoice No</th><th>Date</th><th>Tests</th>' +
+        ? '<p class="muted" style="font-size:12px;margin-top:0">Tick any 2 invoices to compare their reports side by side.</p>' +
+          '<div class="tbl-wrap"><table class="table"><thead><tr><th></th><th>Invoice No</th><th>Date</th><th>Tests</th>' +
           '<th class="num">Total</th><th class="num">Paid</th><th class="num">Due</th><th>Status</th><th></th></tr></thead>' +
           '<tbody>' + invRows + '</tbody></table></div>'
         : App.empty('No invoices yet for this patient.')) +
       '</div></div>';
 
     paint(html, function () {
+      /* lab test actions: enter result / view / print */
+      function ensureResultsMod(cb) {
+        if (App.enterLabResult && App.viewLabReport && App.printLabReport) { cb(); return; }
+        App.loadScript('assets/js/mod-results.js').then(cb, function () { App.toast('Could not load lab results module', 'err'); });
+      }
+      function entryRow(tr) {
+        return { res: tr.res, invoice: tr.invoice, patient: p, item: tr.item, test: tr.test };
+      }
+      document.querySelectorAll('[data-ptenter]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var tr = testRows[+b.getAttribute('data-ptenter')];
+          if (!tr) return;
+          ensureResultsMod(function () {
+            App.enterLabResult(entryRow(tr), function () { renderDetail({ id: p.id }); });
+          });
+        });
+      });
+      document.querySelectorAll('[data-ptview]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var tr = testRows[+b.getAttribute('data-ptview')];
+          if (!tr) return;
+          var invId = tr.invoice.id;
+          ensureResultsMod(function () { App.viewLabReport(invId); });
+        });
+      });
+      document.querySelectorAll('[data-ptprint]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var tr = testRows[+b.getAttribute('data-ptprint')];
+          if (!tr) return;
+          var invId = tr.invoice.id;
+          ensureResultsMod(function () { App.printLabReport(invId); });
+        });
+      });
+      /* report comparison: select 2 invoices, compare side by side */
+      var cmpBtn = document.getElementById('cmpBtn');
+      var cmpChks = Array.prototype.slice.call(document.querySelectorAll('.cmp-chk'));
+      function paintCmpBtn() {
+        var sel = cmpChks.filter(function (c) { return c.checked; });
+        if (cmpBtn) {
+          cmpBtn.style.display = sel.length === 2 ? '' : 'none';
+          cmpBtn.textContent = 'Compare Selected (' + sel.length + '/2)';
+        }
+      }
+      cmpChks.forEach(function (c) {
+        c.addEventListener('change', function () {
+          var sel = cmpChks.filter(function (x) { return x.checked; });
+          if (sel.length > 2) { c.checked = false; App.toast('Select only 2 invoices to compare', 'err'); return; }
+          paintCmpBtn();
+        });
+      });
+      if (cmpBtn) cmpBtn.addEventListener('click', function () {
+        var sel = cmpChks.filter(function (x) { return x.checked; }).map(function (x) { return x.getAttribute('data-inv'); });
+        if (sel.length !== 2) return;
+        ensureResultsMod(function () { App.compareReports(sel[0], sel[1]); });
+      });
+      paintCmpBtn();
       if (!edit) return;
       document.getElementById('pt-edit').addEventListener('click', function () {
         openPatientModal(p, function () { renderDetail({ id: p.id }); });
@@ -366,7 +774,22 @@
     });
   }
 
+  /* ---------- #/patients/new : dedicated full-page add form ---------- */
+  function renderAddPage() {
+    if (!canEdit()) { App.toast('Not allowed.', 'err'); App.nav('#/patients'); return; }
+    var html =
+      '<div class="page-head"><div><a class="back-link" href="#/patients">← All Patients</a><h1>Add Patient</h1></div></div>' +
+      '<div class="card"><div class="card-b">' + formHTML({}) + '</div></div>';
+    paint(html, function () {
+      bindForm(function () { App.nav('#/patients'); }, null, function (np) {
+        if (np && np.id) App.nav('#/patient/' + np.id);
+        else App.nav('#/patients');
+      });
+    });
+  }
+
   /* ---------- route registration ---------- */
   App.route('/patients', renderList);
+  App.route('/patients/new', renderAddPage);
   App.route('/patient/:id', renderDetail);
 })();

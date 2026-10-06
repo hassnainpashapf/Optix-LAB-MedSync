@@ -593,7 +593,10 @@
             return true;
           }).catch(function () { return true; });
         }
-        API = null; remote = false; return false;
+        /* server configured but unreachable (offline / VPS down): do NOT fall back to the local demo store.
+           Show the login page; sign-in then reports 'cannot reach the server' and works once it is back. */
+        cloud = true; remote = false; clearSession();
+        return true;
       });
     },
     isRemote: function () { return remote; },

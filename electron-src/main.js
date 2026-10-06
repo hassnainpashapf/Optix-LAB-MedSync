@@ -32,7 +32,7 @@ async function boot() {
   let started = null;
   let lastErr = null;
   for (let p = 3765; p < 3785; p++) {
-    try { started = await start({ port: p, dbPath, wwwRoot: __dirname }); break; }
+    try { started = await start({ port: p, dbPath, wwwRoot: __dirname, cloudUrl: (updater.getConfig && updater.getConfig().cloudUrl) || '' }); break; }
     catch (e) { lastErr = e; }
   }
   if (!started) {

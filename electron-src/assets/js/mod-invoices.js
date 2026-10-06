@@ -10,7 +10,8 @@
     doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
     cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
     cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
-    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>'
+    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+    printer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>'
   };
   function scIsTech() {
     try {
@@ -153,16 +154,13 @@
 
   /* ---------- WhatsApp helpers ---------- */
   function waPhone(p) {
-    var d = String(p || '').replace(/\D/g, '');
-    if (!d) return null;
-    if (d.charAt(0) === '0') d = '92' + d.slice(1);
-    return d;
+    return App.normWa(p); /* shared helper (app.js) */
   }
   function shareInvoiceWhatsApp(id) {
     var inv = DB.get('invoices', id);
     if (!inv) return;
     var p = patientOf(inv);
-    var ph = waPhone(p && p.phone);
+    var ph = waPhone(p && (p.whatsapp || p.phone)); /* dedicated WhatsApp no., else phone */
     if (!ph) { App.toast('No WhatsApp number on patient record', 'err'); return; }
     var s = DB.get('settings', 'main') || {};
     var tests = (inv.items || []).map(function (it) { return it.name; }).join(', ');
@@ -203,7 +201,7 @@
         '<div style="font-size:26px;font-weight:800">' + App.esc(s.labName || 'Lab') + '</div>' +
         '<div style="color:#555;font-size:13px">' + App.esc(s.address || '') + ' &nbsp;|&nbsp; ' + App.esc(s.phone || '') + '</div>' +
       '</div>' +
-      '<div style="font-size:20px;font-weight:800;border-top:2px solid #0d9488;border-bottom:2px solid #0d9488;padding:10px 0;margin-bottom:16px">PAYMENT RECEIPT</div>' +
+      '<div style="font-size:20px;font-weight:800;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:16px">PAYMENT RECEIPT</div>' +
       '<table style="width:100%;font-size:14px;border-collapse:collapse;margin-bottom:16px">' +
         '<tr><td style="padding:6px;color:#555">Receipt No</td><td style="padding:6px;font-weight:700">' + App.esc(py.id) + '</td></tr>' +
         '<tr><td style="padding:6px;color:#555">Date</td><td style="padding:6px">' + App.d(py.date) + ' ' + (App.dt(py.date).split(' ').slice(-1) || '') + '</td></tr>' +
@@ -368,7 +366,7 @@
         '<div style="color:#555;font-size:13px">' + App.esc(s.tagline || '') + '</div>' +
         '<div style="color:#555;font-size:13px">' + App.esc(s.address || '') + ' &nbsp;|&nbsp; ' + App.esc(s.phone || '') + '</div>' +
       '</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #0d9488;border-bottom:2px solid #0d9488;padding:10px 0;margin-bottom:16px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:16px">' +
         '<div style="font-size:20px;font-weight:800">INVOICE</div>' +
         '<div style="text-align:right"><div><strong>' + App.esc(inv.no) + '</strong></div>' +
         '<div style="font-size:13px;color:#555">Date: ' + App.d(inv.createdAt) + ' ' + App.dt(inv.createdAt).split(' ').slice(-1) + '</div>' +
@@ -444,19 +442,6 @@
     return list;
   }
 
-  function summaryStrip(list) {
-    var billed = 0, collected = 0, due = 0;
-    list.forEach(function (inv) { billed += inv.total; collected += inv.paid; due += inv.due; });
-    return '<div class="stat-grid" style="margin-bottom:18px">' +
-      '<div class="stat"><div class="stat-label">Total Billed</div><div class="stat-num">' + App.money(billed) + '</div>' +
-      '<div class="stat-sub">' + list.length + ' invoice(s)</div></div>' +
-      '<div class="stat"><div class="stat-label">Collected</div><div class="stat-num" style="color:var(--green)">' + App.money(collected) + '</div>' +
-      '<div class="stat-sub">payments received</div></div>' +
-      '<div class="stat"><div class="stat-label">Outstanding Due</div><div class="stat-num" style="color:var(--red)">' + App.money(due) + '</div>' +
-      '<div class="stat-sub">yet to collect</div></div>' +
-    '</div>';
-  }
-
   function invoiceRows(list) {
     if (!list.length) return '<tr><td colspan="9">' + App.empty('No invoices found. Adjust filters or create a new bill.') + '</td></tr>';
     return list.map(function (inv) {
@@ -506,25 +491,23 @@
 
     view.innerHTML =
       '<div class="card"><div class="card-b">' +
-        '<div class="toolbar" style="margin-bottom:14px">' +
-          '<input id="f-q" class="input search" style="max-width:280px" placeholder="Search invoice no, patient, phone..." value="' + App.esc(F.q) + '">' +
-          '<select id="f-date" class="select">' +
+        SC_STYLE +
+        '<div class="stat-grid">' + invStats + '</div>' +
+        '<div class="toolbar" style="margin:0 0 12px;gap:8px;flex-wrap:nowrap">' +
+          '<input id="f-q" class="input" style="flex:1;min-width:0;width:auto;padding:8px 12px;font-size:13px" placeholder="Search invoice no, patient, phone..." value="' + App.esc(F.q) + '">' +
+          '<select id="f-date" class="select" style="width:auto;flex:0 0 auto;padding:8px 10px;font-size:13px">' +
             '<option value="all">All dates</option>' +
             '<option value="today"' + (F.date === 'today' ? ' selected' : '') + '>Today</option>' +
             '<option value="yesterday"' + (F.date === 'yesterday' ? ' selected' : '') + '>Yesterday</option>' +
             '<option value="last7"' + (F.date === 'last7' ? ' selected' : '') + '>Last 7 days</option>' +
           '</select>' +
-          '<select id="f-status" class="select">' +
+          '<select id="f-status" class="select" style="width:auto;flex:0 0 auto;padding:8px 10px;font-size:13px">' +
             '<option value="all">All statuses</option>' +
             '<option value="paid"' + (F.status === 'paid' ? ' selected' : '') + '>Paid</option>' +
             '<option value="partial"' + (F.status === 'partial' ? ' selected' : '') + '>Partial</option>' +
             '<option value="unpaid"' + (F.status === 'unpaid' ? ' selected' : '') + '>Unpaid</option>' +
           '</select>' +
-          '<a class="btn btn-primary" href="#/billing" style="margin-left:auto">+ New Bill</a>' +
         '</div>' +
-        SC_STYLE +
-        '<div class="stat-grid">' + invStats + '</div>' +
-        '<div id="inv-summary"></div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr>' +
           '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:center">Tests</th>' +
           '<th style="text-align:right">Total</th><th style="text-align:right">Paid</th>' +
@@ -534,7 +517,6 @@
 
     function update() {
       var list = filteredInvoices();
-      document.getElementById('inv-summary').innerHTML = summaryStrip(list);
       document.getElementById('inv-rows').innerHTML = invoiceRows(list);
       view.querySelectorAll('[data-collect]').forEach(function (btn) {
         btn.addEventListener('click', function () { openPaymentModal(btn.getAttribute('data-collect')); });
@@ -577,7 +559,7 @@
       '<div class="toolbar">' +
         '<a class="btn btn-ghost" href="#/invoices">← Back to Invoices</a>' +
         '<div style="flex:1"></div>' +
-        '<button class="btn btn-ghost" id="iv-print">🖨 Print Invoice</button>' +
+        '<button class="btn btn-ghost" id="iv-print">' + SC_ICONS.printer + ' Print Invoice</button>' +
         '<button class="btn btn-ghost" id="iv-edit">Edit</button>' +
         '<button class="btn btn-ghost" id="iv-wa">WhatsApp</button>' +
         (r2(inv.due) > 0 ? '<button class="btn btn-primary" id="iv-collect">Collect Payment</button>' : '') +

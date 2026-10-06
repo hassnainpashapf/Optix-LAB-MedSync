@@ -11,6 +11,7 @@ function start(opts) {
   const port = opts.port || 3765;
   const dbPath = opts.dbPath || path.join(__dirname, 'labpos.db');
   const wwwRoot = opts.wwwRoot || path.join(__dirname, '..');
+  const cloudUrl = String(opts.cloudUrl || '').replace(/\/+$/, '');
 
   const store = openStore(dbPath);
   if (store.isEmpty()) {
@@ -58,11 +59,13 @@ function start(opts) {
     }
     res.json({ latest: v, minRequired: v, bundleUrl: null, changelog: '' });
   });
-  /* frontend config: tells db.js where the API lives (must precede /:table routes) */
-  app.get('/api-config.js', (req, res) => {
-    res.type('application/javascript');
-    res.send(`window.LABPOS_API=${JSON.stringify(`http://127.0.0.1:${port}`)};`);
-  });
+  /* frontend config: tells db.js where the API lives (must precede /:table routes).
+     cloudUrl set (cloud.json / LABPOS_CLOUD_URL) -> the desktop app uses the shared cloud API;
+     empty -> local-only mode against this embedded server. */
+  const apiBase = cloudUrl || `http://127.0.0.1:${port}`;
+  const sendCfg = (req, res) => { res.type('application/javascript'); res.set('Cache-Control', 'no-store'); res.send(`window.LABPOS_API=${JSON.stringify(apiBase)};`); };
+  app.get('/api-config.js', sendCfg);
+  app.get('/assets/js/api-config.js', sendCfg); /* the web index.html loads this path */
   app.get('/api/:table', (req, res) => {
     if (!okTable(req.params.table)) return res.status(404).json({ error: 'unknown table' });
     res.json(store.all(req.params.table));

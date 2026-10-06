@@ -1,24 +1,115 @@
-/* Optix LAB MedSync — DB layer (localStorage). Exposes window.DB. See SPEC.md for schema. */
+/* Optix LAB MedSync — DB layer (localStorage). Exposes window.DB. See SPEC.md for schema.
+   MULTI-TENANT: each lab gets its own isolated store under 'labpos_db_' + labId.
+   The registry 'labpos_labs_v1' lists all labs. Switch stores with DB.useLab(labId). */
 (function () {
   'use strict';
 
-  var KEY = 'labpos_db_v1';
+  /* ---------------- multi-tenant ---------------- */
+  var REG_KEY = 'labpos_labs_v1';   /* lab registry: { labs: [{id,name,adminUsername,createdAt,active}] } */
+  var LAST_KEY = 'labpos_last_lab'; /* last used lab (login page preview) */
+  var LEGACY_KEY = 'labpos_db_v1';  /* old single-lab key — migrated to lab1, kept as backup */
+  var KEY = LEGACY_KEY;
+  var currentLabId = null;
+
+  function keyFor(labId) { return 'labpos_db_' + labId; }
+
+  function loadRegistry() {
+    try {
+      var r = JSON.parse(localStorage.getItem(REG_KEY) || 'null');
+      if (r && Array.isArray(r.labs)) return r;
+    } catch (e) {}
+    return null;
+  }
+  function saveRegistry(reg) {
+    try { localStorage.setItem(REG_KEY, JSON.stringify(reg)); } catch (e) {}
+  }
+  function labById(id) {
+    var reg = loadRegistry();
+    if (!reg || !id) return null;
+    for (var i = 0; i < reg.labs.length; i++) {
+      if (reg.labs[i].id === id) return reg.labs[i];
+    }
+    return null;
+  }
+
+  /* First run: build the registry. An existing single-lab database is migrated
+     into the default lab ('lab1'); the legacy key is left untouched as backup. */
+  function ensureRegistry() {
+    var reg = loadRegistry();
+    if (reg) return reg;
+    var legacy = null;
+    try { legacy = localStorage.getItem(LEGACY_KEY); } catch (e) {}
+    var labName = 'Optix LAB MedSync';
+    if (legacy) {
+      try {
+        var s = JSON.parse(legacy);
+        if (s && s.settings && s.settings.labName) labName = s.settings.labName;
+      } catch (e) {}
+    }
+    reg = { labs: [{ id: 'lab1', name: labName, adminUsername: 'admin', createdAt: new Date().toISOString(), active: true }] };
+    saveRegistry(reg);
+    if (legacy) {
+      try { localStorage.setItem(keyFor('lab1'), legacy); } catch (e) {}
+    }
+    return reg;
+  }
 
   /* Remote mode: when served by the LabPOS server, /api-config.js sets
      window.LABPOS_API and DB.init() loads the server dump into `store`.
      All reads stay synchronous; writes go to memory + fire-and-forget API. */
   var API = null;
-  var remote = false;
+  var remote = false;   /* server data loaded + authenticated: writes mirror to the API */
+  var cloud = false;    /* a token-auth cloud API is configured (login goes through the server) */
+  var inflight = 0;     /* unfinished API writes (the background refresh waits for 0) */
+  var SESS_KEY = 'labpos_session';
+  function sessToken() {
+    try { var s = JSON.parse(localStorage.getItem(SESS_KEY) || 'null'); return (s && s.token) || ''; } catch (e) { return ''; }
+  }
+  function authHeaders(extra) {
+    var h = extra || {};
+    var t = sessToken();
+    if (t) h['Authorization'] = 'Bearer ' + t;
+    return h;
+  }
+  function clearSession() { try { localStorage.removeItem(SESS_KEY); } catch (e) {} }
+  function fireAuthError() { try { if (window.DB && typeof window.DB.onAuthError === 'function') window.DB.onAuthError(); } catch (e) {} }
+  function fireWriteError(msg) { try { if (window.DB && typeof window.DB.onWriteError === 'function') window.DB.onWriteError(msg); } catch (e) {} }
+  function loadDump() {
+    return window.fetch(API + '/api/dump', { cache: 'no-store', headers: authHeaders() }).then(function (r) {
+      if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; }
+      if (!r.ok) throw new Error('dump failed');
+      return r.json();
+    }).then(function (dump) {
+      if (!dump || !dump.settings || !dump.seq) throw new Error('bad dump');
+      return dump;
+    });
+  }
   function apiWrite(method, table, id, body) {
     if (!remote || !API) return;
     var url = API + '/api/' + table + (id ? '/' + encodeURIComponent(id) : '');
+    inflight++;
     try {
       fetch(url, {
         method: method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: body === undefined ? undefined : JSON.stringify(body)
-      }).catch(function () { /* offline — memory still updated */ });
-    } catch (e) {}
+      }).then(function (r) {
+        inflight--;
+        if (r.ok) return;
+        if (r.status === 401) { fireAuthError(); return; }
+        if (r.status === 409) { /* another PC took this record number: pull fresh data */
+          fireWriteError('Another user saved at the same time. Data refreshed — please re-check and retry.');
+          if (window.DB) window.DB.refresh();
+          return;
+        }
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          fireWriteError((j && j.error) || ('Server rejected the change (' + r.status + ')'));
+        });
+      }).catch(function () {
+        inflight--;
+        fireWriteError('Could not reach the server — the last change was NOT saved. Check your connection.');
+      });
+    } catch (e) { inflight--; }
   }
 
   var ID_CONF = {
@@ -29,9 +120,12 @@
     invoices: { prefix: null, digits: 4 }, /* uses settings.invoicePrefix */
     payments: { prefix: 'PM', digits: 4 },
     expenses: { prefix: 'EX', digits: 4 },
-    results:  { prefix: 'R',  digits: 4 }
+    results:  { prefix: 'R',  digits: 4 },
+    report_templates: { prefix: 'TPL', digits: 3 },
+    report_schedules: { prefix: 'SCH', digits: 3 },
+    wa_log: { prefix: 'WAL', digits: 4 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -81,23 +175,31 @@
     return d.toISOString();
   }
 
-  function seedStore() {
+  function seedStore(opts) {
+    opts = opts || {};
     var store = {
-      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0 },
+      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0 },
       settings: {
         id: 'main',
-        labName: 'Optix LAB MedSync',
+        labName: opts.labName || 'Optix LAB MedSync',
         tagline: 'Accurate • Fast • Trusted',
         address: 'Main Road, Gulberg, Lahore',
         phone: '0300-1234567',
         email: 'info@citybloodlab.pk',
         invoicePrefix: 'INV',
-        footerNote: 'Get well soon. Reports available on counter & phone.',
+        footerNote: '',
         currency: 'PKR',
-        whatsapp: { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' }
+        whatsapp: { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false },
+        signatories: [
+          { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
+          { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: '' },
+          { name: 'ABDAL INAM UL HAQ KHANZADA', qual: 'M.Phil (Microbiology)', title: 'Lab Technologist' },
+          { name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Lab Technologist' }
+        ]
       },
       users: [], patients: [], tests: [], doctors: [],
-      invoices: [], payments: [], expenses: [], results: []
+      invoices: [], payments: [], expenses: [], results: [],
+      wa_log: []
     };
 
     function put(table, obj) {
@@ -112,8 +214,9 @@
       return obj;
     }
 
-    /* users */
-    put('users', { id: 'U-01', name: 'Administrator', username: 'admin', password: 'admin123', role: 'admin', active: true });
+    /* users — per-tenant admin comes from opts.admin when provided */
+    var _adm = opts.admin || {};
+    put('users', { id: 'U-01', name: _adm.name || 'Administrator', username: _adm.username || 'admin', password: _adm.password || 'admin123', role: 'admin', active: true });
     put('users', { id: 'U-02', name: 'Rizwan Ahmed', username: 'reception', password: 'rec123', role: 'reception', active: true });
     put('users', { id: 'U-03', name: 'Sana Iqbal', username: 'technician', password: 'tech123', role: 'technician', active: true });
 
@@ -122,11 +225,106 @@
     put('doctors', { id: 'D-02', name: 'Dr. Sara Malik', clinic: 'Health Center, Model Town', phone: '0321-4445556', commissionPct: 10 });
 
     /* tests: [code, name, category, price, sampleType, tat, params] */
-    var CBC_P = [{ name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5' }, { name: 'TLC', unit: '/µL', ref: '4,000–11,000' }, { name: 'Platelets', unit: '/µL', ref: '150,000–450,000' }, { name: 'ESR', unit: 'mm/hr', ref: '0–20' }];
-    var A1C_P = [{ name: 'HbA1c', unit: '%', ref: '< 5.7' }];
-    var LIP_P = [{ name: 'Total Cholesterol', unit: 'mg/dL', ref: '< 200' }, { name: 'Triglycerides', unit: 'mg/dL', ref: '< 150' }, { name: 'HDL', unit: 'mg/dL', ref: '> 40' }, { name: 'LDL', unit: 'mg/dL', ref: '< 100' }];
+    /* Default report templates — per-test fields used by result entry, print and PDF */
+    var TP = {
+      'CBC': [
+        { name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5', type: 'number' },
+        { name: 'TLC', unit: '/µL', ref: '4,000–11,000', type: 'number' },
+        { name: 'Neutrophils', unit: '%', ref: '40–70', type: 'number' },
+        { name: 'Lymphocytes', unit: '%', ref: '20–40', type: 'number' },
+        { name: 'Monocytes', unit: '%', ref: '2–8', type: 'number' },
+        { name: 'Eosinophils', unit: '%', ref: '1–6', type: 'number' },
+        { name: 'Platelets', unit: 'x10^9/l', ref: '150 – 400', type: 'number' },
+        { name: 'PCV', unit: '%', ref: '40–50', type: 'number' },
+        { name: 'MCV', unit: 'fL', ref: '80–100', type: 'number' },
+        { name: 'MCH', unit: 'pg', ref: '27–32', type: 'number' },
+        { name: 'MCHC', unit: 'g/dL', ref: '32–36', type: 'number' },
+        { name: 'ESR', unit: 'mm/hr', ref: '0–20', type: 'number' }
+      ],
+      'HB': [{ name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5', type: 'number' }],
+      'ESR': [{ name: 'ESR', unit: 'mm/hr', ref: '0–20', type: 'number' }],
+      'PLT': [{ name: 'Platelet Count', unit: 'x10^9/l', ref: '150 – 400', type: 'number' }],
+      'BGRP': [{ name: 'ABO Group', unit: '', ref: '', type: 'text' }, { name: 'Rh Factor', unit: '', ref: 'Positive / Negative', type: 'text' }],
+      'PTINR': [
+        { name: 'Prothrombin Time', unit: 'sec', ref: '11–13', type: 'number' },
+        { name: 'Control', unit: 'sec', ref: '', type: 'number' },
+        { name: 'INR', unit: 'ratio', ref: '0.9–1.1', type: 'number' }
+      ],
+      'RETIC': [{ name: 'Reticulocyte Count', unit: '%', ref: '0.5–2.5', type: 'number' }],
+      'LFT': [
+        { name: 'Bilirubin – Total', unit: 'mg/dL', ref: '0.3–1.2', type: 'number' },
+        { name: 'Bilirubin – Direct', unit: 'mg/dL', ref: '0.0–0.3', type: 'number' },
+        { name: 'ALT (SGPT)', unit: 'U/L', ref: '7–56', type: 'number' },
+        { name: 'AST (SGOT)', unit: 'U/L', ref: '10–40', type: 'number' },
+        { name: 'Alkaline Phosphatase', unit: 'U/L', ref: '44–147', type: 'number' },
+        { name: 'Total Protein', unit: 'g/dL', ref: '6.0–8.3', type: 'number' },
+        { name: 'Albumin', unit: 'g/dL', ref: '3.5–5.5', type: 'number' }
+      ],
+      'RFT': [
+        { name: 'Urea', unit: 'mg/dL', ref: '15–40', type: 'number' },
+        { name: 'Creatinine', unit: 'mg/dL', ref: '0.6–1.2', type: 'number' },
+        { name: 'Sodium', unit: 'mmol/L', ref: '135–145', type: 'number' },
+        { name: 'Potassium', unit: 'mmol/L', ref: '3.5–5.1', type: 'number' }
+      ],
+      'ELEC': [
+        { name: 'Sodium', unit: 'mmol/L', ref: '135–145', type: 'number' },
+        { name: 'Potassium', unit: 'mmol/L', ref: '3.5–5.1', type: 'number' },
+        { name: 'Chloride', unit: 'mmol/L', ref: '98–107', type: 'number' },
+        { name: 'Bicarbonate', unit: 'mmol/L', ref: '22–28', type: 'number' }
+      ],
+      'CA': [{ name: 'Serum Calcium', unit: 'mg/dL', ref: '8.5–10.5', type: 'number' }],
+      'UA': [{ name: 'Uric Acid', unit: 'mg/dL', ref: '3.4–7.0', type: 'number' }],
+      'CRP': [{ name: 'C-Reactive Protein', unit: 'mg/L', ref: '< 3.0', type: 'number' }],
+      'FBS': [{ name: 'Glucose – Fasting', unit: 'mg/dL', ref: '70–100', type: 'number' }],
+      'RBS': [{ name: 'Glucose – Random', unit: 'mg/dL', ref: '< 140', type: 'number' }],
+      'HBA1C': [{ name: 'HbA1c', unit: '%', ref: '< 5.7', type: 'number' }],
+      'OGTT': [
+        { name: 'Glucose – Fasting', unit: 'mg/dL', ref: '70–100', type: 'number' },
+        { name: 'Glucose – 2 Hour', unit: 'mg/dL', ref: '< 140', type: 'number' }
+      ],
+      'LIPID': [
+        { name: 'Total Cholesterol', unit: 'mg/dL', ref: '< 200', type: 'number' },
+        { name: 'Triglycerides', unit: 'mg/dL', ref: '< 150', type: 'number' },
+        { name: 'HDL', unit: 'mg/dL', ref: '> 40', type: 'number' },
+        { name: 'LDL', unit: 'mg/dL', ref: '< 100', type: 'number' }
+      ],
+      'CHOL': [{ name: 'Total Cholesterol', unit: 'mg/dL', ref: '< 200', type: 'number' }],
+      'TG': [{ name: 'Triglycerides', unit: 'mg/dL', ref: '< 150', type: 'number' }],
+      'HBSAG': [{ name: 'Result', unit: '', ref: 'Non-Reactive', type: 'text' }],
+      'AHCV': [{ name: 'Result', unit: '', ref: 'Non-Reactive', type: 'text' }],
+      'HIV': [{ name: 'Result', unit: '', ref: 'Non-Reactive', type: 'text' }],
+      'NS1': [{ name: 'Dengue NS1', unit: '', ref: 'Negative', type: 'text' }],
+      'WIDAL': [{ name: 'Result', unit: '', ref: 'Negative', type: 'text' }],
+      'TYPHI': [
+        { name: 'IgG', unit: '', ref: 'Negative', type: 'text' },
+        { name: 'IgM', unit: '', ref: 'Negative', type: 'text' }
+      ],
+      'TSH': [{ name: 'TSH', unit: 'µIU/mL', ref: '0.27–4.2', type: 'number' }],
+      'TFT': [
+        { name: 'T3', unit: 'ng/mL', ref: '0.8–2.0', type: 'number' },
+        { name: 'T4', unit: 'µg/dL', ref: '5.1–14.1', type: 'number' },
+        { name: 'TSH', unit: 'µIU/mL', ref: '0.27–4.2', type: 'number' }
+      ],
+      'TESTO': [{ name: 'Testosterone – Total', unit: 'ng/dL', ref: '264–916', type: 'number' }],
+      'VITD': [{ name: 'Vitamin D (25-OH)', unit: 'ng/mL', ref: '30–100', type: 'number' }],
+      'B12': [{ name: 'Vitamin B12', unit: 'pg/mL', ref: '200–900', type: 'number' }],
+      'FERR': [{ name: 'Ferritin', unit: 'ng/mL', ref: '30–400', type: 'number' }],
+      'URE': [
+        { name: 'Colour', unit: '', ref: 'Pale yellow', type: 'text' },
+        { name: 'Appearance', unit: '', ref: 'Clear', type: 'text' },
+        { name: 'pH', unit: '', ref: '4.6–8.0', type: 'number' },
+        { name: 'Specific Gravity', unit: '', ref: '1.005–1.030', type: 'number' },
+        { name: 'Protein', unit: '', ref: 'Negative', type: 'text' },
+        { name: 'Glucose', unit: '', ref: 'Negative', type: 'text' },
+        { name: 'Pus Cells', unit: '/hpf', ref: 'Nil', type: 'text' },
+        { name: 'RBCs', unit: '/hpf', ref: 'Nil', type: 'text' },
+        { name: 'Epithelial Cells', unit: '/hpf', ref: 'Few', type: 'text' }
+      ],
+      'UCUL': [{ name: 'Culture Result', unit: '', ref: 'No growth', type: 'text' }],
+      'UPT': [{ name: 'Result', unit: '', ref: '', type: 'text' }]
+    };
     var T = [
-      ['CBC', 'Complete Blood Count', 'Hematology', 800, 'Blood', 'Same day', CBC_P],
+      ['CBC', 'Complete Blood Count', 'Hematology', 800, 'Blood', 'Same day', []],
       ['ESR', 'Erythrocyte Sedimentation Rate', 'Hematology', 300, 'Blood', 'Same day', []],
       ['HB', 'Hemoglobin', 'Hematology', 250, 'Blood', 'Same day', []],
       ['PLT', 'Platelet Count', 'Hematology', 400, 'Blood', 'Same day', []],
@@ -141,9 +339,9 @@
       ['CRP', 'C-Reactive Protein', 'Biochemistry', 800, 'Serum', 'Same day', []],
       ['FBS', 'Fasting Blood Glucose', 'Diabetes', 300, 'Blood', 'Same day', []],
       ['RBS', 'Random Blood Glucose', 'Diabetes', 300, 'Blood', 'Same day', []],
-      ['HBA1C', 'HbA1c (Glycated Hemoglobin)', 'Diabetes', 1100, 'Blood', 'Same day', A1C_P],
+      ['HBA1C', 'HbA1c (Glycated Hemoglobin)', 'Diabetes', 1100, 'Blood', 'Same day', []],
       ['OGTT', 'Oral Glucose Tolerance Test', 'Diabetes', 900, 'Blood', 'Next day', []],
-      ['LIPID', 'Lipid Profile', 'Lipid', 1300, 'Serum', 'Same day', LIP_P],
+      ['LIPID', 'Lipid Profile', 'Lipid', 1300, 'Serum', 'Same day', []],
       ['CHOL', 'Total Cholesterol', 'Lipid', 450, 'Serum', 'Same day', []],
       ['TG', 'Triglycerides', 'Lipid', 450, 'Serum', 'Same day', []],
       ['HBSAG', 'HBsAg (Hepatitis B)', 'Serology', 700, 'Serum', 'Same day', []],
@@ -163,10 +361,13 @@
       ['UPT', 'Urine Pregnancy Test', 'Urine', 500, 'Urine', 'Same day', []]
     ];
     T.forEach(function (t) {
-      put('tests', { code: t[0], name: t[1], category: t[2], price: t[3], sampleType: t[4], tat: t[5], active: true, params: t[6] });
+      put('tests', { code: t[0], name: t[1], category: t[2], price: t[3], sampleType: t[4], tat: t[5], active: true, params: TP[t[0]] || t[6] });
     });
     var testByCode = {};
     store.tests.forEach(function (t) { testByCode[t.code] = t; });
+
+    /* ---- demo data: only for the default lab (fresh tenants start clean) ---- */
+    if (opts.demoData !== false) {
 
     /* patients */
     var P = [
@@ -197,7 +398,7 @@
     ];
     /* ready result values for param-based tests (older invoices) */
     var READY_VALS = {
-      'CBC': { 'Hemoglobin': '14.2', 'TLC': '7,600', 'Platelets': '248,000', 'ESR': '14' },
+      'CBC': { 'Hemoglobin': '14.2', 'TLC': '7,600', 'Platelets': '248', 'ESR': '14' },
       'HBA1C': { 'HbA1c': '6.8' },
       'LIPID': { 'Total Cholesterol': '198', 'Triglycerides': '142', 'HDL': '52', 'LDL': '118' },
       'ESR': { 'Result': '18 mm/hr' },
@@ -259,26 +460,113 @@
       put('expenses', { title: e[1], category: e[2], amount: e[3], date: isoDaysAgo(e[0], 12, 0), note: 'Seed expense', createdBy: e[4] });
     });
 
+    } /* end demo data */
+
     return store;
   }
 
   /* ---------------- public API ---------------- */
-  var store = load();
-  if (!store) { store = seedStore(); save(store); }
-  /* one-time rebrand: existing installs seeded with the old default name */
-  if (store && store.settings && (store.settings.labName === 'City Blood Lab' || store.settings.labName === 'Optxic LAB')) {
-    store.settings.labName = 'Optix LAB MedSync'; save(store);
+  var store = null;
+
+  /* one-time migrations applied per store */
+  function applyMigrations() {
+    /* rebrand: existing installs seeded with the old default name */
+    if (store && store.settings && (store.settings.labName === 'City Blood Lab' || store.settings.labName === 'Optxic LAB')) {
+      store.settings.labName = 'Optix LAB MedSync'; save(store);
+    }
+    /* existing installs lack the WhatsApp config object */
+    if (store && store.settings && !store.settings.whatsapp) {
+      store.settings.whatsapp = { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false };
+      save(store);
+    }
+    /* existing installs lack the WhatsApp auto-send toggles (backfill without
+       clobbering values the lab already set) */
+    if (store && store.settings && store.settings.whatsapp) {
+      var _wa = store.settings.whatsapp, _waDirty = false;
+      if (_wa.autoPatient == null) { _wa.autoPatient = true; _waDirty = true; }
+      if (_wa.autoDoctor == null) { _wa.autoDoctor = false; _waDirty = true; }
+      if (_waDirty) save(store);
+    }
+    /* existing installs lack the WhatsApp send log */
+    if (store && !Array.isArray(store.wa_log)) {
+      store.wa_log = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.wa_log == null) store.seq.wa_log = 0;
+      save(store);
+    }
+    /* existing installs lack default signatory doctors — seed from reference */
+    if (store && store.settings && (!store.settings.signatories || !store.settings.signatories.length)) {
+      store.settings.signatories = [
+        { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
+        { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: '' },
+        { name: 'ABDAL INAM UL HAQ KHANZADA', qual: 'M.Phil (Microbiology)', title: 'Lab Technologist' },
+        { name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Lab Technologist' }
+      ];
+      save(store);
+    }
   }
-  /* one-time: existing installs lack the WhatsApp config object */
-  if (store && store.settings && !store.settings.whatsapp) {
-    store.settings.whatsapp = { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' };
-    save(store);
+
+  /* Switch to a lab's isolated store. Falls back to the first registered lab.
+     Returns the lab record (copy) or null when no labs exist. */
+  function useLab(labId) {
+    var reg = ensureRegistry();
+    var lab = labById(labId) || (reg.labs.length ? reg.labs[0] : null);
+    if (!lab) return null;
+    currentLabId = lab.id;
+    KEY = keyFor(lab.id);
+    store = load();
+    if (!store) {
+      store = seedStore({ labName: lab.name, demoData: lab.id === 'lab1' });
+      save(store);
+    }
+    applyMigrations();
+    /* auto-seed 5000 tests if catalog is loaded and fewer than 100 tests exist */
+    try {
+      if (store && typeof TEST_CATALOG_5000 !== 'undefined' && TEST_CATALOG_5000.length) {
+        var existingNames = {};
+        (store.tests || []).forEach(function (t) { existingNames[(t.name || '').toLowerCase()] = 1; });
+        if (Object.keys(existingNames).length < 100) {
+          var added = 0;
+          TEST_CATALOG_5000.forEach(function (ct, i) {
+            var nm = (ct.name || '').toLowerCase();
+            if (!ct.name || existingNames[nm]) return;
+            existingNames[nm] = 1;
+            store.seq.tests++;
+            store.tests.push({
+              id: 't' + Date.now() + '_' + i + '_' + added,
+              code: 'T' + (10000 + i),
+              name: ct.name, category: ct.category || 'General', price: 0,
+              sampleType: 'Blood', tat: 'Same day', active: true,
+              params: ct.params || []
+            });
+            added++;
+          });
+          if (added) save(store);
+        }
+      }
+    } catch (e) {}
+    try { localStorage.setItem(LAST_KEY, lab.id); } catch (e) {}
+    return copy(lab);
   }
+
+  /* boot: registry + migration, then load the last-used lab as the preview
+     store (the login page reads branding from it before anyone logs in) */
+  ensureRegistry();
+  var _lastLab = null;
+  try { _lastLab = localStorage.getItem(LAST_KEY); } catch (e) {}
+  useLab(_lastLab || 'lab1');
 
   function persist() { if (!remote) save(store); }
 
   window.DB = {
-    KEY: KEY,
+    get KEY() { return KEY; },
+
+    /* ---- multi-tenant ---- */
+    useLab: useLab,
+    currentLab: function () { var l = labById(currentLabId); return l ? copy(l) : null; },
+    currentLabId: function () { return currentLabId; },
+    labs: function () { if (cloud) return []; var r = loadRegistry(); return r ? copy(r.labs) : []; },
+    labById: function (id) { var l = labById(id); return l ? copy(l) : null; },
 
     /* Load server data when running under the LabPOS server/Electron app.
        Must be awaited before first render (app.js does this). Falls back to
@@ -287,16 +575,64 @@
       var base = null;
       try { base = window.LABPOS_API || null; } catch (e) {}
       if (!base || !window.fetch) return Promise.resolve(false);
-      return window.fetch(base + '/api/dump', { cache: 'no-store' }).then(function (r) {
-        if (!r.ok) throw new Error('dump failed');
-        return r.json();
-      }).then(function (dump) {
-        if (!dump || !dump.settings || !dump.seq) throw new Error('bad dump');
-        API = base; remote = true; store = dump;
+      API = base;
+      return loadDump().then(function (dump) {
+        store = dump; remote = true;
+        if (sessToken()) cloud = true; /* valid token = token-auth cloud API; no token = open desktop server */
         return true;
-      }).catch(function () { API = null; remote = false; return false; });
+      }).catch(function (err) {
+        if (err && err.auth) {
+          /* token-auth cloud API: no valid session -> login page, data loads after sign-in */
+          cloud = true; remote = false; clearSession();
+          return window.fetch(API + '/api/public-info').then(function (r) { return r.ok ? r.json() : null; }).then(function (info) {
+            if (info && info.labName) {
+              store.settings.labName = info.labName;
+              if (info.tagline) store.settings.tagline = info.tagline;
+              if (info.logo) store.settings.logo = info.logo;
+            }
+            return true;
+          }).catch(function () { return true; });
+        }
+        /* server configured but unreachable (offline / VPS down): do NOT fall back to the local demo store.
+           Show the login page; sign-in then reports 'cannot reach the server' and works once it is back. */
+        cloud = true; remote = false; clearSession();
+        return true;
+      });
     },
     isRemote: function () { return remote; },
+    isCloud: function () { return cloud; },
+    /* Server-side login (cloud mode). Resolves {user, token}; rejects with a user-facing message. */
+    cloudLogin: function (username, password) {
+      return window.fetch(API + '/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error(j.error || 'Login failed (' + r.status + ')');
+          return j;
+        });
+      }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); }).then(function (j) {
+        try { localStorage.setItem(SESS_KEY, JSON.stringify({ token: j.token })); } catch (e) {}
+        return loadDump().then(function (dump) { store = dump; remote = true; return j; });
+      });
+    },
+    changePassword: function (current, next) {
+      return window.fetch(API + '/api/auth/change-password', {
+        method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ current: current, next: next })
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not change password'); return true; });
+      });
+    },
+    /* Pull fresh server data (other PCs' work). Skipped while our own writes are in flight. */
+    refresh: function () {
+      if (!remote || !API || inflight > 0) return Promise.resolve(false);
+      return loadDump().then(function (dump) { if (inflight === 0) { store = dump; return true; } return false; })
+        .catch(function (e) { if (e && e.auth) fireAuthError(); return false; });
+    },
+    authHeaders: authHeaders,
+    onAuthError: null,
+    onWriteError: null,
 
     all: function (table) {
       if (table === 'settings') return [copy(store.settings)];
@@ -318,7 +654,7 @@
       var row = copy(obj) || {};
       row.id = nextId(store, table);
       if (table === 'invoices' && !row.no) row.no = row.id;
-      store[table].push(row);
+      (store[table] = store[table] || []).push(row);
       persist();
       apiWrite('POST', table, null, row);
       return copy(row);
@@ -342,6 +678,7 @@
           });
           persist();
           apiWrite('PUT', table, id, rows[i]);
+          if (remote && table === 'users') delete rows[i].password; /* never keep plaintext in memory */
           return copy(rows[i]);
         }
       }
@@ -359,12 +696,13 @@
 
     reset: function () {
       if (remote && API) {
-        return window.fetch(API + '/api/admin/reseed', { method: 'POST' }).then(function (r) {
+        return window.fetch(API + '/api/admin/reseed', { method: 'POST', headers: authHeaders() }).then(function (r) {
           if (!r.ok) throw new Error('reseed failed');
           return r.json();
         }).then(function (dump) { store = dump; return true; });
       }
-      store = seedStore();
+      var _rlab = labById(currentLabId);
+      store = seedStore({ labName: _rlab ? _rlab.name : undefined, demoData: currentLabId === 'lab1' });
       persist();
       return Promise.resolve(true);
     },
@@ -376,27 +714,29 @@
       var tables = (data && data.tables) || data; /* accept both {tables:{...}} and flat dumps */
       if (!tables || typeof tables !== 'object') throw new Error('Invalid backup file');
       ARRAY_TABLES.forEach(function (t) {
-        if (!Array.isArray(tables[t])) throw new Error('Invalid backup: missing table ' + t);
+        if (!Array.isArray(tables[t])) tables[t] = []; /* backfill tables added after the backup was made */
       });
       if (!tables.settings || typeof tables.settings !== 'object') throw new Error('Invalid backup: missing settings');
       if (!tables.seq || typeof tables.seq !== 'object') tables.seq = {};
       if (remote && API) {
         return window.fetch(API + '/api/restore', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders({ 'Content-Type': 'application/json' }),
           body: JSON.stringify(tables)
         }).then(function (r) {
           if (!r.ok) throw new Error('restore failed');
           return r.json();
         }).then(function () {
-          return window.fetch(API + '/api/dump', { cache: 'no-store' }).then(function (r) { return r.json(); });
+          return loadDump();
         }).then(function (dump) { store = dump; return true; });
       }
       store = {
         seq: tables.seq, settings: tables.settings,
         users: tables.users, patients: tables.patients, tests: tables.tests,
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
-        expenses: tables.expenses, results: tables.results
+        expenses: tables.expenses, results: tables.results,
+        report_templates: tables.report_templates, report_schedules: tables.report_schedules,
+        wa_log: tables.wa_log
       };
       normalizeSeq(store);
       persist();

@@ -1347,6 +1347,16 @@
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#fff;color:#000;margin-top:-8px">' +
         leftHtml +
         rightHtml +
+      '</div>' +
+      '<div style="margin-top:8px;padding:6px 0;border-top:1px solid #000;border-bottom:1px solid #000;text-align:center;color:#000">' +
+        '<div style="display:flex;justify-content:center;gap:24px;flex-wrap:wrap;font-size:0.75em;line-height:1.4">' +
+          '<div><div style="font-weight:700">DR. AAFRINISH AMANAT</div><div>MBBS, M.Phil (Histopathology)</div><div>Consultant Pathologist</div></div>' +
+          '<div><div style="font-weight:700">DR. YUMNA KHAN</div><div>B.Sc, MBBS, FCPS, RMP</div><div>&nbsp;</div></div>' +
+          '<div><div style="font-weight:700">ABDAL INAM UL HAQ KHANZADA</div><div>M.Phil (Microbiology)</div><div>Lab Technologist</div></div>' +
+          '<div><div style="font-weight:700">ABDUL WAHEED KHANZADA</div><div>MA, MLT (AFIP)</div><div>Lab Technologist</div></div>' +
+        '</div>' +
+        '<div style="margin-top:4px;font-size:0.7em">Main Road, Gulberg, Lahore | Phone: 0300-1234567 | Email: info@citybloodlab.pk</div>' +
+        '<div style="margin-top:4px;font-size:0.6em;line-height:1.4;text-align:justify">NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.</div>' +
       '</div>'
     );
   }
@@ -1412,8 +1422,8 @@
       ['Address', val(pat.address)]
     ];
     var right = [
-      ['Reporting Date', fmtDateTime(inv.createdAt)],
-      ['Collect Report At', fmtDateTime(d.maxReported)],
+      ['Registration Date', fmtDateTime(inv.createdAt)],
+      ['Registration Date', fmtDateTime(d.maxReported)],
       ['Registration Location', val(s.headOffice)],
       ['Destination Location', val(s.destinationLocation || s.mainLab)],
       ['Reference', val(s.reference)],
@@ -1632,10 +1642,9 @@
       }));
     var nRes = cols.length;
 
-    /* column grid: TEST 30% | NORMAL VALUE 22% | UNIT 10% | results share the rest */
-    var resW = (38 / nRes).toFixed(2);
-    var gridCols = '30% 22% 10%';
-    for (var gi = 0; gi < nRes; gi++) gridCols += ' ' + resW + '%';
+    /* column grid: TEST 32% | NORMAL VALUE 24% | UNIT 12% | RESULT fixed 150px */
+    var gridCols = '32% 24% 12%';
+    for (var gi = 0; gi < nRes; gi++) gridCols += ' 150px';
 
     /* section title: "{Name} ({CODE})" — append REPORT unless already present */
     var tName = testName(r);
@@ -1647,13 +1656,13 @@
        barcode of the case/invoice number, then the case number, then the
        date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
-      return '<div style="border:1px solid #000;background:#fff;' +
-        'padding:0;line-height:1.2;font-size:0.7em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;justify-self:end;max-width:130px;width:100%">' +
-        '<div style="font-weight:700;color:#000;font-size:0.9em;background:#d3d3d3;padding:3px 0;border-bottom:1px solid #000;text-align:center;width:100%">RESULT</div>' +
-        '<div style="padding:3px 4px;display:flex;flex-direction:column;align-items:center;width:100%">' +
+      return '<div style="border:2px solid #000;background:#fff;' +
+        'padding:0;line-height:1.25;font-size:0.75em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%">' +
+        '<div style="font-weight:700;color:#000;font-size:1em;background:#d3d3d3;padding:4px 0;border-bottom:2px solid #000;text-align:center;width:100%">RESULT</div>' +
+        '<div style="padding:4px 6px;display:flex;flex-direction:column;align-items:center;width:100%">' +
         '<div style="margin:2px 0">' + barcodeHtml(invNo) + '</div>' +
-        '<div style="font-weight:400;color:#000;font-size:0.85em">' + App.esc(invNo) + '</div>' +
-        '<div style="font-size:0.8em;color:#000">' +
+        '<div style="color:#000;font-size:0.9em">' + App.esc(invNo) + '</div>' +
+        '<div style="font-size:0.85em;color:#000">' +
           App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
         '</div></div>' +
       '</div>';
@@ -1869,7 +1878,7 @@
     var disc = s.disclaimer || _fn ||
       'NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.';
     var discHtml =
-      '<div class="rpt-disc" style="border:1px solid #000;padding:6px 8px;font-size:0.72em;line-height:1.5;margin:8px 0 0">' +
+      '<div class="rpt-disc" style="border:1px solid #000;padding:4px 6px;font-size:0.55em;line-height:1.4;margin:6px 0 0">' +
         App.esc(disc) + '</div>';
 
     /* 6: powered-by (existing constraint) */
@@ -2028,7 +2037,7 @@
     try { if (window.LABPOS_API) base = window.LABPOS_API; } catch (e) {}
     return fetch(base + '/api/report-pdfs', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: (DB.authHeaders ? DB.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' }),
       body: JSON.stringify({ key: key, pdfBase64: b64 })
     }).then(function (r) { return r.json(); })
       .then(function (j) {
@@ -2364,8 +2373,8 @@
         ['Address',               pat.address]
       ];
       var right = [
-        ['Reporting Date',      inv.createdAt ? App.dt(inv.createdAt) : ''],
-        ['Collect Report At',     d.maxReported ? App.dt(d.maxReported) : ''],
+        ['Registration Date',      inv.createdAt ? App.dt(inv.createdAt) : ''],
+        ['Registration Date',     d.maxReported ? App.dt(d.maxReported) : ''],
         ['Registration Location', s.headOffice],
         ['Destination Location',  s.mainLab],
         ['Reference',             docName],

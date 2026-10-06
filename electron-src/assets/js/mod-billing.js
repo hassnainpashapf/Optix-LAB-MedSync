@@ -1,9 +1,11 @@
 /* ============================================================
-   Optix LAB MedSync — New Bill POS  (route: #/billing)
+   Optix LAB MedSync — New Bill POS  (route: #/billing/:patientId, opened from Patient Profile)
    Three-column point-of-sale: patient | test picker + cart | bill summary
    ============================================================ */
 (function () {
   'use strict';
+
+  var PRINT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>';
 
   function currentUser() {
     try {
@@ -39,8 +41,8 @@
       return !!(s && s.role === 'technician');
     } catch (e) { return false; }
   }
-  function scCard(icon, tint, label, value, sub) {
-    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
+  function scCard(icon, tint, label, value, sub, full) {
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')' + (full ? ';background:linear-gradient(135deg,#ffffff 50%,var(--' + tint + '-soft) 50%);border-color:transparent' : '') + '">' +
       '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
       '<div class="lb">' + App.esc(label) + '</div>' +
       '<div class="vl">' + value + '</div>' +
@@ -48,10 +50,13 @@
     '</div>';
   }
 
-  App.route('#/billing', function () {
+  App.route('#/billing/:patientId', function (params) {
+    var patientId = params && params.patientId;
+    var fixedPatient = patientId ? DB.get('patients', patientId) : null;
+    if (!fixedPatient) { App.toast('Patient not found.', 'err'); App.nav('#/patients'); return; }
     var view = document.getElementById('view');
     var state = {
-      patient: null,
+      patient: fixedPatient,
       cart: [],            // [{testId, code, name, price}]
       doctorId: '',
       discType: 'rs',      // 'rs' | 'pct'
@@ -104,7 +109,7 @@
       if ($('blDisc')) $('blDisc').textContent = '− ' + App.money(t.discAmt);
       if ($('blTotal')) $('blTotal').textContent = App.money(t.total);
       if ($('blCount')) $('blCount').textContent = state.cart.length + (state.cart.length === 1 ? ' test' : ' tests');
-      if (!state.tenderDirty && $('blTendered')) $('blTendered').value = t.total > 0 ? t.total : '';
+      if (!state.tenderDirty && $('blTendered')) { $('blTendered').value = t.total > 0 ? t.total : ''; state.tendered = t.total; }
       var cr = $('blChangeRow');
       if (cr) {
         if (t.change > 0) {
@@ -116,7 +121,9 @@
         }
       }
       var sb = $('blSave');
-      if (sb) sb.disabled = !(state.patient && state.cart.length);
+      /* never fully disable: a dead button gives zero feedback. The idle look
+         hints it's not ready; saveBill() toasts exactly what's missing. */
+      if (sb) sb.classList.toggle('is-idle', !(state.patient && state.cart.length));
     }
 
     /* ---------- patient panel ---------- */
@@ -133,89 +140,12 @@
               '<span>' + App.esc([p.age ? p.age + ' yrs' : '', p.gender || ''].filter(Boolean).join(' • ') || '—') + '</span>' +
               '<span>' + App.esc(p.phone || 'No phone') + '</span>' +
             '</div>' +
-            '<button class="btn btn-ghost btn-sm" id="blPatChange">Change</button>' +
           '</div>';
-        document.getElementById('blPatChange').addEventListener('click', function () {
-          state.patient = null;
-          document.getElementById('blPatSearchWrap').style.display = '';
-          paintPatient();
-          paintTotals();
-        });
       } else {
-        box.innerHTML = '<div class="empty">No patient selected.<br>Search above or add a new patient.</div>';
+        box.innerHTML = '<div class="empty">No patient selected.</div>';
       }
     }
 
-    function paintPatientResults(q) {
-      var box = document.getElementById('blPatResults');
-      if (!box) return;
-      q = (q || '').trim().toLowerCase();
-      if (!q) { box.innerHTML = ''; return; }
-      var hits = DB.all('patients').filter(function (p) {
-        return (p.name || '').toLowerCase().indexOf(q) >= 0 || (p.phone || '').toLowerCase().indexOf(q) >= 0;
-      }).slice(0, 8);
-      if (!hits.length) { box.innerHTML = '<div class="bl-nores">No matches. Use “+ New Patient”.</div>'; return; }
-      box.innerHTML = hits.map(function (p) {
-        return '<button class="bl-pick" data-id="' + App.esc(p.id) + '">' +
-          '<strong>' + App.esc(p.name) + '</strong>' +
-          '<span>' + App.esc(p.phone || '—') + ' • ' + App.esc(p.id) + '</span>' +
-        '</button>';
-      }).join('');
-      box.querySelectorAll('.bl-pick').forEach(function (b) {
-        b.addEventListener('click', function () {
-          state.patient = DB.get('patients', b.getAttribute('data-id'));
-          document.getElementById('blPatSearchWrap').style.display = 'none';
-          document.getElementById('blPatSearch').value = '';
-          box.innerHTML = '';
-          paintPatient();
-          paintTotals();
-        });
-      });
-    }
-
-    function openNewPatient() {
-      var body =
-        '<style>.npf .label{display:block;margin-bottom:6px}.npf .form-grid{align-items:start}</style>' +
-        '<div class="npf">' +
-        '<div class="form-grid">' +
-          '<div><label class="label">Full name *</label><input class="input" id="npName" placeholder="e.g. Ali Raza"></div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
-            '<div><label class="label">Age</label><input class="input" id="npAge" type="number" min="0" max="130" placeholder="35"></div>' +
-            '<div><label class="label">Gender</label><select class="select" id="npGender"><option>Male</option><option>Female</option><option>Other</option></select></div>' +
-          '</div>' +
-          '<div><label class="label">Phone</label><input class="input" id="npPhone" placeholder="0300-1234567"></div>' +
-          '<div><label class="label">Address</label><input class="input" id="npAddress" placeholder="House, street, city"></div>' +
-        '</div>' +
-        '<div class="bl-modal-foot"><button class="btn btn-ghost" id="npCancel">Cancel</button>' +
-        '<button class="btn btn-primary" id="npSave">Save Patient</button></div>' +
-        '</div>';
-      var close = App.modal('New Patient', body, {
-        onOpen: function (ov, close) {
-          document.getElementById('npCancel').addEventListener('click', close);
-          document.getElementById('npName').focus();
-          document.getElementById('npSave').addEventListener('click', function () {
-            var name = document.getElementById('npName').value.trim();
-            if (!name) { App.toast('Patient name is required', 'err'); return; }
-            var p = DB.insert('patients', {
-              name: name,
-              age: num(document.getElementById('npAge').value) || '',
-              gender: document.getElementById('npGender').value,
-              phone: document.getElementById('npPhone').value.trim(),
-              address: document.getElementById('npAddress').value.trim(),
-              createdAt: new Date().toISOString()
-            });
-            state.patient = p;
-            document.getElementById('blPatSearchWrap').style.display = 'none';
-            var s = document.getElementById('blPatSearch'); if (s) s.value = '';
-            var r = document.getElementById('blPatResults'); if (r) r.innerHTML = '';
-            paintPatient();
-            paintTotals();
-            close();
-            App.toast('Patient ' + p.id + ' registered');
-          });
-        }
-      });
-    }
 
     /* ---------- test picker + cart ---------- */
     function paintTests() {
@@ -341,16 +271,16 @@
     var bTestsToday = bTodayInv.reduce(function (s, i) { return s + ((i.items && i.items.length) || 0); }, 0);
     var billStats =
       scCard(SC_ICONS.doc, 'brand', "Today's Bills", String(bTodayInv.length),
-        bTodayInv.length === 1 ? 'bill created today' : 'bills created today') +
+        bTodayInv.length === 1 ? 'bill created today' : 'bills created today', true) +
       scCard(SC_ICONS.cash, 'green', "Today's Billed",
         isTech ? String(bTodayInv.length) : App.money(bTodayBilled),
-        isTech ? 'bills created today' : 'billed value today') +
+        isTech ? 'bills created today' : 'billed value today', true) +
       scCard(SC_ICONS.cal, 'blue', 'This Month Billed',
         isTech ? String(bMonthInv.length) : App.money(bMonthBilled),
-        isTech ? 'invoices this month' : 'billed value this month') +
+        isTech ? 'invoices this month' : 'billed value this month', true) +
       scCard(SC_ICONS.trend, 'amber', 'Avg Bill Today',
         isTech ? String(bTestsToday) : App.money(bAvgToday),
-        isTech ? 'tests billed today' : 'per bill average');
+        isTech ? 'tests billed today' : 'per bill average', true);
 
     view.innerHTML =
     SC_STYLE +
@@ -359,14 +289,17 @@
     '<style>' +
     '.bl-pos{display:grid;grid-template-columns:290px minmax(0,1fr) 340px;gap:18px;align-items:start}' +
     '.bl-panel{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:0 1px 3px rgba(15,30,46,.06)}' +
-    '.bl-panel-h{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800;font-size:14.5px;display:flex;align-items:center;justify-content:space-between;min-height:58px;gap:10px}' +
-    '.bl-panel-t{display:flex;align-items:center;gap:9px;min-width:0}' +
+    '.bl-panel-h{padding:14px 16px;border-bottom:1px solid var(--line);font-weight:800;font-size:14.5px;display:flex;align-items:center;justify-content:space-between;min-height:58px;gap:10px;flex-wrap:nowrap}' +
+    '.bl-panel-t{display:flex;align-items:center;gap:9px;min-width:0;flex:1}' +
+    '.bl-panel-h .btn{flex:none;white-space:nowrap}' +
+    '.bl-pat-searchrow{display:flex;gap:8px;align-items:center}' +
+    '.bl-pat-searchrow .input{flex:1;min-width:0}' +
     '.bl-step{width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;display:inline-grid;place-items:center;font-size:12.5px;font-weight:800;flex:none}' +
     '.bl-panel-b{padding:14px 16px}' +
     '.bl-sec{margin-top:14px}' +
     '.bl-sec>.label{display:block;margin:0 0 7px}' +
     '.bl-pat-card{display:flex;gap:12px;align-items:center;background:var(--brand-soft);border:1px solid #cdeee9;border-radius:12px;padding:12px}' +
-    '.bl-pat-ava{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;display:grid;place-items:center;font-weight:800;font-size:19px;flex:none}' +
+    '.bl-pat-ava{width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#131845,#0d0f36);color:#fff;display:grid;place-items:center;font-weight:800;font-size:19px;flex:none}' +
     '.bl-pat-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}' +
     '.bl-pat-info strong{font-size:14.5px}' +
     '.bl-pat-info span{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
@@ -404,19 +337,19 @@
     '.bl-disc-wrap .input{flex:1}' +
     '.bl-modal-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}' +
     '.bl-save{width:100%;padding:14px;font-size:15.5px;margin-top:12px}' +
-    '.bl-save:disabled{opacity:.45;cursor:not-allowed}' +
+    '.bl-save.is-idle{opacity:.45}' +
     '@media(max-width:1180px){.bl-pos{grid-template-columns:1fr 1fr}.bl-pos .bl-col-summary{grid-column:1/-1}}' +
     '@media(max-width:760px){.bl-pos{grid-template-columns:1fr}}' +
     '</style>' +
 
+    '<div class="page-head"><div><a class="back-link" href="#/patient/' + App.esc(fixedPatient.id) + '">← ' + App.esc(fixedPatient.name) + '</a>' +
+      '<h1>New Bill</h1></div></div>' +
+
     '<div class="bl-pos">' +
-      /* patient column */
-      '<div class="bl-panel"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">1</span>Patient</span>' +
-        '<button class="btn btn-primary btn-sm" id="blNewPat">+ New Patient</button></div>' +
-        '<div class="bl-panel-b"><div id="blPatSearchWrap">' +
-          '<input class="input search" id="blPatSearch" placeholder="Search name or phone…" autocomplete="off">' +
-          '<div id="blPatResults"></div>' +
-        '</div><div id="blPatientBox" style="margin-top:10px"></div></div></div>' +
+      /* patient column — fixed patient, no search */
+      '<div class="bl-panel"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">1</span>Patient</span></div>' +
+        '<div class="bl-panel-b">' +
+        '<div id="blPatientBox" style="margin-top:10px"></div></div></div>' +
 
       /* tests column */
       '<div class="bl-panel"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">2</span>Tests</span><span class="badge b-ready" id="blCount">0 tests</span></div>' +
@@ -451,17 +384,12 @@
         '<div class="bl-sec"><label class="label">Amount tendered</label>' +
         '<input class="input" id="blTendered" type="number" min="0" placeholder="0"></div>' +
         '<div class="bl-row" id="blChangeRow" style="margin-top:6px"></div>' +
-        '<button class="btn btn-primary bl-save" id="blSave" disabled>Save &amp; Print</button>' +
+        '<button class="btn btn-primary bl-save" id="blSave">' + PRINT_ICON + ' Save &amp; Print</button>' +
         '<button class="btn btn-ghost" id="blClear" style="width:100%;margin-top:8px">Clear Bill</button>' +
       '</div></div>' +
     '</div>';
 
     /* ---------- wiring ---------- */
-    document.getElementById('blNewPat').addEventListener('click', openNewPatient);
-
-    var ps = document.getElementById('blPatSearch');
-    ps.addEventListener('input', function () { paintPatientResults(ps.value); });
-
     var ts = document.getElementById('blTestSearch');
     ts.addEventListener('input', function () { state.q = ts.value; paintTests(); });
 
