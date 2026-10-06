@@ -159,9 +159,10 @@
     results:  { prefix: 'R',  digits: 4 },
     report_templates: { prefix: 'TPL', digits: 3 },
     report_schedules: { prefix: 'SCH', digits: 3 },
-    wa_log: { prefix: 'WAL', digits: 4 }
+    wa_log: { prefix: 'WAL', digits: 4 },
+    closings: { prefix: 'CL', digits: 4 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'closings'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -530,6 +531,13 @@
       if (store.seq.wa_log == null) store.seq.wa_log = 0;
       save(store);
     }
+    /* existing installs lack the daily cash-closing table */
+    if (store && !Array.isArray(store.closings)) {
+      store.closings = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.closings == null) store.seq.closings = 0;
+      save(store);
+    }
     /* existing installs lack default signatory doctors — seed from reference */
     if (store && store.settings && (!store.settings.signatories || !store.settings.signatories.length)) {
       store.settings.signatories = [
@@ -788,7 +796,7 @@
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
         expenses: tables.expenses, results: tables.results,
         report_templates: tables.report_templates, report_schedules: tables.report_schedules,
-        wa_log: tables.wa_log
+        wa_log: tables.wa_log, closings: tables.closings
       };
       normalizeSeq(store);
       persist();
