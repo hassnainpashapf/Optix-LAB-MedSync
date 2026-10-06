@@ -967,6 +967,26 @@
   .rpt-page {
     max-width: 800px;
   }
+  /* The report is designed as an A4 sheet (210 x 297 mm, 12mm margin): shown that way in the viewer and print preview.
+     Scoped so the Lab Profile sample preview (which draws its own sheet) is not double-framed. */
+  .report-preview .rpt-page,
+  body > .rpt-page {
+    box-sizing: border-box;
+    width: 210mm;
+    max-width: none;
+    min-height: 297mm;
+    padding: 12mm;
+    margin: 0 auto;
+    background: #fff;
+    box-shadow: 0 8px 30px rgba(0,0,0,.28);
+    display: flex;
+    flex-direction: column;
+  }
+  .report-preview .rpt-page .rpt-footer,
+  body > .rpt-page .rpt-footer { margin-top: auto; }
+  @media (max-width: 840px) {
+    .report-preview .rpt-page { width: 100%; min-height: 0; padding: 14px; }
+  }
 }
 
 /* ---------------------------------------------------------------------
@@ -2232,7 +2252,7 @@
         : '<button class="btn btn-ghost" id="rvWaDoctor" disabled title="No WhatsApp number on file" style="opacity:.45;cursor:not-allowed">' + WA_ICON + ' Send to Doctor (WhatsApp)</button>';
     }
     var close = App.modal('Lab Report — ' + App.esc(d.inv.no),
-      '<div class="report-preview" style="max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:20px;background:#fff">' +
+      '<div class="report-preview" style="max-height:66vh;overflow:auto;border-radius:12px;padding:18px;background:#525659">' +
         stripQrImg(reportHtml(d)) +
       '</div>' +
       '<div id="rvWaHist" style="margin-top:12px">' + waHistoryHtml(invoiceId) + '</div>' +
