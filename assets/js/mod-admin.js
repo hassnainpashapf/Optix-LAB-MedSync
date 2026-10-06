@@ -232,13 +232,14 @@
   /* ============================================================
      REPORTS  (#/reports) — admin only
      ============================================================ */
-  var rep = { from: null, to: null };
+  var rep = { from: null, to: null, type: 'all' };
   function repInit() {
     if (!rep.from) {
       var t = App.today();
       rep.from = t.slice(0, 8) + '01'; // first of month
       rep.to = t;
     }
+    if (!rep.type) rep.type = 'all';
   }
   function setPreset(p) {
     var t = App.today();
@@ -336,7 +337,8 @@
       + '</div></div>';
 
     /* ---- Finalized Patient Reports archive ----
-       Every report finalized (status='ready') in Lab Results is saved here. */
+       Every report finalized (status='ready') in Lab Results is saved here.
+       Shown for 'all' and 'patients' types. */
     var finByInv = {};
     DB.all('results').filter(function (r) { return r.status === 'ready'; }).forEach(function (r) {
       (finByInv[r.invoiceId] = finByInv[r.invoiceId] || []).push(r);
@@ -377,6 +379,16 @@
     var html = ''
       + '<style>' + ADM_STAT_CSS + '</style>'
       + '<div class="stat-grid">' + repStats + '</div>'
+
+      /* report type selector */
+      + '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+      + '<span style="font-weight:700;margin-right:8px">Report Type:</span>'
+      + ['all', 'tests', 'finance', 'dues', 'patients'].map(function (t) {
+          var lbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports' }[t];
+          var active = rep.type === t;
+          return '<button type="button" class="btn ' + (active ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-reptype="' + t + '">' + lbl + '</button>';
+        }).join('')
+      + '</div></div>'
 
       + filterCard
 
@@ -436,6 +448,9 @@
     document.getElementById('repTo').addEventListener('change', function (e) { rep.to = e.target.value; renderReports(); });
     document.querySelectorAll('[data-preset]').forEach(function (b) {
       b.addEventListener('click', function () { setPreset(b.getAttribute('data-preset')); });
+    });
+    document.querySelectorAll('[data-reptype]').forEach(function (b) {
+      b.addEventListener('click', function () { rep.type = b.getAttribute('data-reptype'); renderReports(); });
     });
     document.getElementById('repPrint').addEventListener('click', function () {
       var ph = '<p><strong>Period:</strong> ' + App.esc(App.d(from)) + ' – ' + App.esc(App.d(to)) + '</p>'
