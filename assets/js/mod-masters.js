@@ -126,11 +126,14 @@ function renderTests() {
 
   var cats = categories();
   var allT = DB.all('tests');
-  var nActive = allT.filter(function (t) { return t.active !== false; }).length;
-  var nPkg = allT.filter(function (t) { return t.isPackage; }).length;
+  /* filter by selected category for stat cards */
+  var fT = testFilter.cat === 'All' ? allT : allT.filter(function (t) { return t.category === testFilter.cat; });
+  var nActive = fT.filter(function (t) { return t.active !== false; }).length;
+  var nPkg = fT.filter(function (t) { return t.isPackage; }).length;
+  var catLbl = testFilter.cat === 'All' ? 'in catalog' : 'in ' + testFilter.cat;
   var statCards =
-    tStat(TICONS.flask, 'blue', 'Total Tests', allT.length, 'in catalog') +
-    tStat(TICONS.check, 'green', 'Active Tests', nActive, 'available for booking') +
+    tStat(TICONS.flask, 'blue', 'Total Tests', fT.length, catLbl) +
+    tStat(TICONS.check, 'green', 'Active Tests', nActive, testFilter.cat === 'All' ? 'available for booking' : 'active in ' + testFilter.cat) +
     tStat(TICONS.tag, 'amber', 'Categories', cats.length, 'test categories') +
     tStat(TICONS.box, 'brand', 'Packages', nPkg, 'bundled offers');
   var chips = ['All'].concat(cats).map(function (c) {

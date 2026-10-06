@@ -155,6 +155,11 @@
       }).join('');
     return '' +
       '<form id="ptf-form" class="form-grid" novalidate>' +
+      '<div class="form-row" style="grid-column:1/-1">' +
+      '<button type="button" class="btn btn-ghost" id="ptf-scan" style="width:auto">📷 Scan CNIC Photo</button>' +
+      '<span class="muted" style="font-size:12px;margin-left:8px">Upload a CNIC photo to auto-fill name, CNIC & DOB</span>' +
+      '<input type="file" id="ptf-scanfile" accept="image/*" style="display:none">' +
+      '<div id="ptf-scanstat" class="muted" style="font-size:12px;margin-top:4px"></div></div>' +
       '<div class="form-row"><label class="label" for="ptf-name">Full Name *</label>' +
       '<input class="input" id="ptf-name" maxlength="80" placeholder="e.g. Muhammad Ali" value="' + val('name') + '">' +
       '<div class="f-err" id="ptf-e-name"></div></div>' +
@@ -226,6 +231,81 @@
   function bindForm(close, existing, afterSave) {
     var form = document.getElementById('ptf-form');
     if (!form) return;
+    /* CNIC photo scan with OCR */
+    var scanBtn = document.getElementById('ptf-scan');
+    var scanFile = document.getElementById('ptf-scanfile');
+    var scanStat = document.getElementById('ptf-scanstat');
+    if (scanBtn && scanFile) {
+      scanBtn.addEventListener('click', function () { scanFile.click(); });
+      scanFile.addEventListener('change', function () {
+        var f = scanFile.files[0];
+        if (!f) return;
+        if (scanStat) scanStat.textContent = 'Loading OCR engine...';
+        /* load Tesseract.js dynamically */
+        function runOCR() {
+          if (scanStat) scanStat.textContent = 'Scanning CNIC... (this may take 10-20 seconds)';
+          var img = new Image();
+          img.onload = function () {
+            try {
+              Tesseract.recognize(img, 'eng').then(function (result) {
+                var text = result.data.text || '';
+                if (scanStat) scanStat.textContent = 'Processing...';
+                /* extract CNIC number (13 digits) */
+                var cnicM = text.match(/(\d{5})[-\s]?(\d{7})[-\s]?(\d)/);
+                if (cnicM) {
+                  var cnic = cnicM[1] + '-' + cnicM[2] + '-' + cnicM[3];
+                  var ci = document.getElementById('ptf-cnic');
+                  if (ci) ci.value = cnic;
+                }
+                /* extract DOB (look for date patterns) */
+                var dobM = text.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})/);
+                if (dobM) {
+                  var dobStr = dobM[3] + '-' + String(dobM[2]).padStart(2, '0') + '-' + String(dobM[1]).padStart(2, '0');
+                  var di = document.getElementById('ptf-dob');
+                  if (di) {
+                    di.value = dobStr;
+                    /* calculate age */
+                    try {
+                      var bd = new Date(dobStr), now = new Date();
+                      var age = now.getFullYear() - bd.getFullYear();
+                      if (now.getMonth() < bd.getMonth() || (now.getMonth() === bd.getMonth() && now.getDate() < bd.getDate())) age--;
+                      var ai = document.getElementById('ptf-age');
+                      if (ai && age > 0 && age < 120) ai.value = age;
+                    } catch (e) {}
+                  }
+                }
+                /* extract name (line after "Name" label) */
+                var lines = text.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+                for (var i = 0; i < lines.length; i++) {
+                  if (/^name/i.test(lines[i]) && lines[i + 1]) {
+                    var nm = lines[i + 1].replace(/[^A-Za-z ]/g, '').trim();
+                    if (nm.length > 2) {
+                      var ni = document.getElementById('ptf-name');
+                      if (ni && !ni.value) ni.value = nm;
+                      break;
+                    }
+                  }
+                }
+                if (scanStat) scanStat.textContent = '✓ Scan complete. Please verify the filled fields.';
+                App.toast('CNIC scanned', 'ok');
+              }).catch(function () {
+                if (scanStat) scanStat.textContent = 'Scan failed. Please enter manually.';
+              });
+            } catch (e) {
+              if (scanStat) scanStat.textContent = 'Scan failed. Please enter manually.';
+            }
+          };
+          img.src = URL.createObjectURL(f);
+        }
+        if (typeof Tesseract === 'undefined') {
+          var sc = document.createElement('script');
+          sc.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
+          sc.onload = runOCR;
+          sc.onerror = function () { if (scanStat) scanStat.textContent = 'Could not load OCR. Check internet.'; };
+          document.head.appendChild(sc);
+        } else runOCR();
+      });
+    }
     document.getElementById('ptf-cancel').addEventListener('click', close);
     // live-update the WhatsApp button next to the phone field as the user types
     var phoneInput = document.getElementById('ptf-phone');

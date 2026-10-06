@@ -984,12 +984,16 @@
 }
   `;
 
-  /* ---------- worker 1/4: report header (Chughtai-style) ----------
-     Decorative grey-to-blue top bar; circular logo; large serif lab name +
-     tagline highlight box + address/Tel/Email (center); MR / Lab # and
-     Case # with Code39 barcodes + 90px QR placeholder (right); thin black
-     rule below. The custom s.headerHtml override is applied by
-     reportHtml(), not here. */
+  /* ---------- worker 1/4: report header (premium navy/gold) ----------
+     Navy gradient band with WHITE serif lab name + tagline (gold tint),
+     102px circular logo with gold/white ring, address/Tel/Email in black
+     below the band, Report Date card + 90px QR placeholder (right),
+     navy-to-steel top bar and 3px gold rule below. Exactly ONE
+     <img data-qr="1"> is emitted: print code replaces that attribute to
+     inject the real QR, stripQrImg() strips it when QR is off. No
+     box-shadows (they don't print): borders + gradients only, every
+     background carries print-color-adjust:exact. The custom s.headerHtml
+     override is applied by reportHtml(), not here. */
   function reportHeaderHtml(d) {
     var inv = (d && d.inv) || {};
     var pat = (d && d.pat) || {};
@@ -1000,12 +1004,10 @@
     var showQr = s.showQr !== false;             /* default true */
     var labName = s.labName || 'Optix LAB MedSync';
 
-    /* "6-7/2025" -> "6 - 7 / 2025" spaced style like the reference */
-    function spacedNo(v) {
-      var t = String(v == null ? '' : v);
-      if (!t) return '';
-      return t.replace(/\s*-\s*/g, ' - ').replace(/\s*\/\s*/g, ' / ');
-    }
+    /* Force backgrounds/gradients to print (screen + PDF). */
+    var EXACT = 'print-color-adjust:exact;-webkit-print-color-adjust:exact';
+    var NAVY_GRAD = 'linear-gradient(135deg,#0e2a5e 0%,#173a7c 60%,#1e4a99 100%)';
+    var GOLD_GRAD = 'linear-gradient(135deg,#a8841f 0%,#f0d878 45%,#c9a227 100%)';
 
     /* left: 102px circular logo (photo, or the lab's initial when unset)
        wrapped in a gold gradient ring + white inner ring */
@@ -1530,35 +1532,55 @@
   App.sectionCatOf = sectionCatOf;
 
   /* ---------- worker 4/4: report footer (redesign) ----------
-     Centered bold verification line, thick black rule, signatories in
-     one row spread across (from s.signatories), bordered disclaimer box,
-     "Powered by System Optix". Used only when the custom s.footerHtml
-     override is NOT set. */
+     Premium footer (Aga Khan / Chughtai style):
+       1. "Electronically Verified" rich band — small-caps navy bold on a
+          light gold tint, with thin navy rules on each side.
+       2. Configured signatories (s.signatories) in a spread row: each gets
+          a thin gold top rule, bold black name (slightly larger), and
+          refined smaller qual/title lines.
+          Empty fallback renders nothing per user request.
+       3. Disclaimer in a premium tinted box. Every background carries
+          print-color-adjust:exact so it prints. No box-shadow.
+       4. "Powered by System Optix" line (black, centered).
+     Used only when the custom s.footerHtml override is NOT set. */
   function reportFooterHtml(d) {
     var s = (d && d.s) || {};
+    var EXACT = 'print-color-adjust:exact;-webkit-print-color-adjust:exact';
 
-    /* 1: centered bold verification line */
+    /* 1: rich verified band — light gold gradient tint, navy small-caps
+       bold text, thin navy rules on each side */
     var verNote = s.verNote || s.verificationNote ||
       'Electronically Verified Report, No Signature(s) Required.';
-    var line1 =
-      '<p class="rpt-ver" style="text-align:center;font-weight:700;font-size:0.96em;margin:22px 0 4px;line-height:1.5">' +
-        App.esc(verNote) + '</p>';
+    var verBand =
+      '<div class="rpt-ver" style="margin:26px 0 6px;background:linear-gradient(135deg,#fdf7e4 0%,#f4e9c8 100%);' +
+        EXACT + ';border-top:2px solid #c9a227;border-bottom:2px solid #c9a227;padding:11px 16px">' +
+        '<div style="display:flex;align-items:center;gap:16px">' +
+          '<div style="flex:1;height:1px;background:#0e2a5e;' + EXACT + '"></div>' +
+          '<div style="font-weight:700;font-size:0.84em;letter-spacing:0.16em;text-transform:uppercase;' +
+            'color:#0e2a5e;font-family:' + RPT.serif + ';text-align:center">' +
+            App.esc(verNote) +
+          '</div>' +
+          '<div style="flex:1;height:1px;background:#0e2a5e;' + EXACT + '"></div>' +
+        '</div>' +
+      '</div>';
 
-    /* 2: thick black rule */
-    var rule = '<hr class="rpt-footrule" style="border:none;border-top:2.5px solid #000;margin:6px 0">';
-
-    /* 3: signatories in one row, spread across; fallback signature lines when empty */
+    /* 2: signatories in a spread row — gold top rule per signatory, bold
+       black name, refined smaller qual/title */
     var sigs = (Array.isArray(s.signatories) ? s.signatories : [])
       .filter(function (g) { return g && (g.name || g.qual || g.title); });
     var sigHtml;
     if (sigs.length) {
       sigHtml =
-        '<div class="rpt-sigs" style="display:flex;justify-content:space-between;gap:10px;margin:10px 0 8px">' +
+        '<div class="rpt-sigs" style="display:flex;justify-content:space-between;gap:28px;margin:22px 0 10px">' +
           sigs.map(function (g) {
-            return '<div class="rpt-sig" style="flex:1;text-align:left">' +
-              '<div class="n" style="font-weight:700;font-size:0.9em">' + App.esc(g.name || '') + '</div>' +
-              (g.qual ? '<div class="q" style="font-size:0.78em">' + App.esc(g.qual) + '</div>' : '') +
-              (g.title ? '<div class="t" style="font-size:0.78em">' + App.esc(g.title) + '</div>' : '') +
+            return '<div class="rpt-sig" style="flex:1;min-width:0">' +
+              '<div style="height:2px;background:#c9a227;' + EXACT + ';margin-bottom:12px"></div>' +
+              '<div class="n" style="font-weight:700;font-size:1.05em;color:#000;line-height:1.35">' +
+                App.esc(g.name || '') + '</div>' +
+              (g.qual ? '<div class="q" style="font-size:0.8em;color:#000;letter-spacing:0.04em;margin-top:4px">' +
+                App.esc(g.qual) + '</div>' : '') +
+              (g.title ? '<div class="t" style="font-size:0.8em;color:#000;letter-spacing:0.04em;margin-top:2px">' +
+                App.esc(g.title) + '</div>' : '') +
             '</div>';
           }).join('') + '</div>';
     } else {
@@ -1566,18 +1588,21 @@
       sigHtml = '';
     }
 
-    /* 4: disclaimer note inside a bordered box */
+    /* 3: premium disclaimer box — light navy tint, gold border + navy
+       accent edge, refined padding. Full disclaimer text unchanged. */
     var disc = s.disclaimer || s.footerNote ||
       'NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.';
     var discHtml =
-      '<div class="rpt-disc" style="border:1px solid #000;padding:6px 8px;font-size:0.72em;line-height:1.5;margin:8px 0 0">' +
+      '<div class="rpt-disc" style="background:#f7f9fd;' + EXACT + ';border:1px solid #c9a227;' +
+        'border-left:4px solid #0e2a5e;padding:10px 14px;font-size:0.74em;line-height:1.65;color:#000;' +
+        'margin:10px 0 0">' +
         App.esc(disc) + '</div>';
 
-    /* 5: powered-by (existing constraint) */
+    /* 4: powered-by (existing constraint) */
     var powered =
-      '<p class="rpt-powered" style="color:#000;font-size:0.88em;text-align:center;margin:14px 0 0">Powered by System Optix</p>';
+      '<p class="rpt-powered" style="color:#000;font-size:0.88em;text-align:center;margin:16px 0 0">Powered by System Optix</p>';
 
-    return '<div class="rpt-footer">' + line1 + rule + sigHtml + discHtml + powered + '</div>';
+    return '<div class="rpt-footer">' + verBand + sigHtml + discHtml + powered + '</div>';
   }
 
   function reportData(invoiceId) {

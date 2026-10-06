@@ -95,7 +95,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
   transition:all .15s;
 }
 .nav-item .nav-ico svg{width:18px;height:18px}
-.nav-item.active{background:var(--brand-soft);color:var(--brand-d);border-color:var(--brand-line)}
+.nav-item.active{background:var(--brand-soft);color:var(--brand-d);border:2px solid #131845;box-shadow:0 2px 8px rgba(19,24,69,.12)}
 .nav-item.active .nav-ico{background:var(--brand-grad);color:#fff;box-shadow:0 4px 10px -3px rgba(19,24,69,.5)}
 .nav-item.active::before{
   content:'';position:absolute;left:-12px;top:8px;bottom:8px;width:4px;border-radius:0 4px 4px 0;
