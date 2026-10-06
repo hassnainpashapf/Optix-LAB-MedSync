@@ -474,7 +474,7 @@
             '<td><strong>' + App.esc(p.name) + '</strong></td>' +
             '<td><input class="input" data-bt="' + ti + '" data-bpi="' + pi + '"' + (isNum ? ' type="number" step="any" inputmode="decimal"' : '') + ' value="' + App.esc(v) + '" placeholder="Enter value"></td>' +
             '<td class="muted">' + App.esc(p.unit || '') + '</td>' +
-            '<td class="muted">' + App.esc(p.ref || '') + '</td></tr>';
+            '<td class="muted">' + App.esc(refFor(p, patient)) + '</td></tr>';
         }).join('');
         fieldsHtml =
           '<table class="table"><thead><tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Reference Range</th></tr></thead>' +
@@ -619,7 +619,7 @@
           '<td><strong>' + App.esc(p.name) + '</strong></td>' +
           '<td><input class="input" data-pi="' + i + '"' + (isNum ? ' type="number" step="any" inputmode="decimal"' : '') + ' value="' + App.esc(v) + '" placeholder="Enter value"></td>' +
           '<td class="muted">' + App.esc(p.unit || '') + '</td>' +
-          '<td class="muted">' + App.esc(p.ref || '') + '</td></tr>';
+          '<td class="muted">' + App.esc(refFor(p, pat)) + '</td></tr>';
       }).join('');
       body =
         '<table class="table"><thead><tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Reference Range</th></tr></thead>' +
@@ -1720,13 +1720,14 @@
     var rowsHtml;
     if (params.length) {
       rowsHtml = params.map(function (p) {
+        var pref = refFor(p, d.pat);
         var cells = cols.map(function (c, ci) {
-          return valCell((c.values || {})[p.name], p.ref, ci === 0);
+          return valCell((c.values || {})[p.name], pref, ci === 0);
         }).join('');
         return '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
           'border-bottom:1px solid #ddd;font-size:1.04em;padding:2px 6px">' +
           '<div>' + App.esc(p.name || '') + '</div>' +
-          '<div>' + App.esc(p.ref != null && p.ref !== '' ? String(p.ref) : '—') + '</div>' +
+          '<div>' + App.esc(pref !== '' ? String(pref) : '—') + '</div>' +
           '<div>' + App.esc(p.unit != null && p.unit !== '' ? String(p.unit) : '') + '</div>' +
           cells +
         '</div>';
@@ -1916,6 +1917,17 @@
 
     return '<div class="rpt-footer">' + line1 + rule + sigHtml + addrHtml + discHtml + powered + '</div>';
   }
+
+  /* Reference range of a parameter for THIS patient: child (< 13 yrs) -> male / female -> general range. */
+  function refFor(p, pat) {
+    if (!p) return '';
+    var age = parseFloat(pat && pat.age), g = String((pat && pat.gender) || '').toLowerCase().charAt(0);
+    if (!isNaN(age) && age < 13 && p.refChild) return p.refChild;
+    if (g === 'm' && p.refMale) return p.refMale;
+    if (g === 'f' && p.refFemale) return p.refFemale;
+    return p.ref || '';
+  }
+  App.refFor = refFor;
 
   function reportData(invoiceId, ropts) {
     var inv = invOf(invoiceId);
@@ -2577,7 +2589,7 @@
       // ---- build one param row (lines pre-wrapped, height pre-computed) ----
       function buildRow(p, vals) {
         var valStr = vals[p.name] != null ? String(vals[p.name]) : '';
-        var refStr = p.ref || '—';
+        var refStr = refFor(p, d.pat) || '—';
         var nameW = CX_REF - CX_TEST - 2;
         var refW  = CX_UNIT - CX_REF - 2;
         var unitW = RX - 36 - CX_UNIT - 2;   // keep clear of right-aligned value

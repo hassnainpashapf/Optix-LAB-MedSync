@@ -1767,7 +1767,12 @@
         + '<input class="input rt-fr" placeholder="Reference range" value="' + App.esc(p.ref || '') + '">'
         + '<select class="input rt-ft"><option value="text"' + (isNum ? '' : ' selected') + '>Text</option>'
         + '<option value="number"' + (isNum ? ' selected' : '') + '>Number</option></select>'
-        + '<button type="button" class="btn btn-ghost btn-sm rt-frm" title="Remove">✕</button></div>';
+        + '<button type="button" class="btn btn-ghost btn-sm rt-frm" title="Remove">✕</button>'
+        + '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:-2px">'
+        +   '<input class="input rt-xm" placeholder="Male range (optional)" value="' + App.esc(p.refMale || '') + '">'
+        +   '<input class="input rt-xf" placeholder="Female range (optional)" value="' + App.esc(p.refFemale || '') + '">'
+        +   '<input class="input rt-xc" placeholder="Child &lt; 13 yrs (optional)" value="' + App.esc(p.refChild || '') + '">'
+        + '</div></div>';
     }
     function wireRemovals() {
       box.querySelectorAll('.rt-frm').forEach(function (b) {
@@ -1780,11 +1785,13 @@
       box.querySelectorAll('.rt-frow').forEach(function (row) {
         var n = row.querySelector('.rt-fn').value.trim();
         if (!n) return;
-        out.push({
+        var o = {
           name: n,
           unit: row.querySelector('.rt-fu').value.trim(),
           ref: row.querySelector('.rt-fr').value.trim()
-        });
+        };
+        [['.rt-xm', 'refMale'], ['.rt-xf', 'refFemale'], ['.rt-xc', 'refChild']].forEach(function (x) { var v = row.querySelector(x[0]).value.trim(); if (v) o[x[1]] = v; });
+        out.push(o);
       });
       return out;
     }
@@ -1839,12 +1846,14 @@
       box.querySelectorAll('.rt-frow').forEach(function (row) {
         var n = row.querySelector('.rt-fn').value.trim();
         if (!n) return;
-        params.push({
+        var po = {
           name: n,
           unit: row.querySelector('.rt-fu').value.trim(),
           ref: row.querySelector('.rt-fr').value.trim(),
           type: row.querySelector('.rt-ft').value === 'number' ? 'number' : 'text'
-        });
+        };
+        [['.rt-xm', 'refMale'], ['.rt-xf', 'refFemale'], ['.rt-xc', 'refChild']].forEach(function (x) { var v = row.querySelector(x[0]).value.trim(); if (v) po[x[1]] = v; });
+        params.push(po);
       });
       DB.update('tests', tid, { params: params });
       App.toast('Report template saved — ' + params.length + ' field(s).');

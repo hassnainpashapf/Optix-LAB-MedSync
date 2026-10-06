@@ -167,6 +167,40 @@ async function main() {
     if (n) console.log('[labpos-cloud] default normal ranges added to', n, 'tests');
   } catch (e) { console.log('[labpos-cloud] default ranges skipped:', e.message); }
 
+  /* standard adult/child reference ranges for the most common parameters that differ by sex or age: added once to params that
+     have none (lab-edited values are never touched; every range stays editable in Tests / Report Templates) */
+  if (!DESKTOP) try {
+    const R = [
+      { n: /^(h(a)?emoglobin|hb)\b/i, u: /g\/dl/i, m: '13.5 - 17.5', f: '12.0 - 15.5', c: '11.5 - 15.5' },
+      { n: /^(pcv|hct|h(a)?ematocrit)\b/i, u: /%/, m: '40 - 54', f: '36 - 48', c: '35 - 45' },
+      { n: /^(total )?rbc/i, u: /(10|x10).*(12|6)|\/l|ul|µl/i, m: '4.5 - 5.9', f: '4.1 - 5.1', c: '4.0 - 5.2' },
+      { n: /^esr\b/i, u: /mm/i, m: '0 - 15', f: '0 - 20', c: '0 - 10' },
+      { n: /^(serum )?creatinine/i, u: /mg\/dl/i, m: '0.7 - 1.3', f: '0.6 - 1.1', c: '0.3 - 0.7' },
+      { n: /^uric acid/i, u: /mg\/dl/i, m: '3.4 - 7.0', f: '2.4 - 6.0', c: '2.0 - 5.5' },
+      { n: /^ferritin/i, u: /ng\/ml/i, m: '24 - 336', f: '11 - 307', c: '7 - 140' },
+      { n: /^(serum )?iron\b/i, u: /(u|µ)g\/dl/i, m: '65 - 175', f: '50 - 170', c: '50 - 120' },
+      { n: /^alkaline phosphatase|^alp\b/i, u: /u\/l/i, c: '150 - 420' },
+    ];
+    let n = 0;
+    for (const t of await store.all('tests')) {
+      if (!Array.isArray(t.params) || t.isPackage) continue;
+      let changed = false;
+      const params = t.params.map((p) => {
+        if (p.refMale || p.refFemale || p.refChild) return p;
+        const hit = R.find((x) => x.n.test(String(p.name || '').trim()) && x.u.test(String(p.unit || '')));
+        if (!hit) return p;
+        changed = true;
+        const q = Object.assign({}, p);
+        if (hit.m) q.refMale = hit.m;
+        if (hit.f) q.refFemale = hit.f;
+        if (hit.c) q.refChild = hit.c;
+        return q;
+      });
+      if (changed) { await store.put('tests', Object.assign({}, t, { params })); n++; }
+    }
+    if (n) console.log('[labpos-cloud] male/female/child reference ranges added to', n, 'tests');
+  } catch (e) { console.log('[labpos-cloud] sex/age ranges skipped:', e.message); }
+
   /* one-time: rows written before sync existed have no _s cursor, so desktops would never pull them */
   try {
     let n = 0;
