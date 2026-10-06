@@ -29,6 +29,11 @@
 .dl-ver{color:#5b6b80;font-size:14px;margin:0}
 .dl-ver b{color:#131845}
 .dl-meta{color:#8a94a6;font-size:13px;margin:2px 0 0}
+.dl-win-list{display:flex;flex-direction:column;gap:8px;margin:6px 0 2px}
+.dl-win-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f6fafd;border:1px solid #e6eef5;border-radius:12px;padding:8px 12px}
+.dl-win-row b{color:#131845;font-size:14px}
+.dl-win-row span{color:#5b6b80;font-size:12.5px;display:block}
+.dl-win-btn{flex:none;font-size:13px;padding:8px 14px}
 .dl-steps-sec{padding:20px 0 70px}
 .dl-sec-h{color:#131845;font-size:clamp(1.6rem,3vw,2.2rem);font-weight:800;letter-spacing:-.02em;text-align:center;margin:0 0 36px}
 .dl-steps-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
@@ -101,10 +106,17 @@
             <span class="os-ico" aria-hidden="true">
               <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.6 10.6 4.5v7H3zM11.7 4.3 21 3v8.5h-9.3zM3 12.5h7.6v7L3 18.4zM11.7 12.5H21V21l-9.3-1.3z"/></svg>
             </span>
-            <div><b>Windows</b><span>Windows 10 / 11 (64-bit)</span></div>
+            <div><b>Windows</b><span>Windows 7 / 8.1 / 10 / 11 (32-bit &amp; 64-bit)</span></div>
           </div>
-          <p class="dl-ver">Version <b>1.0.0</b></p>
-          <a class="btn btn-navy btn-block" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-Setup-1.0.0.exe">Download for Windows (.exe)</a>
+          <p class="dl-ver">Version <b>1.0.0</b> &mdash; pick the installer for your PC</p>
+          <div class="dl-win-list">
+            <div class="dl-win-row"><div><b>Windows 11 / 10</b><span>64-bit &middot; ~93 MB</span></div><a class="btn btn-navy dl-win-btn" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-Setup-1.0.0-win10-11-x64.exe">Download</a></div>
+            <div class="dl-win-row"><div><b>Windows 10</b><span>32-bit &middot; ~81 MB</span></div><a class="btn btn-navy dl-win-btn" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-Setup-1.0.0-win10-x86.exe">Download</a></div>
+            <div class="dl-win-row"><div><b>Windows 8.1</b><span>64-bit &middot; ~93 MB</span></div><a class="btn btn-navy dl-win-btn" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-Setup-1.0.0-win8-x64.exe">Download</a></div>
+            <div class="dl-win-row"><div><b>Windows 8.1</b><span>32-bit &middot; ~66 MB</span></div><a class="btn btn-navy dl-win-btn" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-Setup-1.0.0-win8-x86.exe">Download</a></div>
+            <div class="dl-win-row"><div><b>Windows 7</b><span>64-bit &middot; ~93 MB</span></div><a class="btn btn-navy dl-win-btn" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-Setup-1.0.0-win7-x64.exe">Download</a></div>
+            <div class="dl-win-row"><div><b>Windows 7</b><span>32-bit &middot; ~66 MB</span></div><a class="btn btn-navy dl-win-btn" href="https://github.com/hassnainpashapf/Optix-LAB-MedSync/releases/download/v1.0.0/Optix-LAB-MedSync-Setup-1.0.0-win7-x86.exe">Download</a></div>
+          </div>
           <p class="dl-meta">Free &bull; Offline installer &bull; Your database is preserved on updates</p>
         </div>
       </article>
@@ -132,7 +144,7 @@
         <div class="dl-os-steps reveal">
           <h3>Windows</h3>
           <ol>
-            <li>Download the .exe installer using the button above.</li>
+            <li>Download the .exe installer matching your Windows version using a button above.</li>
             <li>Run it and follow the setup wizard (Next &rarr; Install).</li>
             <li>Launch Optix LAB MedSync from the desktop or Start menu and log in.</li>
           </ol>
@@ -156,7 +168,7 @@
         <div class="dl-req reveal">
           <h3>Windows</h3>
           <ul>
-            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#5392ba" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Windows 10 or 11, 64-bit</li>
+            <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#5392ba" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>Windows 7, 8.1, 10 or 11 (32-bit &amp; 64-bit)</li>
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#5392ba" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>4 GB RAM or more</li>
             <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#5392ba" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>500 MB free disk space</li>
           </ul>
