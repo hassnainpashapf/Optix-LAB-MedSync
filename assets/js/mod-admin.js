@@ -340,14 +340,6 @@
 
       + filterCard
 
-      + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Payment Methods</h3></div><div class="card-b">'
-      +   '<div class="stat-grid">'
-      +   statCard('Cash', App.money(methods.Cash), '₨', 'var(--green-soft)', 'var(--green)')
-      +   statCard('Bank Transfer', App.money(methods.Bank), '▭', 'var(--blue-soft)', 'var(--blue)')
-      +   statCard('Card', App.money(methods.Card), '▭', 'var(--amber-soft)', 'var(--amber)')
-      +   (methods.Other ? statCard('Other', App.money(methods.Other), '•', 'var(--brand-soft)', 'var(--brand-d)') : '')
-      +   '</div></div></div>'
-
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
       + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
       + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>';
