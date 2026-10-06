@@ -1500,7 +1500,13 @@
     var rptBase = Math.round(12.5 * rptScale * 10) / 10;
 
     /* header */
-    var headOut = noLabHeader ? '' : (s.headerHtml ? s.headerHtml : reportHeaderHtml(d));
+    /* custom header/footer only override if they contain real content (ignore trivial/invalid like ">") */
+    function hasRealHtml(h) {
+      if (!h) return false;
+      var t = String(h).replace(/<[^>]*>/g, '').trim();
+      return t.length > 1;
+    }
+    var headOut = noLabHeader ? '' : (hasRealHtml(s.headerHtml) ? s.headerHtml : reportHeaderHtml(d));
 
     /* patient info grid */
     var infoHtml = patientGridHtml(d);
@@ -1529,7 +1535,7 @@
     });
 
     /* footer */
-    var footOut = s.footerHtml ? s.footerHtml : reportFooterHtml(d);
+    var footOut = hasRealHtml(s.footerHtml) ? s.footerHtml : reportFooterHtml(d);
 
     var bodyHtml = headOut + infoHtml + testsHtml +
       (pendingCount
