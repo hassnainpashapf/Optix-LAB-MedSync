@@ -1505,12 +1505,14 @@
           }).join('') + '</div>';
     }
 
-    /* 4: address block, centered bold-ish */
+    /* 4: address block, centered bold-ish — always show lab address + contact */
     var addrLines = [];
+    if (s.address) addrLines.push(s.address);
     if (s.headOffice) addrLines.push('Head Office: ' + s.headOffice);
     if (s.mainLab) addrLines.push('Previous Lab: ' + s.mainLab);
     var contactParts = [];
     if (s.phone) contactParts.push('Phone: ' + s.phone);
+    if (s.callCenter) contactParts.push('Call Center: ' + s.callCenter);
     if (s.website) contactParts.push('Web: ' + s.website);
     if (s.email) contactParts.push('Email: ' + s.email);
     if (contactParts.length) addrLines.push(contactParts.join('   '));
