@@ -1030,9 +1030,9 @@
         '</div>';
     }
 
-    /* RIGHT: Patient No. / Case # rows, then the QR placeholder */
+    /* RIGHT: Patient No. / Case # rows (centered like Chughtai), then the QR */
     var rightHtml =
-      '<div style="flex:none;text-align:right;color:#000;font-size:0.95em;line-height:1.7">' +
+      '<div style="flex:none;text-align:center;color:#000;font-size:0.95em;line-height:1.7">' +
         '<div><span style="font-weight:700">Patient No.:</span> ' +
           App.esc(String(pat.id == null ? '' : pat.id)) + '</div>' +
         '<div><span style="font-weight:700">Case #:</span> ' +
