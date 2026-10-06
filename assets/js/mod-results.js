@@ -1844,6 +1844,7 @@
      one row spread across (from s.signatories), bordered disclaimer box,
      "Powered by System Optix". Used only when the custom s.footerHtml
      override is NOT set. */
+  var DEFAULT_DISCLAIMER = 'NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.';
   function reportFooterHtml(d) {
     var s = (d && d.s) || {};
 
@@ -1894,8 +1895,7 @@
     /* 5: disclaimer box — skip the old "Get well soon" default footer note */
     var _fn = s.footerNote;
     if (_fn === 'Get well soon. Reports available on counter & phone.') _fn = '';
-    var disc = s.disclaimer || _fn ||
-      'NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.';
+    var disc = s.disclaimer || _fn || DEFAULT_DISCLAIMER;
     var discHtml =
       '<div class="rpt-disc" style="border:none;border-bottom:1px solid #000;padding:2px 0 6px;font-size:0.52em;line-height:1.4;margin:4px 0 0;text-align:justify">' +
         App.esc(disc) + '</div>';
@@ -2426,7 +2426,7 @@
       // ---- inline abnormal check: "low - high" refs, also "<x" / ">x" style ----
       // Returns -1 (low), 1 (high), 0 (normal / not parseable).
       function rangeFlag(ref, valStr) {
-        var v = parseFloat(String(valStr == null ? '' : valStr).trim());
+        var v = parseFloat(String(valStr == null ? '' : valStr).replace(/,/g, '').trim()); /* "7,600" -> 7600 */
         if (isNaN(v)) return 0;
         var rs = String(ref == null ? '' : ref).replace(/,/g, '');
         var m = rs.match(/(-?\d+(?:\.\d+)?)\s*(?:-|to|\u2013)\s*(-?\d+(?:\.\d+)?)/i);
@@ -2644,78 +2644,75 @@
       txt('Note: ' + d.pendingCount + ' test(s) from this invoice are still pending.', M, y);
       y += 7;
     }
-    if (s.footerNote) {
+    if (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') {
       need(8);
       doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(120, 120, 120);
       txt(doc.splitTextToSize(s.footerNote, CW), M, y);
       y += 6;
     }
 
-    // ----- footer: verification note, signatories, address block -----
-    need(50);
-
-    // 1) Bold centered verification lines (as in the reference report)
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9.5);
-    doc.setTextColor(20, 20, 20);
+    // ----- footer (same content as the HTML report): verification line, signatories, address line, NOTE, powered-by.
+    // It is measured first and pinned to the bottom of the last page (a new page is added only if it cannot fit). -----
+    var PH = 297, FM = M;                                   // A4 height, bottom margin
     var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
     var fVerLines = doc.splitTextToSize(fVerNote, CW);
-    txt(fVerLines, W / 2, y, { align: 'center' });
-    y += fVerLines.length * 4.6 + 1.5;
-    txt('Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.', W / 2, y, { align: 'center' });
-    y += 6.5;
-
-    // 2) Thick black rule
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.9);
-    doc.line(M, y, W - M, y);
-    y += 7;
-
-    // 3) Signatories — spread evenly across the full content width (any count)
-    var fSigs = (Array.isArray(s.signatories) ? s.signatories : [])
-      .filter(function (g) { return g && (g.name || g.title); });
-    if (fSigs.length) {
-      var fSw = CW / fSigs.length;      // column width per signatory
-      var fSigBlockH = 0;
-      fSigs.forEach(function (g, k) {
-        var fCx = M + fSw * (k + 0.5);  // column center
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-        txt(g.name || '', fCx, y, { align: 'center' });
-        var fSy = y + 4.3;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(105, 105, 105);
-        if (g.qual)  { txt(g.qual,  fCx, fSy, { align: 'center' }); fSy += 3.9; }
-        if (g.title) { txt(g.title, fCx, fSy, { align: 'center' }); fSy += 3.9; }
-        if (fSy - y > fSigBlockH) fSigBlockH = fSy - y;
-      });
-      y += fSigBlockH + 5;
-    } else {
-      // Signature lines removed per user request — no fallback
-    }
-
-    // 4) Address block — bold, centered (3 lines as in the reference report)
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-    var fAddrLines = [];
-    fAddrLines.push('Head Office: ' + (s.headOffice || s.address || '—') +
-      '    Call Center: ' + (s.callCenter || s.phone || '—'));
-    var fMainLine = 'Main Lab: ' + (s.mainLab || '—');
-    if (s.mainLabPhone) fMainLine += '   Ph: ' + s.mainLabPhone;
-    fAddrLines.push(fMainLine);
-    var fContactBits = [];
-    if (s.phone)   fContactBits.push('Phone: ' + s.phone);
-    if (s.website) fContactBits.push('Web: ' + s.website);
-    if (s.email)   fContactBits.push('Email: ' + s.email);
-    if (fContactBits.length) fAddrLines.push(fContactBits.join('   '));
-    fAddrLines.forEach(function (ln) {
-      var fWl = doc.splitTextToSize(ln, CW);
-      txt(fWl, W / 2, y, { align: 'center' });
-      y += fWl.length * 4.6;
+    var fSigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title); });
+    var fSw = fSigs.length ? CW / fSigs.length : CW;
+    var fSigBlockH = 0;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+    var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
+    fSigs.forEach(function (g, k) {
+      var h = fSigNameLines[k].length * 4.1 + (g.qual ? 3.9 : 0) + (g.title ? 3.9 : 0);
+      if (h > fSigBlockH) fSigBlockH = h;
     });
-    y += 2;
+    var fAddrParts = [];
+    if (s.address) fAddrParts.push(s.address);
+    if (s.headOffice) fAddrParts.push('Head Office: ' + s.headOffice);
+    if (s.mainLab) fAddrParts.push('Previous Lab: ' + s.mainLab);
+    if (s.phone) fAddrParts.push('Phone: ' + s.phone);
+    if (s.callCenter) fAddrParts.push('Call Center: ' + s.callCenter);
+    if (s.website) fAddrParts.push('Web: ' + s.website);
+    if (s.email) fAddrParts.push('Email: ' + s.email);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    var fAddrLines = fAddrParts.length ? doc.splitTextToSize(fAddrParts.join(' | '), CW) : [];
+    var fNote = s.disclaimer || ((s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') ? s.footerNote : '') || DEFAULT_DISCLAIMER;
+    doc.setFontSize(6.6);
+    var fNoteLines = doc.splitTextToSize(fNote, CW);
+    var fH = fVerLines.length * 4.4 + 3 + 1 + 4 + fSigBlockH + 4 + 1 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + fNoteLines.length * 2.9 + 3 + 1 + 5;
+    if (y + fH > PH - FM) { doc.addPage(); y = M; }
+    y = Math.max(y + 4, PH - FM - fH);                      // pin to the bottom of the page
 
-    // 5) Powered-by line (small grey, centered)
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+    // verification line (bold, centered)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+    txt(fVerLines, W / 2, y + 3, { align: 'center' });
+    y += fVerLines.length * 4.4 + 3;
+    // rule
+    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, y, W - M, y); y += 5;
+    // signatories, centered columns
+    fSigs.forEach(function (g, k) {
+      var fCx = M + fSw * (k + 0.5), fSy = y;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+      txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 4.1;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(40, 40, 40);
+      if (g.qual)  { txt(g.qual,  fCx, fSy, { align: 'center' }); fSy += 3.9; }
+      if (g.title) { txt(g.title, fCx, fSy, { align: 'center' }); fSy += 3.9; }
+    });
+    y += fSigBlockH + 3;
+    // rule + address line
+    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 4;
+    if (fAddrLines.length) {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+      txt(fAddrLines, W / 2, y, { align: 'center' }); y += fAddrLines.length * 4.2 + 2;
+    }
+    // NOTE (small)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6); doc.setTextColor(20, 20, 20);
+    txt(fNoteLines, M, y, {}); y += fNoteLines.length * 2.9 + 2;
+    doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 4;
+    // powered-by
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
     txt('Powered by System Optix', W / 2, y, { align: 'center' });
-    y += 5;
+    y += 4;
 
     var dataUri;
     try { dataUri = doc.output('datauristring'); }
