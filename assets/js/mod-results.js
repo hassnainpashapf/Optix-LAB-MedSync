@@ -242,7 +242,7 @@
         var ft = existing['Result'] != null ? String(existing['Result']) : '';
         fieldsHtml =
           '<div><label class="label">Result</label>' +
-          '<textarea class="input" data-bfree="' + ti + '" rows="4" placeholder="Type the test result here...">' + App.esc(ft) + '</textarea></div>';
+          '<input class="input" data-bfree="' + ti + '" placeholder="Type the result value..." value="' + App.esc(ft) + '"></div>';
       }
       return '<div class="card" style="margin-bottom:14px"><div class="card-h"><div><strong>' + tTitle + '</strong></div>' +
         '<span class="muted">' + App.esc(row.invoice.no || row.invoice.id) + '</span></div>' +
@@ -380,7 +380,7 @@
       body =
         '<div class="form-grid"><div>' +
         '<label class="label">Result</label>' +
-        '<textarea class="input" id="resFree" rows="6" placeholder="Type the test result here...">' + App.esc(ft) + '</textarea>' +
+        '<input class="input" id="resFree" placeholder="Type the result value..." value="' + App.esc(ft) + '">' +
         '</div></div>';
     }
 
