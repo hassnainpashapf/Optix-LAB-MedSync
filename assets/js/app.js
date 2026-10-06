@@ -284,7 +284,7 @@
       '<div class="addr">' + esc(s.address || '') + ' &nbsp;•&nbsp; ' + esc(s.phone || '') +
       (s.email ? ' &nbsp;•&nbsp; ' + esc(s.email) : '') + '</div></div>') +
       bodyHTML +
-      '<div class="note">' + esc(s.footerNote || '') + ' &nbsp;•&nbsp; Printed: ' + esc(dt(new Date())) + '</div>' +
+      (noHeader ? '' : '<div class="note">' + esc(s.footerNote || '') + ' &nbsp;•&nbsp; Printed: ' + esc(dt(new Date())) + '</div>') +
       '</body></html>');
     w.document.close();
     w.focus();

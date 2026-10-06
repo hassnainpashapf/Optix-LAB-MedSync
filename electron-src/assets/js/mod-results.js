@@ -910,6 +910,11 @@
     color: #000 !important;
   }
 
+  /* Footer (doctors, address, NOTE, powered-by) sits at the very bottom of the page:
+     the report fills one A4 sheet (297mm - 2x12mm page margin - 2x28px body padding) and the footer is pushed down. */
+  .rpt-page { display: flex; flex-direction: column; min-height: 244mm; }
+  .rpt-page .rpt-footer { margin-top: auto !important; }
+
   /* Never leak screen chrome into the printout. */
   .noprint,
   button, .btn,
@@ -1980,7 +1985,7 @@
     });
 
     /* footer */
-    var footOut = hasRealHtml(s.footerHtml) ? s.footerHtml : reportFooterHtml(d);
+    var footOut = hasRealHtml(s.footerHtml) ? '<div class="rpt-footer">' + s.footerHtml + '</div>' : reportFooterHtml(d);
 
     var bodyHtml = headOut + infoHtml + testsHtml +
       (pendingCount
