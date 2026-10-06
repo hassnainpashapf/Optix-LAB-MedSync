@@ -1162,7 +1162,7 @@
       ['Address', val(pat.address)]
     ];
     var right = [
-      ['Registration Date', fmtDateTime(inv.createdAt)],
+      ['Reporting Date', fmtDateTime(inv.createdAt)],
       ['Collect Report At', fmtDateTime(d.maxReported)],
       ['Registration Location', val(s.headOffice)],
       ['Destination Location', val(s.destinationLocation || s.mainLab)],
@@ -2100,7 +2100,7 @@
         ['Address',               pat.address]
       ];
       var right = [
-        ['Registration Date',     inv.createdAt ? App.dt(inv.createdAt) : ''],
+        ['Reporting Date',      inv.createdAt ? App.dt(inv.createdAt) : ''],
         ['Collect Report At',     d.maxReported ? App.dt(d.maxReported) : ''],
         ['Registration Location', s.headOffice],
         ['Destination Location',  s.mainLab],
