@@ -1666,7 +1666,7 @@
     var headCells =
       '<div style="' + _hc + 'border-left:2px solid #000;letter-spacing:0.35em">TEST</div>' +
       '<div style="' + _hc + '">NORMAL VALUE</div>' +
-      '<div style="' + _hc + 'border-right:2px solid #000;margin-right:6px">UNIT</div>';
+      '<div style="' + _hc + '">UNIT</div>';
 
     /* value cell: centered; abnormal = bold black only (no colors, no arrows) */
     function valCell(valueStr, refStr) {
