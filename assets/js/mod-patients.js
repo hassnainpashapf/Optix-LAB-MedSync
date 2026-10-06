@@ -99,6 +99,48 @@
   var listQuery = '';
 
   /* ---------- patient form (add / edit) ---------- */
+  function ptUser() {
+    try {
+      if (window.App && App.session) {
+        var as = (typeof App.session === 'function') ? App.session() : App.session;
+        if (as && as.name) return as.name;
+      }
+      var s = JSON.parse(localStorage.getItem('labpos_session') || 'null');
+      if (s && s.name) return s.name;
+    } catch (e) {}
+    return 'system';
+  }
+  /* Order-tests picker (add mode only): checkbox list of active tests */
+  var PTF_TSTYLE =
+    '<style>' +
+    '.ptf-tlist{max-height:180px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px;background:#fff}' +
+    '.ptf-trow{display:flex;align-items:center;gap:10px;padding:8px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}' +
+    '.ptf-trow:last-child{border-bottom:none}' +
+    '.ptf-trow:hover{background:#f4f9fd}' +
+    '.ptf-tchk{width:16px;height:16px;accent-color:var(--brand);flex:none;cursor:pointer}' +
+    '.ptf-tinfo{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.ptf-tprice{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}' +
+    '.ptf-tsum{font-size:12px;color:var(--muted);font-weight:600;margin-top:6px}' +
+    '.ptf-opt{font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;font-size:10px}' +
+    '.ptf-tempty{padding:12px;font-size:12.5px;color:var(--muted);text-align:center}' +
+    '</style>';
+  function orderTestsHTML() {
+    var tests = DB.all('tests').filter(function (t) { return t.active !== false; })
+      .sort(function (a, b) { return String(a.code || a.name || '').localeCompare(String(b.code || b.name || '')); });
+    var rows = tests.map(function (t) {
+      var nm = (t.code ? t.code + ' — ' : '') + (t.name || 'Test');
+      return '<label class="ptf-trow" data-tname="' + App.esc(nm.toLowerCase()) + '">' +
+        '<input type="checkbox" class="ptf-tchk" value="' + App.esc(t.id) + '" data-price="' + (+t.price || 0) + '">' +
+        '<span class="ptf-tinfo"><strong>' + App.esc(nm) + '</strong>' +
+        (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') + '</span>' +
+        '<span class="ptf-tprice">' + App.money(+t.price || 0) + '</span></label>';
+    }).join('');
+    return PTF_TSTYLE +
+      '<div class="form-row"><label class="label" for="ptf-tsearch">Order Tests <span class="ptf-opt">(optional — sent to Lab Results)</span></label>' +
+      '<input class="input" id="ptf-tsearch" placeholder="Search tests…" autocomplete="off">' +
+      '<div class="ptf-tlist" id="ptf-tlist">' + (rows || '<div class="ptf-tempty">No active tests found.</div>') + '</div>' +
+      '<div class="ptf-tsum" id="ptf-tsum">0 selected • Rs 0</div></div>';
+  }
   function formHTML(p) {
     p = p || {};
     function val(k) { return App.esc(p[k] == null ? '' : p[k]); }
@@ -126,6 +168,7 @@
       '<div class="f-err" id="ptf-e-phone"></div></div>' +
       '<div class="form-row"><label class="label" for="ptf-address">Address</label>' +
       '<textarea class="input" id="ptf-address" rows="2" maxlength="200" placeholder="Street, area, city">' + val('address') + '</textarea></div>' +
+      (!p.id ? orderTestsHTML() : '') +
       '<div class="modal-actions">' +
       '<button type="button" class="btn btn-ghost" id="ptf-cancel">Cancel</button>' +
       '<button type="submit" class="btn btn-primary">' + (p.id ? 'Save Changes' : 'Add Patient') + '</button>' +
@@ -149,6 +192,29 @@
         waWrap.innerHTML = waBtn(phoneInput.value, 'Chat on WhatsApp');
       });
     }
+    // order-tests picker (add mode only): search filter + live selection summary
+    var tSearch = document.getElementById('ptf-tsearch');
+    var tList = document.getElementById('ptf-tlist');
+    var tSum = document.getElementById('ptf-tsum');
+    function paintTSum() {
+      if (!tList || !tSum) return;
+      var n = 0, amt = 0;
+      var chks = tList.querySelectorAll('.ptf-tchk:checked');
+      for (var i = 0; i < chks.length; i++) { n++; amt += (+chks[i].getAttribute('data-price') || 0); }
+      tSum.textContent = n + ' selected • ' + App.money(amt);
+    }
+    if (tSearch && tList) {
+      tSearch.addEventListener('input', function () {
+        var q = tSearch.value.trim().toLowerCase();
+        var rows = tList.querySelectorAll('.ptf-trow');
+        for (var i = 0; i < rows.length; i++) {
+          var nm = rows[i].getAttribute('data-tname') || '';
+          rows[i].style.display = (!q || nm.indexOf(q) >= 0) ? '' : 'none';
+        }
+      });
+      tList.addEventListener('change', paintTSum);
+      paintTSum();
+    }
     form.addEventListener('submit', function (ev) {
       ev.preventDefault();
       var name = document.getElementById('ptf-name').value.trim();
@@ -170,8 +236,39 @@
         App.toast('Patient details updated.');
       } else {
         data.createdAt = new Date().toISOString();
-        DB.insert('patients', data);
-        App.toast('Patient added successfully.');
+        var np = DB.insert('patients', data);
+        // order tests → unpaid invoice + pending lab results (add mode only)
+        var tMsg = 'Patient added successfully.';
+        var tListEl = document.getElementById('ptf-tlist');
+        if (tListEl && np && np.id) {
+          var tIds = [];
+          var chks = tListEl.querySelectorAll('.ptf-tchk:checked');
+          for (var ci = 0; ci < chks.length; ci++) tIds.push(chks[ci].value);
+          var items = [];
+          tIds.forEach(function (tid) {
+            var t = DB.get('tests', tid);
+            if (!t) return;
+            items.push({ testId: t.id, code: t.code, name: t.name, price: +t.price || 0,
+              isPackage: !!t.isPackage, includes: t.isPackage ? (t.includes || []) : null });
+          });
+          if (items.length) {
+            var bTotal = items.reduce(function (a, l) { return a + (+l.price || 0); }, 0);
+            var inv = DB.insert('invoices', {
+              patientId: np.id, doctorId: null, items: items,
+              subtotal: bTotal, discount: 0, total: bTotal, paid: 0, due: bTotal,
+              status: 'unpaid', createdAt: new Date().toISOString(), createdBy: ptUser()
+            });
+            items.forEach(function (l) {
+              var tids = (l.isPackage && l.includes && l.includes.length) ? l.includes : [l.testId];
+              tids.forEach(function (tid) {
+                DB.insert('results', { invoiceId: inv.id, testId: tid, values: {},
+                  status: 'pending', reportedAt: null, reportedBy: null });
+              });
+            });
+            tMsg = 'Patient added — ' + items.length + ' test(s) sent to Lab Results.';
+          }
+        }
+        App.toast(tMsg);
       }
       close();
       if (afterSave) afterSave();
