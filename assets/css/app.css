@@ -62,7 +62,7 @@ input,select,textarea{font-family:inherit;font-size:14px;color:var(--ink)}
 /* ============ Sidebar (WHITE premium) ============ */
 .sidebar{
   width:232px;flex:none;background:var(--sidebar);
-  border-right:2px solid #000;
+  border-right:1px solid var(--line);
   display:flex;flex-direction:column;
   position:sticky;top:0;height:100vh;z-index:40;
 }
