@@ -554,7 +554,7 @@ body{zoom:0.9}
 }
 @keyframes scRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
 @keyframes dbRise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
-.stat{display:block;position:relative;background:var(--card);border:2px solid #000;border-radius:12px;padding:13px 14px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards}
+.stat{display:block;position:relative;background:var(--card);border:2px solid #000 !important;border-radius:12px;padding:13px 14px;box-shadow:var(--sh-sm);overflow:hidden;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards}
 .stat:nth-child(2){animation-delay:.07s}
 .stat:nth-child(3){animation-delay:.14s}
 .stat:nth-child(4){animation-delay:.21s}
