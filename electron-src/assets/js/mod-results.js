@@ -3074,8 +3074,6 @@
         test: {
           /* second category -> second department divider */
           category: 'Chemical Pathology',
-          /* per-test note (worker 05 testNoteHtml convention: "Note:" block) */
-          note: 'Serum electrolytes should always be interpreted in the light of the clinical findings.',
           params: [
             { name: 'Sodium', unit: 'mmol/L', ref: '135 – 145', type: 'number' },
             { name: 'Potassium', unit: 'mmol/L', ref: '3.5 – 5.5', type: 'number' },
