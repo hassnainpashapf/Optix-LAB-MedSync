@@ -298,6 +298,16 @@
     };
   }
 
+  function reportHeadHtml(s) {
+    return '<div style="border-bottom:3px solid #131845;padding-bottom:12px;margin-bottom:16px;text-align:center">' +
+      (s.logo ? '<img src="' + App.esc(s.logo) + '" style="width:54px;height:54px;object-fit:contain;margin-bottom:6px" alt="">' : '') +
+      '<h1 style="margin:0;color:#131845">' + App.esc(s.labName || 'Lab') + '</h1>' +
+      '<div style="color:#64748b">' + App.esc(s.tagline || '') + '</div>' +
+      '<div style="color:#64748b">' + App.esc(s.address || '') + ' &nbsp;•&nbsp; ' + App.esc(s.phone || '') +
+      (s.email ? ' &nbsp;•&nbsp; ' + App.esc(s.email) : '') + '</div>' +
+    '</div>';
+  }
+
   function reportHtml(d) {
     var inv = d.inv, pat = d.pat, s = d.s, readyRows = d.readyRows, pendingCount = d.pendingCount;
 
@@ -329,13 +339,7 @@
       return '<div><span style="color:#64748b">' + k + ':</span> <strong>' + App.esc(v || '—') + '</strong></div>';
     };
 
-    return '<div style="border-bottom:3px solid #131845;padding-bottom:12px;margin-bottom:16px">' +
-        '<h1 style="margin:0;color:#131845">' + App.esc(s.labName || 'Lab') + '</h1>' +
-        '<div style="color:#64748b">' + App.esc(s.tagline || '') + '</div>' +
-        '<div style="color:#64748b">' + App.esc(s.address || '') + ' &nbsp;•&nbsp; ' + App.esc(s.phone || '') +
-        (s.email ? ' &nbsp;•&nbsp; ' + App.esc(s.email) : '') + '</div>' +
-      '</div>' +
-      '<h2 style="text-align:center;margin:0 0 14px">LABORATORY REPORT</h2>' +
+    return '<h2 style="text-align:center;margin:0 0 14px">LABORATORY REPORT</h2>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;background:#f8fafc;border:1px solid #e8eef4;border-radius:10px;padding:12px 16px;margin-bottom:8px">' +
         info('Patient', pat.name) +
         info('Age / Gender', (pat.age || '') + (pat.gender ? ' / ' + pat.gender : '')) +
@@ -369,7 +373,7 @@
     if (!d) { App.toast('No ready results to view', 'err'); return; }
     var close = App.modal('Lab Report — ' + App.esc(d.inv.no),
       '<div class="report-preview" style="max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:20px;background:#fff">' +
-        reportHtml(d) +
+        reportHeadHtml(d.s) + reportHtml(d) +
       '</div>' +
       '<div class="actions" style="margin-top:16px">' +
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
