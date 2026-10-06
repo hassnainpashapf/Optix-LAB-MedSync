@@ -159,9 +159,10 @@
     results:  { prefix: 'R',  digits: 4 },
     report_templates: { prefix: 'TPL', digits: 3 },
     report_schedules: { prefix: 'SCH', digits: 3 },
-    wa_log: { prefix: 'WAL', digits: 4 }
+    wa_log: { prefix: 'WAL', digits: 4 },
+    samples: { prefix: 'S', digits: 5 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -214,7 +215,7 @@
   function seedStore(opts) {
     opts = opts || {};
     var store = {
-      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0 },
+      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0, samples: 0 },
       settings: {
         id: 'main',
         labName: opts.labName || 'Optix LAB MedSync',
@@ -235,7 +236,7 @@
       },
       users: [], patients: [], tests: [], doctors: [],
       invoices: [], payments: [], expenses: [], results: [],
-      wa_log: []
+      wa_log: [], samples: []
     };
 
     function put(table, obj) {
@@ -530,6 +531,13 @@
       if (store.seq.wa_log == null) store.seq.wa_log = 0;
       save(store);
     }
+    /* existing installs lack the sample-tracking table */
+    if (store && !Array.isArray(store.samples)) {
+      store.samples = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.samples == null) store.seq.samples = 0;
+      save(store);
+    }
     /* existing installs lack default signatory doctors — seed from reference */
     if (store && store.settings && (!store.settings.signatories || !store.settings.signatories.length)) {
       store.settings.signatories = [
@@ -788,7 +796,7 @@
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
         expenses: tables.expenses, results: tables.results,
         report_templates: tables.report_templates, report_schedules: tables.report_schedules,
-        wa_log: tables.wa_log
+        wa_log: tables.wa_log, samples: tables.samples
       };
       normalizeSeq(store);
       persist();

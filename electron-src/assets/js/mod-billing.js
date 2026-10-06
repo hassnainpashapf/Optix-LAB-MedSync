@@ -252,7 +252,10 @@
           });
         });
       });
-      App.toast('Invoice ' + inv.id + ' saved' + (t.due > 0 ? ' • Due ' + App.money(t.due) : ''));
+      /* one sample row per tube (barcode labels are printed from #/samples or the invoice page) */
+      var smpN = 0;
+      try { if (window.Samples) smpN = Samples.createForInvoice(inv).length; } catch (e) { if (window.console) console.error(e); }
+      App.toast('Invoice ' + inv.id + ' saved' + (t.due > 0 ? ' • Due ' + App.money(t.due) : '') + (smpN ? ' • ' + smpN + ' sample' + (smpN === 1 ? '' : 's') + ' to collect' : ''));
       App.nav('#/invoice/' + inv.id);
     }
 
