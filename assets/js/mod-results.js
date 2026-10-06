@@ -1094,7 +1094,7 @@
       '</div>';
 
     return (
-      '<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;background:#fff;color:#000;margin-top:-8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#fff;color:#000;margin-top:-8px">' +
         leftHtml +
         rightHtml +
       '</div>'
