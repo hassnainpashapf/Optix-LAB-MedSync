@@ -1,0 +1,13 @@
+{
+  "appId": "com.optix.labmedsync",
+  "appName": "Optix LAB MedSync",
+  "webDir": "www",
+  "server": {
+    "url": "https://optix-lab-medsync.pages.dev/app/",
+    "cleartext": false,
+    "androidScheme": "https",
+    "errorPath": "offline.html",
+    "allowNavigation": ["optix-lab-medsync.pages.dev", "labpos-api.150.230.52.29.sslip.io"]
+  },
+  "android": { "allowMixedContent": false, "backgroundColor": "#131845" }
+}

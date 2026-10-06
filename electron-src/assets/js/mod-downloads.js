@@ -5,7 +5,7 @@
   var GH = 'https://labpos-api.150.230.52.29.sslip.io/releases/';
   var DMG_URL = GH + 'Optix-LAB-MedSync-1.2.2-arm64.dmg.tar.gz';
   /* TODO(parent): replace with the real published APK URL */
-  var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-debug.apk';
+  var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.0.0.apk';
 
   /* 6 distinct installer binaries (Windows 11 and Windows 10 64-bit share one) */
   var WIN_OPTS = [
@@ -173,8 +173,8 @@
       ]
     }) +
     dlCard({
-      title: 'Android APK', version: '1.0.0', size: '~3.9 MB', file: 'APK', url: APK_URL, icon: ICO.android,
-      note: ICO.check + '<span>Install the <b>Optix LAB MedSync</b> mobile app directly on your Android phone.</span>',
+      title: 'Android APK', version: '2.0.0', size: '~3 MB', file: 'APK', url: APK_URL, icon: ICO.android,
+      note: ICO.check + '<span>Install the <b>Optix LAB MedSync</b> mobile app on your Android phone. It opens like an app and uses the same cloud account and data (internet needed).</span>',
       steps: [
         'Download the <b>.apk</b> file on your Android phone.',
         'Open the file and allow <b>install from unknown sources</b> if prompted.',
@@ -189,8 +189,8 @@
     '<div class="card-b"><div class="tbl-wrap"><table class="table"><tbody>' +
     '<tr><th style="width:140px">Windows</th><td>Windows 7, 8.1, 10 or 11 (64-bit and 32-bit builds available), 4 GB RAM, 500 MB free disk space</td></tr>' +
     '<tr><th>Mac</th><td>macOS 12 or newer, Apple Silicon (M1/M2/M3)</td></tr>' +
-    '<tr><th>Web App</th><td>Chrome, Edge or Safari on any PC or phone</td></tr><tr><th>Android</th><td>Android 7.0 or newer, ~50 MB free space</td></tr>' +
-    '<tr><th>Network</th><td>Desktop apps work offline and sync with the cloud when online (first sign-in on a new PC needs internet). The Web App needs internet. The Android app keeps its data on the phone only (no cloud sync)</td></tr>' +
+    '<tr><th>Web App</th><td>Chrome, Edge or Safari on any PC or phone</td></tr><tr><th>Android</th><td>Android 6.0 or newer, internet connection</td></tr>' +
+    '<tr><th>Network</th><td>Desktop apps work offline and sync with the cloud when online (first sign-in on a new PC needs internet). The Android app and the Web App use the cloud directly and need internet</td></tr>' +
     '</tbody></table></div></div></div>' +
 
     '</div>';
