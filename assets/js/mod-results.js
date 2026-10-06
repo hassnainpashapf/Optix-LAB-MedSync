@@ -1632,9 +1632,9 @@
       }));
     var nRes = cols.length;
 
-    /* column grid: TEST 28% | NORMAL VALUE 20% | UNIT 15% | results share the rest */
-    var resW = (37 / nRes).toFixed(2);
-    var gridCols = '28% 20% 15%';
+    /* column grid: TEST 24% | NORMAL VALUE 16% | UNIT 28% | results share the rest */
+    var resW = (32 / nRes).toFixed(2);
+    var gridCols = '24% 16% 28%';
     for (var gi = 0; gi < nRes; gi++) gridCols += ' ' + resW + '%';
 
     /* section title: "{Name} ({CODE})" — append REPORT unless already present */
@@ -1648,12 +1648,12 @@
        date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
       return '<div style="border:1px solid #000;border-left:none;background:#fff;' +
-        'padding:0;line-height:1.1;font-size:0.65em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%;margin-left:-1px">' +
-        '<div style="font-weight:700;color:#000;font-size:0.85em;background:#d3d3d3;padding:2px 0;border-bottom:1px solid #000;text-align:center;width:100%">RESULT</div>' +
+        'padding:0;line-height:1.1;font-size:0.6em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;justify-self:end;max-width:100px;width:100%;margin-left:-1px">' +
+        '<div style="font-weight:700;color:#000;font-size:0.8em;background:#d3d3d3;padding:2px 0;border-bottom:1px solid #000;text-align:center;width:100%">RESULT</div>' +
         '<div style="padding:2px 3px;display:flex;flex-direction:column;align-items:center;width:100%">' +
         '<div style="margin:1px 0">' + barcodeHtml(invNo) + '</div>' +
-        '<div style="font-weight:400;color:#000;font-size:0.8em">' + App.esc(invNo) + '</div>' +
-        '<div style="font-size:0.75em;color:#000">' +
+        '<div style="font-weight:400;color:#000;font-size:0.75em">' + App.esc(invNo) + '</div>' +
+        '<div style="font-size:0.7em;color:#000">' +
           App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
         '</div></div>' +
       '</div>';
