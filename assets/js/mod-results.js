@@ -1423,7 +1423,7 @@
     ];
     var right = [
       ['Reporting Date', fmtDateTime(inv.createdAt)],
-      ['Collect Report At', fmtDateTime(d.maxReported)],
+      ['Reporting Date', fmtDateTime(d.maxReported)],
       ['Registration Location', val(s.headOffice)],
       ['Destination Location', val(s.destinationLocation || s.mainLab)],
       ['Reference', val(s.reference)],
@@ -2374,7 +2374,7 @@
       ];
       var right = [
         ['Reporting Date',      inv.createdAt ? App.dt(inv.createdAt) : ''],
-        ['Collect Report At',     d.maxReported ? App.dt(d.maxReported) : ''],
+        ['Reporting Date',     d.maxReported ? App.dt(d.maxReported) : ''],
         ['Registration Location', s.headOffice],
         ['Destination Location',  s.mainLab],
         ['Reference',             docName],
