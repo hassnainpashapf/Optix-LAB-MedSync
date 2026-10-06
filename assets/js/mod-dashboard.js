@@ -476,8 +476,36 @@
         '<div class="dbx-htrack"><div class="dbx-hfill" style="width:' + w + '%"></div></div>' +
         '<div class="dbx-hval">' + e.n + '</div></div>';
     }).join('');
-    var catCard = '<div class="card"><div class="card-h"><h3>Tests by Category</h3><a class="btn btn-ghost btn-sm" href="#/tests">View all</a></div>' +
-      '<div class="card-b">' + (catRows || App.empty('No tests billed yet.')) + '</div></div>';
+    /* Recent Patients — latest 5 added */
+    var recentPats = patients.slice().sort(function (a, b) {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    }).slice(0, 5);
+    var patRows = recentPats.map(function (p) {
+      var nm = p.name || 'Patient';
+      var init = App.esc(nm.charAt(0).toUpperCase());
+      return '<a href="#/patient/' + p.id + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);text-decoration:none">' +
+        '<span style="width:34px;height:34px;border-radius:50%;background:#22c55e1a;color:#22c55e;display:grid;place-items:center;font-weight:700;flex:none">' + init + '</span>' +
+        '<span style="flex:1"><b style="font-size:13px;color:var(--ink)">' + App.esc(nm) + '</b><br>' +
+        '<small style="color:var(--muted)">' + App.esc(p.phone || p.cnic || '') + '</small></span>' +
+        '<small style="color:var(--muted)">' + App.esc(App.dt(p.createdAt) || '') + '</small></a>';
+    }).join('');
+    var patCard = '<div class="card"><div class="card-h"><h3>Recent Patients</h3><a class="btn btn-ghost btn-sm" href="#/patients">View all</a></div>' +
+      '<div class="card-b">' + (patRows || App.empty('No patients yet.')) + '</div></div>';
+
+    /* Tests in Progress — pending results */
+    var pendRes = results.filter(function (r) { return !r.value && r.status !== 'ready'; })
+      .sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); }).slice(0, 5);
+    var pendRows = pendRes.map(function (r) {
+      var p = DB.get('patients', r.patientId) || {};
+      var t = DB.get('tests', r.testId) || {};
+      return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)">' +
+        '<span style="width:34px;height:34px;border-radius:10px;background:#8b5cf61a;color:#8b5cf6;display:grid;place-items:center;flex:none">' + App.icon('flask', 16) + '</span>' +
+        '<span style="flex:1"><b style="font-size:13px;color:var(--ink)">' + App.esc(t.name || r.testName || 'Test') + '</b><br>' +
+        '<small style="color:var(--muted)">' + App.esc(p.name || '') + '</small></span>' +
+        '<span class="badge badge-warn">Pending</span></div>';
+    }).join('');
+    var pendCard = '<div class="card"><div class="card-h"><h3>Tests in Progress</h3><a class="btn btn-ghost btn-sm" href="#/results">View all</a></div>' +
+      '<div class="card-b">' + (pendRows || App.empty('No pending tests.')) + '</div></div>';
 
     // expense breakdown (current month)
     var expPalette = ['#131845', '#2b3a7a', '#5392ba', '#7fb3d4', '#f59e0b', '#94a3b8'];
@@ -557,7 +585,7 @@
     '.dbx-lval{text-align:right;white-space:nowrap;font-size:12px;min-width:84px}' +
     '@media(max-width:560px){.dbx-hrow{grid-template-columns:104px 1fr auto}.dbx-lbar{flex-basis:100%;order:6}.dbx-lbrow{flex-wrap:wrap}}' +
     '</style>' +
-    '<div class="dbx-grid">' + catCard + expCard + lbCard + '</div>';
+    '<div class="dbx-grid">' + patCard + pendCard + lbCard + '</div>';
 
     // ---- donut stats per role (multi-color segmented rings; center = value + % of goal) ----
     var NAVY = '#131845', BLUE = '#5392ba', AMBER = '#f59e0b', GREEN = '#16a34a', RED = '#ef4444', GREY = '#94a3b8';
