@@ -51,11 +51,12 @@
     trend: _svgA('<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>'),
     flask: _svgA('<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/>')
   };
-  function admStat(icon, tint, label, value, sub, raw, isMoney, vlStyle) {
+  function admStat(icon, tint, label, value, sub, raw, isMoney, vlStyle, fullTint) {
     var countAttrs = (typeof raw === 'number' && isFinite(raw))
       ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"'
       : '';
-    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
+    var cardStyle = '--sc:var(--' + tint + ')' + (fullTint ? ';background:var(--' + tint + '-soft);border-color:transparent' : '');
+    return '<div class="stat" data-tint="' + tint + '" style="' + cardStyle + '">' +
       '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
       '<div class="lb">' + App.esc(label) + '</div>' +
       '<div class="vl"' + countAttrs + (vlStyle ? ' style="' + vlStyle + '"' : '') + '>' + value + '</div>' +
@@ -276,10 +277,10 @@
     var mNet = mColl - mExpT;
     var mTests = mInvoices.reduce(function (s, iv) { return s + ((iv.items || []).length); }, 0);
     var repStats =
-      admStat(AICONS.cash, 'green', 'Month Collection', App.money(mColl), 'collected in ' + mShort, mColl, true) +
-      admStat(AICONS.receipt, 'red', 'Month Expenses', App.money(mExpT), mExpenses.length + ' entries in ' + mShort, mExpT, true) +
-      admStat(AICONS.trend, 'brand', 'Net (This Month)', App.money(mNet), mNet >= 0 ? 'surplus so far' : 'deficit so far', mNet, true) +
-      admStat(AICONS.flask, 'blue', 'Tests Billed', mTests, mInvoices.length + ' bills in ' + mShort, mTests, false);
+      admStat(AICONS.cash, 'green', 'Month Collection', App.money(mColl), 'collected in ' + mShort, mColl, true, null, true) +
+      admStat(AICONS.receipt, 'red', 'Month Expenses', App.money(mExpT), mExpenses.length + ' entries in ' + mShort, mExpT, true, null, true) +
+      admStat(AICONS.trend, 'brand', 'Net (This Month)', App.money(mNet), mNet >= 0 ? 'surplus so far' : 'deficit so far', mNet, true, null, true) +
+      admStat(AICONS.flask, 'blue', 'Tests Billed', mTests, mInvoices.length + ' bills in ' + mShort, mTests, false, null, true);
 
     var methods = { Cash: 0, Bank: 0, Card: 0, Other: 0 };
     payments.forEach(function (p) {
