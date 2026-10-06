@@ -1633,7 +1633,7 @@
     var nRes = cols.length;
 
     /* column grid: TEST 32% | NORMAL VALUE 24% | UNIT 12% | RESULT fixed 150px */
-    var gridCols = '32% 24% 12%';
+    var gridCols = '32% 24% minmax(0,1fr)'; /* UNIT column absorbs the slack so the RESULT box sits at the right edge */
     for (var gi = 0; gi < nRes; gi++) gridCols += ' 150px';
 
     /* section title: "{Name} ({CODE})" — append REPORT unless already present */
@@ -1660,10 +1660,11 @@
 
     /* ONE grey header bar (heavy black outline, no inner dividers) like the reference:
        spaced "T E S T" | NORMAL VALUE | UNIT, columns aligned with the body rows */
-    var headCells = '<div style="grid-column:span 3;display:grid;grid-template-columns:32fr 24fr 12fr;' +
-      'border:2px solid #000;border-right:none;background:#bfbfbf;color:#000;font-weight:700;' +
-      'padding:6px 4px;box-sizing:border-box;align-items:center;font-size:1em">' +
-      '<div style="letter-spacing:0.35em">TEST</div><div>NORMAL VALUE</div><div>UNIT</div></div>';
+    var _hc = 'background:#bfbfbf;color:#000;font-weight:700;padding:6px 4px;box-sizing:border-box;border-top:2px solid #000;border-bottom:2px solid #000;display:flex;align-items:center;';
+    var headCells =
+      '<div style="' + _hc + 'border-left:2px solid #000;letter-spacing:0.35em">TEST</div>' +
+      '<div style="' + _hc + '">NORMAL VALUE</div>' +
+      '<div style="' + _hc + '">UNIT</div>';
 
     /* value cell: centered; abnormal = bold black only (no colors, no arrows) */
     function valCell(valueStr, refStr) {
