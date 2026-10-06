@@ -841,7 +841,7 @@
           box.style.fontFamily = ff;
           box.innerHTML = html;
         } catch (e) {
-          box.innerHTML = '<div class="muted" style="padding:30px;text-align:center">Preview unavailable.</div>';
+          box.innerHTML = '<div class="muted" style="padding:30px;text-align:center">Preview unavailable.<br><small style="color:#c00">' + App.esc(e.message || e) + '</small></div>';
         }
       }
       if (App.sampleReportPreview) go();

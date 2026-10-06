@@ -1007,45 +1007,35 @@
       return t.replace(/\s*-\s*/g, ' - ').replace(/\s*\/\s*/g, ' / ');
     }
 
-    /* left: 102px circular logo (photo, or the lab's initial when unset)
-       wrapped in a gold gradient ring + white inner ring */
-    var logoImg = s.logo
-      ? '<img src="' + App.esc(s.logo) + '" style="width:102px;height:102px;border-radius:50%;object-fit:cover;display:block" alt="">'
-      : '<div style="width:102px;height:102px;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
-          'background:' + App.esc(accent) + ';' + EXACT + ';color:#ffffff;font-size:2.6em;font-weight:700;font-family:' + RPT.serif + '">' +
+    /* left: circular logo (photo, or the lab's initial when unset) */
+    var logoHtml = s.logo
+      ? '<img src="' + App.esc(s.logo) + '" style="width:84px;height:84px;border-radius:50%;object-fit:cover;flex:none" alt="">'
+      : '<div style="width:84px;height:84px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;' +
+          'background:' + App.esc(accent) + ';color:#ffffff;font-size:2.2em;font-weight:700;font-family:' + RPT.serif + '">' +
           App.esc((labName.charAt(0) || 'L').toUpperCase()) +
         '</div>';
-    var logoHtml =
-      '<div style="flex:none;padding:3px;border-radius:50%;background:' + GOLD_GRAD + ';' + EXACT + '">' +
-        '<div style="padding:3px;border-radius:50%;background:#ffffff">' +
-          logoImg +
-        '</div>' +
-      '</div>';
 
-    /* center: navy gradient band (WHITE serif name + gold-tint tagline),
-       then address/Tel/Email in black below the band */
+    /* center: large serif lab name, tagline highlight box, address lines */
     var centerHtml =
-      '<div style="flex:1;min-width:0">' +
-        '<div style="background:' + NAVY_GRAD + ';' + EXACT + ';border-left:5px solid #c9a227;padding:10px 14px">' +
-          '<div style="margin:0;color:#ffffff;font-family:' + RPT.serif +
-            ';font-weight:700;font-size:1.75em;line-height:1.2;letter-spacing:.5px">' +
-            App.esc(labName) +
-          '</div>' +
-          ((showTagline && s.tagline)
-            ? '<div style="display:inline-block;background:rgba(255,255,255,.16);color:#f6e6ae;' + EXACT + ';' +
-                'font-style:italic;font-family:' + RPT.serif + ';font-size:1.02em;padding:2px 10px;margin-top:6px">' +
-                App.esc(s.tagline) +
-              '</div>'
-            : '') +
+      '<div style="flex:1;min-width:0;border-left:2px solid #c0392b;padding-left:12px">' +
+        '<div style="margin:0;color:#000;font-family:' + RPT.serif +
+          ';font-weight:700;font-size:1.6em;line-height:1.2">' +
+          App.esc(labName) +
         '</div>' +
-        '<div style="font-size:0.92em;color:#000;line-height:1.5;margin-top:5px;padding-left:2px">' +
+        ((showTagline && s.tagline)
+          ? '<div style="display:inline-block;background:#d9f2fb;font-style:italic;color:#000;' +
+              'font-family:' + RPT.serif + ';font-size:1.05em;padding:2px 10px;margin-top:4px">' +
+              App.esc(s.tagline) +
+            '</div>'
+          : '') +
+        '<div style="font-size:0.92em;color:#000;line-height:1.5;margin-top:4px">' +
           (s.address ? App.esc(s.address) + '<br>' : '') +
           (s.phone ? 'Tel: ' + App.esc(s.phone) + '<br>' : '') +
           (s.email ? 'Email: ' + App.esc(s.email) : '') +
         '</div>' +
       '</div>';
 
-    /* right: report date/time card + QR (Case # replaced with date per user request) */
+    /* right: report date/time + QR (Case # replaced with date per user request) */
     var rptDt = '';
     try {
       var rdt = new Date(inv.createdAt);
@@ -1056,10 +1046,10 @@
       rptDt = rdt.getDate() + ' ' + months[rdt.getMonth()] + ' ' + rdt.getFullYear() + ', ' + hh + ':' + mm + ' ' + ap;
     } catch (e) {}
     var rightHtml =
-      '<div style="display:flex;align-items:center;gap:14px;flex:none">' +
-        '<div style="text-align:center;background:#eef2f9;' + EXACT + ';border:1px solid #b9c6de;border-top:4px solid #0e2a5e;padding:8px 14px">' +
-          '<div style="font-size:0.98em;font-weight:700;color:#0e2a5e;margin-bottom:3px">Report Date:</div>' +
-          '<div style="font-size:1.06em;font-weight:700;color:#000">' + App.esc(rptDt || '—') + '</div>' +
+      '<div style="display:flex;align-items:flex-start;gap:14px;flex:none">' +
+        '<div style="text-align:center;margin-right:8px">' +
+          '<div style="font-size:1.02em;font-weight:700;margin-bottom:4px">Report Date:</div>' +
+          '<div style="font-size:1.06em;font-weight:700">' + App.esc(rptDt || '—') + '</div>' +
         '</div>' +
         (showQr
           ? '<img data-qr="1" style="width:90px;height:90px" alt="QR">'
@@ -1067,13 +1057,13 @@
       '</div>';
 
     return (
-      '<div style="height:12px;background:linear-gradient(135deg,#0e2a5e 0%,#2c4d9c 55%,#7d93c4 100%);' + EXACT + ';margin-bottom:10px;border-bottom:2px solid #c9a227"></div>' +
-      '<div style="display:flex;align-items:center;gap:16px;padding-bottom:10px">' +
+      '<div style="height:10px;background:linear-gradient(to right,#8f8f8f 0%,#b5b5b5 45%,#cfe9f5 100%);margin-bottom:8px"></div>' +
+      '<div style="display:flex;align-items:flex-start;gap:14px;padding-bottom:8px">' +
         logoHtml +
         centerHtml +
         rightHtml +
       '</div>' +
-      '<div style="height:3px;background:#c9a227;' + EXACT + '"></div>'
+      '<div style="border-bottom:2px solid #000"></div>'
     );
   }
 
@@ -1117,11 +1107,10 @@
     };
 
     /* "Label : value" row; label bold black with fixed width so the
-       colons align like the reference. Generous line-height for the
-       premium, airy feel. */
+       colons align like the reference. */
     var row = function (label, value) {
       return (
-        '<div style="display:flex;gap:0;padding:3.5px 0;font-size:0.88em;line-height:1.65">' +
+        '<div style="display:flex;gap:0;padding:2.5px 0;font-size:0.88em;line-height:1.5">' +
           '<span style="font-weight:700;color:#000;flex:none;width:140px">' +
             App.esc(label) +
           '</span>' +
@@ -1152,19 +1141,10 @@
       row('Consultant', val(docName)) +
       row('Contact No', val(pat.phone));
 
-    /* Premium info card: light tint (#f4f8fc) with a subtle steel-blue
-       outer border, rounded corners, a hairline divider between the two
-       columns, and soft inner padding. Thin black rule below, per the
-       reference layout. */
     return (
-      '<div style="background:#f4f8fc;print-color-adjust:exact;-webkit-print-color-adjust:exact;' +
-        'border:1px solid #c9d8ea;border-radius:5px;padding:10px 16px;margin:2px 0 6px">' +
-        '<div style="display:flex;gap:0">' +
-          '<div style="flex:1;min-width:0;padding-right:22px">' + left + '</div>' +
-          '<div style="flex:none;align-self:stretch;width:1px;background:#c9d8ea;' +
-            'print-color-adjust:exact;-webkit-print-color-adjust:exact"></div>' +
-          '<div style="flex:1;min-width:0;padding-left:22px">' + right + '</div>' +
-        '</div>' +
+      '<div style="display:flex;gap:40px;margin:2px 0 6px">' +
+        '<div style="flex:1;min-width:0">' + left + '</div>' +
+        '<div style="flex:1;min-width:0">' + right + '</div>' +
       '</div>' +
       '<hr style="border:none;border-top:1px solid #000;margin:6px 0 4px">'
     );
@@ -1340,26 +1320,18 @@
   }
 
   /* ---------- worker 3/4: per-test table with INTEGRATED comparison columns ----------
-     Premium design (Aga Khan / Chughtai style):
-     - Full-width section title band: navy gradient (linear-gradient(90deg,
-       #123060,#1b4a94)) with WHITE bold caps text: "{Test Name} ({CODE})
-       REPORT" — test code from r.item.code (fallback r.test.code) shown
-       with the test name. print-color-adjust:exact so the gradient prints.
-     - Header row below the band: TEST | REFERENCE RANGE | UNIT cells in
-       deep steel/navy (#1f3a5f) with white bold text, then one RESULT box
-       per report: the current report first, then one per previous report
-       of the same test for this patient (newest first, capped at 2).
-       Each box (#e9f1fb, navy border, gold top accent) shows EXACTLY:
+     Target design (reference: Waheed Khanzada style):
+     - Blue bold caps section title: "{Test Name} ({CODE}) REPORT" — test code
+       from r.item.code (fallback r.test.code) shown with the test name.
+     - Light-blue (#d9f2fb) header row (TEST | REFERENCE RANGE | UNIT, dark
+       borders) plus one RESULT box per report: the current report first,
+       then one per previous report of the same test for this patient
+       (newest first, capped at 2). Each box shows:
          line 1: RESULT (bold), line 2: 6:7:2025 (d:m:yyyy),
          line 3: 11-Jul-25  15:33
-       (no CURRENT/PREVIOUS labels).
-     - Body rows: alternating #ffffff / #f7fafd backgrounds with the
-       existing dotted separators; param name regular weight, roomier
-       9px vertical padding.
-     - Abnormal values (abnormalDir via valCell): 3-tier severity colors
-       — mild #e65100, moderate #ef6c00, critical #c00 — bold with
-       ↑ (high) / ↓ (low) before the value, in current and previous
-       columns alike.
+     - Body rows with dotted separators; param name regular weight.
+     - Abnormal values (abnormalDir): red (#c00) bold with ↑ (high) or ↓
+       (low) before the value — current and previous columns alike.
      - Tests with no params (free-text): single row labeled "Result" with
        the value spanning the result columns. */
   function testSectionHtml(r, d) {
@@ -1388,25 +1360,20 @@
     var title = tName + (tCode ? ' (' + tCode + ')' : '');
     if (!/report\s*:?\s*$/i.test(title)) title += ' REPORT';
 
-    /* RESULT header boxes — rich #e9f1fb fill, navy border with a gold
-       top accent; 3-line format kept EXACTLY: RESULT / d:m:yyyy /
-       dd-Mmm-yy hh:mm (fmtDMY / fmtDTm). print-color-adjust:exact for PDF. */
+    /* RESULT header boxes — match reference: RESULT / d:m:yyyy / dd-Mmm-yy hh:mm */
     var boxHtml = cols.map(function (c) {
-      return '<div style="border:1px solid #123060;border-top:3px solid #c9a227;' +
-        'background:#e9f1fb;print-color-adjust:exact;-webkit-print-color-adjust:exact;' +
-        'text-align:center;color:#000;padding:6px 2px;line-height:1.45;font-size:0.95em">' +
+      return '<div style="border:1px solid #000;background:#d9f2fb;text-align:center;' +
+        'padding:4px 2px;line-height:1.4;font-size:0.95em;grid-row:span 2">' +
         '<div style="font-weight:700">RESULT</div>' +
         '<div style="font-weight:700">' + App.esc(fmtDMY(c.reportedAt)) + '</div>' +
         '<div style="font-size:0.9em">' + App.esc(fmtDTm(c.reportedAt)).replace(/ /g, '&nbsp;') + '</div>' +
       '</div>';
     }).join('');
 
-    /* header cells for the 3 label columns — deep steel/navy with white
-       bold text, premium look */
+    /* light-blue header cells for the 3 label columns */
     var headCells = ['TEST', 'REFERENCE RANGE', 'UNIT'].map(function (h, i) {
-      return '<div style="border:1px solid #123060;' + (i ? 'border-left:none;' : '') +
-        'background:#1f3a5f;print-color-adjust:exact;-webkit-print-color-adjust:exact;' +
-        'color:#fff;font-weight:700;letter-spacing:0.03em;padding:8px 6px;font-size:1em">' + h + '</div>';
+      return '<div style="border:1px solid #000;' + (i ? 'border-left:none;' : '') +
+        'background:#d9f2fb;font-weight:700;padding:4px 6px;font-size:1em">' + h + '</div>';
     }).join('');
 
     /* value cell: centered; abnormal = color by severity with ↑/↓ before the value */
@@ -1423,18 +1390,15 @@
       return '<div style="text-align:center">' + App.esc(disp) + '</div>';
     }
 
-    /* body rows: alternating white / #f7fafd for readability, dotted
-       bottom separators, param name regular weight, roomier padding */
+    /* body rows: dotted bottom separators, param name regular weight */
     var rowsHtml;
     if (params.length) {
-      rowsHtml = params.map(function (p, pi) {
+      rowsHtml = params.map(function (p) {
         var cells = cols.map(function (c) {
           return valCell((c.values || {})[p.name], p.ref);
         }).join('');
-        var rowBg = (pi % 2) ? '#f7fafd' : '#ffffff';
         return '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
-          'background:' + rowBg + ';print-color-adjust:exact;-webkit-print-color-adjust:exact;' +
-          'border-bottom:1px dotted #999;font-size:1.04em;padding:9px 6px;color:#000">' +
+          'border-bottom:1px dotted #999;font-size:1.04em;padding:4px 6px">' +
           '<div>' + App.esc(p.name || '') + '</div>' +
           '<div>' + App.esc(p.ref != null && p.ref !== '' ? String(p.ref) : '—') + '</div>' +
           '<div>' + App.esc(p.unit != null && p.unit !== '' ? String(p.unit) : '') + '</div>' +
@@ -1446,8 +1410,7 @@
       var ftVal = vals['Result'];
       rowsHtml =
         '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
-          'background:#ffffff;print-color-adjust:exact;-webkit-print-color-adjust:exact;' +
-          'border-bottom:1px dotted #999;font-size:1.04em;padding:9px 6px;color:#000">' +
+          'border-bottom:1px dotted #999;font-size:1.04em;padding:4px 6px">' +
           '<div>Result</div>' +
           '<div></div><div></div>' +
           '<div style="grid-column:span ' + nRes + ';text-align:center">' +
@@ -1466,22 +1429,15 @@
         '</div>';
     }
 
-    /* assemble: full-width navy gradient title band, then the header row
-       (TEST | REFERENCE RANGE | UNIT + RESULT boxes), then body + remarks.
-       Grid auto-placement: the band spans all columns (row 1); the 3 header
-       cells and nRes RESULT boxes fill row 2 in order. */
-    return '<div class="rpt-section" style="margin:16px 0 4px">' +
+    /* assemble: title + RESULT boxes row, then light-blue header row, body, remarks */
+    return '<div class="rpt-section" style="margin:14px 0 4px">' +
       '<div style="display:grid;grid-template-columns:' + gridCols + '">' +
-        '<div style="grid-column:1 / -1;' +
-          'background:linear-gradient(90deg,#123060,#1b4a94);' +
-          'print-color-adjust:exact;-webkit-print-color-adjust:exact;' +
-          'color:#fff;font-weight:700;font-size:1.15em;text-transform:uppercase;' +
-          'letter-spacing:0.04em;padding:9px 12px;border-radius:4px 4px 0 0;' +
-          'page-break-after:avoid">' +
+        '<div style="grid-column:span 3;align-self:center;color:#000;font-weight:700;' +
+          'font-size:1.15em;text-transform:uppercase;letter-spacing:0.02em">' +
           App.esc(title) +
         '</div>' +
-        headCells +
         boxHtml +
+        headCells +
       '</div>' +
       rowsHtml +
       remarksHtml +
