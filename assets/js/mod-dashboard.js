@@ -395,8 +395,11 @@
 
     var widgets =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}' +
+    '.dbw-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px}' +
     '.dbq-card{transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
+    '.dbq-card .card-b{padding:10px 12px!important}' +
+    '.dbq-card b{font-size:13px!important}.dbq-card small{font-size:11px!important}' +
+    '@media(max-width:1200px){.dbw-grid{grid-template-columns:repeat(3,1fr)}}' +
     '.dbw-grid .card-h,.dbx-grid .card-h{padding:10px 14px}.dbw-grid .card-h h3,.dbx-grid .card-h h3{font-size:14px}' +
     '.dbw-grid .card-b,.dbx-grid .card-b{padding:12px 14px}' +
     '@media(max-width:900px){.dbw-grid{grid-template-columns:1fr}}' +
