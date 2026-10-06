@@ -995,75 +995,58 @@
     var pat = (d && d.pat) || {};
     var s = (d && d.s) || {};
 
-    var accent = s.accent || RPT.navy;
     var showTagline = s.showTagline !== false;   /* default true */
     var showQr = s.showQr !== false;             /* default true */
     var labName = s.labName || 'Optix LAB MedSync';
 
-    /* "6-7/2025" -> "6 - 7 / 2025" spaced style like the reference */
+    /* "INV-0042" -> "INV - 0042" spaced style like the reference */
     function spacedNo(v) {
       var t = String(v == null ? '' : v);
       if (!t) return '';
       return t.replace(/\s*-\s*/g, ' - ').replace(/\s*\/\s*/g, ' / ');
     }
 
-    /* left: circular logo (photo, or the lab's initial when unset) */
-    var logoHtml = s.logo
-      ? '<img src="' + App.esc(s.logo) + '" style="width:84px;height:84px;border-radius:50%;object-fit:cover;flex:none" alt="">'
-      : '<div style="width:84px;height:84px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;' +
-          'background:' + App.esc(accent) + ';color:#ffffff;font-size:2.2em;font-weight:700;font-family:' + RPT.serif + '">' +
-          App.esc((labName.charAt(0) || 'L').toUpperCase()) +
+    /* LEFT: logo image when set, else large black serif lab name (+ tagline) */
+    var leftHtml;
+    if (s.logo) {
+      leftHtml =
+        '<div style="flex:none">' +
+          '<img src="' + App.esc(s.logo) + '" style="max-width:220px;max-height:84px" alt="">' +
         '</div>';
+    } else {
+      leftHtml =
+        '<div style="flex:1;min-width:0">' +
+          '<div style="margin:0;color:#000;font-family:' + RPT.serif +
+            ';font-weight:700;font-size:1.7em;line-height:1.2">' +
+            App.esc(labName) +
+          '</div>' +
+          ((showTagline && s.tagline)
+            ? '<div style="margin:4px 0 0;color:#000;font-family:' + RPT.serif +
+                ';font-style:italic;font-size:1.05em">' +
+                App.esc(s.tagline) +
+              '</div>'
+            : '') +
+        '</div>';
+    }
 
-    /* center: large serif lab name, tagline highlight box, address lines */
-    var centerHtml =
-      '<div style="flex:1;min-width:0;border-left:2px solid #c0392b;padding-left:12px">' +
-        '<div style="margin:0;color:#000;font-family:' + RPT.serif +
-          ';font-weight:700;font-size:1.6em;line-height:1.2">' +
-          App.esc(labName) +
-        '</div>' +
-        ((showTagline && s.tagline)
-          ? '<div style="display:inline-block;background:#d9f2fb;font-style:italic;color:#000;' +
-              'font-family:' + RPT.serif + ';font-size:1.05em;padding:2px 10px;margin-top:4px">' +
-              App.esc(s.tagline) +
-            '</div>'
-          : '') +
-        '<div style="font-size:0.92em;color:#000;line-height:1.5;margin-top:4px">' +
-          (s.address ? App.esc(s.address) + '<br>' : '') +
-          (s.phone ? 'Tel: ' + App.esc(s.phone) + '<br>' : '') +
-          (s.email ? 'Email: ' + App.esc(s.email) : '') +
-        '</div>' +
-      '</div>';
-
-    /* right: report date/time + QR (Case # replaced with date per user request) */
-    var rptDt = '';
-    try {
-      var rdt = new Date(inv.createdAt);
-      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      var hh = rdt.getHours(), ap = hh >= 12 ? 'PM' : 'AM';
-      hh = hh % 12 || 12;
-      var mm = String(rdt.getMinutes()).padStart(2, '0');
-      rptDt = rdt.getDate() + ' ' + months[rdt.getMonth()] + ' ' + rdt.getFullYear() + ', ' + hh + ':' + mm + ' ' + ap;
-    } catch (e) {}
+    /* RIGHT: Patient No. / Case # rows, then the QR placeholder */
     var rightHtml =
-      '<div style="display:flex;align-items:flex-start;gap:14px;flex:none">' +
-        '<div style="text-align:center;margin-right:8px">' +
-          '<div style="font-size:1.02em;font-weight:700;margin-bottom:4px">Report Date:</div>' +
-          '<div style="font-size:1.06em;font-weight:700">' + App.esc(rptDt || '—') + '</div>' +
-        '</div>' +
+      '<div style="flex:none;text-align:right;color:#000;font-size:0.95em;line-height:1.7">' +
+        '<div><span style="font-weight:700">Patient No.:</span> ' +
+          App.esc(String(pat.id == null ? '' : pat.id)) + '</div>' +
+        '<div><span style="font-weight:700">Case #:</span> ' +
+          App.esc(spacedNo(inv.no)) + '</div>' +
         (showQr
-          ? '<img data-qr="1" style="width:90px;height:90px" alt="QR">'
+          ? '<div style="margin-top:6px"><img data-qr="1" style="width:90px;height:90px" alt="QR"></div>'
           : '') +
       '</div>';
 
     return (
-      '<div style="height:10px;background:linear-gradient(to right,#8f8f8f 0%,#b5b5b5 45%,#cfe9f5 100%);margin-bottom:8px"></div>' +
-      '<div style="display:flex;align-items:flex-start;gap:14px;padding-bottom:8px">' +
-        logoHtml +
-        centerHtml +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:16px;background:#fff;color:#000">' +
+        leftHtml +
         rightHtml +
       '</div>' +
-      '<div style="border-bottom:2px solid #000"></div>'
+      '<div style="border-top:2px solid #000;margin-top:10px"></div>'
     );
   }
 
@@ -1073,81 +1056,79 @@
      inv.createdAt (registration time), formatted "11-Jul-25 3:33:30 pm".
      Thin black rule below the grid. */
   function patientGridHtml(d) {
-    d = d || {};
     var inv = d.inv || {};
     var pat = d.pat || {};
     var s = d.s || {};
-    var doc = d.doc || null;
+    var em = '\u2014';
 
-    var MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    var pad2 = function (n) { return (n < 10 ? '0' : '') + n; };
+    function val(v) {
+      if (v === undefined || v === null) return em;
+      var str = String(v).trim();
+      return str ? App.esc(str) : em;
+    }
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function validDate(t) {
+      if (!t) return null;
+      var dt = new Date(t);
+      return isNaN(dt.getTime()) ? null : dt;
+    }
+    function fmtDate(t) {
+      var dt = validDate(t);
+      if (!dt) return null;
+      return pad(dt.getDate()) + '-' + pad(dt.getMonth() + 1) + '-' + dt.getFullYear();
+    }
+    function fmtTime(t) {
+      var dt = validDate(t);
+      if (!dt) return null;
+      return pad(dt.getHours()) + ':' + pad(dt.getMinutes()) + ':' + pad(dt.getSeconds());
+    }
+    function fmtDateTime(t) {
+      var ds = fmtDate(t), ts = fmtTime(t);
+      if (!ds || !ts) return em;
+      return App.esc(ds + ' ' + ts);
+    }
+    function row(label, value) {
+      return '<div style="display:flex;margin:1px 0;color:#000">' +
+        '<span style="display:inline-block;min-width:140px;font-weight:bold;color:#000">' + label + '</span>' +
+        '<span style="color:#000">:</span>' +
+        '<span style="color:#000;margin-left:6px">' + value + '</span>' +
+        '</div>';
+    }
 
-    /* day-Mon-yy, e.g. '11-Jul-25'; '—' when missing/invalid */
-    var fmtDT = function (iso) {
-      if (!iso) return '—';
-      var t = new Date(iso);
-      if (isNaN(t.getTime())) return '—';
-      return t.getDate() + '-' + MON[t.getMonth()] + '-' + pad2(t.getFullYear() % 100);
-    };
+    var ageStr = (pat.age === undefined || pat.age === null) ? '' : String(pat.age).trim();
+    var genderStr = (pat.gender === undefined || pat.gender === null) ? '' : String(pat.gender).trim();
+    var ageSex = '';
+    if (ageStr) ageSex = ageStr + ' Yr(s)';
+    if (genderStr) ageSex = ageSex ? ageSex + ' / ' + genderStr : genderStr;
 
-    /* 12-hour clock with seconds, e.g. '3:33:30 pm'; '—' when missing/invalid */
-    var fmtTime = function (iso) {
-      if (!iso) return '—';
-      var t = new Date(iso);
-      if (isNaN(t.getTime())) return '—';
-      var h = t.getHours();
-      var ap = h >= 12 ? 'pm' : 'am';
-      h = h % 12;
-      if (h === 0) h = 12;
-      return h + ':' + pad2(t.getMinutes()) + ':' + pad2(t.getSeconds()) + ' ' + ap;
-    };
+    var left = [
+      ['Patient Name', val(pat.name)],
+      ['Father/Husband Name', val(pat.father)],
+      ['Age/Sex', val(ageSex)],
+      ['Blood Group', val(pat.blood)],
+      ['NIC', val(pat.cnic)],
+      ['Phone', val(pat.phone)],
+      ['Address', val(pat.address)]
+    ];
+    var right = [
+      ['Registration Date', fmtDateTime(inv.createdAt)],
+      ['Collect Report At', fmtDateTime(d.maxReported)],
+      ['Registration Location', val(s.headOffice)],
+      ['Destination Location', val(s.destinationLocation || s.mainLab)],
+      ['Reference', val(s.reference)],
+      ['Consultant', val((d.doc && d.doc.name) || 'SELF')]
+    ];
 
-    var val = function (v) {
-      return App.esc(v == null || v === '' ? '—' : String(v));
-    };
-
-    /* "Label : value" row; label bold black with fixed width so the
-       colons align like the reference. */
-    var row = function (label, value) {
-      return (
-        '<div style="display:flex;gap:0;padding:2.5px 0;font-size:0.88em;line-height:1.5">' +
-          '<span style="font-weight:700;color:#000;flex:none;width:140px">' +
-            App.esc(label) +
-          '</span>' +
-          '<span style="color:#000;flex:none">:&#160;</span>' +
-          '<span style="color:#000;flex:1;min-width:0">' + value + '</span>' +
-        '</div>'
-      );
-    };
-
-    var ageSex = [pat.age ? pat.age + ' Years' : '', pat.gender || '']
-      .filter(function (x) { return x; })
-      .join(' / ');
-    var docName = doc && doc.name ? doc.name : 'SELF';
-    var regDate = inv.createdAt
-      ? fmtDT(inv.createdAt) + '  ' + fmtTime(inv.createdAt)
-      : '—';
-
-    var left =
-      row("Patient's Name", val(pat.name)) +
-      row('Father/Husband', val(pat.father)) +
-      row('Age/Sex', val(ageSex)) +
-      row('NIC No', val(pat.cnic));
-
-    var right =
-      row('Reg. Date', val(regDate)) +
-      row('Reg. Centre', val(s.headOffice || 'Main')) +
-      row('Specimen', val('Taken in Lab')) +
-      row('Consultant', val(docName)) +
-      row('Contact No', val(pat.phone));
-
-    return (
-      '<div style="display:flex;gap:40px;margin:2px 0 6px">' +
-        '<div style="flex:1;min-width:0">' + left + '</div>' +
-        '<div style="flex:1;min-width:0">' + right + '</div>' +
-      '</div>' +
-      '<hr style="border:none;border-top:1px solid #000;margin:6px 0 4px">'
-    );
+    var i, html = '<div style="display:flex;color:#000;font-size:12px">';
+    html += '<div style="flex:1;padding-right:10px">';
+    for (i = 0; i < left.length; i++) { html += row(left[i][0], left[i][1]); }
+    html += '</div>';
+    html += '<div style="flex:1;padding-left:10px">';
+    for (i = 0; i < right.length; i++) { html += row(right[i][0], right[i][1]); }
+    html += '</div>';
+    html += '</div>';
+    html += '<hr style="border:none;border-top:1px solid #000;margin:6px 0 4px">';
+    return html;
   }
 
   /* ---------- worker 11/20: abnormal value highlighting ----------
@@ -1341,6 +1322,7 @@
     var vals = (r.res && r.res.values) || {};
     var testId = (r.item && (r.item.testId || r.item.id)) || '';
     var prev = (d.prevByTest && testId && d.prevByTest[testId]) || [];
+    var invNo = (d.inv && d.inv.no) || '';
 
     /* result columns: current report first, then previous (newest first) */
     var cols = [{ reportedAt: (r.res && r.res.reportedAt) || d.maxReported || '', values: vals }]
@@ -1349,7 +1331,7 @@
       }));
     var nRes = cols.length;
 
-    /* column grid: TEST 30% | REFERENCE RANGE 22% | UNIT 10% | results share the rest */
+    /* column grid: TEST 30% | NORMAL VALUE 22% | UNIT 10% | results share the rest */
     var resW = (38 / nRes).toFixed(2);
     var gridCols = '30% 22% 10%';
     for (var gi = 0; gi < nRes; gi++) gridCols += ' ' + resW + '%';
@@ -1360,37 +1342,41 @@
     var title = tName + (tCode ? ' (' + tCode + ')' : '');
     if (!/report\s*:?\s*$/i.test(title)) title += ' REPORT';
 
-    /* RESULT header boxes — match reference: RESULT / d:m:yyyy / dd-Mmm-yy hh:mm */
+    /* RESULT header boxes — span the full header height (grid-row: span 2):
+       barcode of the case/invoice number, then the case number, then the
+       date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
-      return '<div style="border:1px solid #000;background:#d9f2fb;text-align:center;' +
+      return '<div style="border:1px solid #000;background:#fff;text-align:center;' +
         'padding:4px 2px;line-height:1.4;font-size:0.95em;grid-row:span 2">' +
-        '<div style="font-weight:700">RESULT</div>' +
-        '<div style="font-weight:700">' + App.esc(fmtDMY(c.reportedAt)) + '</div>' +
-        '<div style="font-size:0.9em">' + App.esc(fmtDTm(c.reportedAt)).replace(/ /g, '&nbsp;') + '</div>' +
+        '<div style="font-weight:700;color:#000">RESULT</div>' +
+        barcodeHtml(invNo) +
+        '<div style="font-weight:700;color:#000">' + App.esc(invNo) + '</div>' +
+        '<div style="font-size:0.9em;color:#000">' +
+          App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
+        '</div>' +
       '</div>';
     }).join('');
 
-    /* light-blue header cells for the 3 label columns */
-    var headCells = ['TEST', 'REFERENCE RANGE', 'UNIT'].map(function (h, i) {
+    /* medium-grey header bar cells for the 3 label columns */
+    var headCells = ['TEST', 'NORMAL VALUE', 'UNIT'].map(function (h, i) {
       return '<div style="border:1px solid #000;' + (i ? 'border-left:none;' : '') +
-        'background:#d9f2fb;font-weight:700;padding:4px 6px;font-size:1em">' + h + '</div>';
+        'background:#d9d9d9;color:#000;font-weight:700;padding:4px 6px;font-size:1em">' +
+        h +
+      '</div>';
     }).join('');
 
-    /* value cell: centered; abnormal = color by severity with ↑/↓ before the value */
-    /* mild (≤10% out) = amber #e65100, moderate (≤25%) = orange #ef6c00, critical = red #c00 */
+    /* value cell: centered; abnormal = bold black only (no colors, no arrows) */
     function valCell(valueStr, refStr) {
       var disp = (valueStr == null) ? '' : String(valueStr);
-      var sev = abnormalSeverity(disp, refStr);
-      if (sev) {
-        var arrow = sev.dir === 'high' ? '↑' : '↓';
-        var color = sev.severity === 'critical' ? '#c00' : (sev.severity === 'moderate' ? '#ef6c00' : '#e65100');
-        return '<div style="text-align:center;color:' + color + ';font-weight:700">' +
-          arrow + ' ' + App.esc(disp) + '</div>';
+      if (abnormalSeverity(disp, refStr)) {
+        return '<div style="text-align:center">' +
+          '<span style="font-weight:700;color:#000">' + App.esc(disp) + '</span>' +
+        '</div>';
       }
       return '<div style="text-align:center">' + App.esc(disp) + '</div>';
     }
 
-    /* body rows: dotted bottom separators, param name regular weight */
+    /* body rows: thin separators, param name regular weight */
     var rowsHtml;
     if (params.length) {
       rowsHtml = params.map(function (p) {
@@ -1398,7 +1384,7 @@
           return valCell((c.values || {})[p.name], p.ref);
         }).join('');
         return '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
-          'border-bottom:1px dotted #999;font-size:1.04em;padding:4px 6px">' +
+          'border-bottom:1px solid #ddd;font-size:1.04em;padding:4px 6px">' +
           '<div>' + App.esc(p.name || '') + '</div>' +
           '<div>' + App.esc(p.ref != null && p.ref !== '' ? String(p.ref) : '—') + '</div>' +
           '<div>' + App.esc(p.unit != null && p.unit !== '' ? String(p.unit) : '') + '</div>' +
@@ -1410,7 +1396,7 @@
       var ftVal = vals['Result'];
       rowsHtml =
         '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
-          'border-bottom:1px dotted #999;font-size:1.04em;padding:4px 6px">' +
+          'border-bottom:1px solid #ddd;font-size:1.04em;padding:4px 6px">' +
           '<div>Result</div>' +
           '<div></div><div></div>' +
           '<div style="grid-column:span ' + nRes + ';text-align:center">' +
@@ -1429,7 +1415,7 @@
         '</div>';
     }
 
-    /* assemble: title + RESULT boxes row, then light-blue header row, body, remarks */
+    /* assemble: title + RESULT boxes row, then grey header row, body, remarks */
     return '<div class="rpt-section" style="margin:14px 0 4px">' +
       '<div style="display:grid;grid-template-columns:' + gridCols + '">' +
         '<div style="grid-column:span 3;align-self:center;color:#000;font-weight:700;' +
@@ -1495,45 +1481,59 @@
 
     /* 1: centered bold verification line */
     var verNote = s.verNote || s.verificationNote ||
-      'Electronically Verified Report, No Signature(s) Required.';
+      'Electronically verified report. No signatures necessary. Sample brought to the main lab. Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.';
     var line1 =
       '<p class="rpt-ver" style="text-align:center;font-weight:700;font-size:0.96em;margin:22px 0 4px;line-height:1.5">' +
         App.esc(verNote) + '</p>';
 
-    /* 2: thick black rule */
-    var rule = '<hr class="rpt-footrule" style="border:none;border-top:2.5px solid #000;margin:6px 0">';
+    /* 2: thin black rule */
+    var rule = '<hr class="rpt-footrule" style="border:none;border-top:1px solid #000;margin:6px 0">';
 
-    /* 3: signatories in one row, spread across; fallback signature lines when empty */
+    /* 3: signatory doctors in one row, spread across */
     var sigs = (Array.isArray(s.signatories) ? s.signatories : [])
-      .filter(function (g) { return g && (g.name || g.qual || g.title); });
-    var sigHtml;
+      .filter(function (g) { return g && g.name; });
+    var sigHtml = '';
     if (sigs.length) {
       sigHtml =
         '<div class="rpt-sigs" style="display:flex;justify-content:space-between;gap:10px;margin:10px 0 8px">' +
           sigs.map(function (g) {
             return '<div class="rpt-sig" style="flex:1;text-align:left">' +
-              '<div class="n" style="font-weight:700;font-size:0.9em">' + App.esc(g.name || '') + '</div>' +
-              (g.qual ? '<div class="q" style="font-size:0.78em">' + App.esc(g.qual) + '</div>' : '') +
-              (g.title ? '<div class="t" style="font-size:0.78em">' + App.esc(g.title) + '</div>' : '') +
+              '<div style="font-weight:700;font-size:0.9em">' + App.esc(g.name) + '</div>' +
+              (g.qual ? '<div style="font-size:0.78em">' + App.esc(g.qual) + '</div>' : '') +
+              (g.title ? '<div style="font-size:0.78em">' + App.esc(g.title) + '</div>' : '') +
             '</div>';
           }).join('') + '</div>';
-    } else {
-      /* signature lines removed per user request */
-      sigHtml = '';
     }
 
-    /* 4: disclaimer note inside a bordered box */
+    /* 4: address block, centered bold-ish */
+    var addrLines = [];
+    if (s.headOffice) addrLines.push('Head Office: ' + s.headOffice);
+    if (s.mainLab) addrLines.push('Previous Lab: ' + s.mainLab);
+    var contactParts = [];
+    if (s.phone) contactParts.push('Phone: ' + s.phone);
+    if (s.website) contactParts.push('Web: ' + s.website);
+    if (s.email) contactParts.push('Email: ' + s.email);
+    if (contactParts.length) addrLines.push(contactParts.join('   '));
+    var addrHtml = '';
+    if (addrLines.length) {
+      addrHtml =
+        '<div style="text-align:center;font-weight:600;font-size:0.85em;line-height:1.6;margin:6px 0">' +
+          addrLines.map(function (l) { return '<div>' + App.esc(l) + '</div>'; }).join('') +
+        '</div>';
+    }
+
+    /* 5: disclaimer box */
     var disc = s.disclaimer || s.footerNote ||
       'NOTE: All the tests are performed on the most advanced, highly sophisticated, appropriate, and state of the art instruments with highly sensitive chemicals under strict conditions and with all care and diligence. However, the above results are NOT the DIAGNOSIS and should be correlated with clinical findings, patient\'s history, signs and symptoms and other diagnostic tests. Lab to lab variation may occur. This document is NEVER challengeable at any PLACE/COURT and in any CONDITION.';
     var discHtml =
       '<div class="rpt-disc" style="border:1px solid #000;padding:6px 8px;font-size:0.72em;line-height:1.5;margin:8px 0 0">' +
         App.esc(disc) + '</div>';
 
-    /* 5: powered-by (existing constraint) */
+    /* 6: powered-by (existing constraint) */
     var powered =
       '<p class="rpt-powered" style="color:#000;font-size:0.88em;text-align:center;margin:14px 0 0">Powered by System Optix</p>';
 
-    return '<div class="rpt-footer">' + line1 + rule + sigHtml + discHtml + powered + '</div>';
+    return '<div class="rpt-footer">' + line1 + rule + sigHtml + addrHtml + discHtml + powered + '</div>';
   }
 
   function reportData(invoiceId) {
