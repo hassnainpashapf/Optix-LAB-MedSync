@@ -153,6 +153,7 @@ function renderTests() {
           }).join('') +
         '</select>' +
         (canEdit ? '<button type="button" class="btn btn-ghost" id="t-import" style="margin-left:8px">📥 Import CSV</button>' : '') +
+        (canEdit ? '<button type="button" class="btn btn-ghost" id="t-bulkprice" style="margin-left:8px">💰 Bulk Prices</button>' : '') +
         (canEdit ? '' : '') +
         (canEdit ? '<button type="button" class="btn btn-primary" id="t-add" style="margin-left:auto">+ Add Test</button>' : '') +
       '</div>' +
@@ -176,6 +177,9 @@ function renderTests() {
   });
   var addBtn = document.getElementById('t-add');
   if (addBtn) addBtn.addEventListener('click', function () { testModal(null); });
+  /* bulk price update */
+  var bulkBtn = document.getElementById('t-bulkprice');
+  if (bulkBtn) bulkBtn.addEventListener('click', function () { bulkPriceModal(); });
   /* CSV import for tests */
   var impBtn = document.getElementById('t-import');
   if (impBtn) impBtn.addEventListener('click', function () {
@@ -500,6 +504,150 @@ var TEST_TEMPLATES = {
     { name: 'Troponin I', unit: 'ng/mL', ref: '< 0.04', type: 'number' }
   ]
 };
+
+/* ---------- bulk price update ---------- */
+function _bulkFilteredTests() {
+  var q = (testFilter.q || '').trim().toLowerCase();
+  return DB.all('tests').filter(function (t) {
+    if (testFilter.cat !== 'All' && t.category !== testFilter.cat) return false;
+    if (testFilter.status === 'Active' && !t.active) return false;
+    if (testFilter.status === 'Inactive' && t.active) return false;
+    if (q) {
+      var h = ((t.code || '') + ' ' + (t.name || '') + ' ' + (t.category || '')).toLowerCase();
+      if (h.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
+}
+
+function bulkPriceModal() {
+  var cats = categories().sort();
+  var scopeNote = (testFilter.cat !== 'All' || testFilter.status !== 'All' || (testFilter.q || '').trim())
+    ? 'Note: only tests matching your current filters will be updated.'
+    : 'This will apply to ALL tests in the catalog.';
+
+  var body =
+    '<div style="display:flex;flex-direction:column;gap:14px">' +
+      '<p class="muted" style="margin:0">' + App.esc(scopeNote) + '</p>' +
+      '<div>' +
+        '<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;padding:10px;border:2px solid var(--line);border-radius:10px;margin-bottom:8px">' +
+          '<input type="radio" name="bp-mode" value="fixed" checked style="margin-top:3px">' +
+          '<span><b>Set fixed price</b><br><span class="muted">Set all affected tests to one price.</span></span>' +
+        '</label>' +
+        '<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;padding:10px;border:2px solid var(--line);border-radius:10px;margin-bottom:8px">' +
+          '<input type="radio" name="bp-mode" value="category" style="margin-top:3px">' +
+          '<span><b>Set price by category</b><br><span class="muted">Set one price for every test in a chosen category.</span></span>' +
+        '</label>' +
+        '<label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;padding:10px;border:2px solid var(--line);border-radius:10px">' +
+          '<input type="radio" name="bp-mode" value="percent" style="margin-top:3px">' +
+          '<span><b>Percentage change</b><br><span class="muted">Increase or decrease all affected prices by a %.</span></span>' +
+        '</label>' +
+      '</div>' +
+      '<div id="bp-fixedbox">' +
+        '<label class="label">New price (Rs)</label>' +
+        '<input id="bp-price" class="input" type="number" min="0" step="1" placeholder="e.g. 100">' +
+      '</div>' +
+      '<div id="bp-catbox" style="display:none">' +
+        '<label class="label">Category</label>' +
+        '<select id="bp-cat" class="select">' +
+          cats.map(function (c) { return '<option>' + App.esc(c) + '</option>'; }).join('') +
+        '</select>' +
+        '<label class="label" style="margin-top:10px">New price for this category (Rs)</label>' +
+        '<input id="bp-catprice" class="input" type="number" min="0" step="1" placeholder="e.g. 150">' +
+      '</div>' +
+      '<div id="bp-pctbox" style="display:none">' +
+        '<label class="label">Percentage (use negative for decrease, e.g. -10)</label>' +
+        '<input id="bp-pct" class="input" type="number" step="0.1" placeholder="e.g. 10 for +10%, -10 for -10%">' +
+      '</div>' +
+      '<div id="bp-count" class="muted" style="font-weight:600"></div>' +
+      '<div style="display:flex;justify-content:flex-end;gap:10px;border-top:1px solid var(--line);padding-top:14px">' +
+        '<button type="button" class="btn btn-ghost" id="bp-cancel">Cancel</button>' +
+        '<button type="button" class="btn btn-primary" id="bp-apply">Apply</button>' +
+      '</div>' +
+    '</div>';
+
+  App.modal('💰 Bulk Update Prices', body, { wide: true, onOpen: function (ov, close) {
+    var m = lastModal(); if (!m) return;
+    m.querySelector('#bp-cancel').addEventListener('click', close);
+
+    function mode() {
+      var r = m.querySelector('input[name="bp-mode"]:checked');
+      return r ? r.value : 'fixed';
+    }
+    function affectedCount() {
+      var md = mode();
+      if (md === 'category') {
+        var cat = m.querySelector('#bp-cat').value;
+        return DB.all('tests').filter(function (t) { return t.category === cat; }).length;
+      }
+      return _bulkFilteredTests().length;
+    }
+    function refreshCount() {
+      var md = mode();
+      m.querySelector('#bp-fixedbox').style.display = md === 'fixed' ? '' : 'none';
+      m.querySelector('#bp-catbox').style.display = md === 'category' ? '' : 'none';
+      m.querySelector('#bp-pctbox').style.display = md === 'percent' ? '' : 'none';
+      m.querySelector('#bp-count').textContent = 'This will update ' + affectedCount() + ' test(s).';
+    }
+    Array.prototype.forEach.call(m.querySelectorAll('input[name="bp-mode"]'), function (r) {
+      r.addEventListener('change', refreshCount);
+    });
+    m.querySelector('#bp-cat').addEventListener('change', refreshCount);
+    refreshCount();
+
+    m.querySelector('#bp-apply').addEventListener('click', function () {
+      var md = mode(), n = affectedCount();
+      if (!n) { App.toast('No tests match the current selection.', 'err'); return; }
+      var newPrice = null, pct = null, cat = null;
+
+      if (md === 'fixed') {
+        newPrice = parseFloat(m.querySelector('#bp-price').value);
+        if (isNaN(newPrice) || newPrice < 0) { App.toast('Enter a valid price (0 or more).', 'err'); return; }
+      } else if (md === 'category') {
+        cat = m.querySelector('#bp-cat').value;
+        newPrice = parseFloat(m.querySelector('#bp-catprice').value);
+        if (isNaN(newPrice) || newPrice < 0) { App.toast('Enter a valid price (0 or more).', 'err'); return; }
+      } else {
+        pct = parseFloat(m.querySelector('#bp-pct').value);
+        if (isNaN(pct)) { App.toast('Enter a valid percentage.', 'err'); return; }
+      }
+
+      var desc = md === 'fixed' ? 'set price to Rs ' + newPrice :
+                 md === 'category' ? 'set all "' + cat + '" tests to Rs ' + newPrice :
+                 (pct >= 0 ? 'increase' : 'decrease') + ' prices by ' + Math.abs(pct) + '%';
+      App.confirm('This will ' + desc + ' for ' + n + ' test(s). Continue?').then(function (ok) {
+        if (!ok) return;
+        var updated = 0;
+        try {
+          if (md === 'category') {
+            DB.all('tests').forEach(function (t) {
+              if (t.category !== cat) return;
+              t.price = Math.round(newPrice);
+              DB.put('tests', t);
+              updated++;
+            });
+          } else {
+            _bulkFilteredTests().forEach(function (t) {
+              if (md === 'fixed') {
+                t.price = Math.round(newPrice);
+              } else {
+                t.price = Math.max(0, Math.round((parseFloat(t.price) || 0) * (1 + pct / 100)));
+              }
+              DB.put('tests', t);
+              updated++;
+            });
+          }
+        } catch (e) {
+          App.toast('Update failed: ' + (e.message || e), 'err');
+          return;
+        }
+        close();
+        App.toast('✅ ' + updated + ' test price(s) updated.');
+        drawTestRows(true);
+      });
+    });
+  } });
+}
 
 function testModal(t) {
   var isNew = !t;
