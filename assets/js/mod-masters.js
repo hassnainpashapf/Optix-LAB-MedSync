@@ -271,6 +271,63 @@ function paramRow(p) {
   '</div>';
 }
 
+/* Pre-defined parameter templates for common tests (from standard lab reference ranges) */
+var TEST_TEMPLATES = {
+  'CBC': [
+    { name: 'Haemoglobin', unit: 'g/dl', ref: '13 - 18', type: 'number' },
+    { name: 'WBC (TLC)', unit: 'x10³/uL', ref: '4 - 11', type: 'number' },
+    { name: 'ESR (WG)', unit: 'mm/1st Hour', ref: '1 - 10', type: 'number' },
+    { name: 'Total RBC', unit: 'x10⁶/uL', ref: '4.5 - 6.5', type: 'number' },
+    { name: 'HCT (PVC)', unit: '%', ref: '38 - 52', type: 'number' },
+    { name: 'MCV', unit: 'fL', ref: '80 - 96', type: 'number' },
+    { name: 'MCH', unit: 'pg', ref: '27 - 32', type: 'number' },
+    { name: 'MCHC', unit: '%', ref: '30 - 35', type: 'number' },
+    { name: 'Platelets', unit: 'x10³/uL', ref: '150 - 450', type: 'number' },
+    { name: 'RDW %', unit: '%', ref: '', type: 'number' },
+    { name: 'RDW a', unit: 'um³', ref: '', type: 'number' },
+    { name: 'MPV', unit: 'um', ref: '', type: 'number' },
+    { name: 'PDW', unit: 'um', ref: '', type: 'number' },
+    { name: 'PCT', unit: '%', ref: '', type: 'number' }
+  ],
+  'Lipid Profile': [
+    { name: 'Total Cholesterol', unit: 'mg/dL', ref: '< 200', type: 'number' },
+    { name: 'Triglycerides', unit: 'mg/dL', ref: '< 150', type: 'number' },
+    { name: 'HDL Cholesterol', unit: 'mg/dL', ref: '40 - 60', type: 'number' },
+    { name: 'LDL Cholesterol', unit: 'mg/dL', ref: '< 100', type: 'number' },
+    { name: 'VLDL', unit: 'mg/dL', ref: '2 - 30', type: 'number' }
+  ],
+  'Liver Function (LFT)': [
+    { name: 'Total Bilirubin', unit: 'mg/dL', ref: '0.3 - 1.2', type: 'number' },
+    { name: 'Direct Bilirubin', unit: 'mg/dL', ref: '0.0 - 0.3', type: 'number' },
+    { name: 'SGPT (ALT)', unit: 'U/L', ref: '7 - 56', type: 'number' },
+    { name: 'SGOT (AST)', unit: 'U/L', ref: '10 - 40', type: 'number' },
+    { name: 'Alkaline Phosphatase', unit: 'U/L', ref: '44 - 147', type: 'number' },
+    { name: 'Total Protein', unit: 'g/dL', ref: '6.0 - 8.3', type: 'number' },
+    { name: 'Albumin', unit: 'g/dL', ref: '3.5 - 5.5', type: 'number' }
+  ],
+  'Kidney Function (RFT)': [
+    { name: 'Urea', unit: 'mg/dL', ref: '15 - 45', type: 'number' },
+    { name: 'Creatinine', unit: 'mg/dL', ref: '0.6 - 1.2', type: 'number' },
+    { name: 'Uric Acid', unit: 'mg/dL', ref: '3.5 - 7.2', type: 'number' },
+    { name: 'Sodium', unit: 'm.mol/l', ref: '135 - 150', type: 'number' },
+    { name: 'Potassium', unit: 'm.mol/l', ref: '3.5 - 5.4', type: 'number' },
+    { name: 'Chloride', unit: 'm.mol/l', ref: '95 - 108', type: 'number' }
+  ],
+  'Thyroid Profile': [
+    { name: 'Total T3', unit: 'ng/mL', ref: '0.8 - 2.11', type: 'number' },
+    { name: 'Total T4', unit: 'ug/dl', ref: '4.5 - 13.8', type: 'number' },
+    { name: 'TSH', unit: 'uIU/ml', ref: '0.37 - 5.1', type: 'number' }
+  ],
+  'Blood Sugar': [
+    { name: 'Glucose (Fasting)', unit: 'mg/dL', ref: '70 - 100', type: 'number' },
+    { name: 'Glucose (Random)', unit: 'mg/dL', ref: '< 140', type: 'number' }
+  ],
+  'HbA1c': [
+    { name: 'HbA1c', unit: '%', ref: '4.0 - 5.6', type: 'number' },
+    { name: 'Avg. Blood Glucose', unit: 'mg/dL', ref: '', type: 'number' }
+  ]
+};
+
 function testModal(t) {
   var isNew = !t;
   t = t || { code: '', name: '', category: '', price: '', sampleType: 'Blood', tat: 'Same day', active: true, params: [] };
@@ -292,6 +349,12 @@ function testModal(t) {
       '<div><label class="label">Status</label><label style="display:flex;align-items:center;gap:8px;font-weight:600"><input id="tm-active" type="checkbox"' + (t.active ? ' checked' : '') + '> Active</label></div>' +
     '</div>' +
     '<div style="margin-top:14px"><label class="label">Report Parameters</label>' +
+      '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+        '<select class="select" id="tm-tpl" style="flex:1"><option value="">Load template…</option>' +
+        Object.keys(TEST_TEMPLATES).map(function (k) { return '<option value="' + App.esc(k) + '">' + App.esc(k) + '</option>'; }).join('') +
+        '</select>' +
+        '<button type="button" id="tm-tplgo" class="btn btn-ghost btn-sm">Apply</button>' +
+      '</div>' +
       '<div id="tm-prows"></div>' +
       '<button type="button" id="tm-addp" class="btn btn-ghost btn-sm">+ Add Parameter</button></div>' +
     '<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">' +
@@ -320,6 +383,16 @@ function testModal(t) {
     (t.params || []).forEach(addRow);
     if (!(t.params || []).length) addRow(null);
     m.querySelector('#tm-addp').addEventListener('click', function () { addRow(null); });
+    /* template loader: fill parameters from a pre-defined template */
+    var tplSel = m.querySelector('#tm-tpl'), tplGo = m.querySelector('#tm-tplgo');
+    if (tplGo) tplGo.addEventListener('click', function () {
+      var key = tplSel ? tplSel.value : '';
+      var tpl = key && TEST_TEMPLATES[key];
+      if (!tpl) { App.toast('Select a template first', 'err'); return; }
+      rowsBox.innerHTML = '';
+      tpl.forEach(function (p) { addRow(p); });
+      App.toast(tpl.length + ' parameters loaded from "' + key + '"');
+    });
 
     /* package includes picker */
     var pkgBox = m.querySelector('#tm-pkgbox'), pkgList = m.querySelector('#tm-pkglist');

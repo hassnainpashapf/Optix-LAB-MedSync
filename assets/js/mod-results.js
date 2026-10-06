@@ -455,11 +455,12 @@
     };
   }
 
-  function reportHtml(d) {
+  function reportHtml(d, opts) {
     var inv = d.inv || {}, pat = d.pat || {}, s = d.s || {};
     var readyRows = d.readyRows || [], pendingCount = d.pendingCount || 0;
     var doc = d.doc || null;
     var docName = doc ? doc.name : '';
+    var noLabHeader = !!(opts && opts.noLabHeader);
 
     /* ---------- header: lab logo + info left, patient/case/QR right ---------- */
     var addrLine = [s.address, s.phone, s.email].filter(function (x) { return x; }).join(' • ');
@@ -563,7 +564,7 @@
     if (abLast) ab.push('<div>' + abLast + '</div>');
     var addrHtml = ab.length ? '<div style="text-align:center;font-size:12px;margin-top:16px;line-height:1.8">' + ab.join('') + '</div>' : '';
 
-    var headOut = s.headerHtml ? s.headerHtml : headHtml;
+    var headOut = noLabHeader ? '' : (s.headerHtml ? s.headerHtml : headHtml);
     var footOut = s.footerHtml ? s.footerHtml :
       '<p style="text-align:center;font-weight:700;font-size:12.5px;margin:22px 0 0">' + App.esc(verNote) + '</p>' +
       sigHtml + addrHtml +
@@ -629,7 +630,7 @@
     return String(html).replace(/<img[^>]*data-qr="1"[^>]*>/, '');
   }
 
-  async function printReport(invoiceId) {
+  async function printReport(invoiceId, opts) {
     var d = reportData(invoiceId);
     if (!d) { App.toast('No ready results to print', 'err'); return; }
     var invPaid = d.inv && d.inv.status === 'paid';
@@ -642,11 +643,27 @@
         else noQrReason = invPaid ? 'upload failed' : 'payment pending — QR activates when paid';
       } else noQrReason = 'upload failed';
     } catch (e) { noQrReason = 'upload failed'; }
-    var html = reportHtml(d);
+    var html = reportHtml(d, opts);
     if (qrImg) html = html.replace('data-qr="1"', 'data-qr="1" src="' + qrImg + '"');
     else html = stripQrImg(html);
     if (noQrReason) App.toast('Report printed without QR (' + noQrReason + ')', invPaid ? 'err' : 'info');
     App.print('Lab Report — ' + d.inv.no, html, { noHeader: true });
+  }
+
+  /* print choice dialog: with or without the lab letterhead header */
+  function printReportChoice(invoiceId) {
+    App.modal('Print Report',
+      '<p style="margin-bottom:16px">Print this report with or without the lab header?</p>' +
+      '<div style="display:flex;gap:12px">' +
+      '<button class="btn btn-primary" id="prWithHead" style="flex:1;padding:14px">With Header</button>' +
+      '<button class="btn btn-ghost" id="prNoHead" style="flex:1;padding:14px">Without Header</button>' +
+      '</div>' +
+      '<p class="muted" style="margin-top:12px;font-size:12px;margin-bottom:0">Use "Without Header" when printing on pre-printed letterhead paper.</p>',
+      { onOpen: function (ov, close) {
+          ov.querySelector('#prWithHead').addEventListener('click', function () { close(); printReport(invoiceId, {}); });
+          ov.querySelector('#prNoHead').addEventListener('click', function () { close(); printReport(invoiceId, { noLabHeader: true }); });
+        }
+      });
   }
 
   // Report preview modal with Print + Share on WhatsApp actions
@@ -664,7 +681,7 @@
       '</div>',
       { wide: true, onOpen: function (ov, close) {
           document.getElementById('rvClose').addEventListener('click', close);
-          document.getElementById('rvPrint').addEventListener('click', function () { printReport(invoiceId); });
+          document.getElementById('rvPrint').addEventListener('click', function () { close(); printReportChoice(invoiceId); });
           document.getElementById('rvWa').addEventListener('click', function () { shareReportWhatsApp(invoiceId); });
         }
       });
@@ -1059,7 +1076,7 @@
       b.addEventListener('click', function () { viewReport(b.getAttribute('data-rview')); });
     });
     v.querySelectorAll('[data-rprint]').forEach(function (b) {
-      b.addEventListener('click', function () { printReport(b.getAttribute('data-rprint')); });
+      b.addEventListener('click', function () { printReportChoice(b.getAttribute('data-rprint')); });
     });
     v.querySelectorAll('[data-rviewfirst]').forEach(function (b) {
       b.addEventListener('click', function () {
@@ -1073,7 +1090,7 @@
 
   /* exposed so the Reports page "Finalized Patient Reports" archive can view/print */
   App.viewLabReport = viewReport;
-  App.printLabReport = printReport;
+  App.printLabReport = printReportChoice;
   /* exposed so the Patient Profile page can enter results directly */
   App.enterLabResult = openEntry;
   /* sample report preview for Lab Profile settings (uses provided settings, not DB) */
