@@ -1422,8 +1422,8 @@
       ['Address', val(pat.address)]
     ];
     var right = [
-      ['Reporting Date', fmtDateTime(inv.createdAt)],
-      ['Reporting Date', fmtDateTime(d.maxReported)],
+      ['Registration Date', fmtDateTime(inv.createdAt)],
+      ['Registration Date', fmtDateTime(d.maxReported)],
       ['Registration Location', val(s.headOffice)],
       ['Destination Location', val(s.destinationLocation || s.mainLab)],
       ['Reference', val(s.reference)],
@@ -2373,8 +2373,8 @@
         ['Address',               pat.address]
       ];
       var right = [
-        ['Reporting Date',      inv.createdAt ? App.dt(inv.createdAt) : ''],
-        ['Reporting Date',     d.maxReported ? App.dt(d.maxReported) : ''],
+        ['Registration Date',      inv.createdAt ? App.dt(inv.createdAt) : ''],
+        ['Registration Date',     d.maxReported ? App.dt(d.maxReported) : ''],
         ['Registration Location', s.headOffice],
         ['Destination Location',  s.mainLab],
         ['Reference',             docName],
