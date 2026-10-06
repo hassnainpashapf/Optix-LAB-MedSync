@@ -915,29 +915,12 @@
   function waDefaults() {
     return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '' };
   }
-  /* ---- WhatsApp API: API managed by Superadmin; lab number editable by admin ---- */
+  /* ---- WhatsApp: admin only sees/edits their lab number; API hidden ---- */
   function renderSetWhatsapp() {
     var s = DB.get('settings', 'main') || {};
     var w = Object.assign(waDefaults(), s.whatsapp || {});
-    var masked = w.token ? '\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022' : '\u2014';
-    var rows =
-      row('API Provider', w.provider === 'custom' ? 'Custom' : 'Ultramsg') +
-      row('Instance ID', w.instanceId || '\u2014') +
-      row('API Token', masked) +
-      (w.provider === 'custom' ? row('API Base URL', w.baseUrl || '\u2014') : '');
-    function row(k, v) {
-      return '<div style="display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)">' +
-        '<span style="color:var(--muted);font-size:13px">' + App.esc(k) + '</span>' +
-        '<strong style="font-size:13px;word-break:break-all;text-align:right">' + App.esc(v) + '</strong></div>';
-    }
     var html =
-      '<div style="max-width:640px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;padding:14px 16px;margin-bottom:16px">' +
-      '<div style="font-weight:700;font-size:14px;margin-bottom:4px">Managed by Superadmin</div>' +
-      '<div style="font-size:13px;color:var(--muted)">The WhatsApp API credentials are configured in the Superadmin console. ' +
-      'These settings are read-only here — contact your superadmin to change them.</div>' +
-      '<div style="margin-top:10px"><a class="btn btn-sm" href="../superadmin/">Open Superadmin Console</a></div></div>' +
-      '<div style="max-width:640px">' + rows + '</div>' +
-      '<div class="card" style="max-width:640px;margin-top:16px"><div class="card-h"><h3>Lab WhatsApp Number</h3></div>' +
+      '<div class="card" style="max-width:640px"><div class="card-h"><h3>Lab WhatsApp Number</h3></div>' +
       '<div class="card-b">' +
       '<p class="muted" style="font-size:13px;margin-top:0">This is your lab\'s WhatsApp number — used when sharing reports with patients.</p>' +
       '<div style="display:flex;gap:10px">' +
