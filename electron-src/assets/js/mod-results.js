@@ -2009,6 +2009,109 @@
   }
   App.refFor = refFor;
 
+  /* ---------- patient result trends ----------
+     Every numeric parameter a patient has ever been reported on (Hb, sugar, creatinine ...), plotted visit by visit against
+     that patient's own reference range. Rendered into any container by the patient profile page. */
+  function trendSeries(pat) {
+    var invs = DB.all('invoices').filter(function (i) { return i.patientId === pat.id; });
+    var invById = {}; invs.forEach(function (i) { invById[i.id] = i; });
+    var map = {};
+    DB.all('results').forEach(function (r) {
+      var inv = invById[r.invoiceId];
+      if (!inv || r.status !== 'ready' || !r.values) return;
+      var test = DB.get('tests', r.testId); if (!test || !Array.isArray(test.params)) return;
+      var when = r.reportedAt || inv.createdAt || '';
+      test.params.forEach(function (p) {
+        var raw = r.values[p.name];
+        if (raw == null || raw === '') return;
+        var v = parseAbnNum(raw); if (isNaN(v)) return;
+        var key = String(p.name).toLowerCase();
+        var ref = refFor(p, pat);
+        var m = map[key] || (map[key] = { name: p.name, unit: p.unit || '', ref: ref, pts: [] });
+        m.ref = ref || m.ref; m.unit = p.unit || m.unit;
+        m.pts.push({ t: when, v: v, raw: String(raw), inv: inv.no || inv.id, invId: inv.id });
+      });
+    });
+    var out = Object.keys(map).map(function (k) { return map[k]; });
+    out.forEach(function (m) {
+      m.pts.sort(function (a, b) { return a.t < b.t ? -1 : (a.t > b.t ? 1 : 0); });
+      m.pts.forEach(function (pt) { var sv = abnormalSeverity(pt.raw, m.ref); pt.sev = sv ? sv.severity : null; pt.dir = sv ? sv.dir : null; });
+    });
+    out.sort(function (a, b) { return (b.pts.length - a.pts.length) || a.name.localeCompare(b.name); });
+    return out;
+  }
+  function refBounds(ref) {
+    var r = String(ref || '').replace(/[–—]/g, '-').replace(/,/g, '').trim(), m;
+    if ((m = r.match(/^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/))) return { lo: parseFloat(m[1]), hi: parseFloat(m[2]) };
+    if ((m = r.match(/^\s*(?:<=|<|≤)\s*(\d+(?:\.\d+)?)/))) return { lo: null, hi: parseFloat(m[1]) };
+    if ((m = r.match(/^\s*(?:>=|>|≥)\s*(\d+(?:\.\d+)?)/))) return { lo: parseFloat(m[1]), hi: null };
+    return null;
+  }
+  function outDist(m, v) {
+    var b = refBounds(m.ref); if (!b) return 0;
+    if (b.lo != null && v < b.lo) return b.lo - v;
+    if (b.hi != null && v > b.hi) return v - b.hi;
+    return 0;
+  }
+  var TREND_COL = { ok: '#16a34a', mild: '#d97706', moderate: '#ea580c', critical: '#dc2626' };
+  function trendSvg(m) {
+    var W = 1000, H = 320, L = 56, R = 48, T = 22, B = 46, n = m.pts.length;
+    var b = refBounds(m.ref);
+    var vals = m.pts.map(function (q) { return q.v; });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    if (b) { if (b.lo != null) { mn = Math.min(mn, b.lo); mx = Math.max(mx, b.lo); } if (b.hi != null) { mn = Math.min(mn, b.hi); mx = Math.max(mx, b.hi); } }
+    var span = (mx - mn) || Math.abs(mx) || 1; mn -= span * 0.14; mx += span * 0.14; if (mn < 0 && Math.min.apply(null, vals) >= 0 && (!b || b.lo == null || b.lo >= 0)) mn = 0;
+    var X = function (i) { return n === 1 ? (L + (W - L - R) / 2) : L + (W - L - R) * i / (n - 1); };
+    var Y = function (v) { return T + (H - T - B) * (1 - (v - mn) / (mx - mn)); };
+    var f = function (v) { return Math.abs(v) >= 100 ? String(Math.round(v)) : String(Math.round(v * 10) / 10); };
+    var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block" role="img" aria-label="' + App.esc(m.name) + ' trend">';
+    for (var k = 0; k <= 4; k++) { var gv = mn + (mx - mn) * k / 4, gy = Y(gv);
+      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy + '" y2="' + gy + '" stroke="#e5eaf3"/><text x="' + (L - 8) + '" y="' + (gy + 4) + '" text-anchor="end" font-size="11" fill="#6b7a90">' + f(gv) + '</text>'; }
+    if (b) { var yTop = b.hi != null ? Y(b.hi) : T, yBot = b.lo != null ? Y(b.lo) : (H - B);
+      g += '<rect x="' + L + '" y="' + yTop + '" width="' + (W - L - R) + '" height="' + Math.max(2, yBot - yTop) + '" fill="#16a34a" opacity=".10"/>';
+      if (b.hi != null) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yTop + '" y2="' + yTop + '" stroke="#16a34a" stroke-dasharray="4 4" opacity=".6"/>';
+      if (b.lo != null) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yBot + '" y2="' + yBot + '" stroke="#16a34a" stroke-dasharray="4 4" opacity=".6"/>';
+      g += '<text x="' + (W - R - 4) + '" y="' + (yTop + 13) + '" text-anchor="end" font-size="10.5" fill="#15803d">normal ' + App.esc(m.ref) + '</text>'; }
+    if (n > 1) g += '<polyline fill="none" stroke="#3b5b9a" stroke-width="2.2" stroke-linejoin="round" points="' + m.pts.map(function (q, i) { return X(i) + ',' + Y(q.v); }).join(' ') + '"/>';
+    m.pts.forEach(function (q, i) {
+      var col = TREND_COL[q.sev || 'ok'], x = X(i), y = Y(q.v), up = y > T + 26;
+      g += '<g><title>' + App.esc(m.name + ': ' + q.raw + ' ' + m.unit + ' — ' + App.d(q.t) + ' (' + q.inv + ')') + '</title>' +
+        '<circle cx="' + x + '" cy="' + y + '" r="6" fill="#fff" stroke="' + col + '" stroke-width="3"/>' +
+        '<text x="' + x + '" y="' + (up ? y - 12 : y + 20) + '" text-anchor="middle" font-size="12" font-weight="700" fill="' + col + '">' + App.esc(f(q.v)) + '</text></g>' +
+        '<text x="' + x + '" y="' + (H - 22) + '" text-anchor="middle" font-size="11" fill="#6b7a90">' + App.esc(App.d(q.t)) + '</text>';
+    });
+    return g + '</svg>';
+  }
+  App.renderPatientTrends = function (host, pat) {
+    if (!host) return;
+    var series = trendSeries(pat);
+    if (!series.length) { host.innerHTML = '<p class="muted" style="margin:0">Trends appear here once this patient has reported numeric results.</p>'; return; }
+    host.innerHTML = '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">' +
+      '<label class="label" style="margin:0;font-weight:700">Parameter</label>' +
+      '<select class="input" id="trSel" style="max-width:320px">' + series.map(function (m, i) {
+        return '<option value="' + i + '">' + App.esc(m.name) + ' (' + m.pts.length + ' result' + (m.pts.length > 1 ? 's' : '') + ')</option>'; }).join('') + '</select>' +
+      '<span class="muted" style="font-size:12px;margin-left:auto"><span style="color:#16a34a">●</span> normal &nbsp;<span style="color:#d97706">●</span> mild/moderate &nbsp;<span style="color:#dc2626">●</span> critical</span></div>' +
+      '<div id="trBody"></div>';
+    function draw(i) {
+      var m = series[i], rows = m.pts.map(function (q, j) {
+        var prev = j ? m.pts[j - 1] : null, d = prev ? q.v - prev.v : null, dTxt;
+        if (d == null) dTxt = '<span class="muted">—</span>';
+        else if (d === 0) dTxt = '<span class="muted">no change</span>';
+        else {
+          var da = outDist(m, prev.v), db = outDist(m, q.v);   /* distance outside the normal range: smaller = improving */
+          var col = (da === 0 && db === 0) ? '#6b7a90' : (db < da ? '#16a34a' : '#dc2626');
+          dTxt = '<span style="color:' + col + ';font-weight:700">' + (d > 0 ? '▲ +' : '▼ ') + (Math.round(d * 100) / 100) + '</span>';
+        }
+        var flag = q.sev ? '<span style="color:' + TREND_COL[q.sev] + ';font-weight:800">' + (q.dir === 'high' ? '↑ HIGH' : '↓ LOW') + (q.sev === 'critical' ? ' · CRITICAL' : '') + '</span>' : '<span style="color:#16a34a;font-weight:700">Normal</span>';
+        return '<tr><td>' + App.esc(App.d(q.t)) + '</td><td><span class="mono">' + App.esc(q.inv) + '</span></td><td><b>' + App.esc(q.raw) + '</b> <span class="muted">' + App.esc(m.unit) + '</span></td><td>' + flag + '</td><td>' + dTxt + '</td></tr>';
+      }).reverse().join('');
+      document.getElementById('trBody').innerHTML = (m.pts.length < 2 ? '<p class="muted" style="margin:0 0 8px;font-size:12.5px">Only one result so far — the line appears from the next visit.</p>' : '') + trendSvg(m) +
+        '<div class="tbl-wrap" style="margin-top:12px"><table class="table"><thead><tr><th>Date</th><th>Invoice</th><th>Result</th><th>Status</th><th>Change</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    }
+    host.querySelector('#trSel').addEventListener('change', function () { draw(+this.value); });
+    draw(0);
+  };
+
   function reportData(invoiceId, ropts) {
     var inv = invOf(invoiceId);
     if (!inv) return null;

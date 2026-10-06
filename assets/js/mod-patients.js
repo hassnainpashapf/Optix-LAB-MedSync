@@ -696,6 +696,9 @@
         : App.empty('No tests ordered yet for this patient.')) +
       '</div></div>' +
 
+      '<div class="card" id="trCard" style="display:none"><div class="card-h"><h3>Result Trends</h3><span class="muted">parameter-wise history</span></div>' +
+      '<div class="card-b" id="trHost"></div></div>' +
+
       '<div class="card"><div class="card-h"><h3>Invoice History</h3><span class="muted">' + st.visits + ' invoice(s)</span>' +
       '<button class="btn btn-primary btn-sm" id="cmpBtn" style="display:none;margin-left:auto">Compare Selected (2)</button></div>' +
       '<div class="card-b">' +
@@ -740,6 +743,13 @@
           var invId = tr.invoice.id;
           ensureResultsMod(function () { App.printLabReport(invId); });
         });
+      });
+      /* result trends: only when this patient has reported results; module loads on demand */
+      var hasRes = false;
+      try { hasRes = DB.all('results').some(function (r) { return r.status === 'ready' && st.invoices.some(function (i) { return i.id === r.invoiceId; }); }); } catch (e) {}
+      if (hasRes) ensureResultsMod(function () {
+        var card = document.getElementById('trCard'), host = document.getElementById('trHost');
+        if (card && host && App.renderPatientTrends) { card.style.display = ''; App.renderPatientTrends(host, p); }
       });
       /* report comparison: select 2 invoices, compare side by side */
       var cmpBtn = document.getElementById('cmpBtn');
