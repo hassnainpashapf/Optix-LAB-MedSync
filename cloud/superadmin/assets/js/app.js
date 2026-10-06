@@ -625,22 +625,26 @@ function createTenantModal() {
 /* ---------------- views ---------------- */
 
 function renderLogin() {
+  document.body.className = 'login-mode';
   $('root').innerHTML =
-    '<div class="login-wrap"><div class="login-card">' +
-    '<div class="brand-row"><div class="brand-ico">' + IC.cloud + '</div>' +
-    '<div><div class="brand-name">Optix LAB MedSync</div><div class="brand-sub">SUPERADMIN CONSOLE</div></div></div>' +
+    '<div class="login-wrap">' +
+    '<form class="login-card" id="saLoginForm" autocomplete="off">' +
+    '<div class="login-logo">' +
+    '<span class="login-mark">' + IC.flask + '</span>' +
+    '<h1>Optix LAB MedSync</h1>' +
+    '<p class="login-tag">Superadmin Console</p>' +
+    '</div>' +
     '<h2>Welcome back</h2>' +
-    '<p class="lede">Sign in with your superadmin credentials to manage lab installations, roll out updates and view the release changelog.</p>' +
-    (state.loginError ? '<div class="login-err">' + esc(state.loginError) + '</div>' : '') +
-    '<label class="label" for="userInput">Username</label>' +
-    '<input class="input" id="userInput" type="text" placeholder="Enter username" autocomplete="username" autocapitalize="off" spellcheck="false">' +
-    '<label class="label" for="passInput" style="margin-top:12px">Password</label>' +
-    '<input class="input" id="passInput" type="password" placeholder="Enter password" autocomplete="current-password">' +
-    '<button class="btn btn-primary btn-block" id="loginBtn">Sign in</button>' +
+    '<p class="login-sub">Sign in to manage your labs</p>' +
+    (state.loginError ? '<div class="login-err">' + esc(state.loginError) + '</div>' : '<div class="login-err" hidden></div>') +
+    '<label class="label">Username<input class="input" id="userInput" type="text" placeholder="Enter username" autocomplete="username" autocapitalize="off" spellcheck="false" autofocus></label>' +
+    '<label class="label">Password<input class="input" id="passInput" type="password" placeholder="Enter password" autocomplete="current-password"></label>' +
+    '<button class="btn login-signin btn-block" type="submit" id="loginBtn">Sign In</button>' +
     '<div class="login-div"><span>or</span></div>' +
-    '<a class="btn btn-ghost btn-block" href="/">Optix LAB MedSync Login</a>' +
-    '<p class="login-hint">Your session is stored only in this tab (session storage) and ends when the tab is closed.</p>' +
-    '</div></div>';
+    '<a class="btn btn-ghost btn-block" href="/app/">App Login</a>' +
+    '</form>' +
+    '<p class="login-foot">Powered by System Optix</p>' +
+    '</div>';
 
   var uEl = $('userInput'), pEl = $('passInput');
   uEl.focus();
@@ -671,9 +675,8 @@ function renderLogin() {
     startAutoRefresh();
     loadData(false);
   }
-  $('loginBtn').addEventListener('click', submit);
+  $('saLoginForm').addEventListener('submit', function (e) { e.preventDefault(); submit(); });
   uEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); pEl.focus(); } });
-  pEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
 }
 
 function labsTableHtml() {
@@ -737,6 +740,7 @@ function changelogCardHtml() {
 }
 
 function renderApp() {
+  document.body.className = '';
   var labs = state.labs;
   var online = labs.filter(isOnline).length;
   var latest = state.version && state.version.latest;

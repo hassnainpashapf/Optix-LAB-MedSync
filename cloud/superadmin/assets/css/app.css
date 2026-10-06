@@ -86,24 +86,41 @@ textarea.input{resize:vertical;min-height:90px}
 .b-blue{background:var(--blue-soft);color:var(--blue)}
 .b-gray{background:#f1f5f9;color:var(--muted)}
 
-/* ============ Login ============ */
-.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
-  background:radial-gradient(1000px 500px at 50% -10%,#ebf4f8 0%,var(--bg) 60%)}
-.login-card{background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:var(--sh-lg);
-  width:420px;max-width:100%;padding:36px 34px}
-.brand-row{display:flex;align-items:center;gap:12px;margin-bottom:22px}
-.brand-ico{width:44px;height:44px;border-radius:13px;background:var(--brand-grad);display:grid;place-items:center;color:#fff;flex:none}
-.brand-ico svg{width:24px;height:24px}
-.brand-name{font-size:17px;font-weight:800;letter-spacing:-.01em}
-.brand-sub{font-size:12px;color:var(--muted);font-weight:600}
-.login-card h2{font-size:22px;letter-spacing:-.02em;margin-bottom:6px}
-.login-card .lede{color:var(--muted);font-size:13.5px;margin-bottom:20px}
-.login-card .btn-block{margin-top:14px}
-.login-div{display:flex;align-items:center;gap:10px;margin:16px 0 4px;color:var(--muted,#8a8f98);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
-.login-div::before,.login-div::after{content:'';flex:1;height:1px;background:var(--border,#e5e7eb)}
-.login-err{background:var(--red-soft);color:var(--red);border-radius:var(--r-md);
-  padding:10px 14px;font-size:13.5px;font-weight:600;margin-bottom:14px}
-.login-hint{margin-top:16px;font-size:12px;color:var(--faint);text-align:center}
+/* ============ Login (mirrors the app login page) ============ */
+body.login-mode{background:#131845}
+.login-wrap{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;gap:18px;
+  align-items:center;justify-content:center;padding:24px;overflow:auto;
+  background:linear-gradient(135deg,#131845 0%,#1e2a6b 55%,#5392ba 135%)}
+.login-wrap::before{content:'';position:absolute;width:560px;height:560px;border-radius:50%;
+  background:rgba(255,255,255,.07);top:-180px;right:-140px;pointer-events:none}
+.login-wrap::after{content:'';position:absolute;width:380px;height:380px;border-radius:50%;
+  background:rgba(255,255,255,.05);bottom:-140px;left:-120px;pointer-events:none}
+.login-card{position:relative;z-index:1;width:420px;max-width:100%;background:#fff;
+  border-radius:20px;box-shadow:0 24px 60px -12px rgba(0,0,0,.45);padding:38px 36px}
+.login-logo{display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:24px}
+.login-mark{width:64px;height:64px;border-radius:18px;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(135deg,#131845,#5392ba);
+  box-shadow:0 10px 24px -8px rgba(19,24,69,.55);margin-bottom:14px}
+.login-mark svg{width:32px;height:32px}
+.login-logo h1{font-size:22px;font-weight:800;letter-spacing:-.02em;color:#131845}
+.login-tag{font-size:13px;color:var(--muted);margin-top:4px}
+.login-card h2{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:4px;text-align:center;color:#131845}
+.login-sub{color:var(--muted);font-size:13.5px;margin-bottom:22px;text-align:center}
+.login-card .label{margin-bottom:14px}
+.login-err{background:var(--red-soft);color:var(--red);border:1px solid #f5c6c6;border-radius:var(--r-md);
+  padding:11px 14px;font-weight:600;font-size:13.5px;margin-bottom:16px}
+.login-err[hidden]{display:none}
+.login-card .btn-block{margin-top:6px}
+.login-signin{background:linear-gradient(135deg,#131845,#2a3a8f);border:none;color:#fff;
+  box-shadow:0 8px 18px -8px rgba(19,24,69,.6)}
+.login-signin:hover{background:linear-gradient(135deg,#0e1238,#1e2a6b);color:#fff;transform:translateY(-1px)}
+.login-div{display:flex;align-items:center;gap:10px;margin:16px 0 6px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+.login-div::before,.login-div::after{content:'';flex:1;height:1px;background:#e5e7eb}
+.login-foot{position:relative;z-index:1;font-size:11.5px;color:rgba(255,255,255,.6);letter-spacing:.04em}
+@media(max-width:900px){
+  .login-card{padding:28px 22px}
+  .login-wrap{padding:16px}
+}
 
 /* ============ Topbar ============ */
 .topbar{background:#fff;border-bottom:1px solid var(--line);padding:12px 28px;

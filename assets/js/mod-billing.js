@@ -42,7 +42,7 @@
     } catch (e) { return false; }
   }
   function scCard(icon, tint, label, value, sub, full) {
-    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')' + (full ? ';background:var(--' + tint + '-soft);border-color:transparent' : '') + '">' +
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')' + (full ? ';background:linear-gradient(135deg,#ffffff 50%,var(--' + tint + '-soft) 50%);border-color:transparent' : '') + '">' +
       '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
       '<div class="lb">' + App.esc(label) + '</div>' +
       '<div class="vl">' + value + '</div>' +

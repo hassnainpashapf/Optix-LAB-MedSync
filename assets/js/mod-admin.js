@@ -55,7 +55,7 @@
     var countAttrs = (typeof raw === 'number' && isFinite(raw))
       ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"'
       : '';
-    var cardStyle = '--sc:var(--' + tint + ')' + (fullTint ? ';background:var(--' + tint + '-soft);border-color:transparent' : '');
+    var cardStyle = '--sc:var(--' + tint + ')' + (fullTint ? ';background:linear-gradient(135deg,#ffffff 50%,var(--' + tint + '-soft) 50%);border-color:transparent' : '');
     return '<div class="stat" data-tint="' + tint + '" style="' + cardStyle + '">' +
       '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
       '<div class="lb">' + App.esc(label) + '</div>' +
