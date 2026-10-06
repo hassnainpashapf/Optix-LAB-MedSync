@@ -521,8 +521,8 @@
       '.tb-menu-danger svg{color:var(--red)}' +
       '.tb-qa{display:flex;gap:8px;align-items:center;margin-left:2px}' +
       '.tb-qa .tb-qab{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}' +
-      '.tb-qa .tb-classic{background:#fff;border:1px solid #131845;color:#131845;font-weight:600;box-shadow:none}' +
-      '.tb-qa .tb-classic:hover{background:#ebf4f8;border-color:#131845;color:#131845;transform:none}' +
+      '.tb-qa .tb-classic{background:#fff;border:1px solid var(--bd);color:#131845;font-weight:600;box-shadow:none}' +
+      '.tb-qa .tb-classic:hover{background:#ebf4f8;border-color:#8fa0c0;color:#131845;transform:none}' +
       '.tb-qa .tb-classic svg{color:#131845;flex:none}' +
       '.tb-qa .tb-icon{padding:7px;border-radius:10px;min-width:34px;justify-content:center}' +
       '@media(max-width:640px){.tb-qa .tb-qa-t{display:none}.tb-qa{gap:6px}.tb-qa .tb-qab{padding:7px 9px}}' +

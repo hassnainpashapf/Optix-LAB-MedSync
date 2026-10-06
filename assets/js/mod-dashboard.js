@@ -226,7 +226,7 @@
     '.db-page .stat-ico{border-radius:50%;box-shadow:inset 0 0 0 1px var(--sc-line),0 4px 10px rgba(11,23,64,.08)}' +
     '.db-page .stat .vl{color:var(--ink)}' +
     '.db-page .stat .lb{color:var(--muted)}' +
-    '.db-page .card{border-radius:20px;box-shadow:0 18px 45px rgba(11,23,64,.10);border:2px solid #000 !important}' +
+    '.db-page .card{border-radius:20px;box-shadow:0 18px 45px rgba(11,23,64,.10);border:2px solid var(--bd) !important}' +
     '.db-page .card-h h3{color:var(--ink);font-weight:800;letter-spacing:-.01em}' +
     '</style>' +
     '<style>' +
