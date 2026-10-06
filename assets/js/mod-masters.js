@@ -224,7 +224,8 @@ function drawTestRows(canEdit) {
   tb.querySelectorAll('[data-book]').forEach(function (b) {
     b.addEventListener('click', function () {
       sessionStorage.setItem('labpos_pretest', b.getAttribute('data-book'));
-      App.nav('#/billing');
+      App.nav('#/patients');
+      App.toast('Select a patient, then use “+ New Bill” to order this test', 'info');
     });
   });
   tb.querySelectorAll('[data-edit]').forEach(function (b) {

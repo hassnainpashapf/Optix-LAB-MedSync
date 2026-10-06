@@ -482,9 +482,40 @@
     var docName = 'Self';
     if (p.doctorId) { var _dd = DB.get('doctors', p.doctorId); if (_dd && _dd.name) docName = _dd.name; }
 
+    /* lab tests for this patient: each ordered test with its result status */
+    var testRows = [];
+    st.invoices.forEach(function (inv) {
+      (inv.items || []).forEach(function (item) {
+        var res = null;
+        try {
+          res = DB.all('results').filter(function (r) { return r.invoiceId === inv.id && r.testId === item.testId; })[0] || null;
+        } catch (e) { res = null; }
+        testRows.push({ res: res, invoice: inv, item: item, test: DB.get('tests', item.testId) });
+      });
+    });
+    testRows.sort(function (a, b) {
+      var da = a.invoice.createdAt || '', db = b.invoice.createdAt || '';
+      return db < da ? -1 : (db > da ? 1 : 0);
+    });
+    var labTestRowsHtml = testRows.map(function (tr, i) {
+      var tName = App.esc(tr.item.name || (tr.test && tr.test.name) || 'Test');
+      var ready = tr.res && tr.res.status === 'ready';
+      var status = ready ? '<span class="badge b-ok">Ready</span>' : '<span class="badge b-warn">Pending</span>';
+      var actions = ready
+        ? '<button class="btn btn-ghost btn-sm" data-ptview="' + i + '">View</button> ' +
+          '<button class="btn btn-ghost btn-sm" data-ptprint="' + i + '">Print</button>'
+        : '<button class="btn btn-primary btn-sm" data-ptenter="' + i + '">Enter Result</button>';
+      return '<tr><td><strong>' + tName + '</strong></td>' +
+        '<td><span class="mono">' + App.esc(tr.invoice.no || tr.invoice.id) + '</span></td>' +
+        '<td>' + App.d(tr.invoice.createdAt) + '</td>' +
+        '<td>' + status + '</td>' +
+        '<td class="actions">' + actions + '</td></tr>';
+    }).join('');
+
     var html = '' + WA_CSS +
       '<div class="page-head"><div><a class="back-link" href="#/patients">← All Patients</a><h1>Patient Profile</h1></div>' +
-      (edit ? '<div class="head-actions"><button class="btn btn-ghost" id="pt-edit">Edit Details</button>' +
+      (edit ? '<div class="head-actions"><a class="btn btn-primary" href="#/billing/' + App.esc(p.id) + '">+ New Bill</a>' +
+        '<button class="btn btn-ghost" id="pt-edit">Edit Details</button>' +
         '<button class="btn btn-danger" id="pt-del">Delete</button></div>' : '') + '</div>' +
 
       '<div class="card pt-profile"><div class="card-b pt-profile-in">' +
@@ -514,6 +545,14 @@
       '<div class="stat"><div class="stat-ic ' + (st.due > 0 ? 'red' : 'green') + '">⏳</div><div><div class="stat-v">' + App.money(st.due) + '</div><div class="stat-l">Outstanding Due</div></div></div>' +
       '</div>' +
 
+      '<div class="card"><div class="card-h"><h3>Lab Tests</h3><span class="muted">' + testRows.length + ' test(s)</span></div>' +
+      '<div class="card-b">' +
+      (testRows.length
+        ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th>Invoice No</th><th>Date</th><th>Status</th><th></th></tr></thead>' +
+          '<tbody>' + labTestRowsHtml + '</tbody></table></div>'
+        : App.empty('No tests ordered yet for this patient.')) +
+      '</div></div>' +
+
       '<div class="card"><div class="card-h"><h3>Invoice History</h3><span class="muted">' + st.visits + ' invoice(s)</span></div>' +
       '<div class="card-b">' +
       (st.invoices.length
@@ -524,6 +563,39 @@
       '</div></div>';
 
     paint(html, function () {
+      /* lab test actions: enter result / view / print */
+      function ensureResultsMod(cb) {
+        if (App.enterLabResult && App.viewLabReport && App.printLabReport) { cb(); return; }
+        App.loadScript('assets/js/mod-results.js').then(cb, function () { App.toast('Could not load lab results module', 'err'); });
+      }
+      function entryRow(tr) {
+        return { res: tr.res, invoice: tr.invoice, patient: p, item: tr.item, test: tr.test };
+      }
+      document.querySelectorAll('[data-ptenter]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var tr = testRows[+b.getAttribute('data-ptenter')];
+          if (!tr) return;
+          ensureResultsMod(function () {
+            App.enterLabResult(entryRow(tr), function () { renderDetail({ id: p.id }); });
+          });
+        });
+      });
+      document.querySelectorAll('[data-ptview]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var tr = testRows[+b.getAttribute('data-ptview')];
+          if (!tr) return;
+          var invId = tr.invoice.id;
+          ensureResultsMod(function () { App.viewLabReport(invId); });
+        });
+      });
+      document.querySelectorAll('[data-ptprint]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var tr = testRows[+b.getAttribute('data-ptprint')];
+          if (!tr) return;
+          var invId = tr.invoice.id;
+          ensureResultsMod(function () { App.printLabReport(invId); });
+        });
+      });
       if (!edit) return;
       document.getElementById('pt-edit').addEventListener('click', function () {
         openPatientModal(p, function () { renderDetail({ id: p.id }); });

@@ -1,5 +1,5 @@
 /* ============================================================
-   Optix LAB MedSync — New Bill POS  (route: #/billing)
+   Optix LAB MedSync — New Bill POS  (route: #/billing/:patientId, opened from Patient Profile)
    Three-column point-of-sale: patient | test picker + cart | bill summary
    ============================================================ */
 (function () {
@@ -50,10 +50,13 @@
     '</div>';
   }
 
-  App.route('#/billing', function () {
+  App.route('#/billing/:patientId', function (params) {
+    var patientId = params && params.patientId;
+    var fixedPatient = patientId ? DB.get('patients', patientId) : null;
+    if (!fixedPatient) { App.toast('Patient not found.', 'err'); App.nav('#/patients'); return; }
     var view = document.getElementById('view');
     var state = {
-      patient: null,
+      patient: fixedPatient,
       cart: [],            // [{testId, code, name, price}]
       doctorId: '',
       discType: 'rs',      // 'rs' | 'pct'
@@ -137,89 +140,12 @@
               '<span>' + App.esc([p.age ? p.age + ' yrs' : '', p.gender || ''].filter(Boolean).join(' • ') || '—') + '</span>' +
               '<span>' + App.esc(p.phone || 'No phone') + '</span>' +
             '</div>' +
-            '<button class="btn btn-ghost btn-sm" id="blPatChange">Change</button>' +
           '</div>';
-        document.getElementById('blPatChange').addEventListener('click', function () {
-          state.patient = null;
-          document.getElementById('blPatSearchWrap').style.display = '';
-          paintPatient();
-          paintTotals();
-        });
       } else {
-        box.innerHTML = '<div class="empty">No patient selected.<br>Search above or add a new patient.</div>';
+        box.innerHTML = '<div class="empty">No patient selected.</div>';
       }
     }
 
-    function paintPatientResults(q) {
-      var box = document.getElementById('blPatResults');
-      if (!box) return;
-      q = (q || '').trim().toLowerCase();
-      if (!q) { box.innerHTML = ''; return; }
-      var hits = DB.all('patients').filter(function (p) {
-        return (p.name || '').toLowerCase().indexOf(q) >= 0 || (p.phone || '').toLowerCase().indexOf(q) >= 0;
-      }).slice(0, 8);
-      if (!hits.length) { box.innerHTML = '<div class="bl-nores">No matches. Use “+ New Patient”.</div>'; return; }
-      box.innerHTML = hits.map(function (p) {
-        return '<button class="bl-pick" data-id="' + App.esc(p.id) + '">' +
-          '<strong>' + App.esc(p.name) + '</strong>' +
-          '<span>' + App.esc(p.phone || '—') + ' • ' + App.esc(p.id) + '</span>' +
-        '</button>';
-      }).join('');
-      box.querySelectorAll('.bl-pick').forEach(function (b) {
-        b.addEventListener('click', function () {
-          state.patient = DB.get('patients', b.getAttribute('data-id'));
-          document.getElementById('blPatSearchWrap').style.display = 'none';
-          document.getElementById('blPatSearch').value = '';
-          box.innerHTML = '';
-          paintPatient();
-          paintTotals();
-        });
-      });
-    }
-
-    function openNewPatient() {
-      var body =
-        '<style>.npf .label{display:block;margin-bottom:6px}.npf .form-grid{align-items:start}</style>' +
-        '<div class="npf">' +
-        '<div class="form-grid">' +
-          '<div><label class="label">Full name *</label><input class="input" id="npName" placeholder="e.g. Ali Raza"></div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
-            '<div><label class="label">Age</label><input class="input" id="npAge" type="number" min="0" max="130" placeholder="35"></div>' +
-            '<div><label class="label">Gender</label><select class="select" id="npGender"><option>Male</option><option>Female</option><option>Other</option></select></div>' +
-          '</div>' +
-          '<div><label class="label">Phone</label><input class="input" id="npPhone" placeholder="0300-1234567"></div>' +
-          '<div><label class="label">Address</label><input class="input" id="npAddress" placeholder="House, street, city"></div>' +
-        '</div>' +
-        '<div class="bl-modal-foot"><button class="btn btn-ghost" id="npCancel">Cancel</button>' +
-        '<button class="btn btn-primary" id="npSave">Save Patient</button></div>' +
-        '</div>';
-      var close = App.modal('New Patient', body, {
-        onOpen: function (ov, close) {
-          document.getElementById('npCancel').addEventListener('click', close);
-          document.getElementById('npName').focus();
-          document.getElementById('npSave').addEventListener('click', function () {
-            var name = document.getElementById('npName').value.trim();
-            if (!name) { App.toast('Patient name is required', 'err'); return; }
-            var p = DB.insert('patients', {
-              name: name,
-              age: num(document.getElementById('npAge').value) || '',
-              gender: document.getElementById('npGender').value,
-              phone: document.getElementById('npPhone').value.trim(),
-              address: document.getElementById('npAddress').value.trim(),
-              createdAt: new Date().toISOString()
-            });
-            state.patient = p;
-            document.getElementById('blPatSearchWrap').style.display = 'none';
-            var s = document.getElementById('blPatSearch'); if (s) s.value = '';
-            var r = document.getElementById('blPatResults'); if (r) r.innerHTML = '';
-            paintPatient();
-            paintTotals();
-            close();
-            App.toast('Patient ' + p.id + ' registered');
-          });
-        }
-      });
-    }
 
     /* ---------- test picker + cart ---------- */
     function paintTests() {
@@ -416,13 +342,13 @@
     '@media(max-width:760px){.bl-pos{grid-template-columns:1fr}}' +
     '</style>' +
 
+    '<div class="page-head"><div><a class="back-link" href="#/patient/' + App.esc(fixedPatient.id) + '">← ' + App.esc(fixedPatient.name) + '</a>' +
+      '<h1>New Bill</h1></div></div>' +
+
     '<div class="bl-pos">' +
-      /* patient column */
+      /* patient column — fixed patient, no search */
       '<div class="bl-panel"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">1</span>Patient</span></div>' +
-        '<div class="bl-panel-b"><div id="blPatSearchWrap" class="bl-pat-searchrow">' +
-          '<input class="input search" id="blPatSearch" placeholder="Search name or phone…" autocomplete="off">' +
-          '<button class="btn btn-primary" id="blNewPat">+ New Patient</button>' +
-          '</div><div id="blPatResults"></div>' +
+        '<div class="bl-panel-b">' +
         '<div id="blPatientBox" style="margin-top:10px"></div></div></div>' +
 
       /* tests column */
@@ -464,11 +390,6 @@
     '</div>';
 
     /* ---------- wiring ---------- */
-    document.getElementById('blNewPat').addEventListener('click', openNewPatient);
-
-    var ps = document.getElementById('blPatSearch');
-    ps.addEventListener('input', function () { paintPatientResults(ps.value); });
-
     var ts = document.getElementById('blTestSearch');
     ts.addEventListener('input', function () { state.q = ts.value; paintTests(); });
 

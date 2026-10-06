@@ -510,7 +510,6 @@
             '<option value="partial"' + (F.status === 'partial' ? ' selected' : '') + '>Partial</option>' +
             '<option value="unpaid"' + (F.status === 'unpaid' ? ' selected' : '') + '>Unpaid</option>' +
           '</select>' +
-          '<a class="btn btn-primary" href="#/billing" style="flex:0 0 auto;white-space:nowrap;padding:8px 14px;font-size:13px">+ New Bill</a>' +
         '</div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr>' +
           '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:center">Tests</th>' +
