@@ -1499,7 +1499,9 @@
       }
       if (!dir) return null;
     } else if (ref.indexOf('-') > -1) {
-      var nums = ref.match(/-?\d+(\.\d+)?/g);
+      /* plain "a-b" / "a - b" ranges (no spaces too: "13.5-17.5"), else fall back to signed numbers */
+      var rm = ref.match(/^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)/);
+      var nums = rm ? [rm[1], rm[2]] : ref.match(/-?\d+(\.\d+)?/g);
       if (nums && nums.length >= 2) {
         lo = parseFloat(nums[0]); hi = parseFloat(nums[1]);
         if (lo > hi) { var t = lo; lo = hi; hi = t; }
@@ -2107,55 +2109,17 @@
 
   /* print choice dialog: with or without the lab letterhead header */
   function printReportChoice(invoiceId) {
-    /* find all previous reports for this patient */
-    var prevList = [];
-    try {
-      var curInv = invOf(invoiceId);
-      if (curInv && curInv.patientId) {
-        prevList = DB.all('invoices')
-          .filter(function (inv) {
-            return inv.patientId === curInv.patientId && inv.id !== invoiceId &&
-              joinedRows('ready').some(function (r) { return r.invoice.id === inv.id; });
-          })
-          .sort(function (a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
-      }
-    } catch (e) {}
-    var cmpHtml = '';
-    if (prevList.length) {
-      cmpHtml = '<div style="margin-top:14px;border:1px solid var(--line);border-radius:8px;padding:10px;max-height:180px;overflow:auto">' +
-        '<div style="font-weight:700;margin-bottom:8px">Previous Reports <span class="muted" style="font-weight:400">(select to include in comparison)</span></div>';
-      prevList.forEach(function (p, i) {
-        cmpHtml += '<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;border-bottom:1px solid var(--line)">' +
-          '<input type="checkbox" class="prCmpSel" value="' + App.esc(p.id) + '"' + (i === 0 ? ' checked' : '') + ' style="width:16px;height:16px"> ' +
-          '<span><strong>' + App.esc(p.no || p.id) + '</strong> <span class="muted">' + App.esc(App.d(p.createdAt)) + '</span></span></label>';
-      });
-      cmpHtml += '</div>';
-    }
+    /* The separate 'Report Comparison' page is NOT printed with the report (use the Compare button to view it). */
     App.modal('Print Report',
       '<p style="margin-bottom:16px">Print this report with or without the lab header?</p>' +
       '<div style="display:flex;gap:12px">' +
       '<button class="btn btn-primary" id="prWithHead" style="flex:1;padding:14px">With Header</button>' +
       '<button class="btn btn-ghost" id="prNoHead" style="flex:1;padding:14px">Without Header</button>' +
-      '</div>' + cmpHtml +
+      '</div>' +
       '<p class="muted" style="margin-top:12px;font-size:12px;margin-bottom:0">Use "Without Header" when printing on pre-printed letterhead paper.</p>',
       { onOpen: function (ov, close) {
-          function selCmps() {
-            var out = [];
-            ov.querySelectorAll('.prCmpSel:checked').forEach(function (c) { out.push(c.value); });
-            return out;
-          }
-          ov.querySelector('#prWithHead').addEventListener('click', function () {
-            close();
-            var sels = selCmps();
-            if (sels.length) printWithComparison(invoiceId, sels[0], {});
-            else printReport(invoiceId, {});
-          });
-          ov.querySelector('#prNoHead').addEventListener('click', function () {
-            close();
-            var sels = selCmps();
-            if (sels.length) printWithComparison(invoiceId, sels[0], { noLabHeader: true });
-            else printReport(invoiceId, { noLabHeader: true });
-          });
+          ov.querySelector('#prWithHead').addEventListener('click', function () { close(); printReport(invoiceId, {}); });
+          ov.querySelector('#prNoHead').addEventListener('click', function () { close(); printReport(invoiceId, { noLabHeader: true }); });
         }
       });
   }
