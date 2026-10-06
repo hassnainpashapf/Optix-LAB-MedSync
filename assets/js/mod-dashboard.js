@@ -37,22 +37,37 @@
       '</div>';
   }
 
-  /* Donut stat — big ring, amount in the center, no card box (merges into the page) */
-  function donutStat(color, label, valueText, pct, sub, raw, isMoney) {
+  /* Donut stat — multi-color segmented ring, amount in the center, no card box (merges into the page).
+     segs: [{color, frac, label}] — ring shows the composition; center keeps value + % of goal. */
+  function donutStat(segs, label, valueText, pct, sub, raw, isMoney) {
     var C = 2 * Math.PI * 60;
     var p = Math.max(0, Math.min(100, Math.round(pct || 0)));
     var countAttrs = (typeof raw === 'number' && isFinite(raw))
       ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"'
       : '';
+    var tot = 0, nz = 0, i;
+    for (i = 0; i < segs.length; i++) { var f0 = +segs[i].frac || 0; tot += f0; if (f0 > 0) nz++; }
+    var arcs = '', acc = 0, legs = '';
+    for (i = 0; i < segs.length; i++) {
+      var sg = segs[i], f = +sg.frac || 0;
+      if (f > 0 && tot > 0) {
+        var len = f / tot * C;
+        var gap = nz > 1 ? 3 : 0; /* small gap between segments */
+        arcs += '<circle cx="75" cy="75" r="60" fill="none" stroke="' + sg.color + '" stroke-width="16"' +
+          ' stroke-dasharray="' + Math.max(0.1, len - gap).toFixed(1) + ' ' + C.toFixed(1) + '"' +
+          ' stroke-dashoffset="' + (-acc / tot * C).toFixed(1) + '" transform="rotate(-90 75 75)"/>';
+        acc += f;
+      }
+      legs += '<span class="dbd-leg"><span class="dbd-dot" style="background:' + sg.color + '"></span>' + App.esc(sg.label) + '</span>';
+    }
     return '<div class="dbd-plain">' +
       '<svg width="150" height="150" viewBox="0 0 150 150">' +
-      '<circle cx="75" cy="75" r="60" fill="none" stroke="#e8edf4" stroke-width="16"/>' +
-      '<circle cx="75" cy="75" r="60" fill="none" stroke="' + color + '" stroke-width="16" stroke-linecap="round"' +
-      ' stroke-dasharray="' + (p / 100 * C).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 75 75)"/>' +
+      '<circle cx="75" cy="75" r="60" fill="none" stroke="#e8edf4" stroke-width="16"/>' + arcs +
       '<text x="75" y="72" text-anchor="middle" class="dbd-amt"' + countAttrs + '>' + valueText + '</text>' +
       '<text x="75" y="94" text-anchor="middle" class="dbd-pct">' + p + '%</text></svg>' +
       '<div class="dbd-lb">' + App.esc(label) + '</div>' +
-      '<div class="dbd-sub">' + sub + '</div></div>';
+      '<div class="dbd-sub">' + sub + '</div>' +
+      '<div class="dbd-legs">' + legs + '</div></div>';
   }
 
   App.route('/dashboard', function () {
@@ -508,21 +523,76 @@
     '</style>' +
     '<div class="dbx-grid">' + catCard + expCard + lbCard + '</div>';
 
-    // ---- donut stats per role (ring = share of a meaningful total) ----
-    var NAVY = '#131845', BLUE = '#5392ba', AMBER = '#f59e0b', GREEN = '#16a34a';
+    // ---- donut stats per role (multi-color segmented rings; center = value + % of goal) ----
+    var NAVY = '#131845', BLUE = '#5392ba', AMBER = '#f59e0b', GREEN = '#16a34a', RED = '#ef4444', GREY = '#94a3b8';
+    function bucketByMethod(pays) {
+      var out = [
+        { label: 'Cash', color: BLUE, frac: 0 },
+        { label: 'Card', color: NAVY, frac: 0 },
+        { label: 'Bank / Transfer', color: AMBER, frac: 0 },
+        { label: 'Other', color: GREY, frac: 0 }
+      ];
+      pays.forEach(function (p) {
+        var m = String(p.method || '').toLowerCase();
+        var b = m.indexOf('cash') >= 0 ? 0 : m.indexOf('card') >= 0 ? 1 :
+          (m.indexOf('bank') >= 0 || m.indexOf('transfer') >= 0 || m.indexOf('online') >= 0 ||
+           m.indexOf('cheque') >= 0 || m.indexOf('check') >= 0) ? 2 : 3;
+        out[b].frac += (+p.amount || 0);
+      });
+      return out;
+    }
+    function segsByCategory(rs, colors) {
+      var agg = {};
+      rs.forEach(function (r) {
+        var t = r.testId ? DB.get('tests', r.testId) : null;
+        var c = (t && t.category) || 'General';
+        agg[c] = (agg[c] || 0) + 1;
+      });
+      var list = Object.keys(agg).map(function (c) { return { label: c, frac: agg[c] }; })
+        .sort(function (a, b) { return b.frac - a.frac; });
+      var top = list.slice(0, 3), rest = list.slice(3);
+      var segs = top.map(function (e, ix) { return { label: e.label, frac: e.frac, color: colors[ix % colors.length] }; });
+      if (rest.length) segs.push({ label: 'Other', frac: rest.reduce(function (a, e) { return a + e.frac; }, 0), color: colors[3] });
+      return segs;
+    }
+    /* today's tests grouped by invoice payment status */
+    var tStatN = { paid: 0, partial: 0, unpaid: 0 };
+    invToday.forEach(function (i) {
+      var n = i.items ? i.items.length : 0;
+      var st = String(i.status || '').toLowerCase();
+      if (st === 'paid') tStatN.paid += n;
+      else if (st === 'partial') tStatN.partial += n;
+      else tStatN.unpaid += n;
+    });
+    var todayTestSegs = [
+      { label: 'Paid', color: GREEN, frac: tStatN.paid },
+      { label: 'Partial', color: AMBER, frac: tStatN.partial },
+      { label: 'Unpaid', color: RED, frac: tStatN.unpaid }
+    ];
     var stats;
     if (isTech) {
+      var todayIds = {};
+      invToday.forEach(function (i) { todayIds[i.id] = 1; });
+      var tRes = results.filter(function (r) { return todayIds[r.invoiceId]; });
+      var tReady = tRes.filter(function (r) { return r.status === 'ready'; }).length;
+      var todayTestTech = tRes.length
+        ? [{ label: 'Results ready', color: GREEN, frac: tReady },
+           { label: 'Awaiting', color: AMBER, frac: tRes.length - tReady }]
+        : [{ label: 'Billed', color: NAVY, frac: testsToday }];
+      var repTodayRes = results.filter(function (r) { return r.status === 'ready' && dayKey(r.reportedAt) === today; });
       stats =
-        donutStat(NAVY, "Today's Tests", String(testsToday), monthTests > 0 ? testsToday / monthTests * 100 : 0, invToday.length + ' invoices today', testsToday, false) +
-        donutStat(AMBER, 'Pending Results', String(pendingRes.length), results.length > 0 ? pendingRes.length / results.length * 100 : 0, 'awaiting entry', pendingRes.length, false) +
-        donutStat(GREEN, 'Reported Today', String(reportedToday), testsToday > 0 ? Math.min(100, reportedToday / testsToday * 100) : 0, 'results completed', reportedToday, false) +
-        donutStat(BLUE, 'Total Patients', String(patients.length), patients.length > 0 ? monthPatients / patients.length * 100 : 0, monthPatients + ' new this month', patients.length, false);
+        donutStat(todayTestTech, "Today's Tests", String(testsToday), monthTests > 0 ? testsToday / monthTests * 100 : 0, invToday.length + ' invoices today', testsToday, false) +
+        donutStat(segsByCategory(pendingRes, [NAVY, BLUE, AMBER, GREY]), 'Pending Results', String(pendingRes.length), results.length > 0 ? pendingRes.length / results.length * 100 : 0, 'awaiting entry', pendingRes.length, false) +
+        donutStat(segsByCategory(repTodayRes, [GREEN, BLUE, AMBER, GREY]), 'Reported Today', String(reportedToday), testsToday > 0 ? Math.min(100, reportedToday / testsToday * 100) : 0, 'results completed', reportedToday, false) +
+        donutStat([{ label: 'New this month', color: GREEN, frac: monthPatients },
+                   { label: 'Existing', color: BLUE, frac: Math.max(0, patients.length - monthPatients) }],
+                  'Total Patients', String(patients.length), patients.length > 0 ? monthPatients / patients.length * 100 : 0, monthPatients + ' new this month', patients.length, false);
     } else {
       stats =
-        donutStat(NAVY, "Today's Collection", App.money(todayCol), goalTarget > 0 ? todayCol / goalTarget * 100 : 0, payToday.length + ' payments today', todayCol, true) +
-        donutStat(BLUE, "Today's Tests", String(testsToday), monthTests > 0 ? testsToday / monthTests * 100 : 0, invToday.length + ' invoices today', testsToday, false) +
-        donutStat(AMBER, 'Pending Dues', App.money(duesTotal), monthBilled > 0 ? duesTotal / monthBilled * 100 : 0, dueInvs.length + ' invoices unpaid', duesTotal, true) +
-        donutStat(GREEN, monthName + ' Collection', App.money(monthCol), goalTarget > 0 ? monthCol / goalTarget * 100 : 0, 'of ' + App.money(goalTarget) + ' goal', monthCol, true);
+        donutStat(bucketByMethod(payToday), "Today's Collection", App.money(todayCol), goalTarget > 0 ? todayCol / goalTarget * 100 : 0, payToday.length + ' payments today', todayCol, true) +
+        donutStat(todayTestSegs, "Today's Tests", String(testsToday), monthTests > 0 ? testsToday / monthTests * 100 : 0, invToday.length + ' invoices today', testsToday, false) +
+        donutStat(ageB.map(function (b) { return { label: b.label, color: b.color, frac: b.amt }; }), 'Pending Dues', App.money(duesTotal), monthBilled > 0 ? duesTotal / monthBilled * 100 : 0, dueInvs.length + ' invoices unpaid', duesTotal, true) +
+        donutStat(mBuckets.map(function (b) { return { label: b.label, color: b.color, frac: b.amt }; }), monthName + ' Collection', App.money(monthCol), goalTarget > 0 ? monthCol / goalTarget * 100 : 0, 'of ' + App.money(goalTarget) + ' goal', monthCol, true);
     }
 
     var donutCss =
@@ -533,6 +603,9 @@
       '.dbd-plain .dbd-pct{font-size:12px;font-weight:700;fill:#8a94a6}' +
       '.dbd-plain .dbd-lb{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5b6b80;margin-top:10px}' +
       '.dbd-plain .dbd-sub{font-size:11.5px;color:#8a94a6;font-weight:500;margin-top:3px}' +
+      '.dbd-plain .dbd-legs{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 10px;margin:8px auto 0;max-width:180px}' +
+      '.dbd-plain .dbd-leg{display:inline-flex;align-items:center;font-size:10.5px;color:#8a94a6;font-weight:600;white-space:nowrap}' +
+      '.dbd-plain .dbd-dot{width:9px;height:9px;border-radius:3px;margin-right:4px;flex:none}' +
       '@media(max-width:560px){.dbd-plain .dbd-amt{font-size:14px}}' +
       '</style>';
 
@@ -621,6 +694,13 @@
     donutCss +
     '<div class="stat-grid">' + stats + '</div>' +
 
+    widgets +
+    advSection +
+
+    '<div class="card" style="margin-bottom:20px"><div class="card-h"><h3>' + (isTech ? 'Tests — Last 7 Days' : 'Collection — Last 7 Days') + '</h3>' +
+    '<span class="db-week-pill">Total ' + (isTech ? week.reduce(function (a, w) { return a + w.val; }, 0) + ' tests' : App.money(week.reduce(function (a, w) { return a + w.val; }, 0))) + ' this week</span></div>' +
+    '<div class="card-b"><div class="db-cols">' + bars + '</div></div></div>' +
+
     '<div class="db-grid">' +
       '<div class="card"><div class="card-h"><h3>Recent Invoices</h3><a class="btn btn-ghost btn-sm" href="#/invoices">View all</a></div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr><th>Invoice</th><th>Patient</th><th>Tests</th>' + (isTech ? '' : '<th>Total</th>') + '<th>Status</th><th></th></tr></thead>' +
@@ -645,12 +725,6 @@
       (topDocs.length ? '' : App.empty('No referrals this month yet.')) +
       '</div></div>' +
     '</div>' +
-
-    widgets +
-    advSection +
-    '<div class="card" style="margin-bottom:20px"><div class="card-h"><h3>' + (isTech ? 'Tests — Last 7 Days' : 'Collection — Last 7 Days') + '</h3>' +
-    '<span class="db-week-pill">Total ' + (isTech ? week.reduce(function (a, w) { return a + w.val; }, 0) + ' tests' : App.money(week.reduce(function (a, w) { return a + w.val; }, 0))) + ' this week</span></div>' +
-    '<div class="card-b"><div class="db-cols">' + bars + '</div></div></div>' +
     '</div>';
     } /* end buildDashboard */
 
