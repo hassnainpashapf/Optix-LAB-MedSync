@@ -357,6 +357,13 @@
     var existing = (row.res && row.res.values) || {};
     var resId = row.res ? row.res.id : null;
 
+    // Trend-graph support (assets/js/graph-config.js, loaded in parallel by Worker 1).
+    // Guarded so the modal works exactly as before when that file is absent.
+    var graphCfg = null;
+    if (window.App && App.graphFor && App.renderGraphSvg) {
+      try { graphCfg = App.graphFor(test) || null; } catch (gerr) { graphCfg = null; }
+    }
+
     var body;
     if (params.length) {
       var rowsHtml = params.map(function (p, i) {
@@ -371,6 +378,7 @@
       body =
         '<table class="table"><thead><tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Reference Range</th></tr></thead>' +
         '<tbody>' + rowsHtml + '</tbody></table>' +
+        (graphCfg ? '<div id="resGraphWrap" style="margin-top:14px"><div class="label" style="font-weight:700;margin-bottom:6px">Trend Graph</div><div id="resGraph"></div></div>' : '') +
         '<div class="form-grid" style="margin-top:12px"><div>' +
         '<label class="label">Remarks (optional)</label>' +
         '<input class="input" id="resRemarks" value="' + App.esc(existing['Remarks'] || '') + '" placeholder="e.g. Sample hemolyzed, repeat advised">' +
@@ -394,6 +402,30 @@
           document.getElementById('resSave').addEventListener('click', function () {
             saveResult(row, params, close, onSaved);
           });
+          // Live trend graph: re-render on every param input, scoped to this modal's overlay.
+          function renderGraph() {
+            if (!graphCfg) return;
+            var wrap = document.getElementById('resGraphWrap');
+            var holder = document.getElementById('resGraph');
+            if (!wrap || !holder) return;
+            var valsByName = {};
+            var inputs = ov.querySelectorAll('input[data-pi]');
+            for (var i = 0; i < inputs.length; i++) {
+              var pi = parseInt(inputs[i].getAttribute('data-pi'), 10);
+              if (!isNaN(pi) && params[pi]) valsByName[params[pi].name] = inputs[i].value;
+            }
+            var svg = '';
+            try { svg = App.renderGraphSvg(graphCfg, valsByName); } catch (gerr2) { svg = ''; }
+            holder.innerHTML = svg;
+            wrap.style.display = svg ? '' : 'none';
+          }
+          if (graphCfg) {
+            var gInputs = ov.querySelectorAll('input[data-pi]');
+            for (var gi = 0; gi < gInputs.length; gi++) {
+              gInputs[gi].addEventListener('input', renderGraph);
+            }
+            renderGraph();
+          }
         }
       });
   }
@@ -982,6 +1014,27 @@
     image-rendering: auto;
   }
 }
+
+/* ---------------------------------------------------------------------
+   11. TREND GRAPH (worker 3/3)
+   Inline SVG rendered by App.renderGraphSvg (graph-config.js).
+   --------------------------------------------------------------------- */
+.rpt-page .rpt-graph {
+  /* Keep the reference band / line colors in print. */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+  /* Never split the graph block across a page boundary. */
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+/* The SVG scales via its own viewBox; cap the rendered size instead of
+   fixing pixel dimensions so it stays crisp on screen and in print. */
+.rpt-page .rpt-graph svg {
+  display: block;
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+}
   `;
 
   /* ---------- worker 1/4: report header (Chughtai-style) ----------
@@ -1417,7 +1470,44 @@
         '</div>';
     }
 
-    /* assemble: title + RESULT boxes row, then grey header row, body, remarks */
+    /* ---------- worker 3/3: trend graph below the table ----------
+       Contract lives in assets/js/graph-config.js (Worker 1):
+         App.graphFor(test) -> {xLabels, unit, refLo, refHi, title} | null
+         App.renderGraphSvg(g, valsByParam) -> inline-SVG HTML | ''
+       Current-report values only; renderGraphSvg returns '' when fewer
+       than 2 numeric points are plottable. Guarded so the report still
+       renders when graph-config.js is absent. Never throws. */
+    var graphHtml = '';
+    try {
+      if (window.App && App.graphFor && App.renderGraphSvg) {
+        var g = App.graphFor(test);
+        /* Value lookup keys: the config carries the param names in g.params
+           (g.xLabels are display labels like "0 min"); the contract used
+           xLabels for both. Accept either shape. */
+        var gKeys = (g && Array.isArray(g.params) && g.params.length) ? g.params :
+                    (g && Array.isArray(g.xLabels) ? g.xLabels : []);
+        if (gKeys.length > 1) {
+          var nNum = 0;
+          for (var qi = 0; qi < gKeys.length; qi++) {
+            if (isFinite(parseFloat(vals[gKeys[qi]]))) nNum++;
+          }
+          if (nNum >= 2) {
+            var svg = App.renderGraphSvg(g, vals) || '';
+            if (svg) {
+              graphHtml =
+                '<div class="rpt-graph" style="margin:8px 0 4px;page-break-inside:avoid">' +
+                  '<div style="font-weight:700;font-size:0.9em;margin-bottom:4px;color:#000">' +
+                    App.esc(g.title || 'Trend Graph') +
+                  '</div>' +
+                  svg +
+                '</div>';
+            }
+          }
+        }
+      }
+    } catch (e) { graphHtml = ''; }
+
+    /* assemble: title + RESULT boxes row, then grey header row, body, graph, remarks */
     return '<div class="rpt-section" style="margin:14px 0 4px">' +
       '<div style="display:grid;grid-template-columns:' + gridCols + '">' +
         '<div style="grid-column:span 3;align-self:center;color:#000;font-weight:700;' +
@@ -1428,6 +1518,7 @@
         headCells +
       '</div>' +
       rowsHtml +
+      graphHtml +
       remarksHtml +
     '</div>';
   }
