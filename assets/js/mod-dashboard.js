@@ -395,7 +395,8 @@
 
     var widgets =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}' +
+    '.dbw-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:14px}' +
+    '.dbq-card{transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
     '.dbw-grid .card-h,.dbx-grid .card-h{padding:10px 14px}.dbw-grid .card-h h3,.dbx-grid .card-h h3{font-size:14px}' +
     '.dbw-grid .card-b,.dbx-grid .card-b{padding:12px 14px}' +
     '@media(max-width:900px){.dbw-grid{grid-template-columns:1fr}}' +
@@ -418,7 +419,39 @@
     '.dbw-pos{color:var(--green)}' +
     '.dbw-neg{color:var(--red)}' +
     '</style>' +
-    '<div class="dbw-grid">' + goalCard + donutCard + ageCard + plCard + '</div>';
+    /* quick-access cards — 6 shortcuts */
+    '<div class="dbw-grid">' +
+      '<a href="#/patients" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#22c55e1a;color:#22c55e;display:grid;place-items:center;flex:none">' + App.icon('users', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Patients</b><br><small style="color:var(--muted)">Manage patient records</small></span>' +
+        '</div></a>' +
+      '<a href="#/results" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#8b5cf61a;color:#8b5cf6;display:grid;place-items:center;flex:none">' + App.icon('clipboard', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Lab Results</b><br><small style="color:var(--muted)">Enter & view results</small></span>' +
+        '</div></a>' +
+      '<a href="#/tests" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#14b8a61a;color:#14b8a6;display:grid;place-items:center;flex:none">' + App.icon('flask', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Tests</b><br><small style="color:var(--muted)">Test catalog & prices</small></span>' +
+        '</div></a>' +
+      '<a href="#/invoices" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#f973161a;color:#f97316;display:grid;place-items:center;flex:none">' + App.icon('file', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Invoices</b><br><small style="color:var(--muted)">Billing & payments</small></span>' +
+        '</div></a>' +
+      '<a href="#/reports" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#6366f11a;color:#6366f1;display:grid;place-items:center;flex:none">' + App.icon('chart', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Reports</b><br><small style="color:var(--muted)">Analytics & insights</small></span>' +
+        '</div></a>' +
+      '<a href="#/settings" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#64748b1a;color:#64748b;display:grid;place-items:center;flex:none">' + App.icon('gear', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Settings</b><br><small style="color:var(--muted)">Lab profile & config</small></span>' +
+        '</div></a>' +
+    '</div>';
 
     // ---- ADVANCED graphs: category bars, expense breakdown, doctor leaderboard ----
 
