@@ -328,7 +328,7 @@
         App.toast(tMsg);
       }
       close();
-      if (afterSave) afterSave();
+      if (afterSave) afterSave(np || existing || null);
     });
   }
   function openPatientModal(existing, afterSave) {
@@ -438,7 +438,7 @@
       search.focus();
       search.setSelectionRange(search.value.length, search.value.length);
       var addBtn = document.getElementById('pt-add');
-      if (addBtn) addBtn.addEventListener('click', function () { openPatientModal(null, renderList); });
+      if (addBtn) addBtn.addEventListener('click', function () { App.nav('#/patients/new'); });
       bindRowButtons();
     });
 
@@ -606,7 +606,22 @@
     });
   }
 
+  /* ---------- #/patients/new : dedicated full-page add form ---------- */
+  function renderAddPage() {
+    if (!canEdit()) { App.toast('Not allowed.', 'err'); App.nav('#/patients'); return; }
+    var html =
+      '<div class="page-head"><div><a class="back-link" href="#/patients">← All Patients</a><h1>Add Patient</h1></div></div>' +
+      '<div class="card"><div class="card-b">' + formHTML({}) + '</div></div>';
+    paint(html, function () {
+      bindForm(function () { App.nav('#/patients'); }, null, function (np) {
+        if (np && np.id) App.nav('#/patient/' + np.id);
+        else App.nav('#/patients');
+      });
+    });
+  }
+
   /* ---------- route registration ---------- */
   App.route('/patients', renderList);
+  App.route('/patients/new', renderAddPage);
   App.route('/patient/:id', renderDetail);
 })();

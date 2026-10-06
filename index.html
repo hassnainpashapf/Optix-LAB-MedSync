@@ -36,7 +36,7 @@ document.addEventListener('keydown', function (e) {
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
    to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
-window.__ASSET_V = 'd197769';
+window.__ASSET_V = 'c8db871';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
@@ -45,6 +45,7 @@ window.__LAZY_ROUTES = {
   '#/invoice/:id': 'assets/js/mod-invoices.js',
   '#/dues': 'assets/js/mod-invoices.js',
   '/patients': 'assets/js/mod-patients.js',
+  '/patients/new': 'assets/js/mod-patients.js',
   '/patient/:id': 'assets/js/mod-patients.js',
   '/tests': 'assets/js/mod-masters.js',
   '/doctors': 'assets/js/mod-masters.js',
@@ -56,9 +57,9 @@ window.__LAZY_ROUTES = {
   '/profile': 'assets/js/mod-profile.js'
 };
 </script>
-<script src="assets/js/qrcode.min.js?v=d197769"></script>
-<script src="assets/js/db.js?v=d197769"></script>
-<script src="assets/js/app.js?v=d197769"></script>
-<script src="assets/js/mod-dashboard.js?v=d197769"></script>
+<script src="assets/js/qrcode.min.js?v=c8db871"></script>
+<script src="assets/js/db.js?v=c8db871"></script>
+<script src="assets/js/app.js?v=c8db871"></script>
+<script src="assets/js/mod-dashboard.js?v=c8db871"></script>
 </body>
 </html>
