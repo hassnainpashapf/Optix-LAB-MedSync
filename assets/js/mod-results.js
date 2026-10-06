@@ -1660,7 +1660,7 @@
 
     /* ONE grey header bar (heavy black outline, no inner dividers) like the reference:
        spaced "T E S T" | NORMAL VALUE | UNIT, columns aligned with the body rows */
-    var _hc = 'background:#bfbfbf;color:#000;font-weight:700;padding:6px 4px;box-sizing:border-box;border-top:2px solid #000;border-bottom:2px solid #000;display:flex;align-items:center;';
+    var _hc = 'background:#cfe4f6;color:#0b1740;font-weight:700;padding:2px 4px;box-sizing:border-box;border-top:2px solid #000;border-bottom:2px solid #000;display:flex;align-items:center;';
     var headCells =
       '<div style="' + _hc + 'border-left:2px solid #000;letter-spacing:0.35em">TEST</div>' +
       '<div style="' + _hc + '">NORMAL VALUE</div>' +
@@ -2074,7 +2074,7 @@
       if (jsOk) {
         var url = await getReportPdfUrl(invoiceId);
         /* fallback: if backend upload fails or invoice unpaid, generate QR with invoice reference */
-        if (!url) url = 'https://optix-lab-medsync.pages.dev/#/invoice/' + invoiceId;
+        if (!url) url = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
         qrImg = qrDataUrlFor(url);
       }
     } catch (e) { qrImg = null; }
