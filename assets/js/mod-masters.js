@@ -194,31 +194,46 @@ function drawTestRows(canEdit) {
 
   if (!rows.length) { tb.innerHTML = '<tr><td colspan="8">' + App.empty('No tests found.') + '</td></tr>'; return; }
 
-  tb.innerHTML = rows.map(function (t) {
-    var status = t.active
-      ? '<span class="badge b-ready">Active</span>'
-      : '<span class="badge b-unpaid">Inactive</span>';
-    var acts = canEdit
-      ? '<div class="actions">' +
-        '<button type="button" class="btn btn-primary btn-sm" data-book="' + App.esc(t.id) + '">Book</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm" data-edit="' + App.esc(t.id) + '">Edit</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm" data-toggle="' + App.esc(t.id) + '">' +
-          (t.active ? 'Deactivate' : 'Activate') + '</button>' +
-        '<button type="button" class="btn btn-ghost btn-sm" data-del="' + App.esc(t.id) + '" title="Delete">✕</button>' +
-        '</div>'
-      : '<span class="muted">—</span>';
-    return '<tr>' +
-      '<td><strong>' + App.esc(t.code || '') + '</strong></td>' +
-      '<td>' + App.esc(t.name || '') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
-        (t.isPackage && t.includes ? '<div style="font-size:11.5px;color:var(--muted)">' + t.includes.length + ' tests included</div>' : '') + '</td>' +
-      '<td>' + App.esc(t.category || '') + '</td>' +
-      '<td>' + App.esc(t.sampleType || '') + '</td>' +
-      '<td>' + App.esc(t.tat || '') + '</td>' +
-      '<td style="text-align:right"><strong>' + App.money(+t.price || 0) + '</strong></td>' +
-      '<td>' + status + '</td>' +
-      '<td style="text-align:right">' + acts + '</td>' +
-    '</tr>';
-  }).join('');
+  /* group tests by department (category) */
+  var groups = {}, order = [];
+  rows.forEach(function (t) {
+    var cat = t.category || 'Uncategorized';
+    if (!groups[cat]) { groups[cat] = []; order.push(cat); }
+    groups[cat].push(t);
+  });
+  order.sort();
+
+  var htmlParts = [];
+  order.forEach(function (cat) {
+    htmlParts.push('<tr class="dept-head"><td colspan="8" style="background:var(--brand-soft);font-weight:800;padding:10px 12px;color:var(--brand)">' +
+      App.esc(cat) + ' <span class="muted" style="font-weight:400">(' + groups[cat].length + ')</span></td></tr>');
+    groups[cat].forEach(function (t) {
+      var status = t.active
+        ? '<span class="badge b-ready">Active</span>'
+        : '<span class="badge b-unpaid">Inactive</span>';
+      var acts = canEdit
+        ? '<div class="actions">' +
+          '<button type="button" class="btn btn-primary btn-sm" data-book="' + App.esc(t.id) + '">Book</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-edit="' + App.esc(t.id) + '">Edit</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-toggle="' + App.esc(t.id) + '">' +
+            (t.active ? 'Deactivate' : 'Activate') + '</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-del="' + App.esc(t.id) + '" title="Delete">✕</button>' +
+          '</div>'
+        : '<span class="muted">—</span>';
+      htmlParts.push('<tr>' +
+        '<td><strong>' + App.esc(t.code || '') + '</strong></td>' +
+        '<td>' + App.esc(t.name || '') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
+          (t.isPackage && t.includes ? '<div style="font-size:11.5px;color:var(--muted)">' + t.includes.length + ' tests included</div>' : '') + '</td>' +
+        '<td>' + App.esc(t.category || '') + '</td>' +
+        '<td>' + App.esc(t.sampleType || '') + '</td>' +
+        '<td>' + App.esc(t.tat || '') + '</td>' +
+        '<td style="text-align:right"><strong>' + App.money(+t.price || 0) + '</strong></td>' +
+        '<td>' + status + '</td>' +
+        '<td style="text-align:right">' + acts + '</td>' +
+      '</tr>');
+    });
+  });
+  tb.innerHTML = htmlParts.join('');
 
   if (!canEdit) return;
   tb.querySelectorAll('[data-book]').forEach(function (b) {
