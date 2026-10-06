@@ -434,6 +434,1047 @@
   /* ---------- print report ---------- */
 
   // Shared structured report data (used by HTML print, preview modal, and PDF builder)
+  /* ============================================================
+     Lab report redesign (Chughtai-style) — integrated helpers
+     Sources: ~/workspace/report-redesign/ workers 2,4,5,6,7,8,9,11,12.
+
+     Font sizes below are written in em relative to the .rpt-page root.
+     reportHtml() sets that root's px size from s.reportFontSize
+     ('small' | 'medium' | 'large') via RPT.setScale(), so the whole
+     report scales from one rule. Layout px (gaps, borders, images)
+     deliberately does NOT scale.
+     ============================================================ */
+
+  /* ---------- worker 7/20: report style constants ---------- */
+  var RPT = {
+
+    /* COLORS — sampled from the reference */
+    navy:      '#1b1b6e',  // lab name, tagline, logo ink (deep reference blue)
+    ink:       '#111',     // primary body text / headings
+    black:     '#000',     // patient grid labels+values, footer rule, barcode text
+    grey:      '#777',     // secondary / muted text
+    lightGrey: '#A9A9A9',  // hairline rules, dividers
+    barGrey:   '#b5b5b5',  // TEST|NORMAL VALUE|UNIT header bar + RESULT box header
+    line:      '#333',     // RESULT box border, thin dark rules
+    tableLine: '#8a8a8a',  // table header-bar outer border
+    white:     '#ffffff',
+    red:       '#c0392b',  // logo droplet accent
+    powered:   '#999',     // "Powered by System Optix" footer line
+
+    /* FONT SIZES — base scale (px at reportFontSize = 'medium') */
+    base:  12,
+    h1:    26,     // lab name in header
+    h2:    15,     // test name heading (e.g. "Serum Electrolytes")
+    h3:    13,
+    small: 10.5,
+    tiny:  9,
+
+    fs: {
+      /* header */
+      labName:       26,
+      labTagline:    14,
+      labSlogan:      9,
+      patientNoLbl:  12,
+      patientNoVal:  12,
+      logoSize:      54,
+
+      /* patient info grid */
+      patLabel:      12,
+      patValue:      12,
+      patLabelW:    230,
+
+      /* sections */
+      testName:      15,
+      deptTitle:     14,
+      subsection:    12.5,
+      noteLbl:       11,
+      noteBody:      11,
+
+      /* test table */
+      tableHead:     11,
+      tableCell:     11.5,
+      tableResult:   11.5,
+      refRange:      10.5,
+      resultBoxTtl:  11,
+      resultBoxMeta:  9,
+
+      /* footer */
+      verNote:       12,
+      sigName:       12,
+      sigQual:       10,
+      sigTitle:      10,
+      addrLine:      12.5,
+      poweredBy:     11
+    },
+
+    /* FONT FAMILIES — serif for the lab brand only; body inherits the
+       lab's configured sans font (s.font) from the app / print shell. */
+    serif: "Georgia,'Times New Roman',serif",
+    sans:  "Arial,Helvetica,sans-serif",
+
+    w: {
+      normal: 400,
+      bold:   700
+    },
+
+    sp: {
+      headGap:        16,
+      headPadBottom:  12,
+      headMargin:     10,
+      qrSize:        110,
+      gridColGap:     40,
+      gridRowPad:      2.5,
+      gridMargin:      '2px 0 6px',
+      gridRuleMargin:  '6px 0 4px',
+      testNameMargin: '18px 0 6px',
+      deptMargin:     '22px 0 10px',
+      deptPad:        '7px 10px',
+      subMargin:      '20px 0 8px',
+      noteMargin:     '8px 0 2px',
+      tableHeadPad:   '7px 10px',
+      tableCellPad:   '6px 10px',
+      verNoteMargin:  '22px 0 4px',
+      footRuleMargin: '6px 0',
+      sigMargin:      '10px 0 6px',
+      sigGap:          8,
+      addrMargin:     '10px 0 0',
+      poweredMargin:  '14px 0 0'
+    },
+
+    bd: {
+      hairline:  '1px solid #A9A9A9',
+      thin:      '1px solid #8a8a8a',
+      resultBox: '1.5px solid #333',
+      rule:      '2.5px solid #000',
+      sigLine:   '1px solid #000'
+    },
+
+    lh: {
+      body:  1.5,
+      table: 1.4,
+      addr:  1.9
+    },
+
+    track: {
+      caps:  '0.6px',
+      wide:  '2px'
+    },
+
+    /* reportFontSize setting -> scale multiplier */
+    fontScale: { small: 0.9, medium: 1, large: 1.12 },
+
+    _scale: 1,
+
+    /* select the active multiplier: RPT.setScale('large') */
+    setScale: function (setting) {
+      this._scale = this.fontScale[setting] || 1;
+      return this._scale;
+    },
+
+    /* scale one px value: RPT.size(12) -> 13.4 at 'large' */
+    size: function (n) {
+      return Math.round(n * this._scale * 10) / 10;
+    },
+
+    /* scaled copy of the whole fs map for the given setting */
+    sizes: function (setting) {
+      var k = (setting && this.fontScale[setting]) ? setting : 'medium';
+      var m = this.fontScale[k], out = {}, key;
+      for (key in this.fs) {
+        if (Object.prototype.hasOwnProperty.call(this.fs, key)) {
+          out[key] = Math.round(this.fs[key] * m * 10) / 10;
+        }
+      }
+      return out;
+    },
+
+    /* one-liner for inline styles: RPT.px('font-size', 12) -> "font-size:12px" */
+    px: function (prop, n) {
+      return prop + ':' + this.size(n) + 'px';
+    }
+  };
+
+  /* ---------- worker 12/20: print stylesheet ----------
+     reportHtml() injects this inside a <style> tag at the top of its
+     output; rules are scoped to .rpt-page / @media print. */
+  var RPT_PRINT_CSS = `
+/* =====================================================================
+   Optix LAB MedSync — Lab Report Print Stylesheet  (Worker 12/20)
+   ---------------------------------------------------------------------
+   Target: Chughtai-style A4 lab report (see reference image).
+   The integrator injects this into the print document opened by
+   App.print(title, html, {noHeader:true}), wrapping the report HTML
+   in <div class="rpt-page"> … </div>. Report body itself is inline-
+   styled; these rules govern the page box, print-only behavior,
+   page-break control, exact background printing, and font smoothing.
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   1. PAGE BOX — A4 portrait, ~12mm margins
+   --------------------------------------------------------------------- */
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+/* ---------------------------------------------------------------------
+   2. PRINT BASE
+   --------------------------------------------------------------------- */
+@media print {
+
+  /* Hard reset of any screen padding the app's print template applies. */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* Never leak screen chrome into the printout. */
+  .noprint,
+  button, .btn,
+  .actions, .toolbar {
+    display: none !important;
+  }
+
+  /* Hide the browser's auto header/footer URL bar if the app sets
+     @page margin boxes — kept zero-size defensively. */
+  @page {
+    margin: 12mm;
+  }
+
+  /* Keep everything monochrome-black like the reference report. */
+  a {
+    color: #000 !important;
+    text-decoration: none !important;
+  }
+
+  /* Long values wrap instead of overflowing the page edge. */
+  * {
+    overflow-wrap: break-word;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   3. REPORT CONTAINER
+   --------------------------------------------------------------------- */
+.rpt-page {
+  /* 210mm A4 − 2×12mm page margin ≈ 186mm of printable width */
+  max-width: 186mm;
+  width: 100%;
+  margin: 0 auto;
+  color: #000;
+  background: #fff;
+  font-size: 12.5px;
+  line-height: 1.55;
+  /* Everything below inherits from here unless overridden. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  /* Keep shaded header bars when printing from Chrome/Edge. */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+/* On screen preview (the "live print preview" panel) keep the page
+   readable at any viewport width; print media ignores this. */
+@media screen {
+  .rpt-page {
+    max-width: 800px;
+  }
+}
+
+/* ---------------------------------------------------------------------
+   4. PAGE-BREAK CONTROL
+   --------------------------------------------------------------------- */
+
+/* Test sections: never split a section's table across a page boundary
+   when it fits on one page; never leave a section heading orphaned
+   at the bottom of a page. (The integrator wraps each h3+table pair
+   in .rpt-section; these rules also cover the raw sibling markup.) */
+.rpt-page .rpt-section,
+.rpt-page table.table {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.rpt-page h3 {
+  break-after: avoid;
+  page-break-after: avoid;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+/* If a section's table is genuinely longer than a page, at least keep
+   each data row intact. */
+.rpt-page table tr {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+/* Keep the note attached to the row it belongs to. */
+.rpt-page .rpt-note {
+  break-before: avoid;
+  page-break-before: avoid;
+}
+
+/* RESULT box (barcode + reported-at stamp): never break across pages,
+   never dangle away from its section. */
+.rpt-page .rpt-resultbox {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  break-before: avoid;
+  page-break-before: avoid;
+  float: right;
+  margin: 0 0 6px 12px;
+}
+
+/* Patient info grid and report header: keep together. */
+.rpt-page .rpt-head,
+.rpt-page .rpt-patient {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* Footer: keep the verification note, signatory row and address block
+   together on the same page; never orphan the footer from the body —
+   force it onto the next page if it cannot fit with its lead content. */
+.rpt-page .rpt-footer {
+  break-inside: avoid;
+  page-break-inside: avoid;
+  break-before: auto;
+}
+.rpt-page .rpt-footnote {
+  orphans: 3;
+  widows: 3;
+}
+/* Signatory row: one block, never split between columns or pages. */
+.rpt-page .rpt-sigs {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+/* "Powered by System Optix" line always sits with the address block. */
+.rpt-page .rpt-powered {
+  break-before: avoid;
+  page-break-before: avoid;
+}
+
+/* ---------------------------------------------------------------------
+   5. BACKGROUNDS MUST PRINT (exact color reproduction)
+   --------------------------------------------------------------------- */
+
+/* Grey header bars on TEST | NORMAL VALUE | UNIT | RESULT tables. */
+.rpt-page,
+.rpt-page thead th,
+.rpt-page .rpt-greybar {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+.rpt-page thead th {
+  background: #cfcfcf;
+}
+.rpt-page .rpt-greybar {
+  background: #d9d9d9;
+}
+
+/* ---------------------------------------------------------------------
+   6. TYPOGRAPHY FOR PRINT (matches the reference: plain black serif-less)
+   --------------------------------------------------------------------- */
+.rpt-page h1, .rpt-page h2, .rpt-page h3 {
+  color: #000;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.rpt-page .rpt-sec-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  margin: 16px 0 6px;
+  color: #000;
+}
+
+/* Patient info: label bold, value regular — like the reference grid. */
+.rpt-page .rpt-patient {
+  font-size: 12.5px;
+}
+.rpt-page .rpt-patient .k {
+  font-weight: 700;
+}
+
+/* Test tables: full width, thin dark rules, generous cell padding. */
+.rpt-page table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 8px 0 4px;
+}
+.rpt-page th,
+.rpt-page td {
+  border: 1px solid #555;
+  padding: 6px 8px;
+  font-size: 12px;
+  text-align: left;
+  vertical-align: top;
+  color: #000;
+}
+.rpt-page thead th {
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.4px;
+}
+.rpt-page td strong,
+.rpt-page .rpt-result {
+  font-weight: 700;
+}
+
+/* "Note:" blocks under a test. */
+.rpt-page .rpt-note {
+  font-size: 11.5px;
+  margin: 6px 0 10px;
+}
+.rpt-page .rpt-note b,
+.rpt-page .rpt-note strong {
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------------
+   7. HEADER — lab block left, Patient No / Case # / QR right
+   --------------------------------------------------------------------- */
+.rpt-page .rpt-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 10px;
+  margin-bottom: 8px;
+  border-bottom: 2px solid #000;
+}
+.rpt-page .rpt-brand {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  min-width: 0;
+}
+.rpt-page .rpt-logo {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  flex: none;
+}
+.rpt-page .rpt-labname {
+  margin: 0;
+  font-size: 21px;
+  color: #000;
+  letter-spacing: 0.3px;
+}
+.rpt-page .rpt-tagline,
+.rpt-page .rpt-addr {
+  font-size: 11px;
+  color: #000;
+}
+.rpt-page .rpt-ids {
+  text-align: right;
+  flex: none;
+}
+.rpt-page .rpt-ids .k {
+  font-size: 12px;
+  font-weight: 700;
+}
+.rpt-page .rpt-ids .v {
+  font-size: 12px;
+  margin: 2px 0 6px;
+  letter-spacing: 1px;
+}
+.rpt-page .rpt-qr {
+  width: 104px;
+  height: 104px;
+}
+
+/* ---------------------------------------------------------------------
+   8. PATIENT INFO GRID
+   --------------------------------------------------------------------- */
+.rpt-page .rpt-patient {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 36px;
+  margin: 6px 0 4px;
+}
+.rpt-page .rpt-prow {
+  display: flex;
+  gap: 10px;
+  padding: 3px 0;
+  font-size: 12.5px;
+}
+.rpt-page .rpt-prow .k {
+  font-weight: 700;
+  flex: none;
+  min-width: 168px;
+}
+.rpt-page hr.rpt-rule {
+  border: none;
+  border-top: 1px solid #999;
+  margin: 8px 0 4px;
+}
+
+/* ---------------------------------------------------------------------
+   9. FOOTER — verification notes, signatories, address, powered-by
+   --------------------------------------------------------------------- */
+.rpt-page .rpt-footer {
+  margin-top: 18px;
+}
+.rpt-page .rpt-ver {
+  text-align: center;
+  font-weight: 700;
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 18px 0 4px;
+}
+.rpt-page hr.rpt-footrule {
+  border: none;
+  border-top: 2.5px solid #000;
+  margin: 6px 0;
+}
+.rpt-page .rpt-sigs {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 12px;
+}
+.rpt-page .rpt-sig {
+  flex: 1;
+  text-align: center;
+}
+.rpt-page .rpt-sig .n {
+  font-weight: 800;
+  font-size: 12.5px;
+}
+.rpt-page .rpt-sig .q,
+.rpt-page .rpt-sig .t {
+  font-size: 10.5px;
+  color: #000;
+}
+.rpt-page .rpt-addrblock {
+  text-align: center;
+  font-size: 12px;
+  margin-top: 14px;
+  line-height: 1.8;
+}
+.rpt-page .rpt-powered {
+  color: #000;
+  font-size: 11px;
+  text-align: center;
+  margin: 12px 0 0;
+}
+
+/* ---------------------------------------------------------------------
+   10. PRINT FINISHING TOUCHES
+   --------------------------------------------------------------------- */
+@media print {
+  /* Never start a new page for a lone heading: pull the first content
+     block up with the section title when a break would orphan it. */
+  .rpt-page h3:first-child {
+    margin-top: 0;
+  }
+  /* Remove any drop shadows / rounded corners that survive from
+     screen styles — flat print only. */
+  .rpt-page * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  /* QR and logo images: crisp edges. */
+  .rpt-page img {
+    image-rendering: auto;
+  }
+}
+  `;
+
+  /* ---------- worker 8/20: QR block (header, top-right) ----------
+     The <img data-qr="1"> keeps the placeholder contract: printReport()
+     injects the src with .replace('data-qr="1"', 'data-qr="1" src="..."')
+     (first occurrence — the wrapper uses data-qr-wrap, not data-qr="1").
+     stripQrImg() removes the whole data-qr-wrap block on unpaid reports so
+     the "Scan to verify" caption never dangles without its QR. */
+  function qrBlockHtml(d) {
+    var s = (d && d.s) || {};
+    if (s.showQr === false) return '';
+    return (
+      '<div data-qr-wrap style="display:flex;flex-direction:column;align-items:center;flex:none;margin-left:18px">' +
+        '<img data-qr="1" style="width:130px;height:130px;display:block" alt="QR code - scan to verify report">' +
+        '<span style="font-size:0.76em;color:#8a8a8a;letter-spacing:0.4px;margin-top:4px;white-space:nowrap">Scan to verify</span>' +
+      '</div>'
+    );
+  }
+
+  /* ---------- worker 2/20: report header ----------
+     Logo + navy serif lab name/tagline (left); Patient No. / Case # with
+     wide-spaced numbers + QR block (right); optional reportTitle banner.
+     The custom s.headerHtml override is applied by reportHtml(), not here. */
+  function reportHeaderHtml(d) {
+    var inv = (d && d.inv) || {};
+    var pat = (d && d.pat) || {};
+    var s = (d && d.s) || {};
+
+    var accent = s.accent || RPT.navy;
+    var showTagline = s.showTagline !== false;   /* default true */
+    var escAccent = App.esc(accent);
+
+    /* left: logo + lab identity */
+    var leftHtml =
+      '<div style="display:flex;align-items:center;gap:14px;min-width:0">' +
+        (s.logo
+          ? '<img src="' + App.esc(s.logo) + '" style="width:70px;height:70px;object-fit:contain;flex:none" alt="">'
+          : '') +
+        '<div style="min-width:0">' +
+          '<div style="margin:0;color:' + escAccent + ';font-family:' + RPT.serif +
+            ';font-weight:700;font-size:2em;letter-spacing:0.08em;text-transform:uppercase;line-height:1.15">' +
+            App.esc(s.labName || 'Optix LAB MedSync') +
+          '</div>' +
+          ((showTagline && s.tagline)
+            ? '<div style="color:' + escAccent + ';font-family:' + RPT.serif + ';font-size:1.36em;margin-top:2px">' +
+                App.esc(s.tagline) +
+              '</div>'
+            : '') +
+        '</div>' +
+      '</div>';
+
+    /* right: Patient No. / Case # + QR.
+       margin-right:-4px compensates the trailing letter-spacing so the
+       wide-spaced numbers stay flush right under their labels. */
+    var rightHtml =
+      '<div style="display:flex;align-items:flex-start;gap:16px;flex:none">' +
+        '<div style="text-align:right">' +
+          '<div style="font-size:1.12em;font-weight:700">Patient No.:</div>' +
+          '<div style="font-size:1.04em;letter-spacing:0.31em;margin:3px -4px 8px 0">' +
+            App.esc(pat.id || '—') +
+          '</div>' +
+          '<div style="font-size:1.12em;font-weight:700">Case #:</div>' +
+          '<div style="font-size:1.04em;letter-spacing:0.31em;margin:3px -4px 0 0">' +
+            App.esc(inv.no || inv.id || '—') +
+          '</div>' +
+        '</div>' +
+        qrBlockHtml(d) +
+      '</div>';
+
+    /* optional report title banner */
+    var bannerHtml = s.reportTitle
+      ? '<div style="margin:4px 0 10px;padding:7px 10px;background:' + escAccent +
+        ';color:#ffffff;text-align:center;font-weight:700;font-size:1.2em;letter-spacing:0.27em;text-transform:uppercase">' +
+          App.esc(s.reportTitle) +
+        '</div>'
+      : '';
+
+    return (
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding-bottom:10px">' +
+        leftHtml +
+        rightHtml +
+      '</div>' +
+      bannerHtml
+    );
+  }
+
+  /* ---------- worker 3/20: patient info grid ----------
+     2 columns; labels BOLD black with a fixed-width label column; values
+     regular. Thin rule below the grid. */
+  function patientGridHtml(d) {
+    d = d || {};
+    var inv = d.inv || {};
+    var pat = d.pat || {};
+    var s = d.s || {};
+    var doc = d.doc || null;
+
+    var LABEL_W = '230px';        /* fixed label column width (layout: not scaled) */
+
+    var row = function (label, value) {
+      return (
+        '<div style="display:flex;gap:0;padding:2.5px 0;font-size:0.88em;line-height:1.5">' +
+          '<span style="font-weight:700;color:#000;flex:none;width:' + LABEL_W + '">' +
+            App.esc(label) + ':' +
+          '</span>' +
+          '<span style="color:#000;flex:1;min-width:0">' +
+            App.esc(value == null || value === '' ? '—' : String(value)) +
+          '</span>' +
+        '</div>'
+      );
+    };
+
+    var ageSex = [pat.age ? pat.age + ' Yr(s)' : '', pat.gender || '']
+      .filter(function (x) { return x; })
+      .join(' / ');
+    var docName = doc && doc.name ? doc.name : 'Standard.';
+
+    var left =
+      row('Patient Name', pat.name) +
+      row('Father / Husband Name', pat.father) +
+      row('Age / Sex', ageSex) +
+      row('Blood Group', pat.blood || 'Unknown') +
+      row('NIC', pat.cnic) +
+      row('Phone', pat.phone) +
+      row('Address', pat.address);
+
+    var right =
+      row('Registration Date', inv.createdAt ? App.dt(inv.createdAt) : '') +
+      row('Collect Report At', d.maxReported ? App.dt(d.maxReported) : '') +
+      row('Registration Location', s.headOffice) +
+      row('Destination Location', s.mainLab) +
+      row('Reference', docName) +
+      row('Consultant', docName);
+
+    return (
+      '<div style="display:flex;gap:40px;margin:2px 0 6px">' +
+        '<div style="flex:1;min-width:0">' + left + '</div>' +
+        '<div style="flex:1;min-width:0">' + right + '</div>' +
+      '</div>' +
+      '<hr style="border:none;border-top:1px solid #bbb;margin:6px 0 4px">'
+    );
+  }
+
+  /* ---------- worker 11/20: abnormal value highlighting ----------
+     abnormalDir() parses the reference range ("135 - 150", "< 200",
+     "> 10", "4,000 - 11,000") and returns 'high' | 'low' | null.
+     Empty / non-numeric refs (e.g. test-template params with ref: '')
+     are NEVER flagged. */
+  function parseAbnNum(str) {
+    if (str == null) return NaN;
+    var clean = String(str).replace(/,/g, '').trim();   // "7,500" -> "7500"
+    var m = clean.match(/^[+-]?(\d+(\.\d+)?|\.\d+)/);
+    return m ? parseFloat(m[0]) : NaN;
+  }
+
+  /* Returns 'high' | 'low' | null — the direction tells which arrow to show. */
+  function abnormalDir(valueStr, refStr) {
+    var v = parseAbnNum(valueStr);
+    if (isNaN(v)) return null;
+    if (refStr == null) return null;
+    var ref = String(refStr).replace(/[–—]/g, '-').trim();  // en/em dash -> hyphen
+    if (!ref || /see\s*below/i.test(ref)) return null;      // "(See Below)" etc.
+    ref = ref.replace(/,/g, '');                            // "4,000 - 11,000"
+
+    /* single-sided bounds: "< X", "<= X", "≤ X", "> X", ">= X", "≥ X" */
+    var op = ref.match(/^\s*(<=|>=|<|>|≤|≥)\s*(.+)$/);
+    if (op) {
+      var bound = parseAbnNum(op[2]);
+      if (isNaN(bound)) return null;
+      switch (op[1]) {
+        case '<':  return v >= bound ? 'high' : null;  // abnormal if >= X
+        case '<=': case '≤': return v > bound ? 'high' : null;
+        case '>':  return v <= bound ? 'low' : null;   // abnormal if <= X
+        case '>=': case '≥': return v < bound ? 'low' : null;
+      }
+      return null;
+    }
+
+    /* "low - high" ranges: "135 - 150", "3.5 - 5.4", "0.8 - 2.11" */
+    if (ref.indexOf('-') > -1) {
+      var nums = ref.match(/-?\d+(\.\d+)?/g);
+      if (nums && nums.length >= 2) {
+        var lo = parseFloat(nums[0]), hi = parseFloat(nums[1]);
+        if (lo > hi) { var t = lo; lo = hi; hi = t; }        // defensive swap
+        if (v < lo) return 'low';
+        if (v > hi) return 'high';
+        return null;
+      }
+    }
+    return null;  // unknown/non-numeric ref ("Negative", "200", ...)
+  }
+
+  function isAbnormal(valueStr, refStr) {
+    return abnormalDir(valueStr, refStr) !== null;
+  }
+
+  /* Worker 11's resultCellHtml targets <table> markup; the redesigned
+     report renders rows as a div grid, so rows use resultCellDiv() —
+     same detection, same red-bold + ↑/↓ treatment. */
+  function resultCellDiv(valueStr, refStr) {
+    var disp = (valueStr == null) ? '' : String(valueStr);
+    var dir = abnormalDir(valueStr, refStr);
+    var arrow = dir === 'high' ? ' ↑' : (dir === 'low' ? ' ↓' : '');
+    return '<div style="text-align:right' + (dir ? ';color:#c00;font-weight:700' : '') + '">' +
+      App.esc(disp) + arrow + '</div>';
+  }
+
+  /* table-markup variant (kept for parity with worker 11's spec) */
+  function resultCellHtml(valueStr, refStr) {
+    var disp = (valueStr == null) ? '' : String(valueStr);
+    var dir = abnormalDir(valueStr, refStr);
+    if (!dir) return '<td>' + App.esc(disp) + '</td>';
+    var arrow = (dir === 'high') ? ' ↑' : ' ↓';
+    return '<td style="color:#c00;font-weight:700">' + App.esc(disp) + arrow + '</td>';
+  }
+
+  /* ---------- worker 9/20: Code39-style barcode (pure HTML/CSS) ----------
+     barcodeHtml(text) renders a deterministic Code39-style barcode strip
+     for the case # (~100px x 28px, black bars on white). No dependencies. */
+  var CODE39 = {
+    '0': 'nnnwwnwnn', '1': 'wnnwnnnnw', '2': 'nnwwnnnnw', '3': 'wnwwnnnnn',
+    '4': 'nnnwwnnnw', '5': 'wnnwwnnnn', '6': 'nnwwwnnnn', '7': 'nnnwnnwnw',
+    '8': 'wnnwnnwnn', '9': 'nnwwnnwnn',
+    'A': 'wnnnnwnnw', 'B': 'nnwnnwnnw', 'C': 'wnwnnwnnn', 'D': 'nnnnwwnnw',
+    'E': 'wnnnwwnnn', 'F': 'nnwnwwnnn', 'G': 'nnnnnwwnw', 'H': 'wnnnnwwnn',
+    'I': 'nnwnnwwnn', 'J': 'nnnnwwwnn', 'K': 'wnnnnnnww', 'L': 'nnwnnnnww',
+    'M': 'wnwnnnnwn', 'N': 'nnnnwnnww', 'O': 'wnnnwnnwn', 'P': 'nnwnwnnwn',
+    'Q': 'nnnnnnwww', 'R': 'wnnnnnwwn', 'S': 'nnwnnnwwn', 'T': 'nnnnwnwwn',
+    'U': 'wwnnnnnnw', 'V': 'nwwnnnnnw', 'W': 'wwwnnnnnn', 'X': 'nwnnwnnnw',
+    'Y': 'wwnnwnnnn', 'Z': 'nwwnwnnnn', '-': 'nwnnnnwnw', '.': 'wwnnnnwnn',
+    ' ': 'nwwnnnwnn', '*': 'nwnnwnwnn', '$': 'nwnwnwnnn', '/': 'nwnwnnnwn',
+    '+': 'nwnnnwnwn', '%': 'nnnwnwnwn'
+  };
+
+  function barcodeHtml(text) {
+    var t = String(text == null ? '' : text).toUpperCase().replace(/\s+/g, '');
+    // Encode with * start/stop; unsupported chars fall back to '-'
+    var seq = '*' + t + '*';
+    var bars = '';
+    for (var i = 0; i < seq.length; i++) {
+      var ch = seq.charAt(i);
+      var pat = CODE39[ch] || CODE39['-'];
+      for (var j = 0; j < 9; j++) {
+        var isBar = (j % 2 === 0);
+        var wide = pat.charAt(j) === 'w';
+        // flex-grow proportional to module width: wide = 3x narrow
+        bars += '<span style="display:block;flex:0 0 auto;width:0;flex-grow:' +
+          (wide ? 3 : 1) + ';background:' + (isBar ? '#000' : '#fff') +
+          ';height:100%;"></span>';
+      }
+      // narrow inter-character gap (white)
+      if (i < seq.length - 1) {
+        bars += '<span style="display:block;flex:0 0 auto;width:0;flex-grow:1;background:#fff;height:100%;"></span>';
+      }
+    }
+    return '<div style="display:flex;align-items:stretch;width:100px;height:28px;' +
+      'background:#fff;padding:0;margin:0 auto;line-height:0;overflow:hidden;" ' +
+      'aria-hidden="true">' + bars + '</div>';
+  }
+
+  /* ---------- worker 4/20: one test section ----------
+     Bold section title; medium-grey header bar (TEST | NORMAL VALUE | UNIT);
+     bordered RESULT box on the right (grey "RESULT" strip, barcode, case #,
+     timestamp); borderless param rows with the result value right-aligned
+     in its own 4th column; abnormal values render red-bold with ↑/↓.
+     No-params tests get a single "Result" row; vals['Remarks'] renders
+     below the rows.
+
+     NOTE (integrator fix): the worker's draft used a 3-column grid for a
+     4-cell row, which would wrap the result cell onto a second line. The
+     grid below uses 4 columns (header bar carries an empty 4th cell) so
+     the TEST | NORMAL VALUE | UNIT | result columns line up exactly.
+
+     Relies on: testName(r), barcodeHtml(), resultCellDiv(), chughtaiTs(). */
+  function chughtaiTs(v) {
+    var t = v instanceof Date ? v : new Date(v);
+    if (isNaN(t.getTime())) return '';
+    var M = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return p(t.getDate()) + '-' + M[t.getMonth()] + '-' + t.getFullYear() + ' ' +
+           p(t.getHours()) + ':' + p(t.getMinutes());
+  }
+
+  function testSectionHtml(r, d) {
+    d = d || {};
+    var inv = d.inv || {};
+    var s = d.s || {};
+    var test = r.test || {};
+    var params = Array.isArray(test.params) ? test.params : [];
+    var vals = (r.res && r.res.values) || {};
+
+    var caseNo = inv.no || inv.id || '';
+    // Reference timestamp = report/collection time; fall back to registration.
+    var ts = chughtaiTs(d.maxReported || inv.createdAt);
+    var showBarcode = s.showBarcode !== false;
+
+    // Column grid shared by the grey header bar and every body row so the
+    // columns line up exactly. The result value is right-aligned in the
+    // 4th column, which sits in the RESULT box zone.
+    var COLS = '40% 24% 14% 1fr';
+
+    /* grey header bar: TEST | NORMAL VALUE | UNIT (+ empty result zone) */
+    var barHtml =
+      '<div class="rpt-greybar" style="background:#A9A9A9;border:1px solid #000;display:grid;' +
+        'grid-template-columns:' + COLS + ';font-weight:700;color:#000;' +
+        'font-size:1em;padding:3px 6px">' +
+        '<div>TEST</div><div>NORMAL VALUE</div><div>UNIT</div><div></div>' +
+      '</div>';
+
+    /* body rows: no visible borders, param name bold */
+    var rowsHtml;
+    if (params.length) {
+      rowsHtml = params.map(function (p) {
+        var v = vals[p.name];
+        return '<div style="display:grid;grid-template-columns:' + COLS + ';' +
+          'font-size:1.04em;padding:3px 6px">' +
+          '<div style="font-weight:700">' + App.esc(p.name || '') + '</div>' +
+          '<div>' + App.esc(p.ref != null && p.ref !== '' ? String(p.ref) : '—') + '</div>' +
+          '<div>' + App.esc(p.unit != null && p.unit !== '' ? String(p.unit) : '') + '</div>' +
+          resultCellDiv(v, p.ref) +
+        '</div>';
+      }).join('');
+    } else {
+      // Test with no params: single row with a "Result" label.
+      rowsHtml =
+        '<div style="display:grid;grid-template-columns:' + COLS + ';' +
+          'font-size:1.04em;padding:3px 6px">' +
+          '<div style="font-weight:700">Result</div>' +
+          '<div></div><div></div>' +
+          resultCellDiv(vals['Result'], '') +
+        '</div>';
+    }
+
+    /* remarks below the table */
+    var remarksHtml = '';
+    if (vals['Remarks']) {
+      remarksHtml =
+        '<div style="font-size:1em;padding:6px 6px 0">' +
+          '<div style="font-weight:700">Note:</div>' +
+          '<div>' + App.esc(vals['Remarks']) + '</div>' +
+        '</div>';
+    }
+
+    /* RESULT box (right side, ~110px, top-aligned with grey bar) */
+    var bcHtml = '';
+    if (showBarcode) {
+      bcHtml = '<div style="margin:4px 6px 2px">' + barcodeHtml(String(caseNo)) + '</div>';
+    }
+    var resultBoxHtml =
+      '<div class="rpt-resultbox" style="width:110px;flex:none;border:1px solid #000">' +
+        '<div style="background:#A9A9A9;border-bottom:1px solid #000;' +
+          'font-weight:700;font-size:0.96em;text-align:center;color:#000;' +
+          'padding:2px 0">RESULT</div>' +
+        bcHtml +
+        '<div style="text-align:center;font-size:0.88em;padding:2px 2px 0">' +
+          App.esc(String(caseNo)) + '</div>' +
+        '<div style="text-align:center;font-size:0.88em;padding:0 2px 4px">' +
+          App.esc(ts) + '</div>' +
+      '</div>';
+
+    /* assemble: title, then flex row (bar+rows left, box right) */
+    return '<div class="rpt-section" style="margin:14px 0 4px">' +
+      '<div style="font-weight:700;font-size:1.2em;color:#000;margin:0 0 4px">' +
+        App.esc(testName(r)) +
+      '</div>' +
+      '<div style="display:flex;align-items:flex-start;gap:6px">' +
+        '<div style="flex:1;min-width:0">' +
+          barHtml +
+          rowsHtml +
+          remarksHtml +
+        '</div>' +
+        resultBoxHtml +
+      '</div>' +
+    '</div>';
+  }
+
+  /* ---------- worker 5/20: section dividers / subsection headers / notes ----------
+     Emitted by reportHtml() when tests carry a category (grouped, stable
+     sort). Until tests carry categories this is a safe no-op. */
+  function sectionDividerHtml(title) {
+    return '<div style="background:#e8e8e8;border:1px solid #b5b5b5;' +
+      'padding:7px 10px;margin:22px 0 10px;' +
+      'font-size:1.12em;font-weight:700;color:#111;' +
+      'page-break-after:avoid">' +
+      App.esc(title || '') + '</div>';
+  }
+
+  function subsectionHeaderHtml(title) {
+    return '<h3 style="margin:20px 0 8px;font-size:1em;font-weight:700;' +
+      'letter-spacing:0.05em;color:#111;text-transform:uppercase;' +
+      'page-break-after:avoid">' +
+      App.esc(String(title || '').toUpperCase()) + '</h3>';
+  }
+
+  /* Per-test Note block ("Note:" + small text). Renders test.note when
+     present, nothing otherwise. */
+  function testNoteHtml(test) {
+    var note = test && (test.note || '');
+    if (!note) return '';
+    return '<div class="rpt-note" style="margin:8px 0 2px;font-size:0.88em;line-height:1.5;color:#222;' +
+      'page-break-inside:avoid">' +
+      '<strong>Note:</strong><br>' +
+      App.esc(note) + '</div>';
+  }
+
+  function sectionCatOf(r) {
+    var c = r && r.test && r.test.category;
+    if (c == null) return '';
+    return String(c).trim();
+  }
+
+  /* exposed for other modules / future use */
+  App.sectionDividerHtml = sectionDividerHtml;
+  App.subsectionHeaderHtml = subsectionHeaderHtml;
+  App.testNoteHtml = testNoteHtml;
+  App.sectionCatOf = sectionCatOf;
+
+  /* ---------- worker 6/20: report footer ----------
+     Bold centered verification note, thick rule, physician note, thick
+     rule, signatories (from s.signatories) spread in a row, bold centered
+     address block, "Powered by System Optix". Used only when the custom
+     s.footerHtml override is NOT set. */
+  function reportFooterHtml(d) {
+    var s = (d && d.s) || {};
+
+    /* line 1: verification note (bold, centered) */
+    var verNote = s.verNote || s.verificationNote ||
+      'Electronically verified report. No signatures necessary. Sample brought to the main lab.';
+    var line1 =
+      '<p class="rpt-ver" style="text-align:center;font-weight:700;font-size:0.96em;margin:22px 0 4px;line-height:1.5">' +
+        App.esc(verNote) + '</p>';
+
+    /* thick black rule */
+    var rule = '<hr class="rpt-footrule" style="border:none;border-top:2.5px solid #000;margin:6px 0">';
+
+    /* line 2: physician interpretation note (bold, centered) */
+    var line2 =
+      '<p style="text-align:center;font-weight:700;font-size:0.96em;margin:6px 0 4px;line-height:1.5">' +
+        'Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.</p>';
+
+    /* signatories: spread in one row; fallback signature lines when empty */
+    var sigs = (Array.isArray(s.signatories) ? s.signatories : [])
+      .filter(function (g) { return g && (g.name || g.qual || g.title); });
+    var sigHtml;
+    if (sigs.length) {
+      sigHtml =
+        '<div class="rpt-sigs" style="display:flex;justify-content:space-between;gap:8px;margin:10px 0 6px">' +
+          sigs.map(function (g) {
+            return '<div class="rpt-sig" style="flex:1;text-align:center">' +
+              '<div class="n" style="font-weight:700;font-size:0.96em">' + App.esc(g.name || '') + '</div>' +
+              (g.qual ? '<div class="q" style="font-size:0.8em">' + App.esc(g.qual) + '</div>' : '') +
+              (g.title ? '<div class="t" style="font-size:0.8em">' + App.esc(g.title) + '</div>' : '') +
+            '</div>';
+          }).join('') + '</div>';
+    } else {
+      sigHtml =
+        '<div style="display:flex;justify-content:space-between;margin:34px 0 6px">' +
+          '<div style="text-align:center;min-width:180px">' +
+            '<div style="border-top:1px solid #000;padding-top:6px;font-size:0.96em">Lab Technologist</div></div>' +
+          '<div style="text-align:center;min-width:180px">' +
+            '<div style="border-top:1px solid #000;padding-top:6px;font-size:0.96em">Pathologist</div></div>' +
+        '</div>';
+    }
+
+    /* address block (centered, BOLD) */
+    var ab = [];
+    if (s.headOffice) {
+      var ab1 = 'Head Office: ' + App.esc(s.headOffice);
+      if (s.callCenter) ab1 += ' &nbsp;Call Center: ' + App.esc(s.callCenter);
+      ab.push('<div>' + ab1 + '</div>');
+    }
+    if (s.mainLab) {
+      var ab2 = 'Main Lab: ' + App.esc(s.mainLab);
+      if (s.mainLabPhone) ab2 += ' &nbsp;Ph: ' + App.esc(s.mainLabPhone);
+      ab.push('<div>' + ab2 + '</div>');
+    }
+    var abLast = [
+      s.phone ? 'Phone: ' + App.esc(s.phone) : '',
+      s.website ? 'Web: ' + App.esc(s.website) : '',
+      s.email ? 'Email: ' + App.esc(s.email) : ''
+    ].filter(function (x) { return x; }).join(' &nbsp; ');
+    if (abLast) ab.push('<div>' + abLast + '</div>');
+    var addrHtml = ab.length
+      ? '<div class="rpt-addrblock" style="text-align:center;font-weight:700;font-size:1em;margin:10px 0 0;line-height:1.9">' +
+          ab.join('') + '</div>'
+      : '';
+
+    /* powered-by */
+    var powered =
+      '<p class="rpt-powered" style="color:#999;font-size:0.88em;text-align:center;margin:14px 0 0">Powered by System Optix</p>';
+
+    return '<div class="rpt-footer">' + line1 + rule + line2 + rule + sigHtml + addrHtml + powered + '</div>';
+  }
+
   function reportData(invoiceId) {
     var inv = invOf(invoiceId);
     if (!inv) return null;
@@ -455,125 +1496,72 @@
     };
   }
 
+  /* ---------- lab report document (Chughtai-style redesign) ----------
+     Composed from the integrated helpers above:
+       header (worker 2) + patient grid (worker 3) + test sections with
+       category dividers/notes (workers 4+5) + footer (worker 6).
+     - s.headerHtml / s.footerHtml custom overrides still win when set.
+     - opts.noLabHeader (print-choice dialog: pre-printed letterhead) still
+       suppresses the header.
+     - The QR placeholder <img data-qr="1"> contract is unchanged:
+       printReport() injects the src; stripQrImg() removes the whole
+       data-qr-wrap block on unpaid reports.
+     - Output is wrapped in .rpt-page (print stylesheet governs page box,
+       breaks and exact backgrounds) with the <style> prepended. */
   function reportHtml(d, opts) {
     var inv = d.inv || {}, pat = d.pat || {}, s = d.s || {};
     var readyRows = d.readyRows || [], pendingCount = d.pendingCount || 0;
-    var doc = d.doc || null;
-    var docName = doc ? doc.name : '';
     var noLabHeader = !!(opts && opts.noLabHeader);
 
-    /* ---------- header: lab logo + info left, patient/case/QR right ---------- */
-    var addrLine = [s.address, s.phone, s.email].filter(function (x) { return x; }).join(' • ');
-    var headHtml =
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding-bottom:12px;margin-bottom:10px;border-bottom:2px solid #131845">' +
-        '<div style="display:flex;gap:12px;align-items:flex-start;min-width:0">' +
-          (s.logo ? '<img src="' + App.esc(s.logo) + '" style="width:54px;height:54px;object-fit:contain;flex:none" alt="">' : '') +
-          '<div style="min-width:0">' +
-            '<h1 style="margin:0;color:#131845;font-size:22px">' + App.esc(s.labName || 'Optix LAB MedSync') + '</h1>' +
-            (s.tagline ? '<div style="color:#555;font-size:12px">' + App.esc(s.tagline) + '</div>' : '') +
-            (addrLine ? '<div style="color:#555;font-size:11px">' + App.esc(addrLine) + '</div>' : '') +
-          '</div>' +
-        '</div>' +
-        '<div style="text-align:right;flex:none">' +
-          '<div style="font-size:12px;font-weight:700">Patient No.:</div>' +
-          '<div style="font-size:12px;margin:2px 0 6px">' + App.esc(pat.id || '—') + '</div>' +
-          '<div style="font-size:12px;font-weight:700">Case #:</div>' +
-          '<div style="font-size:12px;margin:2px 0 6px">' + App.esc(inv.no || inv.id || '—') + '</div>' +
-          '<img data-qr="1" style="width:110px;height:110px" alt="">' +
-        '</div>' +
-      '</div>';
+    /* report font-size scale (Lab Profile -> Report Font Size) */
+    var rptScale = RPT.setScale(s.reportFontSize || 'medium');
+    var rptBase = Math.round(12.5 * rptScale * 10) / 10;
 
-    /* ---------- patient info: 2 columns ---------- */
-    var ageSex = [pat.age ? pat.age + ' Yr(s)' : '', pat.gender || ''].filter(function (x) { return x; }).join(' / ');
-    var prow = function (k, v) {
-      return '<div style="display:flex;gap:10px;padding:3px 0;font-size:12.5px">' +
-        '<span style="font-weight:700;flex:none;min-width:170px">' + k + ':</span>' +
-        '<span>' + App.esc(v == null || v === '' ? '—' : String(v)) + '</span></div>';
-    };
-    var infoHtml =
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 40px;margin:4px 0 6px">' +
-        '<div>' +
-          prow('Patient Name', pat.name) +
-          prow('Father / Husband Name', pat.father) +
-          prow('Age / Sex', ageSex) +
-          prow('Blood Group', pat.blood || 'Unknown') +
-          prow('NIC', pat.cnic) +
-          prow('Phone', pat.phone) +
-          prow('Address', pat.address) +
-        '</div>' +
-        '<div>' +
-          prow('Registration Date', inv.createdAt ? App.dt(inv.createdAt) : '') +
-          prow('Collect Report At', d.maxReported ? App.dt(d.maxReported) : '') +
-          prow('Registration Location', s.headOffice) +
-          prow('Destination Location', s.mainLab) +
-          prow('Reference', docName) +
-          prow('Consultant', docName) +
-        '</div>' +
-      '</div>' +
-      '<hr style="border:none;border-top:1px solid #ccc;margin:8px 0 4px">';
+    /* header */
+    var headOut = noLabHeader ? '' : (s.headerHtml ? s.headerHtml : reportHeaderHtml(d));
 
-    /* ---------- test tables: TEST | NORMAL VALUE | UNIT | RESULT ---------- */
-    var testsHtml = readyRows.map(function (r) {
-      var test = r.test;
-      var params = (test && Array.isArray(test.params)) ? test.params : [];
-      var vals = (r.res && r.res.values) || {};
-      var bodyRows;
-      if (params.length) {
-        bodyRows = params.map(function (p) {
-          return '<tr><td>' + App.esc(p.name) + '</td>' +
-            '<td>' + App.esc(p.ref || '—') + '</td>' +
-            '<td>' + App.esc(p.unit || '—') + '</td>' +
-            '<td><strong>' + App.esc(vals[p.name] != null ? String(vals[p.name]) : '') + '</strong></td></tr>';
-        }).join('');
-        if (vals['Remarks']) {
-          bodyRows += '<tr><td colspan="4"><em>Remarks: ' + App.esc(vals['Remarks']) + '</em></td></tr>';
-        }
-      } else {
-        bodyRows = '<tr><td>Result</td><td>—</td><td>—</td><td><strong>' +
-          App.esc(vals['Result'] != null ? String(vals['Result']) : '') + '</strong></td></tr>';
+    /* patient info grid */
+    var infoHtml = patientGridHtml(d);
+
+    /* test sections, grouped by test category when present */
+    var rows = readyRows.slice();
+    rows.sort(function (a, b) {
+      var ca = sectionCatOf(a), cb = sectionCatOf(b);
+      if (!ca && !cb) return 0;              // keep original order
+      if (!ca) return 1;                     // uncategorised last
+      if (!cb) return -1;
+      return ca === cb ? 0 : (ca < cb ? -1 : 1);
+    });
+    var testsHtml = '', lastCat = null;
+    rows.forEach(function (r) {
+      var cat = sectionCatOf(r);
+      if (cat && cat !== lastCat) {
+        // Department divider on category change; categories that already
+        // read like a department ("Department of X") render as the divider,
+        // otherwise as an ALL-CAPS subsection header.
+        testsHtml += (/^department of/i.test(cat) ? sectionDividerHtml(cat) : subsectionHeaderHtml(cat));
+        lastCat = cat;
       }
-      return '<h3 style="margin:18px 0 6px;font-size:15px">' + App.esc(testName(r)) +
-        (testCode(r) ? ' <span style="color:#64748b;font-weight:500">(' + App.esc(testCode(r)) + ')</span>' : '') + '</h3>' +
-        '<table class="table"><thead><tr><th>TEST</th><th>NORMAL VALUE</th><th>UNIT</th><th>RESULT</th></tr></thead>' +
-        '<tbody>' + bodyRows + '</tbody></table>';
-    }).join('');
+      testsHtml += testSectionHtml(r, d);
+      testsHtml += testNoteHtml(r.test);
+    });
 
-    /* ---------- footer: verification note, signatories, address block ---------- */
-    var verNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
-    var sigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.qual || g.title); });
-    var sigHtml;
-    if (sigs.length) {
-      sigHtml = '<div style="display:flex;justify-content:space-between;gap:10px;border-top:2px solid #111;margin-top:22px;padding-top:14px">' +
-        sigs.map(function (g) {
-          return '<div style="flex:1;text-align:center">' +
-            '<div style="font-weight:800;font-size:12.5px">' + App.esc(g.name || '') + '</div>' +
-            (g.qual ? '<div style="font-size:10.5px;color:#444">' + App.esc(g.qual) + '</div>' : '') +
-            (g.title ? '<div style="font-size:10.5px;color:#444">' + App.esc(g.title) + '</div>' : '') +
-          '</div>';
-        }).join('') + '</div>';
-    } else {
-      sigHtml = '<div style="display:flex;justify-content:space-between;margin-top:40px">' +
-        '<div style="text-align:center;min-width:180px"><div style="border-top:1px solid #0f1e2e;padding-top:6px;font-size:12px">Lab Technologist</div></div>' +
-        '<div style="text-align:center;min-width:180px"><div style="border-top:1px solid #0f1e2e;padding-top:6px;font-size:12px">Pathologist</div></div>' +
-      '</div>';
-    }
-    var ab = [];
-    if (s.headOffice) ab.push('<div><strong>Head Office:</strong> ' + App.esc(s.headOffice) + (s.callCenter ? ' &nbsp;<strong>Call Center:</strong> ' + App.esc(s.callCenter) : '') + '</div>');
-    if (s.mainLab) ab.push('<div><strong>Main Lab:</strong> ' + App.esc(s.mainLab) + (s.mainLabPhone ? ' &nbsp;<strong>Ph:</strong> ' + App.esc(s.mainLabPhone) : '') + '</div>');
-    var abLast = [s.phone ? 'Phone: ' + App.esc(s.phone) : '', s.website ? 'Web: ' + App.esc(s.website) : '', s.email ? 'Email: ' + App.esc(s.email) : ''].filter(function (x) { return x; }).join(' &nbsp; ');
-    if (abLast) ab.push('<div>' + abLast + '</div>');
-    var addrHtml = ab.length ? '<div style="text-align:center;font-size:12px;margin-top:16px;line-height:1.8">' + ab.join('') + '</div>' : '';
+    /* footer */
+    var footOut = s.footerHtml ? s.footerHtml : reportFooterHtml(d);
 
-    var headOut = noLabHeader ? '' : (s.headerHtml ? s.headerHtml : headHtml);
-    var footOut = s.footerHtml ? s.footerHtml :
-      '<p style="text-align:center;font-weight:700;font-size:12.5px;margin:22px 0 0">' + App.esc(verNote) + '</p>' +
-      sigHtml + addrHtml +
-      '<p style="color:#999;font-size:11px;text-align:center;margin:14px 0 0">Powered by System Optix</p>';
-
-    return headOut + infoHtml + testsHtml +
-      (pendingCount ? '<p style="color:#d97706"><em>Note: ' + pendingCount + ' test(s) from this invoice are still pending.</em></p>' : '') +
-      (s.footerNote ? '<p style="color:#64748b;margin-top:18px;margin-bottom:4px"><em>' + App.esc(s.footerNote) + '</em></p>' : '') +
+    var bodyHtml = headOut + infoHtml + testsHtml +
+      (pendingCount
+        ? '<p style="color:#d97706;font-size:0.96em;margin:10px 0"><em>Note: ' +
+          pendingCount + ' test(s) from this invoice are still pending.</em></p>'
+        : '') +
+      (s.footerNote
+        ? '<p style="color:#64748b;margin-top:18px;margin-bottom:4px;font-size:0.92em"><em>' +
+          App.esc(s.footerNote) + '</em></p>'
+        : '') +
       footOut;
+
+    return '<style>' + RPT_PRINT_CSS + '</style>' +
+      '<div class="rpt-page" style="font-size:' + rptBase + 'px">' + bodyHtml + '</div>';
   }
 
   /* ---------- QR-coded report PDF upload ---------- */
@@ -627,7 +1615,16 @@
   }
 
   function stripQrImg(html) {
-    return String(html).replace(/<img[^>]*data-qr="1"[^>]*>/, '');
+    var h = String(html);
+    // The data-qr-wrap block contains no nested <div> (the caption is a
+    // <span>), so the first </div> the non-greedy match hits is the
+    // wrapper's own closing tag — this removes the QR *and* its
+    // "Scan to verify" caption, so unpaid reports never show a
+    // dangling caption.
+    h = h.replace(/<div[^>]*\bdata-qr-wrap\b[^>]*>[\s\S]*?<\/div>/, '');
+    // Fallback: strip a bare QR img if the wrapper is ever absent.
+    h = h.replace(/<img[^>]*data-qr="1"[^>]*>/, '');
+    return h;
   }
 
   async function printReport(invoiceId, opts) {
@@ -703,7 +1700,13 @@
     var y = M;
 
     function need(h) { if (y + h > 280) { doc.addPage(); y = M; } }
-    function txt(t, x, yy, opts) { doc.text(String(t == null ? '' : t), x, yy, opts || {}); }
+    function txt(t, x, yy, opts) {
+      // jsPDF renders a string[] as multiple lines; keep that working
+      // (patient grid / wrapped footer lines pass splitTextToSize arrays).
+      if (Array.isArray(t)) t = t.map(function (l) { return String(l == null ? '' : l); });
+      else t = String(t == null ? '' : t);
+      doc.text(t, x, yy, opts || {});
+    }
     function dash(v) { return (v == null || v === '') ? '—' : String(v); }
     function addImg(dataUrl, x, yy, w, h) {
       try {
@@ -714,128 +1717,374 @@
     }
 
     /* ----- header: logo + lab (left), patient/case nos + QR (right) ----- */
-    var qrS = 26;
-    if (s.logo) addImg(s.logo, M, y, 15, 15);
-    var tx = M + (s.logo ? 19 : 0);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(27, 27, 110);
-    txt(s.labName || 'Optix LAB MedSync', tx, y + 6);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(70, 70, 70);
-    var ty = y + 11;
-    if (s.tagline) { txt(s.tagline, tx, ty); ty += 4.5; }
-    var sub = [s.address, s.phone, s.email].filter(function (x) { return x; }).join('  •  ');
-    if (sub) { doc.setFontSize(8); doc.setTextColor(120, 120, 120); txt(doc.splitTextToSize(sub, 105)[0], tx, ty); }
-    if (qrDataUrl) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
-    var nx = W - M - qrS - 3;
-    doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-    doc.setFont('helvetica', 'bold'); txt('Patient No.:', nx, y + 4, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); txt(dash(pat.id), nx, y + 8.5, { align: 'right' });
-    doc.setFont('helvetica', 'bold'); txt('Case #:', nx, y + 14, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); txt(dash(inv.no || inv.id), nx, y + 18.5, { align: 'right' });
-    y += qrS + 3;
-    doc.setDrawColor(19, 24, 69); doc.setLineWidth(0.7);
-    doc.line(M, y, W - M, y); y += 6;
 
-    /* ----- patient info: two columns ----- */
-    var ageSex = (pat.age ? pat.age + ' Yr(s)' : '') + (pat.gender ? (pat.age ? ' / ' : '') + pat.gender : '');
-    var left = [
-      ['Patient Name', pat.name],
-      ['Father / Husband Name', pat.father || pat.fatherName],
-      ['Age / Sex', ageSex],
-      ['Blood Group', pat.blood || 'Unknown'],
-      ['NIC', pat.cnic],
-      ['Phone', pat.phone],
-      ['Address', pat.address]
-    ];
-    var right = [
-      ['Registration Date', App.dt(inv.createdAt)],
-      ['Reported At', d.maxReported ? App.dt(d.maxReported) : null],
-      ['Referred By', d.doc ? d.doc.name : 'Self'],
-      ['Email', pat.email],
-      ['City', pat.city],
-      ['Tests', d.readyRows.length + (d.pendingCount ? ' (' + d.pendingCount + ' pending)' : '')]
-    ];
-    var rows = Math.max(left.length, right.length);
-    for (var i = 0; i < rows; i++) {
-      var lL = left[i] ? doc.splitTextToSize(dash(left[i][1]), 50) : [''];
-      var rL = right[i] ? doc.splitTextToSize(dash(right[i][1]), 50) : [''];
-      var hgt = Math.max(lL.length, rL.length) * 4.4 + 1.4;
-      need(hgt);
-      if (left[i]) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-        txt(left[i][0] + ':', M, y);
-        doc.setFont('helvetica', 'normal');
-        txt(lL, M + 36, y);
-      }
-      if (right[i]) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-        txt(right[i][0] + ':', M + CW / 2, y);
-        doc.setFont('helvetica', 'normal');
-        txt(rL, M + CW / 2 + 36, y);
-      }
-      y += hgt;
+    // Accent hex -> RGB (default navy #1B1B6E); accepts "#rrggbb" or "rrggbb".
+    function hdrAccentRgb(hex) {
+      var raw = String(hex || '').trim().replace(/^#/, '');
+      if (/^[0-9a-fA-F]{3}$/.test(raw)) raw = raw.split('').map(function (c) { return c + c; }).join('');
+      if (!/^[0-9a-fA-F]{6}$/.test(raw)) raw = '1B1B6E';
+      var v = parseInt(raw, 16);
+      return [(v >> 16) & 255, (v >> 8) & 255, v & 255];
     }
-    y += 2;
-    doc.setDrawColor(180, 180, 180); doc.setLineWidth(0.3);
-    doc.line(M, y, W - M, y); y += 6;
+    var A = hdrAccentRgb(s.accent);
+    var showQr = s.showQr !== false && !!qrDataUrl;
+    var showTagline = s.showTagline !== false && !!s.tagline;
 
-    /* ----- test tables: TEST | NORMAL VALUE | UNIT | RESULT ----- */
-    var COLS = [64, 58, 28, 32]; // sums to 182 = CW
-    function tableHead() {
-      need(9);
-      doc.setFillColor(154, 160, 166); doc.setTextColor(20, 20, 20);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-      doc.rect(M, y, CW, 7, 'F');
-      var heads = ['TEST', 'NORMAL VALUE', 'UNIT', 'RESULT'], x = M;
-      heads.forEach(function (h, k) {
-        if (k === 3) txt(h, x + COLS[k] - 2, y + 4.8, { align: 'right' });
-        else txt(h, x + 2, y + 4.8);
-        x += COLS[k];
-      });
-      y += 7;
+    var qrS = 26;                                  // QR size (mm)
+    var headH = showQr ? qrS : 23;                 // header block height
+
+    // --- left: logo (~18mm) + lab name + subtitle ---
+    if (s.logo) addImg(s.logo, M, y, 18, 18);
+    var htx = M + (s.logo ? 22 : 0);
+    doc.setFont('times', 'bold'); doc.setFontSize(18);
+    doc.setTextColor(A[0], A[1], A[2]);
+    txt(s.labName || 'Optix LAB MedSync', htx, y + 9);
+    if (showTagline) {
+      doc.setFont('times', 'italic'); doc.setFontSize(11);
+      doc.setTextColor(A[0], A[1], A[2]);
+      txt(s.tagline, htx, y + 15.5);
     }
-    function tableRow(cells) {
+
+    // --- right: Patient No. / Case # right-aligned with wide letter spacing ---
+    var hnx = W - M - (showQr ? qrS + 4 : 0);
+    doc.setTextColor(20, 20, 20);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    txt('Patient No.:', hnx, y + 5, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+    txt(dash(pat.id), hnx, y + 10, { align: 'right', charSpace: 1.4 });
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+    txt('Case #:', hnx, y + 15.5, { align: 'right' });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+    txt(dash(inv.no || inv.id), hnx, y + 20.5, { align: 'right', charSpace: 1.4 });
+
+    // --- QR 26mm at far right ---
+    if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
+
+    y += headH + 2;
+
+    // --- optional report banner (only when s.reportTitle is set) ---
+    if (s.reportTitle) {
+      doc.setFillColor(A[0], A[1], A[2]);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(255, 255, 255);
+      doc.rect(M, y, CW, 8, 'F');
+      txt(s.reportTitle, M + CW / 2, y + 5.6, { align: 'center' });
+      y += 8 + 2;
+    }
+
+    // --- navy divider line; y now sits below the header ---
+    doc.setDrawColor(A[0], A[1], A[2]); doc.setLineWidth(0.6);
+    doc.line(M, y, W - M, y);
+    y += 5;
+
+    /* ----- patient info: 2-column grid (ref: Chughtai report) ----- */
+    (function () {
+      var pat = d.pat || {}, inv = d.inv || {}, s = d.s || {};
+      var docName = d.doc ? d.doc.name : '';
+
+      var ageSex = [pat.age ? pat.age + ' Yr(s)' : '', pat.gender || '']
+        .filter(function (x) { return x; }).join(' / ');
+
+      // Reference label set + order. Registration Location = lab head office,
+      // Destination Location = main lab (same mapping as reportHtml).
+      var left = [
+        ['Patient Name',          pat.name],
+        ['Father / Husband Name', pat.father || pat.fatherName],
+        ['Age / Sex',             ageSex],
+        ['Blood Group',           pat.blood || 'Unknown'],
+        ['NIC',                   pat.cnic],
+        ['Phone',                 pat.phone],
+        ['Address',               pat.address]
+      ];
+      var right = [
+        ['Registration Date',     inv.createdAt ? App.dt(inv.createdAt) : ''],
+        ['Collect Report At',     d.maxReported ? App.dt(d.maxReported) : ''],
+        ['Registration Location', s.headOffice],
+        ['Destination Location',  s.mainLab],
+        ['Reference',             docName],
+        ['Consultant',            docName]
+      ];
+
+      var COL_W   = CW / 2;            // 93 mm per column
+      var VAL_OFF = 44;               // label -> value offset (matches reference)
+      var WRAP_W  = COL_W - VAL_OFF - 2; // value wrap width (~47 mm)
+      var LH      = 4.6;              // line height
+      var ROW_PAD = 2.4;              // breathing room between rows
+
       doc.setFontSize(9);
-      var lines = cells.map(function (c, k) { return doc.splitTextToSize(String(c == null ? '' : c), COLS[k] - 4); });
-      var rh = Math.max.apply(null, lines.map(function (l) { return l.length; })) * 4.4 + 2.5;
-      need(rh);
-      var x = M;
-      doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.25);
-      doc.rect(M, y, CW, rh);
-      lines.forEach(function (ln, k) {
-        doc.setFont('helvetica', (k === 0 || k === 3) ? 'bold' : 'normal');
-        doc.setTextColor(20, 20, 20);
-        if (k === 3) txt(ln, x + COLS[k] - 2, y + 4.6, { align: 'right' });
-        else txt(ln, x + 2, y + 4.6);
-        x += COLS[k];
-      });
-      var sx = M;
-      for (var k = 0; k < 3; k++) { sx += COLS[k]; doc.line(sx, y, sx, y + rh); }
-      y += rh;
-    }
+      var rows = Math.max(left.length, right.length);
+      for (var i = 0; i < rows; i++) {
+        var lLines = left[i]  ? doc.splitTextToSize(dash(left[i][1]),  WRAP_W) : [''];
+        var rLines = right[i] ? doc.splitTextToSize(dash(right[i][1]), WRAP_W) : [''];
+        var rh = Math.max(lLines.length, rLines.length) * LH + ROW_PAD;
+        need(rh);
 
-    d.readyRows.forEach(function (r) {
-      var test = r.test;
-      var params = (test && Array.isArray(test.params)) ? test.params : [];
-      var vals = (r.res && r.res.values) || {};
-      need(12);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(20, 20, 20);
-      txt(doc.splitTextToSize(testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : ''), CW)[0], M, y);
-      y += 6;
-      tableHead();
-      if (params.length) {
-        params.forEach(function (p) {
-          tableRow([p.name, p.ref || '—', p.unit || '—', vals[p.name] != null ? String(vals[p.name]) : '']);
-        });
-        if (vals['Remarks']) {
-          need(8);
-          doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(100, 100, 100);
-          txt('Remarks: ' + vals['Remarks'], M, y + 4.5); y += 7;
+        if (left[i]) {
+          doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
+          txt(left[i][0] + ':', M, y);
+          doc.setFont('helvetica', 'normal');
+          txt(lLines, M + VAL_OFF, y);
         }
-      } else {
-        tableRow(['Result', '—', '—', vals['Result'] != null ? String(vals['Result']) : '']);
+        if (right[i]) {
+          var rx = M + COL_W;
+          doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
+          txt(right[i][0] + ':', rx, y);
+          doc.setFont('helvetica', 'normal');
+          txt(rLines, rx + VAL_OFF, y);
+        }
+        y += rh;
       }
-      y += 4;
-    });
+
+      /* thin divider rule below the grid (ref: light-grey full-width rule) */
+      y += 1.5;
+      need(4);
+      doc.setDrawColor(160, 160, 160);
+      doc.setLineWidth(0.3);
+      doc.line(M, y, W - M, y);
+      y += 5;
+    })();
+
+    /* ----- test tables: section title + RESULT box, grey bar, rows ----- */
+    (function () {
+      var s = d.s || {}, inv = d.inv || {};
+
+      // ---- geometry ----
+      var RBW  = 30;                // RESULT box width (~30mm per reference)
+      var GREY = [169, 169, 169];   // #A9A9A9 header fill
+      var INK  = [20, 20, 20];
+      var RED  = [198, 20, 20];     // abnormal value color
+      var CX_TEST = M + 2;          // param name column
+      var CX_REF  = M + 55;         // NORMAL VALUE column
+      var CX_UNIT = M + 84;         // UNIT column
+      var RX      = W - M - 2;      // right-aligned result value x
+      var LINE    = 4.6;            // row line height
+
+      var showBc = (s.showBarcode !== false);   // default true
+      var BOX_H  = showBc ? 24 : 17.5;
+
+      // ---- "15-Jun-2026 14:56" style timestamp ----
+      var MONS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      function p2(n) { return (n < 10 ? '0' : '') + n; }
+      function fmtTs(v) {
+        var dt = new Date(v);
+        if (!v || isNaN(dt.getTime())) return '';
+        return p2(dt.getDate()) + '-' + MONS[dt.getMonth()] + '-' + dt.getFullYear() +
+               ' ' + p2(dt.getHours()) + ':' + p2(dt.getMinutes());
+      }
+
+      // ---- inline abnormal check: "low - high" refs, also "<x" / ">x" style ----
+      // Returns -1 (low), 1 (high), 0 (normal / not parseable).
+      function rangeFlag(ref, valStr) {
+        var v = parseFloat(String(valStr == null ? '' : valStr).trim());
+        if (isNaN(v)) return 0;
+        var rs = String(ref == null ? '' : ref).replace(/,/g, '');
+        var m = rs.match(/(-?\d+(?:\.\d+)?)\s*(?:-|to|\u2013)\s*(-?\d+(?:\.\d+)?)/i);
+        if (m) {
+          var lo = parseFloat(m[1]), hi = parseFloat(m[2]);
+          if (v < lo) return -1;
+          if (v > hi) return 1;
+          return 0;
+        }
+        var m2 = rs.match(/(<=|<|>=|>)\s*(-?\d+(?:\.\d+)?)/);
+        if (m2) {
+          var b = parseFloat(m2[2]), op = m2[1];
+          if ((op === '<' && v >= b) || (op === '<=' && v > b)) return 1;
+          if ((op === '>' && v <= b) || (op === '>=' && v < b)) return -1;
+          return 0;
+        }
+        return 0;
+      }
+
+      // ---- pseudo-barcode: thin vertical rects derived from the case # chars ----
+      function drawBarcode(bx, byy, bw, bh, seed) {
+        var str = String(seed == null || seed === '' ? '0000' : seed);
+        var bars = [], total = 0, i, c, w, g;
+        for (i = 0; i < str.length; i++) {
+          c = str.charCodeAt(i);
+          w = 0.35 + (((c * 7 + i * 13) % 5) * 0.16);   // 0.35 - 0.99
+          g = 0.30 + (((c * 3 + i * 11) % 3) * 0.20);   // 0.30 - 0.70
+          bars.push({ w: w, g: g });
+          total += w + g;
+        }
+        var scale = Math.min(1, (bw - 4) / total);
+        var x = bx + bw / 2 - (total * scale) / 2;
+        doc.setFillColor(INK[0], INK[1], INK[2]);
+        for (i = 0; i < bars.length; i++) {
+          doc.rect(x, byy, bars[i].w * scale, bh, 'F');
+          x += (bars[i].w + bars[i].g) * scale;
+        }
+      }
+
+      // ---- sub-reference lines for "(See Below)" style params ----
+      // Supports p.refLines (array of strings), p.subRefs ([{label,ref}] or
+      // strings), or p.refNote (newline-separated string).
+      function subRefLines(p) {
+        if (p.refLines && p.refLines.length) return p.refLines;
+        if (p.subRefs && p.subRefs.length) return p.subRefs.map(function (sr) {
+          return typeof sr === 'string' ? sr : ((sr.label ? sr.label + ': ' : '') + (sr.ref || ''));
+        });
+        if (p.refNote) return String(p.refNote).split(/\n+/).filter(function (l) { return l.trim(); });
+        return null;
+      }
+
+      // ---- the RESULT box (top-right of each section) ----
+      function resultBox(bx, byy, caseNo, tsStr) {
+        var cx = bx + RBW / 2, yy = byy + 5.5;
+        doc.setDrawColor(60, 60, 60); doc.setLineWidth(0.4);
+        doc.rect(bx, byy, RBW, BOX_H);                       // outer border
+        doc.setFillColor(GREY[0], GREY[1], GREY[2]);
+        doc.rect(bx, byy, RBW, 5.5, 'F');                    // grey RESULT strip
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+        doc.setTextColor(INK[0], INK[1], INK[2]);
+        txt('RESULT', cx, byy + 3.9, { align: 'center' });
+        if (showBc) {
+          drawBarcode(bx, yy + 1, RBW, 6.5, caseNo);
+          yy += 8.5;
+        } else {
+          yy += 1.5;
+        }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+        txt(dash(caseNo), cx, yy + 3.4, { align: 'center' });
+        if (tsStr) {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+          doc.setTextColor(60, 60, 60);
+          txt(tsStr, cx, yy + 7.2, { align: 'center' });
+        }
+      }
+
+      // ---- grey header bar: TEST | NORMAL VALUE | UNIT ----
+      function tableHead() {
+        need(9);
+        doc.setFillColor(GREY[0], GREY[1], GREY[2]);
+        doc.setDrawColor(80, 80, 80); doc.setLineWidth(0.35);
+        doc.rect(M, y, CW, 7, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+        doc.setTextColor(INK[0], INK[1], INK[2]);
+        txt('TEST', CX_TEST, y + 4.8);
+        txt('NORMAL VALUE', CX_REF, y + 4.8);
+        txt('UNIT', CX_UNIT, y + 4.8);
+        y += 7;
+      }
+
+      // ---- build one param row (lines pre-wrapped, height pre-computed) ----
+      function buildRow(p, vals) {
+        var valStr = vals[p.name] != null ? String(vals[p.name]) : '';
+        var refStr = p.ref || '—';
+        var nameW = CX_REF - CX_TEST - 2;
+        var refW  = CX_UNIT - CX_REF - 2;
+        var unitW = RX - 36 - CX_UNIT - 2;   // keep clear of right-aligned value
+        var nameL = doc.splitTextToSize(p.name || '', Math.max(10, nameW));
+        var refL  = doc.splitTextToSize(refStr, Math.max(10, refW));
+        var unitL = doc.splitTextToSize(p.unit || '—', Math.max(10, unitW));
+        var valL  = valStr ? doc.splitTextToSize(valStr, 34) : [''];
+        var n = Math.max(nameL.length, refL.length, unitL.length, valL.length);
+        var subs = null, sl = subRefLines(p);
+        if (sl) {
+          subs = [];
+          sl.forEach(function (s) {
+            doc.splitTextToSize(s, CW - 6).forEach(function (l) { subs.push(l); });
+          });
+          if (!subs.length) subs = null;
+        }
+        return {
+          name: nameL, ref: refL, unit: unitL, val: valL, subs: subs,
+          abnormal: rangeFlag(refStr, valStr) !== 0,
+          rh: n * LINE + 2.5
+        };
+      }
+
+      // ---- draw one param row: bold name | ref | unit | right-aligned value ----
+      // No gridlines. Abnormal values are bold red.
+      function tableRow(row) {
+        need(row.rh);
+        var li;
+        doc.setTextColor(INK[0], INK[1], INK[2]);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+        for (li = 0; li < row.name.length; li++) txt(row.name[li], CX_TEST, y + LINE + li * LINE);
+        doc.setFont('helvetica', 'normal');
+        for (li = 0; li < row.ref.length; li++) txt(row.ref[li], CX_REF, y + LINE + li * LINE);
+        for (li = 0; li < row.unit.length; li++) txt(row.unit[li], CX_UNIT, y + LINE + li * LINE);
+        if (row.abnormal) { doc.setFont('helvetica', 'bold'); doc.setTextColor(RED[0], RED[1], RED[2]); }
+        else { doc.setFont('helvetica', 'bold'); doc.setTextColor(INK[0], INK[1], INK[2]); }
+        for (li = 0; li < row.val.length; li++) txt(row.val[li], RX, y + LINE + li * LINE, { align: 'right' });
+        y += row.rh;
+        if (row.subs && row.subs.length) {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+          doc.setTextColor(INK[0], INK[1], INK[2]);
+          row.subs.forEach(function (s) { txt(s, CX_TEST, y + 4.2); y += 4.2; });
+          y += 1;
+        }
+      }
+
+      /* ----- one section per ready row ----- */
+      var caseNo = inv.no || inv.id;
+
+      d.readyRows.forEach(function (r) {
+        var test = r.test || {};
+        var params = Array.isArray(test.params) ? test.params : [];
+        var vals = (r.res && r.res.values) || {};
+
+        // Section title (kept clear of the RESULT box on the right).
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5);
+        var titleLines = doc.splitTextToSize(
+          testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : ''), CW - RBW - 6);
+        var titleH = titleLines.length * 6;
+
+        // Build rows up-front so the whole section page-breaks cleanly.
+        var rows = params.length
+          ? params.map(function (p) { return buildRow(p, vals); })
+          : [buildRow({ name: 'Result', ref: '', unit: '' },
+                      { Result: vals['Result'] != null ? String(vals['Result']) : '' })];
+
+        var rowsH = rows.reduce(function (a, row) {
+          return a + row.rh + (row.subs ? row.subs.length * 4.2 + 1 : 0);
+        }, 0);
+
+        var noteLines = null, noteH = 0;
+        var tnote = test.note || test.notes || '';
+        if (tnote) {
+          noteLines = doc.splitTextToSize(String(tnote), CW - 4);
+          noteH = 6 + noteLines.length * 4.4;
+        }
+        var remLines = null, remH = 0;
+        if (vals['Remarks']) {
+          remLines = doc.splitTextToSize('Remarks: ' + vals['Remarks'], CW - 4);
+          remH = remLines.length * 4.4 + 2;
+        }
+
+        need(Math.max(titleH, BOX_H) + 2 + 7 + rowsH + noteH + remH + 6);
+
+        // Title (left) + RESULT box (right).
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5);
+        doc.setTextColor(INK[0], INK[1], INK[2]);
+        titleLines.forEach(function (tl, i) { txt(tl, M, y + 5 + i * 6); });
+        resultBox(W - M - RBW, y - 1, caseNo,
+                  fmtTs((r.res && r.res.reportedAt) || d.maxReported || inv.createdAt));
+        y += Math.max(titleH, BOX_H) + 2;
+
+        // Grey bar + rows.
+        tableHead();
+        rows.forEach(tableRow);
+
+        // Optional test-level note.
+        if (noteLines) {
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+          doc.setTextColor(INK[0], INK[1], INK[2]);
+          txt('Note:', M, y + 4.5);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+          doc.setTextColor(70, 70, 70);
+          txt(noteLines, M, y + 8.9);
+          y += noteH;
+        }
+        // Remarks (existing behavior).
+        if (remLines) {
+          doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
+          txt(remLines, M, y + 4.5);
+          y += remH;
+        }
+        y += 5;
+      });
+    })();
 
     if (d.pendingCount) {
       need(8);
@@ -850,46 +2099,78 @@
       y += 6;
     }
 
-    /* ----- footer: verification note, signatories, address block ----- */
-    need(42);
-    doc.setDrawColor(17, 17, 17); doc.setLineWidth(0.6);
-    doc.line(M, y, W - M, y); y += 6;
-    var verNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-    txt(verNote, W / 2, y, { align: 'center' }); y += 5;
-    txt('Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.', W / 2, y, { align: 'center' }); y += 9;
-    var sigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title); });
-    if (sigs.length) {
-      var sw = CW / sigs.length;
-      sigs.forEach(function (g, k) {
-        var cx = M + sw * (k + 0.5);
+    // ----- footer: verification note, signatories, address block -----
+    need(50);
+
+    // 1) Bold centered verification lines (as in the reference report)
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(20, 20, 20);
+    var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
+    var fVerLines = doc.splitTextToSize(fVerNote, CW);
+    txt(fVerLines, W / 2, y, { align: 'center' });
+    y += fVerLines.length * 4.6 + 1.5;
+    txt('Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.', W / 2, y, { align: 'center' });
+    y += 6.5;
+
+    // 2) Thick black rule
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.9);
+    doc.line(M, y, W - M, y);
+    y += 7;
+
+    // 3) Signatories — spread evenly across the full content width (any count)
+    var fSigs = (Array.isArray(s.signatories) ? s.signatories : [])
+      .filter(function (g) { return g && (g.name || g.title); });
+    if (fSigs.length) {
+      var fSw = CW / fSigs.length;      // column width per signatory
+      var fSigBlockH = 0;
+      fSigs.forEach(function (g, k) {
+        var fCx = M + fSw * (k + 0.5);  // column center
         doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
-        txt(g.name || '', cx, y, { align: 'center' });
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(90, 90, 90);
-        var sy = y + 4;
-        if (g.qual) { txt(g.qual, cx, sy, { align: 'center' }); sy += 3.8; }
-        if (g.title) { txt(g.title, cx, sy, { align: 'center' }); }
+        txt(g.name || '', fCx, y, { align: 'center' });
+        var fSy = y + 4.3;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(105, 105, 105);
+        if (g.qual)  { txt(g.qual,  fCx, fSy, { align: 'center' }); fSy += 3.9; }
+        if (g.title) { txt(g.title, fCx, fSy, { align: 'center' }); fSy += 3.9; }
+        if (fSy - y > fSigBlockH) fSigBlockH = fSy - y;
       });
-      y += 14;
+      y += fSigBlockH + 5;
     } else {
+      // Fallback: handwritten signature lines when no signatories are configured
       doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
       doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.3);
-      doc.line(M, y, M + 52, y); doc.line(W - M - 52, y, W - M, y);
+      doc.line(M, y, M + 52, y);
+      doc.line(W - M - 52, y, W - M, y);
       txt('Lab Technologist', M + 26, y + 5, { align: 'center' });
       txt('Pathologist', W - M - 26, y + 5, { align: 'center' });
-      y += 11;
+      y += 12;
     }
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-    txt('Head Office: ' + (s.headOffice || s.address || '—') + '    Call Center: ' + (s.callCenter || s.phone || '—'), W / 2, y, { align: 'center' }); y += 4.5;
-    var ab2 = [];
-    if (s.mainLab) ab2.push('Main Lab: ' + s.mainLab);
-    if (s.mainLabPhone) ab2.push('Ph: ' + s.mainLabPhone);
-    if (s.phone) ab2.push('Phone: ' + s.phone);
-    if (s.website) ab2.push('Web: ' + s.website);
-    if (s.email) ab2.push('Email: ' + s.email);
-    if (ab2.length) { txt(ab2.join('   '), W / 2, y, { align: 'center' }); y += 5; }
-    doc.setFontSize(8); doc.setTextColor(150, 150, 150);
+
+    // 4) Address block — bold, centered (3 lines as in the reference report)
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+    var fAddrLines = [];
+    fAddrLines.push('Head Office: ' + (s.headOffice || s.address || '—') +
+      '    Call Center: ' + (s.callCenter || s.phone || '—'));
+    var fMainLine = 'Main Lab: ' + (s.mainLab || '—');
+    if (s.mainLabPhone) fMainLine += '   Ph: ' + s.mainLabPhone;
+    fAddrLines.push(fMainLine);
+    var fContactBits = [];
+    if (s.phone)   fContactBits.push('Phone: ' + s.phone);
+    if (s.website) fContactBits.push('Web: ' + s.website);
+    if (s.email)   fContactBits.push('Email: ' + s.email);
+    if (fContactBits.length) fAddrLines.push(fContactBits.join('   '));
+    fAddrLines.forEach(function (ln) {
+      var fWl = doc.splitTextToSize(ln, CW);
+      txt(fWl, W / 2, y, { align: 'center' });
+      y += fWl.length * 4.6;
+    });
+    y += 2;
+
+    // 5) Powered-by line (small grey, centered)
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(150, 150, 150);
     txt('Powered by System Optix', W / 2, y, { align: 'center' });
+    y += 5;
 
     var dataUri;
     try { dataUri = doc.output('datauristring'); }
@@ -1094,35 +2375,75 @@
   /* exposed so the Patient Profile page can enter results directly */
   App.enterLabResult = openEntry;
   /* sample report preview for Lab Profile settings (uses provided settings, not DB) */
+  /* sample report preview for Lab Profile settings (uses provided settings, not DB).
+     Redesigned demo (worker 18/20): Chughtai-like data exercising the new
+     features — 3 tests in 2 categories (department dividers), 1 abnormal
+     value (Hemoglobin 11.8 g/dL vs 13.0-17.0, auto-detected), 1 per-test
+     Note. `s` passes through untouched so every new setting key flows to
+     reportHtml. */
   App.sampleReportPreview = function (s) {
     s = s || {};
     var now = new Date().toISOString();
+
     var sampleRows = [
       {
         item: { name: 'Complete Blood Count', code: 'CBC', testId: 'sample1' },
-        test: { params: [
-          { name: 'Hemoglobin', unit: 'g/dL', ref: '13.0 – 17.0', type: 'number' },
-          { name: 'WBC Count', unit: '/µL', ref: '4,000 – 11,000', type: 'number' },
-          { name: 'Platelets', unit: '/µL', ref: '150,000 – 400,000', type: 'number' }
-        ] },
-        res: { values: { 'Hemoglobin': '14.2', 'WBC Count': '7,500', 'Platelets': '250,000' } },
-        invoice: { id: 'preview', no: 'INV-0001' }
+        test: {
+          /* category -> department divider (worker 05 sections convention) */
+          category: 'Haematology',
+          params: [
+            { name: 'Hemoglobin', unit: 'g/dL', ref: '13.0 – 17.0', type: 'number' },
+            { name: 'WBC Count', unit: '/µL', ref: '4,000 – 11,000', type: 'number' },
+            { name: 'Platelets', unit: '/µL', ref: '150,000 – 400,000', type: 'number' }
+          ]
+        },
+        res: {
+          values: { 'Hemoglobin': '11.8', 'WBC Count': '7,500', 'Platelets': '250,000' },
+          /* Abnormal demo: 11.8 g/dL is below the 13.0–17.0 reference range;
+             the report auto-detects it from value + ref (flags kept as hook). */
+          flags: { 'Hemoglobin': 'L' }
+        },
+        invoice: { id: 'preview', no: 'INV-0042' }
       },
       {
-        item: { name: 'Blood Sugar (Fasting)', code: 'BSF', testId: 'sample2' },
-        test: { params: [
-          { name: 'Glucose', unit: 'mg/dL', ref: '70 – 100', type: 'number' }
-        ] },
+        item: { name: 'Serum Electrolytes', code: 'ELEC', testId: 'sample2' },
+        test: {
+          /* second category -> second department divider */
+          category: 'Chemical Pathology',
+          /* per-test note (worker 05 testNoteHtml convention: "Note:" block) */
+          note: 'Serum electrolytes should always be interpreted in the light of the clinical findings.',
+          params: [
+            { name: 'Sodium', unit: 'mmol/L', ref: '135 – 145', type: 'number' },
+            { name: 'Potassium', unit: 'mmol/L', ref: '3.5 – 5.5', type: 'number' },
+            { name: 'Chloride', unit: 'mmol/L', ref: '98 – 107', type: 'number' }
+          ]
+        },
+        res: { values: { 'Sodium': '140', 'Potassium': '4.2', 'Chloride': '103' } },
+        invoice: { id: 'preview', no: 'INV-0042' }
+      },
+      {
+        item: { name: 'Blood Sugar (Fasting)', code: 'BSF', testId: 'sample3' },
+        test: {
+          /* same category as above -> no extra divider; groups under it */
+          category: 'Chemical Pathology',
+          params: [
+            { name: 'Glucose', unit: 'mg/dL', ref: '70 – 100', type: 'number' }
+          ]
+        },
         res: { values: { 'Glucose': '92' } },
-        invoice: { id: 'preview', no: 'INV-0001' }
+        invoice: { id: 'preview', no: 'INV-0042' }
       }
     ];
+
     return reportHtml({
-      inv: { id: 'preview', no: 'INV-0001', createdAt: now },
-      pat: { id: 'P-0001', name: 'Sample Patient', father: 'Sample Father', age: 35, gender: 'Male',
-             blood: 'B+', cnic: '35202-1234567-1', phone: '0300-1234567', address: '123 Sample Street, Lahore' },
-      s: s,
-      doc: { name: 'Dr. Sample Doctor' },
+      inv: { id: 'preview', no: 'INV-0042', createdAt: now },
+      pat: {
+        id: 'P-10042', name: 'Muhammad Ahmad Khan', father: 'Muhammad Ashfaq Khan',
+        age: 42, gender: 'Male', blood: 'B+', cnic: '35202-3456789-1',
+        phone: '0301-4567890', address: 'House 14, Block C, Johar Town, Lahore'
+      },
+      s: s, /* pass-through: all new settings keys flow to reportHtml */
+      doc: { name: 'Dr. Ayesha Raza' },
       readyRows: sampleRows,
       pendingCount: 0,
       maxReported: now

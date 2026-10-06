@@ -515,6 +515,17 @@
       + '<option value="lato"' + (s.font === 'lato' ? ' selected' : '') + '>Lato</option>'
       + '<option value="montserrat"' + (s.font === 'montserrat' ? ' selected' : '') + '>Montserrat</option>'
       + '</select></div>'
+      + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Report Appearance</div></div>'
+      + '<div><label class="label">Report Title</label><input class="input" id="spReportTitle" placeholder="e.g. LABORATORY REPORT" value="' + App.esc(s.reportTitle || '') + '"></div>'
+      + '<div><label class="label">Accent Color</label><input type="color" id="spAccent" value="' + App.esc(s.accent || '#1b1b6e') + '" style="width:56px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer"></div>'
+      + '<div><label class="label">Report Font Size</label><select class="select" id="spFontSize">'
+      + '<option value="small"' + (s.reportFontSize === 'small' ? ' selected' : '') + '>Small</option>'
+      + '<option value="medium"' + ((!s.reportFontSize || s.reportFontSize === 'medium') ? ' selected' : '') + '>Medium</option>'
+      + '<option value="large"' + (s.reportFontSize === 'large' ? ' selected' : '') + '>Large</option>'
+      + '</select></div>'
+      + '<div><label class="label" for="spShowQr">Show QR Code</label><input type="checkbox" id="spShowQr"' + (s.showQr === false ? '' : ' checked') + ' style="width:20px;height:20px;accent-color:var(--brand)"></div>'
+      + '<div><label class="label" for="spShowBarcode">Show Barcode in RESULT box</label><input type="checkbox" id="spShowBarcode"' + (s.showBarcode === false ? '' : ' checked') + ' style="width:20px;height:20px;accent-color:var(--brand)"></div>'
+      + '<div><label class="label" for="spShowTagline">Show Tagline</label><input type="checkbox" id="spShowTagline"' + (s.showTagline === false ? '' : ' checked') + ' style="width:20px;height:20px;accent-color:var(--brand)"></div>'
       + '<div style="grid-column:1/-1"><label class="label">Report / Receipt Footer Note</label><input class="input" id="spFoot" value="' + App.esc(s.footerNote || '') + '"></div>'
       + '<div style="grid-column:1/-1"><label class="label">Lab Logo</label>'
       + '<div style="display:flex;align-items:center;gap:14px">'
@@ -648,6 +659,12 @@
         verNote: document.getElementById('spVerNote').value.trim(),
         signatories: _syncSigs(),
         font: document.getElementById('spFont').value,
+        reportTitle: document.getElementById('spReportTitle').value.trim(),
+        accent: document.getElementById('spAccent').value,
+        showQr: document.getElementById('spShowQr').checked,
+        showBarcode: document.getElementById('spShowBarcode').checked,
+        showTagline: document.getElementById('spShowTagline').checked,
+        reportFontSize: document.getElementById('spFontSize').value,
         headerHtml: document.getElementById('spHeadHtml').value.trim(),
         footerHtml: document.getElementById('spFootHtml').value.trim()
       });
@@ -660,12 +677,16 @@
     var _pvTimer = null;
     function _collectPreviewSettings() {
       function gv(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; }
+      function gc(id) { var e = document.getElementById(id); return e ? e.checked : false; }
       return {
         labName: gv('spName'), tagline: gv('spTag'), address: gv('spAddr'),
         phone: gv('spPhone'), email: gv('spEmail'), footerNote: gv('spFoot'),
         logo: _logoData, website: gv('spWeb'), headOffice: gv('spHead'),
         mainLab: gv('spMainLab'), callCenter: gv('spCall'), mainLabPhone: gv('spMainPhone'),
         verNote: gv('spVerNote'), signatories: _syncSigs(), font: gv('spFont'),
+        reportTitle: gv('spReportTitle'), accent: gv('spAccent'),
+        showQr: gc('spShowQr'), showBarcode: gc('spShowBarcode'), showTagline: gc('spShowTagline'),
+        reportFontSize: gv('spFontSize'),
         headerHtml: gv('spHeadHtml'), footerHtml: gv('spFootHtml')
       };
     }
