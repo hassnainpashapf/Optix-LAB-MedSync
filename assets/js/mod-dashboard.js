@@ -37,21 +37,21 @@
       '</div>';
   }
 
-  /* Donut stat card — ring shows pct of a meaningful total, value below with count-up */
+  /* Donut stat — big ring, amount in the center, no card box (merges into the page) */
   function donutStat(color, label, valueText, pct, sub, raw, isMoney) {
-    var C = 2 * Math.PI * 44;
+    var C = 2 * Math.PI * 60;
     var p = Math.max(0, Math.min(100, Math.round(pct || 0)));
     var countAttrs = (typeof raw === 'number' && isFinite(raw))
       ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"'
       : '';
-    return '<div class="dbd" style="--dbd:' + color + '">' +
-      '<div class="dbd-ring"><svg width="104" height="104" viewBox="0 0 118 118">' +
-      '<circle cx="59" cy="59" r="44" fill="none" stroke="#edf1f7" stroke-width="13"/>' +
-      '<circle cx="59" cy="59" r="44" fill="none" stroke="' + color + '" stroke-width="13" stroke-linecap="round"' +
-      ' stroke-dasharray="' + (p / 100 * C).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 59 59)"/>' +
-      '<text x="59" y="65" text-anchor="middle" class="dbd-p">' + p + '%</text></svg></div>' +
+    return '<div class="dbd-plain">' +
+      '<svg width="150" height="150" viewBox="0 0 150 150">' +
+      '<circle cx="75" cy="75" r="60" fill="none" stroke="#e8edf4" stroke-width="16"/>' +
+      '<circle cx="75" cy="75" r="60" fill="none" stroke="' + color + '" stroke-width="16" stroke-linecap="round"' +
+      ' stroke-dasharray="' + (p / 100 * C).toFixed(1) + ' ' + C.toFixed(1) + '" transform="rotate(-90 75 75)"/>' +
+      '<text x="75" y="72" text-anchor="middle" class="dbd-amt"' + countAttrs + '>' + valueText + '</text>' +
+      '<text x="75" y="94" text-anchor="middle" class="dbd-pct">' + p + '%</text></svg>' +
       '<div class="dbd-lb">' + App.esc(label) + '</div>' +
-      '<div class="dbd-vl"' + countAttrs + '>' + valueText + '</div>' +
       '<div class="dbd-sub">' + sub + '</div></div>';
   }
 
@@ -107,7 +107,7 @@
         return isMoney ? 'Rs ' + raw.toLocaleString('en-US') : String(raw);
       }
       function run() {
-        var els = document.querySelectorAll('#view .stat .vl[data-count], #view .dbd-vl[data-count]');
+        var els = document.querySelectorAll('#view .stat .vl[data-count], #view .dbd-amt[data-count]');
         var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         for (var i = 0; i < els.length; i++) (function (el) {
           var target = parseFloat(el.getAttribute('data-count')) || 0;
@@ -527,16 +527,13 @@
 
     var donutCss =
       '<style>' +
-      '.dbd{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:18px 12px 15px;' +
-      'box-shadow:var(--sh-sm);text-align:center;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards;min-width:0}' +
-      '.dbd:nth-child(2){animation-delay:.07s}.dbd:nth-child(3){animation-delay:.14s}.dbd:nth-child(4){animation-delay:.21s}' +
-      '.dbd:hover{transform:translateY(-2px);box-shadow:var(--sh-md)}' +
-      '.dbd-ring{display:grid;place-items:center;margin-bottom:8px}' +
-      '.dbd-p{font-size:15px;font-weight:800;fill:var(--ink)}' +
-      '.dbd-lb{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}' +
-      '.dbd-vl{font-size:21px;font-weight:800;letter-spacing:-.02em;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}' +
-      '.dbd-sub{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:5px}' +
-      '@media(max-width:560px){.dbd{padding:14px 8px 12px}.dbd-vl{font-size:17px}}' +
+      '.dbd-plain{text-align:center;padding:8px 4px;min-width:0;animation:scRise .55s cubic-bezier(.22,.8,.3,1) backwards}' +
+      '.dbd-plain:nth-child(2){animation-delay:.07s}.dbd-plain:nth-child(3){animation-delay:.14s}.dbd-plain:nth-child(4){animation-delay:.21s}' +
+      '.dbd-plain .dbd-amt{font-size:17px;font-weight:800;fill:#131845}' +
+      '.dbd-plain .dbd-pct{font-size:12px;font-weight:700;fill:#8a94a6}' +
+      '.dbd-plain .dbd-lb{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#5b6b80;margin-top:10px}' +
+      '.dbd-plain .dbd-sub{font-size:11.5px;color:#8a94a6;font-weight:500;margin-top:3px}' +
+      '@media(max-width:560px){.dbd-plain .dbd-amt{font-size:14px}}' +
       '</style>';
 
     return '<div class="db-page">' +

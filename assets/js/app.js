@@ -652,6 +652,7 @@
   window.App = {
     route: route,
     nav: nav,
+    loadScript: loadScript,
     ensureJsPDF: ensureJsPDF,
     toast: toast,
     modal: modal,

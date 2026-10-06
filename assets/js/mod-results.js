@@ -699,4 +699,8 @@
   }
 
   App.route('#/results', render);
+
+  /* exposed so the Reports page "Finalized Patient Reports" archive can view/print */
+  App.viewLabReport = viewReport;
+  App.printLabReport = printReport;
 })();
