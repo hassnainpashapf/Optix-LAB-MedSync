@@ -576,6 +576,11 @@
   function renderLogin() {
     var st = {};
     try { st = window.DB.get('settings', 'main') || {}; } catch (e) {}
+    /* Cloud/web sign-in always shows the Optix brand; a lab's own logo + name appear only inside its dashboard.
+       The desktop app (local install) shows its own lab's logo + name on the sign-in page. */
+    var _desk = !!(window.labposDesktop && window.labposDesktop.isDesktop), _webCloud = false;
+    try { _webCloud = !!(window.DB.isCloud && window.DB.isCloud()) && !_desk; } catch (e) {}
+    if (_webCloud) st = {};
     /* multi-tenant: list active labs for the selector */
     var _labs = [];
     try { _labs = window.DB.labs().filter(function (l) { return l.active !== false; }); } catch (e) {}
