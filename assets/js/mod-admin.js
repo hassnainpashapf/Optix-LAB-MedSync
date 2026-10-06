@@ -335,11 +335,51 @@
       +   '</div>'
       + '</div></div>';
 
+    /* ---- Finalized Patient Reports archive ----
+       Every report finalized (status='ready') in Lab Results is saved here. */
+    var finByInv = {};
+    DB.all('results').filter(function (r) { return r.status === 'ready'; }).forEach(function (r) {
+      (finByInv[r.invoiceId] = finByInv[r.invoiceId] || []).push(r);
+    });
+    var finList = Object.keys(finByInv).map(function (invId) {
+      var inv = DB.get('invoices', invId);
+      if (!inv) return null;
+      var rs = finByInv[invId];
+      var pat = DB.get('patients', inv.patientId);
+      var maxRep = '';
+      rs.forEach(function (r) { if (r.reportedAt && r.reportedAt > maxRep) maxRep = r.reportedAt; });
+      var names = rs.map(function (r) {
+        var t = r.testId ? DB.get('tests', r.testId) : null;
+        return t ? (t.code || t.name) : 'Test';
+      });
+      var shown = names.slice(0, 3).join(', ');
+      if (names.length > 3) shown += ' +' + (names.length - 3);
+      return { inv: inv, patName: pat ? pat.name : 'Walk-in', tests: shown, n: rs.length, reported: maxRep };
+    }).filter(Boolean).sort(function (a, b) { return (b.reported || '').localeCompare(a.reported || ''); });
+    var finRows = finList.map(function (f) {
+      return '<tr>' +
+        '<td>' + App.esc(f.reported ? App.d(f.reported) : '—') + '</td>' +
+        '<td><strong>' + App.esc(f.inv.no || f.inv.id) + '</strong></td>' +
+        '<td>' + App.esc(f.patName) + '</td>' +
+        '<td>' + App.esc(f.tests) + ' <span class="muted">(' + f.n + ')</span></td>' +
+        '<td style="text-align:right"><button class="btn btn-ghost btn-sm" data-finrep="' + App.esc(f.inv.id) + '">View</button></td>' +
+      '</tr>';
+    }).join('');
+    var finCard = ''
+      + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Finalized Patient Reports</h3>'
+      + '<span class="muted" style="font-weight:500;font-size:13px">Finalized reports are saved here</span></div><div class="card-b">'
+      + (finRows
+        ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Reported</th><th>Invoice</th><th>Patient</th><th>Tests</th><th></th></tr></thead><tbody>' + finRows + '</tbody></table></div>'
+        : App.empty('No finalized reports yet. Finalize a patient report from Lab Results and it will be saved here.'))
+      + '</div></div>';
+
     var html = ''
       + '<style>' + ADM_STAT_CSS + '</style>'
       + '<div class="stat-grid">' + repStats + '</div>'
 
       + filterCard
+
+      + finCard
 
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
       + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
@@ -366,6 +406,19 @@
 
     document.getElementById('view').innerHTML = html;
     admCountUp();
+
+    /* finalized reports archive: open the full report view (loads the results module on demand) */
+    document.querySelectorAll('[data-finrep]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var invId = b.getAttribute('data-finrep');
+        function go() {
+          if (App.viewLabReport) App.viewLabReport(invId);
+          else App.toast('Report viewer failed to load', 'err');
+        }
+        if (App.viewLabReport) go();
+        else App.loadScript('assets/js/mod-results.js').then(go, function () { App.toast('Could not load report viewer', 'err'); });
+      });
+    });
 
     document.getElementById('repFrom').addEventListener('change', function (e) { rep.from = e.target.value; renderReports(); });
     document.getElementById('repTo').addEventListener('change', function (e) { rep.to = e.target.value; renderReports(); });
