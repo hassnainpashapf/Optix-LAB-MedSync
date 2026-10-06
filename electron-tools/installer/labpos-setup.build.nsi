@@ -1,6 +1,6 @@
 ; =====================================================================
 ; Optix LAB MedSync Setup — hand-written NSIS installer (compiled with native makensis)
-;   Placeholders 1.2.3 and 342560 are filled in by
+;   Placeholders 1.2.3 and 232536 are filled in by
 ;   build-installer.sh before compiling. Do not edit the built .nsi by hand.
 ; =====================================================================
 !include "MUI2.nsh"
@@ -14,8 +14,8 @@
 !define APP_EXE       "Optix LAB MedSync.exe"
 
 Name "${APP_NAME} ${APP_VERSION}"
-OutFile "..\..\dist-installer\Optix-LAB-MedSync-Setup-${APP_VERSION}.exe"
-InstallDir "$PROGRAMFILES64\${APP_NAME}"
+OutFile "..\..\dist-installer\Optix-LAB-MedSync-Setup-${APP_VERSION}-win7-8-x86.exe"
+InstallDir "$PROGRAMFILES\${APP_NAME}"
 InstallDirRegKey HKLM "Software\${APP_NAME}" "InstallDir"
 RequestExecutionLevel admin
 SetCompressor /SOLID lzma
@@ -71,7 +71,7 @@ Section "${APP_NAME}" SecMain
   SetOutPath "$INSTDIR"
 
   ; App payload (Electron build: Optix LAB MedSync.exe + resources)
-  File /r "..\..\dist-installer\win-unpacked\*.*"
+  File /r "..\..\dist-installer-win7\win-ia32-unpacked\*.*"
 
   ; Uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -86,7 +86,7 @@ Section "${APP_NAME}" SecMain
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayIcon" "$INSTDIR\${APP_EXE},0"
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "Publisher" "${APP_PUBLISHER}"
   WriteRegStr   HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayVersion" "${APP_VERSION}"
-  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "EstimatedSize" 342560
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "EstimatedSize" 232536
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoRepair" 1
 

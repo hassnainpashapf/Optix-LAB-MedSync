@@ -27,7 +27,7 @@ VER=$(node -p "require('./app-stage/package.json').version")
 KB=$(du -sk ../../dist-installer/$UNP | cut -f1)
 echo "version=$VER  installed-KB=$KB"
 cp -f ../../electron-src/icon.ico ./icon.ico
-sed -e "s/__APP_VERSION__/${VER}/g" -e "s/__ESTIMATED_KB__/${KB}/g" -e "s/__UNPACKED__/${UNP}/g" -e "s|__PF__|${PF}|g" -e "s/__SUFFIX__/${SUF}/g" \
+sed -e "s/__APP_VERSION__/${VER}/g" -e "s/__ESTIMATED_KB__/${KB}/g" -e "s/__UNPACKED__/${UNP}/g" -e "s|__PF__|${PF}|g" -e "s/__OUT__/dist-installer/g" -e "s/__SUFFIX__/${SUF}/g" \
   labpos-setup.nsi > labpos-setup.build.nsi
 makensis -V2 labpos-setup.build.nsi
 

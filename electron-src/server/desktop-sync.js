@@ -14,6 +14,7 @@
 const fs = require('fs');
 const path = require('path');
 const { sameRecord, DEL } = require('./sync-store');
+const httpFetch = require('./http-fetch'); /* works on Node 16 (Windows 7/8 builds) as well as modern Node */
 
 /* fields that point at another record: [table, field, targetTable] ('items[].testId' handled separately) */
 const REFS = [
@@ -41,7 +42,7 @@ function create(ctx) {
     opts = opts || {};
     const headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
     if (token && !opts.noAuth) headers.Authorization = 'Bearer ' + token;
-    return fetch(cloudUrl + p, Object.assign({}, opts, { headers, signal: AbortSignal.timeout(timeoutMs || 15000) }));
+    return httpFetch(cloudUrl + p, { method: opts.method, headers, body: opts.body, timeout: timeoutMs || 15000 });
   }
 
   async function getState() { return (await raw.getMeta('sync')) || { since: 0, pushedU: 0 }; }
@@ -168,7 +169,7 @@ function create(ctx) {
   }
   async function fetchPdf(key) {
     try {
-      const r = await fetch(cloudUrl + '/r/' + encodeURIComponent(key), { signal: AbortSignal.timeout(20000) });
+      const r = await httpFetch(cloudUrl + '/r/' + encodeURIComponent(key) + '?raw=1', { timeout: 20000 });
       if (!r.ok) return null;
       const buf = Buffer.from(await r.arrayBuffer());
       fs.writeFileSync(pdfFile(key), buf);

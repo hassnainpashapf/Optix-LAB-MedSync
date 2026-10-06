@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Optix LAB MedSync</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23131845'/%3E%3Cpath d='M13 7h6v7l4 9.2c.6 1.4-.4 2.8-1.9 2.8H10.9c-1.5 0-2.5-1.4-1.9-2.8L13 14V7z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cpath d='M11 20h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="manifest" href="assets/manifest.webmanifest">
+<meta name="theme-color" content="#131845">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MedSync">
+<link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="assets/css/app.css?v=7a828df">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar" id="sidebar"><!-- rendered by App.renderShell() --></aside>
+  <div class="main">
+    <header class="topbar" id="topbar"><!-- rendered by App.renderShell() --></header>
+    <main id="view"><!-- route views render here --></main>
+  </div>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+
+<script>
+/* Shell-level delegation (works regardless of module render timing) */
+document.addEventListener('click', function (e) {
+  if (e.target.closest('#navToggle')) document.body.classList.toggle('side-open');
+  else if (e.target.closest('.nav-it')) document.body.classList.remove('side-open');
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape') document.body.classList.remove('side-open');
+});
+</script>
+<!-- API base for the web build (Cloudflare Pages copies assets/); the desktop app serves its own /api-config.js -->
+<script src="assets/js/api-config.js"></script>
+<script>
+/* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
+   It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
+   to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
+window.__ASSET_V = '7a828df';
+/* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
+   Only db.js + app.js + mod-dashboard.js load at boot. */
+window.__LAZY_ROUTES = {
+  '#/billing/:patientId': 'assets/js/mod-billing.js',
+  '#/invoices': 'assets/js/mod-invoices.js',
+  '#/invoice/:id': 'assets/js/mod-invoices.js',
+  '#/dues': 'assets/js/mod-invoices.js',
+  '/patients': 'assets/js/mod-patients.js',
+  '/patients/new': 'assets/js/mod-patients.js',
+  '/patient/:id': 'assets/js/mod-patients.js',
+  '/tests': 'assets/js/mod-masters.js',
+  '/doctors': 'assets/js/mod-masters.js',
+  '#/results': 'assets/js/mod-results.js',
+  '#/expenses': 'assets/js/mod-admin.js',
+  '#/reports': 'assets/js/mod-admin.js',
+  '#/settings': 'assets/js/mod-admin.js',
+  '/downloads': 'assets/js/mod-downloads.js',
+  '/profile': 'assets/js/mod-profile.js'
+};
+</script>
+<script src="assets/js/qrcode.min.js?v=7a828df"></script>
+<script src="assets/js/db.js?v=7a828df"></script>
+<script src="assets/js/test-catalog-5000.js?v=7a828df"></script>
+<script src="assets/js/graph-config.js?v=7a828df"></script>
+<script src="assets/js/app.js?v=7a828df"></script>
+<script src="assets/js/mod-dashboard.js?v=7a828df"></script>
+</body>
+</html>

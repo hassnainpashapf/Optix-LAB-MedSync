@@ -3,7 +3,10 @@
    Interface matches db-pg.js exactly; all methods are async so the server
    can await both adapters uniformly. */
 'use strict';
-const { DatabaseSync } = require('node:sqlite');
+/* node:sqlite (Node 22+, Electron 30+) or, on older runtimes (Windows 7/8 desktop builds: Electron 22 / Node 16), better-sqlite3 —
+   both expose the same exec/prepare/run/get/all API used below. */
+let DatabaseSync;
+try { DatabaseSync = require('node:sqlite').DatabaseSync; } catch (e) { DatabaseSync = require('better-sqlite3'); }
 const fs = require('fs');
 const path = require('path');
 

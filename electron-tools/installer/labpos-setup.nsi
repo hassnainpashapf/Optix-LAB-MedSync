@@ -71,7 +71,7 @@ Section "${APP_NAME}" SecMain
   SetOutPath "$INSTDIR"
 
   ; App payload (Electron build: Optix LAB MedSync.exe + resources)
-  File /r "..\..\dist-installer\__UNPACKED__\*.*"
+  File /r "..\..\__OUT__\__UNPACKED__\*.*"
 
   ; Uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"

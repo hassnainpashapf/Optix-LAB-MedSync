@@ -1,0 +1,40 @@
+# Optix LAB MedSync Windows installer (NSIS) — electron-builder config.
+# Built on Linux via wine. Produces dist-installer/Optix-LAB-MedSync-Setup-<version>.exe
+appId: com.labpos.desktop
+productName: Optix LAB MedSync
+copyright: Copyright © Optix LAB MedSync
+electronVersion: 22.3.27
+
+directories:
+  app: ./app-stage-win7
+  output: ../../dist-installer-win7
+
+files:
+  - "**/*"
+  - "!**/*.map"
+
+# Windows 7/8/8.1 build: Electron 22 (last to support them) runs Node 16 -> no node:sqlite, so the prebuilt win32 better-sqlite3 is bundled
+asar: true
+asarUnpack:
+  - "node_modules/better-sqlite3/**"
+npmRebuild: false
+nodeGypRebuild: false
+buildDependenciesFromSource: false
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: ../../electron-src/icon.ico
+  artifactName: "Optix-LAB-MedSync-Setup-${version}.${ext}"
+
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  allowElevation: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Optix LAB MedSync
+  uninstallDisplayName: Optix LAB MedSync
+  # classic Next-Next wizard pages are used when oneClick is false

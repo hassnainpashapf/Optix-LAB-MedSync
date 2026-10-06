@@ -11,10 +11,10 @@
   var WIN_OPTS = [
     { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.3-win10-11-x64.exe' },
     { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.2.3-win10-x86.exe' },
-    { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win8-x64.exe' },
-    { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win8-x86.exe' },
-    { os: 'Windows 7',       arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win7-x64.exe' },
-    { os: 'Windows 7',       arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.0.0-win7-x86.exe' }
+    { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.3-win7-8-x64.exe' },
+    { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.2.3-win7-8-x86.exe' },
+    { os: 'Windows 7',       arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.3-win7-8-x64.exe' },
+    { os: 'Windows 7',       arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.2.3-win7-8-x86.exe' }
   ];
   var WIN_SIZE = '~100 MB';
 
@@ -47,7 +47,7 @@
     }).join('');
     return '<div class="card dl-card">' +
       '<div class="card-h"><div class="dl-ico">' + ICO.win + '</div>' +
-      '<div><h3>Windows</h3><p class="dl-ver">Windows 10/11 (64 &amp; 32-bit): v1.2.3 (cloud sync) &middot; Windows 7/8: v1.0.0</p></div></div>' +
+      '<div><h3>Windows</h3><p class="dl-ver">Windows 7, 8.1, 10, 11 &middot; Version 1.2.3 (cloud sync)</p></div></div>' +
       '<div class="card-b">' +
       '<button type="button" class="btn btn-primary dl-btn dl-win-toggle">' + ICO.dl +
         '<span class="dl-win-toggle-tx">Choose your Windows version</span>' + ICO.chev + '</button>' +
@@ -55,7 +55,7 @@
         '<div class="dl-note">' + ICO.check + '<span><b>Not sure which to pick?</b> Most modern PCs use 64-bit. Windows 11 is 64-bit only.</span></div>' +
         '<div class="dl-os-grid">' + grid + '</div>' +
       '</div>' +
-      '<div class="dl-note">' + ICO.check + '<span>Windows 10/11 (v1.2.3, 64 and 32-bit) keeps its own copy of your data, works offline and syncs with the cloud. Windows 7/8 builds (v1.0.0) work on that PC only, without cloud sync.</span></div>' +
+      '<div class="dl-note">' + ICO.check + '<span>Every Windows build (7, 8.1, 10, 11 &middot; 64 and 32-bit) keeps its own copy of your data, works offline and syncs with the cloud, so the same account works on the web, the app and the phone.</span></div>' +
       '<ol class="dl-steps">' + steps + '</ol>' +
       '</div></div>';
   }
