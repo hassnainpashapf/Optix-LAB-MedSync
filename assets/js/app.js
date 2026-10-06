@@ -844,6 +844,35 @@
     window.addEventListener('resize', schedule);
     setInterval(watch, 1500); /* #view is re-created on login/logout */
   })();
+  /* Android app: tell the user when a newer APK exists and let them update in one tap
+     (Android always asks for the final install confirmation itself — apps cannot install silently). */
+  (function () {
+    if (!/OptixApp/.test(navigator.userAgent || '')) return;
+    var m = /OptixApp\/(\d+)/.exec(navigator.userAgent || '');
+    var cur = m ? +m[1] : 201; /* APK 2.0.1 did not report its version */
+    var shown = false;
+    function check() {
+      if (shown || !window.LABPOS_API || !session()) return;
+      try { if (+localStorage.getItem('apkUpdLater') > Date.now()) return; } catch (e) {}
+      fetch(window.LABPOS_API + '/api/version', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (v) {
+        if (!v || !v.apk || !(v.apk.versionCode > cur) || shown) return;
+        shown = true;
+        var bar = document.createElement('div');
+        bar.id = 'apkUpdate';
+        bar.style.cssText = 'position:fixed;left:10px;right:10px;bottom:14px;z-index:99999;display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:14px;background:#131845;color:#fff;box-shadow:0 10px 30px rgba(0,0,0,.35);font:600 13.5px/1.35 system-ui,sans-serif';
+        bar.innerHTML = '<div style="flex:1"><b>New app version ' + esc(v.apk.version) + ' available</b><div style="font-weight:500;opacity:.8;font-size:12px">Tap Update, open the downloaded file and press Install.</div></div>' +
+          '<button id="apkLater" style="border:0;border-radius:9px;padding:9px 11px;background:rgba(255,255,255,.14);color:#fff;font-weight:700">Later</button>' +
+          '<button id="apkGo" style="border:0;border-radius:9px;padding:9px 14px;background:#fff;color:#131845;font-weight:800">Update</button>';
+        document.body.appendChild(bar);
+        document.getElementById('apkLater').onclick = function () { bar.remove(); try { localStorage.setItem('apkUpdLater', String(Date.now() + 6 * 3600 * 1000)); } catch (e) {} };
+        document.getElementById('apkGo').onclick = function () { location.href = v.apk.url; }; /* external host -> opens in the phone browser, which downloads the APK */
+      }).catch(function () {});
+    }
+    setTimeout(check, 4000);
+    setInterval(check, 30 * 60 * 1000);
+    window.addEventListener('hashchange', function () { setTimeout(check, 1500); });
+  })();
+
   /* desktop app: small badge showing whether this PC's data has reached the cloud */
   (function () {
     if (!(window.labposDesktop && window.labposDesktop.isDesktop)) return;

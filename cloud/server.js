@@ -215,7 +215,23 @@ async function main() {
   app.get('/assets/js/api-config.js', sendApiConfig); /* the web index.html loads this path */
   /* ---- release channel (polled by the desktop updater + superadmin) ----
      NOTE: specific /api/* routes must be registered BEFORE /api/:table */
-  app.get('/api/version', (req, res) => res.json(readReleases()));
+  /* newest Android app = highest Optix-LAB-MedSync-<a.b.c>.apk in the releases folder (drop a new APK there, no config needed);
+     versionCode = a*100 + b*10 + c (2.0.2 -> 202), matching the APK's own versionCode */
+  function latestApk(req) {
+    try {
+      let best = null;
+      for (const f of fs.readdirSync(path.join(DATA_DIR, 'releases'))) {
+        const m = /^Optix-LAB-MedSync-(\d+)\.(\d+)\.(\d+)\.apk$/.exec(f);
+        if (!m) continue;
+        const code = (+m[1]) * 100 + (+m[2]) * 10 + (+m[3]);
+        if (!best || code > best.versionCode) best = { version: `${m[1]}.${m[2]}.${m[3]}`, versionCode: code, file: f };
+      }
+      if (!best) return null;
+      const base = PUBLIC_API_URL || `${req.protocol}://${req.get('host')}`;
+      return { version: best.version, versionCode: best.versionCode, url: base + '/releases/' + best.file };
+    } catch (e) { return null; }
+  }
+  app.get('/api/version', (req, res) => { const r = readReleases(); const apk = latestApk(req); if (apk) r.apk = apk; res.json(r); });
 
   /* ---- lab registry ---- */
   async function getLabs() { return (await store.getMeta('labs')) || {}; }
