@@ -1303,7 +1303,7 @@
         bars += '<span style="display:block;flex:0 0 auto;width:0;flex-grow:1;background:#fff;height:100%;"></span>';
       }
     }
-    return '<div style="display:flex;align-items:stretch;width:40px;height:12px;' +
+    return '<div style="display:flex;align-items:stretch;width:32px;height:18px;' +
       'background:#fff;padding:0;margin:0 auto;line-height:0;overflow:hidden;" ' +
       'aria-hidden="true">' + bars + '</div>';
   }
@@ -2537,8 +2537,8 @@
       '<div class="toolbar" style="margin-bottom:16px;flex-wrap:wrap">' +
         '<input class="input search" id="resSearch" placeholder="Search invoice no / patient..." value="' + App.esc(query) + '" style="max-width:280px;flex:1;min-width:200px">' +
         '<div style="display:flex;gap:8px;margin-left:auto">' +
-          '<button class="btn ' + (tab === 'pending' ? 'btn-primary' : 'btn-ghost') + '" data-tab="pending">Pending Entry <span class="badge b-pending" style="margin-left:6px">' + pendingRows.length + '</span></button>' +
-          '<button class="btn ' + (tab === 'ready' ? 'btn-primary' : 'btn-ghost') + '" data-tab="ready">Ready Reports <span class="badge b-ready" style="margin-left:6px">' + readyGroupsCount + '</span></button>' +
+          '<button class="btn ' + (tab === 'pending' ? 'btn-primary' : '') + '" data-tab="pending" style="border:2px solid #000">Pending Entry <span class="badge b-pending" style="margin-left:6px">' + pendingRows.length + '</span></button>' +
+          '<button class="btn ' + (tab === 'ready' ? 'btn-primary' : '') + '" data-tab="ready" style="border:2px solid #000">Ready Reports <span class="badge b-ready" style="margin-left:6px">' + readyGroupsCount + '</span></button>' +
         '</div>' +
       '</div>';
 
