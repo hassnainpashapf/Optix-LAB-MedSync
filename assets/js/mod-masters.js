@@ -205,8 +205,9 @@ function drawTestRows(canEdit) {
 
   var htmlParts = [];
   order.forEach(function (cat) {
-    htmlParts.push('<tr class="dept-head"><td colspan="8" style="background:var(--brand-soft);font-weight:800;padding:10px 12px;color:var(--brand)">' +
-      App.esc(cat) + ' <span class="muted" style="font-weight:400">(' + groups[cat].length + ')</span></td></tr>');
+    var isUncat = cat === 'Uncategorized';
+    htmlParts.push('<tr class="dept-head"><td colspan="8" style="background:' + (isUncat ? '#fef3c7' : 'var(--brand-soft)') + ';font-weight:800;padding:10px 12px;color:' + (isUncat ? '#92400e' : 'var(--brand)') + ';border-left:4px solid ' + (isUncat ? '#f59e0b' : 'var(--brand)') + '">' +
+      '📁 ' + App.esc(cat) + ' <span class="muted" style="font-weight:400">(' + groups[cat].length + ' test' + (groups[cat].length === 1 ? '' : 's') + ')</span></td></tr>');
     groups[cat].forEach(function (t) {
       var status = t.active
         ? '<span class="badge b-ready">Active</span>'
@@ -223,7 +224,8 @@ function drawTestRows(canEdit) {
       htmlParts.push('<tr>' +
         '<td><strong>' + App.esc(t.code || '') + '</strong></td>' +
         '<td>' + App.esc(t.name || '') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
-          (t.isPackage && t.includes ? '<div style="font-size:11.5px;color:var(--muted)">' + t.includes.length + ' tests included</div>' : '') + '</td>' +
+          (t.isPackage && t.includes ? '<div style="font-size:11.5px;color:var(--muted)">' + t.includes.length + ' tests included</div>' : '') +
+          '<div style="margin-top:4px"><span class="badge" style="background:var(--brand-soft);color:var(--brand);font-size:11px">📁 ' + App.esc(t.category || 'Uncategorized') + '</span></div></td>' +
         '<td>' + App.esc(t.category || '') + '</td>' +
         '<td>' + App.esc(t.sampleType || '') + '</td>' +
         '<td>' + App.esc(t.tat || '') + '</td>' +
