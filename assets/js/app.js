@@ -631,6 +631,8 @@
           '</div>' +
         '</aside>' +
         '<div class="lg-form">' +
+        '<a class="lg-back" href="https://optix-lab-medsync.pages.dev/"' + ((window.labposDesktop && window.labposDesktop.isDesktop) ? ' target="_blank" rel="noopener"' : '') + '>' +
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Back to website</a>' +
         '<form class="login-card" id="loginForm" autocomplete="off">' +
           '<div class="login-logo">' +
             '<span class="login-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 32)) + '</span>' +

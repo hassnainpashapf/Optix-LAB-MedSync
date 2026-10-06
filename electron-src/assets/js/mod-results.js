@@ -1655,10 +1655,12 @@
     var invNo = (d.inv && d.inv.no) || '';
 
     /* result columns: current report first, then previous (newest first) */
-    var cols = [{ reportedAt: (r.res && r.res.reportedAt) || d.maxReported || '', values: vals }]
+    var cols = [{ reportedAt: (r.res && r.res.reportedAt) || d.maxReported || '', values: vals, invoiceNo: invNo }]
       .concat(prev.map(function (p) {
-        return { reportedAt: p.reportedAt || '', values: p.values || {} };
+        return { reportedAt: p.reportedAt || '', values: p.values || {}, invoiceNo: p.invoiceNo || '' };
       }));
+    var cmp = cols.length > 1; /* comparison print: previous results beside the new ones */
+    if (cmp) d._cmpLegend = true;
     var nRes = cols.length;
 
     /* column grid: TEST 32% | NORMAL VALUE 24% | UNIT (rest) | RESULT fixed 120px */
@@ -1679,8 +1681,8 @@
         'padding:0;line-height:1.25;font-size:0.76em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%">' +
         '<div style="font-weight:700;color:#000;font-size:1em;background:#bfbfbf;padding:3px 0;border-bottom:2px solid #000;text-align:center;width:100%">RESULT</div>' +
         '<div style="padding:3px 3px 2px;display:flex;flex-direction:column;align-items:center;width:100%;box-sizing:border-box">' +
-        '<div style="width:100%;margin:0 0 2px">' + barcodeHtml(invNo, '100%', '11px') + '</div>' +
-        '<div style="color:#000;font-size:1em;white-space:nowrap">' + App.esc(invNo) + '</div>' +
+        '<div style="width:100%;margin:0 0 2px">' + barcodeHtml(c.invoiceNo || invNo, '100%', '11px') + '</div>' +
+        '<div style="color:#000;font-size:1em;white-space:nowrap">' + App.esc(c.invoiceNo || invNo) + '</div>' +
         '<div style="font-size:1em;color:#000;white-space:nowrap">' +
           App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
         '</div></div>' +
@@ -1695,23 +1697,31 @@
       '<div style="' + _hc + '">NORMAL VALUE</div>' +
       '<div style="' + _hc + '">UNIT</div>';
 
-    /* value cell: centered; abnormal = bold black only (no colors, no arrows) */
-    function valCell(valueStr, refStr) {
+    /* value cell. Normal print: abnormal = bold black. Comparison print: the NEW result is colour-coded by how far it is
+       outside the range (amber = slightly, orange = moderately, red = critical) with an arrow (up = high, down = low);
+       previous results stay plain so the doctor can read the change at a glance. */
+    var SEV_COLOR = { mild: '#b45309', moderate: '#c2410c', critical: '#b91c1c' };
+    function valCell(valueStr, refStr, isNew) {
       var disp = (valueStr == null) ? '' : String(valueStr);
-      if (abnormalSeverity(disp, refStr)) {
-        return '<div style="text-align:right;padding-right:20px">' +
-          '<span style="font-weight:700;color:#000">' + App.esc(disp) + '</span>' +
-        '</div>';
+      var sev = abnormalSeverity(disp, refStr);
+      var base = 'text-align:right;padding-right:20px';
+      if (cmp) {
+        if (isNew && sev) {
+          return '<div style="' + base + '"><span style="font-weight:800;color:' + SEV_COLOR[sev.severity] + '">' +
+            (sev.dir === 'high' ? '&uarr; ' : '&darr; ') + App.esc(disp) + '</span></div>';
+        }
+        return '<div style="' + base + '">' + App.esc(disp) + '</div>';
       }
-      return '<div style="text-align:right;padding-right:20px">' + App.esc(disp) + '</div>';
+      if (sev) return '<div style="' + base + '"><span style="font-weight:700;color:#000">' + App.esc(disp) + '</span></div>';
+      return '<div style="' + base + '">' + App.esc(disp) + '</div>';
     }
 
     /* body rows: thin separators, param name regular weight */
     var rowsHtml;
     if (params.length) {
       rowsHtml = params.map(function (p) {
-        var cells = cols.map(function (c) {
-          return valCell((c.values || {})[p.name], p.ref);
+        var cells = cols.map(function (c, ci) {
+          return valCell((c.values || {})[p.name], p.ref, ci === 0);
         }).join('');
         return '<div style="display:grid;grid-template-columns:' + gridCols + ';' +
           'border-bottom:1px solid #ddd;font-size:1.04em;padding:2px 6px">' +
@@ -1907,7 +1917,7 @@
     return '<div class="rpt-footer">' + line1 + rule + sigHtml + addrHtml + discHtml + powered + '</div>';
   }
 
-  function reportData(invoiceId) {
+  function reportData(invoiceId, ropts) {
     var inv = invOf(invoiceId);
     if (!inv) return null;
     var readyRows = joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; });
@@ -1932,7 +1942,9 @@
       var db = (b.res && b.res.reportedAt) || b.invoice.createdAt || '';
       return db < da ? -1 : (db > da ? 1 : 0);
     });
+    var cmpIds = (ropts && Array.isArray(ropts.compareIds)) ? ropts.compareIds : [];
     otherInvRows.forEach(function (r) {
+      if (cmpIds.indexOf(r.invoice.id) < 0) return; /* previous results are shown only for the reports chosen in the print dialog */
       var tid = (r.item && (r.item.testId || r.item.id)) || (r.res && r.res.testId);
       if (!tid) return;
       if (!prevByTest[tid]) prevByTest[tid] = [];
@@ -2020,6 +2032,13 @@
         : '') +
       footOut;
 
+    if (d._cmpLegend) {
+      bodyHtml = bodyHtml.replace(footOut, '<p style="margin:6px 0 2px;font-size:0.82em;color:#000">' +
+        '<b>New result:</b> &uarr; above range &nbsp; &darr; below range &nbsp;|&nbsp; ' +
+        '<span style="color:#b45309;font-weight:700">amber</span> slightly outside &nbsp; ' +
+        '<span style="color:#c2410c;font-weight:700">orange</span> moderately outside &nbsp; ' +
+        '<span style="color:#b91c1c;font-weight:700">red</span> critical. Previous results are shown as recorded.</p>' + footOut);
+    }
     return '<style>' + RPT_PRINT_CSS + '</style>' +
       '<div class="rpt-page" style="font-size:' + rptBase + 'px">' + bodyHtml + '</div>';
   }
@@ -2089,7 +2108,7 @@
   }
 
   async function printReport(invoiceId, opts) {
-    var d = reportData(invoiceId);
+    var d = reportData(invoiceId, { compareIds: opts && opts.compareIds });
     if (!d) { App.toast('No ready results to print', 'err'); return; }
     var invPaid = d.inv && d.inv.status === 'paid';
     var qrImg = null;
@@ -2121,17 +2140,43 @@
 
   /* print choice dialog: with or without the lab letterhead header */
   function printReportChoice(invoiceId) {
-    /* The separate 'Report Comparison' page is NOT printed with the report (use the Compare button to view it). */
+    /* previous reports of this patient: choose up to 2 to show beside the new result (old = plain, new = colour-coded) */
+    var prevList = [];
+    try {
+      var curInv = invOf(invoiceId);
+      if (curInv && curInv.patientId) {
+        prevList = DB.all('invoices').filter(function (inv) {
+          return inv.patientId === curInv.patientId && inv.id !== invoiceId &&
+            joinedRows('ready').some(function (r) { return r.invoice.id === inv.id; });
+        }).sort(function (a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
+      }
+    } catch (e) {}
+    var cmpHtml = '';
+    if (prevList.length) {
+      cmpHtml = '<div style="margin-top:14px;border:1px solid var(--bd);border-radius:10px;padding:10px;max-height:190px;overflow:auto">' +
+        '<div style="font-weight:700;margin-bottom:2px">Show previous result beside the new one</div>' +
+        '<div class="muted" style="font-size:12px;margin-bottom:6px">Optional (max 2). New abnormal values are coloured with &uarr;/&darr; to help read the change.</div>';
+      prevList.forEach(function (p) {
+        cmpHtml += '<label style="display:flex;align-items:center;gap:8px;padding:6px 4px;cursor:pointer;border-top:1px solid var(--line)">' +
+          '<input type="checkbox" class="prCmpSel" value="' + App.esc(p.id) + '" style="width:16px;height:16px"> ' +
+          '<span><strong>' + App.esc(p.no || p.id) + '</strong> <span class="muted">' + App.esc(App.d(p.createdAt)) + '</span></span></label>';
+      });
+      cmpHtml += '</div>';
+    }
     App.modal('Print Report',
       '<p style="margin-bottom:16px">Print this report with or without the lab header?</p>' +
       '<div style="display:flex;gap:12px">' +
       '<button class="btn btn-primary" id="prWithHead" style="flex:1;padding:14px">With Header</button>' +
       '<button class="btn btn-ghost" id="prNoHead" style="flex:1;padding:14px">Without Header</button>' +
-      '</div>' +
+      '</div>' + cmpHtml +
       '<p class="muted" style="margin-top:12px;font-size:12px;margin-bottom:0">Use "Without Header" when printing on pre-printed letterhead paper.</p>',
       { onOpen: function (ov, close) {
-          ov.querySelector('#prWithHead').addEventListener('click', function () { close(); printReport(invoiceId, {}); });
-          ov.querySelector('#prNoHead').addEventListener('click', function () { close(); printReport(invoiceId, { noLabHeader: true }); });
+          function sels() { var o = []; ov.querySelectorAll('.prCmpSel:checked').forEach(function (c) { o.push(c.value); }); return o.slice(0, 2); }
+          ov.querySelectorAll('.prCmpSel').forEach(function (c) {
+            c.addEventListener('change', function () { if (ov.querySelectorAll('.prCmpSel:checked').length > 2) { c.checked = false; App.toast('You can show at most 2 previous reports.', 'err'); } });
+          });
+          ov.querySelector('#prWithHead').addEventListener('click', function () { var ids = sels(); close(); printReport(invoiceId, { compareIds: ids }); });
+          ov.querySelector('#prNoHead').addEventListener('click', function () { var ids = sels(); close(); printReport(invoiceId, { noLabHeader: true, compareIds: ids }); });
         }
       });
   }
@@ -2867,20 +2912,7 @@
           pg.rows.forEach(function (r) { if (r.res && r.res.reportedAt && r.res.reportedAt > lastRep) lastRep = r.res.reportedAt; });
           var actHtml = invOrder.map(function (iid) {
             var inv = invMap[iid].invoice;
-            /* check if patient has an older report for comparison */
-            var hasOld = false, oldInvId = null;
-            try {
-              var allInvs = DB.all('invoices')
-                .filter(function (x) {
-                  return x.patientId === pat.id && x.id !== iid &&
-                    joinedRows('ready').some(function (r) { return r.invoice.id === x.id; });
-                })
-                .sort(function (a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
-              if (allInvs.length) { hasOld = true; oldInvId = allInvs[0].id; }
-            } catch (e) {}
-            var cmpBtn = hasOld
-              ? ' <button class="btn btn-ghost btn-sm" data-rcmp="' + App.esc(inv.id) + '|' + App.esc(oldInvId) + '" style="background:#e3f2fd;color:#1565c0;border:1px solid #bbdefb">⇄ Compare</button>'
-              : '';
+            var cmpBtn = '';
             return '<div style="margin-bottom:4px;white-space:nowrap">' +
               '<button class="btn btn-ghost btn-sm" data-rview="' + App.esc(inv.id) + '">View</button> ' +
               '<button class="btn btn-primary btn-sm" data-rprint="' + App.esc(inv.id) + '">' + PRINT_ICON + ' Print</button>' + cmpBtn + '</div>';
@@ -2929,12 +2961,6 @@
     });
     v.querySelectorAll('[data-rprint]').forEach(function (b) {
       b.addEventListener('click', function () { printReportChoice(b.getAttribute('data-rprint')); });
-    });
-    v.querySelectorAll('[data-rcmp]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var ids = (b.getAttribute('data-rcmp') || '').split('|');
-        if (ids.length === 2) compareReports(ids[1], ids[0]);
-      });
     });
     v.querySelectorAll('[data-rviewfirst]').forEach(function (b) {
       b.addEventListener('click', function () {

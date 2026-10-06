@@ -568,6 +568,13 @@ body.login-mode{background:#131845}
 .lg-split .login-signin::after{content:'';position:absolute;top:0;left:-60%;width:40%;height:100%;
   background:linear-gradient(100deg,transparent,rgba(255,255,255,.35),transparent);transform:skewX(-20deg);animation:lgSweep 3.8s 1.2s infinite}
 .lg-split .login-foot{color:#8b94a7}
+.lg-back{position:absolute;top:18px;left:20px;z-index:3;display:inline-flex;align-items:center;gap:8px;padding:9px 15px;border-radius:999px;
+  border:1px solid var(--bd);background:#fff;color:#131845;font-weight:700;font-size:13px;text-decoration:none;box-shadow:0 2px 8px rgba(19,24,69,.06);
+  animation:lgUp .7s .4s both;transition:background .15s,transform .15s,box-shadow .15s}
+.lg-back svg{width:16px;height:16px;transition:transform .15s}
+.lg-back:hover{background:#eef3fb;box-shadow:0 6px 16px rgba(19,24,69,.12)}
+.lg-back:hover svg{transform:translateX(-3px)}
+@media (max-width:900px){.lg-back{top:30px;left:16px;padding:8px 13px;font-size:12.5px}}
 @keyframes lgShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
 @keyframes lgFloat{0%,100%{transform:translate(0,0)}50%{transform:translate(-18px,22px)}}
 @keyframes lgUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
