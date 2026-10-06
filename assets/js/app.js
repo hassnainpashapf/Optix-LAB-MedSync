@@ -33,18 +33,18 @@
 
   /* ---------------- nav + permissions ---------------- */
   var NAV = [
-    { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard' },
-    { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients' },
-    { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results' },
-    { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests' },
-    { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices' },
-    { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues' },
-    { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors' },
-    { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses' },
-    { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports' },
-    { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads' },
-    { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings' },
-    { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile' }
+    { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
+    { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e' },
+    { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6' },
+    { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests',     color: '#14b8a6' },
+    { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316' },
+    { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues',      color: '#ef4444' },
+    { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors',   color: '#ec4899' },
+    { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
+    { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports',   color: '#6366f1' },
+    { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads', color: '#06b6d4' },
+    { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b' },
+    { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
   ];
   var PERMS = {
     dashboard: ['admin', 'reception', 'technician'],
@@ -437,16 +437,14 @@
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     var items = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role); }).map(function (n) {
       return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
-        '<span class="nav-ic">' + icon(n.icon, 19) + '</span><span class="nav-lb">' + n.label + '</span></a>';
+        '<span class="nav-ic" style="background:' + (n.color || '#64748b') + '1a;color:' + (n.color || '#64748b') + '">' + icon(n.icon, 19) + '</span><span class="nav-lb">' + n.label + '</span></a>';
     }).join('');
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
       '<span class="brand-tx"><b>' + esc(st.labName || 'Optix LAB MedSync') + '</b><small>Diagnostic Lab</small></span>' +
       '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
       '<div class="nav-sec">Main Menu</div>' +
-      '<nav class="nav">' + items + '</nav>' +
-      '<div class="side-foot"><div class="side-ver">Optix LAB MedSync v1.0</div>' +
-      '<div class="side-keys"><kbd>' + (_isMac ? '&#8984;K' : 'Ctrl+K') + '</kbd> search &middot; <kbd>N</kbd> new bill</div></div>';
+      '<nav class="nav">' + items + '</nav>';
     /* topbar */
     var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
     /* current user record (for profile photo in avatar) */
