@@ -1647,8 +1647,8 @@
        barcode of the case/invoice number, then the case number, then the
        date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
-      return '<div style="border:1px solid #000;background:#fff;' +
-        'padding:0;line-height:1.1;font-size:0.65em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;justify-self:end;max-width:110px;width:100%">' +
+      return '<div style="border:1px solid #000;border-left:none;background:#fff;' +
+        'padding:0;line-height:1.1;font-size:0.65em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%;margin-left:-1px">' +
         '<div style="font-weight:700;color:#000;font-size:0.85em;background:#d3d3d3;padding:2px 0;border-bottom:1px solid #000;text-align:center;width:100%">RESULT</div>' +
         '<div style="padding:2px 3px;display:flex;flex-direction:column;align-items:center;width:100%">' +
         '<div style="margin:1px 0">' + barcodeHtml(invNo) + '</div>' +
