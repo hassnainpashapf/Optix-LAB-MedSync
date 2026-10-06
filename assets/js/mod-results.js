@@ -184,6 +184,23 @@
     return order.map(function (id) { return map[id]; });
   }
 
+  function groupByPatient(rows) {
+    var map = {}, order = [];
+    rows.forEach(function (r) {
+      var pid = (r.patient && r.patient.id) || r.invoice.patientId || 'unknown';
+      if (!map[pid]) { map[pid] = { patient: r.patient, rows: [] }; order.push(pid); }
+      map[pid].rows.push(r);
+    });
+    // most recent activity first
+    order.sort(function (a, b) {
+      var da = '', db = '';
+      map[a].rows.forEach(function (r) { if (r.invoice.createdAt > da) da = r.invoice.createdAt; });
+      map[b].rows.forEach(function (r) { if (r.invoice.createdAt > db) db = r.invoice.createdAt; });
+      return db < da ? -1 : (db > da ? 1 : 0);
+    });
+    return order.map(function (pid) { return map[pid]; });
+  }
+
   function testName(row) {
     return row.item.name || (row.test && row.test.name) || 'Test';
   }
@@ -192,6 +209,100 @@
   }
 
   /* ---------- entry modal ---------- */
+
+  /* Bulk entry: all pending tests for a patient in one form, then print */
+  function openBulkEntry(patient, rows) {
+    if (!rows.length) return;
+    var invNos = {};
+    rows.forEach(function (r) { invNos[r.invoice.no || r.invoice.id] = true; });
+    var invList = Object.keys(invNos).join(', ');
+
+    var sectionsHtml = rows.map(function (row, ti) {
+      var test = row.test;
+      var params = (test && Array.isArray(test.params)) ? test.params : [];
+      var existing = (row.res && row.res.values) || {};
+      var tTitle = App.esc(testName(row)) + (testCode(row) ? ' <span class="muted">(' + App.esc(testCode(row)) + ')</span>' : '');
+      var fieldsHtml;
+      if (params.length) {
+        var prowHtml = params.map(function (p, pi) {
+          var v = existing[p.name] != null ? String(existing[p.name]) : '';
+          var isNum = p.type === 'number';
+          return '<tr>' +
+            '<td><strong>' + App.esc(p.name) + '</strong></td>' +
+            '<td><input class="input" data-bt="' + ti + '" data-bpi="' + pi + '"' + (isNum ? ' type="number" step="any" inputmode="decimal"' : '') + ' value="' + App.esc(v) + '" placeholder="Enter value"></td>' +
+            '<td class="muted">' + App.esc(p.unit || '') + '</td>' +
+            '<td class="muted">' + App.esc(p.ref || '') + '</td></tr>';
+        }).join('');
+        fieldsHtml =
+          '<table class="table"><thead><tr><th>Parameter</th><th>Result</th><th>Unit</th><th>Reference Range</th></tr></thead>' +
+          '<tbody>' + prowHtml + '</tbody></table>' +
+          '<div style="margin-top:10px"><label class="label">Remarks (optional)</label>' +
+          '<input class="input" data-brem="' + ti + '" value="' + App.esc(existing['Remarks'] || '') + '" placeholder="e.g. Sample hemolyzed, repeat advised"></div>';
+      } else {
+        var ft = existing['Result'] != null ? String(existing['Result']) : '';
+        fieldsHtml =
+          '<div><label class="label">Result</label>' +
+          '<textarea class="input" data-bfree="' + ti + '" rows="4" placeholder="Type the test result here...">' + App.esc(ft) + '</textarea></div>';
+      }
+      return '<div class="card" style="margin-bottom:14px"><div class="card-h"><div><strong>' + tTitle + '</strong></div>' +
+        '<span class="muted">' + App.esc(row.invoice.no || row.invoice.id) + '</span></div>' +
+        '<div class="card-b">' + fieldsHtml + '</div></div>';
+    }).join('');
+
+    var sub = App.esc(patient.name || '—') +
+      (patient.age ? ' <span class="muted">(' + App.esc(String(patient.age)) + (patient.gender ? '/' + App.esc(patient.gender) : '') + ')</span>' : '') +
+      ' <span class="muted">• ' + App.esc(invList) + ' • ' + rows.length + ' test(s)</span>';
+
+    App.modal('Enter Results — ' + App.esc(patient.name || 'Patient'),
+      '<p class="muted" style="margin-bottom:14px">' + sub + '</p>' + sectionsHtml +
+      '<div class="actions" style="margin-top:16px;position:sticky;bottom:0;background:#fff;padding-top:12px;border-top:1px solid var(--line)">' +
+      '<button class="btn btn-ghost" id="bresCancel">Cancel</button>' +
+      '<button class="btn btn-primary" id="bresSave">Save All Results</button></div>',
+      { onOpen: function (ov, close) {
+          document.getElementById('bresCancel').addEventListener('click', close);
+          document.getElementById('bresSave').addEventListener('click', function () {
+            var saved = 0, skipped = 0;
+            rows.forEach(function (row, ti) {
+              var test = row.test;
+              var params = (test && Array.isArray(test.params)) ? test.params : [];
+              var vals = {};
+              var anyVal = false;
+              if (params.length) {
+                for (var pi = 0; pi < params.length; pi++) {
+                  var inp = ov.querySelector('[data-bt="' + ti + '"][data-bpi="' + pi + '"]');
+                  var v = inp ? inp.value.trim() : '';
+                  vals[params[pi].name] = v;
+                  if (v) anyVal = true;
+                }
+                var rem = ov.querySelector('[data-brem="' + ti + '"]');
+                if (rem && rem.value.trim()) vals['Remarks'] = rem.value.trim();
+              } else {
+                var ta = ov.querySelector('[data-bfree="' + ti + '"]');
+                var t = ta ? ta.value.trim() : '';
+                if (t) { vals = { Result: t }; anyVal = true; }
+              }
+              if (!anyVal) { skipped++; return; }
+              var patch = {
+                values: vals,
+                status: 'ready',
+                reportedAt: new Date().toISOString(),
+                reportedBy: sessionUser()
+              };
+              if (row.res) DB.update('results', row.res.id, patch);
+              else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy });
+              saved++;
+            });
+            close();
+            if (!saved) { App.toast('Enter at least one result value', 'err'); return; }
+            App.toast(saved + ' result(s) saved — marked ready' + (skipped ? ' (' + skipped + ' skipped — empty)' : ''));
+            render();
+            // offer print: switch to ready tab so the user can print
+            tab = 'ready';
+            render();
+          });
+        }
+      });
+  }
 
   function openEntry(row, onSaved) {
     var test = row.test;
@@ -407,12 +518,16 @@
     if (abLast) ab.push('<div>' + abLast + '</div>');
     var addrHtml = ab.length ? '<div style="text-align:center;font-size:12px;margin-top:16px;line-height:1.8">' + ab.join('') + '</div>' : '';
 
-    return headHtml + infoHtml + testsHtml +
-      (pendingCount ? '<p style="color:#d97706"><em>Note: ' + pendingCount + ' test(s) from this invoice are still pending.</em></p>' : '') +
-      (s.footerNote ? '<p style="color:#64748b;margin-top:18px;margin-bottom:4px"><em>' + App.esc(s.footerNote) + '</em></p>' : '') +
+    var headOut = s.headerHtml ? s.headerHtml : headHtml;
+    var footOut = s.footerHtml ? s.footerHtml :
       '<p style="text-align:center;font-weight:700;font-size:12.5px;margin:22px 0 0">' + App.esc(verNote) + '</p>' +
       sigHtml + addrHtml +
       '<p style="color:#999;font-size:11px;text-align:center;margin:14px 0 0">Powered by System Optix</p>';
+
+    return headOut + infoHtml + testsHtml +
+      (pendingCount ? '<p style="color:#d97706"><em>Note: ' + pendingCount + ' test(s) from this invoice are still pending.</em></p>' : '') +
+      (s.footerNote ? '<p style="color:#64748b;margin-top:18px;margin-bottom:4px"><em>' + App.esc(s.footerNote) + '</em></p>' : '') +
+      footOut;
   }
 
   /* ---------- QR-coded report PDF upload ---------- */
@@ -745,8 +860,8 @@
   function render() {
     var pendingRows = joinedRows('pending');
     var readyRows = joinedRows('ready');
-    var pendingGroups = groupByInvoice(pendingRows);
     var readyGroups = groupByInvoice(readyRows);
+    var pendingPatientGroups = [];
 
     // ---- dashboard-style stat cards (real data) ----
     var today = App.today();
@@ -771,12 +886,6 @@
       '</div></div>';
 
     var q = query.trim().toLowerCase();
-    function matches(g) {
-      if (!q) return true;
-      return (g.invoice.no || '').toLowerCase().indexOf(q) > -1 ||
-             (g.patient.name || '').toLowerCase().indexOf(q) > -1 ||
-             ((g.patient.phone || '')).indexOf(q) > -1;
-    }
 
     var tabsHtml =
       '<div class="toolbar" style="margin-bottom:16px;flex-wrap:wrap">' +
@@ -789,29 +898,48 @@
 
     var bodyHtml = '';
     if (tab === 'pending') {
-      var groups = pendingGroups.filter(matches);
-      if (!groups.length) {
+      var pgroups = groupByPatient(pendingRows).filter(function (pg) {
+        if (!q) return true;
+        var p = pg.patient || {};
+        var invMatch = pg.rows.some(function (r) { return (r.invoice.no || '').toLowerCase().indexOf(q) > -1; });
+        return invMatch ||
+               (p.name || '').toLowerCase().indexOf(q) > -1 ||
+               (p.phone || '').indexOf(q) > -1 ||
+               (p.id || '').toLowerCase().indexOf(q) > -1;
+      });
+      if (!pgroups.length) {
         bodyHtml = App.empty(query ? 'No pending results match your search.' : 'All caught up — no pending results.');
       } else {
-        bodyHtml = groups.map(function (g) {
-          var inv = g.invoice, pat = g.patient;
-          var rowsHtml = g.rows.map(function (r, i) {
-            return '<tr><td><strong>' + App.esc(testName(r)) + '</strong>' +
-              (testCode(r) ? ' <span class="muted">(' + App.esc(testCode(r)) + ')</span>' : '') + '</td>' +
-              '<td class="muted">' + App.esc((r.test && r.test.sampleType) || '') + '</td>' +
-              '<td class="muted">' + App.esc((r.test && r.test.tat) || '') + '</td>' +
-              '<td class="actions"><button class="btn btn-primary btn-sm" data-enter="' + g.invoice.id + '|' + i + '">Enter Result</button></td></tr>';
-          }).join('');
-          return '<div class="card" style="margin-bottom:14px" data-inv="' + App.esc(inv.id) + '">' +
-            '<div class="card-h"><div><strong>' + App.esc(inv.no) + '</strong> — ' + App.esc(pat.name || '—') +
-            (pat.age ? ' <span class="muted">(' + App.esc(String(pat.age)) + (pat.gender ? '/' + App.esc(pat.gender) : '') + ')</span>' : '') + '</div>' +
-            '<span class="muted">' + App.d(inv.createdAt) + ' • ' + g.rows.length + ' test(s) pending</span></div>' +
-            '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th>Sample</th><th>TAT</th><th></th></tr></thead>' +
-            '<tbody>' + rowsHtml + '</tbody></table></div></div>';
+        var prowsHtml = pgroups.map(function (pg, pi) {
+          var pat = pg.patient || {};
+          var invNos = {};
+          pg.rows.forEach(function (r) { invNos[r.invoice.no || r.invoice.id] = true; });
+          var testNames = pg.rows.map(function (r) { return testName(r); }).join(', ');
+          return '<tr>' +
+            '<td><span class="mono">' + App.esc(pat.id || '—') + '</span></td>' +
+            '<td><a class="link pt-name" data-patenter="' + pi + '" href="javascript:void(0)"><strong>' + App.esc(pat.name || '—') + '</strong></a></td>' +
+            '<td class="muted">' + App.esc([pat.age ? pat.age + ' yrs' : '', pat.gender || ''].filter(Boolean).join(' / ') || '—') + '</td>' +
+            '<td class="muted">' + App.esc(pat.phone || '—') + '</td>' +
+            '<td class="muted">' + App.esc(Object.keys(invNos).join(', ')) + '</td>' +
+            '<td><span class="badge b-pending">' + pg.rows.length + ' pending</span></td>' +
+            '<td class="actions"><button class="btn btn-primary btn-sm" data-patenter="' + pi + '">Enter Results</button></td></tr>';
         }).join('');
+        // stash for the click handlers below
+        pendingPatientGroups = pgroups;
+        bodyHtml =
+          '<div class="card"><div class="card-b">' +
+          '<div class="tbl-wrap"><table class="table"><thead><tr>' +
+          '<th>Patient ID</th><th>Patient Name</th><th>Age / Gender</th><th>Phone</th><th>Invoice(s)</th><th>Status</th><th></th>' +
+          '</tr></thead><tbody>' + prowsHtml + '</tbody></table></div>' +
+          '</div></div>';
       }
     } else {
-      var rgroups = readyGroups.filter(matches);
+      var rgroups = readyGroups.filter(function (g) {
+        if (!q) return true;
+        return (g.invoice.no || '').toLowerCase().indexOf(q) > -1 ||
+               (g.patient.name || '').toLowerCase().indexOf(q) > -1 ||
+               ((g.patient.phone || '')).indexOf(q) > -1;
+      });
       if (!rgroups.length) {
         bodyHtml = App.empty(query ? 'No ready reports match your search.' : 'No ready reports yet.');
       } else {
@@ -849,13 +977,11 @@
     // wire search (keep focus, don't full re-render on each keystroke)
     var si = document.getElementById('resSearch');
     si.addEventListener('input', function () { query = si.value; render(); var n = document.getElementById('resSearch'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
-    // wire enter-result buttons (pending tab)
-    v.querySelectorAll('[data-enter]').forEach(function (b) {
+    // wire patient-name / Enter Results buttons (pending tab) → bulk entry form
+    v.querySelectorAll('[data-patenter]').forEach(function (b) {
       b.addEventListener('click', function () {
-        var parts = b.getAttribute('data-enter').split('|');
-        var card = b.closest('[data-inv]');
-        var g = groupByInvoice(joinedRows('pending')).filter(function (x) { return x.invoice.id === parts[0]; })[0];
-        if (g && g.rows[+parts[1]]) openEntry(g.rows[+parts[1]]);
+        var pg = pendingPatientGroups[+b.getAttribute('data-patenter')];
+        if (pg && pg.rows.length) openBulkEntry(pg.patient || {}, pg.rows);
       });
     });
     // wire view/edit + print (ready tab)
@@ -891,4 +1017,39 @@
   App.printLabReport = printReport;
   /* exposed so the Patient Profile page can enter results directly */
   App.enterLabResult = openEntry;
+  /* sample report preview for Lab Profile settings (uses provided settings, not DB) */
+  App.sampleReportPreview = function (s) {
+    s = s || {};
+    var now = new Date().toISOString();
+    var sampleRows = [
+      {
+        item: { name: 'Complete Blood Count', code: 'CBC', testId: 'sample1' },
+        test: { params: [
+          { name: 'Hemoglobin', unit: 'g/dL', ref: '13.0 – 17.0', type: 'number' },
+          { name: 'WBC Count', unit: '/µL', ref: '4,000 – 11,000', type: 'number' },
+          { name: 'Platelets', unit: '/µL', ref: '150,000 – 400,000', type: 'number' }
+        ] },
+        res: { values: { 'Hemoglobin': '14.2', 'WBC Count': '7,500', 'Platelets': '250,000' } },
+        invoice: { id: 'preview', no: 'INV-0001' }
+      },
+      {
+        item: { name: 'Blood Sugar (Fasting)', code: 'BSF', testId: 'sample2' },
+        test: { params: [
+          { name: 'Glucose', unit: 'mg/dL', ref: '70 – 100', type: 'number' }
+        ] },
+        res: { values: { 'Glucose': '92' } },
+        invoice: { id: 'preview', no: 'INV-0001' }
+      }
+    ];
+    return reportHtml({
+      inv: { id: 'preview', no: 'INV-0001', createdAt: now },
+      pat: { id: 'P-0001', name: 'Sample Patient', father: 'Sample Father', age: 35, gender: 'Male',
+             blood: 'B+', cnic: '35202-1234567-1', phone: '0300-1234567', address: '123 Sample Street, Lahore' },
+      s: s,
+      doc: { name: 'Dr. Sample Doctor' },
+      readyRows: sampleRows,
+      pendingCount: 0,
+      maxReported: now
+    });
+  };
 })();

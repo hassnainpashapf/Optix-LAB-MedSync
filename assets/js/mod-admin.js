@@ -489,7 +489,17 @@
   /* ---- Lab Profile ---- */
   function renderSetProfile() {
     var s = DB.get('settings', 'main') || {};
-    var html = '<div class="form-grid" style="max-width:720px">'
+    var html =
+      '<style>' +
+      '.sp-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}' +
+      '.sp-preview{position:sticky;top:16px}' +
+      '.sp-preview-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}' +
+      '.sp-preview-head h3{margin:0;font-size:15px}' +
+      '.sp-preview-doc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:22px;box-shadow:0 2px 14px rgba(15,30,60,.07);font-size:12px;max-height:calc(100vh - 140px);overflow:auto}' +
+      '@media(max-width:1100px){.sp-layout{grid-template-columns:1fr}.sp-preview{position:static}}' +
+      '</style>' +
+      '<div class="sp-layout">' +
+      '<div class="sp-form"><div class="form-grid">'
       + '<div><label class="label">Lab Name *</label><input class="input" id="spName" value="' + App.esc(s.labName || '') + '"></div>'
       + '<div><label class="label">Tagline</label><input class="input" id="spTag" value="' + App.esc(s.tagline || '') + '"></div>'
       + '<div style="grid-column:1/-1"><label class="label">Address</label><input class="input" id="spAddr" value="' + App.esc(s.address || '') + '"></div>'
@@ -522,8 +532,18 @@
       + '<div style="grid-column:1/-1"><label class="label">Signatory Doctors <span class="muted" style="font-weight:400">(shown on lab reports)</span></label>'
       + '<div id="spSigList"></div>'
       + '<button class="btn btn-ghost" type="button" id="spSigAdd" style="margin-top:8px">+ Add Signatory</button></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(optional — HTML allowed, replaces the default header)</span></label>'
+      + '<textarea class="input" id="spHeadHtml" rows="3" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.headerHtml || '') + '</textarea></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(optional — HTML allowed, replaces the default footer)</span></label>'
+      + '<textarea class="input" id="spFootHtml" rows="3" placeholder="<div style=&quot;text-align:center&quot;>...">">' + App.esc(s.footerHtml || '') + '</textarea></div>'
       + '</div>'
-      + '<div style="margin-top:18px"><button class="btn btn-primary" id="spSave">Save Profile</button></div>';
+      + '<div style="margin-top:18px"><button class="btn btn-primary" id="spSave">Save Profile</button></div>'
+      + '</div>'
+      + '<div class="sp-preview">'
+      + '<div class="sp-preview-head"><h3>Print Preview</h3><span class="muted" style="font-size:12px">Live — updates as you type</span></div>'
+      + '<div class="sp-preview-doc" id="spPreviewDoc"><div class="muted" style="padding:40px 20px;text-align:center">Loading preview…</div></div>'
+      + '</div>'
+      + '</div>';
     document.getElementById('setBody').innerHTML = html;
     /* lab logo upload: downscale to max 256px PNG, keep in memory until Save */
     var _logoData = s.logo || '';
@@ -533,6 +553,7 @@
     function _paintLogo() {
       if (_logoPrev) { _logoPrev.src = _logoData || ''; _logoPrev.hidden = !_logoData; }
       if (_logoRm) _logoRm.hidden = !_logoData;
+      if (typeof _schedulePreview === 'function') _schedulePreview();
     }
     if (_logoInput) _logoInput.addEventListener('change', function () {
       var f = _logoInput.files && _logoInput.files[0];
@@ -626,12 +647,69 @@
         mainLabPhone: document.getElementById('spMainPhone').value.trim(),
         verNote: document.getElementById('spVerNote').value.trim(),
         signatories: _syncSigs(),
-        font: document.getElementById('spFont').value
+        font: document.getElementById('spFont').value,
+        headerHtml: document.getElementById('spHeadHtml').value.trim(),
+        footerHtml: document.getElementById('spFootHtml').value.trim()
       });
       App.toast('Lab profile saved.');
       if (App.renderShell) App.renderShell();
       if (App.applyFont) App.applyFont();
     });
+
+    /* ---- live print preview (right panel) ---- */
+    var _pvTimer = null;
+    function _collectPreviewSettings() {
+      function gv(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; }
+      return {
+        labName: gv('spName'), tagline: gv('spTag'), address: gv('spAddr'),
+        phone: gv('spPhone'), email: gv('spEmail'), footerNote: gv('spFoot'),
+        logo: _logoData, website: gv('spWeb'), headOffice: gv('spHead'),
+        mainLab: gv('spMainLab'), callCenter: gv('spCall'), mainLabPhone: gv('spMainPhone'),
+        verNote: gv('spVerNote'), signatories: _syncSigs(), font: gv('spFont'),
+        headerHtml: gv('spHeadHtml'), footerHtml: gv('spFootHtml')
+      };
+    }
+    function _paintPreview() {
+      var box = document.getElementById('spPreviewDoc');
+      if (!box) return;
+      function go() {
+        try {
+          var ps = _collectPreviewSettings();
+          var html = App.sampleReportPreview(ps);
+          // apply the selected font to the preview
+          var ff = "'Inter',sans-serif";
+          try {
+            if (App.applyFont) {
+              var fk = ps.font || 'inter';
+              var families = { inter: "'Inter',sans-serif", jakarta: "'Plus Jakarta Sans',sans-serif",
+                roboto: "'Roboto',sans-serif", poppins: "'Poppins',sans-serif",
+                opensans: "'Open Sans',sans-serif", lato: "'Lato',sans-serif", montserrat: "'Montserrat',sans-serif" };
+              ff = families[fk] || families.inter;
+            }
+          } catch (e) {}
+          box.style.fontFamily = ff;
+          box.innerHTML = html;
+        } catch (e) {
+          box.innerHTML = '<div class="muted" style="padding:30px;text-align:center">Preview unavailable.</div>';
+        }
+      }
+      if (App.sampleReportPreview) go();
+      else App.loadScript('assets/js/mod-results.js').then(go, function () {
+        box.innerHTML = '<div class="muted" style="padding:30px;text-align:center">Could not load preview.</div>';
+      });
+    }
+    function _schedulePreview() {
+      if (_pvTimer) clearTimeout(_pvTimer);
+      _pvTimer = setTimeout(_paintPreview, 350);
+    }
+    // re-render preview on any form input (debounced)
+    var _spForm = document.querySelector('.sp-form');
+    if (_spForm) {
+      _spForm.addEventListener('input', _schedulePreview);
+      _spForm.addEventListener('change', _schedulePreview);
+    }
+    // logo changes also refresh the preview
+    _paintPreview();
   }
 
   /* ---- My Account — change own username / password ---- */
