@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Optix">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/css/app.css?v=131v">
+<link rel="stylesheet" href="assets/css/app.css?v=131w">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -31,7 +31,7 @@
 /* Shell-level delegation (works regardless of module render timing) */
 document.addEventListener('click', function (e) {
   if (e.target.closest('#navToggle')) document.body.classList.toggle('side-open');
-  else if (e.target.closest('.nav-it:not(.nav-par)') || e.target.closest('.nav-sub-it')) document.body.classList.remove('side-open');
+  else if (e.target.closest('.nav-it:not(.nav-par):not(.nav-fh)') || e.target.closest('.nav-sub-it')) document.body.classList.remove('side-open');
 });
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') document.body.classList.remove('side-open');
@@ -43,7 +43,7 @@ document.addEventListener('keydown', function (e) {
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
    to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
-window.__ASSET_V = '131v';
+window.__ASSET_V = '131w';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
@@ -80,12 +80,12 @@ window.__LAZY_ROUTES = {
   '/profile': 'assets/js/mod-profile.js'
 };
 </script>
-<script src="assets/js/qrcode.min.js?v=131v"></script>
-<script src="assets/js/db.js?v=131v"></script>
-<script src="assets/js/graph-config.js?v=131v"></script>
-<script src="assets/js/app.js?v=131v"></script>
-<script src="assets/js/mod-auth.js?v=131v"></script>
-<script src="assets/js/samples-core.js?v=131v"></script>
-<script src="assets/js/mod-dashboard.js?v=131v"></script>
+<script src="assets/js/qrcode.min.js?v=131w"></script>
+<script src="assets/js/db.js?v=131w"></script>
+<script src="assets/js/graph-config.js?v=131w"></script>
+<script src="assets/js/app.js?v=131w"></script>
+<script src="assets/js/mod-auth.js?v=131w"></script>
+<script src="assets/js/samples-core.js?v=131w"></script>
+<script src="assets/js/mod-dashboard.js?v=131w"></script>
 </body>
 </html>

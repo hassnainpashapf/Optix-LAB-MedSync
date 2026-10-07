@@ -632,22 +632,46 @@
     var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'outsourced', 'doctors', 'invoices', 'dues', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
-    var lastSec = '';
-    var items = visible.map(function (n) {
-      var head = '';
-      if (SEC[n.key] && SEC[n.key] !== lastSec) { lastSec = SEC[n.key]; head = '<div class="nav-sec2">' + lastSec + '</div>'; }
+    /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
+    function itemHtml(n) {
       if (n.sub) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
         var subs = n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; });
         var open = n.key === activeKey;
-        return head + '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
+        return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
           '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span>' +
           '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
           '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '">' + x.label + '</a>'; }).join('') + '</div></div>';
       }
-      return head + '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
+      return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
         '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span></a>';
-    }).join('');
+    }
+    /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
+       A new page only needs its key added to a folder below (a key that is in no folder simply shows at the bottom). */
+    var TOP = ['dashboard', 'patients', 'samples', 'results', 'invoices'];
+    var FOLDERS = [
+      { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['tests', 'outsourced', 'stock', 'doctors'] },
+      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'panels', 'expenses', 'finance'] },
+      { id: 'ins', label: 'Insights', icon: 'chart', keys: ['reports', 'audit'] },
+      { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'email', 'downloads'] },
+      { id: 'acc', label: 'Account', icon: 'gear', keys: ['subscription', 'settings'] }
+    ];
+    var savedOpen = {}; try { savedOpen = JSON.parse(localStorage.getItem('labpos_navfolders') || '{}') || {}; } catch (e) { savedOpen = {}; }
+    var byKey = {}; visible.forEach(function (n) { byKey[n.key] = n; });
+    var placed = {}, items = '';
+    TOP.forEach(function (k) { if (byKey[k]) { items += itemHtml(byKey[k]); placed[k] = 1; } });
+    FOLDERS.forEach(function (f) {
+      var inside = f.keys.filter(function (k) { return byKey[k]; });
+      inside.forEach(function (k) { placed[k] = 1; });
+      if (!inside.length) return;
+      if (inside.length === 1) { items += itemHtml(byKey[inside[0]]); return; } /* a folder with one page is just that page */
+      var holds = inside.indexOf(activeKey) >= 0, open = holds || !!savedOpen[f.id];
+      items += '<div class="nav-fold' + (open ? ' open' : '') + (holds ? ' has-active' : '') + '" data-fold="' + f.id + '">' +
+        '<button type="button" class="nav-it nav-fh" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="nav-ic">' + icon(f.icon, 20) + '</span><span class="nav-lb">' + f.label + '</span>' +
+        '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
+        '<div class="nav-fb">' + inside.map(function (k) { return itemHtml(byKey[k]); }).join('') + '</div></div>';
+    });
+    visible.forEach(function (n) { if (!placed[n.key]) items += itemHtml(n); });
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
       '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Science') + '</b><small>Diagnostic Lab</small></span>' +
@@ -756,7 +780,7 @@
         if (!document.body.classList.contains('side-open')) return;
         var t = e.target;
         if (!t || !t.closest) return;
-        if (t.closest('#sideClose') || t.closest('#sidebar .nav-it:not(.nav-par)') || t.closest('#sidebar .nav-sub-it')) { document.body.classList.remove('side-open'); return; }
+        if (t.closest('#sideClose') || t.closest('#sidebar .nav-it:not(.nav-par):not(.nav-fh)') || t.closest('#sidebar .nav-sub-it')) { document.body.classList.remove('side-open'); return; }
         if (t.closest('#sidebar') || t.closest('#navToggle')) return;
         document.body.classList.remove('side-open');
       });
@@ -776,6 +800,13 @@
       var on = subs[j].getAttribute('data-href') === h;
       subs[j].classList.toggle('on', on);
     }
+    /* folders: the one holding the current page opens (the others keep whatever the user chose) */
+    var folds = document.querySelectorAll('.nav-fold');
+    for (var f = 0; f < folds.length; f++) {
+      var hasA = !!folds[f].querySelector('.nav-it.active, .nav-sub-it.on');
+      folds[f].classList.toggle('has-active', hasA);
+      if (hasA) { folds[f].classList.add('open'); var fh = folds[f].querySelector('.nav-fh'); if (fh) fh.setAttribute('aria-expanded', 'true'); }
+    }
     /* accordion: only the group that holds the current page stays open; moving to any other page closes the rest */
     var grps = document.querySelectorAll('.nav-grp');
     for (var k = 0; k < grps.length; k++) {
@@ -784,6 +815,14 @@
       var pk = gk.querySelector('.nav-par'); if (pk) pk.setAttribute('aria-expanded', hold ? 'true' : 'false');
     }
   }
+  /* folders open / close on click and the choice is remembered on this device */
+  document.addEventListener('click', function (e) {
+    var h = e.target && e.target.closest ? e.target.closest('.nav-fh') : null;
+    if (!h) return;
+    var f = h.closest('.nav-fold'); if (!f) return;
+    var open = f.classList.toggle('open'); h.setAttribute('aria-expanded', open ? 'true' : 'false');
+    try { var m = JSON.parse(localStorage.getItem('labpos_navfolders') || '{}') || {}; m[f.getAttribute('data-fold')] = open; localStorage.setItem('labpos_navfolders', JSON.stringify(m)); } catch (x) {}
+  });
   /* sub-menu parents open / close their group (remembered per browser); delegated once */
   document.addEventListener('click', function (e) {
     var b = e.target && e.target.closest ? e.target.closest('.nav-par') : null;
