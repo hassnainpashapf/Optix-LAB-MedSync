@@ -1921,7 +1921,7 @@
 
   /* ---- WhatsApp API (admin only) ---- */
   function waDefaults() {
-    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true };
+    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true, autoReceipt: false, autoDueReminder: false, dueReminderDay: 1, autoOwnerSummary: false, ownerSummaryHour: 21, ownerNumber: '', autoFeedback: false, googleReviewUrl: '', autoRetest: false };
   }
   /* ---- Link the lab's own WhatsApp number with a QR code (the server then sends from it) ---- */
   function wireGateway() {
@@ -2090,8 +2090,58 @@
       '<input type="checkbox" id="waAutoCritical"' + (w.autoCritical !== false ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--red)"> ' +
       'Send <strong>critical value</strong> alerts on WhatsApp</label>' +
       '</div></div>';
+    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    var hours = [18, 19, 20, 21, 22, 23].map(function (h) { return '<option value="' + h + '"' + ((+w.ownerSummaryHour || 21) === h ? ' selected' : '') + '>' + (h - 12) + ':00 PM</option>'; }).join('');
+    function tick(id, on, title, desc, extra) {
+      return '<div style="padding:12px 0;border-top:1px solid var(--line)"><label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;font-size:14px">' +
+        '<input type="checkbox" id="' + id + '"' + (on ? ' checked' : '') + ' style="width:18px;height:18px;margin-top:2px;accent-color:var(--green)"> <span><strong>' + title + '</strong><span class="muted" style="display:block;font-size:12.5px;margin-top:2px">' + desc + '</span></span></label>' + (extra ? '<div style="margin:8px 0 0 28px">' + extra + '</div>' : '') + '</div>';
+    }
+    html +=
+      '<div class="card" style="max-width:640px;margin-top:14px"><div class="card-h"><h3>Automatic messages</h3></div><div class="card-b" style="padding-top:4px">' +
+      '<p class="muted" style="font-size:13px;margin:8px 0 6px">Tick a box and it starts working by itself &mdash; no need to press anything. Needs your WhatsApp number to be <b>connected</b> above. All messages leave one by one at your sending speed, and only go to people who have a phone number saved.</p>' +
+      tick('waAutoReceipt', w.autoReceipt === true, 'Receipt after billing', 'A few minutes after an invoice is made, the patient gets a receipt: invoice no., total, paid and balance.') +
+      tick('waAutoDue', w.autoDueReminder === true, 'Weekly balance reminder', 'Once a week, patients who still owe money get a polite reminder with the amount (at most 4 times per invoice).',
+        '<label class="label" for="waDueDay" style="margin-bottom:3px">Send on</label><select class="select" id="waDueDay" style="max-width:200px">' + days.map(function (d, i) { return '<option value="' + i + '"' + ((+w.dueReminderDay === i) ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select>') +
+      tick('waAutoOwner', w.autoOwnerSummary === true, 'Daily summary to the owner', 'Every evening you get one message: today\'s patients, billing, money collected and total dues.',
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end"><div><label class="label" for="waOwnerHour" style="margin-bottom:3px">Time</label><select class="select" id="waOwnerHour">' + hours + '</select></div>' +
+        '<div style="flex:1;min-width:190px"><label class="label" for="waOwnerNum" style="margin-bottom:3px">Owner\'s WhatsApp number</label><input class="input" id="waOwnerNum" placeholder="blank = lab number above" value="' + App.esc(w.ownerNumber || '') + '"></div>' +
+        '<button class="btn btn-ghost btn-sm" id="waOwnerTest" type="button">Send me today\'s summary now</button></div>') +
+      tick('waAutoFeedback', w.autoFeedback === true, 'Feedback &amp; Google review request', 'A day after a fully-paid report, the patient is thanked and asked how the visit was. Each patient is asked at most once a month.',
+        '<label class="label" for="waReviewUrl" style="margin-bottom:3px">Google review link <span class="muted" style="font-weight:400">(optional)</span></label><input class="input" id="waReviewUrl" placeholder="https://g.page/r/..." value="' + App.esc(w.googleReviewUrl || '') + '">') +
+      tick('waAutoRetest', w.autoRetest === true, 'Repeat-test reminder', 'Patients are reminded a few days before a test is due again (e.g. HbA1c after 3 months). Set the days on each test, or use the button.',
+        '<button class="btn btn-ghost btn-sm" id="waRetestFill" type="button">Set common repeat days on my tests</button> <span class="muted" id="waRetestMsg" style="font-size:12.5px"></span>') +
+      '<div style="margin-top:12px;display:flex;align-items:center;gap:10px"><button class="btn btn-primary" id="waAutoSave">Save automatic messages</button><span class="muted" style="font-size:12.5px">Times are in Pakistan time.</span></div>' +
+      '</div></div>';
     document.getElementById('setBody').innerHTML = '<div id="waGwBox"></div>' + html;
     wireGateway();
+    function autoPatch() {
+      var st = DB.get('settings', 'main') || {}, ww = Object.assign(waDefaults(), st.whatsapp || {});
+      var g = function (id) { return document.getElementById(id); };
+      ww.autoReceipt = g('waAutoReceipt').checked; ww.autoDueReminder = g('waAutoDue').checked; ww.dueReminderDay = +g('waDueDay').value;
+      ww.autoOwnerSummary = g('waAutoOwner').checked; ww.ownerSummaryHour = +g('waOwnerHour').value; ww.ownerNumber = g('waOwnerNum').value.trim();
+      ww.autoFeedback = g('waAutoFeedback').checked; ww.googleReviewUrl = g('waReviewUrl').value.trim(); ww.autoRetest = g('waAutoRetest').checked;
+      if (ww.googleReviewUrl && !/^https:\/\//i.test(ww.googleReviewUrl)) { App.toast('Google review link must start with https://'); return false; }
+      st.whatsapp = ww; DB.update('settings', 'main', st); return true;
+    }
+    document.getElementById('waAutoSave').addEventListener('click', function () { if (autoPatch()) App.toast('Automatic messages saved'); });
+    ['waAutoReceipt', 'waAutoDue', 'waAutoOwner', 'waAutoFeedback', 'waAutoRetest'].forEach(function (id) {
+      document.getElementById(id).addEventListener('change', function () {
+        if (autoPatch()) App.toast((this.checked ? 'Switched ON' : 'Switched OFF') + ' — saved');
+      });
+    });
+    document.getElementById('waOwnerTest').addEventListener('click', function () {
+      var b = this; if (!autoPatch()) return; b.disabled = true;
+      DB.waGw('POST', 'auto/test', {}).then(function () { b.disabled = false; App.toast('Summary sent to the owner number'); }, function (e) { b.disabled = false; App.toast(e && e.message ? e.message : 'Could not send — is WhatsApp connected?'); });
+    });
+    document.getElementById('waRetestFill').addEventListener('click', function () {
+      var rules = [[/hba1c|glycosylated|glycated/i, 90], [/lipid|cholesterol/i, 180], [/tsh|thyroid|\bt3\b|\bt4\b/i, 180], [/vitamin\s*d|25.?oh/i, 180], [/vitamin\s*b.?12|b12/i, 180], [/ferritin|iron/i, 180], [/\bhb\b|cbc|complete blood/i, 0], [/creatinine|urea|kft|rft|renal/i, 180], [/lft|liver|alt|sgpt/i, 180], [/psa/i, 365]];
+      var n = 0;
+      DB.all('tests').forEach(function (t) {
+        if (+t.retestDays > 0 || t.isPackage) return;
+        for (var i = 0; i < rules.length; i++) if (rules[i][1] && rules[i][0].test(t.name || '')) { DB.update('tests', t.id, Object.assign({}, t, { retestDays: rules[i][1] })); n++; break; }
+      });
+      document.getElementById('waRetestMsg').textContent = n ? n + ' test(s) updated (HbA1c 3 months; lipid, thyroid, vitamin D/B12, kidney, liver 6 months).' : 'Nothing to change — matching tests already have repeat days.';
+    });
     document.getElementById('waLabNumSave').addEventListener('click', function () {
       var num = document.getElementById('waLabNum').value.trim();
       var st = DB.get('settings', 'main') || {};

@@ -1288,6 +1288,15 @@ async function main() {
         await applyGap(req); res.json(Object.assign({ ok: true }, waGw.sendDocument(me, b.to, buf, b.fileName || 'Lab-Report.pdf', b.caption || '')));
       } catch (e) { res.status(/limit|not linked|not on WhatsApp|look right|waiting/.test(e.message) ? 400 : 502).json({ error: e.message }); }
     });
+    /* the five automatic messages (tick boxes in Settings -> WhatsApp), see wa-auto.js */
+    const waAuto = require('./wa-auto').create({ saas, raw: rawStore, waGw, log: (m) => console.log('[labpos-cloud]', m) });
+    waAuto.start();
+    app.post('/api/wa/auto/test', needAdmin, async (req, res) => {
+      try { await waAuto.summaryNow(req.lab || await saas.getLab('main')); res.json({ ok: true }); } catch (e) { res.status(400).json({ error: e.message }); }
+    });
+    if (process.env.WA_AUTO_TEST === '1') app.post('/api/wa/auto/run', needAdmin, async (req, res) => { /* tests only: run the jobs now (optionally "as of" a given time) */
+      const b = req.body || {}; res.json({ sent: (await waAuto.runAll(b.now ? new Date(b.now) : new Date(), b.only)) || 0 });
+    });
     /* bring back every lab that had linked a number before this restart */
     setTimeout(async () => { try { const ids = []; for (const l of (await saas.loadLabs(true)).values()) ids.push(l.id); await waGw.boot(ids); } catch (e) { /* the gateway is optional */ } }, 5000);
   }

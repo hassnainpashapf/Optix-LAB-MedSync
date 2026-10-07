@@ -673,6 +673,7 @@ function testModal(t) {
       '<div><label class="label">Sample Type</label><select id="tm-sample" class="select">' + sampleOpts + '</select></div>' +
       '<div><label class="label">Turnaround Time</label><input id="tm-tat" class="input" value="' + App.esc(t.tat || '') + '" placeholder="e.g. Same day"></div>' +
       '<div><label class="label">Status</label><label style="display:flex;align-items:center;gap:8px;font-weight:600"><input id="tm-active" type="checkbox"' + (t.active ? ' checked' : '') + '> Active</label></div>' +
+      '<div><label class="label">Remind to repeat after (days)</label><input id="tm-retest" class="input" type="number" min="0" step="1" value="' + App.esc(t.retestDays ? String(t.retestDays) : '') + '" placeholder="e.g. 90 (optional)"><div class="muted" style="font-size:12px;margin-top:3px">Used by WhatsApp &rarr; Automatic messages &rarr; repeat-test reminder.</div></div>' +
     '</div>' +
     '<div style="margin-top:14px"><label class="label">Report Parameters</label>' +
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
@@ -787,6 +788,7 @@ function testModal(t) {
         code: code, name: name, category: category, price: price, consumes: consumes,
         sampleType: m.querySelector('#tm-sample').value,
         tat: m.querySelector('#tm-tat').value.trim() || 'Same day',
+        retestDays: Math.max(0, parseInt(m.querySelector('#tm-retest').value, 10) || 0),
         active: m.querySelector('#tm-active').checked,
         params: params,
         isPackage: isPkgEl.checked,
