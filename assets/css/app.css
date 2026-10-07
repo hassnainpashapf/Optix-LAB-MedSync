@@ -1336,3 +1336,20 @@ nav.nav{padding:4px 12px 12px;scrollbar-width:thin;scrollbar-color:#d5dbe8 trans
 .sf-tx small{font-size:11.5px;color:#8793a8;font-weight:600}
 .sf-out{margin-left:auto;border:0;background:none;color:#8793a8;padding:8px;border-radius:9px;cursor:pointer;display:grid;place-items:center}
 .sf-out:hover{background:#fdecec;color:#dc2626}
+
+/* sidebar text: black */
+.sidebar .brand-tx b{color:#000}
+.sidebar .brand-tx small{color:#4b5563}
+.nav-it{color:#000}
+.nav-it:hover{color:#000}
+.nav-it.active{color:#000}
+.nav-ic{color:#1f2937}
+.nav-it:hover .nav-ic,.nav-it.active .nav-ic{color:#000}
+.nav-chev{color:#374151}
+.nav-sub-it{color:#000}
+.nav-sub-it:hover,.nav-sub-it.on{color:#000}
+.nav-sub-it.danger,.nav-sub-it.danger.on{color:#dc2626}
+.nav-sec2{color:#4b5563}
+.sf-tx b{color:#000}
+.sf-tx small{color:#4b5563}
+.sf-out{color:#374151}
