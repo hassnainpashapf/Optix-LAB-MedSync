@@ -1,6 +1,6 @@
 /* Optix LAB MedSync — Dashboard module (#/dashboard)
-   Simplified layout (2026-10-06): stat cards row, quick-access cards,
-   Recent Patients, Tests in Progress. All graphs/charts removed. */
+   Layout: stat cards row, quick-access cards, two big 7-day graph cards
+   (collections vs expenses / tests & invoices), Recent Patients, Tests in Progress. */
 (function () {
   'use strict';
 
@@ -68,6 +68,7 @@
       return '<div class="db-page db-skel" data-db-skel="1">' + SKEL_CSS +
         '<div class="stat-grid">' + skelStat() + skelStat() + skelStat() + skelStat() + '</div>' +
         '<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px">' + qa + '</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">' + '<div class="sk" style="height:330px;border-radius:20px"></div><div class="sk" style="height:330px;border-radius:20px"></div></div>' +
         '<div style="display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px">' +
         skelCard(150) + skelCard(170) + '</div>' +
         '</div>';
@@ -138,12 +139,11 @@
     // ---- quick-access cards — 6 shortcuts ----
     var quickCss =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 4 : 5) + ',1fr);gap:12px;margin-bottom:14px}' +
-    '.dbw-grid>a:last-child{grid-column:span 2}' + /* 9 cards = 5 + 4 (technician: 7 = 4 + 3); the last card stretches so the second row is full */
+    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 6 : 7) + ',1fr);gap:12px;margin-bottom:14px}' +
     '.dbq-card{transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
     '.dbq-card .card-b{padding:10px 12px!important}' +
     '.dbq-card b{font-size:13px!important}.dbq-card small{font-size:11px!important}' +
-    '@media(max-width:1200px){.dbw-grid{grid-template-columns:repeat(3,1fr)}.dbw-grid>a:last-child{grid-column:auto}}' +
+    '@media(max-width:1200px){.dbw-grid{grid-template-columns:repeat(3,1fr)}}' +
     '@media(max-width:900px){.dbw-grid{grid-template-columns:1fr}}' +
     '</style>';
     var quickAccess =
@@ -152,11 +152,6 @@
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
           '<span style="width:44px;height:44px;border-radius:12px;background:#22c55e1a;color:#22c55e;display:grid;place-items:center;flex:none">' + App.icon('users', 22) + '</span>' +
           '<span><b style="font-size:15px;color:var(--ink)">Patients</b><br><small style="color:var(--muted)">Manage patient records</small></span>' +
-        '</div></a>' +
-      '<a href="#/samples" class="card dbq-card" style="text-decoration:none">' +
-        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
-          '<span style="width:44px;height:44px;border-radius:12px;background:#e11d481a;color:#e11d48;display:grid;place-items:center;flex:none">' + App.icon('tube', 22) + '</span>' +
-          '<span><b style="font-size:15px;color:var(--ink)">Samples</b><br><small style="color:var(--muted)">Barcode &amp; tracking</small></span>' +
         '</div></a>' +
       '<a href="#/results" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
@@ -182,11 +177,6 @@
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
           '<span style="width:44px;height:44px;border-radius:12px;background:#0ea5a41a;color:#0ea5a4;display:grid;place-items:center;flex:none">' + App.icon('finance', 22) + '</span>' +
           '<span><b style="font-size:15px;color:var(--ink)">Cash &amp; Profit</b><br><small style="color:var(--muted)">Day closing &amp; P&amp;L</small></span>' +
-        '</div></a>') +
-      (isTech ? '' : '<a href="#/whatsapp" class="card dbq-card" style="text-decoration:none">' +
-        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
-          '<span style="width:44px;height:44px;border-radius:12px;background:#22c55e1a;color:#22c55e;display:grid;place-items:center;flex:none">' + App.icon('chat', 22) + '</span>' +
-          '<span><b style="font-size:15px;color:var(--ink)">WhatsApp</b><br><small style="color:var(--muted)">Send &amp; track reports</small></span>' +
         '</div></a>') +
       '<a href="#/settings" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
@@ -226,6 +216,73 @@
     var pendCard = '<div class="card"><div class="card-h"><h3>Tests in Progress</h3><a class="btn btn-ghost btn-sm" href="#/results">View all</a></div>' +
       '<div class="card-b">' + (pendRows || App.empty('No pending tests.')) + '</div></div>';
 
+
+    /* ---------- two big graph cards: last 7 days (hand-drawn SVG, no libraries) ---------- */
+    function localDay(v) { var d = new Date(v); if (isNaN(d)) return ''; return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+    var DAYS7 = [], DNAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    (function () { var n = new Date(); for (var i = 6; i >= 0; i--) { var d = new Date(n.getFullYear(), n.getMonth(), n.getDate() - i); DAYS7.push({ key: localDay(d), label: DNAMES[d.getDay()], num: d.getDate() }); } })();
+    function perDay(rows, dateOf, valOf) {
+      var m = {}; DAYS7.forEach(function (d) { m[d.key] = 0; });
+      rows.forEach(function (r) { var k = localDay(dateOf(r)); if (m.hasOwnProperty(k)) m[k] += valOf(r); });
+      return DAYS7.map(function (d) { return m[d.key]; });
+    }
+    function niceMax(v) {
+      if (v <= 0) return 10;
+      var p = Math.pow(10, Math.floor(Math.log(v) / Math.LN10)), f = v / p;
+      return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+    }
+    function sum(a) { return a.reduce(function (x, y) { return x + y; }, 0); }
+    function short(n) { return n >= 1000000 ? (Math.round(n / 100000) / 10) + 'M' : (n >= 1000 ? (Math.round(n / 100) / 10) + 'k' : String(Math.round(n))); }
+    /* bars (one or two series) + optional line; W/H = viewBox */
+    function chartSvg(o) {
+      var W = 640, H = 270, L = 46, R = 14, T = 16, B = 34, iw = W - L - R, ih = H - T - B, n = DAYS7.length;
+      var all = []; o.bars.forEach(function (b) { all = all.concat(b.data); }); if (o.line) all = all.concat(o.line.data);
+      var max = niceMax(Math.max.apply(null, all.concat([0]))), step = iw / n, g = '', i, k;
+      for (k = 0; k <= 4; k++) { var y = T + ih - ih * k / 4; g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#e3ecf7" stroke-width="1"' + (k ? ' stroke-dasharray="3 4"' : '') + '/>' + '<text x="' + (L - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="#8a94a6">' + (o.money ? short(max * k / 4) : Math.round(max * k / 4)) + '</text>'; }
+      var nb = o.bars.length, bw = Math.min(30, step / (nb + 1.1)), bars = '';
+      for (i = 0; i < n; i++) {
+        var cx = L + step * i + step / 2;
+        o.bars.forEach(function (b, bi) {
+          var v = b.data[i], h = ih * v / max, x = cx - (nb * bw) / 2 + bi * bw + (bi ? 2 : 0), tip = DAYS7[i].label + ' ' + DAYS7[i].num + ' — ' + b.name + ': ' + (o.money ? 'Rs ' + Math.round(v).toLocaleString('en-US') : v);
+          bars += '<rect class="dbc-bar" x="' + x + '" y="' + (T + ih - h) + '" width="' + (bw - (bi ? 2 : 0)) + '" height="' + Math.max(h, v > 0 ? 2 : 0) + '" rx="5" fill="' + b.color + '" style="animation-delay:' + (i * 55 + bi * 90) + 'ms"><title>' + tip + '</title></rect>';
+        });
+        g += '<text x="' + cx + '" y="' + (H - 12) + '" text-anchor="middle" font-size="11.5" fill="' + (DAYS7[i].key === today ? '#131845' : '#8a94a6') + '" font-weight="' + (DAYS7[i].key === today ? '800' : '600') + '">' + DAYS7[i].label + ' ' + DAYS7[i].num + '</text>';
+      }
+      var line = '';
+      if (o.line) {
+        var pts = o.line.data.map(function (v, idx) { return [L + step * idx + step / 2, T + ih - ih * v / max, v, idx]; });
+        var d = pts.map(function (q, idx) { return (idx ? 'L' : 'M') + q[0] + ' ' + q[1]; }).join(' ');
+        line = '<path d="' + d + ' L' + pts[pts.length - 1][0] + ' ' + (T + ih) + ' L' + pts[0][0] + ' ' + (T + ih) + ' Z" fill="' + o.line.color + '" opacity=".10"/>' +
+          '<path class="dbc-line" d="' + d + '" fill="none" stroke="' + o.line.color + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" pathLength="100"/>' +
+          pts.map(function (q) { return '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="4.5" fill="#fff" stroke="' + o.line.color + '" stroke-width="2.5"><title>' + DAYS7[q[3]].label + ' ' + DAYS7[q[3]].num + ' — ' + o.line.name + ': ' + q[2] + '</title></circle>'; }).join('');
+      }
+      return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="' + App.esc(o.label) + '" style="display:block;overflow:visible">' + g + bars + line + '</svg>';
+    }
+    function legend(items) { return '<div class="dbc-leg">' + items.map(function (x) { return '<span><i style="background:' + x[1] + '"></i>' + x[0] + '</span>'; }).join('') + '</div>'; }
+    function chip(label, value, color) { return '<div class="dbc-chip"><small>' + label + '</small><b' + (color ? ' style="color:' + color + '"' : '') + '>' + value + '</b></div>'; }
+    function bigCard(title, sub, chips, svg, leg, link) {
+      return '<div class="card dbc-card"><div class="card-h"><div><h3>' + title + '</h3><div class="dbc-sub">' + sub + '</div></div>' + (link ? '<a class="btn btn-ghost btn-sm" href="' + link[0] + '" style="margin-left:auto">' + link[1] + '</a>' : '') + '</div>' +
+        '<div class="card-b"><div class="dbc-chips">' + chips + '</div>' + svg + leg + '</div></div>';
+    }
+    var expenses = DB.all('expenses') || [];
+    var tests7 = perDay(invoices, function (r) { return r.createdAt; }, function (r) { return r.items ? r.items.length : 0; });
+    var inv7 = perDay(invoices, function (r) { return r.createdAt; }, function () { return 1; });
+    var chartA, chartB;
+    if (isTech) {
+      var rep7 = perDay(results.filter(function (r) { return r.status === 'ready'; }), function (r) { return r.reportedAt; }, function () { return 1; });
+      chartA = bigCard('Results reported', 'Last 7 days', chip('Reported (7 days)', sum(rep7), '#059669') + chip('Pending now', pendingRes.length, '#d97706') + chip('Today', rep7[6]),
+        chartSvg({ label: 'Results reported per day', bars: [{ name: 'Results reported', data: rep7, color: '#10b981' }] }), legend([['Results reported', '#10b981']]), ['#/results/ready', 'Ready reports']);
+    } else {
+      var col7 = perDay(payments, function (r) { return r.date; }, function (r) { return +r.amount || 0; });
+      var exp7 = perDay(expenses, function (r) { return r.date; }, function (r) { return +r.amount || 0; });
+      var net = sum(col7) - sum(exp7);
+      chartA = bigCard('Collections vs Expenses', 'Last 7 days', chip('Collected', App.money(sum(col7)), '#2563eb') + chip('Expenses', App.money(sum(exp7)), '#d97706') + chip(net >= 0 ? 'Net profit' : 'Net loss', (net < 0 ? '−' : '') + App.money(Math.abs(net)), net >= 0 ? '#059669' : '#dc2626'),
+        chartSvg({ label: 'Collections and expenses per day', money: true, bars: [{ name: 'Collected', data: col7, color: '#3b82f6' }, { name: 'Expenses', data: exp7, color: '#f59e0b' }] }), legend([['Collected', '#3b82f6'], ['Expenses', '#f59e0b']]), ['#/finance/profit', 'Profit &amp; Loss']);
+    }
+    chartB = bigCard('Tests &amp; Invoices', 'Last 7 days', chip('Tests ordered', sum(tests7), '#7c3aed') + chip('Invoices', sum(inv7), '#ea580c') + chip('Today', tests7[6] + ' tests'),
+      chartSvg({ label: 'Tests ordered and invoices per day', bars: [{ name: 'Invoices', data: inv7, color: '#fdba74' }], line: { name: 'Tests ordered', data: tests7, color: '#7c3aed' } }), legend([['Invoices', '#fdba74'], ['Tests ordered', '#7c3aed']]), isTech ? null : ['#/invoices', 'Invoices']);
+    var chartsHtml = '<div class="db-charts">' + chartA + chartB + '</div>';
+
     return '<div class="db-page">' +
     '<style>' +
     '/* ===== Dashboard website-matched theme (scoped, navy/blue medical) ===== */' +
@@ -248,6 +305,15 @@
     '<style>' +
     '/* shared compact stat card CSS now in app.css */' +
     '.stat .dl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}' +
+    '.db-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}' +
+    '@media(max-width:1000px){.db-charts{grid-template-columns:1fr}}' +
+    '.dbc-card .card-h{align-items:flex-start}.dbc-card .card-h h3{font-size:17px;font-weight:800;letter-spacing:-.01em}.dbc-sub{font-size:12.5px;color:var(--muted);margin-top:2px;font-weight:600}' +
+    '.dbc-chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}' +
+    '.dbc-chip{background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px 14px;min-width:96px}.dbc-chip small{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}.dbc-chip b{font-size:16.5px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums}' +
+    '.dbc-leg{display:flex;gap:16px;justify-content:center;margin-top:6px;font-size:12.5px;font-weight:600;color:var(--muted)}.dbc-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}' +
+    '.dbc-bar{transform-box:fill-box;transform-origin:bottom;animation:dbcGrow .7s cubic-bezier(.22,.8,.3,1) backwards}@keyframes dbcGrow{from{transform:scaleY(0)}}' +
+    '.dbc-line{stroke-dasharray:100;animation:dbcDraw 1.1s .2s ease-out backwards}@keyframes dbcDraw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}' +
+    '@media (prefers-reduced-motion:reduce){.dbc-bar,.dbc-line{animation:none}}' +
     '.db-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px}' +
     '@media(max-width:1000px){.db-grid{grid-template-columns:1fr}}' +
     '.db-grid .card-h h3{font-size:16.5px;font-weight:700;letter-spacing:-.01em}' +
@@ -258,7 +324,7 @@
 
     quickCss + quickAccess +
 
-    critCard() +
+    critCard() + chartsHtml +
     '<div class="db-grid">' + patCard + pendCard + '</div>' +
     '</div>';
     } /* end buildDashboard */

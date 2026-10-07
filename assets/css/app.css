@@ -1284,3 +1284,18 @@ td .smp-chip{display:flex;width:fit-content;margin:5px 0 0}
 .nav-sub-it:hover{background:#f1f5f9}
 .nav-sub-it.on{background:var(--brand-soft);color:var(--brand-d);font-weight:700}
 .nav-sub-it.danger{color:var(--red)}.nav-sub-it.danger.on{background:var(--red-soft);color:var(--red)}
+
+/* ---- left panel (sidebar) a little bigger: wider, larger text and icons ---- */
+@media (min-width:1025px){.sidebar{width:268px}}
+@media (min-width:901px) and (max-width:1024px){.sidebar{width:244px}}
+.sidebar .brand{padding:22px 22px 18px}
+.sidebar .brand-mark{width:46px;height:46px;border-radius:14px}
+.sidebar .brand-tx b{font-size:18px}.sidebar .brand-tx small{font-size:12px}
+.sidebar .nav-sec{font-size:12px;padding-left:22px}
+nav.nav{padding:8px 14px 18px}
+.nav-it{padding:8px 12px;font-size:15px;gap:12px;margin-bottom:3px;border-radius:12px}
+.nav-ic{width:32px;height:32px;border-radius:9px}
+.nav-ic svg{width:18px;height:18px}
+.nav-chev{width:15px;height:15px}
+.nav-sub{margin-left:26px}
+.nav-sub-it{padding:8px 12px;font-size:14px}

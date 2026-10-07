@@ -170,7 +170,7 @@
     '.fn-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:18px;align-items:start;margin-bottom:18px}' +
     '.fn-col{display:flex;flex-direction:column;gap:18px;min-width:0}' +
     '.fn-grid .card,.fn-col .card{margin-bottom:0}' +
-    '.fn-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-bottom:18px;align-items:start}' +
+    '.fn-grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-bottom:18px;align-items:stretch}' +
     '.fn-grid2 .card{margin-bottom:0;min-width:0}' +
     '.fn-kpi{grid-template-columns:repeat(3,1fr)}' +
     '.fn-banner{display:flex;gap:10px;align-items:flex-start;border-radius:12px;padding:11px 14px;margin-bottom:14px;font-size:13.5px;font-weight:600;line-height:1.45;border:1px solid}' +
@@ -964,14 +964,14 @@
       '<div class="fn-date"><input class="input" type="date" id="plFrom" value="' + esc(P.from) + '"><span class="fn-note">to</span><input class="input" type="date" id="plTo" value="' + esc(P.to) + '"></div>' : '';
 
     view().innerHTML = '<div class="fn-page">' + tabsHtml('profit') +
-      '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">' +
+      '<div class="stat-grid fn-kpi">' + kpis + '</div>' +
+      '<div class="card" style="margin-bottom:10px"><div class="card-b" style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">' +
       '<div class="fn-seg2">' + presetBtns + '</div>' + custom + '<span style="flex:1"></span>' +
       '<div class="fn-seg" id="plBasis"><button data-basis="cash" class="' + (cash ? 'on' : '') + '">Cash basis</button><button data-basis="accrual" class="' + (!cash ? 'on' : '') + '">Accrual basis</button></div>' +
       '<button class="btn btn-sm" id="plCsv">' + App.icon('download', 14) + ' Export CSV</button>' +
       '<button class="btn btn-sm" id="plPrint">' + App.icon('printer', 14) + ' Print</button></div></div>' +
-      '<div class="fn-note" style="margin:-4px 2px 14px">' + esc(fmtDay(from)) + ' – ' + esc(fmtDay(to)) + ' (' + span + ' day' + (span === 1 ? '' : 's') + ') compared with ' + esc(fmtDay(pFrom)) + ' – ' + esc(fmtDay(pTo)) + '. ' +
+      '<div class="fn-note" style="margin:0 2px 16px">' + esc(fmtDay(from)) + ' – ' + esc(fmtDay(to)) + ' (' + span + ' day' + (span === 1 ? '' : 's') + ') compared with ' + esc(fmtDay(pFrom)) + ' – ' + esc(fmtDay(pTo)) + '. ' +
       (cash ? 'Cash basis: revenue is money actually collected (net of refunds); doctor commission counts only when paid.' : 'Accrual basis: revenue is the value billed (after discounts); doctor commission is accrued on each referred invoice.') + '</div>' +
-      '<div class="stat-grid fn-kpi">' + kpis + '</div>' +
       '<div class="fn-grid2 fn-wide">' +
       '<div class="card"><div class="card-h"><h3>' + (bk.monthly ? 'Monthly' : 'Daily') + ' revenue vs expenses</h3></div><div class="card-b">' +
       '<div class="fn-leg"><span><i style="background:' + C_REV + '"></i>Revenue</span><span><i style="background:' + C_EXP + '"></i>Expenses</span></div>' +

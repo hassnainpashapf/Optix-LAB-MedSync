@@ -11,7 +11,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="MedSync">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/css/app.css?v=130g">
+<link rel="stylesheet" href="assets/css/app.css?v=130h">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -43,7 +43,7 @@ document.addEventListener('keydown', function (e) {
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
    to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
-window.__ASSET_V = '130g';
+window.__ASSET_V = '130h';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
@@ -74,12 +74,12 @@ window.__LAZY_ROUTES = {
   '/profile': 'assets/js/mod-profile.js'
 };
 </script>
-<script src="assets/js/qrcode.min.js?v=130g"></script>
-<script src="assets/js/db.js?v=130g"></script>
-<script src="assets/js/graph-config.js?v=130g"></script>
-<script src="assets/js/app.js?v=130g"></script>
-<script src="assets/js/mod-auth.js?v=130g"></script>
-<script src="assets/js/samples-core.js?v=130g"></script>
-<script src="assets/js/mod-dashboard.js?v=130g"></script>
+<script src="assets/js/qrcode.min.js?v=130h"></script>
+<script src="assets/js/db.js?v=130h"></script>
+<script src="assets/js/graph-config.js?v=130h"></script>
+<script src="assets/js/app.js?v=130h"></script>
+<script src="assets/js/mod-auth.js?v=130h"></script>
+<script src="assets/js/samples-core.js?v=130h"></script>
+<script src="assets/js/mod-dashboard.js?v=130h"></script>
 </body>
 </html>
