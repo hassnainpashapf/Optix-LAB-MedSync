@@ -1196,7 +1196,8 @@ async function main() {
         if (want.length !== got.length || !crypto.timingSafeEqual(want, got)) { await rawStore.setMeta(otpKey(c.lab, k), rec); return res.status(401).json(BAD); }
         await rawStore.setMeta(otpKey(c.lab, k), null); /* one use */
         const w = await whoIs(c.st, k);
-        res.json({ ok: true, token: signToken(PSECRET, { lab: c.lab.id, ph: k, exp: Date.now() + PTOKEN_TTL }), expiresInMin: PTOKEN_TTL / 60000, patient: w.pats.length > 0, doctor: w.docs.length > 0 });
+        const keep = b.remember === true, ttl = keep ? 30 * 86400000 : PTOKEN_TTL; /* "keep me signed in on this phone": 30 days, only if the person ticked it */
+        res.json({ ok: true, token: signToken(PSECRET, { lab: c.lab.id, ph: k, exp: Date.now() + ttl }), expiresInMin: Math.round(ttl / 60000), days: keep ? 30 : 0, patient: w.pats.length > 0, doctor: w.docs.length > 0 });
       } catch (e) { res.status(401).json(BAD); }
     });
     app.get('/api/portal/data', async (req, res) => {

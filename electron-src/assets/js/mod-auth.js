@@ -208,6 +208,7 @@
           '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Sign In</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
           (showLabId && !desk ? '<div class="lg-google" id="lgGoogle" hidden><div class="login-div"><span>or</span></div><div class="lg-gbtn" id="lgGBtn"></div></div>' : '') +
           (showLabId ? '<p class="lg-new">New to Optix? <a href="' + signupHref + '"' + signupAttr + '>Start your 14-day free trial</a></p>' : '') +
+          (showLabId ? '<p class="lg-new" style="margin-top:6px">Patient or doctor? <a id="lgPortal" href="' + (desk ? WEB + '/app/#/portal' : '#/portal') + '"' + signupAttr + '>See your reports</a></p>' : '') +
           '<div class="login-div"><span>or</span></div>' +
           (desk
             ? '<a class="btn btn-ghost btn-block" href="' + WEB + '/superadmin/" target="_blank" rel="noopener">Superadmin Login</a>'
@@ -221,6 +222,8 @@
       var fg = document.getElementById('lgForgot');
       if (fg && window.LABPOS_API && window.fetch) window.fetch(window.LABPOS_API + '/api/auth/mail-status').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { if (j && j.mail) fg.hidden = false; }).catch(function () {});
     } catch (e) {}
+    var _lp = document.getElementById('lgPortal'); /* carry a typed Lab ID into the patient / doctor page */
+    if (_lp && !desk) _lp.addEventListener('click', function (e) { var lb = document.getElementById('liLabId'), v = lb ? lb.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '') : ''; if (v) { e.preventDefault(); location.hash = '#/portal/' + v; } });
     if (window.__loginNote) { showErr(window.__loginNote); window.__loginNote = ''; } /* e.g. "This lab account is suspended" */
     wireGoogle('lgGoogle', 'lgGBtn', function (cred) {
       var labEl = document.getElementById('liLabId'), lab = labEl ? labEl.value.trim().toLowerCase() : '';
