@@ -7,6 +7,7 @@
   var tab = 'ready', sel = {}, logF = { status: '', kind: '', q: '' }, tplDraft = null;
 
   var CSS = '' +
+    '.wc-cur{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}.wc-cur b{font-size:17px;font-weight:800;color:var(--brand)}.wc-cur span{font-size:13px;color:var(--muted)}' +
     '.wc-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}' +
     '.wc-tabs button{border:1px solid var(--bd);background:#fff;border-radius:99px;padding:8px 18px;font-weight:700;font-size:13.5px;color:var(--ink2);cursor:pointer;font-family:inherit}' +
     '.wc-tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}.wc-tabs b{margin-left:6px;font-size:12px;opacity:.85}' +
@@ -57,8 +58,8 @@
       '<div class="wc-st"><div class="card"><div class="k">Sent today</div><b>' + sentToday + '</b></div><div class="card"><div class="k">Waiting to send</div><b>' + waiting + '</b></div>' +
       '<div class="card"><div class="k">Failed (all time)</div><b style="color:' + (failed ? '#b91c1c' : 'inherit') + '">' + failed + '</b></div>' +
       '<div class="card"><div class="k">Auto-send</div><b style="font-size:17px;margin-top:9px">' + (cfg.autoPatient !== false ? 'Patient ✓ ' : '') + (cfg.autoDoctor === true ? 'Doctor ✓' : '') + ((cfg.autoPatient === false && cfg.autoDoctor !== true) ? 'Off' : '') + '</b></div></div>' +
-      '<div class="wc-tabs"><button data-tab="ready" class="' + (tab === 'ready' ? 'on' : '') + '">Ready to send<b>' + waiting + '</b></button><button data-tab="log" class="' + (tab === 'log' ? 'on' : '') + '">Message log<b>' + L.length + '</b></button>' +
-      (s.role === 'admin' ? '<button data-tab="tpl" class="' + (tab === 'tpl' ? 'on' : '') + '">Templates &amp; rules</button>' : '') + '</div>';
+      /* Ready to send / Message log / Templates & rules are sidebar sub-menu items (#/whatsapp, #/whatsapp/log, #/whatsapp/templates); this labels the open list */
+      '<div class="wc-cur"><b>' + (tab === 'tpl' ? 'Templates &amp; rules' : (tab === 'log' ? 'Message log' : 'Ready to send')) + '</b><span>' + (tab === 'tpl' ? 'Messages and sending rules' : (tab === 'log' ? L.length + ' message' + (L.length === 1 ? '' : 's') : waiting + ' waiting')) + '</span></div>';
     if (tab === 'tpl' && s.role === 'admin') h += tplHtml(cfg);
     else if (tab === 'log') h += logHtml(L);
     else h += readyHtml(rdy, ready);
@@ -196,5 +197,8 @@
     }
   }
 
-  App.route('/whatsapp', function () { sel = {}; return render(); });
+  function go(t) { if (tab === 'tpl' && document.getElementById('t_tplPatient')) tplDraft = readDraft(); var me = App.session(); if (t === 'tpl' && !(me && me.role === 'admin')) { App.nav('#/whatsapp'); return ''; } tab = t; sel = {}; return render(); }
+  App.route('/whatsapp', function () { return go('ready'); });
+  App.route('/whatsapp/log', function () { return go('log'); });
+  App.route('/whatsapp/templates', function () { return go('tpl'); });
 })();

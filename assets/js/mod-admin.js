@@ -1303,19 +1303,14 @@
       { id: 'backup', label: 'Backup' },
       { id: 'danger', label: 'Danger Zone' }
     ];
+    /* the sections are sidebar sub-menu items now (#/settings, #/settings/account, …); the card only labels the open one */
+    var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
     var html = ''
       + '<div class="card"><div class="card-b">'
-      + '<div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px">'
-      + tabs.map(function (t) {
-          return '<button class="btn btn-sm ' + (settingsTab === t.id ? 'btn-primary' : 'btn-ghost') + '" data-stab="' + t.id + '"'
-            + (t.id === 'danger' && settingsTab !== 'danger' ? ' style="color:var(--red)"' : '') + '>' + t.label + '</button>';
-        }).join('')
-      + '</div><div id="setBody"></div>'
+      + '<div style="margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:12px"><b style="font-size:17px;color:' + (cur.id === 'danger' ? 'var(--red)' : 'var(--brand)') + '">' + cur.label + '</b></div>'
+      + '<div id="setBody"></div>'
       + '</div></div>';
     document.getElementById('view').innerHTML = html;
-    document.querySelectorAll('[data-stab]').forEach(function (b) {
-      b.addEventListener('click', function () { settingsTab = b.getAttribute('data-stab'); renderSettings(); });
-    });
     if (settingsTab === 'profile') renderSetProfile();
     else if (settingsTab === 'account') renderSetAccount();
     else if (settingsTab === 'templates') renderSetTemplates();
@@ -1327,7 +1322,7 @@
 
   /* deep-link into the WhatsApp settings tab (used by report-view send buttons
      when the WhatsApp API is not configured yet) */
-  App.openWaSettingsTab = function () { settingsTab = 'whatsapp'; renderSettings(); };
+  App.openWaSettingsTab = function () { App.nav('#/settings/whatsapp'); };
 
   /* ---- Lab Profile ---- */
   function renderSetProfile() {
@@ -2139,6 +2134,8 @@
     });
   }
 
-  App.route('#/settings', renderSettings);
+  var SET_TABS = ['profile', 'account', 'templates', 'whatsapp', 'users', 'backup', 'danger'];
+  App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });
+  App.route('#/settings/:tab', function (p) { settingsTab = (p && SET_TABS.indexOf(p.tab) >= 0) ? p.tab : 'profile'; renderSettings(); });
 
 })();

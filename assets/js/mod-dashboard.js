@@ -138,11 +138,12 @@
     // ---- quick-access cards — 6 shortcuts ----
     var quickCss =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 6 : 7) + ',1fr);gap:12px;margin-bottom:14px}' +
+    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 4 : 5) + ',1fr);gap:12px;margin-bottom:14px}' +
+    '.dbw-grid>a:last-child{grid-column:span 2}' + /* 9 cards = 5 + 4 (technician: 7 = 4 + 3); the last card stretches so the second row is full */
     '.dbq-card{transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
     '.dbq-card .card-b{padding:10px 12px!important}' +
     '.dbq-card b{font-size:13px!important}.dbq-card small{font-size:11px!important}' +
-    '@media(max-width:1200px){.dbw-grid{grid-template-columns:repeat(3,1fr)}}' +
+    '@media(max-width:1200px){.dbw-grid{grid-template-columns:repeat(3,1fr)}.dbw-grid>a:last-child{grid-column:auto}}' +
     '@media(max-width:900px){.dbw-grid{grid-template-columns:1fr}}' +
     '</style>';
     var quickAccess =
@@ -151,6 +152,11 @@
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
           '<span style="width:44px;height:44px;border-radius:12px;background:#22c55e1a;color:#22c55e;display:grid;place-items:center;flex:none">' + App.icon('users', 22) + '</span>' +
           '<span><b style="font-size:15px;color:var(--ink)">Patients</b><br><small style="color:var(--muted)">Manage patient records</small></span>' +
+        '</div></a>' +
+      '<a href="#/samples" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#e11d481a;color:#e11d48;display:grid;place-items:center;flex:none">' + App.icon('tube', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Samples</b><br><small style="color:var(--muted)">Barcode &amp; tracking</small></span>' +
         '</div></a>' +
       '<a href="#/results" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
@@ -176,6 +182,11 @@
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
           '<span style="width:44px;height:44px;border-radius:12px;background:#0ea5a41a;color:#0ea5a4;display:grid;place-items:center;flex:none">' + App.icon('finance', 22) + '</span>' +
           '<span><b style="font-size:15px;color:var(--ink)">Cash &amp; Profit</b><br><small style="color:var(--muted)">Day closing &amp; P&amp;L</small></span>' +
+        '</div></a>') +
+      (isTech ? '' : '<a href="#/whatsapp" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#22c55e1a;color:#22c55e;display:grid;place-items:center;flex:none">' + App.icon('chat', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">WhatsApp</b><br><small style="color:var(--muted)">Send &amp; track reports</small></span>' +
         '</div></a>') +
       '<a href="#/settings" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +

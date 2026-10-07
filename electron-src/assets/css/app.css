@@ -1283,3 +1283,4 @@ td .smp-chip{display:flex;width:fit-content;margin:5px 0 0}
 .nav-sub-it{display:block;padding:7px 10px;margin:1px 0;border-radius:8px;color:var(--ink2);font-weight:600;font-size:13px;text-decoration:none;transition:background .15s,color .15s}
 .nav-sub-it:hover{background:#f1f5f9}
 .nav-sub-it.on{background:var(--brand-soft);color:var(--brand-d);font-weight:700}
+.nav-sub-it.danger{color:var(--red)}.nav-sub-it.danger.on{background:var(--red-soft);color:var(--red)}
