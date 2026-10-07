@@ -448,7 +448,85 @@
 
   /* Trigger: call after result saves. Sends only for invoices whose report is
      now fully ready. Never throws — the result-save flow must not break. */
+  /* ---------- email + Slack sharing (cloud labs; the server does the sending, see /api/share/*) ---------- */
+  var _shareSt = null, _shareAt = 0;
+  function shareOn() { return !!(window.DB && DB.share && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop); }
+  function shareStatus(force) {
+    if (!shareOn()) return Promise.resolve({ email: false, slack: false, slackAuto: false });
+    if (!force && _shareSt && Date.now() - _shareAt < 60000) return Promise.resolve(_shareSt);
+    return DB.share('GET', 'status').then(function (j) { _shareSt = j; _shareAt = Date.now(); return j; }, function () { return { email: false, slack: false, slackAuto: false }; });
+  }
+  App.shareStatus = shareStatus;
+  /* the PDF engine is loaded on demand: make sure it is there before building the report PDF that email / Slack send */
+  function pdfUrlFor(invoiceId) {
+    return Promise.resolve(App.ensureJsPDF ? App.ensureJsPDF() : true).then(function () { return getReportPdfUrl(invoiceId, true); });
+  }
+  function keyOfUrl(u) { var m = /\/r\/([A-Za-z0-9_-]+)/.exec(String(u || '')); return m ? m[1] : ''; }
+  function slackNames(invoiceId) {
+    var n = []; joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; }).forEach(function (r) { var t = testName(r); if (t && n.indexOf(t) < 0) n.push(t); });
+    return n.join(', ');
+  }
+  /* auto-post to Slack the moment every test of an invoice is ready (once per invoice) */
+  function slackAutoReady(ids) {
+    if (!shareOn()) return;
+    shareStatus().then(function (st) {
+      if (!st.slackAuto) return;
+      ids.forEach(function (id) {
+        try {
+          var inv = invOf(id); if (!inv || inv.slackNotifiedAt || !waAllReady(id)) return;
+          DB.update('invoices', id, { slackNotifiedAt: new Date().toISOString() });
+          pdfUrlFor(id).then(function (url) {
+            var key = keyOfUrl(url); if (!key) return;
+            DB.share('POST', 'slack', { key: key, event: 'ready', name: (patOf(inv.patientId) || {}).name, invoiceNo: inv.no || inv.id, tests: slackNames(id) }).catch(function () {});
+          });
+        } catch (e) {}
+      });
+    });
+  }
+  function slackSend(invoiceId) {
+    var inv = invOf(invoiceId); if (!inv) return;
+    App.toast('Sending to Slack…', 'info');
+    pdfUrlFor(invoiceId).then(function (url) {
+      var key = keyOfUrl(url); if (!key) { App.toast('Could not prepare the report PDF', 'err'); return; }
+      return DB.share('POST', 'slack', { key: key, event: 'manual', name: (patOf(inv.patientId) || {}).name, invoiceNo: inv.no || inv.id, tests: slackNames(invoiceId) })
+        .then(function () { App.toast('Report posted to Slack'); });
+    }).catch(function (e) { App.toast((e && e.message) || 'Slack failed', 'err'); });
+  }
+  function emailReport(invoiceId, role) {
+    var inv = invOf(invoiceId); if (!inv) { App.toast('Invoice not found', 'err'); return; }
+    var pat = patOf(inv.patientId) || {}, doc = (role === 'doctor' && inv.doctorId) ? DB.get('doctors', inv.doctorId) : null;
+    if (role === 'doctor' && !doc) { App.toast('No referring doctor on this invoice', 'err'); return; }
+    var target = role === 'doctor' ? doc : pat, who = target.name || (role === 'doctor' ? 'doctor' : 'patient'), cur = String(target.email || '').trim();
+    App.modal('Email report to ' + App.esc(who),
+      '<p class="muted" style="margin:0 0 12px">The report PDF is attached to the email, with a link to open it on a phone.</p>' +
+      '<label class="label" for="emTo">Email address</label><input class="input" id="emTo" type="email" maxlength="120" placeholder="name@example.com" value="' + App.esc(cur) + '">' +
+      '<label class="check" style="margin-top:10px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="emSave"' + (cur ? '' : ' checked') + '> Save this address on the ' + (role === 'doctor' ? 'doctor' : 'patient') + '\'s record</label>' +
+      '<div class="actions" style="margin-top:16px"><button class="btn btn-ghost" id="emCancel">Cancel</button><button class="btn btn-primary" id="emSend">Send email</button></div>',
+      { onOpen: function (ov, close) {
+          var to = ov.querySelector('#emTo'); setTimeout(function () { to.focus(); to.select(); }, 50);
+          ov.querySelector('#emCancel').addEventListener('click', close);
+          function go() {
+            var addr = to.value.trim();
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(addr)) { App.toast('Enter a valid email address', 'err'); return; }
+            var save = ov.querySelector('#emSave').checked && addr !== cur;
+            close(); App.toast('Sending email to ' + who + '…', 'info');
+            pdfUrlFor(invoiceId).then(function (url) {
+              var key = keyOfUrl(url); if (!key) throw new Error('Could not prepare the report PDF');
+              return DB.share('POST', 'email', { key: key, to: addr, kind: role, name: who, invoiceNo: inv.no || inv.id });
+            }).then(function () {
+              App.toast('Report emailed to ' + addr);
+              if (save) { try { DB.update(role === 'doctor' ? 'doctors' : 'patients', target.id, { email: addr }); } catch (e) {} }
+            }).catch(function (e) { App.toast((e && e.message) || 'Email failed', 'err'); });
+          }
+          ov.querySelector('#emSend').addEventListener('click', go);
+          to.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+        } });
+  }
+
   function waAutoSendReady(invoiceIds) {
+    try {
+      slackAutoReady((invoiceIds || []).filter(function (id, i, a) { return id && a.indexOf(id) === i; }));
+    } catch (e) {}
     try {
       var ids = [];
       (invoiceIds || []).forEach(function (id) { if (id && ids.indexOf(id) < 0) ids.push(id); });
@@ -2724,15 +2802,26 @@
         previewQr(reportHtml(d), invoiceId) +
       '</div>' +
       '<div id="rvWaHist" style="margin-top:12px">' + waHistoryHtml(invoiceId) + '</div>' +
-      '<div class="actions" style="margin-top:12px">' +
+      '<div class="actions" style="margin-top:12px;flex-wrap:wrap;justify-content:flex-end;gap:8px">' +
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
         '<button class="btn btn-ghost" id="rvWaPatient">' + WA_ICON + ' Send to Patient (WhatsApp)</button>' +
         docWaBtn +
+        '<span id="rvShare" style="display:contents"></span>' +
         '<button class="btn btn-primary" id="rvPrint">' + PRINT_ICON + ' Print Report <span style="opacity:.7;font-weight:500;font-size:11px;margin-left:4px">Ctrl+P</span></button>' +
       '</div>',
       { wide: true, onOpen: function (ov, close) {
           document.getElementById('rvClose').addEventListener('click', close);
           document.getElementById('rvPrint').addEventListener('click', function () { close(); printReportChoice(invoiceId); });
+          shareStatus().then(function (st) { /* Email / Slack buttons appear only when the server can send them */
+            var slot = document.getElementById('rvShare'); if (!slot || !document.body.contains(ov)) return;
+            var h = '';
+            if (st.email) h += '<button class="btn btn-ghost" id="rvEmPat">&#9993; Email Patient</button>' + (d.doc ? '<button class="btn btn-ghost" id="rvEmDoc">&#9993; Email Doctor</button>' : '');
+            if (st.slack) h += '<button class="btn btn-ghost" id="rvSlack">Send to Slack</button>';
+            slot.innerHTML = h;
+            var b1 = document.getElementById('rvEmPat'); if (b1) b1.addEventListener('click', function () { emailReport(invoiceId, 'patient'); });
+            var b2 = document.getElementById('rvEmDoc'); if (b2) b2.addEventListener('click', function () { emailReport(invoiceId, 'doctor'); });
+            var b3 = document.getElementById('rvSlack'); if (b3) b3.addEventListener('click', function () { slackSend(invoiceId); });
+          });
           /* Ctrl+P / Cmd+P while the report is open prints this report (with the lab header) instead of the browser printing the whole page */
           function rvKey(e) {
             if (!document.body.contains(ov)) { document.removeEventListener('keydown', rvKey, true); return; }

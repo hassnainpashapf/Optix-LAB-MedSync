@@ -1025,6 +1025,94 @@ async function main() {
       res.json({ ok: true, key, url: (DESKTOP ? DESKTOP_CLOUD_URL : (PUBLIC_API_URL || (req.protocol + '://' + req.get('host')))) + '/r/' + key });
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
+  /* ---- send a finished report by email or to a Slack channel (cloud labs). Email goes out through the one mailbox set up in the superadmin console,
+     but shows the LAB's name as the sender and replies go to the lab. The wording is fixed (no free text), recipients are limited per minute / per day
+     per lab, and every send is written to the lab's audit log. Slack uses the lab's own incoming-webhook URL, stored encrypted. ---- */
+  if (!DESKTOP) {
+    const shareUser = new Map(), shareLab = new Map(), sharePair = new Map(), slackHits = new Map();
+    const EMAILS_PER_DAY = +process.env.EMAIL_REPORTS_PER_DAY || 40;
+    const SLACK_RE = /^https:\/\/hooks\.slack\.com\/services\/[A-Za-z0-9_\/-]{10,200}$/;
+    const clean1 = (v, n) => String(v == null ? '' : v).replace(/[\r\n\t<>"`]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, n);
+    const maskEmail = (e) => String(e).replace(/^(.).*(@.*)$/, '$1***$2');
+    const linkOf = (req, key) => (PUBLIC_API_URL || (req.protocol + '://' + req.get('host'))) + '/r/' + key;
+    function ownPdf(req, key) {
+      if (!REPORT_KEY_RE.test(String(key || ''))) return null;
+      const f = path.join(REPORT_PDFS_DIR, key + '.pdf'), o = path.join(REPORT_PDFS_DIR, key + '.owner'), me = req.lab ? req.lab.id : 'main';
+      if (!fs.existsSync(f) || (fs.existsSync(o) ? fs.readFileSync(o, 'utf8').trim() : 'main') !== me) return null;
+      return f;
+    }
+    app.get('/api/share/status', needUser, async (req, res) => {
+      const m = (await req.store.getMeta('slack')) || {};
+      res.json({ email: mailer.configured(), perDay: EMAILS_PER_DAY, slack: !!m.webhook, slackAuto: !!(m.webhook && m.auto), slackTail: m.webhook ? decPw(m.webhook).slice(-4) : '' });
+    });
+    app.post('/api/share/email', needUser, async (req, res) => {
+      try {
+        if (!mailer.configured()) return res.status(503).json({ error: 'Email sending is not set up on this server yet. Ask the system owner to set it up.' });
+        const b = req.body || {}, to = String(b.to || '').trim(), lid = req.lab ? req.lab.id : 'main';
+        if (!EMAIL_OK.test(to) || to.length > 120 || /[,;\s]/.test(to)) return res.status(400).json({ error: 'Enter one valid email address' });
+        const f = ownPdf(req, b.key); if (!f) return res.status(404).json({ error: 'The report PDF was not found. Open the report again and retry.' });
+        if (bump(shareUser, req.user.id + '|' + lid, 60000).n > 6) return res.status(429).json({ error: 'Too many emails in a minute. Please wait a moment.' });
+        if (hot(sharePair, lid + '|' + to.toLowerCase() + '|' + b.key, 1)) return res.status(429).json({ error: 'This report was just emailed to this address.' });
+        if (bump(shareLab, lid, 86400000).n > EMAILS_PER_DAY) return res.status(429).json({ error: 'Your lab reached today\'s limit of ' + EMAILS_PER_DAY + ' report emails. It resets in 24 hours.' });
+        bump(sharePair, lid + '|' + to.toLowerCase() + '|' + b.key, 120000);
+        const buf = fs.readFileSync(f); if (buf.length > 12 * 1024 * 1024) return res.status(413).json({ error: 'The report PDF is too large to email. Send the link on WhatsApp instead.' });
+        const st = (await req.store.get('settings', 'main')) || {}, labName = clean1(st.labName || (req.lab && req.lab.name) || 'Your lab', 80);
+        const kind = b.kind === 'doctor' ? 'doctor' : 'patient', name = clean1(b.name, 60), invNo = clean1(b.invoiceNo, 30);
+        const mail = mailer.reportEmail({ labName, name, kind, link: linkOf(req, b.key), invNo, labPhone: clean1(st.phone, 40), labEmail: EMAIL_OK.test(String(st.email || '')) ? clean1(st.email, 80) : '' });
+        await mailer.send(Object.assign({ to, fromName: labName + ' (via Optix LAB MedSync)', replyTo: EMAIL_OK.test(String(st.email || '')) ? String(st.email).trim() : undefined,
+          attachments: [{ filename: 'Lab-Report-' + (invNo.replace(/[^A-Za-z0-9_-]/g, '') || 'report') + '.pdf', content: buf, contentType: 'application/pdf' }] }, mail));
+        await auditLog(req, 'email-report', 'report', b.key, { label: kind + ' ' + maskEmail(to) + (invNo ? ' (' + invNo + ')' : '') });
+        res.json({ ok: true });
+      } catch (e) { console.error('[labpos-cloud] report email failed:', String((e && e.message) || e).slice(0, 200)); res.status(502).json({ error: mailer.friendlyError(e) }); }
+    });
+
+    async function slackPost(url, text) {
+      const ac = new AbortController(), to = setTimeout(() => ac.abort(), 8000);
+      try {
+        const r = await fetch(process.env.SLACK_TEST_URL || url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text }), signal: ac.signal }); /* SLACK_TEST_URL: tests only */
+        if (!r.ok) { const t = (await r.text().catch(() => '')).slice(0, 60); throw new Error(/no_service|invalid_token|403|404/.test(t + r.status) ? 'Slack did not accept this webhook URL. Create a new one in Slack and save it again.' : 'Slack error: ' + (t || r.status)); }
+      } catch (e) { throw new Error(e.name === 'AbortError' ? 'Could not reach Slack. Please try again.' : e.message); }
+      finally { clearTimeout(to); }
+    }
+    const slackEsc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    app.put('/api/share/slack', needAdmin, async (req, res) => {
+      try {
+        const b = req.body || {}, old = (await req.store.getMeta('slack')) || {};
+        if (b.clear) { await req.store.setMeta('slack', null); return res.json({ ok: true, slack: false }); }
+        let webhook = old.webhook || '';
+        if (typeof b.webhook === 'string' && b.webhook.trim()) {
+          const u = b.webhook.trim(); if (!SLACK_RE.test(u)) return res.status(400).json({ error: 'That is not a Slack webhook URL. It starts with https://hooks.slack.com/services/' });
+          webhook = encPw(u);
+        }
+        if (!webhook) return res.status(400).json({ error: 'Paste the Slack webhook URL first' });
+        await req.store.setMeta('slack', { webhook, auto: b.auto !== undefined ? !!b.auto : !!old.auto });
+        res.json({ ok: true, slack: true, slackAuto: b.auto !== undefined ? !!b.auto : !!old.auto, slackTail: decPw(webhook).slice(-4) });
+      } catch (e) { res.status(400).json({ error: e.message }); }
+    });
+    app.post('/api/share/slack/test', needAdmin, async (req, res) => {
+      try {
+        const m = (await req.store.getMeta('slack')) || {}; if (!m.webhook) return res.status(400).json({ error: 'Save the webhook URL first' });
+        const st = (await req.store.get('settings', 'main')) || {};
+        await slackPost(decPw(m.webhook), '✅ Test message from Optix LAB MedSync — ' + slackEsc(clean1(st.labName || 'your lab', 60)) + '. Report notifications will appear here.');
+        res.json({ ok: true });
+      } catch (e) { res.status(502).json({ error: e.message }); }
+    });
+    app.post('/api/share/slack', needUser, async (req, res) => {
+      try {
+        const m = (await req.store.getMeta('slack')) || {}, b = req.body || {}, lid = req.lab ? req.lab.id : 'main';
+        if (!m.webhook) return res.status(400).json({ error: 'Slack is not set up. Add the webhook URL in Settings → Email & Slack.' });
+        if (!ownPdf(req, b.key)) return res.status(404).json({ error: 'The report PDF was not found. Open the report again and retry.' });
+        if (bump(slackHits, lid, 3600000).n > 200) return res.status(429).json({ error: 'Too many Slack messages this hour.' });
+        const st = (await req.store.get('settings', 'main')) || {};
+        const line = (b.event === 'ready' ? '📄 *Report ready*' : '📄 *Lab report*') + ' — ' + slackEsc(clean1(b.name, 60) || 'patient') + (b.invoiceNo ? ' · ' + slackEsc(clean1(b.invoiceNo, 30)) : '') +
+          (b.tests ? '\n' + slackEsc(clean1(b.tests, 160)) : '') + '\n<' + linkOf(req, b.key) + '|Open report PDF>  ·  ' + slackEsc(clean1(st.labName || '', 60));
+        await slackPost(decPw(m.webhook), line);
+        await auditLog(req, 'slack-report', 'report', b.key, { label: (b.event === 'ready' ? 'auto ' : '') + (clean1(b.invoiceNo, 30) || '') });
+        res.json({ ok: true });
+      } catch (e) { res.status(502).json({ error: e.message }); }
+    });
+  }
+
   /* QR target: a phone-friendly, app-like viewer (sharp pinch-zoom, share/download). Scripts and the desktop
      updater ask for the raw PDF with ?raw=1 or without an HTML Accept header. */
   let viewerHtml = null;

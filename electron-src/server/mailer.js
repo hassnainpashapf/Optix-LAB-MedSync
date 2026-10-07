@@ -26,7 +26,8 @@ async function send(m, override) {
   const conf = override || current();
   const from = (conf && conf.from) || process.env.MAIL_FROM || process.env.SMTP_USER || 'no-reply@localhost';
   if (process.env.MAIL_DEBUG_FILE && !override) {
-    fs.appendFileSync(process.env.MAIL_DEBUG_FILE, JSON.stringify({ from, to: m.to, subject: m.subject, text: m.text, html: m.html }) + '\n');
+    fs.appendFileSync(process.env.MAIL_DEBUG_FILE, JSON.stringify({ from, fromName: m.fromName || '', replyTo: m.replyTo || '', to: m.to, subject: m.subject, text: m.text, html: m.html,
+      attachments: (m.attachments || []).map((a) => ({ filename: a.filename, bytes: a.content ? a.content.length : 0, type: a.contentType })) }) + '\n');
     return { debug: true };
   }
   if (!conf || !conf.host) throw new Error('mail is not configured');
@@ -40,7 +41,10 @@ async function send(m, override) {
     });
     if (!override) { transporter = t; tKey = key; }
   }
-  return t.sendMail({ from, to: m.to, subject: m.subject, text: m.text, html: m.html });
+  /* a lab's report mail shows the LAB's name as the sender, from the one mailbox this server uses (replies go to the lab's own address) */
+  let fromField = from;
+  if (m.fromName) { const a = /<([^>]+)>/.exec(from); fromField = { name: String(m.fromName).replace(/[\r\n"<>]/g, ' ').slice(0, 100), address: (a ? a[1] : from).trim() }; }
+  return t.sendMail({ from: fromField, to: m.to, subject: m.subject, text: m.text, html: m.html, replyTo: m.replyTo || undefined, attachments: m.attachments || undefined });
 }
 
 /* turn the mail library's technical errors into something a shop owner can act on */
@@ -75,4 +79,23 @@ function changedEmail({ labName, name }) {
   return { subject, text, html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:auto;padding:24px;color:#131845"><h2 style="margin:0 0 12px">Password changed</h2><p>Hello ${esc(name || '')},</p><p>The password of your account at <b>${esc(labName)}</b> was just changed.</p><p style="font-size:13px;color:#5b6b80">If this was you, nothing more to do. If it was not you, reset it again right away and tell your lab admin.</p></div>` };
 }
 
-module.exports = { configured, send, setConfig, current, tlsFor, friendlyError, resetEmail, changedEmail };
+
+/* the report mail: fixed wording (staff cannot type free text into it, so it cannot be used to send arbitrary mail), the PDF attached, plus a link */
+function reportEmail({ labName, name, kind, link, invNo, labPhone, labEmail }) {
+  const who = name ? name : (kind === 'doctor' ? 'Doctor' : 'Patient');
+  const subject = (kind === 'doctor' ? 'Patient lab report' : 'Your lab report') + ' — ' + labName + (invNo ? ' (' + invNo + ')' : '');
+  const lead = kind === 'doctor'
+    ? 'The lab report' + (name ? ' of the patient you referred' : '') + ' is attached to this email as a PDF.'
+    : 'Your lab report is ready. It is attached to this email as a PDF.';
+  const contact = [labPhone ? 'Phone: ' + labPhone : '', labEmail ? 'Email: ' + labEmail : ''].filter(Boolean).join('  |  ');
+  const text = 'Dear ' + who + ',\n\n' + lead + '\n\nYou can also open or download it here (works on any phone):\n' + link + '\n\n' + labName + (contact ? '\n' + contact : '') +
+    '\n\nIf you were not expecting this email, you can ignore it.';
+  const html = '<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1b2540">' +
+    '<h2 style="margin:0 0 14px;color:#131845">' + esc(labName) + '</h2>' +
+    '<p>Dear ' + esc(who) + ',</p><p>' + esc(lead) + '</p>' +
+    '<p style="margin:22px 0"><a href="' + esc(link) + '" style="background:#131845;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:bold;display:inline-block">Open / download report</a></p>' +
+    '<p style="color:#5b6785;font-size:13px">' + esc(contact) + '</p>' +
+    '<p style="color:#8a94ad;font-size:12px;margin-top:22px">If you were not expecting this email, you can ignore it.</p></div>';
+  return { subject, text, html };
+}
+module.exports = { configured, send, setConfig, current, tlsFor, friendlyError, resetEmail, changedEmail, reportEmail };

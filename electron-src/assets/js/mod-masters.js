@@ -956,6 +956,7 @@ function doctorModal(d) {
       '<div><label class="label">Clinic / Hospital</label><input id="dm-clinic" class="input" value="' + App.esc(d.clinic || '') + '"></div>' +
       '<div><label class="label">Phone</label><input id="dm-phone" class="input" value="' + App.esc(d.phone || '') + '" placeholder="03xx-xxxxxxx"></div>' +
       '<div><label class="label">WhatsApp No.</label><input id="dm-wa" class="input" value="' + App.esc(d.whatsapp || '') + '" placeholder="03xxxxxxxxx"></div>' +
+      '<div><label class="label">Email</label><input id="dm-email" class="input" type="email" maxlength="80" value="' + App.esc(d.email || '') + '" placeholder="doctor@mail.com (to email reports)"></div>' +
       '<div><label class="label">Commission % *</label><input id="dm-comm" class="input" type="number" min="0" max="100" step="0.5" value="' + App.esc(String(d.commissionPct == null ? '' : d.commissionPct)) + '" required></div>' +
     '</div>' +
     '<div style="margin-top:18px;display:flex;justify-content:flex-end;gap:10px">' +
@@ -977,6 +978,7 @@ function doctorModal(d) {
         clinic: m.querySelector('#dm-clinic').value.trim(),
         phone: m.querySelector('#dm-phone').value.trim(),
         whatsapp: m.querySelector('#dm-wa').value.trim(),
+        email: m.querySelector('#dm-email').value.trim(),
         commissionPct: comm
       };
       if (isNew) { DB.insert('doctors', data); App.toast('Doctor added.'); }
