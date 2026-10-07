@@ -846,7 +846,8 @@ function renderDoctors() {
     '<div class="stat-grid">' + docStats + '</div>' +
     '<div class="card"><div class="card-b">' +
       '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px"><input id="d-q" class="input search" placeholder="Search name, clinic, phone..." value="' + App.esc(docFilter.q) + '" style="max-width:280px">' +
-      '<button type="button" class="btn btn-primary" id="d-add" style="margin-left:auto">+ Add Doctor</button></div>' +
+      '<button type="button" class="btn btn-ghost" id="d-stmt" style="margin-left:auto">Monthly statements</button>' +
+      '<button type="button" class="btn btn-primary" id="d-add">+ Add Doctor</button></div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Doctor</th><th>Clinic</th><th>Phone</th><th style="text-align:right">Commission %</th>' +
         '<th style="text-align:right">Referred (this month)</th><th style="text-align:right">Commission Due (month)</th>' +
@@ -858,6 +859,7 @@ function renderDoctors() {
   qEl.addEventListener('input', function () { docFilter.q = qEl.value; drawDoctorRows(); });
   qEl.addEventListener('input', function () { qEl.focus(); });
   document.getElementById('d-add').addEventListener('click', function () { doctorModal(null); });
+  document.getElementById('d-stmt').addEventListener('click', function () { openStatement(''); });
 
   drawDoctorRows();
   dCountUp();
@@ -898,6 +900,7 @@ function drawDoctorRows() {
         (dueM > 0 ? '<div style="font-size:11.5px;color:var(--red);font-weight:700">Due ' + App.money(dueM) + '</div>' : '') + '</td>' +
       '<td style="text-align:right"><div class="actions">' +
         (dueM > 0 ? '<button type="button" class="btn btn-primary btn-sm" data-pay="' + App.esc(d.id) + '" data-due="' + dueM + '">Pay</button>' : '') +
+        '<button type="button" class="btn btn-ghost btn-sm" data-stmt="' + App.esc(d.id) + '">Statement</button>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-edit="' + App.esc(d.id) + '">Edit</button>' +
         '<button type="button" class="btn btn-ghost btn-sm" data-del="' + App.esc(d.id) + '" title="Delete">✕</button>' +
       '</div></td>' +
@@ -908,6 +911,7 @@ function drawDoctorRows() {
     b.addEventListener('click', function () { openCommissionPay(b.getAttribute('data-pay'), parseFloat(b.getAttribute('data-due')) || 0); });
   });
 
+  tb.querySelectorAll('[data-stmt]').forEach(function (b) { b.addEventListener('click', function () { openStatement(b.getAttribute('data-stmt')); }); });
   tb.querySelectorAll('[data-edit]').forEach(function (b) {
     b.addEventListener('click', function () {
       var d = DB.get('doctors', b.getAttribute('data-edit'));
@@ -930,6 +934,11 @@ function drawDoctorRows() {
       });
     });
   });
+}
+
+function openStatement(docId) {
+  if (App.doctorStatement) { App.doctorStatement(docId); return; }
+  App.loadScript('assets/js/mod-statements.js').then(function () { App.doctorStatement(docId); }, function () { App.toast('Could not load the statement', 'err'); });
 }
 
 function openCommissionPay(doctorId, dueAmount) {
