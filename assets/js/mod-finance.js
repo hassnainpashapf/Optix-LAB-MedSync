@@ -468,7 +468,7 @@
       '<button class="fn-ib" id="fnNext" aria-label="Next day">›</button>' +
       '<button class="btn btn-sm" id="fnToday">Today</button></div><span class="sp"></span>' +
       '<span class="fn-note" style="font-weight:700">' + esc(longDay(date)) + '</span></div>' +
-      banners + '<div class="stat-grid fn-k4">' + stats + '</div>' +
+      '<div class="stat-grid fn-k4">' + stats + '</div>' + banners + /* the figures come first, the "earlier days not closed" notice sits below them */
       '<div class="fn-grid"><div class="fn-col">' + openingBox + methodCard + summaryCard + expCard + '</div><div class="fn-col">' + countCard + '</div></div>' + histCard + '</div>';
 
     paintDiff(V.expectedCash, row ? row.difference : null, row ? row.countedCash : null);
