@@ -1483,12 +1483,12 @@
     var _patId = String(pat.id == null ? '' : pat.id);
     var _tpl = !!(d && d._tpl);   /* template mode: per-report parts are written as {{tokens}} for the editable Custom Header box */
     var rightHtml =
-      '<div style="flex:none;color:#000;font-size:0.95em;line-height:1.3;display:flex;align-items:flex-start;gap:8px">' +
+      '<div style="flex:none;color:#000;font-size:0.95em;line-height:1.3;display:flex;align-items:flex-start;gap:12px">' +
         '<div style="text-align:left">' +
         '<div style="margin-top:2px">' + (_tpl ? '{{case_barcode}}' : barcodeHtml(_caseNo).replace('margin:0 auto', 'margin:0')) +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em">' + (_tpl ? '{{case_no}}' : App.esc(_caseNo)) + '</div></div>' +
-        '<div style="margin-top:2px">' + (_tpl ? '{{patient_barcode}}' : barcodeHtml(_patId).replace('margin:0 auto', 'margin:0')) +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em">' + (_tpl ? '{{patient_id}}' : App.esc(_patId)) + '</div></div>' +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2">' + (_tpl ? '{{case_no}}' : App.esc(_caseNo)) + '</div></div>' +
+        '<div style="margin-top:7px">' + (_tpl ? '{{patient_barcode}}' : barcodeHtml(_patId).replace('margin:0 auto', 'margin:0')) +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2">' + (_tpl ? '{{patient_id}}' : App.esc(_patId)) + '</div></div>' +
         '</div>' +
         (showQr
           ? (_tpl ? '<div>{{qr}}</div>' : '<div><img data-qr="1" style="width:70px;height:70px" alt="QR"></div>')
@@ -1723,7 +1723,7 @@
         bars += '<span style="display:block;flex:0 0 auto;width:0;flex-grow:1;background:#fff;height:100%;"></span>';
       }
     }
-    return '<div style="display:flex;align-items:stretch;width:' + (width || '64px') + ';height:' + (height || '12px') + ';' +
+    return '<div style="display:flex;align-items:stretch;width:' + (width || '64px') + ';height:' + (height || '14px') + ';' +
       'background:#fff;padding:0;margin:0 auto;line-height:0;overflow:hidden;" ' +
       'aria-hidden="true">' + bars + '</div>';
   }
@@ -3401,7 +3401,7 @@
             '<td>' + invCells + '</td>' +
             '<td><span class="badge b-ready">' + testCount + ' done</span></td>' +
             '<td class="muted">' + App.esc(lastRep ? App.dt(lastRep) : '—') + '</td>' +
-            '<td class="actions">' + actHtml + '</td></tr>';
+            '<td class="actions rr-act">' + actHtml + '</td></tr>';
         }).join('');
         readyPatientGroups = rpgroups;
         bodyHtml =
