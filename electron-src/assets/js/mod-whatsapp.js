@@ -54,7 +54,7 @@
     var L = logs(), sentToday = L.filter(function (e) { return e.status === 'sent' && String(e.ts).slice(0, 10) === today; }).length;
     var failed = L.filter(function (e) { return e.status === 'failed'; }).length;
     var rdy = readyInvoices(), waiting = rdy.filter(function (i) { return !sentAt(i.id, 'patient', 'report'); }).length;
-    var h = (ready ? '' : '<div class="card" style="margin-bottom:14px;border-color:#f6c6c6;background:#fff6f6"><div class="card-b"><b style="color:#b91c1c">WhatsApp sending is not configured yet.</b> <span class="muted">Contact support to connect your WhatsApp number. Reports can still be printed and shared manually.</span></div></div>') +
+    var h = (ready ? '' : '<div class="card" style="margin-bottom:14px;border-color:#f6c6c6;background:#fff6f6"><div class="card-b"><b style="color:#b91c1c">WhatsApp sending is not configured yet.</b> <span class="muted">Link the lab WhatsApp number in Settings → WhatsApp (scan a QR code). Reports can still be printed and shared manually.</span></div></div>') +
       '<div class="wc-st"><div class="card"><div class="k">Sent today</div><b>' + sentToday + '</b></div><div class="card"><div class="k">Waiting to send</div><b>' + waiting + '</b></div>' +
       '<div class="card"><div class="k">Failed (all time)</div><b style="color:' + (failed ? '#b91c1c' : 'inherit') + '">' + failed + '</b></div>' +
       '<div class="card"><div class="k">Auto-send</div><b style="font-size:17px;margin-top:9px">' + (cfg.autoPatient !== false ? 'Patient ✓ ' : '') + (cfg.autoDoctor === true ? 'Doctor ✓' : '') + ((cfg.autoPatient === false && cfg.autoDoctor !== true) ? 'Off' : '') + '</b></div></div>' +

@@ -1,0 +1,148 @@
+/* WhatsApp gateway — every lab links ITS OWN WhatsApp number by scanning a QR code (like WhatsApp Web), and the server then sends that lab's
+   messages (report links, portal sign-in codes) from that number. One session per lab, kept in memory; the login (creds + keys) is stored in
+   the database, so it survives restarts and deploys and is included in the normal backups.
+
+   This uses WhatsApp's Web protocol through the open-source Baileys library. It is NOT the official WhatsApp Business API: use a dedicated
+   number, send only to your own patients, and keep the volume low — WhatsApp can block numbers that look like spam.
+
+   WA_GATEWAY=0          switch the gateway off (the settings page then says so)
+   WA_GATEWAY_FAKE=1     tests: no WhatsApp at all; shows a fake QR, "pairs" after a moment and writes messages to WA_GATEWAY_FAKE_LOG
+   WA_GATEWAY_DAILY=300  messages per lab per day;  WA_GATEWAY_MAX=60  sessions kept running at the same time */
+'use strict';
+const fs = require('fs');
+const crypto = require('crypto');
+
+function create({ raw, log }) {
+  const FAKE = process.env.WA_GATEWAY_FAKE === '1';
+  const ENABLED = process.env.WA_GATEWAY !== '0';
+  const DAILY = +process.env.WA_GATEWAY_DAILY || 300, MAX = +process.env.WA_GATEWAY_MAX || 60;
+  const sessions = new Map();            /* labId -> session */
+  let B = null, pino = null;             /* Baileys, loaded on first use (it is an ES module) */
+  const say = log || (() => {});
+
+  async function lib() {
+    if (B) return B;
+    B = await import('@whiskeysockets/baileys'); pino = (await import('pino')).default;
+    return B;
+  }
+
+  /* ---- login storage in the database (same idea as Baileys' file store, but one meta row per file) ---- */
+  async function dbAuth(labId) {
+    const b = await lib(), pre = 'wa:' + labId + ':';
+    const idxKey = pre + 'idx'; let idx = new Set((await raw.getMeta(idxKey)) || []), idxT = null;
+    const flush = () => { clearTimeout(idxT); idxT = setTimeout(() => raw.setMeta(idxKey, Array.from(idx)).catch(() => {}), 3000); };
+    const put = async (name, val) => { await raw.setMeta(pre + name, JSON.parse(JSON.stringify(val, b.BufferJSON.replacer))); if (!idx.has(name)) { idx.add(name); flush(); } };
+    const get = async (name) => { const v = await raw.getMeta(pre + name); return v ? JSON.parse(JSON.stringify(v), b.BufferJSON.reviver) : null; };
+    const del = async (name) => { await raw.setMeta(pre + name, null); if (idx.delete(name)) flush(); };
+    const creds = (await get('creds')) || b.initAuthCreds();
+    return {
+      state: { creds, keys: {
+        get: async (type, ids) => { const out = {}; await Promise.all(ids.map(async (id) => { let v = await get(type + '-' + id); if (type === 'app-state-sync-key' && v) v = b.proto.Message.AppStateSyncKeyData.fromObject(v); out[id] = v; })); return out; },
+        set: async (data) => { const jobs = []; for (const cat of Object.keys(data)) for (const id of Object.keys(data[cat])) { const v = data[cat][id]; jobs.push(v ? put(cat + '-' + id, v) : del(cat + '-' + id)); } await Promise.all(jobs); },
+      } },
+      saveCreds: () => put('creds', creds),
+      registered: () => !!creds.registered,
+      wipe: async () => { for (const n of Array.from(idx)) await raw.setMeta(pre + n, null); await raw.setMeta(idxKey, null); idx = new Set(); },
+    };
+  }
+  async function hasLogin(labId) { try { const c = await raw.getMeta('wa:' + labId + ':creds'); return !!(c && c.registered); } catch (e) { return false; } }
+
+  function fresh(labId) { return { labId, state: 'idle', qr: '', number: '', err: '', sock: null, auth: null, stop: false, tries: 0, gap: 0, chain: Promise.resolve(), day: '', sent: 0, at: Date.now() }; }
+  const jidOf = (to) => { let d = String(to || '').replace(/\D/g, ''); while (d.indexOf('00') === 0) d = d.slice(2); if (d.charAt(0) === '0') d = '92' + d.slice(1); return d.length >= 10 && d.length <= 15 ? d + '@s.whatsapp.net' : ''; };
+
+  /* ---- start / reconnect ---- */
+  async function start(labId) {
+    if (!ENABLED) throw new Error('The WhatsApp gateway is switched off on this server.');
+    let S = sessions.get(labId);
+    if (S && (S.state === 'open' || S.state === 'qr' || S.state === 'connecting')) return S;
+    if (!S) { if (sessions.size >= MAX) throw new Error('This server is at its limit of linked WhatsApp numbers. Please contact support.'); S = fresh(labId); sessions.set(labId, S); }
+    S.stop = false; S.err = ''; S.state = 'connecting'; S.qr = '';
+    if (FAKE) { /* tests: a QR for a moment, then "linked" */
+      S.state = 'qr'; S.qr = 'FAKE-QR-' + crypto.randomBytes(6).toString('hex');
+      setTimeout(() => { if (S.state === 'qr' && !S.stop) { S.state = 'open'; S.qr = ''; S.number = process.env.WA_GATEWAY_FAKE_NUMBER || ('92300' + String(1000000 + sessions.size)); } }, +process.env.WA_GATEWAY_FAKE_MS || 1200);
+      return S;
+    }
+    try {
+      const b = await lib(); S.auth = S.auth || await dbAuth(labId);
+      let version; try { version = (await b.fetchLatestBaileysVersion()).version; } catch (e) { version = undefined; }
+      const sock = b.default({ version, auth: S.auth.state, logger: pino({ level: 'silent' }), printQRInTerminal: false, browser: ['Optix LAB MedSync', 'Chrome', '1.0'], markOnlineOnConnect: false, syncFullHistory: false, generateHighQualityLinkPreview: false });
+      S.sock = sock;
+      sock.ev.on('creds.update', () => S.auth.saveCreds().catch(() => {}));
+      sock.ev.on('connection.update', (u) => {
+        if (S.sock !== sock) return;
+        if (u.qr) { S.qr = u.qr; S.state = 'qr'; }
+        if (u.connection === 'open') { S.state = 'open'; S.qr = ''; S.err = ''; S.tries = 0; S.number = String((sock.user && sock.user.id) || '').split(':')[0].split('@')[0]; say('whatsapp linked for lab ' + labId + ' (' + S.number + ')'); }
+        if (u.connection === 'close') {
+          const code = u.lastDisconnect && u.lastDisconnect.error && u.lastDisconnect.error.output ? u.lastDisconnect.error.output.statusCode : 0;
+          S.sock = null; S.number = S.state === 'open' ? S.number : '';
+          if (S.stop) { S.state = 'idle'; return; }
+          if (code === b.DisconnectReason.loggedOut || code === 401) { S.state = 'loggedout'; S.err = 'This number was unlinked from the phone.'; S.auth.wipe().catch(() => {}); S.auth = null; return; }
+          if (!S.auth.registered() && (code === b.DisconnectReason.timedOut || code === 408 || S.state === 'qr')) { S.state = 'idle'; S.qr = ''; S.err = 'The QR code expired. Press the button to get a new one.'; return; }
+          S.state = 'connecting'; S.tries++;
+          if (S.tries > 12) { S.state = 'idle'; S.err = 'Could not reconnect to WhatsApp. Press the button to link again.'; return; }
+          setTimeout(() => { if (!S.stop && sessions.get(labId) === S) { S.state = 'idle'; start(labId).catch(() => {}); } }, Math.min(60000, 2000 * S.tries * S.tries));
+        }
+      });
+    } catch (e) { S.state = 'idle'; S.err = String((e && e.message) || e).slice(0, 160); say('whatsapp start failed: ' + S.err); }
+    return S;
+  }
+
+  function status(labId) {
+    const S = sessions.get(labId);
+    if (!ENABLED) return { enabled: false, state: 'off' };
+    if (!S) return { enabled: true, state: 'idle', qr: '', number: '', err: '' };
+    return { enabled: true, state: S.state, qr: S.state === 'qr' ? S.qr : '', number: S.state === 'open' ? S.number : '', err: S.err || '' };
+  }
+
+  async function logout(labId) {
+    const S = sessions.get(labId);
+    if (S) {
+      S.stop = true;
+      try { if (S.sock) await S.sock.logout(); } catch (e) { /* already unlinked */ }
+      try { if (S.sock) S.sock.end(undefined); } catch (e) { /* ignore */ }
+      try { if (S.auth) await S.auth.wipe(); } catch (e) { /* ignore */ }
+      sessions.delete(labId);
+    }
+    if (!FAKE) { try { const a = await dbAuth(labId); await a.wipe(); } catch (e) { /* nothing stored */ } }
+  }
+
+  /* ---- sending: one message at a time per lab, a short random pause between them, and a daily cap ---- */
+  function queue(S, job) {
+    const run = S.chain.then(async () => {
+      const wait = Math.max(0, S.gap - Date.now()); if (wait) await new Promise((r) => setTimeout(r, wait));
+      try { return await job(); } finally { S.gap = Date.now() + (FAKE ? 0 : 1200 + Math.floor(Math.random() * 1800)); }
+    });
+    S.chain = run.catch(() => {});
+    return run;
+  }
+  function ready(labId) {
+    const S = sessions.get(labId); if (!S || S.state !== 'open') throw new Error('WhatsApp is not linked for this lab. Link the number in Settings → WhatsApp.');
+    const day = new Date().toISOString().slice(0, 10); if (S.day !== day) { S.day = day; S.sent = 0; }
+    if (S.sent >= DAILY) throw new Error('Today\'s WhatsApp limit (' + DAILY + ' messages) is reached. It resets tomorrow.');
+    return S;
+  }
+  async function exists(S, jid) { try { const r = await S.sock.onWhatsApp(jid); if (r && r[0] && r[0].exists === false) throw new Error('This number is not on WhatsApp.'); } catch (e) { if (/not on WhatsApp/.test(e.message)) throw e; } }
+  async function sendText(labId, to, text) {
+    const S = ready(labId), jid = jidOf(to); if (!jid) throw new Error('That phone number does not look right.');
+    return queue(S, async () => {
+      if (FAKE) { if (process.env.WA_GATEWAY_FAKE_LOG) fs.appendFileSync(process.env.WA_GATEWAY_FAKE_LOG, JSON.stringify({ lab: labId, from: S.number, to: jid.split('@')[0], text: String(text).slice(0, 2000) }) + '\n'); S.sent++; return true; }
+      await exists(S, jid); await S.sock.sendMessage(jid, { text: String(text).slice(0, 4000) }); S.sent++; return true;
+    });
+  }
+  async function sendDocument(labId, to, buffer, fileName, caption) {
+    const S = ready(labId), jid = jidOf(to); if (!jid) throw new Error('That phone number does not look right.');
+    return queue(S, async () => {
+      if (FAKE) { if (process.env.WA_GATEWAY_FAKE_LOG) fs.appendFileSync(process.env.WA_GATEWAY_FAKE_LOG, JSON.stringify({ lab: labId, from: S.number, to: jid.split('@')[0], doc: String(fileName), bytes: buffer.length, caption: String(caption || '').slice(0, 500) }) + '\n'); S.sent++; return true; }
+      await exists(S, jid); await S.sock.sendMessage(jid, { document: buffer, mimetype: 'application/pdf', fileName: String(fileName || 'report.pdf').slice(0, 100), caption: String(caption || '').slice(0, 1000) }); S.sent++; return true;
+    });
+  }
+
+  /* after a restart, bring back every lab that had linked a number (one every 2 seconds, so the server stays calm) */
+  async function boot(labIds) {
+    if (!ENABLED || FAKE) return;
+    let n = 0; for (const id of labIds) { if (await hasLogin(id)) { setTimeout(() => start(id).catch(() => {}), 2000 * (++n)); } }
+    if (n) say('restoring ' + n + ' linked WhatsApp number(s)');
+  }
+  return { enabled: ENABLED, fake: FAKE, start, status, logout, sendText, sendDocument, boot, hasLogin };
+}
+module.exports = { create };

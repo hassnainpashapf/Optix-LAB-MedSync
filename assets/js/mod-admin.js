@@ -1923,6 +1923,55 @@
   function waDefaults() {
     return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true };
   }
+  /* ---- Link the lab's own WhatsApp number with a QR code (the server then sends from it) ---- */
+  function wireGateway() {
+    var box = document.getElementById('waGwBox'); if (!box) return;
+    if (!(DB.isCloud && DB.isCloud()) || (window.labposDesktop && window.labposDesktop.isDesktop)) { box.remove(); return; }
+    var timer = null, last = '';
+    function setCfg(patch) { var st = DB.get('settings', 'main') || {}, ww = Object.assign(waDefaults(), st.whatsapp || {}); Object.assign(ww, patch); st.whatsapp = ww; DB.update('settings', 'main', st); }
+    function qrImg(str) { try { var q = qrcode(0, 'L'); q.addData(str); q.make(); return q.createDataURL(5, 4); } catch (e) { return ''; } }
+    function draw(st) {
+      var sig = JSON.stringify([st.state, st.qr, st.number, st.err]); if (sig === last) return; last = sig;
+      var w = (DB.get('settings', 'main') || {}).whatsapp || {};
+      var head = '<div class="card" style="max-width:640px;margin-bottom:14px"><div class="card-h"><h3>Connect your WhatsApp number</h3><span class="badge ' + (st.state === 'open' ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.state === 'open' ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">';
+      var body = '';
+      if (st.enabled === false) body = '<p class="muted" style="margin:0">Linking a WhatsApp number is not available on this server.</p>';
+      else if (st.state === 'open') {
+        body = '<p style="margin-top:0">Connected: <b>+' + App.esc(st.number) + '</b>. Reports, links and portal sign-in codes are now sent from this number.</p>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="gwTest">Send a test message to this number</button><button class="btn btn-ghost" id="gwOff" style="margin-left:auto;color:#b91c1c">Disconnect</button></div><p class="muted" id="gwMsg" style="margin:10px 0 0;font-size:13px"></p>';
+      } else if (st.state === 'qr' && st.qr) {
+        body = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start"><img alt="QR" style="width:230px;height:230px;border:1px solid var(--line);border-radius:12px;padding:6px;background:#fff" src="' + qrImg(st.qr) + '">' +
+          '<ol style="margin:0;padding-left:18px;line-height:1.9;font-size:14px;flex:1;min-width:210px"><li>Open <b>WhatsApp</b> on the lab\'s phone</li><li>Tap <b>Settings → Linked devices</b></li><li>Tap <b>Link a device</b> and scan this code</li></ol></div><p class="muted" style="margin:10px 0 0;font-size:13px">Waiting for the scan… the code refreshes by itself.</p>';
+      } else if (st.state === 'connecting') {
+        body = '<p class="muted" style="margin:0">Connecting to WhatsApp…</p>';
+      } else {
+        body = '<p class="muted" style="margin-top:0">Link <b>your lab\'s own WhatsApp number</b> by scanning a QR code, just like WhatsApp Web. After that, report links and sign-in codes go out from your number automatically. No paid API needed.</p>' +
+          '<div style="background:#fff8e6;border:1px solid #f0d9a0;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.55;margin-bottom:12px"><b>Please note:</b> this works like WhatsApp Web, it is not the official WhatsApp Business API. Use a <b>separate number kept for the lab</b>, message only your own patients, and avoid bulk or promotional messages, otherwise WhatsApp can block the number.</div>' +
+          (st.err ? '<p style="color:#b45309;margin:0 0 10px;font-size:13.5px">' + App.esc(st.err) + '</p>' : '') + '<button class="btn btn-primary" id="gwOn">Link my WhatsApp number</button>';
+      }
+      box.innerHTML = head + body + '</div></div>';
+      var on = document.getElementById('gwOn'); if (on) on.addEventListener('click', function () { on.disabled = true; last = ''; DB.waGw('POST', 'connect', {}).then(function (s) { draw(s); poll(); }, function (e) { on.disabled = false; App.toast(e.message, 'err'); }); });
+      var test = document.getElementById('gwTest'); if (test) test.addEventListener('click', function () { test.disabled = true; DB.waGw('POST', 'send', { to: st.number, text: 'Test message from Optix LAB MedSync. Your WhatsApp number is linked.' }).then(function () { document.getElementById('gwMsg').textContent = 'Sent! Check WhatsApp (it may appear in "Message yourself").'; test.disabled = false; }, function (e) { document.getElementById('gwMsg').textContent = e.message; document.getElementById('gwMsg').style.color = '#b91c1c'; test.disabled = false; }); });
+      var off = document.getElementById('gwOff'); if (off) off.addEventListener('click', function () { App.confirm('Disconnect this WhatsApp number? Reports will stop going out on WhatsApp until you link a number again.').then(function (ok) { if (!ok) return; DB.waGw('POST', 'disconnect', {}).then(function () { setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' }); last = ''; draw({ enabled: true, state: 'idle', qr: '', number: '', err: '' }); }, function (e) { App.toast(e.message, 'err'); }); }); });
+    }
+    function poll() {
+      clearInterval(timer);
+      timer = setInterval(function () {
+        if (!document.getElementById('waGwBox')) { clearInterval(timer); return; }
+        DB.waGw('GET', 'status').then(function (st) {
+          var w = (DB.get('settings', 'main') || {}).whatsapp || {};
+          if (st.state === 'open' && (w.provider !== 'gateway' || w.gatewayNumber !== st.number)) { setCfg({ provider: 'gateway', gatewayNumber: st.number, labNumber: w.labNumber || st.number }); App.toast('WhatsApp number linked'); }
+          draw(st); if (st.state === 'open' || st.state === 'idle' || st.state === 'loggedout') clearInterval(timer);
+        }, function () {});
+      }, 2000);
+    }
+    DB.waGw('GET', 'status').then(function (st) {
+      var w = (DB.get('settings', 'main') || {}).whatsapp || {};
+      if (st.state === 'open' && (w.provider !== 'gateway' || w.gatewayNumber !== st.number)) setCfg({ provider: 'gateway', gatewayNumber: st.number, labNumber: w.labNumber || st.number });
+      if (st.state === 'loggedout' && w.provider === 'gateway') setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' });
+      draw(st); if (st.state === 'qr' || st.state === 'connecting') poll();
+    }, function (e) { box.innerHTML = ''; });
+  }
   /* ---- WhatsApp: admin only sees/edits their lab number; API hidden ---- */
   /* ---- Patient & doctor portal: switch, link / QR to share, and "prepare old reports" ---- */
   function renderSetPortal() {
@@ -2035,7 +2084,8 @@
       '<input type="checkbox" id="waAutoCritical"' + (w.autoCritical !== false ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--red)"> ' +
       'Send <strong>critical value</strong> alerts on WhatsApp</label>' +
       '</div></div>';
-    document.getElementById('setBody').innerHTML = html;
+    document.getElementById('setBody').innerHTML = '<div id="waGwBox"></div>' + html;
+    wireGateway();
     document.getElementById('waLabNumSave').addEventListener('click', function () {
       var num = document.getElementById('waLabNum').value.trim();
       var st = DB.get('settings', 'main') || {};

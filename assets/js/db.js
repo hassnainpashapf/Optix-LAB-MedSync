@@ -711,6 +711,19 @@
         });
       }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
     },
+    /* the lab's own linked WhatsApp number (/api/wa/*): status, link (QR), unlink, send. Resolves the JSON; rejects with a message. */
+    waGw: function (method, path, body) {
+      if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));
+      return window.fetch(API + '/api/wa/' + path, {
+        method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: body === undefined ? undefined : JSON.stringify(body)
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 401 && sessToken()) fireAuthError();
+          if (!r.ok) { var e = new Error(j.error || ('Request failed (' + r.status + ')')); e.status = r.status; throw e; }
+          return j;
+        });
+      }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
+    },
     /* report sharing (/api/share/*): email + Slack. Resolves the JSON; rejects with a message. */
     share: function (method, path, body) {
       if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));

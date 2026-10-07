@@ -3,12 +3,15 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+# git: one WhatsApp dependency (libsignal) is fetched from GitHub
+RUN apk add --no-cache git
+
 # Install dependencies first (better layer caching)
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 # App code (server, adapters, seed, releases)
-COPY server.js sync-store.js tenant-store.js saas.js mailer.js desktop-sync.js db-pg.js db-sqlite.js seed.json default-params.json report-viewer.html releases.json ./
+COPY server.js sync-store.js tenant-store.js saas.js mailer.js wa-gateway.js desktop-sync.js db-pg.js db-sqlite.js seed.json default-params.json report-viewer.html releases.json ./
 
 ENV NODE_ENV=production \
     PORT=4000 \

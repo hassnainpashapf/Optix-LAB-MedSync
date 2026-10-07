@@ -41,7 +41,7 @@
     } catch (e) { return {}; }
   }
   function waReady(cfg) {
-    return !!(cfg && cfg.instanceId && cfg.token);
+    return !!(cfg && ((cfg.provider === 'gateway' && cfg.gatewayNumber) || (cfg.instanceId && cfg.token)));
   }
   function waSummaryText(inv, pat) {
     var s = DB.get('settings', 'main') || {};
@@ -187,6 +187,10 @@
 
   // TEXT message send (Ultramsg /messages/chat or custom provider). done(err)
   function waSendText(cfg, to, text, done) {
+    if (cfg.provider === 'gateway') { /* the lab's own linked WhatsApp number: the server sends it */
+      DB.waGw('POST', 'send', { to: to, text: text }).then(function () { done(); }, function (e) { done(e); });
+      return;
+    }
     var url, body, headers = {};
     if (cfg.provider === 'custom' && cfg.baseUrl) {
       url = cfg.baseUrl;

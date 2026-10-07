@@ -1119,6 +1119,7 @@ async function main() {
      whether or not the number exists. The portal token is a different type of token that the normal API ignores. ---- */
   if (!DESKTOP) {
     const dns = require('dns').promises, net = require('net');
+    const waGw = require('./wa-gateway').create({ raw: rawStore, log: (m) => console.log('[labpos-cloud]', m) });
     const PSECRET = SESSION_SECRET + ':portal', OTP_TTL = 10 * 60000, PTOKEN_TTL = 30 * 60000;
     const prReq = new Map(), prVer = new Map(), prPhone = new Map(), prLab = new Map();
     const linkOf = (req, key) => (PUBLIC_API_URL || (req.protocol + '://' + req.get('host'))) + '/r/' + key;
@@ -1142,7 +1143,7 @@ async function main() {
         if (!r.ok) throw new Error('WhatsApp provider answered ' + r.status);
       } finally { clearTimeout(t); }
     }
-    const waOk = (w) => !!(w && ((w.provider === 'custom' && w.baseUrl && w.token) || (w.provider !== 'custom' && w.instanceId && w.token)));
+    const waOk = (w) => !!(w && ((w.provider === 'gateway' && w.gatewayNumber) || (w.provider === 'custom' && w.baseUrl && w.token) || (w.provider !== 'custom' && w.provider !== 'gateway' && w.instanceId && w.token)));
     async function portalCtx(slug) {
       slug = String(slug || '').trim().toLowerCase(); if (!/^[a-z0-9][a-z0-9-]{2,39}$/.test(slug)) return null;
       const lab = await saas.findBySlug(slug); if (!lab || saas.effStatus(lab) === 'suspended') return null;
@@ -1179,7 +1180,7 @@ async function main() {
         const msg = lname + ': your report code is ' + code + '.\nTap to open your reports: ' + plink + '\nValid for 10 minutes. Do not share this message with anyone.';
         const people = w.pats.concat(w.docs), em = people.map((x) => String(x.email || '').trim()).find((e) => EMAIL_OK.test(e));
         let sent = false;
-        if (waOk(c.set.whatsapp)) { try { await waServerSend(c.set.whatsapp, pwa(b.phone), msg); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (whatsapp) failed:', String(e.message || e).slice(0, 120)); } }
+        if (waOk(c.set.whatsapp)) { try { if (c.set.whatsapp.provider === 'gateway') await waGw.sendText(c.lab.id, pwa(b.phone), msg); else await waServerSend(c.set.whatsapp, pwa(b.phone), msg); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (whatsapp) failed:', String(e.message || e).slice(0, 120)); } }
         if (!sent && em && mailer.configured()) { try { await mailer.send(Object.assign({ to: em, fromName: lname + ' (via Optix LAB MedSync)' }, mailer.portalCodeEmail({ labName: lname, code, link: plink }))); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (email) failed:', String(e.message || e).slice(0, 120)); } }
         if (!sent) await rawStore.setMeta(otpKey(c.lab, k), null);
       } catch (e) { if (!res.headersSent) res.json(SAME); }
@@ -1235,6 +1236,36 @@ async function main() {
         res.json(out);
       } catch (e) { res.status(500).json({ error: 'Could not load your reports. Please try again.' }); }
     });
+
+    /* ---- the lab's own WhatsApp number, linked with a QR code (see wa-gateway.js) ---- */
+    const waUser = new Map();
+    const labOf = (req) => (req.lab ? req.lab.id : 'main');
+    app.get('/api/wa/status', needUser, (req, res) => res.json(waGw.status(labOf(req))));
+    app.post('/api/wa/connect', needAdmin, async (req, res) => {
+      try { await waGw.start(labOf(req)); res.json(waGw.status(labOf(req))); } catch (e) { res.status(400).json({ error: e.message }); }
+    });
+    app.post('/api/wa/disconnect', needAdmin, async (req, res) => {
+      try { await waGw.logout(labOf(req)); await auditLog(req, 'whatsapp-unlink', 'settings', 'whatsapp', { label: 'WhatsApp number unlinked' }); res.json({ ok: true }); } catch (e) { res.status(400).json({ error: e.message }); }
+    });
+    app.post('/api/wa/send', needUser, async (req, res) => {
+      try {
+        if (bump(waUser, req.user.id, 60000).n > 20) return res.status(429).json({ error: 'Too many WhatsApp messages in a minute. Please wait a moment.' });
+        const b = req.body || {}; if (typeof b.text !== 'string' || !b.text.trim() || b.text.length > 4000) return res.status(400).json({ error: 'The message is empty or too long' });
+        await waGw.sendText(labOf(req), b.to, b.text); res.json({ ok: true });
+      } catch (e) { res.status(/limit|not linked|not on WhatsApp|look right/.test(e.message) ? 400 : 502).json({ error: e.message }); }
+    });
+    app.post('/api/wa/send-doc', needUser, async (req, res) => {
+      try {
+        if (bump(waUser, req.user.id, 60000).n > 20) return res.status(429).json({ error: 'Too many WhatsApp messages in a minute. Please wait a moment.' });
+        const b = req.body || {}, key = String(b.key || '');
+        const f = REPORT_KEY_RE.test(key) ? path.join(REPORT_PDFS_DIR, key + '.pdf') : '', o = path.join(REPORT_PDFS_DIR, key + '.owner'), me = labOf(req);
+        if (!f || !fs.existsSync(f) || (fs.existsSync(o) ? fs.readFileSync(o, 'utf8').trim() : 'main') !== me) return res.status(404).json({ error: 'The report PDF was not found' });
+        const buf = fs.readFileSync(f); if (buf.length > 12 * 1024 * 1024) return res.status(413).json({ error: 'The report PDF is too large to send on WhatsApp' });
+        await waGw.sendDocument(me, b.to, buf, b.fileName || 'Lab-Report.pdf', b.caption || ''); res.json({ ok: true });
+      } catch (e) { res.status(/limit|not linked|not on WhatsApp|look right/.test(e.message) ? 400 : 502).json({ error: e.message }); }
+    });
+    /* bring back every lab that had linked a number before this restart */
+    setTimeout(async () => { try { const ids = []; for (const l of (await saas.loadLabs(true)).values()) ids.push(l.id); await waGw.boot(ids); } catch (e) { /* the gateway is optional */ } }, 5000);
   }
 
   /* QR target: a phone-friendly, app-like viewer (sharp pinch-zoom, share/download). Scripts and the desktop
