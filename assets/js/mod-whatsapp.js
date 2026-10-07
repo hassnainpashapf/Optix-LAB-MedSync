@@ -48,7 +48,7 @@
   function render() {
     css();
     var s = App.session();
-    if (!s || (s.role !== 'admin' && s.role !== 'reception')) return '<div class="card"><div class="card-b">' + App.empty('You do not have access to WhatsApp Center.') + '</div></div>';
+    if (!s || (s.role !== 'admin' && s.role !== 'reception' && !(s.role === 'custom' && App.canPage('whatsapp')))) return '<div class="card"><div class="card-b">' + App.empty('You do not have access to WhatsApp Center.') + '</div></div>';
     if (!App.wa) { ensure(paint); return '<div class="card"><div class="card-b">' + App.empty('Loading…') + '</div></div>'; }
     var cfg = App.wa.cfg(), ready = App.wa.ready(cfg), today = App.today();
     var L = logs(), sentToday = L.filter(function (e) { return e.status === 'sent' && String(e.ts).slice(0, 10) === today; }).length;

@@ -97,7 +97,7 @@
   }
 
   function renderExpenses() {
-    if (role() !== 'admin' && role() !== 'reception') return denied();
+    if (role() !== 'admin' && role() !== 'reception' && !(role() === 'custom' && App.canPage('expenses'))) return denied();
     expInitFilter();
 
     var all = DB.all('expenses').slice().sort(function (a, b) {
@@ -264,7 +264,7 @@
   }
 
   function renderReports() {
-    if (role() !== 'admin') return denied();
+    if (role() !== 'admin' && !(role() === 'custom' && App.canPage('reports'))) return denied();
     repInit();
     var from = rep.from, to = rep.to;
 
@@ -357,6 +357,7 @@
 
     // doctor-wise
     var dw = {};
+    var tByIdRep = App.testsById();
     invoices.forEach(function (iv) {
       if (!iv.doctorId) return;
       var doc = DB.get('doctors', iv.doctorId);
@@ -364,6 +365,8 @@
       if (!dw[iv.doctorId]) dw[iv.doctorId] = { name: nm, referrals: 0, billed: 0, pct: doc ? (+doc.commissionPct || 0) : 0 };
       dw[iv.doctorId].referrals++;
       dw[iv.doctorId].billed += (+iv.total || 0);
+      dw[iv.doctorId].comm = (dw[iv.doctorId].comm || 0) + (doc ? App.commissionOf(iv, doc, tByIdRep) : 0);
+      if (doc && (doc.commissionRules || []).length && dw[iv.doctorId].billed > 0) dw[iv.doctorId].pct = Math.round(dw[iv.doctorId].comm / dw[iv.doctorId].billed * 1000) / 10;
     });
     var dwRows = Object.keys(dw).map(function (k) { return dw[k]; })
       .sort(function (a, b) { return b.billed - a.billed; });
@@ -1029,7 +1032,7 @@
     var dwRowsHtml = !dwRows.length
       ? '<tr><td colspan="4">' + App.empty('No doctor referrals in this period.') + '</td></tr>'
       : dwRows.map(function (r) {
-          var comm = Math.round(r.billed * r.pct / 100);
+          var comm = Math.round(r.comm || 0);
           return '<tr><td><strong>' + App.esc(r.name) + '</strong> <span class="muted">(' + r.pct + '%)</span></td>'
             + '<td style="text-align:right">' + r.referrals + '</td>'
             + '<td style="text-align:right">' + App.money(r.billed) + '</td>'
@@ -1207,7 +1210,7 @@
         if (repSecs.doctors) {
           sec('Doctor-wise Referrals');
           row(['Doctor', 'Referrals', 'Billed', 'Commission']);
-          dwRows.forEach(function (r) { row([r.name, r.referrals, r.billed, Math.round(r.billed * r.pct / 100)]); });
+          dwRows.forEach(function (r) { row([r.name, r.referrals, r.billed, Math.round(r.comm || 0)]); });
           L.push('');
         }
         if (repSecs.dues) {
@@ -1261,7 +1264,7 @@
       }
       if (repSecs.doctors) {
         ph += '<h3>Doctor-wise</h3><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
-        + dwRows.map(function (r) { return '<tr><td>' + App.esc(r.name) + '</td><td style="text-align:right">' + r.referrals + '</td><td style="text-align:right">' + App.money(r.billed) + '</td><td style="text-align:right">' + App.money(Math.round(r.billed * r.pct / 100)) + '</td></tr>'; }).join('')
+        + dwRows.map(function (r) { return '<tr><td>' + App.esc(r.name) + '</td><td style="text-align:right">' + r.referrals + '</td><td style="text-align:right">' + App.money(r.billed) + '</td><td style="text-align:right">' + App.money(Math.round(r.comm || 0)) + '</td></tr>'; }).join('')
         + '</tbody></table>';
       }
       if (repSecs.dues) {
@@ -2158,7 +2161,8 @@
   }
 
   /* ---- Users (admin only) ---- */
-  function roleBadge(r) {
+  function roleBadge(r, u) {
+    if (r === 'custom') { var d = (((DB.get('settings', 'main') || {}).customRoles) || []).filter(function (x) { return u && x.id === u.roleId; })[0]; return '<span class="badge b-ready">' + App.esc(d ? d.name : 'custom (missing)') + '</span>'; }
     var cls = r === 'admin' ? 'b-paid' : (r === 'reception' ? 'b-ready' : (r === 'doctor' ? 'b-pending' : 'b-partial'));
     return '<span class="badge ' + cls + '">' + App.esc(r) + '</span>';
   }
@@ -2176,7 +2180,7 @@
       html += '<tr>'
         + '<td><strong>' + App.esc(u.name) + '</strong>' + (isMe ? ' <span class="badge b-ready">you</span>' : '') + '</td>'
         + '<td>' + App.esc(u.username) + '</td>'
-        + '<td>' + roleBadge(u.role) + (u.role === 'doctor' ? '<div class="muted" style="font-size:12px;margin-top:3px">' + App.esc(((DB.get('doctors', u.doctorId) || {}).name) || 'no doctor linked') + '</div>' : '') + '</td>'
+        + '<td>' + roleBadge(u.role, u) + (u.role === 'doctor' ? '<div class="muted" style="font-size:12px;margin-top:3px">' + App.esc(((DB.get('doctors', u.doctorId) || {}).name) || 'no doctor linked') + '</div>' : '') + '</td>'
         + '<td>' + (u.active ? '<span class="badge b-paid">active</span>' : '<span class="badge b-unpaid">inactive</span>') + '</td>'
         + '<td style="text-align:right;white-space:nowrap" class="actions">'
         + '<button class="btn btn-ghost btn-sm" data-uedit="' + App.esc(u.id) + '">Edit</button> '
@@ -2190,9 +2194,20 @@
       + [['admin', 'Admin', 'Everything: settings, users, reports, backup, billing.'], ['reception', 'Reception', 'Patients, invoices, dues, expenses, doctors, WhatsApp and email.'], ['technician', 'Technician', 'Samples, lab results, stock and tests. No billing.'], ['doctor', 'Doctor', 'Own login: sees only the reports of the patients he referred and his commission. Cannot see anything else.']]
         .map(function (r) { return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px"><div>' + roleBadge(r[0]) + '</div><div class="muted" style="font-size:12.5px;margin-top:6px;line-height:1.5">' + r[2] + '</div></div>'; }).join('')
       + '</div>'
+      + customRolesHtml()
       + '<p class="muted" style="font-size:12.5px;margin-top:10px">A <strong>doctor login</strong> does not use up one of your staff seats. Create it with <b>+ Doctor login</b>, then give the doctor your <b>Lab ID</b>, his username and password. He signs in on the normal sign-in page (web or Android app).</p>';
     document.getElementById('setBody').innerHTML = html;
 
+    document.getElementById('crNew').addEventListener('click', function () { openRoleModal(null); });
+    document.querySelectorAll('[data-cr-edit]').forEach(function (b) { b.addEventListener('click', function () { openRoleModal(b.getAttribute('data-cr-edit')); }); });
+    document.querySelectorAll('[data-cr-del]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-cr-del'), r = getRoles().filter(function (x) { return x.id === id; })[0]; if (!r) return;
+        var used = DB.all('users').filter(function (u) { return u.role === 'custom' && u.roleId === id; });
+        if (used.length) return App.toast(used.length + ' user(s) still have this role. Change their role first.', 'err');
+        App.confirm('Delete the role "' + r.name + '"?').then(function (ok) { if (!ok) return; saveRoles(getRoles().filter(function (x) { return x.id !== id; })); App.toast('Role deleted.'); renderSettings(); });
+      });
+    });
     document.getElementById('uAdd').addEventListener('click', function () { openUserModal(null); });
     document.getElementById('uAddDoc').addEventListener('click', function () { openUserModal(null, 'doctor'); });
     document.querySelectorAll('[data-uedit]').forEach(function (b) {
@@ -2222,6 +2237,47 @@
     });
   }
 
+  /* ---- custom roles: the admin ticks which pages a role may open (saved in settings.customRoles) ---- */
+  function getRoles() { return ((DB.get('settings', 'main') || {}).customRoles || []).slice(); }
+  function saveRoles(list) { var st = DB.get('settings', 'main') || {}; st.customRoles = list; DB.update('settings', 'main', st); }
+  function customRolesHtml() {
+    var roles = getRoles(), pages = {}; App.ROLE_PAGES.forEach(function (p) { pages[p[0]] = p[1]; });
+    return '<div style="margin-top:22px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0;font-size:16px">Your own roles</h3><span class="muted" style="font-size:13px">Decide yourself who can see what.</span>'
+      + '<button class="btn btn-primary btn-sm" id="crNew" style="margin-left:auto">+ New role</button></div>'
+      + (roles.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px">' + roles.map(function (r) {
+        var n = DB.all('users').filter(function (u) { return u.role === 'custom' && u.roleId === r.id; }).length;
+        return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px"><div style="display:flex;align-items:center;gap:8px"><span class="badge b-ready">' + App.esc(r.name) + '</span><span class="muted" style="font-size:12px">' + n + ' user' + (n === 1 ? '' : 's') + '</span>'
+          + '<span style="margin-left:auto"><button class="btn btn-ghost btn-sm" data-cr-edit="' + App.esc(r.id) + '">Edit</button> <button class="btn btn-ghost btn-sm" data-cr-del="' + App.esc(r.id) + '" style="color:#b91c1c">Delete</button></span></div>'
+          + '<div class="muted" style="font-size:12.5px;margin-top:8px;line-height:1.55">' + ((r.pages || []).map(function (k) { return pages[k] || k; }).join(', ') || 'No pages ticked') + '</div>'
+          + '<div class="muted" style="font-size:12px;margin-top:6px">' + (r.money === false ? 'Money totals are hidden.' : 'Can see money totals.') + '</div></div>';
+      }).join('') + '</div>' : '<p class="muted" style="font-size:13px;margin:10px 0 0">No custom roles yet. Example: <b>Front desk</b> (patients and invoices only) or <b>Phlebotomist</b> (samples only). Create one, then choose it when you add a user.</p>')
+      + '</div>';
+  }
+  function openRoleModal(id) {
+    var r = id ? getRoles().filter(function (x) { return x.id === id; })[0] : null;
+    r = r || { id: '', name: '', pages: ['dashboard', 'patients'], money: true };
+    var body = '<div><label class="label">Role name *</label><input class="input" id="crName" maxlength="40" placeholder="e.g. Front desk" value="' + App.esc(r.name) + '"></div>'
+      + '<div style="margin-top:12px"><label class="label">This role can open</label><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px 14px">'
+      + App.ROLE_PAGES.map(function (p) { return '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px"><input type="checkbox" class="crPg" value="' + p[0] + '"' + ((r.pages || []).indexOf(p[0]) >= 0 ? ' checked' : '') + ' style="width:17px;height:17px;accent-color:var(--green)"> ' + p[1] + '</label>'; }).join('') + '</div></div>'
+      + '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px"><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:14px"><input type="checkbox" id="crMoney"' + (r.money === false ? '' : ' checked') + ' style="width:17px;height:17px;margin-top:2px;accent-color:var(--green)"> <span><b>Can see money totals</b><span class="muted" style="display:block;font-size:12.5px">Untick to show counts instead of money amounts on the dashboard and the summary cards (like a technician).</span></span></label></div>'
+      + '<p class="muted" style="font-size:12.5px;margin:12px 0 0">Settings, Users &amp; Roles, Audit log and Subscription always stay for the admin only. A role cannot change data in a page it has not been given, even if someone tries.</p>'
+      + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px"><button class="btn btn-ghost" id="crCancel">Cancel</button><button class="btn btn-primary" id="crSave">' + (id ? 'Save role' : 'Create role') + '</button></div>';
+    App.modal(id ? 'Edit role' : 'New role', body, { wide: true, onOpen: function (ov, close) {
+      document.getElementById('crCancel').addEventListener('click', close);
+      document.getElementById('crSave').addEventListener('click', function () {
+        var name = document.getElementById('crName').value.trim();
+        if (!name) return App.toast('Give the role a name.', 'err');
+        var list = getRoles();
+        if (list.some(function (x) { return x.id !== id && x.name.toLowerCase() === name.toLowerCase(); }) || ['admin', 'reception', 'technician', 'doctor'].indexOf(name.toLowerCase()) >= 0) return App.toast('A role with this name already exists.', 'err');
+        var pages = Array.prototype.map.call(document.querySelectorAll('.crPg:checked'), function (c) { return c.value; });
+        if (!pages.length) return App.toast('Tick at least one page.', 'err');
+        var rec = { id: id || 'R-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name, pages: pages, money: document.getElementById('crMoney').checked };
+        if (id) list = list.map(function (x) { return x.id === id ? rec : x; }); else list.push(rec);
+        saveRoles(list); App.toast(id ? 'Role saved.' : 'Role created. Choose it when you add a user.'); close(); renderSettings();
+      });
+    } });
+  }
+
   function openUserModal(u, presetRole) {
     var isEdit = !!u;
     u = u || { name: '', username: '', role: presetRole || 'reception', active: true };
@@ -2232,6 +2288,7 @@
       + (isEdit ? '' : '<div><label class="label">Password *</label><input class="input" id="ufPass" type="password" placeholder="min 4 characters"></div>')
       + '<div><label class="label">Role *</label><select class="select" id="ufRole">'
       + ['admin', 'reception', 'technician', 'doctor'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + r + '</option>'; }).join('')
+      + getRoles().map(function (r) { return '<option value="c:' + App.esc(r.id) + '"' + (u.role === 'custom' && u.roleId === r.id ? ' selected' : '') + '>' + App.esc(r.name) + ' (your role)</option>'; }).join('')
       + '</select></div>'
       + '<div id="ufDocBox" style="' + (u.role === 'doctor' ? '' : 'display:none') + '"><label class="label">Which doctor? *</label><select class="select" id="ufDoc"><option value="">— choose —</option>'
       + allDocs.map(function (d) { return '<option value="' + App.esc(d.id) + '"' + (u.doctorId === d.id ? ' selected' : '') + '>' + App.esc(d.name) + (d.clinic ? ' — ' + App.esc(d.clinic) : '') + '</option>'; }).join('')
@@ -2244,10 +2301,10 @@
     var close = App.modal(isEdit ? 'Edit User' : 'Add User', body, {
       onOpen: function (ov, close) {
         document.getElementById('ufCancel').addEventListener('click', close);
-        var roleNote = { admin: 'Full access to everything in the lab.', reception: 'Patients, billing, invoices, dues, doctors, WhatsApp and email. No settings.', technician: 'Samples, lab results, stock and tests. No billing.', doctor: 'Signs in with this username and password and sees ONLY his own dashboard: reports of the patients he referred and his commission. Nothing else.' };
+        var roleNote = { custom: 'Sees only the pages ticked in this role (set under Your own roles).', admin: 'Full access to everything in the lab.', reception: 'Patients, billing, invoices, dues, doctors, WhatsApp and email. No settings.', technician: 'Samples, lab results, stock and tests. No billing.', doctor: 'Signs in with this username and password and sees ONLY his own dashboard: reports of the patients he referred and his commission. Nothing else.' };
         function syncRole() {
           var rv = document.getElementById('ufRole').value; document.getElementById('ufDocBox').style.display = rv === 'doctor' ? '' : 'none';
-          document.getElementById('ufRoleNote').textContent = roleNote[rv] || '';
+          document.getElementById('ufRoleNote').textContent = roleNote[rv.indexOf('c:') === 0 ? 'custom' : rv] || '';
         }
         document.getElementById('ufRole').addEventListener('change', syncRole);
         document.getElementById('ufDoc').addEventListener('change', function () { var d = DB.get('doctors', this.value), n = document.getElementById('ufName'); if (d && !n.value.trim()) n.value = d.name; });
@@ -2255,12 +2312,13 @@
         document.getElementById('ufSave').addEventListener('click', function () {
           var name = document.getElementById('ufName').value.trim();
           var username = document.getElementById('ufUser').value.trim().toLowerCase();
-          var roleV = document.getElementById('ufRole').value, docId = document.getElementById('ufDoc').value;
+          var roleV = document.getElementById('ufRole').value, docId = document.getElementById('ufDoc').value, roleId = null;
+          if (roleV.indexOf('c:') === 0) { roleId = roleV.slice(2); roleV = 'custom'; }
           if (!name) return App.toast('Name is required.', 'err');
           if (!username) return App.toast('Username is required.', 'err');
           if (roleV === 'doctor' && !docId) return App.toast('Choose which doctor this login is for.', 'err');
           if (isEdit) {
-            DB.update('users', u.id, roleV === 'doctor' ? { name: name, role: roleV, doctorId: docId } : { name: name, role: roleV, doctorId: null });
+            DB.update('users', u.id, roleV === 'doctor' ? { name: name, role: roleV, doctorId: docId, roleId: null } : { name: name, role: roleV, doctorId: null, roleId: roleId });
             App.toast('User updated.');
           } else {
             var pass = document.getElementById('ufPass').value;
@@ -2269,7 +2327,7 @@
             var dup = DB.all('users').some(function (x) { return x.username.toLowerCase() === username; });
             if (dup) return App.toast('Username already exists.', 'err');
             if (roleV !== 'doctor' && App.limitHit && App.limitHit('users')) return;
-            var rec = { name: name, username: username, password: pass, role: roleV, active: true }; if (roleV === 'doctor') rec.doctorId = docId;
+            var rec = { name: name, username: username, password: pass, role: roleV, active: true }; if (roleV === 'doctor') rec.doctorId = docId; if (roleV === 'custom') rec.roleId = roleId;
             DB.insert('users', rec);
             App.toast(roleV === 'doctor' ? 'Doctor login created. Give him the Lab ID, this username and the password.' : 'User added.');
           }

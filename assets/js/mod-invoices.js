@@ -16,7 +16,7 @@
   function scIsTech() {
     try {
       var s = JSON.parse(localStorage.getItem('labpos_session') || 'null');
-      return !!(s && s.role === 'technician');
+      return !!(s && (s.role === 'technician' || (window.App && App.hideMoney && App.hideMoney())));
     } catch (e) { return false; }
   }
   function scCard(icon, tint, label, value, sub) {
@@ -64,6 +64,11 @@
       .sort(function (a, b) { return new Date(a.date) - new Date(b.date); });
   }
 
+  function panelChip(inv) {
+    if (!inv || !inv.panelId) return '';
+    var pn = DB.get('panels', inv.panelId);
+    return ' <span class="badge b-ready" title="Billed to a company account (nothing to collect from the patient)">' + App.esc(pn ? pn.name : 'Corporate') + '</span>';
+  }
   function statusOf(paid, total) {
     var due = r2(total - paid);
     if (due <= 0) return 'paid';
@@ -314,7 +319,7 @@
             b.addEventListener('click', function () {
               var t = DB.get('tests', b.getAttribute('data-add'));
               if (!t) return;
-              items.push({ testId: t.id, code: t.code, name: t.name, price: +t.price || 0, includes: t.isPackage ? (t.includes || []) : null });
+              items.push({ testId: t.id, code: t.code, name: t.name, price: inv.panelId && DB.get('panels', inv.panelId) ? App.panelPrice(DB.get('panels', inv.panelId), t) : (+t.price || 0), includes: t.isPackage ? (t.includes || []) : null });
               search.value = ''; renderPick(); paintItems(root); paintTotal(root);
             });
           });
@@ -345,7 +350,9 @@
           });
           var t = calcTotal();
           var due = r2(t.total - (+inv.paid || 0));
-          DB.update('invoices', id, {
+          DB.update('invoices', id, inv.panelId ? {   /* a company's bill is never collected from the patient: it always stays paid, the account just changes */
+            items: items, subtotal: t.sub, discount: t.disc, total: t.total, paid: t.total, due: 0, status: 'paid', doctorId: doctorId || null
+          } : {
             items: items, subtotal: t.sub, discount: t.disc, total: t.total,
             due: due < 0.01 ? 0 : due, status: statusOf(+inv.paid || 0, t.total),
             doctorId: doctorId || null
@@ -388,7 +395,8 @@
         '<br><strong>Phone:</strong> ' + App.esc((p && p.phone) || '—') +
         (p && p.address ? '<br><strong>Address:</strong> ' + App.esc(p.address) : '') + '</div>' +
         '<div><strong>Referred by:</strong> ' + App.esc(d ? d.name : 'Self') +
-        (d ? '<br><span style="color:#555;font-size:12px">' + App.esc(d.clinic || '') + '</span>' : '') + '</div>' +
+        (d ? '<br><span style="color:#555;font-size:12px">' + App.esc(d.clinic || '') + '</span>' : '') +
+        (inv.panelId && DB.get('panels', inv.panelId) ? '<br><strong>Billed to:</strong> ' + App.esc(DB.get('panels', inv.panelId).name) + (p && p.panelRef ? '<br><span style="color:#555;font-size:12px">ID: ' + App.esc(p.panelRef) + '</span>' : '') : '') + '</div>' +
       '</div>' +
       '<table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px">' +
         '<thead><tr style="background:#f1f5f9"><th style="text-align:left;padding:8px;border:1px solid #ddd">#</th>' +
@@ -401,8 +409,8 @@
         '<div>Subtotal: ' + App.money(inv.subtotal) + '</div>' +
         '<div>Discount: ' + App.money(inv.discount || 0) + '</div>' +
         '<div style="font-size:18px;font-weight:800">Total: ' + App.money(inv.total) + '</div>' +
-        '<div>Paid: ' + App.money(inv.paid) + '</div>' +
-        '<div style="font-weight:800;color:#dc2626">Due: ' + App.money(inv.due) + '</div>' +
+        (inv.panelId ? '<div style="font-weight:700;color:#334155">Charged to the company account</div>' : '<div>Paid: ' + App.money(inv.paid) + '</div>' +
+        '<div style="font-weight:800;color:#dc2626">Due: ' + App.money(inv.due) + '</div>') +
       '</div>' +
       '<div style="font-weight:700;margin-bottom:6px">Payments Received</div>' +
       '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px">' +
@@ -469,7 +477,7 @@
         '<td style="text-align:right">' + App.money(inv.total) + '</td>' +
         '<td style="text-align:right;color:var(--green)">' + App.money(inv.paid) + '</td>' +
         '<td style="text-align:right;font-weight:700;color:' + (inv.due > 0 ? 'var(--red)' : 'var(--muted)') + '">' + App.money(inv.due) + '</td>' +
-        '<td>' + App.badge(inv.status) + smpChip(inv.id) + '</td>' +
+        '<td>' + App.badge(inv.status) + panelChip(inv) + smpChip(inv.id) + '</td>' +
         '<td class="actions"><a class="btn btn-sm btn-ghost" href="#/invoice/' + App.esc(inv.id) + '">View</a>' +
         (r2(inv.due) > 0 ? ' <button class="btn btn-sm btn-primary" data-collect="' + App.esc(inv.id) + '">Collect</button>' : '') +
         ' <button class="btn btn-sm btn-ghost" data-edit="' + App.esc(inv.id) + '">Edit</button>' +
@@ -615,7 +623,7 @@
             '<h2 style="margin:4px 0">Invoice ' + App.esc(inv.no) + '</h2>' +
             '<div style="color:var(--muted);font-size:13px">' + App.esc(s.address || '') + ' &nbsp;•&nbsp; ' + App.esc(s.phone || '') + '</div>' +
           '</div>' +
-          '<div style="text-align:right">' + App.badge(inv.status) + (smpSum ? Samples.chipHTML(smpSum) : '') +
+          '<div style="text-align:right">' + App.badge(inv.status) + panelChip(inv) + (smpSum ? Samples.chipHTML(smpSum) : '') +
             '<div style="margin-top:8px;font-size:13px;color:var(--muted)">Date: <strong style="color:var(--ink)">' + App.d(inv.createdAt) + '</strong></div>' +
             (inv.createdBy ? '<div style="font-size:12px;color:var(--muted)">By: ' + App.esc(inv.createdBy) + '</div>' : '') +
           '</div>' +
@@ -636,7 +644,7 @@
           (d ? '<div style="font-size:16px;font-weight:700">' + App.esc(d.name) + '</div>' +
             '<div style="color:var(--muted);font-size:13px;margin-top:4px">' + App.esc(d.clinic || '') +
             (d.phone ? ' &nbsp;•&nbsp; ' + App.esc(d.phone) : '') + '</div>' +
-            '<div style="font-size:13px;margin-top:4px">Commission: <strong>' + (Number(d.commissionPct) || 0) + '%</strong></div>'
+            '<div style="font-size:13px;margin-top:4px">Commission: <strong>' + ((d.commissionRules || []).length ? App.money(App.commissionOf(inv, d, App.testsById())) + '</strong> (special rates)' : (Number(d.commissionPct) || 0) + '%</strong>') + '</div>'
             : '<div style="color:var(--muted)">Self / walk-in (no referral)</div>') +
         '</div></div>' +
       '</div>' +
@@ -726,7 +734,7 @@
         '<td style="text-align:right">' + App.money(inv.total) + '</td>' +
         '<td style="text-align:right;color:var(--green)">' + App.money(inv.paid) + '</td>' +
         '<td style="text-align:right;font-weight:800;color:var(--red)">' + App.money(inv.due) + '</td>' +
-        '<td>' + App.badge(inv.status) + '</td>' +
+        '<td>' + App.badge(inv.status) + panelChip(inv) + '</td>' +
         '<td class="actions"><button class="btn btn-sm btn-primary" data-collect="' + App.esc(inv.id) + '">Collect</button> ' +
         '<a class="btn btn-sm btn-ghost" href="#/invoice/' + App.esc(inv.id) + '">View</a> ' +
         '<button class="btn btn-sm btn-ghost" data-edit="' + App.esc(inv.id) + '">Edit</button> ' +

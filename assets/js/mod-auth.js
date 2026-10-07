@@ -126,7 +126,7 @@
   }
   function setSession(j, labSlug) {
     localStorage.setItem(SKEY, JSON.stringify({
-      labId: 'cloud', userId: j.user.id, name: j.user.name, role: j.user.role,
+      labId: 'cloud', userId: j.user.id, name: j.user.name, role: j.user.role, roleId: j.user.roleId || '',
       token: j.token, lab: labSlug || (j.lab && j.lab.slug) || '', loginAt: new Date().toISOString()
     }));
   }
@@ -293,7 +293,7 @@
       if (!found) { showErr('Invalid username or password. Please try again.'); return; }
       var sessLab = 'lab1';
       try { sessLab = window.DB.currentLabId() || sessLab; } catch (ex3) {}
-      localStorage.setItem(SKEY, JSON.stringify({ labId: sessLab, userId: found.id, name: found.name, role: found.role, loginAt: new Date().toISOString() }));
+      localStorage.setItem(SKEY, JSON.stringify({ labId: sessLab, userId: found.id, name: found.name, role: found.role, roleId: found.roleId || '', loginAt: new Date().toISOString() }));
       location.hash = '#/dashboard';
     });
   };

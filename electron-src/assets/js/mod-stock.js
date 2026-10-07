@@ -22,7 +22,7 @@
 
   function num(n) { n = Math.round((+n || 0) * 100) / 100; return String(n); }
   function fdate(d) { return d ? App.d(d) : '—'; }
-  function canEdit() { var s = App.session(); return !!s && (s.role === 'admin' || s.role === 'technician'); }
+  function canEdit() { var s = App.session(); return !!s && (s.role === 'admin' || s.role === 'technician' || (s.role === 'custom' && App.canPage('stock'))); }
 
   function statusChips(r) {
     var h = '';
@@ -197,7 +197,7 @@
 
   App.route('#/stock', function () {
     var s = App.session();
-    if (!s || (s.role !== 'admin' && s.role !== 'technician' && s.role !== 'reception')) { document.getElementById('view').innerHTML = '<div class="card"><div class="card-b">' + App.empty('You do not have access to Stock.') + '</div></div>'; return; }
+    if (!s || (s.role !== 'admin' && s.role !== 'technician' && s.role !== 'reception' && !(s.role === 'custom' && App.canPage('stock')))) { document.getElementById('view').innerHTML = '<div class="card"><div class="card-b">' + App.empty('You do not have access to Stock.') + '</div></div>'; return; }
     render();
   });
 })();

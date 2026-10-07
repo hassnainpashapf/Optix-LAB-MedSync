@@ -121,8 +121,9 @@ var docFilter = { q: '' };
 
 function renderTests() {
   var r = sessionRole();
-  if (r !== 'admin' && r !== 'technician') { deny(); return; }
-  var canEdit = (r === 'admin');
+  var cust = (r === 'custom' && App.canPage('tests'));
+  if (r !== 'admin' && r !== 'technician' && !cust) { deny(); return; }
+  var canEdit = (r === 'admin' || cust);
 
   var cats = categories();
   var allT = DB.all('tests');
@@ -809,7 +810,7 @@ function testModal(t) {
 
 function renderDoctors() {
   var r = sessionRole();
-  if (r !== 'admin' && r !== 'reception') { deny(); return; }
+  if (r !== 'admin' && r !== 'reception' && !(r === 'custom' && App.canPage('doctors'))) { deny(); return; }
   var canEdit = true; // admin + reception both manage doctors
 
   /* ---- month stats for the premium stat row (real data) ---- */
@@ -823,10 +824,11 @@ function renderDoctors() {
     refM++;
     if (i.doctorId) byDoc[i.doctorId] = (byDoc[i.doctorId] || 0) + 1;
   });
+  var tById = App.testsById();
   docs.forEach(function (d) {
-    var rev = invsAll.filter(function (i) { return i.doctorId === d.id && monthKey(i.createdAt) === mk; })
-      .reduce(function (s, i) { return s + (+i.total || 0); }, 0);
-    var comm = rev * (+d.commissionPct || 0) / 100;
+    var mineD = invsAll.filter(function (i) { return i.doctorId === d.id && monthKey(i.createdAt) === mk; });
+    var rev = mineD.reduce(function (s, i) { return s + (+i.total || 0); }, 0);
+    var comm = mineD.reduce(function (s, i) { return s + App.commissionOf(i, d, tById); }, 0);
     var paidM = (d.commissionPaid || []).filter(function (x) { return monthKey(x.date) === mk; })
       .reduce(function (s, x) { return s + (+x.amount || 0); }, 0);
     commDue += Math.max(0, comm - paidM);
@@ -884,10 +886,11 @@ function drawDoctorRows() {
 
   if (!rows.length) { tb.innerHTML = '<tr><td colspan="7">' + App.empty('No doctors found.') + '</td></tr>'; return; }
 
+  var tById2 = App.testsById();
   tb.innerHTML = rows.map(function (d) {
     var mine = invs.filter(function (i) { return i.doctorId === d.id && monthKey(i.createdAt) === mk; });
     var rev = mine.reduce(function (s, i) { return s + (+i.total || 0); }, 0);
-    var comm = rev * (+d.commissionPct || 0) / 100;
+    var comm = mine.reduce(function (s, i) { return s + App.commissionOf(i, d, tById2); }, 0);
     var paidM = (d.commissionPaid || []).filter(function (x) { return monthKey(x.date) === mk; })
       .reduce(function (s, x) { return s + (+x.amount || 0); }, 0);
     var dueM = Math.max(0, comm - paidM);
@@ -895,7 +898,7 @@ function drawDoctorRows() {
       '<td><strong>' + App.esc(d.name || '') + '</strong></td>' +
       '<td>' + App.esc(d.clinic || '—') + '</td>' +
       '<td>' + App.esc(d.phone || '—') + (d.whatsapp ? '<div style="font-size:11.5px;color:var(--green)">💬 ' + App.esc(d.whatsapp) + '</div>' : '') + '</td>' +
-      '<td style="text-align:right">' + App.esc(String(d.commissionPct == null ? 0 : d.commissionPct)) + '%</td>' +
+      '<td style="text-align:right">' + App.esc(String(d.commissionPct == null ? 0 : d.commissionPct)) + '%' + ((d.commissionRules || []).length ? '<div class="muted" style="font-size:11px">+ ' + d.commissionRules.length + ' special rate' + (d.commissionRules.length === 1 ? '' : 's') + '</div>' : '') + '</td>' +
       '<td style="text-align:right"><strong>' + mine.length + '</strong></td>' +
       '<td style="text-align:right"><strong>' + App.money(comm) + '</strong>' +
         (paidM > 0 ? '<div style="font-size:11.5px;color:var(--green)">Paid ' + App.money(paidM) + '</div>' : '') +
@@ -986,6 +989,9 @@ function doctorModal(d) {
       '<div><label class="label">Email</label><input id="dm-email" class="input" type="email" maxlength="80" value="' + App.esc(d.email || '') + '" placeholder="doctor@mail.com (to email reports)"></div>' +
       '<div><label class="label">Commission % *</label><input id="dm-comm" class="input" type="number" min="0" max="100" step="0.5" value="' + App.esc(String(d.commissionPct == null ? '' : d.commissionPct)) + '" required></div>' +
     '</div>' +
+    '<div style="margin-top:16px;border-top:1px solid var(--line);padding-top:14px"><label class="label">Special rates <span class="muted" style="font-weight:400">(optional &mdash; a different % for a particular test or category; everything else uses the % above)</span></label>' +
+      '<div id="dm-rules"></div><button type="button" id="dm-addr" class="btn btn-ghost btn-sm">+ Add special rate</button>' +
+      '<div class="muted" id="dm-rnote" style="font-size:12.5px;margin-top:6px">Example: <b>CBC &rarr; 10%</b>, <b>MRI &rarr; 20%</b>. A test rate beats a category rate.</div></div>' +
     '<div style="margin-top:18px;display:flex;justify-content:flex-end;gap:10px">' +
       '<button type="button" class="btn btn-ghost" id="dm-cancel">Cancel</button>' +
       '<button type="submit" class="btn btn-primary">' +
@@ -994,13 +1000,38 @@ function doctorModal(d) {
   App.modal(isNew ? 'Add Referral Doctor' : 'Edit Doctor', body, { onOpen: function (ov, close) {
     var m = lastModal(); if (!m) return;
     m.querySelector('#dm-cancel').addEventListener('click', close);
+    /* special rates: [what][%][remove] rows; "what" is a test or a whole category */
+    var rulesBox = m.querySelector('#dm-rules'), allTests = (DB.all('tests') || []).filter(function (t) { return t.active !== false; }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    var cats = []; allTests.forEach(function (t) { if (t.category && cats.indexOf(t.category) < 0) cats.push(t.category); }); cats.sort();
+    function addRule(r) {
+      r = r || {};
+      var cur = (r.type === 'category' ? 'c:' : 't:') + (r.key || '');
+      var opts = '<option value="">Choose test or category…</option>' +
+        '<optgroup label="Category (all tests in it)">' + cats.map(function (c) { return '<option value="c:' + App.esc(c) + '"' + (cur === 'c:' + c ? ' selected' : '') + '>' + App.esc(c) + ' (all)</option>'; }).join('') + '</optgroup>' +
+        '<optgroup label="Single test">' + allTests.map(function (t) { return '<option value="t:' + App.esc(t.id) + '"' + (cur === 't:' + t.id ? ' selected' : '') + '>' + App.esc(t.name) + '</option>'; }).join('') + '</optgroup>';
+      rulesBox.insertAdjacentHTML('beforeend', '<div class="dm-rule" style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><select class="select dm-rk" style="flex:1;min-width:0">' + opts + '</select>' +
+        '<input class="input dm-rp" type="number" min="0" max="100" step="0.5" style="width:90px" placeholder="%" value="' + (r.pct == null ? '' : App.esc(String(r.pct))) + '"><span class="muted">%</span><button type="button" class="btn btn-ghost btn-sm dm-rx" title="Remove">&times;</button></div>');
+      var row = rulesBox.lastElementChild; row.querySelector('.dm-rx').addEventListener('click', function () { row.remove(); });
+    }
+    (d.commissionRules || []).forEach(addRule);
+    m.querySelector('#dm-addr').addEventListener('click', function () { addRule(null); });
     m.querySelector('#dm-form').addEventListener('submit', function (e) {
       e.preventDefault();
       var name = m.querySelector('#dm-name').value.trim();
       var comm = parseFloat(m.querySelector('#dm-comm').value);
       if (!name) { App.toast('Doctor name is required.', 'err'); return; }
       if (isNaN(comm) || comm < 0 || comm > 100) { App.toast('Commission must be between 0 and 100%.', 'err'); return; }
+      var rules = [], seenR = {}, badR = false;
+      Array.prototype.forEach.call(m.querySelectorAll('.dm-rule'), function (row) {
+        var k = row.querySelector('.dm-rk').value, v = parseFloat(row.querySelector('.dm-rp').value);
+        if (!k && isNaN(v)) return;
+        if (!k || isNaN(v) || v < 0 || v > 100) { badR = true; return; }
+        if (seenR[k]) { badR = true; return; } seenR[k] = 1;
+        rules.push({ type: k.charAt(0) === 'c' ? 'category' : 'test', key: k.slice(2), pct: v });
+      });
+      if (badR) { App.toast('Each special rate needs a test/category (once) and a % between 0 and 100.', 'err'); return; }
       var data = {
+        commissionRules: rules,
         name: name,
         clinic: m.querySelector('#dm-clinic').value.trim(),
         phone: m.querySelector('#dm-phone').value.trim(),

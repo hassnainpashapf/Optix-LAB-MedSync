@@ -38,7 +38,7 @@
   function render() {
     css();
     var s = App.session();
-    if (!s || (s.role !== 'admin' && s.role !== 'reception')) return '<div class="card"><div class="card-b">' + App.empty('You do not have access to the Email Center.') + '</div></div>';
+    if (!s || (s.role !== 'admin' && s.role !== 'reception' && !(s.role === 'custom' && App.canPage('email')))) return '<div class="card"><div class="card-b">' + App.empty('You do not have access to the Email Center.') + '</div></div>';
     if (!App.mail) { ensure(paint); return '<div class="card"><div class="card-b">' + App.empty('Loading…') + '</div></div>'; }
     if (!srv) { App.mail.status(true).then(function (j) { srv = j; paint(); }); return '<div class="card"><div class="card-b">' + App.empty('Loading…') + '</div></div>'; }
     var st = DB.get('settings', 'main') || {}, today = App.today(), L = logs();

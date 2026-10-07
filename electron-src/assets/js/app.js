@@ -50,6 +50,7 @@
     { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests',     color: '#14b8a6' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316' },
     { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues',      color: '#ef4444' },
+    { key: 'panels',    label: 'Corporate',  icon: 'users',     route: '#/panels',    color: '#7c3aed' },
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors',   color: '#ec4899' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
     { key: 'finance',   label: 'Cash & Profit', icon: 'finance', route: '#/finance', color: '#0ea5a4',
@@ -73,6 +74,7 @@
     billing:   ['admin', 'reception'],
     invoices:  ['admin', 'reception'],
     dues:      ['admin', 'reception'],
+    panels:    ['admin', 'reception'],
     patients:  ['admin', 'reception', 'technician'],
     tests:     ['admin', 'reception', 'technician'],
     doctors:   ['admin', 'reception'],
@@ -96,9 +98,30 @@
     if (seg === 'patient') seg = 'patients';
     return seg || 'dashboard';
   }
+  /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
+     Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
+  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['panels', 'Corporate clients'],
+    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Cash & daily closing'], ['reports', 'Reports'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['downloads', 'Downloads']];
+  function roleDef(s) {
+    s = s || session(); if (!s || s.role !== 'custom') return null;
+    var set = null; try { set = DB.get('settings', 'main'); } catch (e) {}
+    var list = (set && set.customRoles) || [];
+    for (var i = 0; i < list.length; i++) if (list[i] && list[i].id === s.roleId) return list[i];
+    return { id: '', name: 'No role', pages: [], money: false };
+  }
   function can(key, role) {
+    if (role === 'custom') {
+      var d = roleDef(); if (!d) return false;
+      if (key === 'profile') return true;
+      if (key === 'billing') key = 'invoices';
+      return (d.pages || []).indexOf(key) !== -1;
+    }
     return (PERMS[key] || []).indexOf(role) !== -1;
   }
+  /* "can this signed-in person open this page?" and "should prices be hidden?" (technician-style) — one answer for every screen */
+  function canPage(key) { var s = session(); return !!s && can(key, s.role); }
+  function hideMoney() { var s = session(); if (!s) return false; if (s.role === 'technician') return true; if (s.role === 'custom') { var d = roleDef(s); return !d || d.money === false; } return false; }
+  function roleLabel(s) { s = s || session() || {}; if (s.role === 'custom') { var d = roleDef(s); return d ? d.name : 'Staff'; } return (s.role || '').charAt(0).toUpperCase() + (s.role || '').slice(1); }
 
   /* ---------------- session ---------------- */
   var SKEY = 'labpos_session';
@@ -600,9 +623,9 @@
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     /* grouped, professional sidebar: section labels, one icon style, active state on the left */
     var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', doctors: 'Laboratory',
-      invoices: 'Billing', dues: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
+      invoices: 'Billing', dues: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
       whatsapp: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'doctors', 'invoices', 'dues', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'doctors', 'invoices', 'dues', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     var lastSec = '';
@@ -627,7 +650,7 @@
       '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
       '<nav class="nav">' + items + '</nav>' +
       '<div class="side-foot"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a>' +
-      '<div class="sf-user"><span class="sf-av">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</span><span class="sf-tx"><b>' + esc(s.name || 'User') + '</b><small>' + esc((s.role || '').charAt(0).toUpperCase() + (s.role || '').slice(1)) + '</small></span>' +
+      '<div class="sf-user"><span class="sf-av">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</span><span class="sf-tx"><b>' + esc(s.name || 'User') + '</b><small>' + esc(roleLabel(s)) + '</small></span>' +
       '<button type="button" class="sf-out" id="sideLogout" title="Log out" aria-label="Log out">' + icon('logout', 17) + '</button></div></div>';
     document.getElementById('sideLogout').addEventListener('click', logout);
     paintSidePlan();
@@ -644,7 +667,10 @@
     var _longDate = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     /* quick actions — role-aware; technicians get read-only shortcuts */
     var isTech = (s.role === 'technician');
-    var tbQa = isTech
+    var tbQa = s.role === 'custom'
+      ? [['patients', '#/patients/new', 'users', 'Add Patient'], ['results', '#/results', 'clipboard', 'Lab Results'], ['expenses', '#/expenses', 'wallet', 'Add Expense'], ['finance', '#/finance', 'finance', 'Close Day']]
+        .filter(function (q) { return can(q[0], 'custom'); }).slice(0, 3).map(function (q) { return '<a class="btn btn-sm tb-qab tb-classic" href="' + q[1] + '">' + icon(q[2], 14) + '<span class="tb-qa-t">' + q[3] + '</span></a>'; }).join('')
+      : isTech
       ? '<a class="btn btn-sm tb-qab tb-classic" href="#/results">' + icon('clipboard', 14) + '<span class="tb-qa-t">Lab Results</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/tests">' + icon('flask', 14) + '<span class="tb-qa-t">View Tests</span></a>'
       : '<a class="btn btn-sm tb-qab tb-classic" href="#/patients/new">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
@@ -688,7 +714,7 @@
       '<div class="tb-acct">' +
       '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + _avatarInner + '</button>' +
       '<div class="tb-menu" id="userMenu" hidden>' +
-      '<div class="tb-menu-head"><b>' + esc(s.name) + '</b>' + badge(s.role) + '</div>' +
+      '<div class="tb-menu-head"><b>' + esc(s.name) + '</b>' + (s.role === 'custom' ? '<span class="badge b-ready">' + esc(roleLabel(s)) + '</span>' : badge(s.role)) + '</div>' +
       '<a class="tb-menu-it" href="#/profile">' + icon('gear', 16) + '<span>Settings</span></a>' +
       '<a class="tb-menu-it" href="#/profile">' + icon('lock', 16) + '<span>Change Password</span></a>' +
       '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
@@ -836,6 +862,7 @@
     isNative: isNativeApp,
     applyFont: applyFont,
     session: session,
+    canPage: canPage, hideMoney: hideMoney, roleLabel: roleLabel, roleDef: roleDef, ROLE_PAGES: ROLE_PAGES,
     logout: logout,
     can: can,
     currentKey: currentKey,
@@ -1086,6 +1113,39 @@
   /* ---------- stock: reagents / consumables ----------
      Everything is derived from the movement log (stock_moves): in (received, with lot + expiry), out (used by a test), waste, adjust (+/-).
      Lots are used oldest-expiry first, so "expiring soon" / "expired" always describes what is really still on the shelf. */
+  /* Doctor commission for one invoice. A doctor has a default % and optional rules (commissionRules: [{type:'test'|'category', key, pct}]);
+     a test rule beats a category rule, which beats the default. With no rules it is exactly total x default %. Discounts are shared out evenly. */
+  App.commissionOf = function (inv, doc, testsById) {
+    var total = +inv.total || 0, base = +(doc && doc.commissionPct) || 0, rules = (doc && doc.commissionRules) || [];
+    if (!rules.length) return total * base / 100;
+    var tests = testsById || {}, byTest = {}, byCat = {};
+    rules.forEach(function (r) { var v = +r.pct; if (isNaN(v) || !r.key) return; if (r.type === 'category') byCat[String(r.key).toLowerCase()] = v; else byTest[r.key] = v; });
+    var items = inv.items || [], sum = 0, comm = 0;
+    items.forEach(function (it) {
+      var pr = +it.price || 0, t = tests[it.testId] || {}, rate = byTest[it.testId] != null ? byTest[it.testId] : (byCat[String(t.category || '').toLowerCase()] != null ? byCat[String(t.category || '').toLowerCase()] : base);
+      sum += pr; comm += pr * rate / 100;
+    });
+    return sum > 0 ? comm * (total / sum) : total * base / 100;
+  };
+  /* Corporate / panel clients (a company, school, hospital...). A panel has its own price list: a special price per test (panel.rates: [{testId, price}])
+     and/or a flat discount % off the normal price. Its bills are not collected from the patient; they build up as the panel's account (udhaar) and are
+     settled by receipts (panel.receipts: [{id, date, amount, method, note}]). A panel invoice carries panelId and is stored as paid with nothing due. */
+  App.panelPrice = function (panel, test) {
+    var list = +(test && test.price) || 0; if (!panel) return list;
+    var rates = panel.rates || [];
+    for (var i = 0; i < rates.length; i++) if (rates[i] && rates[i].testId === (test && test.id) && rates[i].price !== '' && !isNaN(+rates[i].price)) return Math.max(0, +rates[i].price);
+    var d = Math.min(100, Math.max(0, +panel.discountPct || 0));
+    return d ? Math.round(list * (100 - d) / 100) : list;
+  };
+  App.panelAccount = function (panel, uptoDate) {   /* uptoDate (YYYY-MM-DD, optional): balance as it stood at the end of that day */
+    var inv = (DB.all('invoices') || []).filter(function (i) { return i.panelId === panel.id && (!uptoDate || String(i.createdAt || '').slice(0, 10) <= uptoDate); });
+    var billed = inv.reduce(function (a, i) { return a + (+i.total || 0); }, 0);
+    var rec = (panel.receipts || []).filter(function (r) { return !uptoDate || String(r.date || '').slice(0, 10) <= uptoDate; }).reduce(function (a, r) { return a + (+r.amount || 0); }, 0);
+    var open = +panel.openingBalance || 0;
+    return { opening: open, billed: billed, received: rec, balance: Math.round((open + billed - rec) * 100) / 100, invoices: inv.length };
+  };
+  App.testsById = function () { var m = {}; (DB.all('tests') || []).forEach(function (t) { m[t.id] = t; }); return m; };
+
   App.stockState = function () {
     var items = [], moves = [];
     try { items = DB.all('stock_items') || []; moves = DB.all('stock_moves') || []; } catch (e) { return { rows: [], low: 0, out: 0, soon: 0, expired: 0, alerts: 0 }; }

@@ -32,7 +32,7 @@
   App.route('/dashboard', function () {
     var s = session();
     var role = s.role || 'admin';
-    var isTech = role === 'technician';
+    var isTech = role === 'technician' || (App.hideMoney && App.hideMoney());
 
     /* ---------- loading skeletons (CSS-only shimmer, shown while content computes) ---------- */
     var SKEL_CSS =
@@ -336,7 +336,7 @@
     /* low / expiring stock: one line with a link, only when something needs attention */
     function stockCard() {
       try {
-        var me = App.session(); if (!me || (me.role !== 'admin' && me.role !== 'technician') || !App.stockState) return '';
+        var me = App.session(); if (!me || (me.role !== 'admin' && me.role !== 'technician' && !(me.role === 'custom' && App.canPage('stock'))) || !App.stockState) return '';
         var S = App.stockState(); if (!S.alerts) return '';
         var bits = [];
         if (S.out) bits.push('<b>' + S.out + '</b> out of stock'); if (S.low) bits.push('<b>' + S.low + '</b> running low');

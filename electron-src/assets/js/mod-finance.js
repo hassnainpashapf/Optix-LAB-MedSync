@@ -27,7 +27,7 @@
   function sess() { try { return App.session() || {}; } catch (e) { return {}; } }
   function role() { return sess().role || ''; }
   function isAdmin() { return role() === 'admin'; }
-  function canClosing() { var r = role(); return r === 'admin' || r === 'reception'; }
+  function canClosing() { var r = role(); return r === 'admin' || r === 'reception' || (r === 'custom' && App.canPage('finance')); }
   function canProfit() { return role() === 'admin'; }
   function username() {
     var s = sess(), u = null;
@@ -757,10 +757,11 @@
         });
       });
     } else {
+      var tById = App.testsById();
       invs.forEach(function (i) {
         var d = i.doctorId ? docs[i.doctorId] : null;
-        var pct = d ? (+d.commissionPct || 0) : 0;
-        if (pct > 0) { var a = (+i.total || 0) * pct / 100; commission += a; commByDay[invDay(i)] = (commByDay[invDay(i)] || 0) + a; hasComm = true; }
+        var a = d ? App.commissionOf(i, d, tById) : 0;
+        if (a > 0) { commission += a; commByDay[invDay(i)] = (commByDay[invDay(i)] || 0) + a; hasComm = true; }
       });
     }
     if (commission > 0) byCat['Doctor commission'] = commission;
@@ -885,13 +886,14 @@
     return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.rev - a.rev; });
   }
   function doctorRows(invs) {
+    var tById = App.testsById();
     var docs = docById(), map = {}, self = { name: 'Self / no referral', n: 0, billed: 0, pct: 0, comm: 0 };
     invs.forEach(function (iv) {
       var t = +iv.total || 0;
       if (!iv.doctorId) { self.n++; self.billed += t; return; }
       var d = docs[iv.doctorId];
       if (!map[iv.doctorId]) map[iv.doctorId] = { name: d ? d.name : 'Unknown doctor', n: 0, billed: 0, pct: d ? (+d.commissionPct || 0) : 0, comm: 0 };
-      var m = map[iv.doctorId]; m.n++; m.billed += t; m.comm += t * m.pct / 100;
+      var m = map[iv.doctorId]; m.n++; m.billed += t; m.comm += d ? App.commissionOf(iv, d, tById) : 0; m.pct = m.billed > 0 ? Math.round(m.comm / m.billed * 1000) / 10 : m.pct;
     });
     var l = Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.billed - a.billed; });
     if (self.n) l.push(self);

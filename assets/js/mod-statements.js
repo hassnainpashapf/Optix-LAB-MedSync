@@ -17,20 +17,21 @@
 
   /* one doctor, one month */
   function compute(docId, mk) {
-    var doc = DB.get('doctors', docId) || {}, pct = +doc.commissionPct || 0;
+    var doc = DB.get('doctors', docId) || {}, pct = +doc.commissionPct || 0, tById = App.testsById();
     var rows = (DB.all('invoices') || []).filter(function (i) { return i.doctorId === docId && mkOf(i.createdAt) === mk; })
       .sort(function (a, b) { return String(a.createdAt).localeCompare(String(b.createdAt)); })
       .map(function (i) {
         var p = DB.get('patients', i.patientId) || {};
         var tests = (i.items || []).map(function (x) { return x.name || x.code || ''; }).filter(Boolean).join(', ');
         var total = +i.total || 0;
-        return { date: i.createdAt, no: i.no || i.id, patient: p.name || '—', tests: tests, total: total, paid: +i.paid || 0, comm: total * pct / 100 };
+        return { date: i.createdAt, no: i.no || i.id, patient: p.name || '—', tests: tests, total: total, paid: +i.paid || 0, comm: App.commissionOf(i, doc, tById) };
       });
     var billed = rows.reduce(function (s, r) { return s + r.total; }, 0), comm = rows.reduce(function (s, r) { return s + r.comm; }, 0);
     var payouts = (doc.commissionPaid || []).filter(function (x) { return mkOf(x.date) === mk; });
     var paidOut = payouts.reduce(function (s, x) { return s + (+x.amount || 0); }, 0);
     var pats = {}; rows.forEach(function (r) { pats[r.patient] = 1; });
-    return { doc: doc, pct: pct, mk: mk, rows: rows, referrals: rows.length, patients: Object.keys(pats).length, billed: billed, comm: comm, paidOut: paidOut, due: Math.max(0, comm - paidOut) };
+    var effPct = billed > 0 ? Math.round(comm / billed * 1000) / 10 : pct;
+    return { doc: doc, pct: (doc.commissionRules || []).length ? effPct : pct, special: (doc.commissionRules || []).length > 0, mk: mk, rows: rows, referrals: rows.length, patients: Object.keys(pats).length, billed: billed, comm: comm, paidOut: paidOut, due: Math.max(0, comm - paidOut) };
   }
   function allDoctors(mk) {
     return (DB.all('doctors') || []).slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); })
@@ -51,7 +52,7 @@
       '</tbody></table>' +
       '<div style="margin:14px 0 0 auto;max-width:340px;font-size:13.5px">' +
       line('Referrals', s.referrals + ' (' + s.patients + ' patient' + (s.patients === 1 ? '' : 's') + ')') + line('Total billed', rs(s.billed)) +
-      line('Commission (' + s.pct + '%)', rs(s.comm)) + line('Already paid this month', rs(s.paidOut)) + line('Balance due', '<b style="color:' + (s.due > 0 ? '#b91c1c' : '#047857') + '">' + rs(s.due) + '</b>') + '</div>';
+      line('Commission (' + (s.special ? 'avg ' : '') + s.pct + '%)', rs(s.comm)) + line('Already paid this month', rs(s.paidOut)) + line('Balance due', '<b style="color:' + (s.due > 0 ? '#b91c1c' : '#047857') + '">' + rs(s.due) + '</b>') + '</div>';
   }
   function line(a, b) { return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px dashed #e3e8f2"><span style="color:#5b6b80">' + a + '</span><span>' + b + '</span></div>'; }
   function summaryHtml(list, mk) {
@@ -88,7 +89,7 @@
     doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(20, 20, 20); doc.text('Doctor Referral Statement - ' + monthLabel(s.mk), M, y); y += 7;
     doc.setFontSize(10.5); doc.text(String(s.doc.name || ''), M, y);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(80, 90, 110);
-    doc.text(String([s.doc.clinic, s.doc.phone].filter(Boolean).join('  |  ')) + (s.doc.clinic || s.doc.phone ? '  |  ' : '') + 'Commission ' + s.pct + '%', M, y + 5); y += 11;
+    doc.text(String([s.doc.clinic, s.doc.phone].filter(Boolean).join('  |  ')) + (s.doc.clinic || s.doc.phone ? '  |  ' : '') + 'Commission ' + (s.special ? 'avg ' : '') + s.pct + '%', M, y + 5); y += 11;
     var X = { date: M, no: M + 22, pat: M + 46, tests: M + 86, bill: W - M - 30, comm: W - M };
     function th() {
       doc.setFillColor(233, 237, 249); doc.rect(M, y - 4.5, W - 2 * M, 7, 'F'); doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(NAVY[0], NAVY[1], NAVY[2]);
@@ -107,7 +108,7 @@
     if (y + 40 > 285) { doc.addPage(); page++; y = M; }
     y += 4; var bx = W - M - 82;
     function kv(a, b, bold, red) { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(10); doc.setTextColor(red ? 185 : 40, red ? 28 : 40, red ? 28 : 40); doc.text(a, bx, y); doc.text(b, W - M, y, { align: 'right' }); y += 6; }
-    kv('Referrals', s.referrals + ' (' + s.patients + ' patient' + (s.patients === 1 ? '' : 's') + ')'); kv('Total billed', rs(s.billed)); kv('Commission (' + s.pct + '%)', rs(s.comm));
+    kv('Referrals', s.referrals + ' (' + s.patients + ' patient' + (s.patients === 1 ? '' : 's') + ')'); kv('Total billed', rs(s.billed)); kv('Commission (' + (s.special ? 'avg ' : '') + s.pct + '%)', rs(s.comm));
     kv('Already paid this month', rs(s.paidOut)); doc.setDrawColor(NAVY[0], NAVY[1], NAVY[2]); doc.setLineWidth(0.4); doc.line(bx, y - 3.5, W - M, y - 3.5); kv('Balance due', rs(s.due), true, s.due > 0);
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(130, 140, 160);
     for (var p = 1; p <= page; p++) { doc.setPage(p); doc.text('Generated ' + new Date().toLocaleDateString('en-GB') + '  |  Page ' + p + ' of ' + page, W / 2, 291, { align: 'center' }); }

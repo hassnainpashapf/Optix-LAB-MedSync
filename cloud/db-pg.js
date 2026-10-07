@@ -8,7 +8,7 @@
 'use strict';
 const { Pool } = require('pg');
 
-const TABLES = ['settings', 'users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'wa_log', 'report_templates', 'report_schedules', 'samples', 'closings', 'audit', 'stock_items', 'stock_moves', 'email_log'];
+const TABLES = ['settings', 'users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'wa_log', 'report_templates', 'report_schedules', 'samples', 'closings', 'audit', 'stock_items', 'stock_moves', 'email_log', 'panels'];
 
 async function openStore(connectionString) {
   const pool = new Pool(connectionString ? { connectionString } : {});

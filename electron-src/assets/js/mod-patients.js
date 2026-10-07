@@ -13,7 +13,7 @@
   }
   function canEdit() {
     var r = curRole();
-    return r === 'admin' || r === 'reception';
+    return r === 'admin' || r === 'reception' || (r === 'custom' && App.canPage('patients'));
   }
   function initials(name) {
     var parts = String(name || '?').trim().split(/\s+/);
@@ -142,6 +142,15 @@
       '<div class="ptf-tlist" id="ptf-tlist">' + (rows || '<div class="ptf-tempty">No active tests found.</div>') + '</div>' +
       '<div class="ptf-tsum" id="ptf-tsum">0 selected • Rs 0</div></div>';
   }
+  /* corporate / panel client: the patient's bills go to the client's account at the client's prices */
+  function panelFieldHTML(p) {
+    var pans = (DB.all('panels') || []).filter(function (x) { return x.active !== false || x.id === (p && p.panelId); });
+    if (!pans.length) return '';
+    return '<div class="form-2col"><div class="form-row"><label class="label" for="ptf-panel">Corporate client <span class="ptf-opt">(optional)</span></label>' +
+      '<select class="select" id="ptf-panel"><option value="">None - patient pays</option>' + pans.map(function (x) { return '<option value="' + App.esc(x.id) + '"' + ((p && p.panelId) === x.id ? ' selected' : '') + '>' + App.esc(x.name) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="form-row"><label class="label" for="ptf-panelref">Employee / student ID <span class="ptf-opt">(optional)</span></label>' +
+      '<input class="input" id="ptf-panelref" maxlength="40" value="' + App.esc((p && p.panelRef) || '') + '"></div></div>';
+  }
   function formHTML(p) {
     p = p || {};
     function val(k) { return App.esc(p[k] == null ? '' : p[k]); }
@@ -217,6 +226,7 @@
       '</div>' +
       '<div class="form-row"><label class="label" for="ptf-doctor">Referred By</label>' +
       '<select class="select" id="ptf-doctor">' + docOpts + '</select></div>' +
+      panelFieldHTML(p) +
       '<div class="form-row"><label class="label" for="ptf-address">Address</label>' +
       '<textarea class="input" id="ptf-address" rows="2" maxlength="200" placeholder="Street, area, city">' + val('address') + '</textarea></div>' +
       '<div class="form-row"><label class="label" for="ptf-notes">Notes / Medical History</label>' +
@@ -373,8 +383,9 @@
       if (!tList || !tSum) return;
       var n = 0, amt = 0;
       var chks = tList.querySelectorAll('.ptf-tchk:checked');
-      for (var i = 0; i < chks.length; i++) { n++; amt += (+chks[i].getAttribute('data-price') || 0); }
-      tSum.textContent = n + ' selected • ' + App.money(amt);
+      var pnSel = document.getElementById('ptf-panel'), pn = pnSel && pnSel.value ? DB.get('panels', pnSel.value) : null;
+      for (var i = 0; i < chks.length; i++) { n++; amt += pn ? App.panelPrice(pn, DB.get('tests', chks[i].value)) : (+chks[i].getAttribute('data-price') || 0); }
+      tSum.textContent = n + ' selected • ' + App.money(amt) + (pn ? ' (' + pn.name + ' rates, billed to their account)' : '');
     }
     if (tSearch && tList) {
       tSearch.addEventListener('input', function () {
@@ -386,6 +397,7 @@
         }
       });
       tList.addEventListener('change', paintTSum);
+      var pnSel0 = document.getElementById('ptf-panel'); if (pnSel0) pnSel0.addEventListener('change', paintTSum);
       paintTSum();
     }
     form.addEventListener('submit', function (ev) {
@@ -406,6 +418,7 @@
       var ecName = document.getElementById('ptf-ecname').value.trim();
       var ecPhone = document.getElementById('ptf-ecphone').value.trim();
       var doctorId = document.getElementById('ptf-doctor').value || null;
+      var panelEl = document.getElementById('ptf-panel'), panelId = panelEl ? (panelEl.value || null) : null, panelRef = panelEl ? document.getElementById('ptf-panelref').value.trim() : '';
       var notes = document.getElementById('ptf-notes').value.trim();
       var ok = true;
       setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-phone', ''); setErr('ptf-e-email', ''); setErr('ptf-e-whatsapp', '');
@@ -420,6 +433,7 @@
       var data = { name: name, age: age, gender: gender, phone: phone, whatsapp: whatsapp, address: address,
         father: father, dob: dob, cnic: cnic, phone2: phone2, email: email, city: city,
         blood: blood, ecName: ecName, ecPhone: ecPhone, doctorId: doctorId, notes: notes };
+      if (panelEl) { data.panelId = panelId; data.panelRef = panelRef; }
       if (existing && existing.id) {
         DB.update('patients', existing.id, data);
         App.toast('Patient details updated.');
@@ -433,19 +447,19 @@
           var tIds = [];
           var chks = tListEl.querySelectorAll('.ptf-tchk:checked');
           for (var ci = 0; ci < chks.length; ci++) tIds.push(chks[ci].value);
-          var items = [];
+          var items = [], pnl = panelId ? DB.get('panels', panelId) : null;
           tIds.forEach(function (tid) {
             var t = DB.get('tests', tid);
             if (!t) return;
-            items.push({ testId: t.id, code: t.code, name: t.name, price: +t.price || 0,
+            items.push({ testId: t.id, code: t.code, name: t.name, price: pnl ? App.panelPrice(pnl, t) : (+t.price || 0),
               isPackage: !!t.isPackage, includes: t.isPackage ? (t.includes || []) : null });
           });
           if (items.length && !(App.limitHit && App.limitHit('invoices'))) {
             var bTotal = items.reduce(function (a, l) { return a + (+l.price || 0); }, 0);
             var inv = DB.insert('invoices', {
               patientId: np.id, doctorId: null, items: items,
-              subtotal: bTotal, discount: 0, total: bTotal, paid: 0, due: bTotal,
-              status: 'unpaid', createdAt: new Date().toISOString(), createdBy: ptUser()
+              subtotal: bTotal, discount: 0, total: bTotal, paid: pnl ? bTotal : 0, due: pnl ? 0 : bTotal,
+              status: pnl ? 'paid' : 'unpaid', panelId: pnl ? pnl.id : null, createdAt: new Date().toISOString(), createdBy: ptUser()
             });
             DB.update('invoices', inv.id, { no: inv.id });
             items.forEach(function (l) {

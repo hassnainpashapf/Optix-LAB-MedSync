@@ -38,7 +38,7 @@
   function scIsTech() {
     try {
       var s = (typeof App.session === 'function') ? App.session() : App.session;
-      return !!(s && s.role === 'technician');
+      return !!(s && (s.role === 'technician' || (App.hideMoney && App.hideMoney())));
     } catch (e) { return false; }
   }
   function scCard(icon, tint, label, value, sub, full) {
@@ -59,6 +59,7 @@
       patient: fixedPatient,
       cart: [],            // [{testId, code, name, price}]
       doctorId: '',
+      panelId: (fixedPatient.panelId && DB.get('panels', fixedPatient.panelId) && DB.get('panels', fixedPatient.panelId).active !== false) ? fixedPatient.panelId : '',   /* corporate client: bill goes to their account */
       discType: 'rs',      // 'rs' | 'pct'
       discVal: 0,
       method: 'Cash',
@@ -82,14 +83,21 @@
         for (var pi = 0; pi < tests.length; pi++) { if (tests[pi].id === preId) { preT = tests[pi]; break; } }
         if (!preT) preT = DB.get('tests', preId);
         if (preT && preT.active !== false && !state.cart.some(function (l) { return l.testId === preT.id; })) {
-          state.cart.push({ testId: preT.id, code: preT.code, name: preT.name, price: preT.price, isPackage: !!preT.isPackage, includes: preT.isPackage ? (preT.includes || []) : null });
+          state.cart.push({ testId: preT.id, code: preT.code, name: preT.name, price: linePrice(preT), isPackage: !!preT.isPackage, includes: preT.isPackage ? (preT.includes || []) : null });
         }
       }
     } catch (e) {}
 
+    /* ---------- corporate client pricing ---------- */
+    var panels = (DB.all('panels') || []).filter(function (x) { return x.active !== false || x.id === state.panelId; });
+    function curPanel() { return state.panelId ? DB.get('panels', state.panelId) : null; }
+    function linePrice(t) { var pn = curPanel(); return pn ? App.panelPrice(pn, t) : (+t.price || 0); }
+    function repriceCart() { state.cart.forEach(function (l) { var t = DB.get('tests', l.testId); if (t) l.price = linePrice(t); }); }
+
     /* ---------- totals ---------- */
     function totals() {
       var sub = state.cart.reduce(function (a, l) { return a + num(l.price); }, 0);
+      if (curPanel()) return { sub: sub, discAmt: 0, total: sub, tendered: sub, paid: sub, due: 0, change: 0, panel: true };
       var d = num(state.discVal);
       var discAmt = 0;
       if (state.discType === 'pct') { d = Math.min(Math.max(d, 0), 100); discAmt = sub * d / 100; }
@@ -165,7 +173,7 @@
           (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
           '<span>' + App.esc(t.code || '') + ' • ' + App.esc(t.category || '') +
           (t.isPackage && t.includes ? ' • ' + t.includes.length + ' tests' : '') + '</span></div>' +
-          '<div class="bl-test-right"><strong>' + App.money(t.price) + '</strong>' +
+          '<div class="bl-test-right"><strong>' + App.money(linePrice(t)) + '</strong>' +
           (inCart
             ? '<span class="badge b-ready">Added</span>'
             : '<button class="btn btn-primary btn-sm" data-add="' + App.esc(t.id) + '">Add</button>') +
@@ -176,7 +184,7 @@
           var t = DB.get('tests', b.getAttribute('data-add'));
           if (!t) return;
           if (state.cart.some(function (l) { return l.testId === t.id; })) { App.toast('Test already in bill', 'err'); return; }
-          state.cart.push({ testId: t.id, code: t.code, name: t.name, price: t.price, isPackage: !!t.isPackage, includes: t.isPackage ? (t.includes || []) : null });
+          state.cart.push({ testId: t.id, code: t.code, name: t.name, price: linePrice(t), isPackage: !!t.isPackage, includes: t.isPackage ? (t.includes || []) : null });
           paintTests();
           paintCart();
           paintTotals();
@@ -215,7 +223,12 @@
       var t = totals();
       if (t.tendered < 0) { App.toast('Tendered amount cannot be negative', 'err'); return; }
       var status = t.due <= 0 ? 'paid' : (t.paid > 0 ? 'partial' : 'unpaid');
+      var pn = curPanel();
+      if (pn && +pn.creditLimit > 0 && App.panelAccount(pn).balance + t.total > +pn.creditLimit + 0.009) {
+        if (!window.confirm(pn.name + ' would go over its credit limit of ' + App.money(pn.creditLimit) + ' (it already owes ' + App.money(Math.max(0, App.panelAccount(pn).balance)) + '). Save this bill anyway?')) return;
+      }
       var inv = DB.insert('invoices', {
+        panelId: pn ? pn.id : null,
         patientId: state.patient.id,
         doctorId: state.doctorId || null,
         items: state.cart.map(function (l) { return { testId: l.testId, code: l.code, name: l.name, price: l.price, isPackage: !!l.isPackage, includes: l.includes || null }; }),
@@ -229,7 +242,7 @@
         createdBy: currentUser()
       });
       DB.update('invoices', inv.id, { no: inv.id });
-      if (t.paid > 0) {
+      if (t.paid > 0 && !pn) {
         DB.insert('payments', {
           invoiceId: inv.id,
           amount: t.paid,
@@ -369,13 +382,14 @@
       '<div class="bl-panel bl-col-summary"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">3</span>Bill Summary</span></div><div class="bl-panel-b">' +
         '<div class="bl-sec" style="margin-top:0"><label class="label">Selected tests</label>' +
         '<div id="blCart" style="max-height:210px;overflow:auto"></div></div>' +
+        (panels.length ? '<div class="bl-sec"><label class="label">Bill to</label><select class="select" id="blPanel"><option value="">Patient pays (normal)</option>' + panels.map(function (x) { return '<option value="' + App.esc(x.id) + '"' + (x.id === state.panelId ? ' selected' : '') + '>' + App.esc(x.name) + ' (company account)</option>'; }).join('') + '</select><div class="muted" id="blPanelNote" style="font-size:12.5px;margin-top:5px"></div></div>' : '') +
         '<div class="bl-sec"><label class="label">Referral doctor (optional)</label>' +
         '<select class="select" id="blDoctor"><option value="">Walk-in (no referral)</option>' +
           doctors.map(function (d) {
             return '<option value="' + App.esc(d.id) + '">' + App.esc(d.name) + ' — ' + App.esc(d.commissionPct || 0) + '%</option>';
           }).join('') + '</select></div>' +
-        '<div class="bl-sec"><label class="label">Discount</label>' +
-        '<div class="bl-disc-wrap"><div class="bl-seg" style="width:131qx;flex:none">' +
+        '<div class="bl-sec" id="blDiscSec"><label class="label">Discount</label>' +
+        '<div class="bl-disc-wrap"><div class="bl-seg" style="width:131px;flex:none">' +
           '<button id="blDiscRs" class="on">Rs</button><button id="blDiscPct">%</button></div>' +
           '<input class="input" id="blDiscVal" type="number" min="0" value="0"></div></div>' +
         '<div class="bl-sec">' +
@@ -383,9 +397,9 @@
           '<div class="bl-row"><span>Discount</span><strong id="blDisc" style="color:var(--ink)">− Rs 0</strong></div>' +
           '<div class="bl-total"><span>Total</span><strong id="blTotal">Rs 0</strong></div>' +
         '</div>' +
-        '<div class="bl-sec"><label class="label">Payment method</label>' +
+        '<div class="bl-sec" id="blMethSec"><label class="label">Payment method</label>' +
         '<div class="bl-seg" id="blMethod"><button data-m="Cash" class="on">Cash</button><button data-m="Bank">Bank</button><button data-m="Card">Card</button></div></div>' +
-        '<div class="bl-sec"><label class="label">Amount tendered</label>' +
+        '<div class="bl-sec" id="blTendSec"><label class="label">Amount tendered</label>' +
         '<input class="input" id="blTendered" type="number" min="0" placeholder="0"></div>' +
         '<div class="bl-row" id="blChangeRow" style="margin-top:6px"></div>' +
         '<button class="btn btn-primary bl-save" id="blSave">' + PRINT_ICON + ' Save &amp; Print</button>' +
@@ -409,6 +423,20 @@
       state.doctorId = this.value;
     });
 
+    /* "Bill to": a corporate client takes over pricing and payment (no discount / tendered amount; the bill goes to their account) */
+    function applyPanelUi() {
+      var pn = curPanel(), on = !!pn, $ = function (id) { return document.getElementById(id); };
+      ['blDiscSec', 'blMethSec', 'blTendSec'].forEach(function (id) { if ($(id)) $(id).style.display = on ? 'none' : ''; });
+      if (on) { state.discVal = 0; if ($('blDiscVal')) $('blDiscVal').value = '0'; }
+      var note = $('blPanelNote');
+      if (note) {
+        if (!on) note.textContent = '';
+        else { var a = App.panelAccount(pn); note.innerHTML = 'Prices of <b>' + App.esc(pn.name) + '</b> are used. Nothing is collected from the patient; the bill is added to the company account (now owes ' + App.money(Math.max(0, a.balance)) + (+pn.creditLimit > 0 ? ', limit ' + App.money(pn.creditLimit) : '') + ').'; }
+      }
+      repriceCart(); paintTests(); paintCart(); paintTotals();
+    }
+    if (document.getElementById('blPanel')) document.getElementById('blPanel').addEventListener('change', function () { state.panelId = this.value; applyPanelUi(); });
+
     var dr = document.getElementById('blDiscRs'), dp = document.getElementById('blDiscPct');
     dr.addEventListener('click', function () { state.discType = 'rs'; dr.classList.add('on'); dp.classList.remove('on'); paintTotals(); });
     dp.addEventListener('click', function () { state.discType = 'pct'; dp.classList.add('on'); dr.classList.remove('on'); paintTotals(); });
@@ -431,6 +459,7 @@
     });
 
     document.getElementById('blSave').addEventListener('click', saveBill);
+    if (state.panelId) applyPanelUi();
 
     document.getElementById('blClear').addEventListener('click', function () {
       state.cart = []; state.doctorId = ''; state.discType = 'rs'; state.discVal = 0;

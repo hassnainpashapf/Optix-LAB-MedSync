@@ -422,7 +422,7 @@ async function main() {
     fails.delete(fk);
     if (!isHashed(u.password)) await lstore.put('users', Object.assign({}, u, { password: hashPassword(password) }));
     const fresh = (await lstore.get('users', u.id)) || u;
-    const user = { id: u.id, name: u.name, role: u.role };
+    const user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined };
     await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username });
     const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(fresh), exp: Date.now() + TOKEN_TTL_MS });
     res.json({ ok: true, user, token, lab: await saas.view(lab) });
@@ -518,6 +518,24 @@ async function main() {
       if (saas) { lab = await saas.getLab(t.lab || 'main'); ts = lab ? saas.storeFor(lab) : null; } /* tokens issued before SaaS belong to the default lab */
       const u = ts && await ts.get('users', t.uid); /* re-check: deleted/disabled users lose access immediately */
       if (u && u.active !== false && (!t.pv || t.pv === pvOf(u))) { req.user = { id: u.id, role: u.role, name: u.name }; req.store = ts; req.lab = lab; }
+
+    }
+    /* custom roles (made in Settings -> Users & Roles): the pages a role ticks decide what its users may change; this is enforced here, not just hidden in the app */
+    if (req.user && req.user.role === 'custom') {
+      const set = (await req.store.get('settings', 'main')) || {}, u = await req.store.get('users', req.user.id) || {};
+      const def = (Array.isArray(set.customRoles) ? set.customRoles : []).find((r) => r && r.id === u.roleId);
+      req.user.perms = def && Array.isArray(def.pages) ? def.pages : [];
+      const any = (list) => list.some((k) => req.user.perms.indexOf(k) >= 0);
+      const write = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
+      const WR = { patients: ['patients', 'invoices'], invoices: ['invoices', 'dues', 'patients', 'finance'], payments: ['invoices', 'dues', 'patients', 'finance'], results: ['results', 'invoices'], samples: ['samples', 'results', 'invoices', 'patients'],
+        tests: ['tests'], doctors: ['doctors'], expenses: ['expenses', 'finance'], closings: ['finance'], stock_items: ['stock', 'results'], stock_moves: ['stock', 'results'], panels: ['panels'],
+        wa_log: ['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], email_log: ['email', 'results', 'invoices', 'doctors'], report_templates: ['results', 'reports'], report_schedules: ['results', 'reports'] };
+      let deny = false;
+      const tm = /^\/([a-z_]+)(\/|$)/.exec(req.path);
+      if (write && tm && req.path.indexOf('/auth/') !== 0 && WR[tm[1]] !== undefined) deny = !any(WR[tm[1]]);
+      else if (write && /^\/(wa\/send|wa\/send-doc)/.test(req.path)) deny = !any(['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors']);
+      else if (write && /^\/share\/(email|slack)/.test(req.path)) deny = !any(['email', 'results', 'invoices', 'doctors']);
+      if (deny) return res.status(403).json({ error: 'Your role does not allow this. Ask the lab admin.', code: 'ROLE_DENIED' });
     }
     /* a doctor's login is sandboxed on the server: it may only read its own dashboard (and change its own password) — never the lab's tables */
     if (req.user && req.user.role === 'doctor' && !((req.method === 'GET' && req.path === '/doctor/me') || (req.method === 'POST' && req.path === '/auth/change-password')))
@@ -590,7 +608,7 @@ async function main() {
           fresh.used = true; await rawStore.put(RESET_T, fresh);
           await st.put('users', Object.assign({}, u, { password: hashPassword(password) }));
           for (const r of await rawStore.all(RESET_T)) if (r.userId === u.id && r.labId === lab.id && r.id !== id) await rawStore.del(RESET_T, r.id);
-          await auditLog(req, 'update', 'users', u.id, { store: st, actor: { id: u.id, name: u.name, role: u.role }, label: u.name || u.username, changes: [{ f: 'password', from: '•••', to: '•••' }], note: 'Password reset with an emailed link' });
+          await auditLog(req, 'update', 'users', u.id, { store: st, actor: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, label: u.name || u.username, changes: [{ f: 'password', from: '•••', to: '•••' }], note: 'Password reset with an emailed link' });
           return u;
         });
         if (!done) return bad();
@@ -649,7 +667,7 @@ async function main() {
         const u = (await saas.storeFor(lab).all('users'))[0];
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         console.log('[labpos-cloud] saas: new lab signed up:', lab.slug, '<' + lab.ownerEmail + '>');
-        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role }, token, lab: await saas.view(lab) });
+        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab) });
       } catch (e) { res.status(400).json({ error: e.message }); }
     });
 
@@ -712,7 +730,7 @@ async function main() {
         const u = (await saas.storeFor(lab).all('users'))[0];
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         console.log('[labpos-cloud] saas: new lab signed up with Google:', lab.slug, '<' + lab.ownerEmail + '>');
-        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role }, token, lab: await saas.view(lab), google: { username, passwordSet: !!String(b.password || '') } });
+        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), google: { username, passwordSet: !!String(b.password || '') } });
       } catch (e) { res.status(e.status || 400).json({ error: e.message }); }
     });
     /* sign in with Google: with a Lab ID typed, any active user of that lab whose profile email is this Google email; without one,
@@ -747,7 +765,7 @@ async function main() {
         if (cands.length > 1) return res.status(409).json({ error: 'This Google account owns more than one lab. Type the Lab ID above, then try again.' });
         const { lab, u } = cands[0];
         if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
-        const lstore = saas.storeFor(lab), user = { id: u.id, name: u.name, role: u.role };
+        const lstore = saas.storeFor(lab), user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined };
         await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username + ' (Google)' });
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         res.json({ ok: true, user, token, lab: await saas.view(lab) });
@@ -1181,9 +1199,18 @@ async function main() {
         }
         if (w.docs.length) {
           const dids = {}; w.docs.forEach((d) => { dids[d.id] = d; });
+          const tById = {}; (await st.all('tests')).forEach((t) => { tById[t.id] = t; });
+          const commissionOf = (inv, doc, tests) => {   /* same rules as the app: test rule > category rule > default % */
+            const total = +inv.total || 0, base = +doc.commissionPct || 0, rules = Array.isArray(doc.commissionRules) ? doc.commissionRules : [];
+            if (!rules.length) return total * base / 100;
+            const byT = {}, byC = {}; rules.forEach((r) => { const v = +r.pct; if (isNaN(v) || !r.key) return; if (r.type === 'category') byC[String(r.key).toLowerCase()] = v; else byT[r.key] = v; });
+            let sum = 0, comm = 0;
+            (inv.items || []).forEach((it) => { const pr = +it.price || 0, c = String((tests[it.testId] || {}).category || '').toLowerCase(); const rate = byT[it.testId] != null ? byT[it.testId] : (byC[c] != null ? byC[c] : base); sum += pr; comm += pr * rate / 100; });
+            return sum > 0 ? comm * (total / sum) : total * base / 100;
+          };
           const mine = invs.filter((i) => dids[i.doctorId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
           const mk = (d) => { const x = new Date(d); return isNaN(x) ? '' : x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2); };
-          const months = {}; mine.forEach((i) => { const k = mk(i.createdAt); if (!k) return; const m = months[k] = months[k] || { month: k, referrals: 0, billed: 0, commission: 0, paid: 0 }; const pct = +(dids[i.doctorId].commissionPct) || 0; m.referrals++; m.billed += +i.total || 0; m.commission += (+i.total || 0) * pct / 100; });
+          const months = {}; mine.forEach((i) => { const k = mk(i.createdAt); if (!k) return; const m = months[k] = months[k] || { month: k, referrals: 0, billed: 0, commission: 0, paid: 0 }; m.referrals++; m.billed += +i.total || 0; m.commission += commissionOf(i, dids[i.doctorId], tById); });
           w.docs.forEach((d) => (d.commissionPaid || []).forEach((x) => { const k = mk(x.date); if (k && months[k]) months[k].paid += +x.amount || 0; }));
           out.doctor = { names: w.docs.map((d) => d.name), months: Object.keys(months).sort().reverse().slice(0, 12).map((k) => { const m = months[k]; return { month: k, referrals: m.referrals, billed: Math.round(m.billed), commission: Math.round(m.commission), paid: Math.round(m.paid), due: Math.max(0, Math.round(m.commission - m.paid)) }; }),
             reports: mine.slice(0, 200).map((i) => reportOf(i, true)) };
@@ -1386,9 +1413,9 @@ async function main() {
       const dup = (await req.store.all('users')).some((u) => u.id !== (b.id != null ? String(b.id) : req.params.id) && String(u.username).toLowerCase() === b.username.toLowerCase());
       if (dup) throw new Error('This username is already taken');
     }
-    if (req.user.role !== 'admin') delete b.doctorId;
+    if (req.user.role !== 'admin') { delete b.doctorId; delete b.roleId; }
     else {
-      const ROLES = ['admin', 'reception', 'technician', 'doctor'];
+      const ROLES = ['admin', 'reception', 'technician', 'doctor', 'custom'];
       if (b.role !== undefined && ROLES.indexOf(b.role) < 0) throw new Error('Unknown role');
       const before = existing ? ((await req.store.get('users', String(req.params.id))) || {}) : {};
       const role = b.role !== undefined ? b.role : before.role;
@@ -1397,6 +1424,11 @@ async function main() {
         if (!did || !(await req.store.get('doctors', String(did)))) throw new Error('Choose the doctor this login belongs to');
         b.doctorId = String(did);
       } else if (b.role !== undefined || b.doctorId !== undefined) b.doctorId = null;
+      if (role === 'custom') {
+        const rid = b.roleId !== undefined ? b.roleId : before.roleId, set = (await req.store.get('settings', 'main')) || {};
+        if (!rid || !(Array.isArray(set.customRoles) ? set.customRoles : []).some((r) => r && r.id === rid)) throw new Error('Choose one of your custom roles');
+        b.roleId = String(rid);
+      } else if (b.role !== undefined || b.roleId !== undefined) b.roleId = null;
     }
     if (typeof b.password === 'string' && b.password.length > 256) throw new Error('Password is too long');
     if (typeof b.password === 'string' && b.password) {

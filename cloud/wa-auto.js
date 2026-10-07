@@ -58,6 +58,7 @@ function create({ saas, raw, waGw, log }) {
       for (const inv of await st.all('invoices')) {
         const age = nowMs - new Date(inv.createdAt || 0).getTime();
         if (!(age > 90000 && age < 6 * 3600000) || S.receipt[inv.id] || !(+inv.total > 0)) continue;
+        if (inv.panelId) { S.receipt[inv.id] = nowMs; continue; } /* a company's bill: nothing for the patient to pay or be reminded about */
         const p = patients[inv.patientId], to = phoneOf(p); if (!to) { S.receipt[inv.id] = nowMs; continue; }
         const items = (inv.items || []).map((x) => x.name || x.code).filter(Boolean).join(', '), due = +inv.due || 0;
         const txt = '*' + labName + '*\n\nAssalam-o-Alaikum ' + clean(p.name, 60) + ',\n\nThank you for visiting us. Here is your receipt:\n\n*Invoice:* ' + clean(inv.no || inv.id, 30) + ' (' + dlabel(inv.createdAt) + ')\n*Tests:* ' + clean(items, 300) +
@@ -128,14 +129,16 @@ function create({ saas, raw, waGw, log }) {
     const todays = invs.filter((i) => ymdOf(i.createdAt) === today), billed = todays.reduce((a, i) => a + (+i.total || 0), 0);
     const collected = pays.filter((p) => p.status !== 'void' && ymdOf(p.date || p.createdAt) === today).reduce((a, p) => a + (+p.amount || 0), 0);
     const spent = exps.filter((e) => ymdOf(e.date || e.createdAt) === today).reduce((a, e) => a + (+e.amount || 0), 0);
-    const outstanding = invs.reduce((a, i) => a + Math.max(0, +i.due || 0), 0), newPats = pats.filter((p) => ymdOf(p.createdAt) === today).length;
+    const outstanding = invs.reduce((a, i) => a + Math.max(0, +i.due || 0), 0);
+    let corp = 0; try { for (const pn of await st.all('panels')) { const b = (+pn.openingBalance || 0) + invs.filter((i) => i.panelId === pn.id).reduce((a, i) => a + (+i.total || 0), 0) - (pn.receipts || []).reduce((a, r) => a + (+r.amount || 0), 0); if (b > 0) corp += b; } } catch (e) { /* no panels table yet */ }
+    const newPats = pats.filter((p) => ymdOf(p.createdAt) === today).length;
     const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
     const pending = invs.filter((i) => (byInv[i.id] || []).some((r) => r.status !== 'ready') || !(byInv[i.id] || []).length).length;
     const cnt = {}; todays.forEach((i) => (i.items || []).forEach((x) => { const n = clean(x.name || x.code, 40); if (n) cnt[n] = (cnt[n] || 0) + 1; }));
     const top = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a]).slice(0, 3).map((n) => n + ' (' + cnt[n] + ')').join(', ');
     const patientsToday = {}; todays.forEach((i) => { patientsToday[i.patientId] = 1; });
     const txt = '*' + labName + ' — daily summary*\n' + dlabel(now) + '\n\n*Patients:* ' + Object.keys(patientsToday).length + (newPats ? ' (' + newPats + ' new)' : '') + '\n*Invoices:* ' + todays.length + '   *Billed:* ' + rs(billed) +
-      '\n*Collected today:* ' + rs(collected) + (spent ? '\n*Expenses today:* ' + rs(spent) : '') + '\n*Total outstanding dues:* ' + rs(outstanding) + '\n*Reports still pending:* ' + pending + (top ? '\n\n*Top tests today:* ' + top : '');
+      '\n*Collected today:* ' + rs(collected) + (spent ? '\n*Expenses today:* ' + rs(spent) : '') + '\n*Total outstanding dues:* ' + rs(outstanding) + (corp > 0 ? '\n*Company accounts to collect:* ' + rs(corp) : '') + '\n*Reports still pending:* ' + pending + (top ? '\n\n*Top tests today:* ' + top : '');
     try { if (urgent) await waGw.sendUrgent(lab.id, waNum(to), txt, 'owner-summary'); else waGw.sendText(lab.id, waNum(to), txt, 'owner-summary'); return true; } catch (e) { return false; }
   }
 
