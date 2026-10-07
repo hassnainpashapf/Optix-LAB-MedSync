@@ -21,7 +21,7 @@ const REFS = [
   ['invoices', 'patientId', 'patients'], ['invoices', 'doctorId', 'doctors'],
   ['payments', 'invoiceId', 'invoices'],
   ['results', 'invoiceId', 'invoices'], ['results', 'testId', 'tests'],
-  ['patients', 'doctorId', 'doctors'], ['patients', 'panelId', 'panels'], ['invoices', 'panelId', 'panels'],
+  ['patients', 'doctorId', 'doctors'], ['patients', 'panelId', 'panels'], ['invoices', 'panelId', 'panels'], ['outsourced', 'invoiceId', 'invoices'], ['outsourced', 'testId', 'tests'], ['outsourced', 'refLabId', 'ref_labs'], ['tests', 'refLabId', 'ref_labs'],
   ['samples', 'invoiceId', 'invoices'], ['samples', 'patientId', 'patients'], ['samples', 'recollectOf', 'samples'], ['samples', 'recollectId', 'samples'],
   ['stock_moves', 'itemId', 'stock_items'],
 ];

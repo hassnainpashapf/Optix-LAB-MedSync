@@ -685,6 +685,12 @@ function testModal(t) {
       '</div>' +
       '<div id="tm-prows"></div>' +
       '<button type="button" id="tm-addp" class="btn btn-ghost btn-sm">+ Add Parameter</button></div>' +
+    '<div style="margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:10px 12px"><label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer"><input id="tm-out" type="checkbox"' + (t.outsourced ? ' checked' : '') + '> Outsourced &mdash; sent to another (reference) lab</label>' +
+      '<div id="tm-outbox" style="display:' + (t.outsourced ? 'grid' : 'none') + ';grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:10px">' +
+        '<div><label class="label">Reference lab *</label><select id="tm-reflab" class="select"><option value="">Choose&hellip;</option>' + (DB.all('ref_labs') || []).filter(function (x) { return x.active !== false || x.id === t.refLabId; }).map(function (x) { return '<option value="' + App.esc(x.id) + '"' + (t.refLabId === x.id ? ' selected' : '') + '>' + App.esc(x.name) + '</option>'; }).join('') + '</select></div>' +
+        '<div><label class="label">What they charge us (Rs)</label><input id="tm-refcost" class="input" type="number" min="0" step="any" value="' + App.esc(t.refCost == null ? '' : String(t.refCost)) + '"></div>' +
+        '<div><label class="label">Result takes (days)</label><input id="tm-reftat" class="input" type="number" min="0" step="1" value="' + App.esc(t.refTatDays ? String(t.refTatDays) : '') + '" placeholder="e.g. 3"></div>' +
+        '<div class="muted" style="grid-column:1/-1;font-size:12px">Add reference labs in <b>Outsourced &rarr; Reference labs</b>. Every bill with this test then appears in the Outsourced dashboard.</div></div></div>' +
     '<div style="margin-top:14px"><label class="label">Stock used per test <span class="muted" style="font-weight:400">(optional &mdash; taken off your stock automatically when a result is saved)</span></label>' +
       '<div id="tm-cons"></div><button type="button" id="tm-addc" class="btn btn-ghost btn-sm">+ Add stock item</button>' +
       '<div class="muted" id="tm-nocons" style="font-size:12.5px;margin-top:4px" hidden>No stock items yet &mdash; add them in <b>Stock</b> first.</div></div>' +
@@ -705,6 +711,7 @@ function testModal(t) {
   App.modal(isNew ? 'Add New Test' : 'Edit Test', body, { wide: true, onOpen: function (ov, close) {
     var m = lastModal(); if (!m) return;
     m.querySelector('#tm-cancel').addEventListener('click', close);
+    m.querySelector('#tm-out').addEventListener('change', function () { m.querySelector('#tm-outbox').style.display = this.checked ? 'grid' : 'none'; });
     var rowsBox = m.querySelector('#tm-prows');
     function addRow(p) {
       rowsBox.insertAdjacentHTML('beforeend', paramRow(p));
@@ -768,6 +775,7 @@ function testModal(t) {
         return x.id !== t.id && String(x.code || '').toLowerCase() === code.toLowerCase();
       });
       if (dup) { App.toast('A test with this code already exists.', 'err'); return; }
+      if (m.querySelector('#tm-out').checked && !m.querySelector('#tm-reflab').value) { App.toast('Choose the reference lab for an outsourced test (add one in Outsourced → Reference labs first).', 'err'); return; }
       var params = [];
       rowsBox.querySelectorAll('.tm-prow').forEach(function (row) {
         var pn = row.querySelector('.tm-pn').value.trim();
@@ -790,6 +798,11 @@ function testModal(t) {
         sampleType: m.querySelector('#tm-sample').value,
         tat: m.querySelector('#tm-tat').value.trim() || 'Same day',
         retestDays: Math.max(0, parseInt(m.querySelector('#tm-retest').value, 10) || 0),
+        outsourced: m.querySelector('#tm-out').checked,
+        outsourcedAt: m.querySelector('#tm-out').checked ? (t.outsourced && t.outsourcedAt ? t.outsourcedAt : new Date().toISOString()) : (t.outsourcedAt || ''),
+        refLabId: m.querySelector('#tm-out').checked ? m.querySelector('#tm-reflab').value : '',
+        refCost: Math.max(0, parseFloat(m.querySelector('#tm-refcost').value) || 0),
+        refTatDays: Math.max(0, parseInt(m.querySelector('#tm-reftat').value, 10) || 0),
         active: m.querySelector('#tm-active').checked,
         params: params,
         isPackage: isPkgEl.checked,

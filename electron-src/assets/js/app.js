@@ -48,6 +48,7 @@
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', route: '#/results' }, { key: 'ready', label: 'Ready Reports', route: '#/results/ready' }] },
     { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests',     color: '#14b8a6' },
+    { key: 'outsourced', label: 'Outsourced', icon: 'scan',     route: '#/outsourced', color: '#d946ef' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316' },
     { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues',      color: '#ef4444' },
     { key: 'panels',    label: 'Corporate',  icon: 'users',     route: '#/panels',    color: '#7c3aed' },
@@ -75,6 +76,7 @@
     invoices:  ['admin', 'reception'],
     dues:      ['admin', 'reception'],
     panels:    ['admin', 'reception'],
+    outsourced: ['admin', 'reception', 'technician'],
     patients:  ['admin', 'reception', 'technician'],
     tests:     ['admin', 'reception', 'technician'],
     doctors:   ['admin', 'reception'],
@@ -93,14 +95,14 @@
     profile:   ['admin', 'reception', 'technician']
   };
   function routeKey(path) {
-    var seg = (path || '').replace(/^#\//, '').split('/')[0];
+    var seg = (path || '').replace(/^#\//, '').split('?')[0].split('/')[0];
     if (seg === 'invoice') seg = 'invoices';
     if (seg === 'patient') seg = 'patients';
     return seg || 'dashboard';
   }
   /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
      Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
-  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['panels', 'Corporate clients'],
+  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
     ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Cash & daily closing'], ['reports', 'Reports'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['downloads', 'Downloads']];
   function roleDef(s) {
     s = s || session(); if (!s || s.role !== 'custom') return null;
@@ -405,7 +407,8 @@
     });
   })();
   function lazyMatch(hm) {
-    for (var i = 0; i < lazyRoutes.length; i++) if (lazyRoutes[i].re.exec(hm)) return lazyRoutes[i];
+    var q = String(hm).split('?')[0];
+    for (var i = 0; i < lazyRoutes.length; i++) if (lazyRoutes[i].re.exec(hm) || (q !== hm && lazyRoutes[i].re.exec(q))) return lazyRoutes[i];
     return null;
   }
   /* jsPDF (364KB) loads on demand only — used for WhatsApp report PDFs. */
@@ -477,8 +480,9 @@
     /* match route */
     var matched = null, params = {};
     var hm = hash.replace(/^#/, ''); /* match without the '#' so both '#/x' and '/x' registrations work */
+    var hmNoQ = hm.split('?')[0]; /* '#/subscription?pay=ok': a query string never changes which page opens */
     for (var i = 0; i < routes.length; i++) {
-      var m = routes[i].c.re.exec(hm);
+      var m = routes[i].c.re.exec(hm) || (hmNoQ !== hm ? routes[i].c.re.exec(hmNoQ) : null);
       if (m) {
         matched = routes[i];
         for (var j = 0; j < routes[i].c.names.length; j++) params[routes[i].c.names[j]] = decodeURIComponent(m[j + 1]);
@@ -622,10 +626,10 @@
     try { st = window.DB.get('settings', 'main') || {}; } catch (e) {}
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     /* grouped, professional sidebar: section labels, one icon style, active state on the left */
-    var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', doctors: 'Laboratory',
+    var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
       invoices: 'Billing', dues: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
       whatsapp: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'doctors', 'invoices', 'dues', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'outsourced', 'doctors', 'invoices', 'dues', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     var lastSec = '';
@@ -1143,6 +1147,27 @@
     var rec = (panel.receipts || []).filter(function (r) { return !uptoDate || String(r.date || '').slice(0, 10) <= uptoDate; }).reduce(function (a, r) { return a + (+r.amount || 0); }, 0);
     var open = +panel.openingBalance || 0;
     return { opening: open, billed: billed, received: rec, balance: Math.round((open + billed - rec) * 100) / 100, invoices: inv.length };
+  };
+  /* Outsourced tests: a test can be marked "sent to a reference lab" (test.outsourced, test.refLabId, test.refCost, test.refTatDays). Every bill that contains
+     one gets a job (table outsourced) that is followed through to_send -> sent -> received; what is owed to the reference lab builds up as its account. */
+  App.outsourceSync = function (invId, force) {   /* force: the bill was just saved/edited by hand; otherwise only bills made after the test was marked outsourced */
+    var inv = DB.get('invoices', invId); if (!inv) return;
+    var jobs = (DB.all('outsourced') || []).filter(function (j) { return j.invoiceId === invId; }), want = {};
+    (inv.items || []).forEach(function (it) {
+      var pk = it.includes && it.includes.length, ids = pk ? it.includes : [it.testId];
+      ids.forEach(function (tid) { var t = DB.get('tests', tid); if (t && t.outsourced && t.refLabId && (force || !t.outsourcedAt || String(inv.createdAt || '') >= t.outsourcedAt)) want[tid] = { t: t, price: pk ? 0 : (+it.price || 0) }; });
+    });
+    Object.keys(want).forEach(function (tid) {
+      if (jobs.some(function (j) { return j.testId === tid; })) return;
+      DB.insert('outsourced', { invoiceId: invId, testId: tid, patientId: inv.patientId, refLabId: want[tid].t.refLabId, cost: +want[tid].t.refCost || 0, price: want[tid].price, status: 'to_send', sentAt: null, receivedAt: null, note: '', createdAt: new Date().toISOString() });
+    });
+    if (force) jobs.forEach(function (j) { if (!want[j.testId] && j.status === 'to_send') DB.remove('outsourced', j.id); });
+  };
+  App.refLabAccount = function (lab) {
+    var live = {}; (DB.all('invoices') || []).forEach(function (i) { live[i.id] = 1; });
+    var cost = (DB.all('outsourced') || []).filter(function (j) { return j.refLabId === lab.id && live[j.invoiceId] && (j.status === 'sent' || j.status === 'received'); }).reduce(function (a, j) { return a + (+j.cost || 0); }, 0);
+    var paid = (lab.payments || []).reduce(function (a, x) { return a + (+x.amount || 0); }, 0), open = +lab.openingBalance || 0;
+    return { opening: open, cost: cost, paid: paid, balance: Math.round((open + cost - paid) * 100) / 100 };
   };
   App.testsById = function () { var m = {}; (DB.all('tests') || []).forEach(function (t) { m[t.id] = t; }); return m; };
 

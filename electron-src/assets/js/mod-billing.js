@@ -242,6 +242,7 @@
         createdBy: currentUser()
       });
       DB.update('invoices', inv.id, { no: inv.id });
+      try { App.outsourceSync(inv.id, true); } catch (e) { if (window.console) console.error(e); }
       if (t.paid > 0 && !pn) {
         DB.insert('payments', {
           invoiceId: inv.id,

@@ -47,7 +47,7 @@
     '.sb-pmi{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px 14px;background:#f8fafc}' +
     '.sb-pmi b{display:block;font-size:14px}.sb-pmi span{font-size:13px;color:var(--muted)}.sb-pmi .num{font-size:16px;font-weight:800;color:#131845;margin-left:auto;letter-spacing:.02em}' +
     '.sb-chip{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:99px}' +
-    '.sb-chip.pending{background:#fef4e2;color:#b45309}.sb-chip.approved{background:#e6f7f0;color:#047857}.sb-chip.rejected{background:#fdecec;color:#b91c1c}' +
+    '.sb-chip.pending,.sb-chip.awaiting{background:#fef4e2;color:#b45309}.sb-chip.approved{background:#e6f7f0;color:#047857}.sb-chip.rejected,.sb-chip.failed{background:#fdecec;color:#b91c1c}.sb-on{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 4px}.sb-on .btn{flex:1;min-width:150px}.sb-or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12.5px;margin:14px 0 4px}.sb-or::before,.sb-or::after{content:"";flex:1;height:1px;background:var(--line)}' +
     '.sb-sup{display:flex;gap:10px;flex-wrap:wrap;align-items:center}' +
     '@media(max-width:900px){.sb-hero{grid-template-columns:1fr}.sb-plans{grid-template-columns:1fr}.sb-use{grid-template-columns:1fr}.sb-pn{font-size:25px}}';
   function css() {
@@ -84,7 +84,7 @@
       return '<div class="card"><div class="card-b">' + App.empty(err || 'Loading…') + (err ? '<div style="text-align:center;margin-top:8px"><button class="btn btn-primary" id="sbRetry">Retry</button></div>' : '') + '</div></div>';
     }
     var L = data.lab, plans = data.plans, info = data.info || {};
-    var pend = (data.payments || []).filter(function (p) { return p.status === 'pending'; }).length;
+    var pend = (data.payments || []).filter(function (p) { return p.status === 'pending' || p.status === 'awaiting'; }).length;
     var endLabel = L.plan === 'trial' ? 'Trial ends' : 'Valid until', end = L.plan === 'trial' ? L.trialEndsAt : L.paidUntil;
     var total = L.plan === 'trial' ? 14 : 30, dl = L.daysLeft == null ? null : L.daysLeft;
     var pct = dl == null ? 100 : Math.max(0, Math.min(100, Math.round(dl / total * 100)));
@@ -166,6 +166,27 @@
     Array.prototype.forEach.call(v.querySelectorAll('[data-pick]'), function (b) { b.addEventListener('click', function () { pay(b.getAttribute('data-pick')); }); });
   }
 
+  /* pay online with JazzCash / Easypaisa: the plan is activated by itself as soon as the payment goes through */
+  function onlineHtml() {
+    var o = (data && data.online) || {}, b = [];
+    if (o.jazzcash) b.push('<button type="button" class="btn btn-primary" data-online="jazzcash">Pay with JazzCash</button>');
+    if (o.easypaisa) b.push('<button type="button" class="btn btn-primary" data-online="easypaisa">Pay with Easypaisa</button>');
+    if (o.simulator) b.push('<button type="button" class="btn btn-ghost" data-online="simulator">Test payment (no real money)</button>');
+    if (!b.length) return '';
+    return '<div class="sb-on">' + b.join('') + '</div><div class="muted" style="font-size:12.5px">Your plan is activated automatically once the payment succeeds.</div><div class="sb-or">or pay manually</div>';
+  }
+  function startOnline(k, gateway, btn) {
+    btn.disabled = true; var t = btn.textContent; btn.textContent = 'Opening…';
+    DB.saas('POST', 'pay-online', { plan: k, period: period, gateway: gateway }).then(function (j) {
+      var c = j.checkout || {};
+      if (c.method === 'POST' && c.fields) {
+        var f = document.createElement('form'); f.method = 'POST'; f.action = c.url;
+        Object.keys(c.fields).forEach(function (n) { var i = document.createElement('input'); i.type = 'hidden'; i.name = n; i.value = c.fields[n]; f.appendChild(i); });
+        document.body.appendChild(f); f.submit();
+      } else if (c.url) location.href = c.url;
+      else throw new Error('Could not open the payment page');
+    }).catch(function (e) { btn.disabled = false; btn.textContent = t; App.toast((e && e.message) || 'Could not start the payment', 'err'); });
+  }
   function copyBtn(t) { return '<button class="btn btn-ghost btn-sm" data-copy="' + esc(t) + '">Copy</button>'; }
   function pay(k) {
     var p = data.plans[k], info = data.info || {}, amount = period === 'yearly' ? p.yearly : p.monthly;
@@ -175,6 +196,7 @@
     }).join('') + '</div>' : '<p class="muted" style="margin:6px 0 12px">Payment details will be shared by support &mdash; contact us to pay.</p>';
     App.modal('Pay for ' + esc(p.name) + ' · ' + (period === 'yearly' ? 'Yearly' : 'Monthly'),
       '<div style="background:#eef3fb;border:1px solid #cdd9f0;border-radius:12px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between"><span class="muted">Amount to pay</span><b style="font-size:22px;color:#131845">' + rs(amount) + '</b></div>' +
+      onlineHtml() +
       '<p style="margin:12px 0 4px;font-size:13.5px"><b>Step 1.</b> ' + esc(info.payInstructions || 'Send the amount by JazzCash / Easypaisa / bank transfer.') + '</p>' + mHtml +
       '<p style="margin:0 0 6px;font-size:13.5px"><b>Step 2.</b> Enter the transaction ID so we can verify it.</p>' +
       '<form id="payForm"><label class="label">Paid via<select class="select" id="pyM">' + methods.map(function (m) { return '<option>' + esc(m.name || '') + '</option>'; }).join('') + '<option>Other</option></select></label>' +
@@ -185,6 +207,7 @@
       { onOpen: function (ov, close) {
         Array.prototype.forEach.call(ov.querySelectorAll('[data-copy]'), function (b) { b.addEventListener('click', function () {
           var t = b.getAttribute('data-copy'); try { navigator.clipboard.writeText(t).then(function () { App.toast('Copied'); }); } catch (e) { App.toast(t); } }); });
+        Array.prototype.forEach.call(ov.querySelectorAll('[data-online]'), function (b) { b.addEventListener('click', function () { startOnline(k, b.getAttribute('data-online'), b); }); });
         ov.querySelector('#pyC').addEventListener('click', close);
         ov.querySelector('#payForm').addEventListener('submit', function (e) {
           e.preventDefault();
@@ -198,5 +221,12 @@
       } });
   }
 
-  App.route('/subscription', function () { err = ''; load(); return render(); }); /* cached view first, refreshed in the background */
+  /* back from the payment page: #/subscription?pay=ok|failed|wait|invalid */
+  function afterPay() {
+    var m = /[?&]pay=([a-z]+)/.exec(location.hash || ''); if (!m) return;
+    var msg = { ok: ['Payment received. Your plan is active.', ''], failed: ['The payment was not completed. You can try again or pay manually.', 'err'], wait: ['Payment received by the gateway. It will be activated as soon as it is confirmed (usually within minutes).', ''], invalid: ['We could not verify that payment. If money was deducted, contact support.', 'err'] }[m[1]];
+    try { history.replaceState(null, '', '#/subscription'); } catch (e) { location.hash = '#/subscription'; }
+    data = null; if (msg) setTimeout(function () { App.toast(msg[0], msg[1] || undefined); }, 300);
+  }
+  App.route('/subscription', function () { afterPay(); err = ''; load(); return render(); }); /* cached view first, refreshed in the background */
 })();

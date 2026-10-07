@@ -1130,9 +1130,9 @@ function loadPayments(silent) {
 }
 function loadSettings(silent) {
   return loadSection('settings', function () {
-    return Promise.all([api('/api/saas/settings'), api('/api/saas/mail').catch(function () { return null; }), api('/api/saas/google').catch(function () { return null; })]).then(function (x) { x[0].mail = x[1]; x[0].google = x[2]; return x[0]; });
+    return Promise.all([api('/api/saas/settings'), api('/api/saas/mail').catch(function () { return null; }), api('/api/saas/google').catch(function () { return null; }), api('/api/saas/paygw').catch(function () { return null; })]).then(function (x) { x[0].mail = x[1]; x[0].google = x[2]; x[0].paygw = x[3]; return x[0]; });
   }, function (r) {
-    state.settingsData = { settings: r.settings || {}, plans: r.plans || {}, mail: r.mail || null };
+    state.settingsData = { settings: r.settings || {}, plans: r.plans || {}, mail: r.mail || null, google: r.google || null, paygw: r.paygw || null };
   }, silent);
 }
 
@@ -1585,11 +1585,12 @@ function newLabModal() {
 
 /* ---------------- 3. Payments ---------------- */
 
+function payTabOf(st) { return st === 'failed' ? 'rejected' : st; }
 function payTabsHtml() {
   var all = state.payments || [];
-  var tabs = [['pending', 'Pending'], ['approved', 'Approved'], ['rejected', 'Rejected']];
+  var tabs = [['pending', 'Pending'], ['awaiting', 'Online, unfinished'], ['approved', 'Approved'], ['rejected', 'Rejected']];
   return tabs.map(function (t) {
-    var n = all.filter(function (p) { return p.status === t[0]; }).length;
+    var n = all.filter(function (p) { return payTabOf(p.status) === t[0]; }).length;
     return '<button type="button" class="tab' + (state.payTab === t[0] ? ' on' : '') + '" data-tab="' + t[0] + '">' + esc(t[1]) +
       '<span class="n' + (t[0] === 'pending' && n > 0 ? ' hot' : '') + '">' + n + '</span></button>';
   }).join('');
@@ -1604,20 +1605,21 @@ function paymentsViewHtml() {
 }
 
 function paymentsListHtml() {
-  var rows = (state.payments || []).filter(function (p) { return p.status === state.payTab; });
+  var rows = (state.payments || []).filter(function (p) { return payTabOf(p.status) === state.payTab; });
   if (!rows.length) {
     var msg = { pending: ['All caught up', 'No payment requests are waiting for review.'],
       approved: ['No approved payments yet', 'Approved payments will be listed here.'],
-      rejected: ['No rejected payments', 'Rejected payments will be listed here.'] }[state.payTab];
+      awaiting: ['Nothing unfinished', 'Online payments that were started but not confirmed by the gateway yet appear here. Check your JazzCash / Easypaisa dashboard and approve them if the money arrived.'],
+      rejected: ['No rejected payments', 'Rejected and failed payments will be listed here.'] }[state.payTab];
     return '<div class="empty"><div class="e-ico">' + IC.card + '</div><h4>' + msg[0] + '</h4><p>' + msg[1] + '</p></div>';
   }
-  var pend = state.payTab === 'pending';
+  var pend = state.payTab === 'pending' || state.payTab === 'awaiting';
   var trs = rows.map(function (p) {
     return '<tr>' +
       '<td class="td-main"><strong>' + esc(p.labName || '—') + '</strong><div class="cell-sub">' + esc(p.labSlug || p.labId) + '</div></td>' +
       '<td data-label="Plan" class="nw"><span>' + planBadge(p.plan) + ' <span class="muted-t" style="text-transform:capitalize">' + esc(p.period) + '</span></span></td>' +
       '<td data-label="Amount" class="nw"><strong>' + money(p.amount) + '</strong></td>' +
-      '<td data-label="Method">' + esc(p.method || '—') + '</td>' +
+      '<td data-label="Method">' + esc(p.method || '—') + (p.online ? ' <span class="badge b-green">auto</span>' : '') + '</td>' +
       '<td data-label="Reference"><span class="ver">' + esc(p.reference || '—') + '</span></td>' +
       '<td data-label="Note" class="note-c">' + (p.note ? esc(p.note) : '<span class="muted-t">—</span>') + '</td>' +
       '<td data-label="Submitted" class="nw">' + esc(fmtDateTime(p.createdAt)) + '</td>' +
@@ -1750,6 +1752,7 @@ function settingsViewHtml() {
     '<div class="card"><div class="card-h"><h3>Payment methods</h3><span class="sub">accounts labs can pay into (up to 8)</span>' +
     '<button class="btn btn-sm" id="pmAdd" style="margin-left:auto">' + IC.plus + ' Add method</button></div>' +
     '<div class="card-b" id="pmList">' + methodsHtml(s.payMethods || []) + '</div></div>' +
+    paygwCardHtml(state.settingsData.paygw) +
     mailCardHtml(state.settingsData.mail) +
     googleCardHtml(state.settingsData.google) +
     '<div class="save-bar"><button class="btn btn-primary" id="setSave2">Save changes</button></div>';
@@ -1788,6 +1791,44 @@ function wireGoogleCard() {
   var c = $g('gcClear'); if (c) c.addEventListener('click', function () {
     if (!window.confirm('Remove the Google Client ID? The Google button will disappear.')) return;
     api('/api/saas/google', { method: 'PUT', body: { clear: true } }).then(function (r) { state.settingsData.google = r; toast('Google sign-in removed.', 'ok'); if (state.view === 'settings') paintMain(); }, handleErr);
+  });
+}
+
+
+/* ---- online payments: connect your own JazzCash / Easypaisa merchant account so labs can pay their subscription online ---- */
+function paygwCardHtml(g) {
+  if (!g) return '';
+  var jc = g.jazzcash || {}, ep = g.easypaisa || {}, rd = g.ready || {};
+  var any = rd.jazzcash || rd.easypaisa;
+  var status = any ? '<span class="badge b-green" style="margin-left:8px">ON</span> <span class="hint">labs can pay online (' + [rd.jazzcash ? 'JazzCash' : '', rd.easypaisa ? 'Easypaisa' : ''].filter(Boolean).join(' + ') + ')</span>'
+    : '<span class="badge" style="margin-left:8px">NOT SET</span> <span class="hint">labs pay manually until a merchant account is connected</span>';
+  function modeSel(id, v) { return '<select class="input" id="' + id + '"><option value="sandbox"' + (v === 'live' ? '' : ' selected') + '>Sandbox (testing, no real money)</option><option value="live"' + (v === 'live' ? ' selected' : '') + '>Live (real money)</option></select>'; }
+  var sec = function (isSet) { return isSet ? 'saved - leave empty to keep' : ''; };
+  return '<div class="card" id="pgCard"><div class="card-h"><h3>Online payments (JazzCash / Easypaisa)</h3>' + status + '<span class="sub" style="margin-left:auto">manual payment stays available beside it</span></div><div class="card-b">' +
+    '<p class="hint" style="margin:0 0 12px">Connect your own merchant account. A lab pays by wallet or card on the JazzCash / Easypaisa page and its plan is activated automatically, with no manual checking. Get the credentials from your merchant portal (start with <b>Sandbox</b>, test, then switch to <b>Live</b>).</p>' +
+    '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:12px"><label style="display:flex;align-items:center;gap:8px;font-weight:800"><input type="checkbox" id="pgJcOn"' + (jc.enabled ? ' checked' : '') + '> JazzCash</label>' +
+    '<div class="fgrid" style="margin-top:10px"><div><label class="label" for="pgJcMode">Mode</label>' + modeSel('pgJcMode', jc.mode) + '</div><div><label class="label" for="pgJcId">Merchant ID</label><input class="input" id="pgJcId" value="' + esc(jc.merchantId || '') + '" autocomplete="off"></div>' +
+    '<div><label class="label" for="pgJcPw">Password</label><input class="input" id="pgJcPw" type="password" placeholder="' + sec(jc.passwordSet) + '" autocomplete="new-password"></div>' +
+    '<div><label class="label" for="pgJcSalt">Integrity Salt</label><input class="input" id="pgJcSalt" type="password" placeholder="' + sec(jc.saltSet) + '" autocomplete="new-password"></div></div>' +
+    '<p class="hint" style="margin:8px 0 0">Return URL to register in the JazzCash portal: <code>' + esc((g.urls || {}).jazzcashReturn || '') + '</code></p></div>' +
+    '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px"><label style="display:flex;align-items:center;gap:8px;font-weight:800"><input type="checkbox" id="pgEpOn"' + (ep.enabled ? ' checked' : '') + '> Easypaisa</label>' +
+    '<div class="fgrid" style="margin-top:10px"><div><label class="label" for="pgEpMode">Mode</label>' + modeSel('pgEpMode', ep.mode) + '</div><div><label class="label" for="pgEpId">Store ID</label><input class="input" id="pgEpId" value="' + esc(ep.storeId || '') + '" autocomplete="off"></div>' +
+    '<div class="span2"><label class="label" for="pgEpKey">Hash Key</label><input class="input" id="pgEpKey" type="password" placeholder="' + sec(ep.hashKeySet) + '" autocomplete="new-password"></div></div>' +
+    '<p class="hint" style="margin:8px 0 0">Payment notification (IPN) URL to register in the Easypay portal: <code>' + esc((g.urls || {}).easypaisaIpn || '') + '</code></p></div>' +
+    (g.simulator ? '<p class="hint" style="margin:10px 0 0;color:#b45309">Test mode is ON on this server (PAY_SIMULATOR): labs also see a free "Test payment" button. Never leave this on in production.</p>' : '') +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center"><button class="btn btn-primary" id="pgSave">Save online payment settings</button></div><p class="hint" id="pgMsg" style="margin:10px 0 0"></p></div></div>';
+}
+function wirePaygwCard() {
+  var $p = function (id) { return document.getElementById(id); };
+  if (!$p('pgCard')) return;
+  $p('pgSave').addEventListener('click', function () {
+    var b = $p('pgSave'); b.disabled = true;
+    api('/api/saas/paygw', { method: 'PUT', body: {
+      jazzcash: { enabled: $p('pgJcOn').checked, mode: $p('pgJcMode').value, merchantId: $p('pgJcId').value.trim(), password: $p('pgJcPw').value, salt: $p('pgJcSalt').value },
+      easypaisa: { enabled: $p('pgEpOn').checked, mode: $p('pgEpMode').value, storeId: $p('pgEpId').value.trim(), hashKey: $p('pgEpKey').value } } })
+      .then(function () { return api('/api/saas/paygw'); })
+      .then(function (r) { state.settingsData.paygw = r; toast('Online payment settings saved.', 'ok'); if (state.view === 'settings') paintMain(); },
+        function (err) { b.disabled = false; var m = $p('pgMsg'); if (m) { m.textContent = (err && err.data && err.data.error) || 'Could not save'; m.style.color = '#b91c1c'; } });
   });
 }
 
@@ -1862,6 +1903,7 @@ function wireSettingsView() {
   if (!state.settingsData) return;
   wireMailCard();
   wireGoogleCard();
+  wirePaygwCard();
   var s1 = $('setSave'), s2 = $('setSave2');
   if (s1) s1.addEventListener('click', saveSettings);
   if (s2) s2.addEventListener('click', saveSettings);

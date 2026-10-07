@@ -358,6 +358,7 @@
             doctorId: doctorId || null
           });
           try { if (window.Samples) Samples.syncInvoice(DB.get('invoices', id)); } catch (e) { if (window.console) console.error(e); }
+          try { App.outsourceSync(id, true); } catch (e) { if (window.console) console.error(e); }
           App.toast('Invoice ' + inv.no + ' updated');
           close(); refresh();
         });

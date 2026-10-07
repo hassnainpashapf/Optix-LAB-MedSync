@@ -22,6 +22,7 @@ const ADAPTER = (process.env.DB_ADAPTER || 'pg').toLowerCase();
 const DATABASE_URL = process.env.DATABASE_URL || '';
 const SQLITE_PATH = process.env.SQLITE_PATH || path.join(__dirname, 'labpos-cloud.db');
 const SUPERADMIN_KEY = process.env.SUPERADMIN_KEY || '';
+const DAY_MS = 86400000;
 const PUBLIC_API_URL = (process.env.PUBLIC_API_URL || '').replace(/\/$/, '');
 const LAB_NAME = process.env.LAB_NAME || '';
 const RELEASE_BUNDLE_URL = process.env.RELEASE_BUNDLE_URL || '';
@@ -528,7 +529,7 @@ async function main() {
       const any = (list) => list.some((k) => req.user.perms.indexOf(k) >= 0);
       const write = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
       const WR = { patients: ['patients', 'invoices'], invoices: ['invoices', 'dues', 'patients', 'finance'], payments: ['invoices', 'dues', 'patients', 'finance'], results: ['results', 'invoices'], samples: ['samples', 'results', 'invoices', 'patients'],
-        tests: ['tests'], doctors: ['doctors'], expenses: ['expenses', 'finance'], closings: ['finance'], stock_items: ['stock', 'results'], stock_moves: ['stock', 'results'], panels: ['panels'],
+        tests: ['tests'], doctors: ['doctors'], expenses: ['expenses', 'finance'], closings: ['finance'], stock_items: ['stock', 'results'], stock_moves: ['stock', 'results'], panels: ['panels'], ref_labs: ['outsourced'], outsourced: ['outsourced', 'results', 'invoices', 'patients'],
         wa_log: ['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], email_log: ['email', 'results', 'invoices', 'doctors'], report_templates: ['results', 'reports'], report_schedules: ['results', 'reports'] };
       let deny = false;
       const tm = /^\/([a-z_]+)(\/|$)/.exec(req.path);
@@ -640,7 +641,7 @@ async function main() {
      ===================================================================================================== */
   if (saas) {
     const clean = (o, keys) => { const r = {}; keys.forEach(k => { if (o && o[k] !== undefined) r[k] = o[k]; }); return r; };
-    const payView = (p) => clean(p, ['id', 'labId', 'labName', 'labSlug', 'plan', 'period', 'amount', 'method', 'reference', 'note', 'status', 'createdAt', 'decidedAt', 'decisionNote']);
+    const payView = (p) => clean(p, ['id', 'labId', 'labName', 'labSlug', 'plan', 'period', 'amount', 'method', 'reference', 'note', 'status', 'createdAt', 'decidedAt', 'decisionNote', 'gateway', 'online']);
     const publicPay = async () => {
       const st = await saas.getSettings();
       return { trialDays: st.trialDays, payInstructions: st.payInstructions, payMethods: st.payMethods, supportPhone: st.supportPhone, supportEmail: st.supportEmail, supportWhatsapp: st.supportWhatsapp };
@@ -779,7 +780,7 @@ async function main() {
       const plans = await saas.getPlans(); const pl = {};
       Object.keys(plans).forEach(k => { pl[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'desc']); });
       const v = await saas.view(lab, true); delete v.history;
-      res.json({ lab: v, plans: pl, info: await publicPay(), payments: pays.slice(0, 20).map(payView) });
+      res.json({ lab: v, plans: pl, info: await publicPay(), online: gwReady(await gwLoad()), payments: pays.slice(0, 20).map(payView) });
     });
     app.post('/api/saas/pay-request', needAdmin, async (req, res) => {
       try {
@@ -885,17 +886,144 @@ async function main() {
     });
     async function decidePayment(req, res) {
       const p = await rawStore.get(saas.PAY_T, req.params.id); if (!p) return res.status(404).json({ error: 'unknown payment' });
-      if (p.status !== 'pending') return res.status(400).json({ error: 'Already ' + p.status });
+      if (p.status !== 'pending' && p.status !== 'awaiting') return res.status(400).json({ error: 'Already ' + p.status });
       const act = req.params.action; if (act !== 'approve' && act !== 'reject') return res.status(400).json({ error: 'approve or reject' });
       const lab = await saas.getLab(p.labId); if (!lab) return res.status(404).json({ error: 'lab no longer exists' });
-      p.status = act === 'approve' ? 'approved' : 'rejected'; p.decidedAt = new Date().toISOString(); p.decisionNote = String((req.body || {}).note || '').slice(0, 200);
+      await settlePayment(p, lab, act === 'approve', String((req.body || {}).note || '').slice(0, 200), 'operator');
+      res.json({ ok: true, payment: p, lab: await saas.view(lab, true) });
+    }
+    /* one place that approves / rejects a payment and extends the subscription (operator click or a verified online payment) */
+    async function settlePayment(p, lab, approve, note, by) {
+      p.status = approve ? 'approved' : 'rejected'; p.decidedAt = new Date().toISOString(); p.decisionNote = note;
       await rawStore.put(saas.PAY_T, p); /* the decision is persisted first, so a repeat can never extend the subscription twice */
-      if (act === 'approve') {
+      if (approve) {
         lab.plan = p.plan; lab.status = 'active'; lab.paidUntil = saas.addPeriod(lab, p.period);
-        await saas.addHistory(lab, 'Payment approved: ' + p.plan + ' ' + p.period + ' (Rs ' + p.amount + ', ref ' + p.reference + ') → paid until ' + lab.paidUntil.slice(0, 10), 'operator');
+        await saas.addHistory(lab, (p.online ? 'Online payment received (' + p.gateway + ')' : 'Payment approved') + ': ' + p.plan + ' ' + p.period + ' (Rs ' + p.amount + ', ref ' + p.reference + ') → paid until ' + lab.paidUntil.slice(0, 10), by);
         await saas.saveLab(lab);
       }
-      res.json({ ok: true, payment: p, lab: await saas.view(lab, true) });
+    }
+    /* ---- online payments (JazzCash / Easypaisa). The operator connects a merchant account in the superadmin console; a lab then pays by card / wallet and
+       the subscription is extended the moment the gateway confirms (verified signature / verified IPN). The manual flow above keeps working beside it. ---- */
+    const paygw = require('./paygw');
+    const GW_META = 'saas_paygw', GW_SIM = process.env.PAY_SIMULATOR === '1';
+    const apiBase = (req) => PUBLIC_API_URL || (req.protocol + '://' + req.get('host'));
+    const gwLoad = async () => {
+      const m = (await rawStore.getMeta(GW_META)) || {}, jc = m.jazzcash || {}, ep = m.easypaisa || {};
+      return {
+        jazzcash: { enabled: !!jc.enabled, mode: jc.mode === 'live' ? 'live' : 'sandbox', merchantId: jc.merchantId || '', password: jc.password ? decPw(jc.password) : '', salt: jc.salt ? decPw(jc.salt) : '' },
+        easypaisa: { enabled: !!ep.enabled, mode: ep.mode === 'live' ? 'live' : 'sandbox', storeId: ep.storeId || '', hashKey: ep.hashKey ? decPw(ep.hashKey) : '' },
+      };
+    };
+    const gwReady = (c) => ({ jazzcash: !!(c.jazzcash.enabled && c.jazzcash.merchantId && c.jazzcash.password && c.jazzcash.salt), easypaisa: !!(c.easypaisa.enabled && c.easypaisa.storeId && c.easypaisa.hashKey), simulator: GW_SIM });
+    app.get('/api/saas/paygw', requireSuperadmin, async (req, res) => {
+      const c = await gwLoad();
+      res.json({ jazzcash: { enabled: c.jazzcash.enabled, mode: c.jazzcash.mode, merchantId: c.jazzcash.merchantId, passwordSet: !!c.jazzcash.password, saltSet: !!c.jazzcash.salt },
+        easypaisa: { enabled: c.easypaisa.enabled, mode: c.easypaisa.mode, storeId: c.easypaisa.storeId, hashKeySet: !!c.easypaisa.hashKey },
+        ready: gwReady(c), simulator: GW_SIM, urls: { jazzcashReturn: apiBase(req) + '/api/saas/pay-return/jazzcash', easypaisaIpn: apiBase(req) + '/api/saas/pay-ipn/easypaisa' } });
+    });
+    app.put('/api/saas/paygw', requireSuperadmin, async (req, res) => {
+      try {
+        const b = req.body || {}, old = (await rawStore.getMeta(GW_META)) || {}, jb = b.jazzcash || {}, eb = b.easypaisa || {}, ID = /^[A-Za-z0-9_.-]{3,60}$/;
+        const sec = (v, keep) => { v = String(v == null ? '' : v); if (!v) return keep || ''; if (v.length > 120) throw new Error('A secret is too long'); return encPw(v); };
+        const next = { jazzcash: Object.assign({}, old.jazzcash), easypaisa: Object.assign({}, old.easypaisa) };
+        if (b.jazzcash) {
+          const id = String(jb.merchantId == null ? (old.jazzcash || {}).merchantId || '' : jb.merchantId).trim(); if (id && !ID.test(id)) throw new Error('JazzCash Merchant ID looks wrong');
+          next.jazzcash = { enabled: !!jb.enabled, mode: jb.mode === 'live' ? 'live' : 'sandbox', merchantId: id, password: sec(jb.password, (old.jazzcash || {}).password), salt: sec(jb.salt, (old.jazzcash || {}).salt) };
+        }
+        if (b.easypaisa) {
+          const id = String(eb.storeId == null ? (old.easypaisa || {}).storeId || '' : eb.storeId).trim(); if (id && !ID.test(id)) throw new Error('Easypaisa Store ID looks wrong');
+          next.easypaisa = { enabled: !!eb.enabled, mode: eb.mode === 'live' ? 'live' : 'sandbox', storeId: id, hashKey: sec(eb.hashKey, (old.easypaisa || {}).hashKey) };
+        }
+        await rawStore.setMeta(GW_META, next);
+        console.log('[labpos-cloud] saas: online payment settings updated (jazzcash ' + (next.jazzcash.enabled ? next.jazzcash.mode : 'off') + ', easypaisa ' + (next.easypaisa.enabled ? next.easypaisa.mode : 'off') + ')');
+        const c = await gwLoad(); res.json({ ok: true, ready: gwReady(c) });
+      } catch (e) { res.status(400).json({ error: e.message }); }
+    });
+    /* what the lab's Subscription page may offer */
+    app.get('/api/saas/pay-options', needUser, async (req, res) => res.json(gwReady(await gwLoad())));
+    const appBack = (res, what) => res.redirect(302, APP_URL + '/app/#/subscription?pay=' + what);
+    /* a verified "paid" report for a payment request: extend the subscription exactly once */
+    async function onlinePaid(txnRef, gateway, amount) {
+      const p = (await rawStore.all(saas.PAY_T)).find((x) => x.online && x.txnRef === txnRef && x.gateway === gateway);
+      if (!p) return { ok: false, why: 'unknown payment' };
+      if (Math.abs((+amount || 0) - (+p.amount || 0)) > 0.009) { console.log('[labpos-cloud] saas: online payment ' + txnRef + ' amount mismatch (' + amount + ' vs ' + p.amount + ') - left for the operator'); return { ok: false, why: 'amount mismatch' }; }
+      if (payBusy.has(p.id)) return { ok: false, why: 'busy' };
+      payBusy.add(p.id);
+      try {
+        const cur = await rawStore.get(saas.PAY_T, p.id);
+        if (cur.status === 'approved') return { ok: true, already: true };
+        if (cur.status !== 'awaiting' && cur.status !== 'pending' && cur.status !== 'failed') return { ok: false, why: 'already ' + cur.status };
+        const lab = await saas.getLab(cur.labId); if (!lab) return { ok: false, why: 'lab gone' };
+        await settlePayment(cur, lab, true, 'Paid online (' + gateway + ')', gateway);
+        return { ok: true };
+      } finally { payBusy.delete(p.id); }
+    }
+    app.post('/api/saas/pay-online', needAdmin, async (req, res) => {
+      try {
+        const lab = req.lab || await saas.getLab('main'), b = req.body || {}, plans = await saas.getPlans();
+        if (!plans[b.plan] || b.plan === 'trial' || b.plan === 'enterprise') return res.status(400).json({ error: 'Choose Starter or Professional (for Enterprise, contact us)' });
+        const period = b.period === 'yearly' ? 'yearly' : 'monthly', gateway = String(b.gateway || ''), cfg = await gwLoad(), ready = gwReady(cfg);
+        if (['jazzcash', 'easypaisa', 'simulator'].indexOf(gateway) < 0 || !ready[gateway]) return res.status(400).json({ error: 'This payment method is not available right now' });
+        const amount = period === 'yearly' ? +plans[b.plan].yearly : +plans[b.plan].monthly;
+        if (!(amount > 0)) return res.status(400).json({ error: 'This plan has no price set' });
+        const recent = (await rawStore.all(saas.PAY_T)).filter((x) => x.labId === lab.id && x.online && x.status === 'awaiting' && Date.now() - Date.parse(x.createdAt) < DAY_MS);
+        if (recent.length >= 5) return res.status(429).json({ error: 'Too many unfinished online payments today. Finish one, or pay manually.' });
+        const txnRef = 'T' + Date.now() + crypto.randomBytes(3).toString('hex');
+        const p = { id: 'P' + crypto.randomBytes(5).toString('hex'), labId: lab.id, labName: lab.name, labSlug: lab.slug, plan: b.plan, period, amount, method: { jazzcash: 'JazzCash (online)', easypaisa: 'Easypaisa (online)', simulator: 'Test payment' }[gateway],
+          gateway, online: true, txnRef, reference: txnRef, note: '', status: 'awaiting', createdAt: new Date().toISOString(), by: req.user.name };
+        await rawStore.put(saas.PAY_T, p);
+        const o = { txnRef, amount, billRef: lab.slug, description: plans[b.plan].name + ' ' + period, email: lab.ownerEmail };
+        const checkout = gateway === 'jazzcash' ? paygw.jcCheckout(cfg.jazzcash, Object.assign(o, { returnUrl: apiBase(req) + '/api/saas/pay-return/jazzcash' }))
+          : gateway === 'easypaisa' ? paygw.epCheckout(cfg.easypaisa, Object.assign(o, { returnUrl: apiBase(req) + '/api/saas/pay-return/easypaisa' }))
+          : { method: 'GET', url: apiBase(req) + '/api/saas/pay-sim/' + p.id, fields: null };
+        console.log('[labpos-cloud] saas: online payment started', lab.slug, gateway, p.plan, p.period, txnRef);
+        res.json({ ok: true, checkout, payment: payView(p) });
+      } catch (e) { res.status(400).json({ error: e.message }); }
+    });
+    /* JazzCash posts the customer's browser back here with a signed result */
+    app.post('/api/saas/pay-return/jazzcash', express.urlencoded({ extended: false, limit: '64kb' }), async (req, res) => {
+      try {
+        const cfg = (await gwLoad()).jazzcash, v = paygw.jcVerify(cfg, req.body || {});
+        if (!v.ok) { console.log('[labpos-cloud] saas: JazzCash return rejected (' + v.why + ')'); return appBack(res, 'invalid'); }
+        if (v.paid) { const r = await onlinePaid(v.txnRef, 'jazzcash', v.amount); return appBack(res, r.ok ? 'ok' : 'wait'); }
+        const p = (await rawStore.all(saas.PAY_T)).find((x) => x.online && x.txnRef === v.txnRef && x.gateway === 'jazzcash');
+        if (p && p.status === 'awaiting') { p.status = 'failed'; p.decidedAt = new Date().toISOString(); p.decisionNote = String(v.message || 'Payment not completed').slice(0, 200); await rawStore.put(saas.PAY_T, p); }
+        return appBack(res, 'failed');
+      } catch (e) { console.log('[labpos-cloud] saas: JazzCash return error', String(e && e.message || e).slice(0, 120)); return appBack(res, 'wait'); }
+    });
+    /* Easypaisa: first the customer's browser comes back with an auth token which is handed back to Easypay to finish; the real confirmation is the IPN below */
+    app.get('/api/saas/pay-return/easypaisa', async (req, res) => {
+      const t = String(req.query.auth_token || '');
+      if (!t) return appBack(res, 'wait');
+      try { return res.redirect(302, paygw.epConfirmUrl((await gwLoad()).easypaisa, t, apiBase(req) + '/api/saas/pay-final/easypaisa')); } catch (e) { return appBack(res, 'wait'); }
+    });
+    app.get('/api/saas/pay-final/easypaisa', (req, res) => appBack(res, 'wait'));
+    const epIpn = async (req, res) => {
+      try {
+        const url = String((req.query && req.query.url) || (req.body && req.body.url) || '');
+        if (!paygw.epIpnUrlOk(url)) return res.status(400).send('bad url');
+        const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 10000);
+        let j; try { const r = await fetch(url, { signal: ac.signal }); j = await r.json(); } finally { clearTimeout(tm); }
+        const t = paygw.epReadTxn(j);
+        if (t.ok && t.paid && t.txnRef) await onlinePaid(t.txnRef, 'easypaisa', t.amount);
+        res.send('OK');
+      } catch (e) { console.log('[labpos-cloud] saas: Easypaisa IPN error', String(e && e.message || e).slice(0, 120)); res.status(500).send('error'); }
+    };
+    app.get('/api/saas/pay-ipn/easypaisa', epIpn);
+    app.post('/api/saas/pay-ipn/easypaisa', express.urlencoded({ extended: false, limit: '64kb' }), epIpn);
+    /* test-only "bank": a page with a Pay and a Cancel button, so the whole flow can be tried without real money. Exists only when PAY_SIMULATOR=1. */
+    if (GW_SIM) {
+      app.get('/api/saas/pay-sim/:id', async (req, res) => {
+        const p = await rawStore.get(saas.PAY_T, req.params.id); if (!p || p.gateway !== 'simulator') return res.status(404).send('unknown');
+        res.type('html').send('<!doctype html><meta charset="utf-8"><title>Test payment</title><body style="font-family:sans-serif;max-width:420px;margin:60px auto;text-align:center"><h2>Test payment page</h2><p>Rs ' + (+p.amount) + ' for ' + String(p.plan).replace(/[^a-z]/g, '') + ' (' + String(p.period).replace(/[^a-z]/g, '') + ')</p>' +
+          '<form method="post" action="/api/saas/pay-sim/' + encodeURIComponent(p.id) + '/pay" style="display:inline"><button style="padding:12px 24px;font-size:16px">Pay</button></form> <form method="post" action="/api/saas/pay-sim/' + encodeURIComponent(p.id) + '/cancel" style="display:inline"><button style="padding:12px 24px;font-size:16px">Cancel</button></form></body>');
+      });
+      app.post('/api/saas/pay-sim/:id/:act', async (req, res) => {
+        const p = await rawStore.get(saas.PAY_T, req.params.id); if (!p || p.gateway !== 'simulator') return res.status(404).send('unknown');
+        if (req.params.act === 'pay') { const r = await onlinePaid(p.txnRef, 'simulator', p.amount); return appBack(res, r.ok ? 'ok' : 'wait'); }
+        if (p.status === 'awaiting') { p.status = 'failed'; p.decidedAt = new Date().toISOString(); p.decisionNote = 'Cancelled'; await rawStore.put(saas.PAY_T, p); }
+        return appBack(res, 'failed');
+      });
     }
     /* ---- email sender (SMTP) for password-reset mails: configured here instead of editing server files ---- */
     const mailView = async () => { const m = (await rawStore.getMeta(MAIL_META)) || null, cur = mailer.current(); return { configured: mailer.configured(), source: cur ? cur.source : 'none', host: (m && m.host) || (cur && cur.host) || '', port: (m && m.port) || (cur && cur.port) || 587, secure: cur ? !!cur.secure : !!(m && m.secure), user: (m && m.user) || (cur && cur.user) || '', from: (m && m.from) || (cur && cur.from) || '', passSet: !!((m && m.pass) || (cur && cur.pass)) }; };

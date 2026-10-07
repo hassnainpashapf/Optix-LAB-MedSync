@@ -462,6 +462,7 @@
               status: pnl ? 'paid' : 'unpaid', panelId: pnl ? pnl.id : null, createdAt: new Date().toISOString(), createdBy: ptUser()
             });
             DB.update('invoices', inv.id, { no: inv.id });
+            try { App.outsourceSync(inv.id, true); } catch (e) { if (window.console) console.error(e); }
             items.forEach(function (l) {
               var tids = (l.isPackage && l.includes && l.includes.length) ? l.includes : [l.testId];
               tids.forEach(function (tid) {

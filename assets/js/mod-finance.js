@@ -765,8 +765,17 @@
       });
     }
     if (commission > 0) byCat['Doctor commission'] = commission;
+    /* tests sent to reference labs: accrued when sent (accrual) or when actually paid to the reference lab (cash) */
+    var outsrc = 0;
+    if (cash) {
+      (DB.all('ref_labs') || []).forEach(function (l) { (l.payments || []).forEach(function (x) { var dd = toDay(x.date); if (inRange(dd, from, to)) { var a2 = +x.amount || 0; outsrc += a2; commByDay[dd] = (commByDay[dd] || 0) + a2; } }); });
+    } else {
+      var liveInv = {}; (DB.all('invoices') || []).forEach(function (i) { liveInv[i.id] = 1; });
+      (DB.all('outsourced') || []).forEach(function (j) { if (!liveInv[j.invoiceId] || (j.status !== 'sent' && j.status !== 'received')) return; var dd = toDay(j.sentAt); if (inRange(dd, from, to)) { var a3 = +j.cost || 0; outsrc += a3; commByDay[dd] = (commByDay[dd] || 0) + a3; } });
+    }
+    if (outsrc > 0) byCat['Outsourced tests'] = outsrc;
     var opExp = sum(exps, function (e) { return +e.amount || 0; });
-    var expTotal = opExp + commission;
+    var expTotal = opExp + commission + outsrc;
     var net = revenue - expTotal;
     var dues = sum(invs, function (i) { return Math.max(0, +i.due || 0); });
     return {
