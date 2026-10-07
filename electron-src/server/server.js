@@ -1174,11 +1174,13 @@ async function main() {
         const w = await whoIs(c.st, k); if (!w.pats.length && !w.docs.length) return;
         const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
         await rawStore.setMeta(otpKey(c.lab, k), { h: otpHash(c.lab, k, code), exp: Date.now() + OTP_TTL, tries: 0 });
-        const lname = String(c.set.labName || c.lab.name || 'Lab').slice(0, 60), msg = lname + ': your report code is ' + code + '. It is valid for 10 minutes. Do not share it with anyone.';
+        /* the link puts the number and code in the part after # — that part never reaches any server (or a WhatsApp link preview) — and opens the portal already signed in */
+        const lname = String(c.set.labName || c.lab.name || 'Lab').slice(0, 60), plink = APP_URL + '/app/#/portal/' + c.lab.slug + '?p=' + k + '&c=' + code;
+        const msg = lname + ': your report code is ' + code + '.\nTap to open your reports: ' + plink + '\nValid for 10 minutes. Do not share this message with anyone.';
         const people = w.pats.concat(w.docs), em = people.map((x) => String(x.email || '').trim()).find((e) => EMAIL_OK.test(e));
         let sent = false;
         if (waOk(c.set.whatsapp)) { try { await waServerSend(c.set.whatsapp, pwa(b.phone), msg); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (whatsapp) failed:', String(e.message || e).slice(0, 120)); } }
-        if (!sent && em && mailer.configured()) { try { await mailer.send(Object.assign({ to: em, fromName: lname + ' (via Optix LAB MedSync)' }, mailer.portalCodeEmail({ labName: lname, code }))); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (email) failed:', String(e.message || e).slice(0, 120)); } }
+        if (!sent && em && mailer.configured()) { try { await mailer.send(Object.assign({ to: em, fromName: lname + ' (via Optix LAB MedSync)' }, mailer.portalCodeEmail({ labName: lname, code, link: plink }))); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (email) failed:', String(e.message || e).slice(0, 120)); } }
         if (!sent) await rawStore.setMeta(otpKey(c.lab, k), null);
       } catch (e) { if (!res.headersSent) res.json(SAME); }
     });

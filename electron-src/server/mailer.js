@@ -99,11 +99,11 @@ function reportEmail({ labName, name, kind, link, invNo, labPhone, labEmail, not
   return { subject, text, html };
 }
 /* the portal sign-in code mail */
-function portalCodeEmail({ labName, code }) {
+function portalCodeEmail({ labName, code, link }) {
   const subject = 'Your ' + labName + ' report code: ' + code;
-  const text = 'Your code is ' + code + '\n\nIt is valid for 10 minutes. Enter it on the ' + labName + ' report page.\nIf you did not ask for it, ignore this email and do not share the code.';
+  const text = 'Your code is ' + code + (link ? '\n\nOr tap this link to open your reports: ' + link : '') + '\n\nIt is valid for 10 minutes. Enter it on the ' + labName + ' report page.\nIf you did not ask for it, ignore this email and do not share the code.';
   const html = '<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:0 auto;color:#1b2540"><h2 style="color:#131845;margin:0 0 12px">' + esc(labName) + '</h2><p>Your report code is</p>' +
-    '<p style="font-size:34px;font-weight:800;letter-spacing:6px;margin:8px 0 14px;color:#131845">' + esc(code) + '</p><p style="color:#5b6785">It is valid for 10 minutes. If you did not ask for it, ignore this email and do not share the code.</p></div>';
+    '<p style="font-size:34px;font-weight:800;letter-spacing:6px;margin:8px 0 14px;color:#131845">' + esc(code) + '</p>' + (link ? '<p><a href="' + esc(link) + '" style="background:#131845;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:bold;display:inline-block">Open my reports</a></p>' : '') + '<p style="color:#5b6785">It is valid for 10 minutes. If you did not ask for it, ignore this email and do not share the code.</p></div>';
   return { subject, text, html };
 }
 module.exports = { configured, send, setConfig, current, tlsFor, friendlyError, resetEmail, changedEmail, reportEmail, portalCodeEmail };

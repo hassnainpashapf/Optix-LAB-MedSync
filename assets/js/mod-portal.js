@@ -196,12 +196,23 @@
   }
 
   A.renderPortal = function (hash) {
+    /* one-tap link from the WhatsApp message: #/portal/<lab>?p=<phone>&c=<code> -> sign in without typing, then hide the code from the address bar */
+    var mq = /\?(?:.*&)?p=(\d{10})&c=(\d{6})/.exec(hash || ''), tap = null;
+    if (mq) { tap = { p: mq[1], c: mq[2] }; try { history.replaceState(null, '', location.href.split('#')[0] + '#/portal/' + slugFrom(hash)); } catch (e) {} }
     var slug = slugFrom(hash) || lget(LLAB) || lget('labpos_lab');
     if (slug !== S.lab) { S.lab = slug; S.info = null; S.step = 'phone'; S.err = ''; S.note = ''; S.token = ''; S.data = null; S.view = 'home'; }
     if (!S.phone) S.phone = lget(LPH);
     paint();
     if (!slug) return;
-    var tk = restore(slug); if (tk) { S.token = tk; S.step = 'app'; }
-    api('info?lab=' + encodeURIComponent(slug)).then(function (i) { S.info = i; if (!i.enabled) S.step = 'phone'; paint(); if (tk && i.enabled) load(); }, function (e) { S.info = { enabled: false }; S.err = e.message; paint(); });
+    var tk = tap ? '' : restore(slug); if (tk) { S.token = tk; S.step = 'app'; }
+    if (tap) { S.phone = tap.p; S.step = 'code'; S.busy = true; }
+    api('info?lab=' + encodeURIComponent(slug)).then(function (i) {
+      S.info = i; if (!i.enabled) { S.step = 'phone'; S.busy = false; }
+      paint();
+      if (tap && i.enabled) {
+        api('verify', { body: { lab: slug, phone: tap.p, code: tap.c, remember: S.remember } }).then(function (j) { S.busy = false; S.token = j.token; S.step = 'app'; S.data = null; S.view = 'home'; S.role = j.patient ? 'patient' : 'doctor'; save(j.days); load(); paint(); },
+          function (e) { S.busy = false; S.step = 'phone'; S.err = 'This link has expired or was already used. Enter your number to get a new code.'; paint(); });
+      } else if (tk && i.enabled) load();
+    }, function (e) { S.info = { enabled: false }; S.err = e.message; paint(); });
   };
 })();
