@@ -1495,11 +1495,14 @@
           : '') +
       '</div>';
 
+    var _ht = (!_tpl && String(s.headerText || '').trim())
+      ? '<div class="rpt-htext" style="text-align:center;color:#000;font-size:0.92em;line-height:1.45;margin-top:6px;white-space:pre-line">' + App.esc(String(s.headerText).trim()) + '</div>'
+      : '';
     return (
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#fff;color:#000;padding-top:2px">' +
         leftHtml +
         rightHtml +
-      '</div>'
+      '</div>' + _ht
     );
   }
 
@@ -2053,7 +2056,10 @@
     var powered =
       '<p class="rpt-powered" style="color:#000;font-size:0.88em;text-align:center;margin:5px 0 0">Powered by System Optix</p>';
 
-    return '<div class="rpt-footer">' + line1 + rule + sigHtml + addrHtml + discHtml + powered + '</div>';
+    var ftHtml = String(s.footerText || '').trim()
+      ? '<div class="rpt-ftext" style="text-align:center;color:#000;font-size:0.92em;font-weight:600;line-height:1.45;margin:6px 0 2px;white-space:pre-line">' + App.esc(String(s.footerText).trim()) + '</div>'
+      : '';
+    return '<div class="rpt-footer">' + ftHtml + line1 + rule + sigHtml + addrHtml + discHtml + powered + '</div>';
   }
 
 
@@ -2809,6 +2815,14 @@
 
       y += headH + 2;
 
+      // --- plain header text from Lab Profile ("Header text"), centred under the header ---
+      if (String(s.headerText || '').trim()) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+        var htLines = doc.splitTextToSize(String(s.headerText).trim(), CW);
+        txt(htLines, W / 2, y + 2, { align: 'center' });
+        y += htLines.length * 4.1 + 3;
+      }
+
       // --- optional report banner (only when s.reportTitle is set) ---
       if (s.reportTitle) {
         doc.setFillColor(A[0], A[1], A[2]);
@@ -3167,10 +3181,19 @@
     var fNote = s.disclaimer || ((s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') ? s.footerNote : '') || DEFAULT_DISCLAIMER;
     doc.setFontSize(6.6);
     var fNoteLines = doc.splitTextToSize(fNote, CW);
-    var fH = fVerLines.length * 4.4 + 3 + 1 + 4 + fSigBlockH + 4 + 1 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + fNoteLines.length * 2.9 + 3 + 1 + 5;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+    var fTextLines = String(s.footerText || '').trim() ? doc.splitTextToSize(String(s.footerText).trim(), CW) : [];
+    var fTextH = fTextLines.length ? fTextLines.length * 4.2 + 3 : 0;
+    var fH = fTextH + fVerLines.length * 4.4 + 3 + 1 + 4 + fSigBlockH + 4 + 1 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + fNoteLines.length * 2.9 + 3 + 1 + 5;
     if (y + fH > PH - FM) { doc.addPage(); y = M; }
     y = Math.max(y + 4, PH - FM - fH);                      // pin to the bottom of the page
 
+    // plain footer text from Lab Profile ("Footer text"), above the verification line
+    if (fTextLines.length) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+      txt(fTextLines, W / 2, y + 3, { align: 'center' });
+      y += fTextH;
+    }
     // verification line (bold, centered)
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
     txt(fVerLines, W / 2, y + 3, { align: 'center' });

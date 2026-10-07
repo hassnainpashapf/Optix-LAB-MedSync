@@ -1407,6 +1407,11 @@
       + '<div style="grid-column:1/-1"><label class="label">Signatory Doctors <span class="muted" style="font-weight:400">(shown on lab reports)</span></label>'
       + '<div id="spSigList"></div>'
       + '<button class="btn btn-ghost" type="button" id="spSigAdd" style="margin-top:8px">+ Add Signatory</button></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Header text <span class="muted" style="font-weight:400">(shown under the lab name on every report — type anything, e.g. address, phone, timings)</span></label>'
+      + '<textarea class="input" id="spHeadText" rows="3" maxlength="600" placeholder="Type the text you want in the report header">' + App.esc(s.headerText || '') + '</textarea></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Footer text <span class="muted" style="font-weight:400">(shown at the bottom of every report — e.g. thanks note, branch address, complaint number)</span></label>'
+      + '<textarea class="input" id="spFootText" rows="3" maxlength="600" placeholder="Type the text you want in the report footer">' + App.esc(s.footerText || '') + '</textarea></div>'
+      + '<details style="grid-column:1/-1"><summary style="cursor:pointer;font-weight:700;color:var(--muted)">Advanced: edit the full header / footer as HTML (most labs do not need this)</summary><div class="form-grid" style="margin-top:10px">'
       + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(this is your current header — edit anything you want; <code>{{logo}}</code> <code>{{qr}}</code> <code>{{case_barcode}}</code> <code>{{case_no}}</code> <code>{{patient_barcode}}</code> <code>{{patient_id}}</code> are filled in for every report)</span></label>'
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spHeadSample">Load Sample</button>'
       + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Reset to automatic</button></div>'
@@ -1415,6 +1420,7 @@
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spFootSample">Load Sample</button>'
       + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Reset to automatic</button></div>'
       + '<textarea class="input" id="spFootHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea></div>'
+      + '</div></details>'
       + '</div>'
       + '<div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" id="spSave">Save Profile</button>' +
         '<button class="btn btn-ghost" id="spPreviewBtn">👁 Preview Report</button></div>'
@@ -1620,6 +1626,8 @@
         email: document.getElementById('spEmail').value.trim(),
         invoicePrefix: pref,
         footerNote: document.getElementById('spFoot').value.trim(),
+        headerText: document.getElementById('spHeadText').value.trim(),
+        footerText: document.getElementById('spFootText').value.trim(),
         logo: _logoData,
         website: document.getElementById('spWeb').value.trim(),
         headOffice: document.getElementById('spHead').value.trim(),
@@ -1661,7 +1669,7 @@
       }
       return {
         labName: gv('spName'), tagline: gv('spTag'), address: gv('spAddr'),
-        phone: gv('spPhone'), email: gv('spEmail'), footerNote: gv('spFoot'),
+        phone: gv('spPhone'), email: gv('spEmail'), footerNote: gv('spFoot'), headerText: gv('spHeadText'), footerText: gv('spFootText'),
         logo: _logoData, website: gv('spWeb'), headOffice: gv('spHead'),
         mainLab: gv('spMainLab'), callCenter: gv('spCall'), mainLabPhone: gv('spMainPhone'),
         verNote: gv('spVerNote'), signatories: sigs, font: gv('spFont'),
