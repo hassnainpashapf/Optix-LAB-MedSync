@@ -132,3 +132,16 @@ PUBLIC_APP_URL=https://optix-lab-medsync.pages.dev   # base address used in the 
 
 Without `SMTP_HOST` the forgot-password page tells users that email reset is not set up (an admin can still reset passwords in Settings → Users, and the operator in the superadmin console).
 `MAIL_DEBUG_FILE=<path>` writes emails to a file instead of sending (testing).
+
+## Automatic backups
+
+`backup.sh` (installed on the VPS in `/opt/labpos-cloud/`, run by cron every day at 21:30 UTC = 02:30 Pakistan time) writes a gzip Postgres dump to `backups/auto/db-<date>.sql.gz` (last 14 days kept) and, on Sundays, an archive of `report-pdfs/` (last 4 kept). A dump smaller than 20 KB or a corrupt gzip is rejected, and every run appends a line to `backups/backup.log`.
+
+Restore into an empty database (never over the live one while the API is running):
+
+```
+docker compose exec -T db psql -U labpos -d postgres -c "CREATE DATABASE labpos_restore"
+gunzip -c backups/auto/db-<stamp>.sql.gz | docker compose exec -T db psql -U labpos -d labpos_restore
+```
+
+then point the API at it (or copy rows across). These backups live on the same server: copy `backups/auto/` to another machine now and then (`scp -r ubuntu@<vps>:/opt/labpos-cloud/backups/auto .`) to be safe against losing the disk.
