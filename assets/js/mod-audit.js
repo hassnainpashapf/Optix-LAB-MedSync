@@ -18,7 +18,7 @@
     '.au-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}' +
     '.au-st{padding:14px 16px}.au-st .k{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.au-st b{display:block;font-size:24px;font-weight:800;margin-top:4px;color:var(--ink)}' +
     '.au-f{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;padding:16px 18px}' +
-    '.au-f label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:var(--ink2);min-width:130qx}.au-f .grow{flex:1;min-width:200px}' +
+    '.au-f label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:700;color:var(--ink2);min-width:130rx}.au-f .grow{flex:1;min-width:200px}' +
     '.au-f .input,.au-f .select{height:38px;padding:0 10px}' +
     '.au-chip{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:99px;white-space:nowrap}' +
     '.au-chip.g{background:#e6f7f0;color:#047857}.au-chip.b{background:#e8f0fe;color:#1d4ed8}.au-chip.r{background:#fdecec;color:#b91c1c}.au-chip.n{background:#f1f5f9;color:#475569}.au-chip.o{background:#fef4e2;color:#b45309}.au-chip.p{background:#f3e8ff;color:#7e22ce}' +

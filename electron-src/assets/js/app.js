@@ -590,7 +590,7 @@
       if (SEC[n.key] && SEC[n.key] !== lastSec) { lastSec = SEC[n.key]; head = '<div class="nav-sec2">' + lastSec + '</div>'; }
       if (n.sub) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
         var subs = n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; });
-        var open = n.key === activeKey || localStorage.getItem('labpos_nav_' + n.key) === '1';
+        var open = n.key === activeKey;
         return head + '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
           '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span>' +
@@ -724,7 +724,13 @@
     for (var j = 0; j < subs.length; j++) {
       var on = subs[j].getAttribute('data-href') === h;
       subs[j].classList.toggle('on', on);
-      if (on) { var g = subs[j].closest('.nav-grp'); if (g) { g.classList.add('open'); var pb = g.querySelector('.nav-par'); if (pb) pb.setAttribute('aria-expanded', 'true'); } }
+    }
+    /* accordion: only the group that holds the current page stays open; moving to any other page closes the rest */
+    var grps = document.querySelectorAll('.nav-grp');
+    for (var k = 0; k < grps.length; k++) {
+      var gk = grps[k], hold = gk.getAttribute('data-grp') === key || !!gk.querySelector('.nav-sub-it.on');
+      gk.classList.toggle('open', hold);
+      var pk = gk.querySelector('.nav-par'); if (pk) pk.setAttribute('aria-expanded', hold ? 'true' : 'false');
     }
   }
   /* sub-menu parents open / close their group (remembered per browser); delegated once */
@@ -734,7 +740,12 @@
     var g = b.closest('.nav-grp'); if (!g) return;
     var open = g.classList.toggle('open');
     b.setAttribute('aria-expanded', open ? 'true' : 'false');
-    try { localStorage.setItem('labpos_nav_' + g.getAttribute('data-grp'), open ? '1' : '0'); } catch (x) {}
+    if (open) { /* opening one group closes the others */
+      Array.prototype.forEach.call(document.querySelectorAll('.nav-grp.open'), function (o) {
+        if (o === g) return; o.classList.remove('open');
+        var op = o.querySelector('.nav-par'); if (op) op.setAttribute('aria-expanded', 'false');
+      });
+    }
   });
 
   /* ---------------- login / sign-up: see mod-auth.js (App.renderLogin / App.renderSignup) ---------------- */
