@@ -654,8 +654,9 @@
       { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'panels', 'expenses', 'finance'] },
       { id: 'ins', label: 'Insights', icon: 'chart', keys: ['reports', 'audit'] },
       { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'email', 'downloads'] },
-      { id: 'acc', label: 'Account', icon: 'gear', keys: ['subscription', 'settings'] }
+      { id: 'acc', label: 'Account', icon: 'gear', keys: ['subscription'] } /* one page = shown as the page itself, not a folder */
     ];
+    var BOTTOM = ['settings']; /* always at the very bottom, outside any folder */
     var savedOpen = {}; try { savedOpen = JSON.parse(localStorage.getItem('labpos_navfolders') || '{}') || {}; } catch (e) { savedOpen = {}; }
     var byKey = {}; visible.forEach(function (n) { byKey[n.key] = n; });
     var placed = {}, items = '';
@@ -671,7 +672,8 @@
         '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
         '<div class="nav-fb">' + inside.map(function (k) { return itemHtml(byKey[k]); }).join('') + '</div></div>';
     });
-    visible.forEach(function (n) { if (!placed[n.key]) items += itemHtml(n); });
+    visible.forEach(function (n) { if (!placed[n.key] && BOTTOM.indexOf(n.key) < 0) items += itemHtml(n); });
+    BOTTOM.forEach(function (k) { if (byKey[k]) items += itemHtml(byKey[k]); });
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
       '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Science') + '</b><small>Diagnostic Lab</small></span>' +
