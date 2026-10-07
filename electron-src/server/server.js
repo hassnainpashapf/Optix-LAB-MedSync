@@ -700,7 +700,7 @@ async function main() {
        only the lab(s) this email OWNS (the signup email, which only the operator can change) */
     app.post('/api/saas/google-login', async (req, res) => {
       const b = req.body || {}, labSlug = typeof b.lab === 'string' ? b.lab.trim().toLowerCase() : '';
-      const NOPE = 'No lab is linked to this Google account. Use "Start your 14-day free trial" to create one, or type your Lab ID above first.';
+      const NOPE = 'No lab is linked to this Google account yet. Type your Lab ID above and make sure this Gmail is saved in your profile (Profile -> Email), or use "Start your 14-day free trial" to create a new lab.';
       try {
         if (hot(ipFails, req.ip, 60)) return res.status(429).json({ error: 'Too many attempts. Try again in a few minutes.' });
         if (labSlug.length > 40) return res.status(400).json({ error: NOPE });
@@ -710,7 +710,15 @@ async function main() {
           const lab = await saas.findBySlug(labSlug);
           if (lab) { const us = (await saas.storeFor(lab).all('users')).filter(x => x.active !== false && String(x.email || '').toLowerCase() === g.email); us.sort((a, c) => (c.role === 'admin') - (a.role === 'admin')); if (us[0]) cands.push({ lab, u: us[0] }); }
         } else {
+          /* the original (default) lab is run by the operator themself, so a user there with this email counts even without a typed Lab ID */
+          const mainLab = await saas.getLab('main');
+          if (mainLab) {
+            const mu = (await saas.storeFor(mainLab).all('users')).filter(x => x.active !== false && String(x.email || '').toLowerCase() === g.email);
+            mu.sort((a, c) => (c.role === 'admin') - (a.role === 'admin'));
+            if (mu[0]) cands.push({ lab: mainLab, u: mu[0] });
+          }
           for (const lab of (await saas.loadLabs(true)).values()) {
+            if (lab.id === 'main') continue;
             if (String(lab.ownerEmail || '').toLowerCase() !== g.email) continue;
             const us = (await saas.storeFor(lab).all('users')).filter(x => x.active !== false && x.role === 'admin' && (String(x.email || '').toLowerCase() === g.email || x.id === 'U-01'));
             if (us[0]) cands.push({ lab, u: us.find(x => String(x.email || '').toLowerCase() === g.email) || us[0] });
