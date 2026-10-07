@@ -9,12 +9,14 @@ const fs = require('fs');
 
 let transporter = null, tKey = '';
 let saved = null; /* settings saved from the superadmin console: { host, port, secure, user, pass, from } (override the environment) */
+/* port 465 = TLS from the start; 587 / 25 = plain connection upgraded with STARTTLS. A wrong tick-box (SSL on 587) is the most common mistake, so the port decides. */
+function tlsFor(port, tick) { return port === 465 ? true : ((port === 587 || port === 25) ? false : !!tick); }
 function setConfig(c) { saved = (c && c.host) ? c : null; transporter = null; tKey = ''; }
 function current() {
-  if (saved) return { host: saved.host, port: +saved.port || 587, secure: !!saved.secure, user: saved.user || '', pass: saved.pass || '', from: saved.from || saved.user || '', source: 'saved' };
+  if (saved) { const port = +saved.port || 587; return { host: saved.host, port, secure: tlsFor(port, saved.secure), user: saved.user || '', pass: saved.pass || '', from: saved.from || saved.user || '', source: 'saved' }; }
   if (process.env.SMTP_HOST) {
     const port = +process.env.SMTP_PORT || 587;
-    return { host: process.env.SMTP_HOST, port, secure: process.env.SMTP_SECURE === '1' || port === 465, user: process.env.SMTP_USER || '', pass: process.env.SMTP_PASS || '', from: process.env.MAIL_FROM || process.env.SMTP_USER || '', source: 'server' };
+    return { host: process.env.SMTP_HOST, port, secure: tlsFor(port, process.env.SMTP_SECURE === '1'), user: process.env.SMTP_USER || '', pass: process.env.SMTP_PASS || '', from: process.env.MAIL_FROM || process.env.SMTP_USER || '', source: 'server' };
   }
   return null;
 }
@@ -41,6 +43,16 @@ async function send(m, override) {
   return t.sendMail({ from, to: m.to, subject: m.subject, text: m.text, html: m.html });
 }
 
+/* turn the mail library's technical errors into something a shop owner can act on */
+function friendlyError(e) {
+  const m = String((e && e.message) || e || ''), c = String((e && e.code) || '');
+  if (/wrong version number|ssl routines/i.test(m)) return 'Secure-connection mismatch. Use port 587 with the SSL/TLS box UNticked, or port 465 with it ticked.';
+  if (/535|Invalid login|Username and Password not accepted|BadCredentials|authentication failed/i.test(m)) return 'The server rejected the username or password. For Gmail use a 16-letter App password (not the normal password), with 2-Step Verification turned on.';
+  if (c === 'ENOTFOUND' || /ENOTFOUND|getaddrinfo/i.test(m)) return 'The SMTP server address was not found. Check the spelling (Gmail: smtp.gmail.com).';
+  if (c === 'ECONNREFUSED' || c === 'ETIMEDOUT' || c === 'ESOCKET' || /ECONNREFUSED|ETIMEDOUT|timed out|Greeting never received/i.test(m)) return 'Could not reach the mail server on this port. Check the port number (587 or 465); some hosting providers block outgoing mail ports.';
+  if (/Daily user sending|quota|limit exceeded/i.test(m)) return 'The mailbox reached its daily sending limit. Try again tomorrow or use another mailbox.';
+  return m.replace(/\s+/g, ' ').slice(0, 200);
+}
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 /* the reset email: plain, one big button, expiry stated, "ignore this if it was not you" */
@@ -63,4 +75,4 @@ function changedEmail({ labName, name }) {
   return { subject, text, html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:auto;padding:24px;color:#131845"><h2 style="margin:0 0 12px">Password changed</h2><p>Hello ${esc(name || '')},</p><p>The password of your account at <b>${esc(labName)}</b> was just changed.</p><p style="font-size:13px;color:#5b6b80">If this was you, nothing more to do. If it was not you, reset it again right away and tell your lab admin.</p></div>` };
 }
 
-module.exports = { configured, send, setConfig, current, resetEmail, changedEmail };
+module.exports = { configured, send, setConfig, current, tlsFor, friendlyError, resetEmail, changedEmail };

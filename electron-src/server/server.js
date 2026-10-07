@@ -774,7 +774,7 @@ async function main() {
       res.json({ ok: true, payment: p, lab: await saas.view(lab, true) });
     }
     /* ---- email sender (SMTP) for password-reset mails: configured here instead of editing server files ---- */
-    const mailView = async () => { const m = (await rawStore.getMeta(MAIL_META)) || null, cur = mailer.current(); return { configured: mailer.configured(), source: cur ? cur.source : 'none', host: (m && m.host) || (cur && cur.host) || '', port: (m && m.port) || (cur && cur.port) || 587, secure: m ? !!m.secure : !!(cur && cur.secure), user: (m && m.user) || (cur && cur.user) || '', from: (m && m.from) || (cur && cur.from) || '', passSet: !!((m && m.pass) || (cur && cur.pass)) }; };
+    const mailView = async () => { const m = (await rawStore.getMeta(MAIL_META)) || null, cur = mailer.current(); return { configured: mailer.configured(), source: cur ? cur.source : 'none', host: (m && m.host) || (cur && cur.host) || '', port: (m && m.port) || (cur && cur.port) || 587, secure: cur ? !!cur.secure : !!(m && m.secure), user: (m && m.user) || (cur && cur.user) || '', from: (m && m.from) || (cur && cur.from) || '', passSet: !!((m && m.pass) || (cur && cur.pass)) }; };
     app.get('/api/saas/mail', requireSuperadmin, async (req, res) => res.json(await mailView()));
     app.put('/api/saas/mail', requireSuperadmin, async (req, res) => {
       try {
@@ -787,7 +787,7 @@ async function main() {
         const old = (await rawStore.getMeta(MAIL_META)) || {};
         let pass = old.pass || '';
         if (typeof b.pass === 'string' && b.pass !== '') { if (b.pass.length > 300) return res.status(400).json({ error: 'Password is too long' }); pass = encPw(b.pass.replace(/\s+/g, '')); } /* app passwords are shown with spaces: strip them */
-        await rawStore.setMeta(MAIL_META, { host, port, secure: !!b.secure, user, from, pass });
+        await rawStore.setMeta(MAIL_META, { host, port, secure: mailer.tlsFor(port, !!b.secure), user, from, pass });
         await loadMailConfig();
         res.json(await mailView());
       } catch (e) { res.status(400).json({ error: e.message }); }
@@ -799,7 +799,7 @@ async function main() {
       try {
         await mailer.send({ to, subject: 'Optix LAB MedSync — test email', text: 'This is a test email from your Optix LAB MedSync server. If you can read it, password-reset emails will be delivered.', html: '<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;color:#131845"><h2>Test email</h2><p>This is a test email from your <b>Optix LAB MedSync</b> server. If you can read it, password-reset emails will be delivered.</p></div>' });
         res.json({ ok: true });
-      } catch (e) { res.status(400).json({ error: String((e && e.message) || e).replace(/\s+/g, ' ').slice(0, 220) }); }
+      } catch (e) { console.error('[labpos-cloud] mail test failed:', String((e && e.message) || e).slice(0, 200)); res.status(400).json({ error: mailer.friendlyError(e) }); }
     });
     app.get('/api/saas/settings', requireSuperadmin, async (req, res) => res.json({ settings: await saas.getSettings(), plans: await saas.getPlans() }));
     app.put('/api/saas/settings', requireSuperadmin, async (req, res) => {
