@@ -409,6 +409,12 @@
       try { window.DB.useLab(s.labId); } catch (e) {}
     }
 
+    /* password reset pages work signed out (and signed in: the emailed link must always open) */
+    if (hash === '#/forgot' || hash.indexOf('#/reset') === 0) {
+      var rf = hash === '#/forgot' ? 'renderForgot' : 'renderReset';
+      if (window.App && App[rf]) App[rf](); else location.hash = '#/login';
+      return;
+    }
     /* auth guard */
     if (!s && hash !== '#/login' && hash !== '#/signup') { location.hash = '#/login'; return; }
     if (s && (hash === '#/login' || hash === '#/signup' || hash === '' || hash === '#')) { location.hash = '#/dashboard'; return; }

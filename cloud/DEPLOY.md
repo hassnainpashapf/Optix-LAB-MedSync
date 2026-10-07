@@ -116,3 +116,19 @@ is untouched by rebuilds.
 2. It is served at `https://<your-api-domain>/releases/Optix-LAB-MedSync-Setup-1.0.0.exe`
 3. In the LabPOS app: Settings → Lab Profile → "Desktop App Download URL" → paste that URL → Save.
 4. The dashboard "⬇ Download App" button will then download the installer.
+
+## Password-reset email (SMTP)
+
+"Forgot password?" emails a one-time link (valid 30 minutes). It needs one sender mailbox; add these to `.env` next to `docker-compose.yml` and run `docker compose up -d api`:
+
+```
+SMTP_HOST=smtp.gmail.com        # or smtp-relay.brevo.com, smtp.zoho.com, your domain's mail server
+SMTP_PORT=587                   # 465 + SMTP_SECURE=1 for SSL
+SMTP_USER=you@gmail.com
+SMTP_PASS=<app password>        # Gmail: Google Account → Security → 2-Step Verification → App passwords
+MAIL_FROM="Optix LAB MedSync <you@gmail.com>"
+PUBLIC_APP_URL=https://optix-lab-medsync.pages.dev   # base address used in the emailed link
+```
+
+Without `SMTP_HOST` the forgot-password page tells users that email reset is not set up (an admin can still reset passwords in Settings → Users, and the operator in the superadmin console).
+`MAIL_DEBUG_FILE=<path>` writes emails to a file instead of sending (testing).

@@ -11,6 +11,7 @@ const zlib = require('zlib');
 const { wrapStore, sameRecord, DEL } = require('./sync-store');
 const { scopeStore } = require('./tenant-store');
 const saasMod = require('./saas');
+const mailer = require('./mailer'); /* nodemailer itself is only loaded when a mail is actually sent */
 
 const VERSION = require('./package.json').version;
 const PORT = +(process.env.PORT || 4000);
@@ -356,7 +357,8 @@ async function main() {
   const auditFails = new Map(); /* ip|lab -> {n, until}: failed-login rows already written to a lab's audit trail */
   const signupHits = new Map(); /* ip -> {n, until}: sign-ups */
   const userFails = new Map();  /* lab|username -> {n, until}: independent of the client IP, so rotating addresses cannot dodge it */
-  const LIMIT_MAPS = [fails, ipFails, auditFails, signupHits, saFails, userFails];
+  const forgotIp = new Map(), forgotKey = new Map(), resetIp = new Map();
+  const LIMIT_MAPS = [fails, ipFails, auditFails, signupHits, saFails, userFails, forgotIp, forgotKey, resetIp];
   function bump(map, key, windowMs) {
     const now = Date.now();
     let e = map.get(key);
@@ -522,6 +524,67 @@ async function main() {
   };
   const superKey = (req) => { const k = req.get('X-Superadmin-Key') || ''; return !!SUPERADMIN_KEY && (safeEq(k, SUPERADMIN_KEY) || (!!process.env.SUPERADMIN_LOGIN_TOKEN && safeEq(k, process.env.SUPERADMIN_LOGIN_TOKEN.trim()))); };
   const needAdminOrSuper = (req, res, next) => (req.user && req.user.role === 'admin') || superKey(req) ? next() : res.status(req.user ? 403 : 401).json({ error: 'admin only' });
+
+  /* ---- forgot / reset password by email (cloud labs). The answer to "forgot" is ALWAYS the same, so nobody can use it to find out
+     which Lab IDs, usernames or emails exist. The emailed token is random, stored only as a hash, valid RESET_TTL_MINUTES, single use. ---- */
+  const RESET_T = '_saas_reset';
+  const RESET_TTL_MS = (+process.env.RESET_TTL_MINUTES || 30) * 60000;
+  const APP_URL = (process.env.PUBLIC_APP_URL || 'https://optix-lab-medsync.pages.dev').replace(/\/+$/, '');
+  const sha = (x) => crypto.createHash('sha256').update(String(x)).digest('hex');
+  const EMAIL_OK = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  if (!DESKTOP) {
+    app.get('/api/auth/mail-status', (req, res) => res.json({ mail: mailer.configured() }));
+    app.post('/api/auth/forgot', async (req, res) => {
+      const same = { ok: true, message: 'If an account with these details exists and has an email address, we have sent a reset link. Check your inbox (and spam).' };
+      try {
+        const b = req.body || {}, labSlug = typeof b.lab === 'string' ? b.lab.trim().toLowerCase() : '', ident = typeof b.identifier === 'string' ? b.identifier.trim().toLowerCase() : '';
+        if (!ident || ident.length > 120 || labSlug.length > 40) return res.status(400).json({ error: 'Enter your username or email' });
+        if (!mailer.configured()) return res.status(503).json({ error: 'Password reset by email is not set up on this server yet. Ask your lab admin to reset it from Settings → Users, or contact support.' });
+        if (bump(forgotIp, req.ip, 3600000).n > 10) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        if (bump(forgotKey, labSlug + '|' + ident, 3600000).n > 3) return res.json(same); /* silently stop mailing the same account */
+        const lab = labSlug ? await saas.findBySlug(labSlug) : await saas.getLab('main');
+        if (!lab || saas.effStatus(lab) === 'suspended') return res.json(same);
+        const st = saas.storeFor(lab), u = (await st.all('users')).find((x) => x.active !== false && (String(x.username).toLowerCase() === ident || String(x.email || '').toLowerCase() === ident));
+        if (!u || !EMAIL_OK.test(String(u.email || ''))) return res.json(same);
+        const token = crypto.randomBytes(32).toString('base64url');
+        const now = Date.now();
+        for (const r of await rawStore.all(RESET_T)) if (r.exp < now - 86400000 || (r.userId === u.id && r.labId === lab.id)) await rawStore.del(RESET_T, r.id); /* old / replaced tokens */
+        await rawStore.put(RESET_T, { id: sha(token), labId: lab.id, userId: u.id, exp: now + RESET_TTL_MS, used: false });
+        const settings = (await st.get('settings', 'main')) || {};
+        const link = APP_URL + '/app/#/reset?lab=' + encodeURIComponent(lab.slug) + '&token=' + encodeURIComponent(token);
+        const mail = mailer.resetEmail({ labName: settings.labName || lab.name, name: u.name, link, minutes: Math.round(RESET_TTL_MS / 60000) });
+        mailer.send({ to: u.email, subject: mail.subject, text: mail.text, html: mail.html }).catch((e) => console.error('[labpos-cloud] reset email failed:', e.message));
+        await auditLog(req, 'update', 'auth', u.id, { store: st, actor: {}, username: u.username, label: u.username, note: 'Password reset email requested' });
+        res.json(same);
+      } catch (e) { console.error('[labpos-cloud] forgot failed:', e.message); res.json(same); }
+    });
+    app.post('/api/auth/reset', async (req, res) => {
+      try {
+        const { token, password } = req.body || {};
+        if (typeof token !== 'string' || token.length < 20 || token.length > 100) return res.status(400).json({ error: 'This reset link is not valid.' });
+        if (typeof password !== 'string' || password.length < 6 || password.length > 256) return res.status(400).json({ error: 'Password must be 6-256 characters' });
+        if (bump(resetIp, req.ip, 3600000).n > 20) return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+        const id = sha(token), rec = await rawStore.get(RESET_T, id);
+        const bad = () => res.status(400).json({ error: 'This reset link is invalid or has expired. Please request a new one.' });
+        if (!rec || rec.used || rec.exp < Date.now()) return bad();
+        const lab = await saas.getLab(rec.labId); if (!lab || saas.effStatus(lab) === 'suspended') return bad();
+        const st = saas.storeFor(lab);
+        const done = await withLock(lab.id, async () => {
+          const fresh = await rawStore.get(RESET_T, id); if (!fresh || fresh.used) return null; /* two clicks at once: only one wins */
+          const u = await st.get('users', rec.userId); if (!u || u.active === false) return null;
+          fresh.used = true; await rawStore.put(RESET_T, fresh);
+          await st.put('users', Object.assign({}, u, { password: hashPassword(password) }));
+          for (const r of await rawStore.all(RESET_T)) if (r.userId === u.id && r.labId === lab.id && r.id !== id) await rawStore.del(RESET_T, r.id);
+          await auditLog(req, 'update', 'users', u.id, { store: st, actor: { id: u.id, name: u.name, role: u.role }, label: u.name || u.username, changes: [{ f: 'password', from: '•••', to: '•••' }], note: 'Password reset with an emailed link' });
+          return u;
+        });
+        if (!done) return bad();
+        const settings = (await st.get('settings', 'main')) || {};
+        if (mailer.configured() && EMAIL_OK.test(String(done.email || ''))) { const m = mailer.changedEmail({ labName: settings.labName || lab.name, name: done.name }); mailer.send({ to: done.email, subject: m.subject, text: m.text, html: m.html }).catch(() => {}); }
+        res.json({ ok: true, lab: lab.slug, username: done.username });
+      } catch (e) { console.error('[labpos-cloud] reset failed:', e.message); res.status(500).json({ error: 'Could not reset the password. Please try again.' }); }
+    });
+  }
 
   app.post('/api/auth/change-password', needUser, async (req, res) => {
     const store = req.store;
@@ -923,7 +986,7 @@ async function main() {
     const from = q.from ? new Date(q.from + 'T00:00:00').toISOString() : '', to = q.to ? new Date(q.to + 'T23:59:59.999').toISOString() : '';
     const needle = String(q.q || '').toLowerCase();
     rows = rows.filter((r) => (!from || r.ts >= from) && (!to || r.ts <= to) && (!q.user || r.uid === q.user || r.user === q.user) && (!q.table || r.table === q.table) && (!q.action || r.action === q.action) &&
-      (!needle || (r.label + ' ' + r.user + ' ' + r.rowId + ' ' + (r.changes || []).map((c) => c.f + ' ' + c.from + ' ' + c.to).join(' ')).toLowerCase().indexOf(needle) >= 0));
+      (!needle || (r.label + ' ' + r.user + ' ' + r.rowId + ' ' + (r.note || '') + ' ' + (r.changes || []).map((c) => c.f + ' ' + c.from + ' ' + c.to).join(' ')).toLowerCase().indexOf(needle) >= 0));
     rows.sort((a, b) => (a.ts < b.ts ? 1 : (a.ts > b.ts ? -1 : 0)));
     const stats = { total: rows.length };
     res.json({ total: rows.length, rows: rows.slice(off, off + lim).map((r) => { const c = Object.assign({}, r); delete c._o; delete c._c; delete c._u; delete c._s; return c; }), users, tables: Object.keys(tables).sort(), stats });

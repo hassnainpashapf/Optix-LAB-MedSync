@@ -1,1 +1,1 @@
-{"dependencies":{"express":"^4.19.2","pg":"^8.13.1"},"description":"LabPOS cloud API for VPS deployment (Express + Postgres, Docker)","engines":{"node":">=20"},"main":"server.js","name":"labpos-cloud","private":true,"scripts":{"start":"node server.js"},"version":"1.0.0"}
+{"dependencies":{"express":"^4.19.2","nodemailer":"^10.0.15","pg":"^8.13.1"},"description":"LabPOS cloud API for VPS deployment (Express + Postgres, Docker)","engines":{"node":">=20"},"main":"server.js","name":"labpos-cloud","private":true,"scripts":{"start":"node server.js"},"version":"1.0.0"}

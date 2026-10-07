@@ -171,6 +171,7 @@
           field('liUser', 'user', 'Username', { ph: 'Enter username', auto: 'username', focus: !showLabId || !!lget(LKEY) }) +
           field('liPass', 'lock', 'Password', { ph: 'Enter password', type: 'password', pw: true, auto: 'current-password' }) +
           '<div class="lg-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
+          (showLabId ? '<div class="lg-forgot"><a href="' + (desk ? WEB + '/app/#/forgot' : '#/forgot') + '"' + (desk ? ' target="_blank" rel="noopener"' : '') + '>Forgot password?</a></div>' : '') +
           '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Sign In</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
           (showLabId ? '<p class="lg-new">New to Optix? <a href="' + signupHref + '"' + signupAttr + '>Start your 14-day free trial</a></p>' : '') +
           '<div class="login-div"><span>or</span></div>' +
@@ -310,6 +311,72 @@
       }).catch(function (ex) {
         btn.disabled = false; btn.classList.remove('busy'); btn.querySelector('.lg-bt').textContent = 'Create my lab — start free trial';
         showErr((ex && ex.message) || 'Could not create the account. Please try again.');
+      });
+    });
+  };
+
+  /* ---------- forgot password / reset password (emailed link) ---------- */
+  function shell(mode, inner) {
+    document.body.className = 'login-mode';
+    document.body.innerHTML = '<div class="login-wrap lg-split">' + brandHtml('login') + '<div class="lg-form">' + bubblesHtml() +
+      '<a class="lg-back" href="#/login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Back to sign in</a>' +
+      inner + '<p class="login-foot"><span class="lg-secure">' + ic('shield', 13) + 'Reset links expire in 30 minutes and work once</span>Powered by System Optix</p></div></div>';
+    wireBrand('login');
+  }
+  function doneCard(icon, title, msg, btn) {
+    return '<div class="login-card lg-card" style="text-align:center"><div class="login-logo lg-sm"><span class="login-mark">' + icon + '</span></div><h2>' + title + '</h2><p class="login-sub" style="margin-bottom:18px">' + msg + '</p>' + (btn || '') + '</div>';
+  }
+  A.renderForgot = function () {
+    shell('forgot',
+      '<form class="login-card lg-card" id="fgForm" autocomplete="off">' +
+        '<div class="login-logo lg-sm"><span class="login-mark">' + ic('key', 28) + '</span></div>' +
+        '<h2>Forgot your password?</h2><p class="login-sub">Enter your Lab ID and username or email. We will email you a link to choose a new password.</p>' +
+        '<div class="login-err" id="loginErr" hidden></div>' +
+        field('fgLab', 'building', 'Lab ID', { ph: 'e.g. al-shifa', val: lget(LKEY), max: 40, hint: 'Leave empty for the main lab.' }) +
+        field('fgId', 'mail', 'Username or email', { ph: 'username or you@example.com', max: 120, focus: true }) +
+        '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Send reset link</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
+        '<p class="lg-new">Remembered it? <a href="#/login">Sign in</a></p></form>');
+    document.getElementById('fgForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var lab = document.getElementById('fgLab').value.trim().toLowerCase(), id = document.getElementById('fgId').value.trim();
+      if (!id) { showErr('Enter your username or email'); return; }
+      var btn = document.querySelector('.login-signin'); btn.disabled = true; btn.classList.add('busy'); btn.querySelector('.lg-bt').textContent = 'Sending…';
+      DB.saas('POST', '../auth/forgot', { lab: lab, identifier: id }).then(function (j) {
+        document.getElementById('fgForm').outerHTML = doneCard(ic('mail', 28), 'Check your email', esc(j.message || 'If an account exists, a reset link is on its way.') + '<br><span class="muted" style="font-size:12.5px">The link works for 30 minutes.</span>', '<a class="btn login-signin btn-block" href="#/login" style="display:flex;text-decoration:none">Back to sign in</a>');
+      }).catch(function (ex) { btn.disabled = false; btn.classList.remove('busy'); btn.querySelector('.lg-bt').textContent = 'Send reset link'; showErr((ex && ex.message) || 'Could not send the email. Please try again.'); });
+    });
+  };
+  A.renderReset = function () {
+    var q = {}; (location.hash.split('?')[1] || '').split('&').forEach(function (p) { var i = p.indexOf('='); if (i > 0) { try { q[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1)); } catch (x) {} } });
+    if (!q.token) { shell('reset', doneCard(ic('alert', 28), 'Link not valid', 'This password reset link is incomplete. Please request a new one.', '<a class="btn login-signin btn-block" href="#/forgot" style="display:flex;text-decoration:none">Request a new link</a>')); return; }
+    shell('reset',
+      '<form class="login-card lg-card" id="rsForm" autocomplete="off">' +
+        '<div class="login-logo lg-sm"><span class="login-mark">' + ic('lock', 28) + '</span></div>' +
+        '<h2>Choose a new password</h2><p class="login-sub">' + (q.lab ? 'For Lab ID <b>' + esc(q.lab) + '</b>' : 'For your account') + '</p>' +
+        '<div class="login-err" id="loginErr" hidden></div>' +
+        field('rsPw', 'lock', 'New password', { ph: 'Min 6 characters', type: 'password', pw: true, auto: 'new-password', focus: true, max: 128 }) +
+        '<div class="lg-meter" id="rsMeter"><i></i><i></i><i></i><span id="rsMeterT"></span></div>' +
+        field('rsPw2', 'lock', 'Confirm new password', { ph: 'Type it again', type: 'password', auto: 'new-password', max: 128 }) +
+        '<div class="lg-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
+        '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Save new password</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button></form>');
+    wirePw('rsPw');
+    document.getElementById('rsPw').addEventListener('input', function () {
+      var v = this.value, sc = 0; if (v.length >= 6) sc++; if (v.length >= 9 && /[a-z]/i.test(v) && /\d/.test(v)) sc++; if (v.length >= 11 && /[^a-z0-9]/i.test(v)) sc++;
+      document.getElementById('rsMeter').setAttribute('data-s', v ? String(sc) : '0'); document.getElementById('rsMeterT').textContent = !v ? '' : (sc <= 1 ? 'Weak' : (sc === 2 ? 'Good' : 'Strong'));
+    });
+    document.getElementById('rsForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+      var a = document.getElementById('rsPw').value, b = document.getElementById('rsPw2').value;
+      if (a.length < 6) { showErr('Password must be at least 6 characters'); return; }
+      if (a !== b) { showErr('The two passwords do not match'); return; }
+      var btn = document.querySelector('.login-signin'); btn.disabled = true; btn.classList.add('busy'); btn.querySelector('.lg-bt').textContent = 'Saving…';
+      DB.saas('POST', '../auth/reset', { token: q.token, password: a }).then(function (j) {
+        try { localStorage.removeItem(SKEY); } catch (x) {} /* any old session belongs to the old password */
+        if (j.lab) lset(LKEY, j.lab);
+        document.getElementById('rsForm').outerHTML = doneCard(ic('check', 28), 'Password changed', 'You can now sign in with your new password' + (j.username ? ' (username: <b>' + esc(j.username) + '</b>)' : '') + '.', '<a class="btn login-signin btn-block" href="#/login" style="display:flex;text-decoration:none">Go to sign in</a>');
+      }).catch(function (ex) {
+        btn.disabled = false; btn.classList.remove('busy'); btn.querySelector('.lg-bt').textContent = 'Save new password';
+        showErr((ex && ex.message) || 'Could not change the password. Please try again.');
       });
     });
   };
