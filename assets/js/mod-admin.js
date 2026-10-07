@@ -1407,14 +1407,14 @@
       + '<div style="grid-column:1/-1"><label class="label">Signatory Doctors <span class="muted" style="font-weight:400">(shown on lab reports)</span></label>'
       + '<div id="spSigList"></div>'
       + '<button class="btn btn-ghost" type="button" id="spSigAdd" style="margin-top:8px">+ Add Signatory</button></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(advanced — only if you need full control; leave empty to use the automatic header above)</span></label>'
+      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(this is your current header — edit anything you want; <code>{{qr}}</code> <code>{{case_barcode}}</code> <code>{{case_no}}</code> <code>{{patient_barcode}}</code> <code>{{patient_id}}</code> are filled in for every report)</span></label>'
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spHeadSample">Load Sample</button>'
-      + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Clear</button></div>'
-      + '<textarea class="input" id="spHeadHtml" rows="3" placeholder="Leave empty for automatic header">' + App.esc(s.headerHtml || '') + '</textarea></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(advanced — only if you need full control; leave empty to use the automatic footer above)</span></label>'
+      + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Reset to automatic</button></div>'
+      + '<textarea class="input" id="spHeadHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic header">' + App.esc(s.headerHtml || '') + '</textarea></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(this is your current footer — edit anything you want)</span></label>'
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spFootSample">Load Sample</button>'
-      + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Clear</button></div>'
-      + '<textarea class="input" id="spFootHtml" rows="3" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea></div>'
+      + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Reset to automatic</button></div>'
+      + '<textarea class="input" id="spFootHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea></div>'
       + '</div>'
       + '<div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" id="spSave">Save Profile</button>' +
         '<button class="btn btn-ghost" id="spPreviewBtn">👁 Preview Report</button></div>'
@@ -1532,6 +1532,7 @@
     var headClearBtn = document.getElementById('spHeadClear');
     if (headClearBtn) headClearBtn.addEventListener('click', function () {
       document.getElementById('spHeadHtml').value = '';
+      _fillTpl(true);
       if (typeof _schedulePreview === 'function') _schedulePreview();
     });
     var footSampleBtn = document.getElementById('spFootSample');
@@ -1542,8 +1543,25 @@
     var footClearBtn = document.getElementById('spFootClear');
     if (footClearBtn) footClearBtn.addEventListener('click', function () {
       document.getElementById('spFootHtml').value = '';
+      _fillTpl(true);
       if (typeof _schedulePreview === 'function') _schedulePreview();
     });
+    /* pre-fill the Custom Header / Footer boxes with the current automatic ones, so they can be edited in place.
+       While a box still holds the untouched automatic text it is saved as "empty" (= keep following the profile fields). */
+    var _tplHead = '', _tplFoot = '';
+    function _fillTpl(force) {
+      var run = function () {
+        var base = _collectPreviewSettings(); base.headerHtml = ''; base.footerHtml = '';
+        var h = document.getElementById('spHeadHtml'), f = document.getElementById('spFootHtml');
+        if (!h || !f || !App.reportHeaderTemplate) return;
+        var nh = App.reportHeaderTemplate(base), nf = App.reportFooterTemplate(base);
+        if (force || !h.value.trim() || h.value === _tplHead) { h.value = nh; _tplHead = nh; }
+        if (force || !f.value.trim() || f.value === _tplFoot) { f.value = nf; _tplFoot = nf; }
+      };
+      if (App.reportHeaderTemplate) run(); else App.loadScript('assets/js/mod-results.js').then(run, function () {});
+    }
+    window.__spAutoTpl = function () { return { head: _tplHead, foot: _tplFoot }; };
+    _fillTpl(false);
     (function () { /* lab-name colour: colour picker, quick swatches, reset to default black */
       var ci = document.getElementById('spNameColor'); if (!ci) return;
       function touch(v) { ci.value = v; ci.setAttribute('data-touched', '1'); if (typeof _schedulePreview === 'function') _schedulePreview(); }
@@ -1618,8 +1636,8 @@
         showTagline: document.getElementById('spShowTagline').checked,
         requireSampleCollected: document.getElementById('spReqSmp').checked,
         reportFontSize: document.getElementById('spFontSize').value,
-        headerHtml: document.getElementById('spHeadHtml').value.trim(),
-        footerHtml: document.getElementById('spFootHtml').value.trim()
+        headerHtml: (document.getElementById('spHeadHtml').value === _tplHead ? '' : document.getElementById('spHeadHtml').value.trim()),
+        footerHtml: (document.getElementById('spFootHtml').value === _tplFoot ? '' : document.getElementById('spFootHtml').value.trim())
       });
       App.toast('Lab profile saved.');
       if (App.renderShell) App.renderShell();
@@ -1651,7 +1669,7 @@
         labNameColor: (function () { var e = document.getElementById('spNameColor'); return e && e.getAttribute('data-touched') ? e.value : ''; })(),
         showQr: gc('spShowQr'), showTagline: gc('spShowTagline'),
         reportFontSize: gv('spFontSize'),
-        headerHtml: gv('spHeadHtml'), footerHtml: gv('spFootHtml')
+        headerHtml: (gv('spHeadHtml') === _tplHead ? '' : gv('spHeadHtml')), footerHtml: (gv('spFootHtml') === _tplFoot ? '' : gv('spFootHtml'))
       };
     }
     function _paintPreview() {
@@ -1686,6 +1704,7 @@
       });
     }
     function _schedulePreview() {
+      try { _fillTpl(false); } catch (e) {}
       if (_pvTimer) clearTimeout(_pvTimer);
       _pvTimer = setTimeout(_paintPreview, 350);
     }

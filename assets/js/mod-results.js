@@ -1481,16 +1481,17 @@
     /* RIGHT: QR on top, then Case # barcode + ID, then Patient ID barcode + ID */
     var _caseNo = spacedNo(inv.no || inv.id);
     var _patId = String(pat.id == null ? '' : pat.id);
+    var _tpl = !!(d && d._tpl);   /* template mode: per-report parts are written as {{tokens}} for the editable Custom Header box */
     var rightHtml =
       '<div style="flex:none;color:#000;font-size:0.95em;line-height:1.3;display:flex;align-items:flex-start;gap:8px">' +
         '<div style="text-align:left">' +
-        '<div style="margin-top:2px">' + barcodeHtml(_caseNo).replace('margin:0 auto', 'margin:0') +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em">' + App.esc(_caseNo) + '</div></div>' +
-        '<div style="margin-top:2px">' + barcodeHtml(_patId).replace('margin:0 auto', 'margin:0') +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em">' + App.esc(_patId) + '</div></div>' +
+        '<div style="margin-top:2px">' + (_tpl ? '{{case_barcode}}' : barcodeHtml(_caseNo).replace('margin:0 auto', 'margin:0')) +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em">' + (_tpl ? '{{case_no}}' : App.esc(_caseNo)) + '</div></div>' +
+        '<div style="margin-top:2px">' + (_tpl ? '{{patient_barcode}}' : barcodeHtml(_patId).replace('margin:0 auto', 'margin:0')) +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em">' + (_tpl ? '{{patient_id}}' : App.esc(_patId)) + '</div></div>' +
         '</div>' +
         (showQr
-          ? '<div><img data-qr="1" style="width:70px;height:70px" alt="QR"></div>'
+          ? (_tpl ? '<div>{{qr}}</div>' : '<div><img data-qr="1" style="width:70px;height:70px" alt="QR"></div>')
           : '') +
       '</div>';
 
@@ -2316,6 +2317,26 @@
        generation itself fails (unpaid invoices get a fallback-URL QR).
      - Output is wrapped in .rpt-page (print stylesheet governs page box,
        breaks and exact backgrounds) with the <style> prepended. */
+  /* {{tokens}} usable inside a Custom Report Header / Footer; filled for every report */
+  function fillTokens(html, d) {
+    var inv = (d && d.inv) || {}, pat = (d && d.pat) || {}, s = (d && d.s) || {};
+    var caseNo = String(inv.no || inv.id || '').replace(/\s*-\s*/g, ' - ').replace(/\s*\/\s*/g, ' / ');
+    var patId = String(pat.id == null ? '' : pat.id);
+    return String(html || '')
+      .replace(/\{\{\s*case_barcode\s*\}\}/g, function () { return barcodeHtml(caseNo).replace('margin:0 auto', 'margin:0'); })
+      .replace(/\{\{\s*patient_barcode\s*\}\}/g, function () { return barcodeHtml(patId).replace('margin:0 auto', 'margin:0'); })
+      .replace(/\{\{\s*case_no\s*\}\}/g, function () { return App.esc(caseNo); })
+      .replace(/\{\{\s*patient_id\s*\}\}/g, function () { return App.esc(patId); })
+      .replace(/\{\{\s*qr\s*\}\}/g, function () { return s.showQr === false ? '' : '<img data-qr="1" style="width:70px;height:70px" alt="QR">'; });
+  }
+  /* the current automatic header / footer as editable HTML (pre-fills the Custom boxes in Settings -> Lab Profile) */
+  function prettyHtml(h) { return String(h).replace(/></g, '>\n<'); }
+  App.reportHeaderTemplate = function (s) { return prettyHtml(reportHeaderHtml({ inv: {}, pat: {}, s: s || {}, _tpl: true })); };
+  App.reportFooterTemplate = function (s) {
+    var h = reportFooterHtml({ s: s || {} });
+    return prettyHtml(h.replace(/^<div class="rpt-footer">/, '').replace(/<\/div>$/, ''));
+  };
+
   function reportHtml(d, opts) {
     var inv = d.inv || {}, pat = d.pat || {}, s = d.s || {};
     var readyRows = d.readyRows || [], pendingCount = d.pendingCount || 0;
@@ -2332,7 +2353,7 @@
       var t = String(h).replace(/<[^>]*>/g, '').trim();
       return t.length > 1;
     }
-    var headOut = noLabHeader ? '' : (hasRealHtml(s.headerHtml) ? s.headerHtml : reportHeaderHtml(d));
+    var headOut = noLabHeader ? '' : (hasRealHtml(s.headerHtml) ? fillTokens(s.headerHtml, d) : reportHeaderHtml(d));
 
     /* patient info grid */
     var infoHtml = patientGridHtml(d);
@@ -2355,7 +2376,7 @@
     });
 
     /* footer */
-    var footOut = hasRealHtml(s.footerHtml) ? '<div class="rpt-footer">' + s.footerHtml + '</div>' : reportFooterHtml(d);
+    var footOut = hasRealHtml(s.footerHtml) ? '<div class="rpt-footer">' + fillTokens(s.footerHtml, d) + '</div>' : reportFooterHtml(d);
 
     var bodyHtml = '<table class="rpt-wrap"><thead><tr><td>' + headOut + infoHtml + '</td></tr></thead><tbody><tr><td>' + testsHtml +
       (pendingCount
