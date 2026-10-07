@@ -1023,5 +1023,43 @@
       }, function () { if (t) clearTimeout(t); bootSplash(false); boot(); });
     } catch (e) { boot(); }
   }
+
+  /* ---------- pick-from-a-menu helpers for the test / report-field editors (Tests, Settings -> Report Templates) ----------
+     App.unitSelect(cls, value) -> a unit drop-down (common lab units; the current value is kept; "Other…" turns it into a text box)
+     App.refPresetSelect()      -> a small drop-down beside a "Reference range" box that fills it with a usual answer */
+  var UNITS = ['g/dL', 'g/dl', 'g/L', 'mg/dL', 'mg/L', 'µg/dL', 'ng/mL', 'ng/dL', 'pg/mL', 'µIU/mL', 'mIU/mL', 'IU/mL', 'IU/L', 'U/L', 'U/mL', 'mmol/L', 'm.mol/l', 'mEq/L', 'µmol/L',
+    'x10^9/l', 'x10^12/l', 'x10³/µL', 'x10⁶/µL', '/µL', '/cumm', '/HPF', '/LPF', '%', 'fl', 'fL', 'pg', 'mm/hr', 'mm/1st Hour', 'sec', 'min', 'ratio', 'INR', 'COI', 'S/CO', 'Index', 'titre', 'cells/µL', 'mL/min', 'kPa', 'mmHg'];
+  var REF_PRESETS = ['Negative', 'Non-Reactive', 'Positive / Negative', 'Reactive / Non-Reactive', 'Absent', 'Not detected', 'Normal', 'Clear', 'Pale yellow',
+    'No growth', 'No organism isolated', 'Not seen', 'Adequate', 'A / B / AB / O', 'See report', '< 1:80'];
+  App.unitSelect = function (cls, val) {
+    val = val == null ? '' : String(val);
+    var has = !val || UNITS.indexOf(val) >= 0;
+    return '<select class="input unit-sel ' + cls + '" title="Unit"><option value="">Unit…</option>' +
+      UNITS.map(function (u) { return '<option' + (u === val ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') +
+      (has ? '' : '<option selected>' + esc(val) + '</option>') + '<option value="__other">Other… (type)</option></select>';
+  };
+  App.refPresetSelect = function () {
+    return '<select class="input ref-preset" title="Pick a usual answer" style="flex:none;width:58px;padding-left:6px;padding-right:2px"><option value="">Pick</option>' +
+      REF_PRESETS.map(function (r) { return '<option>' + esc(r) + '</option>'; }).join('') + '</select>';
+  };
+  if (!window.__pickMenusWired) {
+    window.__pickMenusWired = true;
+    document.addEventListener('change', function (e) {
+      var t = e.target; if (!t || !t.classList) return;
+      if (t.classList.contains('unit-sel') && t.value === '__other') {
+        var inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = 'Unit';
+        inp.className = t.className.replace('unit-sel', '').replace(/\s+/g, ' ').trim();
+        t.parentNode.replaceChild(inp, t); inp.focus(); return;
+      }
+      if (t.classList.contains('ref-preset') && t.value) {
+        var cell = t.parentNode, box = cell && cell.querySelector('input'); if (!box) return;
+        box.value = t.value; t.value = '';
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+        var row = t.closest('.tm-prow, .rt-frow');
+        if (row) { var ty = row.querySelector('.tm-pt, .rt-ft'); if (ty) ty.value = 'text'; }
+      }
+    });
+  }
+
   start();
 })();

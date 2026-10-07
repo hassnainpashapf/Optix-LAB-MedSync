@@ -1797,10 +1797,10 @@
     function fieldRow(p) {
       p = p || {};
       var isNum = p.type === 'number';
-      return '<div class="rt-frow" style="display:grid;grid-template-columns:1fr 90px 1fr 110px 36px;gap:8px;margin-bottom:8px">'
+      return '<div class="rt-frow" style="display:grid;grid-template-columns:1fr 110px 1fr 110px 36px;gap:8px;margin-bottom:8px">'
         + '<input class="input rt-fn" placeholder="Field label (e.g. Hemoglobin)" value="' + App.esc(p.name || '') + '">'
-        + '<input class="input rt-fu" placeholder="Unit" value="' + App.esc(p.unit || '') + '">'
-        + '<input class="input rt-fr" placeholder="Reference range" value="' + App.esc(p.ref || '') + '">'
+        + App.unitSelect('rt-fu', p.unit)
+        + '<div style="display:flex;gap:4px"><input class="input rt-fr" style="min-width:0" placeholder="Reference range" value="' + App.esc(p.ref || '') + '">' + App.refPresetSelect() + '</div>'
         + '<select class="input rt-ft"><option value="text"' + (isNum ? '' : ' selected') + '>Text</option>'
         + '<option value="number"' + (isNum ? ' selected' : '') + '>Number</option></select>'
         + '<button type="button" class="btn btn-ghost btn-sm rt-frm" title="Remove">✕</button>'

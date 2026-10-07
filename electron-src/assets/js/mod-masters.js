@@ -378,15 +378,17 @@ function drawTestRows(canEdit) {
 
 function paramRow(p) {
   p = p || {};
-  return '<div class="tm-prow" data-type="' + App.esc(p.type || '') + '" style="display:grid;grid-template-columns:1fr 110px 1fr 36px;gap:8px;margin-bottom:8px">' +
+  var ptype = p.type || (/\d/.test(String(p.ref || '')) || !p.ref ? 'number' : 'text');
+  return '<div class="tm-prow" style="display:grid;grid-template-columns:1fr 120px 1fr 36px;gap:8px;margin-bottom:8px">' +
     '<input class="input tm-pn" placeholder="Parameter (e.g. Hemoglobin)" value="' + App.esc(p.name || '') + '">' +
-    '<input class="input tm-pu" placeholder="Unit" value="' + App.esc(p.unit || '') + '">' +
-    '<input class="input tm-pr" placeholder="Reference range" value="' + App.esc(p.ref || '') + '">' +
+    App.unitSelect('tm-pu', p.unit) +
+    '<div style="display:flex;gap:4px"><input class="input tm-pr" style="min-width:0" placeholder="Reference range" value="' + App.esc(p.ref || '') + '">' + App.refPresetSelect() + '</div>' +
     '<button type="button" class="btn btn-ghost btn-sm tm-prm" title="Remove">✕</button>' +
-    '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:-2px">' +
+    '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:-2px">' +
       '<input class="input tm-pm" placeholder="Male range (optional)" value="' + App.esc(p.refMale || '') + '">' +
       '<input class="input tm-pf" placeholder="Female range (optional)" value="' + App.esc(p.refFemale || '') + '">' +
       '<input class="input tm-pc" placeholder="Child &lt; 13 yrs (optional)" value="' + App.esc(p.refChild || '') + '">' +
+      '<select class="input tm-pt" title="Result type: Number = typed number; Text / menu = pick from a menu (Positive / Negative ...)"><option value="number"' + (ptype === 'number' ? ' selected' : '') + '>Number</option><option value="text"' + (ptype === 'text' ? ' selected' : '') + '>Text / menu</option></select>' +
     '</div>' +
   '</div>';
 }
@@ -695,7 +697,7 @@ function testModal(t) {
       (isNew ? 'Add Test' : 'Save Changes') + '</button></div>' +
     '</form>';
 
-  App.modal(isNew ? 'Add New Test' : 'Edit Test', body, { onOpen: function (ov, close) {
+  App.modal(isNew ? 'Add New Test' : 'Edit Test', body, { wide: true, onOpen: function (ov, close) {
     var m = lastModal(); if (!m) return;
     m.querySelector('#tm-cancel').addEventListener('click', close);
     var rowsBox = m.querySelector('#tm-prows');
@@ -759,7 +761,7 @@ function testModal(t) {
           unit: row.querySelector('.tm-pu').value.trim(),
           ref: row.querySelector('.tm-pr').value.trim()
         };
-        if (row.getAttribute('data-type')) pobj.type = row.getAttribute('data-type');
+        var ptEl = row.querySelector('.tm-pt'); if (ptEl) pobj.type = ptEl.value;
         [['.tm-pm', 'refMale'], ['.tm-pf', 'refFemale'], ['.tm-pc', 'refChild']].forEach(function (x) {
           var v = row.querySelector(x[0]).value.trim(); if (v) pobj[x[1]] = v;
         });
