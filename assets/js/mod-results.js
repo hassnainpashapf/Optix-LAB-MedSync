@@ -696,9 +696,8 @@
             if (!saved) { App.toast('Enter at least one result value', 'err'); return; }
             App.toast(saved + ' result(s) saved — marked ready' + (skipped ? ' (' + skipped + ' skipped — empty)' : '') + paidMsg);
             render();
-            // offer print: switch to ready tab so the user can print
-            tab = 'ready';
-            render();
+            // offer print: open the Ready Reports page so the user can print
+            App.nav('#/results/ready');
             // auto-send reports that just became fully ready
             if (_crit.length) criticalNotify(_crit);
             waAutoSendReady(_waIds);
@@ -3085,10 +3084,10 @@
     var tabsHtml =
       '<div class="toolbar" style="margin-bottom:16px;flex-wrap:wrap">' +
         '<input class="input search" id="resSearch" placeholder="Search invoice no / patient..." value="' + App.esc(query) + '" style="max-width:280px;flex:1;min-width:200px">' +
-        '<div style="display:flex;gap:8px;margin-left:auto">' +
-          '<button class="btn ' + (tab === 'pending' ? 'btn-primary' : '') + '" data-tab="pending" style="border:2px solid #000">Pending Entry <span class="badge b-pending" style="margin-left:6px">' + pendingRows.length + '</span></button>' +
-          '<button class="btn ' + (tab === 'ready' ? 'btn-primary' : '') + '" data-tab="ready" style="border:2px solid #000">Ready Reports <span class="badge b-ready" style="margin-left:6px">' + readyGroupsCount + '</span></button>' +
-        '</div>' +
+        /* Pending Entry / Ready Reports are sidebar sub-menu items now (#/results, #/results/ready); this only labels the list */
+        '<div style="margin-left:auto;font-weight:700;font-size:14px;color:var(--ink2)">' + (tab === 'pending'
+          ? 'Pending Entry <span class="badge b-pending" style="margin-left:6px">' + pendingRows.length + '</span>'
+          : 'Ready Reports <span class="badge b-ready" style="margin-left:6px">' + readyGroupsCount + '</span>') + '</div>' +
       '</div>';
 
     var bodyHtml = '';
@@ -3217,7 +3216,8 @@
     });
   }
 
-  App.route('#/results', render);
+  App.route('#/results', function () { tab = 'pending'; render(); });
+  App.route('#/results/ready', function () { tab = 'ready'; render(); });
 
   /* exposed so the Reports page "Finalized Patient Reports" archive can view/print */
   App.viewLabReport = viewReport;
