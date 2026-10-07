@@ -648,6 +648,85 @@ async function main() {
       } catch (e) { res.status(400).json({ error: e.message }); }
     });
 
+    /* ---- "Continue with Google": a Google ID token is verified with Google (tokeninfo) and must be issued for OUR client id,
+       unexpired, with a verified email. The client id is set in the superadmin console (or GOOGLE_CLIENT_ID). Google never sees the lab's data. ---- */
+    const GOOGLE_META = 'saas_google';
+    const GOOGLE_INFO = process.env.GOOGLE_TOKENINFO_URL || 'https://oauth2.googleapis.com/tokeninfo';
+    const GCLIENT_RE = /^[0-9A-Za-z._-]{6,200}\.apps\.googleusercontent\.com$/;
+    let googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+    async function loadGoogle() { try { const m = await rawStore.getMeta(GOOGLE_META); googleClientId = (m && m.clientId) || process.env.GOOGLE_CLIENT_ID || ''; } catch (e) { /* keep env value */ } }
+    await loadGoogle();
+    async function verifyGoogle(credential) {
+      if (!googleClientId) throw Object.assign(new Error('Google sign-in is not set up yet.'), { status: 503 });
+      if (typeof credential !== 'string' || credential.length < 10 || credential.length > 6000) throw new Error('Google sign-in failed. Please try again.');
+      const ac = new AbortController(), to = setTimeout(() => ac.abort(), 8000);
+      let j = null, ok = false;
+      try { const r = await fetch(GOOGLE_INFO + '?id_token=' + encodeURIComponent(credential), { signal: ac.signal }); ok = r.ok; j = await r.json().catch(() => null); }
+      catch (e) { throw Object.assign(new Error('Could not reach Google. Please try again.'), { status: 502 }); }
+      finally { clearTimeout(to); }
+      if (!ok || !j || j.aud !== googleClientId || ['accounts.google.com', 'https://accounts.google.com'].indexOf(j.iss) < 0 || !(+j.exp * 1000 > Date.now())
+        || !(j.email_verified === true || j.email_verified === 'true') || !EMAIL_OK.test(String(j.email || ''))) throw new Error('Google could not verify this sign-in. Please try again.');
+      const email = String(j.email).toLowerCase();
+      return { email, name: String(j.name || j.given_name || email.split('@')[0]).slice(0, 100), sub: String(j.sub || '') };
+    }
+    const googleView = async () => ({ configured: !!googleClientId, clientId: googleClientId, source: (await rawStore.getMeta(GOOGLE_META)) ? 'saved' : (process.env.GOOGLE_CLIENT_ID ? 'env' : 'none') });
+    app.get('/api/auth/google-config', (req, res) => res.json({ clientId: googleClientId || '' }));
+    app.get('/api/saas/google', requireSuperadmin, async (req, res) => res.json(await googleView()));
+    app.put('/api/saas/google', requireSuperadmin, async (req, res) => {
+      const b = req.body || {};
+      if (b.clear) { await rawStore.setMeta(GOOGLE_META, null); await loadGoogle(); return res.json(await googleView()); }
+      const id = String(b.clientId || '').trim();
+      if (!GCLIENT_RE.test(id)) return res.status(400).json({ error: 'That does not look like a Google Client ID. It ends with .apps.googleusercontent.com' });
+      await rawStore.setMeta(GOOGLE_META, { clientId: id }); await loadGoogle();
+      res.json(await googleView());
+    });
+    /* start a free trial with a Google account: the lab name + Lab ID come from the form, the owner name + email from Google.
+       The username defaults to the part of the email before @; the password is the typed one, or random (set one later via "Forgot password?"). */
+    app.post('/api/saas/google-signup', async (req, res) => {
+      try {
+        if (bump(signupHits, req.ip, 3600000).n > (+process.env.SAAS_SIGNUPS_PER_HOUR || 5)) return res.status(429).json({ error: 'Too many sign-ups from this network. Please try again later.' });
+        const b = req.body || {}, g = await verifyGoogle(b.credential);
+        let username = String(b.username || '').trim() || g.email.split('@')[0].replace(/[^A-Za-z0-9._-]/g, '').slice(0, 30);
+        if (username.length < 3) username = 'admin';
+        const password = String(b.password || '') || crypto.randomBytes(18).toString('base64url');
+        const lab = await saas.createLab({ labName: b.labName, slug: b.slug, phone: b.phone, ownerName: g.name, email: g.email, username, password }, 'google');
+        const u = (await saas.storeFor(lab).all('users'))[0];
+        const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
+        console.log('[labpos-cloud] saas: new lab signed up with Google:', lab.slug, '<' + lab.ownerEmail + '>');
+        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role }, token, lab: await saas.view(lab), google: { username, passwordSet: !!String(b.password || '') } });
+      } catch (e) { res.status(e.status || 400).json({ error: e.message }); }
+    });
+    /* sign in with Google: with a Lab ID typed, any active user of that lab whose profile email is this Google email; without one,
+       only the lab(s) this email OWNS (the signup email, which only the operator can change) */
+    app.post('/api/saas/google-login', async (req, res) => {
+      const b = req.body || {}, labSlug = typeof b.lab === 'string' ? b.lab.trim().toLowerCase() : '';
+      const NOPE = 'No lab is linked to this Google account. Use "Start your 14-day free trial" to create one, or type your Lab ID above first.';
+      try {
+        if (hot(ipFails, req.ip, 60)) return res.status(429).json({ error: 'Too many attempts. Try again in a few minutes.' });
+        if (labSlug.length > 40) return res.status(400).json({ error: NOPE });
+        const g = await verifyGoogle(b.credential);
+        let cands = [];
+        if (labSlug) {
+          const lab = await saas.findBySlug(labSlug);
+          if (lab) { const us = (await saas.storeFor(lab).all('users')).filter(x => x.active !== false && String(x.email || '').toLowerCase() === g.email); us.sort((a, c) => (c.role === 'admin') - (a.role === 'admin')); if (us[0]) cands.push({ lab, u: us[0] }); }
+        } else {
+          for (const lab of (await saas.loadLabs(true)).values()) {
+            if (String(lab.ownerEmail || '').toLowerCase() !== g.email) continue;
+            const us = (await saas.storeFor(lab).all('users')).filter(x => x.active !== false && x.role === 'admin' && (String(x.email || '').toLowerCase() === g.email || x.id === 'U-01'));
+            if (us[0]) cands.push({ lab, u: us.find(x => String(x.email || '').toLowerCase() === g.email) || us[0] });
+          }
+        }
+        if (!cands.length) { bump(ipFails, req.ip, 15 * 60 * 1000); return res.status(401).json({ error: NOPE }); }
+        if (cands.length > 1) return res.status(409).json({ error: 'This Google account owns more than one lab. Type the Lab ID above, then try again.' });
+        const { lab, u } = cands[0];
+        if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
+        const lstore = saas.storeFor(lab), user = { id: u.id, name: u.name, role: u.role };
+        await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username + ' (Google)' });
+        const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
+        res.json({ ok: true, user, token, lab: await saas.view(lab) });
+      } catch (e) { res.status(e.status || 400).json({ error: e.message }); }
+    });
+
     /* ---- signed-in lab: my subscription ---- */
     app.get('/api/saas/me', needUser, async (req, res) => {
       const lab = req.lab || await saas.getLab('main');

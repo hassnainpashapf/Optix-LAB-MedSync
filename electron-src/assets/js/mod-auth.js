@@ -131,6 +131,28 @@
     }));
   }
 
+  /* ---------- "Continue with Google" (shown only when the operator has set a Google Client ID in the superadmin console) ---------- */
+  function googleAllowed() {
+    return isCloud() && !isDesktop() && !!window.fetch && !!window.LABPOS_API && !/OptixApp|; wv\)|Electron/i.test(navigator.userAgent || '');
+  }
+  function wireGoogle(wrapId, btnId, onCredential) {
+    if (!googleAllowed()) return;
+    window.fetch(window.LABPOS_API + '/api/auth/google-config').then(function (r) { return r.ok ? r.json() : null; }).then(function (cfg) {
+      var wrap = document.getElementById(wrapId), box = document.getElementById(btnId);
+      if (!cfg || !cfg.clientId || !wrap || !box) return;
+      function go() {
+        try {
+          window.google.accounts.id.initialize({ client_id: cfg.clientId, callback: function (resp) { if (resp && resp.credential) onCredential(resp.credential); }, ux_mode: 'popup' });
+          window.google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', logo_alignment: 'left', width: Math.min(360, Math.max(240, box.parentNode.clientWidth || 320)) });
+          wrap.hidden = false;
+        } catch (e) { /* Google script blocked: the normal form still works */ }
+      }
+      if (window.google && window.google.accounts && window.google.accounts.id) { go(); return; }
+      var sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.async = true; sc.onload = go; sc.onerror = function () {};
+      document.head.appendChild(sc);
+    }).catch(function () {});
+  }
+
   /* ---------- sign in ---------- */
   A.renderLogin = function () {
     var st = {};
@@ -173,6 +195,7 @@
           '<div class="lg-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
           (showLabId && !desk ? '<div class="lg-forgot" id="lgForgot" hidden><a href="#/forgot">Forgot password?</a></div>' : '') + /* shown only when the server can send email */
           '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Sign In</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
+          (showLabId && !desk ? '<div class="lg-google" id="lgGoogle" hidden><div class="login-div"><span>or</span></div><div class="lg-gbtn" id="lgGBtn"></div></div>' : '') +
           (showLabId ? '<p class="lg-new">New to Optix? <a href="' + signupHref + '"' + signupAttr + '>Start your 14-day free trial</a></p>' : '') +
           '<div class="login-div"><span>or</span></div>' +
           (desk
@@ -188,6 +211,15 @@
       if (fg && window.LABPOS_API && window.fetch) window.fetch(window.LABPOS_API + '/api/auth/mail-status').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { if (j && j.mail) fg.hidden = false; }).catch(function () {});
     } catch (e) {}
     if (window.__loginNote) { showErr(window.__loginNote); window.__loginNote = ''; } /* e.g. "This lab account is suspended" */
+    wireGoogle('lgGoogle', 'lgGBtn', function (cred) {
+      var labEl = document.getElementById('liLabId'), lab = labEl ? labEl.value.trim().toLowerCase() : '';
+      document.getElementById('loginErr').hidden = true;
+      DB.saas('POST', 'google-login', { credential: cred, lab: lab }).then(function (j) {
+        return DB.adoptSession(j).then(function () { return j; }, function () { return j; });
+      }).then(function (j) {
+        lset(LKEY, j.lab.slug); setSession(j, j.lab.slug); location.hash = '#/dashboard';
+      }).catch(function (ex) { showErr((ex && ex.message) || 'Google sign-in failed. Please try again.'); });
+    });
 
     var labSel = document.getElementById('liLab');
     if (labSel) labSel.addEventListener('change', function () {
@@ -262,6 +294,7 @@
           '<div class="lg-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
           '<label class="lg-terms"><input type="checkbox" id="suTerms"><span>I agree to the <a href="' + WEB + '/terms.html" target="_blank" rel="noopener">Terms</a> and <a href="' + WEB + '/privacy.html" target="_blank" rel="noopener">Privacy Policy</a></span></label>' +
           '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Create my lab &mdash; start free trial</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
+          '<div class="lg-google" id="suGoogle" hidden><div class="login-div"><span>or fill only the lab name and Lab ID, then</span></div><div class="lg-gbtn" id="suGBtn"></div></div>' +
           '<p class="lg-new">Already have an account? <a href="#/login">Sign in</a></p>' +
         '</form>' +
         '<p class="login-foot"><span class="lg-secure">' + ic('shield', 13) + 'Your lab\'s data is stored in its own isolated space</span>Powered by System Optix</p>' +
@@ -316,6 +349,20 @@
         btn.disabled = false; btn.classList.remove('busy'); btn.querySelector('.lg-bt').textContent = 'Create my lab — start free trial';
         showErr((ex && ex.message) || 'Could not create the account. Please try again.');
       });
+    });
+    wireGoogle('suGoogle', 'suGBtn', function (cred) {
+      $('loginErr').hidden = true;
+      var lab = $('suLab').value.trim(), slug = slugify($('suSlug').value);
+      if (lab.length < 3) { showErr('Type your lab name first, then click the Google button again.'); return; }
+      if (slug.length < 3) { showErr('Type a Lab ID first (3+ letters), then click the Google button again.'); return; }
+      if (!$('suTerms').checked) { showErr('Please accept the Terms and Privacy Policy to continue.'); return; }
+      DB.saas('POST', 'google-signup', { credential: cred, labName: lab, slug: slug, phone: $('suPhone').value.trim(), username: $('suUser').value.trim(), password: $('suPass').value }).then(function (j) {
+        return DB.adoptSession(j).then(function () { return j; }, function () { return j; });
+      }).then(function (j) {
+        lset(LKEY, j.lab.slug); setSession(j, j.lab.slug);
+        try { sessionStorage.setItem('labpos_welcome', JSON.stringify({ slug: j.lab.slug, days: j.lab.daysLeft, name: j.lab.name, google: j.google || null })); } catch (e2) {}
+        location.hash = '#/dashboard';
+      }).catch(function (ex) { showErr((ex && ex.message) || 'Could not create the account. Please try again.'); });
     });
   };
 

@@ -1130,7 +1130,7 @@ function loadPayments(silent) {
 }
 function loadSettings(silent) {
   return loadSection('settings', function () {
-    return Promise.all([api('/api/saas/settings'), api('/api/saas/mail').catch(function () { return null; })]).then(function (x) { x[0].mail = x[1]; return x[0]; });
+    return Promise.all([api('/api/saas/settings'), api('/api/saas/mail').catch(function () { return null; }), api('/api/saas/google').catch(function () { return null; })]).then(function (x) { x[0].mail = x[1]; x[0].google = x[2]; return x[0]; });
   }, function (r) {
     state.settingsData = { settings: r.settings || {}, plans: r.plans || {}, mail: r.mail || null };
   }, silent);
@@ -1738,9 +1738,45 @@ function settingsViewHtml() {
     '<button class="btn btn-sm" id="pmAdd" style="margin-left:auto">' + IC.plus + ' Add method</button></div>' +
     '<div class="card-b" id="pmList">' + methodsHtml(s.payMethods || []) + '</div></div>' +
     mailCardHtml(state.settingsData.mail) +
+    googleCardHtml(state.settingsData.google) +
     '<div class="save-bar"><button class="btn btn-primary" id="setSave2">Save changes</button></div>';
 }
 
+
+/* ---- "Continue with Google" on the sign-in / sign-up pages: needs a Google OAuth Client ID ---- */
+function googleCardHtml(g) {
+  g = g || {};
+  var on = !!g.configured;
+  var status = on
+    ? '<span class="badge b-green" style="margin-left:8px">ON</span> <span class="hint">the Google button is live on the sign-in and sign-up pages</span>'
+    : '<span class="badge" style="margin-left:8px">NOT SET</span> <span class="hint">the Google button stays hidden until a Client ID is saved</span>';
+  return '<div class="card" id="googleCard"><div class="card-h"><h3>Sign in with Google</h3>' + status + '<span class="sub" style="margin-left:auto">free trial and sign-in with a Gmail account</span></div><div class="card-b">' +
+    '<ol class="hint" style="margin:0 0 12px 18px;padding:0;line-height:1.8">' +
+    '<li>Open <b>console.cloud.google.com</b> → create a project (any name) → <b>APIs &amp; Services → OAuth consent screen</b> → External → fill the app name and your email → Save.</li>' +
+    '<li><b>Credentials → Create credentials → OAuth client ID</b> → type <b>Web application</b>.</li>' +
+    '<li>Under <b>Authorised JavaScript origins</b> add <code>https://optix-lab-medsync.pages.dev</code> (and your own domain if you get one). No redirect URI is needed.</li>' +
+    '<li>Copy the <b>Client ID</b> (ends with <code>.apps.googleusercontent.com</code>) and paste it below. On the consent screen click <b>Publish app</b> so every Gmail user can sign in.</li></ol>' +
+    '<div class="fgrid"><div class="span2"><label class="label" for="gcId">Google Client ID</label><input class="input" id="gcId" value="' + esc(g.clientId || '') + '" placeholder="123456789-abc123.apps.googleusercontent.com" autocomplete="off"></div></div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center"><button class="btn btn-primary" id="gcSave">Save Client ID</button>' +
+    (on && g.source === 'saved' ? '<button class="btn btn-sm" id="gcClear" style="margin-left:auto">Remove</button>' : '') + '</div>' +
+    '<p class="hint" id="gcMsg" style="margin:10px 0 0"></p>' +
+    '<p class="hint" style="margin:10px 0 0">Note: Google blocks its sign-in inside the Android app and the desktop app, so the button appears on the website only. Those apps keep using the Lab ID + username + password.</p></div></div>';
+}
+function wireGoogleCard() {
+  var $g = function (id) { return document.getElementById(id); };
+  if (!$g('googleCard')) return;
+  function msg(t, bad) { var e = $g('gcMsg'); if (e) { e.textContent = t; e.style.color = bad ? '#b91c1c' : '#047857'; } }
+  $g('gcSave').addEventListener('click', function () {
+    var b = $g('gcSave'); b.disabled = true;
+    api('/api/saas/google', { method: 'PUT', body: { clientId: $g('gcId').value.trim() } }).then(function (r) {
+      state.settingsData.google = r; toast('Google sign-in saved.', 'ok'); if (state.view === 'settings') paintMain();
+    }, function (err) { b.disabled = false; msg((err && err.data && err.data.error) || 'Could not save', true); });
+  });
+  var c = $g('gcClear'); if (c) c.addEventListener('click', function () {
+    if (!window.confirm('Remove the Google Client ID? The Google button will disappear.')) return;
+    api('/api/saas/google', { method: 'PUT', body: { clear: true } }).then(function (r) { state.settingsData.google = r; toast('Google sign-in removed.', 'ok'); if (state.view === 'settings') paintMain(); }, handleErr);
+  });
+}
 
 /* ---- email sender (SMTP): used for "Forgot password" emails ---- */
 function mailCardHtml(m) {
@@ -1812,6 +1848,7 @@ function collectMethods() {
 function wireSettingsView() {
   if (!state.settingsData) return;
   wireMailCard();
+  wireGoogleCard();
   var s1 = $('setSave'), s2 = $('setSave2');
   if (s1) s1.addEventListener('click', saveSettings);
   if (s2) s2.addEventListener('click', saveSettings);
