@@ -503,7 +503,7 @@
             return '<option value="' + o[0] + '"' + (F.range === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
           '<input type="date" class="input" id="smpDate" value="' + esc(F.date) + '"' + (F.range === 'pick' ? '' : ' hidden') + '>' +
           '<span class="smp-sp"></span>' +
-          '<button class="btn btn-sm" id="smpGen" title="Create sample tubes for invoices in this date range that have none">' + App.icon('plus', 14) + ' Generate samples</button>' +
+          '<button class="btn btn-primary btn-sm" id="smpGen" title="Create sample tubes for invoices in this date range that have none">' + App.icon('plus', 14) + ' Generate samples</button>' +
         '</div>' +
         '<div class="tabs" id="smpTabs"></div>' +
         '<div class="smp-bulk" id="smpBulk" hidden></div>' +
