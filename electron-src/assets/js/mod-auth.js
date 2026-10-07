@@ -153,6 +153,19 @@
     }).catch(function () {});
   }
 
+  /* create a free-trial lab straight from a Google sign-in: every field is optional, the server fills the rest from the Google account */
+  function googleSignup(cred, extra) {
+    var body = { credential: cred };
+    Object.keys(extra || {}).forEach(function (k) { if (extra[k]) body[k] = extra[k]; });
+    return DB.saas('POST', 'google-signup', body).then(function (j) {
+      return DB.adoptSession(j).then(function () { return j; }, function () { return j; });
+    }).then(function (j) {
+      lset(LKEY, j.lab.slug); setSession(j, j.lab.slug);
+      try { sessionStorage.setItem('labpos_welcome', JSON.stringify({ slug: j.lab.slug, days: j.lab.daysLeft, name: j.lab.name, google: j.google || null })); } catch (e2) {}
+      location.hash = '#/dashboard';
+    });
+  }
+
   /* ---------- sign in ---------- */
   A.renderLogin = function () {
     var st = {};
@@ -182,8 +195,6 @@
             '<h1>' + esc(st.labName || 'Optix LAB MedSync') + '</h1>' +
             '<p class="login-tag">' + esc(st.tagline || 'Accurate • Fast • Trusted') + '</p>' +
           '</div>' +
-          '<h2>' + greet() + '</h2>' +
-          '<p class="login-sub">Sign in to your lab workspace</p>' +
           (labs.length > 1 && !showLabId
             ? '<label class="lg-f"><span class="lg-fl">Lab</span><span class="lg-in lg-sel">' + ic('building', 17) + '<select class="select" id="liLab">' +
               labs.map(function (l) { return '<option value="' + esc(l.id) + '"' + (l.id === selId ? ' selected' : '') + '>' + esc(l.name) + '</option>'; }).join('') + '</select></span></label>'
@@ -213,12 +224,25 @@
     if (window.__loginNote) { showErr(window.__loginNote); window.__loginNote = ''; } /* e.g. "This lab account is suspended" */
     wireGoogle('lgGoogle', 'lgGBtn', function (cred) {
       var labEl = document.getElementById('liLabId'), lab = labEl ? labEl.value.trim().toLowerCase() : '';
+      var old = document.getElementById('lgMakeLab'); if (old) old.remove();
       document.getElementById('loginErr').hidden = true;
       DB.saas('POST', 'google-login', { credential: cred, lab: lab }).then(function (j) {
         return DB.adoptSession(j).then(function () { return j; }, function () { return j; });
       }).then(function (j) {
         lset(LKEY, j.lab.slug); setSession(j, j.lab.slug); location.hash = '#/dashboard';
-      }).catch(function (ex) { showErr((ex && ex.message) || 'Google sign-in failed. Please try again.'); });
+      }).catch(function (ex) {
+        showErr((ex && ex.message) || 'Google sign-in failed. Please try again.');
+        if (ex && ex.code === 'NO_LAB') { /* no lab for this Google account yet: offer to make one in one click */
+          var er = document.getElementById('loginErr'), mk = document.createElement('button');
+          mk.type = 'button'; mk.id = 'lgMakeLab'; mk.className = 'btn btn-primary btn-block'; mk.style.margin = '8px 0 4px';
+          mk.textContent = 'Create my free 14-day trial lab with this Google account';
+          mk.onclick = function () {
+            mk.disabled = true; mk.textContent = 'Creating your lab…';
+            googleSignup(cred, {}).catch(function (e2) { mk.disabled = false; mk.textContent = 'Create my free 14-day trial lab with this Google account'; showErr((e2 && e2.message) || 'Could not create the lab. Please try again.'); });
+          };
+          er.parentNode.insertBefore(mk, er.nextSibling);
+        }
+      });
     });
 
     var labSel = document.getElementById('liLab');
@@ -294,7 +318,7 @@
           '<div class="lg-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
           '<label class="lg-terms"><input type="checkbox" id="suTerms"><span>I agree to the <a href="' + WEB + '/terms.html" target="_blank" rel="noopener">Terms</a> and <a href="' + WEB + '/privacy.html" target="_blank" rel="noopener">Privacy Policy</a></span></label>' +
           '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Create my lab &mdash; start free trial</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
-          '<div class="lg-google" id="suGoogle" hidden><div class="login-div"><span>or fill only the lab name and Lab ID, then</span></div><div class="lg-gbtn" id="suGBtn"></div></div>' +
+          '<div class="lg-google" id="suGoogle" hidden><div class="login-div"><span>or sign up in one click</span></div><div class="lg-gbtn" id="suGBtn"></div><p class="lg-gnote">Nothing to fill in: your name, email, lab name and Lab ID are taken from your Google account (you can change the lab details later in Settings). By continuing you agree to the <a href="' + WEB + '/terms.html" target="_blank" rel="noopener">Terms</a> and <a href="' + WEB + '/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p></div>' +
           '<p class="lg-new">Already have an account? <a href="#/login">Sign in</a></p>' +
         '</form>' +
         '<p class="login-foot"><span class="lg-secure">' + ic('shield', 13) + 'Your lab\'s data is stored in its own isolated space</span>Powered by System Optix</p>' +
@@ -352,17 +376,9 @@
     });
     wireGoogle('suGoogle', 'suGBtn', function (cred) {
       $('loginErr').hidden = true;
-      var lab = $('suLab').value.trim(), slug = slugify($('suSlug').value);
-      if (lab.length < 3) { showErr('Type your lab name first, then click the Google button again.'); return; }
-      if (slug.length < 3) { showErr('Type a Lab ID first (3+ letters), then click the Google button again.'); return; }
-      if (!$('suTerms').checked) { showErr('Please accept the Terms and Privacy Policy to continue.'); return; }
-      DB.saas('POST', 'google-signup', { credential: cred, labName: lab, slug: slug, phone: $('suPhone').value.trim(), username: $('suUser').value.trim(), password: $('suPass').value }).then(function (j) {
-        return DB.adoptSession(j).then(function () { return j; }, function () { return j; });
-      }).then(function (j) {
-        lset(LKEY, j.lab.slug); setSession(j, j.lab.slug);
-        try { sessionStorage.setItem('labpos_welcome', JSON.stringify({ slug: j.lab.slug, days: j.lab.daysLeft, name: j.lab.name, google: j.google || null })); } catch (e2) {}
-        location.hash = '#/dashboard';
-      }).catch(function (ex) { showErr((ex && ex.message) || 'Could not create the account. Please try again.'); });
+      /* anything already typed in the form is used (lab name, Lab ID, username, password, phone); everything else is filled automatically */
+      googleSignup(cred, { labName: $('suLab').value.trim(), slug: slugify($('suSlug').value), phone: $('suPhone').value.trim(), username: $('suUser').value.trim(), password: $('suPass').value })
+        .catch(function (ex) { showErr((ex && ex.message) || 'Could not create the account. Please try again.'); });
     });
   };
 

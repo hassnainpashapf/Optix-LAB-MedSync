@@ -686,10 +686,24 @@ async function main() {
       try {
         if (bump(signupHits, req.ip, 3600000).n > (+process.env.SAAS_SIGNUPS_PER_HOUR || 5)) return res.status(429).json({ error: 'Too many sign-ups from this network. Please try again later.' });
         const b = req.body || {}, g = await verifyGoogle(b.credential);
-        let username = String(b.username || '').trim() || g.email.split('@')[0].replace(/[^A-Za-z0-9._-]/g, '').slice(0, 30);
+        const local = g.email.split('@')[0];
+        let username = String(b.username || '').trim() || local.replace(/[^A-Za-z0-9._-]/g, '').slice(0, 30);
         if (username.length < 3) username = 'admin';
         const password = String(b.password || '') || crypto.randomBytes(18).toString('base64url');
-        const lab = await saas.createLab({ labName: b.labName, slug: b.slug, phone: b.phone, ownerName: g.name, email: g.email, username, password }, 'google');
+        /* nothing has to be typed: the lab name comes from the Google name, the Lab ID from the email (made unique if taken) */
+        const labName = String(b.labName || '').trim() || (g.name + "'s Lab").slice(0, 100);
+        const typedSlug = saas.slugify(String(b.slug || ''));
+        let lab = null, lastErr = null;
+        if (typedSlug) lab = await saas.createLab({ labName, slug: typedSlug, phone: b.phone, ownerName: g.name, email: g.email, username, password }, 'google');
+        else {
+          let base = saas.slugify(local) || 'lab'; if (base.length < 3) base = (base + '-lab').slice(0, 30);
+          for (let i = 0; i < 8 && !lab; i++) {
+            const slug = i === 0 ? base : (base.slice(0, 24) + '-' + (i < 4 ? i + 1 : crypto.randomBytes(2).toString('hex'))).slice(0, 30);
+            try { lab = await saas.createLab({ labName, slug, phone: b.phone, ownerName: g.name, email: g.email, username, password }, 'google'); }
+            catch (e) { lastErr = e; if (!/already taken/i.test(e.message)) throw e; }
+          }
+          if (!lab) throw lastErr || new Error('Could not pick a free Lab ID. Please type one and try again.');
+        }
         const u = (await saas.storeFor(lab).all('users'))[0];
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         console.log('[labpos-cloud] saas: new lab signed up with Google:', lab.slug, '<' + lab.ownerEmail + '>');
@@ -724,7 +738,7 @@ async function main() {
             if (us[0]) cands.push({ lab, u: us.find(x => String(x.email || '').toLowerCase() === g.email) || us[0] });
           }
         }
-        if (!cands.length) { bump(ipFails, req.ip, 15 * 60 * 1000); return res.status(401).json({ error: NOPE }); }
+        if (!cands.length) { bump(ipFails, req.ip, 15 * 60 * 1000); return res.status(401).json({ error: NOPE, code: 'NO_LAB', email: g.email }); }
         if (cands.length > 1) return res.status(409).json({ error: 'This Google account owns more than one lab. Type the Lab ID above, then try again.' });
         const { lab, u } = cands[0];
         if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
