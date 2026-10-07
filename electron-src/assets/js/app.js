@@ -48,7 +48,8 @@
     { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues',      color: '#ef4444' },
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors',   color: '#ec4899' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
-    { key: 'finance',   label: 'Cash & Profit', icon: 'finance', route: '#/finance', color: '#0ea5a4' },
+    { key: 'finance',   label: 'Cash & Profit', icon: 'finance', route: '#/finance', color: '#0ea5a4',
+      sub: [{ key: 'closing', label: 'Daily Cash Closing', route: '#/finance' }, { key: 'profit', label: 'Profit & Loss', route: '#/finance/profit', roles: ['admin'] }] },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports',   color: '#6366f1' },
     { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads', color: '#06b6d4' },
     { key: 'whatsapp',  label: 'WhatsApp',   icon: 'chat',      route: '#/whatsapp',  color: '#22c55e' },
@@ -558,6 +559,15 @@
     try { st = window.DB.get('settings', 'main') || {}; } catch (e) {}
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     var items = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()); }).map(function (n) {
+      if (n.sub) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
+        var subs = n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; });
+        var open = n.key === activeKey || localStorage.getItem('labpos_nav_' + n.key) === '1';
+        return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
+          '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+          '<span class="nav-ic" style="background:' + (n.color || '#64748b') + '1a;color:' + (n.color || '#64748b') + '">' + icon(n.icon, 19) + '</span><span class="nav-lb">' + n.label + '</span>' +
+          '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
+          '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it" data-href="' + x.route + '">' + x.label + '</a>'; }).join('') + '</div></div>';
+      }
       return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
         '<span class="nav-ic" style="background:' + (n.color || '#64748b') + '1a;color:' + (n.color || '#64748b') + '">' + icon(n.icon, 19) + '</span><span class="nav-lb">' + n.label + '</span></a>';
     }).join('');
@@ -662,7 +672,7 @@
         if (!document.body.classList.contains('side-open')) return;
         var t = e.target;
         if (!t || !t.closest) return;
-        if (t.closest('#sideClose') || t.closest('#sidebar .nav-it')) { document.body.classList.remove('side-open'); return; }
+        if (t.closest('#sideClose') || t.closest('#sidebar .nav-it:not(.nav-par)') || t.closest('#sidebar .nav-sub-it')) { document.body.classList.remove('side-open'); return; }
         if (t.closest('#sidebar') || t.closest('#navToggle')) return;
         document.body.classList.remove('side-open');
       });
@@ -676,7 +686,23 @@
     for (var i = 0; i < links.length; i++) {
       links[i].classList.toggle('active', links[i].getAttribute('data-nav') === key);
     }
+    /* sub-menu: highlight the child that matches the current page and keep its group open */
+    var h = (location.hash || '').split('?')[0], subs = document.querySelectorAll('.nav-sub-it');
+    for (var j = 0; j < subs.length; j++) {
+      var on = subs[j].getAttribute('data-href') === h;
+      subs[j].classList.toggle('on', on);
+      if (on) { var g = subs[j].closest('.nav-grp'); if (g) { g.classList.add('open'); var pb = g.querySelector('.nav-par'); if (pb) pb.setAttribute('aria-expanded', 'true'); } }
+    }
   }
+  /* sub-menu parents open / close their group (remembered per browser); delegated once */
+  document.addEventListener('click', function (e) {
+    var b = e.target && e.target.closest ? e.target.closest('.nav-par') : null;
+    if (!b) return;
+    var g = b.closest('.nav-grp'); if (!g) return;
+    var open = g.classList.toggle('open');
+    b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    try { localStorage.setItem('labpos_nav_' + g.getAttribute('data-grp'), open ? '1' : '0'); } catch (x) {}
+  });
 
   /* ---------------- login / sign-up: see mod-auth.js (App.renderLogin / App.renderSignup) ---------------- */
 
