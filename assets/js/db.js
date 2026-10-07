@@ -275,9 +275,9 @@
     /* Default report templates — per-test fields used by result entry, print and PDF */
     var TP = {
       'CBC': [
-        { name: 'Hb', unit: 'g/dl', ref: '11.5 - 16', type: 'number' },
-        { name: 'Total RBC', unit: 'x10^12/l', ref: '4 - 6', type: 'number' },
-        { name: 'HCT', unit: '%', ref: '36 - 46', type: 'number' },
+        { name: 'Hb', unit: 'g/dl', ref: '11.5 - 16', refMale: '13.0 - 17.0', refFemale: '12.0 - 15.0', type: 'number' },
+        { name: 'Total RBC', unit: 'x10^12/l', ref: '4 - 6', refMale: '4.5 - 5.5', refFemale: '3.8 - 4.8', type: 'number' },
+        { name: 'HCT', unit: '%', ref: '36 - 46', refMale: '40 - 50', refFemale: '36 - 46', type: 'number' },
         { name: 'MCV', unit: 'fl', ref: '75 - 95', type: 'number' },
         { name: 'MCH', unit: 'pg', ref: '26 - 32', type: 'number' },
         { name: 'MCHC', unit: 'g/dl', ref: '30 - 35', type: 'number' },

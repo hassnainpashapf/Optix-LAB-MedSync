@@ -579,7 +579,7 @@
           var isNum = p.type === 'number';
           return '<tr>' +
             '<td><strong>' + App.esc(p.name) + '</strong></td>' +
-            '<td><input class="input" data-bt="' + ti + '" data-bpi="' + pi + '"' + (isNum ? ' type="number" step="any" inputmode="decimal"' : '') + ' value="' + App.esc(v) + '" placeholder="Enter value"></td>' +
+            '<td>' + resultField(p, v, 'data-bt="' + ti + '" data-bpi="' + pi + '"') + '</td>' +
             '<td class="muted">' + App.esc(p.unit || '') + '</td>' +
             '<td class="muted">' + App.esc(refFor(p, patient)) + '</td></tr>';
         }).join('');
@@ -732,7 +732,7 @@
         var isNum = p.type === 'number';
         return '<tr>' +
           '<td><strong>' + App.esc(p.name) + '</strong></td>' +
-          '<td><input class="input" data-pi="' + i + '"' + (isNum ? ' type="number" step="any" inputmode="decimal"' : '') + ' value="' + App.esc(v) + '" placeholder="Enter value"></td>' +
+          '<td>' + resultField(p, v, 'data-pi="' + i + '"') + '</td>' +
           '<td class="muted">' + App.esc(p.unit || '') + '</td>' +
           '<td class="muted">' + App.esc(refFor(p, pat)) + '</td></tr>';
       }).join('');
@@ -2053,6 +2053,59 @@
       '<p class="rpt-powered" style="color:#000;font-size:0.88em;text-align:center;margin:5px 0 0">Powered by System Optix</p>';
 
     return '<div class="rpt-footer">' + line1 + rule + sigHtml + addrHtml + discHtml + powered + '</div>';
+  }
+
+
+  /* ---------- result entry: pick from a menu instead of typing ----------
+     Text-type parameters get a drop-down of the usual answers (Positive / Negative, Reactive / Non-Reactive, Male / Female,
+     colours ...). The list comes from the parameter's own `options` (comma separated) if set, else from its normal range text
+     or its name. "Other…" turns the menu into a normal text box, so nothing is ever blocked. Numbers stay plain number boxes. */
+  function optionsFor(p) {
+    if (!p || p.type === 'number') return null;
+    var o = p.options;
+    if (typeof o === 'string') o = o.split(/\s*,\s*/);
+    if (Array.isArray(o) && o.length) return o.filter(Boolean);
+    var ref = String(p.ref || '').trim(), nm = String(p.name || '').trim(), rl = ref.toLowerCase();
+    if (/^(gender|sex)$/i.test(nm)) return ['Male', 'Female'];
+    if (/^abo( group)?$|^blood group$/i.test(nm)) return ['A', 'B', 'AB', 'O'];
+    if (/^rh( factor)?$/i.test(nm)) return ['Positive', 'Negative'];
+    if (/^colou?r$/i.test(nm)) return ['Pale yellow', 'Yellow', 'Dark yellow', 'Amber', 'Straw', 'Red', 'Brown', 'Colourless'];
+    if (/^appearance$/i.test(nm)) return ['Clear', 'Slightly turbid', 'Turbid', 'Hazy', 'Cloudy'];
+    if (/1\s*:\s*\d+/.test(ref)) return ['Negative', '1:20', '1:40', '1:80', '1:160', '1:320', '1:640'];
+    if (/non[\s-]*reactive|^reactive/.test(rl)) return ['Non-Reactive', 'Reactive', 'Borderline'];
+    if (/^negative|^nil|^absent/.test(rl)) return rl.indexOf('nil') === 0 || rl.indexOf('absent') === 0
+      ? ['Nil', 'Few', 'Moderate', 'Plenty', 'Present'] : ['Negative', 'Positive', 'Trace', '+', '++', '+++', '++++'];
+    if (/^positive/.test(rl)) return ['Positive', 'Negative'];
+    if (/^normal/.test(rl)) return ['Normal', 'Abnormal'];
+    if (/^clear/.test(rl)) return ['Clear', 'Slightly turbid', 'Turbid', 'Hazy'];
+    if (/^(few|occasional)/.test(rl)) return ['Nil', 'Few', 'Occasional', 'Moderate', 'Plenty'];
+    if (/^(pale )?yellow/.test(rl)) return ['Pale yellow', 'Yellow', 'Dark yellow', 'Amber', 'Straw', 'Red', 'Brown'];
+    if (/^(detected|not detected)/.test(rl)) return ['Not Detected', 'Detected'];
+    if (/\//.test(ref) && !/\d/.test(ref)) { var parts = ref.split(/\s*\/\s*/).filter(Boolean); if (parts.length > 1 && parts.length < 8) return parts; }
+    return null;
+  }
+  /* the input (or menu) for one result field; `attrs` carries the data-* hooks the save code looks up */
+  function resultField(p, v, attrs) {
+    var opts = optionsFor(p);
+    if (!opts) {
+      var isNum = p.type === 'number';
+      return '<input class="input" ' + attrs + (isNum ? ' type="number" step="any" inputmode="decimal"' : '') + ' value="' + App.esc(v) + '" placeholder="Enter value">';
+    }
+    var has = !v || opts.some(function (x) { return x.toLowerCase() === String(v).toLowerCase(); });
+    return '<select class="input rs-opt" ' + attrs + '><option value="">— select —</option>' +
+      opts.map(function (x) { return '<option' + (String(v).toLowerCase() === x.toLowerCase() ? ' selected' : '') + '>' + App.esc(x) + '</option>'; }).join('') +
+      (has ? '' : '<option selected>' + App.esc(v) + '</option>') +
+      '<option value="__other">Other… (type)</option></select>';
+  }
+  if (!window.__rsOptWired) {
+    window.__rsOptWired = true;
+    document.addEventListener('change', function (e) {
+      var t = e.target;
+      if (!t || !t.classList || !t.classList.contains('rs-opt') || t.value !== '__other') return;
+      var inp = document.createElement('input'); inp.className = 'input'; inp.placeholder = 'Type the result';
+      Array.prototype.forEach.call(t.attributes, function (a) { if (/^data-/.test(a.name)) inp.setAttribute(a.name, a.value); });
+      t.parentNode.replaceChild(inp, t); inp.focus();
+    });
   }
 
   /* Reference range of a parameter for THIS patient: child (< 13 yrs) -> male / female -> general range. */

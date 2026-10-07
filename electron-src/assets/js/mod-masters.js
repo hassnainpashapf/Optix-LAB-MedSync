@@ -394,9 +394,9 @@ function paramRow(p) {
 /* Pre-defined parameter templates for common tests (from standard lab reference ranges) */
 var TEST_TEMPLATES = {
   'CBC': [
-    { name: 'Hb', unit: 'g/dl', ref: '11.5 - 16', type: 'number' },
-    { name: 'Total RBC', unit: 'x10^12/l', ref: '4 - 6', type: 'number' },
-    { name: 'HCT', unit: '%', ref: '36 - 46', type: 'number' },
+    { name: 'Hb', unit: 'g/dl', ref: '11.5 - 16', refMale: '13.0 - 17.0', refFemale: '12.0 - 15.0', type: 'number' },
+    { name: 'Total RBC', unit: 'x10^12/l', ref: '4 - 6', refMale: '4.5 - 5.5', refFemale: '3.8 - 4.8', type: 'number' },
+    { name: 'HCT', unit: '%', ref: '36 - 46', refMale: '40 - 50', refFemale: '36 - 46', type: 'number' },
     { name: 'MCV', unit: 'fl', ref: '75 - 95', type: 'number' },
     { name: 'MCH', unit: 'pg', ref: '26 - 32', type: 'number' },
     { name: 'MCHC', unit: 'g/dl', ref: '30 - 35', type: 'number' },
@@ -410,23 +410,23 @@ var TEST_TEMPLATES = {
   'Lipid Profile': [
     { name: 'Total Cholesterol', unit: 'mg/dL', ref: '< 200', type: 'number' },
     { name: 'Triglycerides', unit: 'mg/dL', ref: '< 150', type: 'number' },
-    { name: 'HDL Cholesterol', unit: 'mg/dL', ref: '40 - 60', type: 'number' },
+    { name: 'HDL Cholesterol', unit: 'mg/dL', ref: '40 - 60', refMale: '40 - 60', refFemale: '50 - 70', type: 'number' },
     { name: 'LDL Cholesterol', unit: 'mg/dL', ref: '< 100', type: 'number' },
     { name: 'VLDL', unit: 'mg/dL', ref: '2 - 30', type: 'number' }
   ],
   'Liver Function (LFT)': [
     { name: 'Total Bilirubin', unit: 'mg/dL', ref: '0.3 - 1.2', type: 'number' },
     { name: 'Direct Bilirubin', unit: 'mg/dL', ref: '0.0 - 0.3', type: 'number' },
-    { name: 'SGPT (ALT)', unit: 'U/L', ref: '7 - 56', type: 'number' },
-    { name: 'SGOT (AST)', unit: 'U/L', ref: '10 - 40', type: 'number' },
-    { name: 'Alkaline Phosphatase', unit: 'U/L', ref: '44 - 147', type: 'number' },
+    { name: 'SGPT (ALT)', unit: 'U/L', ref: '7 - 56', refMale: '7 - 41', refFemale: '7 - 33', type: 'number' },
+    { name: 'SGOT (AST)', unit: 'U/L', ref: '10 - 40', refMale: '10 - 40', refFemale: '10 - 32', type: 'number' },
+    { name: 'Alkaline Phosphatase', unit: 'U/L', ref: '44 - 147', refMale: '40 - 129', refFemale: '35 - 104', type: 'number' },
     { name: 'Total Protein', unit: 'g/dL', ref: '6.0 - 8.3', type: 'number' },
     { name: 'Albumin', unit: 'g/dL', ref: '3.5 - 5.5', type: 'number' }
   ],
   'Kidney Function (RFT)': [
     { name: 'Urea', unit: 'mg/dL', ref: '15 - 45', type: 'number' },
-    { name: 'Creatinine', unit: 'mg/dL', ref: '0.6 - 1.2', type: 'number' },
-    { name: 'Uric Acid', unit: 'mg/dL', ref: '3.5 - 7.2', type: 'number' },
+    { name: 'Creatinine', unit: 'mg/dL', ref: '0.6 - 1.2', refMale: '0.7 - 1.3', refFemale: '0.6 - 1.1', type: 'number' },
+    { name: 'Uric Acid', unit: 'mg/dL', ref: '3.5 - 7.2', refMale: '3.5 - 7.2', refFemale: '2.6 - 6.0', type: 'number' },
     { name: 'Sodium', unit: 'm.mol/l', ref: '135 - 150', type: 'number' },
     { name: 'Potassium', unit: 'm.mol/l', ref: '3.5 - 5.4', type: 'number' },
     { name: 'Chloride', unit: 'm.mol/l', ref: '95 - 108', type: 'number' }
@@ -498,9 +498,9 @@ var TEST_TEMPLATES = {
     { name: 'Vitamin B12', unit: 'pg/mL', ref: '200 - 900', type: 'number' }
   ],
   'Iron Studies': [
-    { name: 'Serum Iron', unit: 'ug/dL', ref: '60 - 170', type: 'number' },
+    { name: 'Serum Iron', unit: 'ug/dL', ref: '60 - 170', refMale: '65 - 175', refFemale: '50 - 170', type: 'number' },
     { name: 'TIBC', unit: 'ug/dL', ref: '240 - 450', type: 'number' },
-    { name: 'Ferritin', unit: 'ng/mL', ref: '15 - 150', type: 'number' }
+    { name: 'Ferritin', unit: 'ng/mL', ref: '15 - 150', refMale: '24 - 336', refFemale: '11 - 307', type: 'number' }
   ],
   'Cardiac Enzymes': [
     { name: 'CK-MB', unit: 'ng/mL', ref: '0 - 5', type: 'number' },
