@@ -2065,23 +2065,53 @@
     var o = p.options;
     if (typeof o === 'string') o = o.split(/\s*,\s*/);
     if (Array.isArray(o) && o.length) return o.filter(Boolean);
-    var ref = String(p.ref || '').trim(), nm = String(p.name || '').trim(), rl = ref.toLowerCase();
-    if (/^(gender|sex)$/i.test(nm)) return ['Male', 'Female'];
-    if (/^abo( group)?$|^blood group$/i.test(nm)) return ['A', 'B', 'AB', 'O'];
-    if (/^rh( factor)?$/i.test(nm)) return ['Positive', 'Negative'];
-    if (/^colou?r$/i.test(nm)) return ['Pale yellow', 'Yellow', 'Dark yellow', 'Amber', 'Straw', 'Red', 'Brown', 'Colourless'];
-    if (/^appearance$/i.test(nm)) return ['Clear', 'Slightly turbid', 'Turbid', 'Hazy', 'Cloudy'];
+    var ref = String(p.ref || '').trim(), nm = String(p.name || '').trim(), rl = ref.toLowerCase(), nl = nm.toLowerCase();
+    var BG8 = ['A Positive', 'A Negative', 'B Positive', 'B Negative', 'AB Positive', 'AB Negative', 'O Positive', 'O Negative'];
+    var PN = ['Negative', 'Positive'];
+    /* by name */
+    if (/^(gender|sex)$/.test(nl)) return ['Male', 'Female'];
+    if (/blood\s*group|\babo\b/.test(nl) && rl.indexOf('/') < 0) return (/\brh\b|rh\)|& rh|\+ rh/.test(nl) || /^blood\s*group$/.test(nl)) ? BG8 : ['A', 'B', 'AB', 'O'];
+    if (/^rh(\s|$|\()/.test(nl) || /^rh[\s-]*(factor|type|d)/.test(nl)) return ['Positive', 'Negative'];
+    if (/^colou?r$/.test(nl) || /^colou?r\b/.test(nl) && /yellow|amber|brown|colou?r/.test(rl)) return ['Pale yellow', 'Yellow', 'Dark yellow', 'Amber', 'Straw', 'Red', 'Brown', 'Colourless'];
+    if (/^appearance$|^clarity$|^transparency$/.test(nl)) return ['Clear', 'Slightly turbid', 'Turbid', 'Hazy', 'Cloudy'];
+    if (/^consistency$/.test(nl)) return ['Formed', 'Semi-formed', 'Loose', 'Watery', 'Hard', 'Mucoid'];
+    if (/^odou?r$/.test(nl)) return ['Aromatic', 'Foul', 'Offensive', 'Odourless'];
+    /* by the normal-range text */
     if (/1\s*:\s*\d+/.test(ref)) return ['Negative', '1:20', '1:40', '1:80', '1:160', '1:320', '1:640'];
-    if (/non[\s-]*reactive|^reactive/.test(rl)) return ['Non-Reactive', 'Reactive', 'Borderline'];
-    if (/^negative|^nil|^absent/.test(rl)) return rl.indexOf('nil') === 0 || rl.indexOf('absent') === 0
-      ? ['Nil', 'Few', 'Moderate', 'Plenty', 'Present'] : ['Negative', 'Positive', 'Trace', '+', '++', '+++', '++++'];
+    if (/^negative\s*\(/.test(rl)) return PN;                                   // "Negative (cutoff 300)" etc.
+    if (/^non[\s-]*reactive/.test(rl)) return ['Non-Reactive', 'Reactive', 'Borderline'];
+    if (/^reactive/.test(rl)) return ['Reactive', 'Non-Reactive', 'Borderline'];
+    if (/^negative$|^negative\b.*\bpositive|^neg$/.test(rl)) return ['Negative', 'Positive', 'Trace', '+', '++', '+++', '++++'];
     if (/^positive/.test(rl)) return ['Positive', 'Negative'];
-    if (/^normal/.test(rl)) return ['Normal', 'Abnormal'];
+    if (/^no growth|^sterile/.test(rl)) return ['No growth', 'No growth after 48 hours', 'No growth after 5 days', 'Growth seen', 'Contaminated'];
+    if (/^no organisms? isolated|^not isolated/.test(rl)) return ['No organism isolated', 'Organism isolated'];
+    if (/^no organisms? seen/.test(rl)) return ['No organisms seen', 'Organisms seen'];
+    if (/^no parasites? seen/.test(rl)) return ['No parasite seen', 'Parasite seen'];
+    if (/^not seen/.test(rl)) return ['Not seen', 'Seen', 'Occasional', 'Few', 'Moderate', 'Many'];
+    if (/^absent/.test(rl)) return ['Absent', 'Present'];
+    if (/^present/.test(rl)) return ['Present', 'Absent'];
+    if (/^not detected|^none detected|^no inhibitor/.test(rl)) return ['Not Detected', 'Detected'];
+    if (/^none$/.test(rl)) return ['None', 'Present'];
+    if (/^adequate/.test(rl)) return ['Adequate', 'Inadequate'];
+    if (/^sufficient/.test(rl)) return ['Sufficient', 'Insufficient'];
+    if (/^valid/.test(rl)) return ['Valid', 'Invalid'];
+    if (/^compatible/.test(rl)) return ['Compatible', 'Incompatible'];
+    if (/^low risk/.test(rl)) return ['Low Risk', 'Intermediate Risk', 'High Risk'];
+    if (/^normal\b/.test(rl) && rl.length < 14) return ['Normal', 'Abnormal'];
+    if (/^no significant abnormality/.test(rl)) return ['No significant abnormality', 'Abnormality seen'];
     if (/^clear/.test(rl)) return ['Clear', 'Slightly turbid', 'Turbid', 'Hazy'];
     if (/^(few|occasional)/.test(rl)) return ['Nil', 'Few', 'Occasional', 'Moderate', 'Plenty'];
     if (/^(pale )?yellow/.test(rl)) return ['Pale yellow', 'Yellow', 'Dark yellow', 'Amber', 'Straw', 'Red', 'Brown'];
-    if (/^(detected|not detected)/.test(rl)) return ['Not Detected', 'Detected'];
-    if (/\//.test(ref) && !/\d/.test(ref)) { var parts = ref.split(/\s*\/\s*/).filter(Boolean); if (parts.length > 1 && parts.length < 8) return parts; }
+    if (/^brown$/.test(rl)) return ['Brown', 'Yellow', 'Green', 'Black', 'Red', 'Clay-coloured'];
+    if (/^formed$/.test(rl)) return ['Formed', 'Semi-formed', 'Loose', 'Watery', 'Hard', 'Mucoid'];
+    if (/^aromatic$/.test(rl)) return ['Aromatic', 'Foul', 'Offensive'];
+    if (/^nil|^absent/.test(rl)) return ['Nil', 'Few', 'Moderate', 'Plenty', 'Present'];
+    if (/\//.test(ref) && !/\d\s*[-–:]|per |\(/.test(ref) && ref.length <= 40) {            // "Positive / Negative", "A / B / AB / O"
+      var parts = ref.split(/\s*\/\s*/).filter(Boolean);
+      if (parts.length > 1 && parts.length < 8 && parts.every(function (x) { return x.length <= 22; })) return parts;
+    }
+    /* no usable range text: guess from the name for the usual yes/no screening tests */
+    if (!ref && /\b(hbsag|hcv|hiv|ns1|antigen|antibody|anti[\s-]|igm|igg|rapid|ict|malaria|vdrl|rpr|tpha|widal|brucella|h\.? ?pylori|troponin|covid|dengue|pregnancy|hcg|screen)\b/.test(nl)) return PN;
     return null;
   }
   /* the input (or menu) for one result field; `attrs` carries the data-* hooks the save code looks up */
