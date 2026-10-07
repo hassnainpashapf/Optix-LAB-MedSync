@@ -233,6 +233,16 @@ async function main() {
     await saas.bootstrap(store);
   }
 
+  /* email sender saved from the superadmin console (SMTP password stored encrypted with a key derived from the session secret) */
+  const MAIL_META = 'saas_mail';
+  const mailKey = () => crypto.createHash('sha256').update('labpos-mail|' + SESSION_SECRET).digest();
+  const encPw = (pw) => { const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', mailKey(), iv), ct = Buffer.concat([c.update(String(pw), 'utf8'), c.final()]); return 'v1:' + iv.toString('hex') + ':' + c.getAuthTag().toString('hex') + ':' + ct.toString('hex'); };
+  const decPw = (e) => { try { const [v, iv, tag, ct] = String(e).split(':'); if (v !== 'v1') return ''; const d = crypto.createDecipheriv('aes-256-gcm', mailKey(), Buffer.from(iv, 'hex')); d.setAuthTag(Buffer.from(tag, 'hex')); return Buffer.concat([d.update(Buffer.from(ct, 'hex')), d.final()]).toString('utf8'); } catch (e2) { return ''; } };
+  async function loadMailConfig() {
+    try { const m = await rawStore.getMeta(MAIL_META); mailer.setConfig(m && m.host ? { host: m.host, port: m.port, secure: m.secure, user: m.user, from: m.from, pass: m.pass ? decPw(m.pass) : '' } : null); } catch (e) { /* env settings stay in effect */ }
+  }
+  if (!DESKTOP) await loadMailConfig();
+
   const REPORT_PDFS_DIR = path.join(DATA_DIR, 'report-pdfs');
   if (!fs.existsSync(REPORT_PDFS_DIR)) fs.mkdirSync(REPORT_PDFS_DIR, { recursive: true });
   const desktop = DESKTOP ? require('./desktop-sync').create({
@@ -763,6 +773,34 @@ async function main() {
       }
       res.json({ ok: true, payment: p, lab: await saas.view(lab, true) });
     }
+    /* ---- email sender (SMTP) for password-reset mails: configured here instead of editing server files ---- */
+    const mailView = async () => { const m = (await rawStore.getMeta(MAIL_META)) || null, cur = mailer.current(); return { configured: mailer.configured(), source: cur ? cur.source : 'none', host: (m && m.host) || (cur && cur.host) || '', port: (m && m.port) || (cur && cur.port) || 587, secure: m ? !!m.secure : !!(cur && cur.secure), user: (m && m.user) || (cur && cur.user) || '', from: (m && m.from) || (cur && cur.from) || '', passSet: !!((m && m.pass) || (cur && cur.pass)) }; };
+    app.get('/api/saas/mail', requireSuperadmin, async (req, res) => res.json(await mailView()));
+    app.put('/api/saas/mail', requireSuperadmin, async (req, res) => {
+      try {
+        const b = req.body || {};
+        if (b.clear) { await rawStore.setMeta(MAIL_META, null); mailer.setConfig(null); return res.json(await mailView()); }
+        const host = String(b.host || '').trim(), user = String(b.user || '').trim(), from = String(b.from || '').trim(), port = +b.port;
+        if (!host || host.length > 200 || /\s/.test(host)) return res.status(400).json({ error: 'Enter the SMTP server address (for example smtp.gmail.com)' });
+        if (!(port >= 1 && port <= 65535)) return res.status(400).json({ error: 'Port must be between 1 and 65535 (usually 587 or 465)' });
+        if (user.length > 200 || from.length > 300) return res.status(400).json({ error: 'Username or From address is too long' });
+        const old = (await rawStore.getMeta(MAIL_META)) || {};
+        let pass = old.pass || '';
+        if (typeof b.pass === 'string' && b.pass !== '') { if (b.pass.length > 300) return res.status(400).json({ error: 'Password is too long' }); pass = encPw(b.pass.replace(/\s+/g, '')); } /* app passwords are shown with spaces: strip them */
+        await rawStore.setMeta(MAIL_META, { host, port, secure: !!b.secure, user, from, pass });
+        await loadMailConfig();
+        res.json(await mailView());
+      } catch (e) { res.status(400).json({ error: e.message }); }
+    });
+    app.post('/api/saas/mail/test', requireSuperadmin, async (req, res) => {
+      const to = String((req.body || {}).to || '').trim();
+      if (!EMAIL_OK.test(to)) return res.status(400).json({ error: 'Enter an email address to send the test to' });
+      if (!mailer.configured()) return res.status(400).json({ error: 'Save the email settings first' });
+      try {
+        await mailer.send({ to, subject: 'Optix LAB MedSync — test email', text: 'This is a test email from your Optix LAB MedSync server. If you can read it, password-reset emails will be delivered.', html: '<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;color:#131845"><h2>Test email</h2><p>This is a test email from your <b>Optix LAB MedSync</b> server. If you can read it, password-reset emails will be delivered.</p></div>' });
+        res.json({ ok: true });
+      } catch (e) { res.status(400).json({ error: String((e && e.message) || e).replace(/\s+/g, ' ').slice(0, 220) }); }
+    });
     app.get('/api/saas/settings', requireSuperadmin, async (req, res) => res.json({ settings: await saas.getSettings(), plans: await saas.getPlans() }));
     app.put('/api/saas/settings', requireSuperadmin, async (req, res) => {
       const b = req.body || {};

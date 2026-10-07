@@ -1129,8 +1129,10 @@ function loadPayments(silent) {
   }, silent);
 }
 function loadSettings(silent) {
-  return loadSection('settings', function () { return api('/api/saas/settings'); }, function (r) {
-    state.settingsData = { settings: r.settings || {}, plans: r.plans || {} };
+  return loadSection('settings', function () {
+    return Promise.all([api('/api/saas/settings'), api('/api/saas/mail').catch(function () { return null; })]).then(function (x) { x[0].mail = x[1]; return x[0]; });
+  }, function (r) {
+    state.settingsData = { settings: r.settings || {}, plans: r.plans || {}, mail: r.mail || null };
   }, silent);
 }
 
@@ -1735,7 +1737,59 @@ function settingsViewHtml() {
     '<div class="card"><div class="card-h"><h3>Payment methods</h3><span class="sub">accounts labs can pay into (up to 8)</span>' +
     '<button class="btn btn-sm" id="pmAdd" style="margin-left:auto">' + IC.plus + ' Add method</button></div>' +
     '<div class="card-b" id="pmList">' + methodsHtml(s.payMethods || []) + '</div></div>' +
+    mailCardHtml(state.settingsData.mail) +
     '<div class="save-bar"><button class="btn btn-primary" id="setSave2">Save changes</button></div>';
+}
+
+
+/* ---- email sender (SMTP): used for "Forgot password" emails ---- */
+function mailCardHtml(m) {
+  m = m || {};
+  var on = !!m.configured;
+  var status = on
+    ? '<span class="badge b-green" style="margin-left:8px">ON</span> <span class="hint">sending as ' + esc(m.from || m.user || '') + (m.source === 'server' ? ' (set in the server files)' : '') + '</span>'
+    : '<span class="badge" style="margin-left:8px">NOT SET</span> <span class="hint">the "Forgot password?" link stays hidden until this is saved</span>';
+  return '<div class="card" id="mailCard"><div class="card-h"><h3>Email sender (SMTP)</h3>' + status +
+    '<span class="sub" style="margin-left:auto">used for password-reset emails</span></div><div class="card-b">' +
+    '<p class="hint" style="margin:0 0 12px">Use any mailbox. <b>Gmail:</b> server <code>smtp.gmail.com</code>, port <code>587</code>, username = your Gmail address, password = a 16-letter <b>App password</b> (Google Account &rarr; Security &rarr; 2-Step Verification &rarr; App passwords).</p>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"><button type="button" class="btn btn-sm" id="mlGmail">Fill Gmail settings</button><button type="button" class="btn btn-sm" id="mlBrevo">Fill Brevo settings</button></div>' +
+    '<div class="fgrid">' +
+    '<div><label class="label" for="mlHost">SMTP server</label><input class="input" id="mlHost" value="' + esc(m.host || '') + '" placeholder="smtp.gmail.com" autocomplete="off"></div>' +
+    '<div><label class="label" for="mlPort">Port</label><input class="input" type="number" id="mlPort" value="' + esc(m.port || 587) + '" min="1" max="65535"></div>' +
+    '<div><label class="label" for="mlUser">Username (email address)</label><input class="input" id="mlUser" value="' + esc(m.user || '') + '" placeholder="you@gmail.com" autocomplete="off"></div>' +
+    '<div><label class="label" for="mlPass">Password / App password</label><input class="input" type="password" id="mlPass" value="" placeholder="' + (m.passSet ? '•••••••• saved — leave empty to keep' : 'paste the app password') + '" autocomplete="new-password"></div>' +
+    '<div class="span2"><label class="label" for="mlFrom">Send emails as</label><input class="input" id="mlFrom" value="' + esc(m.from || '') + '" placeholder="Optix LAB MedSync &lt;you@gmail.com&gt;"></div>' +
+    '<div class="span2"><label style="display:flex;gap:8px;align-items:center;font-size:13.5px"><input type="checkbox" id="mlSecure"' + (m.secure ? ' checked' : '') + '> Use SSL/TLS from the start (tick only for port 465)</label></div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center"><button class="btn btn-primary" id="mlSave">Save email settings</button>' +
+    '<input class="input" id="mlTo" placeholder="send a test to… (your email)" style="max-width:260px"><button class="btn" id="mlTest">Send test email</button>' +
+    (on && m.source === 'saved' ? '<button class="btn btn-sm" id="mlClear" style="margin-left:auto">Remove saved settings</button>' : '') + '</div>' +
+    '<p class="hint" id="mlMsg" style="margin:10px 0 0"></p></div></div>';
+}
+function wireMailCard() {
+  var $m = function (id) { return document.getElementById(id); };
+  if (!$m('mailCard')) return;
+  function msg(t, bad) { var e = $m('mlMsg'); if (e) { e.textContent = t; e.style.color = bad ? '#b91c1c' : '#047857'; } }
+  function fill(h, p, sec) { $m('mlHost').value = h; $m('mlPort').value = p; $m('mlSecure').checked = !!sec; }
+  $m('mlGmail').addEventListener('click', function () { fill('smtp.gmail.com', 587, false); $m('mlUser').focus(); });
+  $m('mlBrevo').addEventListener('click', function () { fill('smtp-relay.brevo.com', 587, false); $m('mlUser').focus(); });
+  function reload() { return api('/api/saas/mail').then(function (r) { state.settingsData.mail = r; if (state.view === 'settings') paintMain(); }, function () {}); }
+  $m('mlSave').addEventListener('click', function () {
+    var b = $m('mlSave'); b.disabled = true; b.textContent = 'Saving…';
+    api('/api/saas/mail', { method: 'PUT', body: { host: $m('mlHost').value.trim(), port: parseInt($m('mlPort').value, 10), secure: $m('mlSecure').checked, user: $m('mlUser').value.trim(), pass: $m('mlPass').value, from: $m('mlFrom').value.trim() } }).then(function (r) {
+      state.settingsData.mail = r; toast('Email settings saved. Now send a test email.', 'ok'); if (state.view === 'settings') paintMain();
+    }, function (err) { b.disabled = false; b.textContent = 'Save email settings'; msg((err && err.data && err.data.error) || 'Could not save', true); });
+  });
+  $m('mlTest').addEventListener('click', function () {
+    var to = $m('mlTo').value.trim(); if (!to) { msg('Type the email address to send the test to.', true); $m('mlTo').focus(); return; }
+    var b = $m('mlTest'); b.disabled = true; b.textContent = 'Sending…'; msg('Sending… this can take a few seconds.', false);
+    api('/api/saas/mail/test', { method: 'POST', body: { to: to } }).then(function () { b.disabled = false; b.textContent = 'Send test email'; msg('Sent! Check the inbox of ' + to + ' (and the spam folder).', false); },
+      function (err) { b.disabled = false; b.textContent = 'Send test email'; msg('Could not send: ' + ((err && err.data && err.data.error) || 'unknown error'), true); });
+  });
+  var c = $m('mlClear'); if (c) c.addEventListener('click', function () {
+    if (!window.confirm('Remove the saved email settings? Password-reset emails will stop until you save new settings.')) return;
+    api('/api/saas/mail', { method: 'PUT', body: { clear: true } }).then(function (r) { state.settingsData.mail = r; toast('Email settings removed.', 'ok'); if (state.view === 'settings') paintMain(); }, handleErr);
+  });
 }
 
 function collectMethods() {
@@ -1752,6 +1806,7 @@ function collectMethods() {
 
 function wireSettingsView() {
   if (!state.settingsData) return;
+  wireMailCard();
   var s1 = $('setSave'), s2 = $('setSave2');
   if (s1) s1.addEventListener('click', saveSettings);
   if (s2) s2.addEventListener('click', saveSettings);

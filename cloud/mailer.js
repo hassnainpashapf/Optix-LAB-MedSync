@@ -7,25 +7,38 @@
 'use strict';
 const fs = require('fs');
 
-let transporter = null;
-const configured = () => !!(process.env.SMTP_HOST || process.env.MAIL_DEBUG_FILE);
+let transporter = null, tKey = '';
+let saved = null; /* settings saved from the superadmin console: { host, port, secure, user, pass, from } (override the environment) */
+function setConfig(c) { saved = (c && c.host) ? c : null; transporter = null; tKey = ''; }
+function current() {
+  if (saved) return { host: saved.host, port: +saved.port || 587, secure: !!saved.secure, user: saved.user || '', pass: saved.pass || '', from: saved.from || saved.user || '', source: 'saved' };
+  if (process.env.SMTP_HOST) {
+    const port = +process.env.SMTP_PORT || 587;
+    return { host: process.env.SMTP_HOST, port, secure: process.env.SMTP_SECURE === '1' || port === 465, user: process.env.SMTP_USER || '', pass: process.env.SMTP_PASS || '', from: process.env.MAIL_FROM || process.env.SMTP_USER || '', source: 'server' };
+  }
+  return null;
+}
+const configured = () => !!(process.env.MAIL_DEBUG_FILE || current());
 
-async function send(m) {
-  const from = process.env.MAIL_FROM || process.env.SMTP_USER || 'no-reply@localhost';
-  if (process.env.MAIL_DEBUG_FILE) {
+async function send(m, override) {
+  const conf = override || current();
+  const from = (conf && conf.from) || process.env.MAIL_FROM || process.env.SMTP_USER || 'no-reply@localhost';
+  if (process.env.MAIL_DEBUG_FILE && !override) {
     fs.appendFileSync(process.env.MAIL_DEBUG_FILE, JSON.stringify({ from, to: m.to, subject: m.subject, text: m.text, html: m.html }) + '\n');
     return { debug: true };
   }
-  if (!process.env.SMTP_HOST) throw new Error('mail is not configured');
-  if (!transporter) {
-    const port = +process.env.SMTP_PORT || 587;
-    transporter = require('nodemailer').createTransport({
-      host: process.env.SMTP_HOST, port, secure: process.env.SMTP_SECURE === '1' || port === 465,
-      auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS || '' } : undefined,
+  if (!conf || !conf.host) throw new Error('mail is not configured');
+  const key = JSON.stringify([conf.host, conf.port, conf.secure, conf.user, conf.pass]);
+  let t = transporter;
+  if (override || !t || tKey !== key) {
+    t = require('nodemailer').createTransport({
+      host: conf.host, port: conf.port, secure: !!conf.secure,
+      auth: conf.user ? { user: conf.user, pass: conf.pass || '' } : undefined,
       connectionTimeout: 15000, greetingTimeout: 15000, socketTimeout: 20000,
     });
+    if (!override) { transporter = t; tKey = key; }
   }
-  return transporter.sendMail({ from, to: m.to, subject: m.subject, text: m.text, html: m.html });
+  return t.sendMail({ from, to: m.to, subject: m.subject, text: m.text, html: m.html });
 }
 
 const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -50,4 +63,4 @@ function changedEmail({ labName, name }) {
   return { subject, text, html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:auto;padding:24px;color:#131845"><h2 style="margin:0 0 12px">Password changed</h2><p>Hello ${esc(name || '')},</p><p>The password of your account at <b>${esc(labName)}</b> was just changed.</p><p style="font-size:13px;color:#5b6b80">If this was you, nothing more to do. If it was not you, reset it again right away and tell your lab admin.</p></div>` };
 }
 
-module.exports = { configured, send, resetEmail, changedEmail };
+module.exports = { configured, send, setConfig, current, resetEmail, changedEmail };
