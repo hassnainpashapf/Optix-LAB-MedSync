@@ -394,20 +394,18 @@ function paramRow(p) {
 /* Pre-defined parameter templates for common tests (from standard lab reference ranges) */
 var TEST_TEMPLATES = {
   'CBC': [
-    { name: 'Haemoglobin', unit: 'g/dl', ref: '13 - 18', type: 'number' },
-    { name: 'WBC (TLC)', unit: 'x10³/uL', ref: '4 - 11', type: 'number' },
-    { name: 'ESR (WG)', unit: 'mm/1st Hour', ref: '1 - 10', type: 'number' },
-    { name: 'Total RBC', unit: 'x10⁶/uL', ref: '4.5 - 6.5', type: 'number' },
-    { name: 'HCT (PVC)', unit: '%', ref: '38 - 52', type: 'number' },
-    { name: 'MCV', unit: 'fL', ref: '80 - 96', type: 'number' },
-    { name: 'MCH', unit: 'pg', ref: '27 - 32', type: 'number' },
-    { name: 'MCHC', unit: '%', ref: '30 - 35', type: 'number' },
-    { name: 'Platelets', unit: 'x10³/uL', ref: '150 - 450', type: 'number' },
-    { name: 'RDW %', unit: '%', ref: '', type: 'number' },
-    { name: 'RDW a', unit: 'um³', ref: '', type: 'number' },
-    { name: 'MPV', unit: 'um', ref: '', type: 'number' },
-    { name: 'PDW', unit: 'um', ref: '', type: 'number' },
-    { name: 'PCT', unit: '%', ref: '', type: 'number' }
+    { name: 'Hb', unit: 'g/dl', ref: '11.5 - 16', type: 'number' },
+    { name: 'Total RBC', unit: 'x10^12/l', ref: '4 - 6', type: 'number' },
+    { name: 'HCT', unit: '%', ref: '36 - 46', type: 'number' },
+    { name: 'MCV', unit: 'fl', ref: '75 - 95', type: 'number' },
+    { name: 'MCH', unit: 'pg', ref: '26 - 32', type: 'number' },
+    { name: 'MCHC', unit: 'g/dl', ref: '30 - 35', type: 'number' },
+    { name: 'Platelet Count', unit: 'x10^9/l', ref: '150 - 400', type: 'number' },
+    { name: 'WBC Count (TLC)', unit: 'x10^9/l', ref: '4 - 11', type: 'number' },
+    { name: 'Neutrophils', unit: '%', ref: '40 - 75', type: 'number' },
+    { name: 'Lymphocytes', unit: '%', ref: '20 - 50', type: 'number' },
+    { name: 'Monocytes', unit: '%', ref: '02 - 10', type: 'number' },
+    { name: 'Eosinophils', unit: '%', ref: '01 - 06', type: 'number' }
   ],
   'Lipid Profile': [
     { name: 'Total Cholesterol', unit: 'mg/dL', ref: '< 200', type: 'number' },

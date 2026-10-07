@@ -275,18 +275,18 @@
     /* Default report templates — per-test fields used by result entry, print and PDF */
     var TP = {
       'CBC': [
-        { name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5', type: 'number' },
-        { name: 'TLC', unit: '/µL', ref: '4,000–11,000', type: 'number' },
-        { name: 'Neutrophils', unit: '%', ref: '40–70', type: 'number' },
-        { name: 'Lymphocytes', unit: '%', ref: '20–40', type: 'number' },
-        { name: 'Monocytes', unit: '%', ref: '2–8', type: 'number' },
-        { name: 'Eosinophils', unit: '%', ref: '1–6', type: 'number' },
-        { name: 'Platelets', unit: 'x10^9/l', ref: '150 – 400', type: 'number' },
-        { name: 'PCV', unit: '%', ref: '40–50', type: 'number' },
-        { name: 'MCV', unit: 'fL', ref: '80–100', type: 'number' },
-        { name: 'MCH', unit: 'pg', ref: '27–32', type: 'number' },
-        { name: 'MCHC', unit: 'g/dL', ref: '32–36', type: 'number' },
-        { name: 'ESR', unit: 'mm/hr', ref: '0–20', type: 'number' }
+        { name: 'Hb', unit: 'g/dl', ref: '11.5 - 16', type: 'number' },
+        { name: 'Total RBC', unit: 'x10^12/l', ref: '4 - 6', type: 'number' },
+        { name: 'HCT', unit: '%', ref: '36 - 46', type: 'number' },
+        { name: 'MCV', unit: 'fl', ref: '75 - 95', type: 'number' },
+        { name: 'MCH', unit: 'pg', ref: '26 - 32', type: 'number' },
+        { name: 'MCHC', unit: 'g/dl', ref: '30 - 35', type: 'number' },
+        { name: 'Platelet Count', unit: 'x10^9/l', ref: '150 - 400', type: 'number' },
+        { name: 'WBC Count (TLC)', unit: 'x10^9/l', ref: '4 - 11', type: 'number' },
+        { name: 'Neutrophils', unit: '%', ref: '40 - 75', type: 'number' },
+        { name: 'Lymphocytes', unit: '%', ref: '20 - 50', type: 'number' },
+        { name: 'Monocytes', unit: '%', ref: '02 - 10', type: 'number' },
+        { name: 'Eosinophils', unit: '%', ref: '01 - 06', type: 'number' }
       ],
       'HB': [{ name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5', type: 'number' }],
       'ESR': [{ name: 'ESR', unit: 'mm/hr', ref: '0–20', type: 'number' }],
@@ -445,7 +445,7 @@
     ];
     /* ready result values for param-based tests (older invoices) */
     var READY_VALS = {
-      'CBC': { 'Hemoglobin': '14.2', 'TLC': '7,600', 'Platelets': '248', 'ESR': '14' },
+      'CBC': { 'Hb': '14.2', 'Total RBC': '4.8', 'HCT': '42', 'MCV': '88', 'MCH': '29', 'MCHC': '33', 'Platelet Count': '248', 'WBC Count (TLC)': '7.6', 'Neutrophils': '60', 'Lymphocytes': '30', 'Monocytes': '6', 'Eosinophils': '3' },
       'HBA1C': { 'HbA1c': '6.8' },
       'LIPID': { 'Total Cholesterol': '198', 'Triglycerides': '142', 'HDL': '52', 'LDL': '118' },
       'ESR': { 'Result': '18 mm/hr' },
