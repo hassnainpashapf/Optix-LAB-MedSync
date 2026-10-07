@@ -1513,6 +1513,19 @@ function resetAdminModal(l) {
       if (pw.length < 6) { toast('Password must be at least 6 characters.', 'err'); return Promise.reject({ silent: true }); }
       return api('/api/saas/labs/' + encodeURIComponent(l.id) + '/reset-admin', { method: 'POST', body: { password: pw } }).then(function (r) {
         toast('Password reset for admin "' + (r && r.username || 'admin') + '".', 'ok');
+        /* show exactly what was set, so it can be typed (or copied) without guessing */
+        setTimeout(function () {
+          openModal('Password reset — sign-in details',
+            'Use these details on the sign-in page. Nothing else is needed.',
+            '<div style="background:#f6f8fd;border:1px solid #dbe3f3;border-radius:12px;padding:14px 16px;line-height:2;font-size:15px">' +
+            '<div><span class="hint">Lab ID</span> &nbsp; <b id="rsLab">' + esc(l.slug || '') + '</b> <span class="hint">(or leave it empty for the main lab)</span></div>' +
+            '<div><span class="hint">Username</span> &nbsp; <b id="rsUser">' + esc((r && r.username) || 'admin') + '</b></div>' +
+            '<div><span class="hint">Password</span> &nbsp; <b id="rsPw" style="font-family:ui-monospace,Menlo,monospace;font-size:17px">' + esc(pw) + '</b></div></div>' +
+            '<div style="margin-top:10px"><button type="button" class="btn" id="rsCopy">Copy the password</button></div>' +
+            '<p class="hint" style="margin:10px 0 0">If sign-in still says the password is wrong, make sure the Caps Lock is off and that the browser has not filled in an older password.</p>',
+            'Done', function () { return Promise.resolve(); });
+          var c = $('rsCopy'); if (c) c.addEventListener('click', function () { try { var t = document.createElement('textarea'); t.value = pw; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); toast('Password copied', 'ok'); } catch (e) { toast('Select the password and copy it', 'err'); } });
+        }, 250);
         return api('/api/saas/labs').then(function (x) { state.slabs = x.labs || state.slabs; if (state.drawerLab) paintDrawer(false); }, function () {});
       }, failP);
     });
