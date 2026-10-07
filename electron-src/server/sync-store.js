@@ -71,8 +71,8 @@ function wrapStore(raw, origin, tables) {
 
   /* backup restore / reseed: new data replaces everything, so rows that disappeared get tombstones */
   s.restore = async function (d) {
-    const before = {};
-    for (const t of tables) { if (t !== 'settings') before[t] = (await raw.all(t)).map(r => String(r.id)); }
+    const before = {}, skipT = raw.noDump || []; /* server-managed tables (audit trail) are not part of a restore: no tombstones for them */
+    for (const t of tables) { if (t !== 'settings' && skipT.indexOf(t) < 0) before[t] = (await raw.all(t)).map(r => String(r.id)); }
     const oldTombs = await raw.all(DEL);
     const body = Object.assign({}, d);
     const stamp = (r) => Object.assign({}, r, { _u: Date.now(), _s: nowS() });
@@ -83,7 +83,7 @@ function wrapStore(raw, origin, tables) {
     await raw.restore(body);
     for (const tb of oldTombs) await raw.put(DEL, tb);
     for (const t of tables) {
-      if (t === 'settings') continue;
+      if (t === 'settings' || skipT.indexOf(t) >= 0) continue;
       const keep = new Set((body[t] || []).map(r => String(r.id)));
       for (const id of before[t]) {
         if (!keep.has(id)) await raw.put(DEL, { id: key(t, id), t, rid: id, _u: Date.now(), _s: nowS() });

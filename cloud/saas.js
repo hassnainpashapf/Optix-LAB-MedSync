@@ -41,6 +41,7 @@ const USER_RE = /^[a-zA-Z0-9._-]{3,30}$/;
 function create(ctx) {
   const { raw, TABLES, hashPassword, defaultsFor } = ctx;
   const cache = { labs: null, stores: new Map() };
+  const pendingSlugs = new Set(); /* slugs being created right now: reserved before the (slow) seeding so two signups cannot take the same one */
 
   /* ---------- settings / plans ---------- */
   async function getSettings() { return Object.assign({}, DEFAULT_SETTINGS, (await raw.getMeta('saas_settings')) || {}); }
@@ -112,7 +113,7 @@ function create(ctx) {
     const m = new Date(); const month = m.getFullYear() * 12 + m.getMonth();
     let invMonth = 0, last = 0;
     for (const i of invoices) {
-      const d = new Date(i.createdAt || i._c || 0);
+      const d = new Date(i._c || i.createdAt || 0); /* server-set creation time first: a client-chosen createdAt cannot dodge the monthly quota */
       if (!isNaN(d) && d.getFullYear() * 12 + d.getMonth() === month) invMonth++;
       last = Math.max(last, +i._u || 0);
     }
@@ -144,32 +145,49 @@ function create(ctx) {
     const username = String(b.username || '').trim();
     const password = String(b.password || '');
     let slug = slugify(b.slug || labName);
+    if (labName.length > 100 || ownerName.length > 100 || email.length > 254 || phone.length > 30 || password.length > 128) throw new Error('One of the fields is too long');
     if (labName.length < 3) throw new Error('Enter your lab name');
     if (!ownerName) throw new Error('Enter the owner name');
     if (!EMAIL_RE.test(email)) throw new Error('Enter a valid email address');
     if (!USER_RE.test(username)) throw new Error('Username: 3-30 letters, numbers, . _ -');
     if (password.length < 6) throw new Error('Password must be at least 6 characters');
     if (!SLUG_RE.test(slug)) throw new Error('Lab ID must be 3-30 letters/numbers (a hyphen is allowed in the middle)');
-    if (RESERVED.indexOf(slug) >= 0 || await findBySlug(slug)) throw new Error('This Lab ID is already taken — try another');
-    const settings = await getSettings();
-    const id = 'l' + crypto.randomBytes(5).toString('hex');
-    const now = new Date();
-    const lab = { id, slug, prefix: id + '/', name: labName, ownerName, ownerEmail: email, phone, plan: 'trial', status: 'active',
-      trialEndsAt: new Date(now.getTime() + (+settings.trialDays || 14) * DAY).toISOString(), paidUntil: null,
-      createdAt: now.toISOString(), history: [] };
-    await addHistory(lab, 'Signed up — ' + (+settings.trialDays || 14) + '-day free trial', by || 'signup');
-    /* starter data: the standard test list (with normal ranges), an admin account, branding — no demo patients/invoices */
-    const seed = JSON.parse(fs.readFileSync(path.join(__dirname, 'seed.json'), 'utf8'));
-    const tests = (seed.tests || []).map(t => Object.assign({}, t));
-    const st = storeFor(lab);
-    await st.restore({
-      seq: {},
-      settings: { id: 'main', labName, tagline: 'Accurate • Fast • Trusted', address: '', phone, email, invoicePrefix: 'INV', footerNote: '', currency: 'PKR', signatories: [] },
-      users: [{ id: 'U-01', name: ownerName, username, password: hashPassword(password), role: 'admin', active: true, email }],
-      tests: defaultsFor ? defaultsFor(tests) : tests,
-    });
-    await saveLab(lab);
-    return lab;
+    if (RESERVED.indexOf(slug) >= 0 || pendingSlugs.has(slug) || await findBySlug(slug)) throw new Error('This Lab ID is already taken — try another');
+    pendingSlugs.add(slug);
+    let created = null;
+    try {
+      const settings = await getSettings();
+      const id = 'l' + crypto.randomBytes(5).toString('hex');
+      const now = new Date();
+      const lab = { id, slug, prefix: id + '/', name: labName, ownerName, ownerEmail: email, phone, plan: 'trial', status: 'active',
+        trialEndsAt: new Date(now.getTime() + (+settings.trialDays || 14) * DAY).toISOString(), paidUntil: null,
+        createdAt: now.toISOString(), history: [] };
+      await addHistory(lab, 'Signed up — ' + (+settings.trialDays || 14) + '-day free trial', by || 'signup');
+      /* starter data: the standard test list (with normal ranges), an admin account, branding — no demo patients/invoices */
+      const seed = JSON.parse(fs.readFileSync(path.join(__dirname, 'seed.json'), 'utf8'));
+      const tests = (seed.tests || []).map(t => Object.assign({}, t));
+      const st = storeFor(lab);
+      created = lab;
+      await st.restore({
+        seq: {},
+        settings: { id: 'main', labName, tagline: 'Accurate • Fast • Trusted', address: '', phone, email, invoicePrefix: 'INV', footerNote: '', currency: 'PKR', signatories: [] },
+        users: [{ id: 'U-01', name: ownerName, username, password: hashPassword(password), role: 'admin', active: true, email }],
+        tests: defaultsFor ? defaultsFor(tests) : tests,
+      });
+      await saveLab(lab);
+      return lab;
+    } catch (e) {
+      if (created) { try { await purgeLab(created); } catch (x) { /* best effort */ } } /* never leave a half-seeded lab behind */
+      throw e;
+    } finally { pendingSlugs.delete(slug); }
+  }
+
+  /* remove every trace of a lab: all its tables, tombstones and audit rows, and its cached store */
+  async function purgeLab(lab) {
+    if (!lab || lab.id === 'main' || !lab.prefix) throw new Error('refusing to purge the default lab');
+    for (const t of TABLES.concat(['_del'])) for (const r of await raw.all(lab.prefix + t)) await raw.del(lab.prefix + t, String(r.id));
+    for (const k of ['seq', 'sync', 'device']) { try { await raw.setMeta(lab.prefix + k, null); } catch (e) { /* ignore */ } }
+    cache.stores.delete(lab.id);
   }
 
   /* ---------- payments ---------- */
@@ -179,7 +197,7 @@ function create(ctx) {
   }
 
   return { LABS_T, PAY_T, DAY, DEFAULT_PLANS, getSettings, getPlans, loadLabs, saveLab, getLab, findBySlug, storeFor, bootstrap, effStatus, daysLeft,
-    usageOf, limitsOf, view, createLab, addPeriod, addHistory, slugify, SLUG_RE, RESERVED, raw };
+    usageOf, limitsOf, view, createLab, purgeLab, addPeriod, addHistory, slugify, SLUG_RE, RESERVED, raw };
 }
 
 module.exports = { create, slugify, DEFAULT_PLANS, DEFAULT_SETTINGS };

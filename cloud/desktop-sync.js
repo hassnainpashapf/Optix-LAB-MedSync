@@ -22,6 +22,7 @@ const REFS = [
   ['payments', 'invoiceId', 'invoices'],
   ['results', 'invoiceId', 'invoices'], ['results', 'testId', 'tests'],
   ['patients', 'doctorId', 'doctors'],
+  ['samples', 'invoiceId', 'invoices'], ['samples', 'patientId', 'patients'], ['samples', 'recollectOf', 'samples'], ['samples', 'recollectId', 'samples'],
 ];
 
 function create(ctx) {
@@ -71,6 +72,13 @@ function create(ctx) {
         if (r[field] === oldId) await raw.put(rt, Object.assign({}, r, { [field]: newId, _u: now }));
       }
     }
+    if (t === 'invoices') { /* sample tubes carry the invoice number in their barcode */
+      for (const sm of await raw.all('samples')) {
+        if (sm.invoiceId === newId && (sm.invoiceNo === oldId || String(sm.barcode || '').indexOf(oldId) === 0)) {
+          await raw.put('samples', Object.assign({}, sm, { _u: now, invoiceNo: newId, barcode: String(sm.barcode || '').replace(oldId, newId) }));
+        }
+      }
+    }
     if (t === 'tests') {
       for (const inv of await raw.all('invoices')) {
         if (Array.isArray(inv.items) && inv.items.some(it => it && it.testId === oldId)) {
@@ -116,7 +124,7 @@ function create(ctx) {
         .map(x => ({ t: x.t, id: x.row.id, _o: x.row._o, _c: x.row._c }));
       if (mine.length) {
         const cr = await cfetch('/api/sync/check', { method: 'POST', body: JSON.stringify({ rows: mine }) }, 30000);
-        if (cr.status === 402) throw new Error('Subscription expired — renew your plan to resume cloud sync (your data is safe on this PC)');
+        if (cr.status === 402) { let m = ''; try { m = (await cr.json()).error || ''; } catch (e) { /* ignore */ } throw new Error(m || 'Subscription expired — renew your plan to resume cloud sync (your data is safe on this PC)'); }
         if (cr.status === 403) throw new Error('This lab account is suspended — contact support');
         if (!cr.ok) throw new Error('check ' + cr.status);
         const { conflicts } = await cr.json();
@@ -128,7 +136,7 @@ function create(ctx) {
       /* 2) push + pull in one round trip */
       const resp = await cfetch('/api/sync', { method: 'POST', body: JSON.stringify({ since: st.since, rows: dirty.rows, deletes: dirty.deletes }) }, 120000);
       if (resp.status === 401) { token = ''; throw new Error('Cloud session expired — sign in again to resume syncing'); }
-      if (resp.status === 402) throw new Error('Subscription expired — renew your plan to resume cloud sync (your data is safe on this PC)');
+      if (resp.status === 402) { let m = ''; try { m = (await resp.json()).error || ''; } catch (e) { /* ignore */ } throw new Error((m || 'Subscription expired — renew your plan to resume cloud sync') + ' (your data is safe on this PC)'); }
       if (resp.status === 403) throw new Error('This lab account is suspended — contact support');
       if (!resp.ok) throw new Error('sync ' + resp.status);
       const res = await resp.json();
@@ -221,7 +229,14 @@ function create(ctx) {
       setToken(cloud.token);
       status.online = true;
       const st = await getState();
-      if (!local || !st.since) { await cycle(); local = (await raw.all('users')).find(u => u.username === username && u.active !== false) || null; }
+      if (!local || !st.since) {
+        await cycle();
+        local = (await raw.all('users')).find(u => u.username === username && u.active !== false) || null;
+        if (!(await getState()).since) { /* the first download of the lab's data did not finish: do not sign in to an empty database */
+          if (!bound) await raw.setMeta('lab', null);
+          return { status: 503, error: status.lastError || 'Could not download your lab data. Check the internet connection and try again.' };
+        }
+      }
       if (!local) local = { id: cloud.user.id, name: cloud.user.name, username, role: cloud.user.role, active: true };
       await raw.put('users', Object.assign({}, local, { password: hashPassword(password) })); /* offline verifier, no sync stamp */
       if (st.since) cycle().catch(() => {});

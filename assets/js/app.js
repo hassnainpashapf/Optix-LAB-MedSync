@@ -494,6 +494,23 @@
     if (!html) { b.hidden = true; return; }
     b.className = 'sub-banner ' + cls; b.innerHTML = html; b.hidden = false;
   }
+  /* plan limit reached? (instant, from the local data) -> explain and stop BEFORE anything is saved */
+  function limitHit(kind) {
+    try {
+      var l = subInfo && subInfo.lab; if (!l || l.legacy || !saasOn()) return false;
+      var cap = kind === 'users' ? l.limits.users : l.limits.invoicesPerMonth; if (!cap) return false;
+      var n;
+      if (kind === 'users') n = DB.all('users').filter(function (u) { return u.active !== false; }).length;
+      else { var m = new Date(), k = m.getFullYear() * 12 + m.getMonth(); n = DB.all('invoices').filter(function (i) { var d = new Date(i.createdAt || 0); return !isNaN(d) && d.getFullYear() * 12 + d.getMonth() === k; }).length; }
+      if (n < cap) return false;
+      var admin = session() && session().role === 'admin';
+      modal('Plan limit reached',
+        '<p style="margin:0 0 12px">' + (kind === 'users' ? 'Your <b>' + esc(l.planName) + '</b> plan allows <b>' + cap + '</b> staff users.' : 'Your <b>' + esc(l.planName) + '</b> plan allows <b>' + cap + '</b> invoices per month and this month\'s limit is used up.') + '</p><p class="muted" style="margin:0;font-size:13px">Nothing was saved.</p>' +
+        '<div class="modal-actions" style="margin-top:14px"><button class="btn btn-ghost" id="lhOk">Close</button>' + (admin ? '<a class="btn btn-primary" href="#/subscription" id="lhGo">View plans</a>' : '') + '</div>',
+        { onOpen: function (ov, close) { ov.querySelector('#lhOk').addEventListener('click', close); var g = ov.querySelector('#lhGo'); if (g) g.addEventListener('click', close); } });
+      return true;
+    } catch (e) { return false; }
+  }
   function loadSub() {
     if (!saasOn() || !session() || !window.DB || !DB.saas) return Promise.resolve(null);
     return DB.saas('GET', 'me').then(function (j) { subInfo = j; paintSubBanner(); return j; }, function () { return null; });
@@ -732,6 +749,7 @@
     can: can,
     currentKey: currentKey,
     loadSub: loadSub,
+    limitHit: limitHit,
     sub: function () { return subInfo; },
     saasOn: saasOn
   };
@@ -866,7 +884,7 @@
     };
     DB.onAuthError = function () {
       if (!session()) return;
-      toast('Your session expired. Please sign in again.', 'err');
+      toast(window.__loginNote || 'Your session expired. Please sign in again.', 'err');
       setTimeout(logout, 1200);
     };
     /* new CRITICAL results saved on another PC/phone: alert here too (toast + browser notification when allowed) */

@@ -78,7 +78,11 @@
     if (!App.saasOn || !App.saasOn()) {
       return '<div class="card"><div class="card-b">' + App.empty('Subscriptions are managed in the web app. Open the web app (optix-lab-medsync.pages.dev/app) to view or change your plan.') + '</div></div>';
     }
-    if (!data) { load(); return '<div class="card"><div class="card-b">' + App.empty(err || 'Loading…') + '</div></div>'; }
+    if (!data) {
+      if (!err && !loading) load();
+      setTimeout(function () { var r = document.getElementById('sbRetry'); if (r) r.addEventListener('click', function () { err = ''; load(); paint(); }); }, 0);
+      return '<div class="card"><div class="card-b">' + App.empty(err || 'Loading…') + (err ? '<div style="text-align:center;margin-top:8px"><button class="btn btn-primary" id="sbRetry">Retry</button></div>' : '') + '</div></div>';
+    }
     var L = data.lab, plans = data.plans, info = data.info || {};
     var pend = (data.payments || []).filter(function (p) { return p.status === 'pending'; }).length;
     var endLabel = L.plan === 'trial' ? 'Trial ends' : 'Valid until', end = L.plan === 'trial' ? L.trialEndsAt : L.paidUntil;
@@ -194,5 +198,5 @@
       } });
   }
 
-  App.route('/subscription', function () { load(); return render(); }); /* cached view first, refreshed in the background */
+  App.route('/subscription', function () { err = ''; load(); return render(); }); /* cached view first, refreshed in the background */
 })();

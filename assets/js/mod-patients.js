@@ -440,7 +440,7 @@
             items.push({ testId: t.id, code: t.code, name: t.name, price: +t.price || 0,
               isPackage: !!t.isPackage, includes: t.isPackage ? (t.includes || []) : null });
           });
-          if (items.length) {
+          if (items.length && !(App.limitHit && App.limitHit('invoices'))) {
             var bTotal = items.reduce(function (a, l) { return a + (+l.price || 0); }, 0);
             var inv = DB.insert('invoices', {
               patientId: np.id, doctorId: null, items: items,

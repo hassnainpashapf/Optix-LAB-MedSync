@@ -81,6 +81,13 @@
     return window.fetch(API + '/api/dump', { cache: 'no-store', headers: authHeaders(), signal: ctl ? ctl.signal : undefined }).then(function (r) {
       if (to) clearTimeout(to);
       if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; }
+      if (r.status === 403) { /* suspended lab: say so instead of looking like a network problem */
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          var e2 = new Error((j && j.error) || 'This lab account is suspended. Please contact support.'); e2.auth = true; e2.suspended = (j && j.code === 'SUSPENDED');
+          try { window.__loginNote = e2.message; } catch (x) {}
+          throw e2;
+        });
+      }
       if (!r.ok) throw new Error('dump failed');
       return r.json();
     }).then(function (dump) {
@@ -679,6 +686,7 @@
         method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: body === undefined ? undefined : JSON.stringify(body)
       }).then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 401 && sessToken()) fireAuthError();
           if (!r.ok) { var e = new Error(j.error || ('Request failed (' + r.status + ')')); e.code = j.code; e.status = r.status; throw e; }
           return j;
         });
@@ -694,7 +702,11 @@
         method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ current: current, next: next })
       }).then(function (r) {
-        return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not change password'); return true; });
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error(j.error || 'Could not change password');
+          if (j.token) { try { var s = JSON.parse(localStorage.getItem(SESS_KEY) || '{}'); s.token = j.token; localStorage.setItem(SESS_KEY, JSON.stringify(s)); } catch (e) {} } /* new token for this session */
+          return true;
+        });
       });
     },
     /* Pull fresh server data (other PCs' work). Skipped while our own writes are in flight. */

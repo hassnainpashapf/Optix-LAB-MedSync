@@ -209,6 +209,7 @@
 
     /* ---------- save ---------- */
     function saveBill() {
+      if (App.limitHit && App.limitHit('invoices')) return;
       if (!state.patient) { App.toast('Select a patient first', 'err'); return; }
       if (!state.cart.length) { App.toast('Add at least one test', 'err'); return; }
       var t = totals();

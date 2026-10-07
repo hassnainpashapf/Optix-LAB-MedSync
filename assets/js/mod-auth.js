@@ -182,6 +182,7 @@
       '</div></div>';
     wireBrand('login');
     wirePw('liPass');
+    if (window.__loginNote) { showErr(window.__loginNote); window.__loginNote = ''; } /* e.g. "This lab account is suspended" */
 
     var labSel = document.getElementById('liLab');
     if (labSel) labSel.addEventListener('change', function () {
@@ -298,9 +299,12 @@
       if (!$('suTerms').checked) { showErr('Please accept the Terms and Privacy Policy to continue.'); return; }
       var btn = document.querySelector('.login-signin');
       btn.disabled = true; btn.classList.add('busy'); btn.querySelector('.lg-bt').textContent = 'Creating your lab…';
-      DB.saas('POST', 'signup', body).then(function (j) { return DB.adoptSession(j); }).then(function (j) {
+      DB.saas('POST', 'signup', body).then(function (j) {
+        /* the lab exists the moment the server says so: a failed first data download must not undo that (the boot retry loads the data) */
+        return DB.adoptSession(j).then(function () { return j; }, function () { return j; });
+      }).then(function (j) {
         lset(LKEY, j.lab.slug);
-        setSession(j, j.lab.slug);
+        setSession(j, j.lab.slug); /* after adoptSession, which stores the bare token */
         try { sessionStorage.setItem('labpos_welcome', JSON.stringify({ slug: j.lab.slug, days: j.lab.daysLeft, name: j.lab.name })); } catch (e2) {}
         location.hash = '#/dashboard';
       }).catch(function (ex) {

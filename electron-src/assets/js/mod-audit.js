@@ -49,12 +49,15 @@
       return r.json().catch(function () { return {}; }).then(function (j) { if (r.status === 404) throw new Error('The Audit Log needs the latest version of the desktop app — download and install the update from the Downloads page.'); if (!r.ok) throw new Error(j.error || ('Request failed (' + r.status + ')')); return j; });
     });
   }
+  var seq = 0;
   function load(more) {
-    if (loading) return;
+    if (loading && more) return;
+    var my = ++seq; /* the latest request wins: a slower, older answer (previous filters) is ignored */
     loading = true; err = '';
     api('audit?' + qs(more ? rows.length : 0)).then(function (j) {
+      if (my !== seq) return;
       loading = false; data = j; rows = more ? rows.concat(j.rows) : j.rows; paint();
-    }, function (e) { loading = false; err = e.message || 'Could not load the audit log'; paint(); });
+    }, function (e) { if (my !== seq) return; loading = false; err = e.message || 'Could not load the audit log'; paint(); });
   }
   function paint() { var v = document.getElementById('view'); if (v && /#\/audit/.test(location.hash)) { var keep = document.activeElement && document.activeElement.id; v.innerHTML = render(); wire(); if (keep && document.getElementById(keep)) { var e = document.getElementById(keep); e.focus(); try { e.setSelectionRange(e.value.length, e.value.length); } catch (x) {} } } }
 
@@ -113,7 +116,7 @@
         var base = [r.ts, r.user, r.role, r.action, r.table, r.rowId, r.label];
         if (r.changes && r.changes.length) r.changes.forEach(function (c) { out.push(base.concat([c.f, c.from, c.to])); }); else out.push(base.concat(['', '', '']));
       });
-      var text = out.map(function (l) { return l.map(function (v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','); }).join('\r\n');
+      var text = out.map(function (l) { return l.map(function (v) { v = String(v == null ? '' : v); if (/^[=+\-@\t\r]/.test(v)) v = "'" + v; /* spreadsheet formulas from user-typed names must stay text */ return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(','); }).join('\r\n');
       var a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + text], { type: 'text/csv' })); a.download = 'audit-log-' + iso(new Date()) + '.csv';
       document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
     }, function (e) { App.toast(e.message, 'err'); });

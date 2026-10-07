@@ -14,6 +14,7 @@ function scopeStore(raw, prefix, TABLES) {
   const parseSeqKey = 'seq';
   const s = {
     prefix,
+    noDump: NO_DUMP,
     async isEmpty() { for (const t of TABLES) if ((await raw.all(P(t))).length) return false; return true; },
     all: (t) => raw.all(P(t)),
     get: (t, id) => raw.get(P(t), String(id)),
@@ -51,15 +52,34 @@ function scopeStore(raw, prefix, TABLES) {
       for (const t of TABLES.concat(['_del'])) if (NO_DUMP.indexOf(t) < 0) for (const r of await raw.all(P(t))) await raw.del(P(t), String(r.id));
       await s.setMeta(parseSeqKey, {});
     },
+    /* restore = validate + prepare everything FIRST, snapshot the current data, then wipe and load; if loading fails halfway the
+       snapshot is put back, so a failed restore never leaves a half-empty lab */
     async restore(d) {
       if (!d || typeof d !== 'object') throw new Error('bad dump');
-      await s.clear();
+      const rows = [];
       for (const t of TABLES) {
         if (NO_DUMP.indexOf(t) >= 0) continue;
-        if (t === 'settings') { if (d.settings && d.settings.id) await raw.put(P(t), d.settings); }
-        else if (Array.isArray(d[t])) for (const row of d[t]) if (row && row.id != null) await raw.put(P(t), row);
+        if (t === 'settings') { if (d.settings && d.settings.id) rows.push([t, d.settings]); }
+        else if (d[t] != null && !Array.isArray(d[t])) throw new Error('bad dump: ' + t + ' must be a list');
+        else if (Array.isArray(d[t])) for (const row of d[t]) if (row && row.id != null) rows.push([t, row]);
       }
-      if (d.seq) await s.setSeq(d.seq);
+      const snap = await s.dump();
+      try {
+        await s.clear();
+        for (const [t, row] of rows) await raw.put(P(t), row);
+        if (d.seq) await s.setSeq(d.seq);
+      } catch (e) {
+        try {
+          await s.clear();
+          for (const t of TABLES) {
+            if (NO_DUMP.indexOf(t) >= 0) continue;
+            if (t === 'settings') { if (snap.settings) await raw.put(P(t), snap.settings); }
+            else for (const row of (snap[t] || [])) await raw.put(P(t), row);
+          }
+          if (snap.seq) await s.setSeq(snap.seq);
+        } catch (e2) { /* nothing more can be done; the original error is reported */ }
+        throw e;
+      }
     },
     seed: (o) => s.restore(o),
     async close() { /* the shared connection is owned by the server */ },

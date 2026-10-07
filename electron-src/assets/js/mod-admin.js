@@ -1962,7 +1962,7 @@
       + '<p class="muted" style="font-size:12.5px;margin-top:12px">Roles — <strong>admin</strong>: everything · <strong>reception</strong>: billing, invoices, dues, patients, doctors, expenses · <strong>technician</strong>: results, tests & patients (view).</p>';
     document.getElementById('setBody').innerHTML = html;
 
-    document.getElementById('uAdd').addEventListener('click', function () { openUserModal(null); });
+    document.getElementById('uAdd').addEventListener('click', function () { if (App.limitHit && App.limitHit('users')) return; openUserModal(null); });
     document.querySelectorAll('[data-uedit]').forEach(function (b) {
       b.addEventListener('click', function () { openUserModal(DB.get('users', b.getAttribute('data-uedit'))); });
     });
@@ -2112,9 +2112,13 @@
 
   /* ---- Danger Zone ---- */
   function renderSetDanger() {
+    if (App.saasOn && App.saasOn()) { /* cloud labs cannot reset to the shipped demo data; a backup restore is the supported way */
+      document.getElementById('setBody').innerHTML = '<div class="card" style="max-width:720px;margin:0"><div class="card-b"><h3 style="margin-top:0">Reset is not available</h3><p class="muted">Cloud labs cannot be reset to demo data. To go back to an earlier state, restore a backup file from <strong>Settings &rarr; Backup</strong>.</p></div></div>';
+      return;
+    }
     var html = '<div class="card" style="border:1px solid var(--red);max-width:720px;margin:0"><div class="card-b">'
       + '<h3 style="margin-top:0;color:var(--red)">Reset Demo Data</h3>'
-      + '<p class="muted">This wipes <strong>everything</strong> — patients, invoices, payments, expenses, results, users — and restores the original demo dataset. You will be logged out.</p>'
+      + '<p class="muted">This wipes <strong>everything</strong> — patients, invoices, payments, expenses, results — and restores the original demo dataset. Your user accounts are kept. You will be logged out.</p>'
       + '<button class="btn btn-danger" id="dzReset">Reset All Data</button>'
       + '</div></div>';
     document.getElementById('setBody').innerHTML = html;

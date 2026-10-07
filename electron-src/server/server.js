@@ -85,14 +85,24 @@ function readReleases() {
   }
 }
 
+/* compare secrets by hash so timing never reveals how much of a guess was right */
+function safeEq(a, b) {
+  const x = crypto.createHash('sha256').update(String(a)).digest(), y = crypto.createHash('sha256').update(String(b)).digest();
+  return crypto.timingSafeEqual(x, y);
+}
+const saFails = new Map(); /* ip -> {n, until}: wrong superadmin keys */
 function requireSuperadmin(req, res, next) {
   if (!SUPERADMIN_KEY) return res.status(500).json({ error: 'SUPERADMIN_KEY not configured on server' });
   const provided = req.get('X-Superadmin-Key') || '';
+  const sf = saFails.get(req.ip);
+  if (sf && sf.n >= 20 && sf.until > Date.now()) return res.status(429).json({ error: 'Too many attempts' });
   /* Accept either the legacy static key or the username/password derived token
      sent by the console ('up:' + sha256('username:password')). The expected
      derived token is stored server-side as SUPERADMIN_LOGIN_TOKEN. */
   const loginToken = (process.env.SUPERADMIN_LOGIN_TOKEN || '').trim();
-  if (provided === SUPERADMIN_KEY || (loginToken && provided === loginToken)) return next();
+  if (safeEq(provided, SUPERADMIN_KEY) || (loginToken && safeEq(provided, loginToken))) return next();
+  const now = Date.now(), cur = (sf && sf.until > now) ? sf : { n: 0, until: now + 15 * 60 * 1000 };
+  cur.n++; saFails.set(req.ip, cur); if (saFails.size > 20000) saFails.clear();
   return res.status(403).json({ error: 'forbidden' });
 }
 
@@ -230,7 +240,8 @@ async function main() {
   }) : null;
 
   const app = express();
-  app.set('trust proxy', true); /* correct req.protocol behind Nginx Proxy Manager */
+  /* correct req.protocol / req.ip behind Nginx Proxy Manager: trust exactly the proxy hop(s) (TRUST_PROXY, default 1), never a client-supplied X-Forwarded-For */
+  app.set('trust proxy', process.env.TRUST_PROXY ? (isNaN(+process.env.TRUST_PROXY) ? process.env.TRUST_PROXY : +process.env.TRUST_PROXY) : 1);
   app.use(express.json({ limit: '25mb' }));
   /* CORS (manual, no extra deps): the static frontend and phone QR scanners
      fetch /api/* and /r/* cross-origin */
@@ -299,13 +310,15 @@ async function main() {
   async function getLabs() { return (await store.getMeta('labs')) || {}; }
   app.post('/api/labs/heartbeat', async (req, res) => {
     const { labId, name, version, platform } = req.body || {};
-    if (!labId || typeof labId !== 'string') return res.status(400).json({ error: 'labId required' });
+    if (!labId || typeof labId !== 'string' || !/^[A-Za-z0-9_.:-]{1,64}$/.test(labId)) return res.status(400).json({ error: 'labId required (letters, numbers, _ . : -; max 64)' });
     const labs = await getLabs();
+    if (!labs[labId] && Object.keys(labs).length >= 5000) return res.status(429).json({ error: 'registry full' });
     const prev = labs[labId] || {};
+    const cut = (v, n) => (typeof v === 'string' ? v.slice(0, n) : '');
     labs[labId] = {
-      name: name || prev.name || labId,
-      version: version || prev.version || '',
-      platform: platform || prev.platform || '',
+      name: cut(name, 80) || prev.name || labId,
+      version: cut(version, 24) || prev.version || '',
+      platform: cut(platform, 40) || prev.platform || '',
       targetVersion: prev.targetVersion || null,
       lastSeen: new Date().toISOString(),
     };
@@ -335,21 +348,42 @@ async function main() {
   const sanitizeDump = (d) => Object.assign({}, d, { users: (d.users || []).map(stripUser) });
   app.get('/api/public-info', async (req, res) => {
     let st = (await store.get('settings', 'main')) || {};
-    if (saas && typeof req.query.lab === 'string' && req.query.lab) { const l = await saas.findBySlug(req.query.lab); st = l ? ((await saas.storeFor(l).get('settings', 'main')) || {}) : {}; }
     res.json({ labName: st.labName || '', tagline: st.tagline || '', logo: st.logo || '' });
   });
-  const fails = new Map(); /* ip|username -> {n, until} */
+  /* ---- brute-force / abuse limiters (bounded, self-cleaning; keyed on the real client IP — see trust proxy above) ---- */
+  const fails = new Map();      /* ip|lab|username -> {n, until}: wrong passwords */
+  const ipFails = new Map();    /* ip -> {n, until}: any failed sign-in from this address */
+  const auditFails = new Map(); /* ip|lab -> {n, until}: failed-login rows already written to a lab's audit trail */
+  const signupHits = new Map(); /* ip -> {n, until}: sign-ups */
+  const userFails = new Map();  /* lab|username -> {n, until}: independent of the client IP, so rotating addresses cannot dodge it */
+  const LIMIT_MAPS = [fails, ipFails, auditFails, signupHits, saFails, userFails];
+  function bump(map, key, windowMs) {
+    const now = Date.now();
+    let e = map.get(key);
+    if (!e || e.until <= now) e = { n: 0, until: now + windowMs };
+    e.n++; map.set(key, e);
+    if (map.size > 50000) { for (const [k, v] of map) if (v.until <= now) map.delete(k); if (map.size > 50000) map.clear(); }
+    return e;
+  }
+  const hot = (map, key, max) => { const e = map.get(key); return !!(e && e.until > Date.now() && e.n >= max); };
+  setInterval(() => { const now = Date.now(); for (const m of LIMIT_MAPS) for (const [k, v] of m) if (v.until <= now) m.delete(k); }, 600000).unref();
+  const DUMMY_HASH = hashPassword('not-a-real-password'); /* unknown user / lab costs the same scrypt time as a wrong password */
+  /* a token stops working when the user's password changes, or the account is disabled (stolen-token revocation) */
+  const pvOf = (u) => crypto.createHash('sha256').update(String(u.password || '') + '|' + (u.active === false ? '0' : '1')).digest('hex').slice(0, 12);
+  const BAD_LOGIN = 'Invalid Lab ID, username or password';
   app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body || {};
     if (typeof username !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'username and password required' });
     const labSlug = typeof (req.body || {}).lab === 'string' ? req.body.lab.trim().toLowerCase() : '';
+    if (username.length > 64 || password.length > 256 || labSlug.length > 40) return res.status(400).json({ error: BAD_LOGIN });
     const fk = req.ip + '|' + labSlug + '|' + username.toLowerCase();
-    const f = fails.get(fk);
-    if (f && f.n >= 8 && f.until > Date.now()) return res.status(429).json({ error: 'Too many attempts. Try again in a few minutes.' });
+    const gk = labSlug + '|' + username.toLowerCase();
+    if (hot(fails, fk, 8) || hot(ipFails, req.ip, 60) || hot(userFails, gk, 40)) return res.status(429).json({ error: 'Too many attempts. Try again in a few minutes.' });
+    const failed = () => { bump(fails, fk, 15 * 60 * 1000); bump(ipFails, req.ip, 15 * 60 * 1000); bump(userFails, gk, 15 * 60 * 1000); };
     if (DESKTOP) { /* cloud-authoritative while online, cached local hash when offline (see desktop-sync.js) */
       const r = await desktop.authenticate(username, password, labSlug);
       if (!r.user) {
-        if (r.status === 401) fails.set(fk, { n: ((f && f.until > Date.now()) ? f.n : 0) + 1, until: Date.now() + 15 * 60 * 1000 });
+        if (r.status === 401) failed();
         return res.status(r.status || 401).json({ error: r.error || 'Invalid username or password' });
       }
       fails.delete(fk);
@@ -360,21 +394,23 @@ async function main() {
     /* which lab? the Lab ID typed on the sign-in page; empty = the default lab (the original single-lab deployment) */
     const lab = labSlug ? await saas.findBySlug(labSlug) : await saas.getLab('main');
     const bad = () => {
-      if (lab) auditLog(req, 'login_failed', 'auth', username, { store: saas.storeFor(lab), actor: {}, username, label: username });
-      const n = ((f && f.until > Date.now()) ? f.n : 0) + 1;
-      fails.set(fk, { n, until: Date.now() + 15 * 60 * 1000 });
-      return res.status(401).json({ error: labSlug && !lab ? 'Lab ID not found. Check the Lab ID and try again.' : 'Invalid username or password' });
+      failed();
+      /* failed attempts show up in the lab's audit trail, but at most a handful per address per lab (no flooding a victim's log) */
+      if (lab && !hot(auditFails, req.ip + '|' + lab.id, 5) && !hot(auditFails, 'lab|' + lab.id, 20)) { bump(auditFails, req.ip + '|' + lab.id, 15 * 60 * 1000); bump(auditFails, 'lab|' + lab.id, 15 * 60 * 1000); auditLog(req, 'login_failed', 'auth', username, { store: saas.storeFor(lab), actor: {}, username, label: username }); }
+      return res.status(401).json({ error: BAD_LOGIN });
     };
-    if (!lab) return bad();
+    if (!lab) { verifyPassword(password, DUMMY_HASH); return bad(); }
     const lstore = saas.storeFor(lab);
     const u = (await lstore.all('users')).find(x => x.username === username && x.active !== false);
-    if (!u || !verifyPassword(password, u.password)) return bad();
+    if (!u) { verifyPassword(password, DUMMY_HASH); return bad(); }
+    if (!verifyPassword(password, u.password)) return bad();
     if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
     fails.delete(fk);
     if (!isHashed(u.password)) await lstore.put('users', Object.assign({}, u, { password: hashPassword(password) }));
+    const fresh = (await lstore.get('users', u.id)) || u;
     const user = { id: u.id, name: u.name, role: u.role };
     await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username });
-    const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, exp: Date.now() + TOKEN_TTL_MS });
+    const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(fresh), exp: Date.now() + TOKEN_TTL_MS });
     res.json({ ok: true, user, token, lab: await saas.view(lab) });
   });
 
@@ -412,8 +448,8 @@ async function main() {
       const u = o.actor || req.user || {};
       await (o.store || req.store).put('audit', {
         id: 'A-' + Date.now().toString(36) + crypto.randomBytes(3).toString('hex'), ts: new Date().toISOString(),
-        uid: u.id || '', user: u.name || o.username || '', role: u.role || '', ip: req.ip || '',
-        action, table, rowId: String(rowId == null ? '' : rowId), label: o.label || '', changes: o.changes || [], note: o.note || '',
+        uid: String(u.id || '').slice(0, 64), user: String(u.name || o.username || '').slice(0, 64), role: u.role || '', ip: String(req.ip || '').slice(0, 64),
+        action, table, rowId: String(rowId == null ? '' : rowId).slice(0, 64), label: String(o.label || '').slice(0, 140), changes: o.changes || [], note: String(o.note || '').slice(0, 200),
       });
     } catch (e) { /* the audit trail must never break a real write */ }
   }
@@ -429,6 +465,35 @@ async function main() {
     if (saas) for (const l of (await saas.loadLabs()).values()) if (l.id !== 'main') await pruneAudit(saas.storeFor(l));
   }, 86400000).unref();
 
+  /* ---- plan limits (users per lab, invoices per month): enforced on EVERY write path that can create such a row
+     (POST, PUT-as-create, bulk, desktop sync, restore), and serialized per lab so parallel requests cannot both fit ---- */
+  const labLocks = new Map();
+  async function withLock(key, fn) {
+    const prev = labLocks.get(key) || Promise.resolve();
+    let rel; const mine = new Promise((r) => { rel = r; });
+    const chain = prev.then(() => mine);
+    labLocks.set(key, chain);
+    await prev;
+    try { return await fn(); } finally { rel(); if (labLocks.get(key) === chain) labLocks.delete(key); }
+  }
+  const ymOf = (t) => { const d = new Date(t); return d.getFullYear() * 12 + d.getMonth(); };
+  async function limitErr(req, table, rows) {
+    if (!saas || !req.lab || (table !== 'users' && table !== 'invoices')) return null;
+    const lim = await saas.limitsOf(req.lab), cap = table === 'users' ? lim.users : lim.invoicesPerMonth;
+    if (!cap) return null;
+    const nowYm = ymOf(Date.now()); let add = 0;
+    for (const r of rows) {
+      if (!r || r.id == null || await req.store.get(table, String(r.id))) continue;
+      if (table === 'users') { if (r.active !== false) add++; } else if (ymOf(+r._c || Date.now()) === nowYm) add++;
+    }
+    if (!add) return null;
+    const use = await saas.usageOf(req.lab), planName = ((await saas.getPlans())[req.lab.plan] || {}).name || req.lab.plan;
+    if (table === 'users' && use.users + add > cap) return { error: 'Your ' + planName + ' plan allows ' + cap + ' users. Upgrade the plan to add more.', code: 'LIMIT_USERS' };
+    if (table === 'invoices' && use.invoicesThisMonth + add > cap) return { error: 'Monthly invoice limit (' + cap + ') of the ' + planName + ' plan reached. Upgrade the plan to continue billing.', code: 'LIMIT_INVOICES' };
+    return null;
+  }
+  const lockKey = (req) => (req.lab ? req.lab.id : 'main');
+
   /* ---- auth gate: everything registered below needs a valid token ---- */
   app.use('/api', async (req, res, next) => {
     req.store = store; req.lab = null;
@@ -438,7 +503,7 @@ async function main() {
       let lab = null, ts = store;
       if (saas) { lab = await saas.getLab(t.lab || 'main'); ts = lab ? saas.storeFor(lab) : null; } /* tokens issued before SaaS belong to the default lab */
       const u = ts && await ts.get('users', t.uid); /* re-check: deleted/disabled users lose access immediately */
-      if (u && u.active !== false) { req.user = { id: u.id, role: u.role, name: u.name }; req.store = ts; req.lab = lab; }
+      if (u && u.active !== false && (!t.pv || t.pv === pvOf(u))) { req.user = { id: u.id, role: u.role, name: u.name }; req.store = ts; req.lab = lab; }
     }
     if (req.user && saas && req.lab) {
       const st = saas.effStatus(req.lab);
@@ -455,7 +520,7 @@ async function main() {
     if (req.user.role !== 'admin') return res.status(403).json({ error: 'admin only' });
     next();
   };
-  const superKey = (req) => { const k = req.get('X-Superadmin-Key') || ''; return !!SUPERADMIN_KEY && (k === SUPERADMIN_KEY || (!!process.env.SUPERADMIN_LOGIN_TOKEN && k === process.env.SUPERADMIN_LOGIN_TOKEN.trim())); };
+  const superKey = (req) => { const k = req.get('X-Superadmin-Key') || ''; return !!SUPERADMIN_KEY && (safeEq(k, SUPERADMIN_KEY) || (!!process.env.SUPERADMIN_LOGIN_TOKEN && safeEq(k, process.env.SUPERADMIN_LOGIN_TOKEN.trim()))); };
   const needAdminOrSuper = (req, res, next) => (req.user && req.user.role === 'admin') || superKey(req) ? next() : res.status(req.user ? 403 : 401).json({ error: 'admin only' });
 
   app.post('/api/auth/change-password', needUser, async (req, res) => {
@@ -465,13 +530,14 @@ async function main() {
     const u = await store.get('users', req.user.id);
     if (!u || !verifyPassword(String(current || ''), u.password)) return res.status(400).json({ error: 'Current password is incorrect' });
     await store.put('users', Object.assign({}, u, { password: hashPassword(nw) }));
-    res.json({ ok: true });
+    /* the old token is tied to the old password (pv): hand back a fresh one so this session keeps working, every other session ends */
+    const fresh = await store.get('users', req.user.id);
+    res.json({ ok: true, token: signToken(SESSION_SECRET, { uid: fresh.id, role: fresh.role, lab: req.lab ? req.lab.id : undefined, pv: pvOf(fresh), exp: Date.now() + TOKEN_TTL_MS }) });
   });
   /* =====================================================================================================
      SaaS API — signup, plans, subscription, payments, and the operator (superadmin) console.
      ===================================================================================================== */
   if (saas) {
-    const signups = new Map(); /* ip -> [timestamps] (5 signups / hour / IP) */
     const clean = (o, keys) => { const r = {}; keys.forEach(k => { if (o && o[k] !== undefined) r[k] = o[k]; }); return r; };
     const payView = (p) => clean(p, ['id', 'labId', 'labName', 'labSlug', 'plan', 'period', 'amount', 'method', 'reference', 'note', 'status', 'createdAt', 'decidedAt', 'decisionNote']);
     const publicPay = async () => {
@@ -494,12 +560,11 @@ async function main() {
     });
     app.post('/api/saas/signup', async (req, res) => {
       try {
-        const now = Date.now(), hits = (signups.get(req.ip) || []).filter(x => x > now - 3600000);
-        if (hits.length >= (+process.env.SAAS_SIGNUPS_PER_HOUR || 5)) return res.status(429).json({ error: 'Too many sign-ups from this network. Please try again later.' });
+        /* the attempt is counted BEFORE the slow work, so parallel requests cannot slip past the limit */
+        if (bump(signupHits, req.ip, 3600000).n > (+process.env.SAAS_SIGNUPS_PER_HOUR || 5)) return res.status(429).json({ error: 'Too many sign-ups from this network. Please try again later.' });
         const lab = await saas.createLab(req.body || {});
-        hits.push(now); signups.set(req.ip, hits);
         const u = (await saas.storeFor(lab).all('users'))[0];
-        const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, exp: Date.now() + TOKEN_TTL_MS });
+        const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         console.log('[labpos-cloud] saas: new lab signed up:', lab.slug, '<' + lab.ownerEmail + '>');
         res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role }, token, lab: await saas.view(lab) });
       } catch (e) { res.status(400).json({ error: e.message }); }
@@ -590,7 +655,14 @@ async function main() {
       const lab = await saas.getLab(req.params.id); if (!lab) return res.status(404).json({ error: 'unknown lab' });
       if (lab.id === 'main') return res.status(400).json({ error: 'The default lab cannot be deleted' });
       if ((req.get('X-Confirm-Slug') || '') !== lab.slug) return res.status(400).json({ error: 'Send header X-Confirm-Slug: ' + lab.slug + ' to confirm' });
-      await saas.storeFor(lab).clear();
+      await saas.purgeLab(lab); /* every table, tombstone and audit row of this lab */
+      try { /* its report PDFs (and owner marks) too: the public /r/<key> links stop working */
+        for (const f of fs.readdirSync(REPORT_PDFS_DIR)) {
+          if (!/\.owner$/.test(f)) continue;
+          const o = fs.readFileSync(path.join(REPORT_PDFS_DIR, f), 'utf8').trim();
+          if (o === lab.id) { fs.rmSync(path.join(REPORT_PDFS_DIR, f), { force: true }); fs.rmSync(path.join(REPORT_PDFS_DIR, f.replace(/\.owner$/, '.pdf')), { force: true }); }
+        }
+      } catch (e) { /* best effort */ }
       await rawStore.del(saas.LABS_T, lab.id); (await saas.loadLabs()).delete(lab.id);
       for (const p of await rawStore.all(saas.PAY_T)) if (p.labId === lab.id) await rawStore.del(saas.PAY_T, p.id);
       console.log('[labpos-cloud] saas: lab deleted:', lab.slug);
@@ -602,20 +674,27 @@ async function main() {
       rows.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
       res.json(rows);
     });
+    const payBusy = new Set();
     app.post('/api/saas/payments/:id/:action', requireSuperadmin, async (req, res) => {
+      const pid = req.params.id;
+      if (payBusy.has(pid)) return res.status(409).json({ error: 'This payment is being processed' });
+      payBusy.add(pid);
+      try { return await decidePayment(req, res); } finally { payBusy.delete(pid); }
+    });
+    async function decidePayment(req, res) {
       const p = await rawStore.get(saas.PAY_T, req.params.id); if (!p) return res.status(404).json({ error: 'unknown payment' });
       if (p.status !== 'pending') return res.status(400).json({ error: 'Already ' + p.status });
       const act = req.params.action; if (act !== 'approve' && act !== 'reject') return res.status(400).json({ error: 'approve or reject' });
       const lab = await saas.getLab(p.labId); if (!lab) return res.status(404).json({ error: 'lab no longer exists' });
       p.status = act === 'approve' ? 'approved' : 'rejected'; p.decidedAt = new Date().toISOString(); p.decisionNote = String((req.body || {}).note || '').slice(0, 200);
+      await rawStore.put(saas.PAY_T, p); /* the decision is persisted first, so a repeat can never extend the subscription twice */
       if (act === 'approve') {
-        lab.plan = p.plan; lab.status = 'active'; lab.paidUntil = saas.addPeriod(lab, p.period); lab.trialEndsAt = lab.trialEndsAt;
+        lab.plan = p.plan; lab.status = 'active'; lab.paidUntil = saas.addPeriod(lab, p.period);
         await saas.addHistory(lab, 'Payment approved: ' + p.plan + ' ' + p.period + ' (Rs ' + p.amount + ', ref ' + p.reference + ') → paid until ' + lab.paidUntil.slice(0, 10), 'operator');
         await saas.saveLab(lab);
       }
-      await rawStore.put(saas.PAY_T, p);
       res.json({ ok: true, payment: p, lab: await saas.view(lab, true) });
-    });
+    }
     app.get('/api/saas/settings', requireSuperadmin, async (req, res) => res.json({ settings: await saas.getSettings(), plans: await saas.getPlans() }));
     app.put('/api/saas/settings', requireSuperadmin, async (req, res) => {
       const b = req.body || {};
@@ -632,20 +711,6 @@ async function main() {
         await rawStore.setMeta('saas_plans', cur);
       }
       res.json({ ok: true, settings: await saas.getSettings(), plans: await saas.getPlans() });
-    });
-
-    /* ---- plan limits on the generic write routes (users per lab, invoices per month) ---- */
-    app.use('/api', async (req, res, next) => {
-      try {
-        if (req.method !== 'POST' || !req.user || !req.lab) return next();
-        const isUsers = req.path === '/users', isInv = req.path === '/invoices' || req.path === '/bulk/invoices';
-        if (!isUsers && !isInv) return next();
-        const lim = await saas.limitsOf(req.lab), use = await saas.usageOf(req.lab);
-        const planName = ((await saas.getPlans())[req.lab.plan] || {}).name || req.lab.plan;
-        if (isUsers && lim.users && use.users >= lim.users) return res.status(402).json({ error: 'Your ' + planName + ' plan allows ' + lim.users + ' users. Upgrade the plan to add more.', code: 'LIMIT_USERS' });
-        if (isInv && lim.invoicesPerMonth && use.invoicesThisMonth >= lim.invoicesPerMonth) return res.status(402).json({ error: 'Monthly invoice limit (' + lim.invoicesPerMonth + ') of the ' + planName + ' plan reached. Upgrade the plan to continue billing.', code: 'LIMIT_INVOICES' });
-        next();
-      } catch (e) { next(); }
     });
   }
 
@@ -668,15 +733,23 @@ async function main() {
       }
       res.json({ conflicts: out });
     });
-    app.post('/api/sync', needUser, async (req, res) => {
-    const store = req.store;
+    app.post('/api/sync', needUser, async (req, res) => { await withLock(lockKey(req), () => syncOnce(req, res)); });
+    async function syncOnce(req, res) {
+      const store = req.store;
       try {
         const body = req.body || {}, since = +body.since || 0, admin = req.user.role === 'admin';
+        /* plan limits apply to desktop sync too: the whole batch is refused (data stays safe on the PC) rather than silently exceeding the plan */
+        for (const tb of ['users', 'invoices']) {
+          const incoming = (body.rows || []).filter((x) => x && x.t === tb && x.row && x.row.id != null && !(tb === 'users' && !admin)).map((x) => x.row);
+          if (incoming.length) { const e = await limitErr(req, tb, incoming); if (e) return res.status(402).json(e); }
+        }
         const applied = new Set(), skipped = [], maxU = Date.now() + 5 * 60 * 1000;
         for (const x of body.rows || []) {
           if (!x || !okTable(x.t) || !x.row || x.row.id == null) continue;
           const t = x.t, id = String(x.row.id);
           if ((t === 'users' || t === 'settings') && !admin) { skipped.push({ t, id, _u: x.row._u }); continue; }
+          /* the audit trail is append-only: only an admin's PC may add entries (create-if-absent), nobody can overwrite them */
+          if (t === 'audit' && (!admin || await store.get('audit', id))) continue;
           const u = Math.min(+x.row._u || 0, maxU);
           const ex = await store.get(t, id);
           if (ex && !sameRecord(ex, x.row)) continue; /* different record under the same number: the client must renumber first */
@@ -692,7 +765,7 @@ async function main() {
           applied.add(t + '|' + id);
         }
         for (const d of body.deletes || []) {
-          if (!d || !okTable(d.t) || d.id == null) continue;
+          if (!d || !okTable(d.t) || d.id == null || d.t === 'audit') continue; /* audit entries can never be deleted through sync */
           if ((d.t === 'users' || d.t === 'settings') && !admin) continue;
           const u = Math.min(+d._u || 0, maxU), ex = await store.get(d.t, String(d.id));
           if (ex && (+ex._u || 0) > u) continue;
@@ -700,12 +773,13 @@ async function main() {
           applied.add(d.t + '|' + d.id);
         }
         const ch = await store.changesSince(since, applied);
+        if (!admin) { ch.rows = ch.rows.filter((x) => x.t !== 'audit'); ch.deletes = ch.deletes.filter((d) => d.t !== 'audit'); } /* only admins may read the audit trail */
         let cursor = since;
         for (const x of ch.rows) cursor = Math.max(cursor, +x.row._s || 0);
         for (const d of ch.deletes) cursor = Math.max(cursor, +d._s || 0);
         res.json({ cursor, rows: ch.rows.map(x => ({ t: x.t, row: pwStrip(x.t, x.row) })), deletes: ch.deletes, skipped });
       } catch (e) { console.error('[labpos-cloud] sync failed:', e); res.status(500).json({ error: 'sync failed' }); }
-    });
+    }
   }
   app.get('/api/sync/status', needUser, async (req, res) => res.json(DESKTOP ? await desktop.getStatus() : { desktop: false }));
   app.post('/api/sync/now', needUser, async (req, res) => res.json(DESKTOP ? await desktop.cycle() : { desktop: false }));
@@ -732,6 +806,7 @@ async function main() {
       try { buf = Buffer.from(b64, 'base64'); }
       catch (e) { return res.status(400).json({ error: 'invalid base64 payload' }); }
       if (!buf.length) return res.status(400).json({ error: 'empty pdf' });
+      if (buf.slice(0, 4).toString('latin1') !== '%PDF') return res.status(400).json({ error: 'not a PDF file' });
       if (buf.length > REPORT_PDF_MAX_BYTES) return res.status(400).json({ error: 'pdf too large (max 15MB)' });
       /* key is regex-validated (no slashes/dots), so the join cannot escape REPORT_PDFS_DIR */
       /* one lab can never overwrite another lab's PDF: each key remembers its owner (files from before SaaS belong to the default lab) */
@@ -770,6 +845,16 @@ async function main() {
     const store = req.store;
     try {
       const body = req.body || {};
+      if (!body.settings || typeof body.settings !== 'object' || !Array.isArray(body.users) || !body.users.some((u) => u && u.role === 'admin' && u.active !== false)) {
+        return res.status(400).json({ error: 'Invalid backup: it must contain the lab settings and at least one active admin user' });
+      }
+      /* a restore cannot be used to get past the plan limits */
+      if (saas && req.lab) {
+        const lim = await saas.limitsOf(req.lab), nowYm = ymOf(Date.now());
+        const nUsers = body.users.filter((u) => u && u.active !== false).length, nInv = (Array.isArray(body.invoices) ? body.invoices : []).filter((i) => i && ymOf(i._c || i.createdAt || 0) === nowYm).length;
+        if (lim.users && nUsers > lim.users) return res.status(402).json({ error: 'This backup has ' + nUsers + ' active users; your plan allows ' + lim.users + '.', code: 'LIMIT_USERS' });
+        if (lim.invoicesPerMonth && nInv > lim.invoicesPerMonth) return res.status(402).json({ error: 'This backup has ' + nInv + ' invoices this month; your plan allows ' + lim.invoicesPerMonth + '.', code: 'LIMIT_INVOICES' });
+      }
       /* backups exported from the app carry no passwords: keep the existing hash for known users */
       const old = {}; (await store.all('users')).forEach(u => { old[u.id] = u.password; });
       body.users = (Array.isArray(body.users) ? body.users : []).map(u => {
@@ -786,9 +871,10 @@ async function main() {
   app.post('/api/admin/reseed', needAdminOrSuper, async (req, res) => {
     const store = req.store;
     if (DESKTOP) return res.status(403).json({ error: 'Not available on the desktop app' });
+    if (saas && req.lab && req.lab.id !== 'main' && !superKey(req)) return res.status(403).json({ error: 'Reset is not available for cloud labs — restore a backup instead' });
     try {
       const seed = JSON.parse(fs.readFileSync(path.join(__dirname, 'seed.json'), 'utf8'));
-      (seed.users || []).forEach(u => { if (u.password && !isHashed(u.password)) u.password = hashPassword(u.password); });
+      seed.users = await store.all('users'); /* keep the lab's own accounts + passwords: the shipped demo logins (admin123 …) are never reinstalled */
       await keepMeta(() => store.seed(seed));
       await auditLog(req, 'reseed', 'system', '', { label: 'Data reset to the demo data set' });
       res.json(sanitizeDump(await store.dump()));
@@ -810,7 +896,14 @@ async function main() {
   };
   async function prepUserBody(req, existing) {
     const b = Object.assign({}, req.body || {});
-    if (req.user.role !== 'admin') { delete b.role; delete b.active; }
+    if (req.user.role !== 'admin') { delete b.role; delete b.active; delete b.username; } /* staff cannot rename themselves into someone else's login */
+    if (typeof b.username === 'string') {
+      b.username = b.username.trim();
+      if (b.username.length < 2 || b.username.length > 64) throw new Error('Username must be 2-64 characters');
+      const dup = (await req.store.all('users')).some((u) => u.id !== (b.id != null ? String(b.id) : req.params.id) && String(u.username).toLowerCase() === b.username.toLowerCase());
+      if (dup) throw new Error('This username is already taken');
+    }
+    if (typeof b.password === 'string' && b.password.length > 256) throw new Error('Password is too long');
     if (typeof b.password === 'string' && b.password) {
       if (b.password.length < 4 && !isHashed(b.password)) throw new Error('Password must be at least 4 characters');
       if (!isHashed(b.password)) b.password = hashPassword(b.password);
@@ -839,6 +932,7 @@ async function main() {
     if (!Array.isArray(rows) || rows.length > 2000) return res.status(400).json({ error: 'rows[] required (max 2000)' });
     try {
       let n = 0;
+      if (t === 'invoices') { const e = await withLock(lockKey(req), () => limitErr(req, t, rows)); if (e) return res.status(402).json(e); }
       for (const r of rows) { if (r && r.id != null) { await store.put(t, r); n++; } }
       if (n && ['tests', 'invoices', 'patients', 'doctors', 'expenses', 'payments', 'results'].indexOf(t) >= 0) await auditLog(req, 'bulk', t, '', { label: n + ' ' + t + ' saved in one batch' });
       res.json({ ok: true, saved: n });
@@ -854,10 +948,14 @@ async function main() {
     try {
       const t = req.params.table;
       const body = t === 'users' ? await prepUserBody(req, null) : req.body;
-      if (body && body.id != null && t !== 'settings' && await store.get(t, String(body.id))) return res.status(409).json({ error: 'id already exists', id: body.id });
-      const out = await store.put(t, body);
-      await auditLog(req, 'create', t, out.id, { label: auditLabel(t, out), changes: auditDiff({}, out, 12) });
-      res.json(t === 'users' ? stripUser(out) : out);
+      const create = async () => {
+        if (body && body.id != null && t !== 'settings' && await store.get(t, String(body.id))) return res.status(409).json({ error: 'id already exists', id: body.id });
+        const e = await limitErr(req, t, [body]); if (e) return res.status(402).json(e);
+        const out = await store.put(t, body);
+        await auditLog(req, 'create', t, out.id, { label: auditLabel(t, out), changes: auditDiff({}, out, 12) });
+        res.json(t === 'users' ? stripUser(out) : out);
+      };
+      if (t === 'users' || t === 'invoices') await withLock(lockKey(req), create); else await create();
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
   app.put('/api/:table/:id', tableGuard, async (req, res) => {
@@ -865,11 +963,15 @@ async function main() {
     try {
       const t = req.params.table;
       const body = t === 'users' ? await prepUserBody(req, true) : (req.body || {});
-      const before = await store.get(t, req.params.id);
-      const out = await store.patch(t, req.params.id, body);
-      const ch = auditDiff(before, out);
-      if (ch.length) await auditLog(req, before ? 'update' : 'create', t, req.params.id, { label: auditLabel(t, out), changes: ch });
-      res.json(t === 'users' ? stripUser(out) : out);
+      const update = async () => {
+        const before = await store.get(t, req.params.id);
+        if (!before) { const e = await limitErr(req, t, [Object.assign({}, body, { id: req.params.id })]); if (e) return res.status(402).json(e); }
+        const out = await store.patch(t, req.params.id, body);
+        const ch = auditDiff(before, out);
+        if (ch.length) await auditLog(req, before ? 'update' : 'create', t, req.params.id, { label: auditLabel(t, out), changes: ch });
+        res.json(t === 'users' ? stripUser(out) : out);
+      };
+      if (t === 'users' || t === 'invoices') await withLock(lockKey(req), update); else await update();
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
   app.delete('/api/:table/:id', tableGuard, async (req, res) => {
