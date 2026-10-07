@@ -41,22 +41,26 @@ function create({ raw, log }) {
         set: async (data) => { const jobs = []; for (const cat of Object.keys(data)) for (const id of Object.keys(data[cat])) { const v = data[cat][id]; jobs.push(v ? put(cat + '-' + id, v) : del(cat + '-' + id)); } await Promise.all(jobs); },
       } },
       saveCreds: () => put('creds', creds),
-      registered: () => !!creds.registered,
+      registered: () => !!(creds.me && creds.me.id), /* a QR-paired login has "me"; the library only sets "registered" for the phone-number code flow */
       wipe: async () => { for (const n of Array.from(idx)) await raw.setMeta(pre + n, null); await raw.setMeta(idxKey, null); idx = new Set(); },
     };
   }
-  async function hasLogin(labId) { try { const c = await raw.getMeta('wa:' + labId + ':creds'); return !!(c && c.registered); } catch (e) { return false; } }
+  async function hasLogin(labId) { try { const c = await raw.getMeta('wa:' + labId + ':creds'); return !!(c && c.me && c.me.id); } catch (e) { return false; } }
 
   function fresh(labId) { return { labId, state: 'idle', qr: '', number: '', err: '', sock: null, auth: null, stop: false, tries: 0, gap: 0, chain: Promise.resolve(), day: '', sent: 0, at: Date.now() }; }
   const jidOf = (to) => { let d = String(to || '').replace(/\D/g, ''); while (d.indexOf('00') === 0) d = d.slice(2); if (d.charAt(0) === '0') d = '92' + d.slice(1); return d.length >= 10 && d.length <= 15 ? d + '@s.whatsapp.net' : ''; };
 
   /* ---- start / reconnect ---- */
-  async function start(labId) {
+  async function start(labId, opts) {
     if (!ENABLED) throw new Error('The WhatsApp gateway is switched off on this server.');
     let S = sessions.get(labId);
     if (S && (S.state === 'open' || S.state === 'qr' || S.state === 'connecting')) return S;
     if (!S) { if (sessions.size >= MAX) throw new Error('This server is at its limit of linked WhatsApp numbers. Please contact support.'); S = fresh(labId); sessions.set(labId, S); }
     S.stop = false; S.err = ''; S.state = 'connecting'; S.qr = '';
+    if (opts && opts.fresh && !FAKE) { /* the person pressed "Link": drop any half-finished earlier attempt so a clean QR is made */
+      try { const old = await dbAuth(labId); if (!old.registered()) await old.wipe(); } catch (e) { /* nothing stored */ }
+      S.auth = null; S.tries = 0;
+    }
     if (FAKE) { /* tests: a QR for a moment, then "linked" */
       S.state = 'qr'; S.qr = 'FAKE-QR-' + crypto.randomBytes(6).toString('hex');
       setTimeout(() => { if (S.state === 'qr' && !S.stop) { S.state = 'open'; S.qr = ''; S.number = process.env.WA_GATEWAY_FAKE_NUMBER || ('92300' + String(1000000 + sessions.size)); } }, +process.env.WA_GATEWAY_FAKE_MS || 1200);
@@ -68,16 +72,22 @@ function create({ raw, log }) {
       const sock = b.default({ version, auth: S.auth.state, logger: pino({ level: 'silent' }), printQRInTerminal: false, browser: ['Optix LAB MedSync', 'Chrome', '1.0'], markOnlineOnConnect: false, syncFullHistory: false, generateHighQualityLinkPreview: false });
       S.sock = sock;
       sock.ev.on('creds.update', () => S.auth.saveCreds().catch(() => {}));
+      /* WhatsApp's "login complete" message: show CONNECTED right away (the library waits for one more reply that can be slow) */
+      try { sock.ws.on('CB:success', () => { if (S.sock !== sock) return; const me = S.auth && S.auth.state.creds.me; S.state = 'open'; S.qr = ''; S.err = ''; S.tries = 0; S.number = String((me && me.id) || '').split(':')[0].split('@')[0]; say('whatsapp linked for lab ' + labId + ' (' + S.number + ')'); }); } catch (e) { /* the normal event below still works */ }
       sock.ev.on('connection.update', (u) => {
         if (S.sock !== sock) return;
         if (u.qr) { S.qr = u.qr; S.state = 'qr'; }
+        if (u.isNewLogin) { S.state = 'connecting'; S.qr = ''; say('whatsapp (lab ' + labId + ') QR scanned, finishing the link…'); }
         if (u.connection === 'open') { S.state = 'open'; S.qr = ''; S.err = ''; S.tries = 0; S.number = String((sock.user && sock.user.id) || '').split(':')[0].split('@')[0]; say('whatsapp linked for lab ' + labId + ' (' + S.number + ')'); }
         if (u.connection === 'close') {
           const code = u.lastDisconnect && u.lastDisconnect.error && u.lastDisconnect.error.output ? u.lastDisconnect.error.output.statusCode : 0;
+          say('whatsapp (lab ' + labId + ') connection closed, code ' + code + ', state was ' + S.state);
           S.sock = null; S.number = S.state === 'open' ? S.number : '';
           if (S.stop) { S.state = 'idle'; return; }
           if (code === b.DisconnectReason.loggedOut || code === 401) { S.state = 'loggedout'; S.err = 'This number was unlinked from the phone.'; S.auth.wipe().catch(() => {}); S.auth = null; return; }
-          if (!S.auth.registered() && (code === b.DisconnectReason.timedOut || code === 408 || S.state === 'qr')) { S.state = 'idle'; S.qr = ''; S.err = 'The QR code expired. Press the button to get a new one.'; return; }
+          /* right after the QR is scanned WhatsApp ends this connection on purpose ("restart required", 515): open a new one with the same login */
+          if (code === b.DisconnectReason.restartRequired || code === 515) { S.state = 'connecting'; S.tries = 0; setTimeout(() => { if (!S.stop && sessions.get(labId) === S) { S.state = 'idle'; start(labId).catch(() => {}); } }, 300); return; }
+          if (!S.auth.registered() && (code === b.DisconnectReason.timedOut || code === 408)) { S.state = 'idle'; S.qr = ''; S.err = 'The QR code expired. Press the button to get a new one.'; return; }
           S.state = 'connecting'; S.tries++;
           if (S.tries > 12) { S.state = 'idle'; S.err = 'Could not reconnect to WhatsApp. Press the button to link again.'; return; }
           setTimeout(() => { if (!S.stop && sessions.get(labId) === S) { S.state = 'idle'; start(labId).catch(() => {}); } }, Math.min(60000, 2000 * S.tries * S.tries));

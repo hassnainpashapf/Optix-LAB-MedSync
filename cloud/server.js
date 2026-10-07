@@ -11,6 +11,8 @@ const zlib = require('zlib');
 const { wrapStore, sameRecord, DEL } = require('./sync-store');
 const { scopeStore } = require('./tenant-store');
 const saasMod = require('./saas');
+/* a stray rejected promise (for example inside the WhatsApp library) must never take the whole server down */
+process.on('unhandledRejection', (e) => { console.error('[labpos-cloud] unhandled rejection:', String((e && (e.message || e.stack)) || e).slice(0, 300)); });
 const mailer = require('./mailer'); /* nodemailer itself is only loaded when a mail is actually sent */
 
 const VERSION = require('./package.json').version;
@@ -1242,7 +1244,7 @@ async function main() {
     const labOf = (req) => (req.lab ? req.lab.id : 'main');
     app.get('/api/wa/status', needUser, (req, res) => res.json(waGw.status(labOf(req))));
     app.post('/api/wa/connect', needAdmin, async (req, res) => {
-      try { await waGw.start(labOf(req)); res.json(waGw.status(labOf(req))); } catch (e) { res.status(400).json({ error: e.message }); }
+      try { await waGw.start(labOf(req), { fresh: true }); res.json(waGw.status(labOf(req))); } catch (e) { res.status(400).json({ error: e.message }); }
     });
     app.post('/api/wa/disconnect', needAdmin, async (req, res) => {
       try { await waGw.logout(labOf(req)); await auditLog(req, 'whatsapp-unlink', 'settings', 'whatsapp', { label: 'WhatsApp number unlinked' }); res.json({ ok: true }); } catch (e) { res.status(400).json({ error: e.message }); }
