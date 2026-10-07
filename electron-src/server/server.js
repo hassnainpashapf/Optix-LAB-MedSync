@@ -526,13 +526,18 @@ async function main() {
   app.post('/api/auth/change-password', needUser, async (req, res) => {
     const store = req.store;
     const { current, next: nw } = req.body || {};
-    if (typeof nw !== 'string' || nw.length < 4) return res.status(400).json({ error: 'New password must be at least 4 characters' });
-    const u = await store.get('users', req.user.id);
-    if (!u || !verifyPassword(String(current || ''), u.password)) return res.status(400).json({ error: 'Current password is incorrect' });
-    await store.put('users', Object.assign({}, u, { password: hashPassword(nw) }));
-    /* the old token is tied to the old password (pv): hand back a fresh one so this session keeps working, every other session ends */
-    const fresh = await store.get('users', req.user.id);
-    res.json({ ok: true, token: signToken(SESSION_SECRET, { uid: fresh.id, role: fresh.role, lab: req.lab ? req.lab.id : undefined, pv: pvOf(fresh), exp: Date.now() + TOKEN_TTL_MS }) });
+    if (typeof nw !== 'string' || nw.length < 4 || nw.length > 256) return res.status(400).json({ error: 'New password must be 4-256 characters' });
+    /* same per-lab lock as every other user write: the profile page saves the profile and the password at the same moment, and without
+       the lock the profile write could land second and put the OLD password hash back (lost update) */
+    await withLock(lockKey(req), async () => {
+      const u = await store.get('users', req.user.id);
+      if (!u || !verifyPassword(String(current || ''), u.password)) return res.status(400).json({ error: 'Current password is incorrect' });
+      await store.put('users', Object.assign({}, u, { password: hashPassword(nw) }));
+      await auditLog(req, 'update', 'users', u.id, { label: u.name || u.username, changes: [{ f: 'password', from: '•••', to: '•••' }] });
+      /* the old token is tied to the old password (pv): hand back a fresh one so this session keeps working, every other session ends */
+      const fresh = await store.get('users', req.user.id);
+      res.json({ ok: true, token: signToken(SESSION_SECRET, { uid: fresh.id, role: fresh.role, lab: req.lab ? req.lab.id : undefined, pv: pvOf(fresh), exp: Date.now() + TOKEN_TTL_MS }) });
+    });
   });
   /* =====================================================================================================
      SaaS API — signup, plans, subscription, payments, and the operator (superadmin) console.

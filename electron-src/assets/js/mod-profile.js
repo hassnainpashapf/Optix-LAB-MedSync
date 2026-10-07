@@ -165,21 +165,28 @@
       var cloudPw = null;
       if (cloudMode && patch.password) { cloudPw = { cur: curPw, nw: newPw }; delete patch.password; }
 
-      var saved = DB.update('users', u.id, patch);
-      if (!saved) { App.toast('Could not save changes', 'err'); return; }
-
-      /* keep the header/menu in sync with the new name */
-      try {
-        var sess = App.session() || {};
-        sess.name = saved.name;
-        localStorage.setItem(SKEY, JSON.stringify(sess));
-      } catch (e) {}
-
+      /* cloud: change the password FIRST and wait for it, then save the rest of the profile. Doing both at once let the profile save
+         overwrite the new password with the old one on the server. */
+      var finish = function (pwMsg) {
+        var saved = DB.update('users', u.id, patch);
+        if (!saved) { App.toast('Could not save changes', 'err'); return; }
+        /* keep the header/menu in sync with the new name */
+        try {
+          var sess = App.session() || {};
+          sess.name = saved.name;
+          var cur = JSON.parse(localStorage.getItem(SKEY) || '{}'); /* keep the (possibly new) token DB.changePassword just stored */
+          sess.token = cur.token || sess.token;
+          localStorage.setItem(SKEY, JSON.stringify(sess));
+        } catch (e) {}
+        App.toast(pwMsg || (patch.password ? 'Profile and password updated' : 'Profile updated'));
+        App.nav('#/profile');
+      };
       if (cloudPw) {
-        DB.changePassword(cloudPw.cur, cloudPw.nw).then(function () { App.toast('Profile and password updated'); })
-          .catch(function (e) { App.toast(e.message || 'Could not change password', 'err'); });
-      } else App.toast(patch.password ? 'Profile and password updated' : 'Profile updated');
-      App.nav('#/profile'); /* re-render shell (avatar/menu) + view */
+        DB.changePassword(cloudPw.cur, cloudPw.nw).then(function () { finish('Profile and password updated'); })
+          .catch(function (e) { App.toast(e.message || 'Could not change password', 'err'); }); /* nothing is saved, so the fields can simply be corrected */
+        return;
+      }
+      finish();
     });
   }
 
