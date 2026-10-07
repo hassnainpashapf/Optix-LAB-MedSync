@@ -304,7 +304,7 @@
       '<style>' + css + '</style></head><body>' +
       (noHeader ? '' :
       '<div class="ph">' + (s.logo ? '<img class="ph-logo" src="' + esc(s.logo) + '" alt="Lab logo">' : '') +
-      '<h1>' + esc(s.labName || 'Optix LAB MedSync') + '</h1>' +
+      '<h1' + (/^#[0-9a-fA-F]{6}$/.test(s.labNameColor || '') ? ' style="color:' + s.labNameColor + '"' : '') + '>' + esc(s.labName || 'Optix LAB MedSync') + '</h1>' +
       '<div class="tag">' + esc(s.tagline || '') + '</div>' +
       '<div class="addr">' + esc(s.address || '') + ' &nbsp;•&nbsp; ' + esc(s.phone || '') +
       (s.email ? ' &nbsp;•&nbsp; ' + esc(s.email) : '') + '</div></div>') +

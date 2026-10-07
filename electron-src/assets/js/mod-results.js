@@ -1238,6 +1238,12 @@
   vertical-align: top;
   color: #000;
 }
+/* The letterhead + patient block sit in a <thead>: when a report runs over several pages it is printed again at the top of each page. */
+.rpt-page table.rpt-wrap { width: 100%; border-collapse: collapse; margin: 0; flex: none; }
+.rpt-page table.rpt-wrap > thead > tr > td,
+.rpt-page table.rpt-wrap > tbody > tr > td { border: 0; padding: 0; font-size: inherit; vertical-align: top; }
+.rpt-page table.rpt-wrap > thead { display: table-header-group; }
+.rpt-page table.rpt-wrap > tbody > tr { break-inside: auto; page-break-inside: auto; }
 .rpt-page thead th {
   font-weight: 700;
   font-size: 11.5px;
@@ -1459,7 +1465,7 @@
           ? '<img src="' + App.esc(s.logo) + '" style="max-width:120px;max-height:72px;flex:none" alt="">'
           : '') +
         '<div style="min-width:0">' +
-          '<div style="margin:0;color:#000;font-family:' + RPT.serif +
+          '<div style="margin:0;color:' + (/^#[0-9a-fA-F]{6}$/.test(s.labNameColor || '') ? s.labNameColor : '#000') + ';font-family:' + RPT.serif +
             ';font-weight:700;font-size:1.7em;line-height:1.2">' +
             App.esc(labName) +
           '</div>' +
@@ -1489,7 +1495,7 @@
       '</div>';
 
     return (
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#fff;color:#000;margin-top:-8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;background:#fff;color:#000;padding-top:2px">' +
         leftHtml +
         rightHtml +
       '</div>'
@@ -1501,6 +1507,38 @@
      colon separator; labels BOLD black (#000). Reg. Date comes from
      inv.createdAt (registration time), formatted "11-Jul-25 3:33:30 pm".
      Thin black rule below the grid. */
+  /* the patient / registration block printed at the top of every report (HTML print + PDF use this one list):
+     reference layout, all rows always present; empty father / address print ".", empty blood group prints "Unknown" */
+  function reportHeaderRows(d) {
+    var inv = d.inv || {}, pat = d.pat || {}, s = d.s || {};
+    function t(v, fb) { var x = (v === undefined || v === null) ? '' : String(v).trim(); return x ? x : (fb || ''); }
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    function dts(v) {
+      if (!v) return ''; var dt = new Date(v); if (isNaN(dt.getTime())) return '';
+      return pad(dt.getDate()) + '-' + pad(dt.getMonth() + 1) + '-' + dt.getFullYear() + ' ' + pad(dt.getHours()) + ':' + pad(dt.getMinutes()) + ':' + pad(dt.getSeconds());
+    }
+    var ageStr = t(pat.age), genderStr = t(pat.gender), ageSex = ageStr ? ageStr + ' Yr(s)' : '';
+    if (genderStr) ageSex = ageSex ? ageSex + ' / ' + genderStr : genderStr;
+    return {
+      left: [
+        ['Patient Name', t(pat.name)],
+        ['Father / Husband Name', t(pat.father || pat.fatherName, '.')],
+        ['Age / Sex', ageSex],
+        ['Blood Group', t(pat.blood, 'Unknown')],
+        ['NIC', t(pat.cnic || pat.nic)],
+        ['Phone', t(pat.phone)],
+        ['Address', t(pat.address, '.')]
+      ],
+      right: [
+        ['Registration Date', dts(inv.createdAt)],
+        ['Collect Report At', dts(d.maxReported)],
+        ['Registration Location', t(s.headOffice || s.address)],
+        ['Destination Location', t(s.destinationLocation || s.mainLab || s.headOffice || s.address)],
+        ['Reference', t(s.reference, 'Standard')],
+        ['Consultant', t((d.doc && d.doc.name), 'SELF')]
+      ]
+    };
+  }
   function patientGridHtml(d) {
     var inv = d.inv || {};
     var pat = d.pat || {};
@@ -1541,34 +1579,13 @@
         '</div>';
     }
 
-    var ageStr = (pat.age === undefined || pat.age === null) ? '' : String(pat.age).trim();
-    var genderStr = (pat.gender === undefined || pat.gender === null) ? '' : String(pat.gender).trim();
-    var ageSex = '';
-    if (ageStr) ageSex = ageStr + ' Yr(s)';
-    if (genderStr) ageSex = ageSex ? ageSex + ' / ' + genderStr : genderStr;
-
-    var left = [
-      ['Patient Name', val(pat.name)],
-      ['Father/Husband Name', val(pat.father)],
-      ['Age/Sex', val(ageSex)],
-      ['Blood Group', val(pat.blood)],
-      ['CNIC', val(pat.cnic)],
-      ['Phone', val(pat.phone)],
-      ['Address', val(pat.address)]
-    ];
-    var right = [
-      ['Registration Date', fmtDateTime(inv.createdAt)],
-      ['Registration Date', fmtDateTime(d.maxReported)],
-      ['Registration Location', val(s.headOffice)],
-      ['Destination Location', val(s.destinationLocation || s.mainLab)],
-      ['Reference', val(s.reference)],
-      ['Consultant', val((d.doc && d.doc.name) || 'SELF')]
-    ];
+    var hr = reportHeaderRows(d), left = hr.left.map(function (r) { return [r[0], r[1] === '' ? em : App.esc(r[1])]; }), right = hr.right.map(function (r) { return [r[0], r[1] === '' ? em : App.esc(r[1])]; });
+    /* every row is always printed (as in the reference); a missing value shows the reference's placeholder, or stays blank */
+    left = left.map(function (r) { return [r[0], r[1] === em ? '&nbsp;' : r[1]]; });
+    right = right.map(function (r) { return [r[0], r[1] === em ? '&nbsp;' : r[1]]; });
 
     var i, html = '<div style="display:flex;color:#000;font-size:12px">';
     html += '<div style="flex:1;padding-right:10px">';
-    var _has = function (x) { return x[1] !== em; }; /* rows with no value are not printed */
-    left = left.filter(_has); right = right.filter(_has);
     for (i = 0; i < left.length; i++) { html += row(left[i][0], left[i][1]); }
     html += '</div>';
     html += '<div style="flex:1;padding-left:10px">';
@@ -2256,7 +2273,7 @@
     /* footer */
     var footOut = hasRealHtml(s.footerHtml) ? '<div class="rpt-footer">' + s.footerHtml + '</div>' : reportFooterHtml(d);
 
-    var bodyHtml = headOut + infoHtml + testsHtml +
+    var bodyHtml = '<table class="rpt-wrap"><thead><tr><td>' + headOut + infoHtml + '</td></tr></thead><tbody><tr><td>' + testsHtml +
       (pendingCount
         ? '<p style="color:#000;font-size:0.96em;margin:6px 0"><em>Note: ' +
           pendingCount + ' test(s) from this invoice are still pending.</em></p>'
@@ -2264,7 +2281,7 @@
       (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.'
         ? '<p style="color:#000;margin-top:18px;margin-bottom:4px;font-size:0.92em"><em>' +
           App.esc(s.footerNote) + '</em></p>'
-        : '') +
+        : '') + '</td></tr></tbody></table>' +
       footOut;
 
     if (d._cmpLegend) {
@@ -2295,10 +2312,16 @@
     // QR goes live only when the invoice is fully paid; unpaid reports print without a live QR
     // (force = the Android app, which opens the PDF viewer instead of printing)
     if (inv.status !== 'paid' && !force) return Promise.resolve(null);
-    var pdf = null;
-    try { pdf = buildReportPdf(invoiceId); } catch (e) { pdf = null; }
-    if (!pdf || !pdf.dataUri) return Promise.resolve(null);
     var key = inv.reportPdfKey || ('rpt-' + invoiceId + '-' + rand6());
+    /* the PDF carries its own QR (this same link) in the header, like the printout; on the desktop app the cloud address is only known after the upload, so there the QR is left out of the PDF */
+    var selfQr = null;
+    try {
+      var qb = String(window.LABPOS_API || '').replace(/\/+$/, '');
+      if (qb && !(window.labposDesktop && window.labposDesktop.isDesktop)) selfQr = qrDataUrlFor(qb + '/r/' + key);
+    } catch (e) { selfQr = null; }
+    var pdf = null;
+    try { pdf = buildReportPdf(invoiceId, selfQr); } catch (e) { pdf = null; }
+    if (!pdf || !pdf.dataUri) return Promise.resolve(null);
     var rawUri = String(pdf.dataUri);
     var b64 = rawUri.slice(rawUri.indexOf(',') + 1); // strip data:...;base64, prefix (jsPDF adds filename=)
     var base = 'https://labpos-api.150.230.52.29.sslip.io';
@@ -2329,6 +2352,16 @@
     } catch (e) { return null; }
   }
 
+  /* the preview shows the same QR the printout carries: the report's cloud link when it exists, otherwise the invoice link */
+  function previewQr(html, invoiceId) {
+    try {
+      var inv = invOf(invoiceId) || {}, base = '';
+      try { base = String(window.LABPOS_API || '').replace(/\/+$/, ''); } catch (e) {}
+      var url = (inv.reportPdfKey && base && !(App.isNative && App.isNative()) && !(window.labposDesktop && window.labposDesktop.isDesktop)) ? base + '/r/' + inv.reportPdfKey : 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
+      var img = qrDataUrlFor(url);
+      return img ? String(html).replace('data-qr="1"', 'data-qr="1" src="' + img + '"') : stripQrImg(html);
+    } catch (e) { return stripQrImg(html); }
+  }
   function stripQrImg(html) {
     var h = String(html);
     // The data-qr-wrap block contains no nested <div> (the caption is a
@@ -2509,7 +2542,7 @@
     }
     var close = App.modal('Lab Report — ' + App.esc(d.inv.no),
       '<div class="report-preview" style="max-height:66vh;overflow:auto;border-radius:12px;padding:18px;background:#525659">' +
-        stripQrImg(reportHtml(d)) +
+        previewQr(reportHtml(d), invoiceId) +
       '</div>' +
       '<div id="rvWaHist" style="margin-top:12px">' + waHistoryHtml(invoiceId) + '</div>' +
       '<div class="actions" style="margin-top:12px">' +
@@ -2543,7 +2576,8 @@
     var W = 210, M = 12, CW = W - 2 * M;
     var y = M;
 
-    function need(h) { if (y + h > 280) { doc.addPage(); y = M; } }
+    var inHdr = false;
+    function need(h) { if (y + h > 280) { doc.addPage(); y = M; if (!inHdr && typeof drawHeader === 'function') { inHdr = true; drawHeader(); inHdr = false; } } } /* every page starts with the letterhead + patient block */
     function txt(t, x, yy, opts) {
       // jsPDF renders a string[] as multiple lines; keep that working
       // (patient grid / wrapped footer lines pass splitTextToSize arrays).
@@ -2577,115 +2611,100 @@
     var qrS = 26;                                  // QR size (mm)
     var headH = showQr ? qrS : 23;                 // header block height
 
-    // --- left: logo (~18mm) + lab name + subtitle ---
-    if (s.logo) addImg(s.logo, M, y, 18, 18);
-    var htx = M + (s.logo ? 22 : 0);
-    doc.setFont('times', 'bold'); doc.setFontSize(18);
-    doc.setTextColor(A[0], A[1], A[2]);
-    txt(s.labName || 'Optix LAB MedSync', htx, y + 9);
-    if (showTagline) {
-      doc.setFont('times', 'italic'); doc.setFontSize(11);
-      doc.setTextColor(A[0], A[1], A[2]);
-      txt(s.tagline, htx, y + 15.5);
-    }
-
-    // --- right: Patient No. / Case # right-aligned with wide letter spacing ---
-    var hnx = W - M - (showQr ? qrS + 4 : 0);
-    doc.setTextColor(20, 20, 20);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-    txt('Patient No.:', hnx, y + 5, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-    txt(dash(pat.id), hnx, y + 10, { align: 'right', charSpace: 1.4 });
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-    txt('Case #:', hnx, y + 15.5, { align: 'right' });
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-    txt(dash(inv.no || inv.id), hnx, y + 20.5, { align: 'right', charSpace: 1.4 });
-
-    // --- QR 26mm at far right ---
-    if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
-
-    y += headH + 2;
-
-    // --- optional report banner (only when s.reportTitle is set) ---
-    if (s.reportTitle) {
-      doc.setFillColor(A[0], A[1], A[2]);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(255, 255, 255);
-      doc.rect(M, y, CW, 8, 'F');
-      txt(s.reportTitle, M + CW / 2, y + 5.6, { align: 'center' });
-      y += 8 + 2;
-    }
-
-    // --- navy divider line; y now sits below the header ---
-    doc.setDrawColor(A[0], A[1], A[2]); doc.setLineWidth(0.6);
-    doc.line(M, y, W - M, y);
-    y += 5;
-
-    /* ----- patient info: 2-column grid (ref: Chughtai report) ----- */
-    (function () {
-      var pat = d.pat || {}, inv = d.inv || {}, s = d.s || {};
-      var docName = d.doc ? d.doc.name : '';
-
-      var ageSex = [pat.age ? pat.age + ' Yr(s)' : '', pat.gender || '']
-        .filter(function (x) { return x; }).join(' / ');
-
-      // Reference label set + order. Registration Location = lab head office,
-      // Destination Location = main lab (same mapping as reportHtml).
-      var left = [
-        ['Patient Name',          pat.name],
-        ['Father / Husband Name', pat.father || pat.fatherName],
-        ['Age / Sex',             ageSex],
-        ['Blood Group',           pat.blood || 'Unknown'],
-        ['CNIC',                  pat.cnic],
-        ['Phone',                 pat.phone],
-        ['Address',               pat.address]
-      ];
-      var right = [
-        ['Registration Date',      inv.createdAt ? App.dt(inv.createdAt) : ''],
-        ['Registration Date',     d.maxReported ? App.dt(d.maxReported) : ''],
-        ['Registration Location', s.headOffice],
-        ['Destination Location',  s.mainLab],
-        ['Reference',             docName],
-        ['Consultant',            docName]
-      ];
-
-      var COL_W   = CW / 2;            // 93 mm per column
-      var VAL_OFF = 44;               // label -> value offset (matches reference)
-      var WRAP_W  = COL_W - VAL_OFF - 2; // value wrap width (~47 mm)
-      var LH      = 4.6;              // line height
-      var ROW_PAD = 2.4;              // breathing room between rows
-
-      doc.setFontSize(9);
-      var rows = Math.max(left.length, right.length);
-      for (var i = 0; i < rows; i++) {
-        var lLines = left[i]  ? doc.splitTextToSize(dash(left[i][1]),  WRAP_W) : [''];
-        var rLines = right[i] ? doc.splitTextToSize(dash(right[i][1]), WRAP_W) : [''];
-        var rh = Math.max(lLines.length, rLines.length) * LH + ROW_PAD;
-        need(rh);
-
-        if (left[i]) {
-          doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
-          txt(left[i][0] + ':', M, y);
-          doc.setFont('helvetica', 'normal');
-          txt(lLines, M + VAL_OFF, y);
-        }
-        if (right[i]) {
-          var rx = M + COL_W;
-          doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
-          txt(right[i][0] + ':', rx, y);
-          doc.setFont('helvetica', 'normal');
-          txt(rLines, rx + VAL_OFF, y);
-        }
-        y += rh;
+    function drawHeader() {
+      // --- left: logo (~18mm) + lab name + subtitle ---
+      if (s.logo) addImg(s.logo, M, y, 18, 18);
+      var htx = M + (s.logo ? 22 : 0);
+      doc.setFont('times', 'bold'); doc.setFontSize(18);
+      var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : A; /* the lab-name colour from Lab Profile (default: the accent colour) */
+      doc.setTextColor(NC[0], NC[1], NC[2]);
+      txt(s.labName || 'Optix LAB MedSync', htx, y + 9);
+      if (showTagline) {
+        doc.setFont('times', 'italic'); doc.setFontSize(11);
+        doc.setTextColor(A[0], A[1], A[2]);
+        txt(s.tagline, htx, y + 15.5);
       }
 
-      /* thin divider rule below the grid (ref: light-grey full-width rule) */
-      y += 1.5;
-      need(4);
-      doc.setDrawColor(160, 160, 160);
-      doc.setLineWidth(0.3);
+      // --- right: Patient No. / Case # right-aligned with wide letter spacing ---
+      var hnx = W - M - (showQr ? qrS + 15 : 0);
+      doc.setTextColor(20, 20, 20);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      txt('Patient No.:', hnx, y + 5, { align: 'right' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+      txt(dash(pat.id), hnx, y + 10, { align: 'right', charSpace: 1.4 });
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      txt('Case #:', hnx, y + 15.5, { align: 'right' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+      txt(dash(inv.no || inv.id), hnx, y + 20.5, { align: 'right', charSpace: 1.4 });
+
+      // --- QR 26mm at far right ---
+      if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
+
+      y += headH + 2;
+
+      // --- optional report banner (only when s.reportTitle is set) ---
+      if (s.reportTitle) {
+        doc.setFillColor(A[0], A[1], A[2]);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(255, 255, 255);
+        doc.rect(M, y, CW, 8, 'F');
+        txt(s.reportTitle, M + CW / 2, y + 5.6, { align: 'center' });
+        y += 8 + 2;
+      }
+
+      // --- navy divider line; y now sits below the header ---
+      doc.setDrawColor(A[0], A[1], A[2]); doc.setLineWidth(0.6);
       doc.line(M, y, W - M, y);
       y += 5;
-    })();
+
+      /* ----- patient info: 2-column grid (ref: Chughtai report) ----- */
+      (function () {
+        var pat = d.pat || {}, inv = d.inv || {}, s = d.s || {};
+        var docName = d.doc ? d.doc.name : '';
+
+        // Reference label set + order. Registration Location = lab head office,
+        // Destination Location = main lab (same mapping as reportHtml).
+        var hr = reportHeaderRows(d), left = hr.left, right = hr.right;
+
+        var COL_W   = CW / 2;            // 93 mm per column
+        var VAL_OFF = 44;               // label -> value offset (matches reference)
+        var WRAP_W  = COL_W - VAL_OFF - 2; // value wrap width (~47 mm)
+        var LH      = 4.6;              // line height
+        var ROW_PAD = 2.4;              // breathing room between rows
+
+        doc.setFontSize(9);
+        var rows = Math.max(left.length, right.length);
+        for (var i = 0; i < rows; i++) {
+          var lLines = left[i]  ? doc.splitTextToSize(String(left[i][1] || ' '),  WRAP_W) : [''];
+          var rLines = right[i] ? doc.splitTextToSize(String(right[i][1] || ' '), WRAP_W) : [''];
+          var rh = Math.max(lLines.length, rLines.length) * LH + ROW_PAD;
+          need(rh);
+
+          if (left[i]) {
+            doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
+            txt(left[i][0] + ':', M, y);
+            doc.setFont('helvetica', 'normal');
+            txt(lLines, M + VAL_OFF, y);
+          }
+          if (right[i]) {
+            var rx = M + COL_W;
+            doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
+            txt(right[i][0] + ':', rx, y);
+            doc.setFont('helvetica', 'normal');
+            txt(rLines, rx + VAL_OFF, y);
+          }
+          y += rh;
+        }
+
+        /* thin divider rule below the grid (ref: light-grey full-width rule) */
+        y += 1.5;
+        need(4);
+        doc.setDrawColor(160, 160, 160);
+        doc.setLineWidth(0.3);
+        doc.line(M, y, W - M, y);
+        y += 5;
+      })();
+    }
+    drawHeader();
 
     /* ----- test tables: section title + RESULT box, grey bar, rows ----- */
     (function () {

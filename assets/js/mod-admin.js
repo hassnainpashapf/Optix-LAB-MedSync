@@ -1378,6 +1378,11 @@
       + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Report Appearance</div></div>'
       + '<div><label class="label">Report Title</label><input class="input" id="spReportTitle" placeholder="e.g. LABORATORY REPORT" value="' + App.esc(s.reportTitle || '') + '"></div>'
       + '<div><label class="label">Accent Color</label><input type="color" id="spAccent" value="' + App.esc(s.accent || '#1b1b6e') + '" style="width:56px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer"></div>'
+      + '<div><label class="label">Lab Name Color</label><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      + '<input type="color" id="spNameColor" value="' + App.esc(s.labNameColor || '#000000') + '" data-touched="' + (s.labNameColor ? '1' : '') + '" style="width:56px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer">'
+      + ['#000000', '#131845', '#1d4ed8', '#047857', '#9f1239', '#b45309'].map(function (c) { return '<button type="button" class="spNameSw" data-c="' + c + '" title="' + c + '" style="width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #cbd5e1;background:' + c + ';cursor:pointer;padding:0"></button>'; }).join('')
+      + '<button type="button" class="btn btn-ghost btn-sm" id="spNameReset">Reset</button></div>'
+      + '<div class="muted" style="font-size:12px;margin-top:4px">Colour of the lab name at the top of reports and receipts. Default: black.</div></div>'
       + '<div><label class="label">Report Font Size</label><select class="select" id="spFontSize">'
       + '<option value="small"' + (s.reportFontSize === 'small' ? ' selected' : '') + '>Small</option>'
       + '<option value="medium"' + ((!s.reportFontSize || s.reportFontSize === 'medium') ? ' selected' : '') + '>Medium</option>'
@@ -1539,6 +1544,13 @@
       document.getElementById('spFootHtml').value = '';
       if (typeof _schedulePreview === 'function') _schedulePreview();
     });
+    (function () { /* lab-name colour: colour picker, quick swatches, reset to default black */
+      var ci = document.getElementById('spNameColor'); if (!ci) return;
+      function touch(v) { ci.value = v; ci.setAttribute('data-touched', '1'); if (typeof _schedulePreview === 'function') _schedulePreview(); }
+      ci.addEventListener('input', function () { touch(ci.value); });
+      Array.prototype.forEach.call(document.querySelectorAll('.spNameSw'), function (b) { b.addEventListener('click', function () { touch(b.getAttribute('data-c')); }); });
+      document.getElementById('spNameReset').addEventListener('click', function () { ci.value = '#000000'; ci.removeAttribute('data-touched'); if (typeof _schedulePreview === 'function') _schedulePreview(); });
+    })();
     document.getElementById('spPreviewBtn').addEventListener('click', function () {
       var ps = _collectPreviewSettings();
       App.loadScript('assets/js/mod-results.js').then(function () {
@@ -1601,6 +1613,7 @@
         font: document.getElementById('spFont').value,
         reportTitle: document.getElementById('spReportTitle').value.trim(),
         accent: document.getElementById('spAccent').value,
+        labNameColor: (document.getElementById('spNameColor').getAttribute('data-touched') ? document.getElementById('spNameColor').value : ''),
         showQr: document.getElementById('spShowQr').checked,
         showTagline: document.getElementById('spShowTagline').checked,
         requireSampleCollected: document.getElementById('spReqSmp').checked,
@@ -1635,6 +1648,7 @@
         mainLab: gv('spMainLab'), callCenter: gv('spCall'), mainLabPhone: gv('spMainPhone'),
         verNote: gv('spVerNote'), signatories: sigs, font: gv('spFont'),
         reportTitle: gv('spReportTitle'), accent: gv('spAccent'),
+        labNameColor: (function () { var e = document.getElementById('spNameColor'); return e && e.getAttribute('data-touched') ? e.value : ''; })(),
         showQr: gc('spShowQr'), showTagline: gc('spShowTagline'),
         reportFontSize: gv('spFontSize'),
         headerHtml: gv('spHeadHtml'), footerHtml: gv('spFootHtml')
@@ -1647,6 +1661,8 @@
         try {
           var ps = _collectPreviewSettings();
           var html = App.sampleReportPreview(ps);
+          /* show a sample QR in the live preview too (it was an empty image box) */
+          if (ps.showQr !== false && App.qrDataUrlFor) { try { var qs = App.qrDataUrlFor('https://optix-lab-medsync.pages.dev/sample-report'); if (qs) html = html.split('data-qr="1"').join('data-qr="1" src="' + qs + '"'); } catch (e) {} }
           // apply the selected font to the preview
           var ff = "'Inter',sans-serif";
           try {
