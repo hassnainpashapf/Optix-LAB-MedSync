@@ -1479,7 +1479,7 @@
       '</div>';
 
     /* RIGHT: QR on top, then Case # barcode + ID, then Patient ID barcode + ID */
-    var _caseNo = spacedNo(inv.no);
+    var _caseNo = spacedNo(inv.no || inv.id);
     var _patId = String(pat.id == null ? '' : pat.id);
     var rightHtml =
       '<div style="flex:none;color:#000;font-size:0.95em;line-height:1.3;display:flex;align-items:flex-start;gap:8px">' +
@@ -1789,7 +1789,7 @@
     var vals = (r.res && r.res.values) || {};
     var testId = (r.item && (r.item.testId || r.item.id)) || '';
     var prev = (d.prevByTest && testId && d.prevByTest[testId]) || [];
-    var invNo = (d.inv && d.inv.no) || '';
+    var invNo = (d.inv && (d.inv.no || d.inv.id)) || '';
 
     /* result columns: current report first, then previous (newest first) */
     var cols = [{ reportedAt: (r.res && r.res.reportedAt) || d.maxReported || '', values: vals, invoiceNo: invNo }]
@@ -2172,6 +2172,7 @@
   function reportData(invoiceId, ropts) {
     var inv = invOf(invoiceId);
     if (!inv) return null;
+    if (!inv.no) inv = Object.assign({}, inv, { no: inv.id });   /* older invoices saved without a number */
     var readyRows = joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; });
     if (!readyRows.length) return null;
     var pendingCount = joinedRows('pending').filter(function (r) { return r.invoice.id === invoiceId; }).length;

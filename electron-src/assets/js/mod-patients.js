@@ -447,6 +447,7 @@
               subtotal: bTotal, discount: 0, total: bTotal, paid: 0, due: bTotal,
               status: 'unpaid', createdAt: new Date().toISOString(), createdBy: ptUser()
             });
+            DB.update('invoices', inv.id, { no: inv.id });
             items.forEach(function (l) {
               var tids = (l.isPackage && l.includes && l.includes.length) ? l.includes : [l.testId];
               tids.forEach(function (tid) {

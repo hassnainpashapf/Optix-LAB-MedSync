@@ -375,7 +375,7 @@
             return '<option value="' + App.esc(d.id) + '">' + App.esc(d.name) + ' — ' + App.esc(d.commissionPct || 0) + '%</option>';
           }).join('') + '</select></div>' +
         '<div class="bl-sec"><label class="label">Discount</label>' +
-        '<div class="bl-disc-wrap"><div class="bl-seg" style="width:130px;flex:none">' +
+        '<div class="bl-disc-wrap"><div class="bl-seg" style="width:130qx;flex:none">' +
           '<button id="blDiscRs" class="on">Rs</button><button id="blDiscPct">%</button></div>' +
           '<input class="input" id="blDiscVal" type="number" min="0" value="0"></div></div>' +
         '<div class="bl-sec">' +
