@@ -253,13 +253,14 @@
      {lab} {patient} {doctor} {invoice} {date} {tests} {total} {due} {link} {linkline}
      {linkline} = "View / download: <link>" when a report link exists, otherwise "Please collect your report from the lab." */
   var WA_TPL = {
-    tplPatient: '*{lab}*\nAssalam-o-Alaikum {patient},\nYour lab report is ready.\n\nInvoice: {invoice} ({date})\nTests: {tests}\n\n{linkline}\n\nShukriya!',
-    tplDoctor: '*{lab}*\nAssalam-o-Alaikum {doctor},\nLab report of patient {patient} is ready.\n\nInvoice: {invoice} ({date})\nTests: {tests}\n\n{linkline}\n\nShukriya!',
-    tplDue: '*{lab}*\nAssalam-o-Alaikum {patient},\nYour lab report (invoice {invoice}) is ready.\nA balance of {due} is pending. Please clear it at the lab and your report will be sent to you here automatically.\n\nShukriya!'
+    tplPatient: '*{lab}*\n\nAssalam-o-Alaikum {patient},\n\nYour laboratory report is ready.\n\n*Invoice:* {invoice} ({date})\n*Tests:* {tests}\n\n{linkline}\n\nThank you for choosing {lab}.',
+    tplDoctor: '*{lab}*\n\nAssalam-o-Alaikum {doctor},\n\nThe laboratory report of your patient *{patient}* is ready.\n\n*Invoice:* {invoice} ({date})\n*Tests:* {tests}\n\n{linkline}\n\nWith regards,\n{lab}',
+    tplDue: '*{lab}*\n\nAssalam-o-Alaikum {patient},\n\nYour laboratory report (invoice {invoice}) is ready.\nAn outstanding balance of *{due}* is pending. Please clear it at the lab and your report will be sent to you here automatically.\n\nThank you for your cooperation.'
   };
+
   function waRenderTpl(tpl, v) {
     v = v || {};
-    var lineText = v.link ? '📄 View / download: ' + v.link : 'Please collect your report from the lab.';
+    var lineText = v.link ? 'Report (PDF): ' + v.link : 'Please collect your report from the lab.';
     var vars = { lab: v.lab || 'Lab', patient: v.patient || '', doctor: v.doctor || '', invoice: v.invoice || '', date: v.date || '', tests: v.tests || '', total: v.total || '', due: v.due || '', link: v.link || '', linkline: lineText };
     var out = String(tpl).replace(/\{(\w+)\}/g, function (m, k) { return Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m; });
     return out.replace(/\n{3,}/g, '\n\n').replace(/^\s+|\s+$/g, '');
@@ -400,9 +401,9 @@
     var lines = crits.map(function (c) {
       return '• ' + c.name + ': ' + c.value + (c.unit ? ' ' + c.unit : '') + (c.dir === 'high' ? ' ↑ HIGH' : ' ↓ LOW') + (c.ref ? '  (normal ' + c.ref + ')' : '');
     });
-    return '🚨 CRITICAL RESULT — ' + (s.labName || 'Lab') + '\nPatient: ' + (pat.name || '—') +
-      (pat.age ? ' (' + pat.age + ' yrs' + (pat.gender ? ', ' + pat.gender : '') + ')' : '') + '\nInvoice: ' + (inv.no || inv.id) +
-      (testName ? '\nTest: ' + testName : '') + '\n' + lines.join('\n') + '\nPlease review and act immediately.';
+    return '🚨 *CRITICAL RESULT*\n*' + (s.labName || 'Lab') + '*\n\n*Patient:* ' + (pat.name || '—') +
+      (pat.age ? ' (' + pat.age + ' yrs' + (pat.gender ? ', ' + pat.gender : '') + ')' : '') + '\n*Invoice:* ' + (inv.no || inv.id) +
+      (testName ? '\n*Test:* ' + testName : '') + '\n\n' + lines.join('\n') + '\n\nPlease review and take action immediately.';
   }
   function criticalNotify(items) { /* items: [{row, crits}] */
     if (!items || !items.length) return;

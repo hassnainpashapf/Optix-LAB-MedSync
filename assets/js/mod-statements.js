@@ -141,8 +141,8 @@
           .then(function (r) { return r.json(); }).then(function (j) { if (!j || !j.url) throw new Error((j && j.error) || 'Could not upload the PDF'); return j.url; });
       }).then(function (url) {
         var L = lab();
-        var msg = 'Dear ' + (d.name || 'Doctor') + ',\n\nYour referral statement for *' + monthLabel(s.mk) + '* from ' + (L.labName || 'our lab') + ':\n' +
-          '• Referrals: ' + s.referrals + '\n• Total billed: ' + rs(s.billed) + '\n• Commission (' + s.pct + '%): ' + rs(s.comm) + '\n• Paid: ' + rs(s.paidOut) + '\n• *Balance due: ' + rs(s.due) + '*\n\nFull statement (PDF): ' + url + '\n\nThank you for your trust.';
+        var msg = '*' + (L.labName || 'Our lab') + '*\n\nAssalam-o-Alaikum ' + (d.name || 'Doctor') + ',\n\nYour referral statement for *' + monthLabel(s.mk) + '*:\n\n' +
+          '*Referrals:* ' + s.referrals + '\n*Total billed:* ' + rs(s.billed) + '\n*Commission (' + s.pct + '%):* ' + rs(s.comm) + '\n*Paid:* ' + rs(s.paidOut) + '\n*Balance due:* ' + rs(s.due) + '\n\nFull statement (PDF): ' + url + '\n\nThank you for your valued referrals.\n' + (L.labName || '');
         App.wa.send(cfg, to, msg, function (err) {
           try { App.wa.log({ kind: 'statement', invoiceId: null, to: to, toName: d.name || '', toRole: 'doctor', status: err ? 'failed' : 'sent', error: err ? String(err.message || err).slice(0, 200) : '' }); } catch (e) {}
           if (err) App.toast('WhatsApp failed: ' + String(err.message || err).slice(0, 120), 'err'); else App.toast('Statement sent to ' + (d.name || 'doctor') + ' on WhatsApp');
