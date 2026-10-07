@@ -2410,6 +2410,58 @@
     return s;
   }
 
+  /* A custom header / footer (Lab Profile) is HTML, so for the PDF it is drawn to a picture (SVG foreignObject -> canvas) and
+     placed on the page; this keeps the PDF identical to the printout. Resolves null if the browser cannot do it (the PDF then
+     falls back to the automatic header / footer). */
+  function realHtml(h) { return !!h && String(h).replace(/<[^>]*>/g, '').trim().length > 1; }
+  function htmlToPng(inner, wPx, basePx) {
+    return new Promise(function (resolve) {
+      var fr = null;
+      function done(v) { try { if (fr && fr.parentNode) fr.parentNode.removeChild(fr); } catch (e) {} resolve(v); }
+      try {
+        /* measured in a bare frame (no app stylesheet), because the picture is rendered without one too */
+        fr = document.createElement('iframe');
+        fr.style.cssText = 'position:fixed;left:-99999px;top:0;width:' + wPx + 'px;height:20px;border:0;visibility:hidden';
+        document.body.appendChild(fr);
+        var dd = fr.contentDocument; dd.open();
+        dd.write('<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0"><div id="h" style="display:flow-root;width:' + wPx + 'px;background:#fff;color:#000;font-family:Arial,Helvetica,sans-serif;font-size:' + basePx + 'px;line-height:1.3">' + inner + '</div></body></html>');
+        dd.close();
+        var host = dd.getElementById('h');
+        var hPx = Math.ceil(host.getBoundingClientRect().height) + 4;
+        if (!hPx || hPx < 6) return done(null);
+        var xhtml = new XMLSerializer().serializeToString(host);
+        var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + wPx + '" height="' + hPx + '"><foreignObject x="0" y="0" width="100%" height="100%">' + xhtml + '</foreignObject></svg>';
+        var img = new Image(), sc = 2.5, to = setTimeout(function () { done(null); }, 8000);
+        img.onload = function () {
+          clearTimeout(to);
+          try {
+            var cv = document.createElement('canvas'); cv.width = Math.round(wPx * sc); cv.height = Math.round(hPx * sc);
+            var cx = cv.getContext('2d'); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(img, 0, 0, cv.width, cv.height);
+            done({ url: cv.toDataURL('image/png'), ratio: hPx / wPx });
+          } catch (e) { done(null); }
+        };
+        img.onerror = function () { clearTimeout(to); done(null); };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      } catch (e) { done(null); }
+    });
+  }
+  function customPdfParts(invoiceId, qrDataUrl) {
+    var d = null; try { d = reportData(invoiceId); } catch (e) {}
+    if (!d) return Promise.resolve({});
+    var s = d.s || {}, hasH = realHtml(s.headerHtml), hasF = realHtml(s.footerHtml);
+    if (!hasH && !hasF) return Promise.resolve({});
+    var base = Math.round(12.5 * (RPT.setScale(s.reportFontSize || 'medium') || 1) * 10) / 10;
+    function prep(h) {
+      var f = fillTokens(h, d);
+      return qrDataUrl ? f.replace(/data-qr="1"/g, 'src="' + qrDataUrl + '"') : f.replace(/<img[^>]*data-qr="1"[^>]*>/g, '');
+    }
+    var CWpx = Math.round((210 - 24) / 25.4 * 96);
+    return Promise.all([
+      hasH ? htmlToPng(prep(s.headerHtml), CWpx, base) : null,
+      hasF ? htmlToPng(prep(s.footerHtml), CWpx, base) : null
+    ]).then(function (r) { return { hdr: r[0] || null, ftr: r[1] || null }; }, function () { return {}; });
+  }
+
   // Build the report PDF, upload it to the cloud API, return the public URL (or null).
   function getReportPdfUrl(invoiceId, force) {
     var inv = invOf(invoiceId);
@@ -2424,9 +2476,10 @@
       var qb = String(window.LABPOS_API || '').replace(/\/+$/, '');
       if (qb && !(window.labposDesktop && window.labposDesktop.isDesktop)) selfQr = qrDataUrlFor(qb + '/r/' + key);
     } catch (e) { selfQr = null; }
+    return customPdfParts(invoiceId, selfQr).catch(function () { return {}; }).then(function (pre) {
     var pdf = null;
-    try { pdf = buildReportPdf(invoiceId, selfQr); } catch (e) { pdf = null; }
-    if (!pdf || !pdf.dataUri) return Promise.resolve(null);
+    try { pdf = buildReportPdf(invoiceId, selfQr, pre); } catch (e) { pdf = null; }
+    if (!pdf || !pdf.dataUri) return null;
     var rawUri = String(pdf.dataUri);
     var b64 = rawUri.slice(rawUri.indexOf(',') + 1); // strip data:...;base64, prefix (jsPDF adds filename=)
     var base = 'https://labpos-api.150.230.52.29.sslip.io';
@@ -2444,6 +2497,7 @@
         return null;
       })
       .catch(function () { return null; });
+    });
   }
   App.getReportPdfUrl = getReportPdfUrl;
 
@@ -2670,7 +2724,7 @@
 
   // Returns { dataUri } or null (error toasted).
   // qrDataUrl (optional): QR image data URL embedded in the header.
-  function buildReportPdf(invoiceId, qrDataUrl) {
+  function buildReportPdf(invoiceId, qrDataUrl, pre) {
     var d = reportData(invoiceId);
     if (!d) { App.toast('No ready results for PDF', 'err'); return null; }
     var JSPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
@@ -2717,6 +2771,13 @@
     var headH = showQr ? qrS : 23;                 // header block height
 
     function drawHeader() {
+      if (pre && pre.hdr) {   /* custom header from Lab Profile, drawn as a picture (same as the printout) */
+        var chH = CW * pre.hdr.ratio;
+        addImg(pre.hdr.url, M, y, CW, chH);
+        y += chH + 3;
+        drawPatientGrid();
+        return;
+      }
       // --- left: logo (~18mm) + lab name + subtitle ---
       if (s.logo) addImg(s.logo, M, y, 18, 18);
       var htx = M + (s.logo ? 22 : 0);
@@ -2761,6 +2822,9 @@
       doc.line(M, y, W - M, y);
       y += 5;
 
+      drawPatientGrid();
+    }
+    function drawPatientGrid() {
       /* ----- patient info: 2-column grid (ref: Chughtai report) ----- */
       (function () {
         var pat = d.pat || {}, inv = d.inv || {}, s = d.s || {};
@@ -3070,6 +3134,13 @@
     // ----- footer (same content as the HTML report): verification line, signatories, address line, NOTE, powered-by.
     // It is measured first and pinned to the bottom of the last page (a new page is added only if it cannot fit). -----
     var PH = 297, FM = M;                                   // A4 height, bottom margin
+    if (pre && pre.ftr) {   /* custom footer from Lab Profile, drawn as a picture (same as the printout) */
+      var cfH = CW * pre.ftr.ratio + 2;
+      if (y + cfH > PH - FM) { doc.addPage(); y = M; }
+      y = Math.max(y + 4, PH - FM - cfH);
+      addImg(pre.ftr.url, M, y, CW, cfH - 2);
+      y += cfH;
+    } else {
     var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
     var fVerLines = doc.splitTextToSize(fVerNote, CW);
@@ -3129,6 +3200,7 @@
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
     txt('Powered by System Optix', W / 2, y, { align: 'center' });
     y += 4;
+    }
 
     var dataUri;
     try { dataUri = doc.output('datauristring'); }
