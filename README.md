@@ -4,8 +4,8 @@ Diagnostic blood-lab POS: Electron desktop app (Windows installer), Express + SQ
 
 ## Download
 
-- **Windows:** [Optix-LAB-MedSync-Setup-1.3.0-win10-11-x64.exe](https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-Setup-1.3.0-win10-11-x64.exe) — Windows 10/11 64-bit
-- **Mac:** [Optix-LAB-MedSync-1.3.0-arm64.dmg.tar.gz](https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-1.3.0-arm64.dmg.tar.gz) — macOS 12+ (Apple Silicon)
+- **Windows:** [Optix-LAB-MedSync-Setup-1.3.1-win10-11-x64.exe](https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-Setup-1.3.1-win10-11-x64.exe) — Windows 10/11 64-bit
+- **Mac:** [Optix-LAB-MedSync-1.3.1-arm64.dmg.tar.gz](https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-1.3.1-arm64.dmg.tar.gz) — macOS 12+ (Apple Silicon)
 
 The desktop apps keep their own copy of your data and work fully offline. When the internet is available they sync both ways with the cloud, so the same account works on the web and on any PC, and a fresh install (e.g. after a crash) signs in once and gets all data and report PDFs back.
 
