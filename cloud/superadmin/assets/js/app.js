@@ -1757,7 +1757,7 @@ function mailCardHtml(m) {
     '<div><label class="label" for="mlHost">SMTP server</label><input class="input" id="mlHost" value="' + esc(m.host || '') + '" placeholder="smtp.gmail.com" autocomplete="off"></div>' +
     '<div><label class="label" for="mlPort">Port</label><input class="input" type="number" id="mlPort" value="' + esc(m.port || 587) + '" min="1" max="65535"></div>' +
     '<div><label class="label" for="mlUser">Username (email address)</label><input class="input" id="mlUser" value="' + esc(m.user || '') + '" placeholder="you@gmail.com" autocomplete="off"></div>' +
-    '<div><label class="label" for="mlPass">Password / App password</label><input class="input" type="password" id="mlPass" value="" placeholder="' + (m.passSet ? '•••••••• saved — leave empty to keep' : 'paste the app password') + '" autocomplete="new-password"></div>' +
+    '<div><label class="label" for="mlPass">Password / App password</label><div style="position:relative"><input class="input" type="password" id="mlPass" value="" placeholder="' + (m.passSet ? '•••••••• saved — leave empty to keep' : 'paste the app password') + '" autocomplete="new-password" style="padding-right:64px"><button type="button" id="mlEye" class="btn btn-sm" aria-label="Show password" aria-pressed="false" style="position:absolute;right:4px;top:50%;transform:translateY(-50%)">Show</button></div></div>' +
     '<div class="span2"><label class="label" for="mlFrom">Send emails as</label><input class="input" id="mlFrom" value="' + esc(m.from || '') + '" placeholder="Optix LAB MedSync &lt;you@gmail.com&gt;"></div>' +
     '<div class="span2"><label style="display:flex;gap:8px;align-items:center;font-size:13.5px"><input type="checkbox" id="mlSecure"' + (m.secure ? ' checked' : '') + '> Use SSL/TLS from the start (tick only for port 465)</label></div>' +
     '</div>' +
@@ -1771,6 +1771,11 @@ function wireMailCard() {
   if (!$m('mailCard')) return;
   function msg(t, bad) { var e = $m('mlMsg'); if (e) { e.textContent = t; e.style.color = bad ? '#b91c1c' : '#047857'; } }
   function fill(h, p, sec) { $m('mlHost').value = h; $m('mlPort').value = p; $m('mlSecure').checked = !!sec; }
+  $m('mlEye').addEventListener('click', function () {
+    var i = $m('mlPass'), show = i.type === 'password';
+    i.type = show ? 'text' : 'password'; this.textContent = show ? 'Hide' : 'Show';
+    this.setAttribute('aria-pressed', show ? 'true' : 'false'); this.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  });
   $m('mlGmail').addEventListener('click', function () { fill('smtp.gmail.com', 587, false); $m('mlUser').focus(); });
   $m('mlBrevo').addEventListener('click', function () { fill('smtp-relay.brevo.com', 587, false); $m('mlUser').focus(); });
   function reload() { return api('/api/saas/mail').then(function (r) { state.settingsData.mail = r; if (state.view === 'settings') paintMain(); }, function () {}); }
