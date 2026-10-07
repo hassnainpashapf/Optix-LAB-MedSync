@@ -1,5 +1,5 @@
 /* ============================================================
-   Optix LAB MedSync — Admin module (Agent 10)
+   Optix Medical Science — Admin module (Agent 10)
    Routes: #/expenses, #/reports, #/settings
    Depends on: window.DB, window.App (per SPEC.md)
    ============================================================ */
@@ -1186,7 +1186,7 @@
         var L = [];
         function sec(t) { L.push(t); }
         function row(a) { L.push(a.map(csvEsc).join(',')); }
-        sec('Optix LAB MedSync');
+        sec('Optix Medical Science');
         row(['Report Type', repTypeLbl]);
         row(['Period', App.d(from) + ' to ' + App.d(to)]);
         L.push('');
@@ -2401,7 +2401,7 @@
         if (!data || typeof data !== 'object') return App.toast('Invalid backup file.', 'err');
         var chk = (data.tables && typeof data.tables === 'object') ? data.tables : data;
         if (!chk.settings || !Array.isArray(chk.invoices) || !Array.isArray(chk.patients))
-          return App.toast('This file is not an Optix LAB MedSync backup.', 'err');
+          return App.toast('This file is not an Optix Medical Science backup.', 'err');
         App.confirm('Restore backup? ALL current data will be replaced.').then(function (ok) {
           if (!ok) return;
           Promise.resolve(DB.import(data)).then(function () {

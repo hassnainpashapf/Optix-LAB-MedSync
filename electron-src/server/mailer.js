@@ -1,6 +1,6 @@
 /* LabPOS mail sender — password-reset emails (and other notices).
    Configure with environment variables on the server:
-     SMTP_HOST, SMTP_PORT (587), SMTP_USER, SMTP_PASS, SMTP_SECURE=1 (for port 465), MAIL_FROM ("Optix LAB MedSync <you@example.com>")
+     SMTP_HOST, SMTP_PORT (587), SMTP_USER, SMTP_PASS, SMTP_SECURE=1 (for port 465), MAIL_FROM ("Optix Medical Science <you@example.com>")
    Any SMTP provider works (Gmail with an app password, Brevo, Zoho, a domain mailbox...).
    MAIL_DEBUG_FILE=<path> writes each email as a JSON line instead of sending (tests / dry runs).
    nodemailer is loaded lazily, so the desktop app (which never sends mail) does not need it. */
@@ -61,8 +61,8 @@ const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':
 
 /* the reset email: plain, one big button, expiry stated, "ignore this if it was not you" */
 function resetEmail({ labName, name, link, minutes }) {
-  const subject = 'Reset your Optix LAB MedSync password';
-  const text = `Hello ${name || ''},\n\nWe received a request to reset the password of your account at ${labName}.\n\nOpen this link to choose a new password (valid for ${minutes} minutes, works once):\n${link}\n\nIf you did not ask for this, you can ignore this email — your password stays the same.\n\nOptix LAB MedSync`;
+  const subject = 'Reset your Optix Medical Science password';
+  const text = `Hello ${name || ''},\n\nWe received a request to reset the password of your account at ${labName}.\n\nOpen this link to choose a new password (valid for ${minutes} minutes, works once):\n${link}\n\nIf you did not ask for this, you can ignore this email — your password stays the same.\n\nOptix Medical Science`;
   const html = `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:auto;padding:24px;color:#131845">
     <h2 style="margin:0 0 12px">Reset your password</h2>
     <p>Hello ${esc(name || '')},</p>
@@ -70,12 +70,12 @@ function resetEmail({ labName, name, link, minutes }) {
     <p style="margin:24px 0"><a href="${esc(link)}" style="background:#131845;color:#fff;text-decoration:none;padding:12px 22px;border-radius:10px;font-weight:700;display:inline-block">Choose a new password</a></p>
     <p style="font-size:13px;color:#5b6b80">The link is valid for ${minutes} minutes and works once. If the button does not work, copy this address into your browser:<br><span style="word-break:break-all">${esc(link)}</span></p>
     <p style="font-size:13px;color:#5b6b80">If you did not ask for this, ignore this email — your password stays the same.</p>
-    <p style="font-size:12px;color:#8a94a6;margin-top:24px">Optix LAB MedSync</p></div>`;
+    <p style="font-size:12px;color:#8a94a6;margin-top:24px">Optix Medical Science</p></div>`;
   return { subject, text, html };
 }
 function changedEmail({ labName, name }) {
-  const subject = 'Your Optix LAB MedSync password was changed';
-  const text = `Hello ${name || ''},\n\nThe password of your account at ${labName} was just changed. If this was you, nothing more to do. If it was not you, reset it again right away and tell your lab admin.\n\nOptix LAB MedSync`;
+  const subject = 'Your Optix Medical Science password was changed';
+  const text = `Hello ${name || ''},\n\nThe password of your account at ${labName} was just changed. If this was you, nothing more to do. If it was not you, reset it again right away and tell your lab admin.\n\nOptix Medical Science`;
   return { subject, text, html: `<div style="font-family:Arial,Helvetica,sans-serif;max-width:480px;margin:auto;padding:24px;color:#131845"><h2 style="margin:0 0 12px">Password changed</h2><p>Hello ${esc(name || '')},</p><p>The password of your account at <b>${esc(labName)}</b> was just changed.</p><p style="font-size:13px;color:#5b6b80">If this was you, nothing more to do. If it was not you, reset it again right away and tell your lab admin.</p></div>` };
 }
 

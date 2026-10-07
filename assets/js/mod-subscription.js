@@ -1,4 +1,4 @@
-/* Optix LAB MedSync — Subscription module (#/subscription)
+/* Optix Medical Science — Subscription module (#/subscription)
    Current plan + trial/renewal countdown, usage vs plan limits, plan cards (monthly / yearly),
    manual payment submission (JazzCash / Easypaisa / bank transfer — approved by the operator) and payment history. */
 (function () {

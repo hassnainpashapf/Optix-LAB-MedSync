@@ -1,5 +1,5 @@
 /* ============================================================
-   Optix LAB MedSync — Lab Results module
+   Optix Medical Science — Lab Results module
    Route: #/results
    - Pending results grouped by invoice, per-test result entry
    - Ready results grouped by invoice, printable lab reports
@@ -1172,7 +1172,7 @@
      output; rules are scoped to .rpt-page / @media print. */
   var RPT_PRINT_CSS = `
 /* =====================================================================
-   Optix LAB MedSync — Lab Report Print Stylesheet  (Worker 12/20)
+   Optix Medical Science — Lab Report Print Stylesheet  (Worker 12/20)
    ---------------------------------------------------------------------
    Target: Chughtai-style A4 lab report (see reference image).
    The integrator injects this into the print document opened by
@@ -1622,7 +1622,7 @@
 
     var showTagline = s.showTagline !== false;   /* default true */
     var showQr = s.showQr !== false;             /* default true */
-    var labName = s.labName || 'Optix LAB MedSync';
+    var labName = s.labName || 'Optix Medical Science';
 
     /* "INV-0042" -> "INV - 0042" spaced style like the reference */
     function spacedNo(v) {
@@ -2995,7 +2995,7 @@
       doc.setFont('times', 'bold'); doc.setFontSize(18);
       var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : A; /* the lab-name colour from Lab Profile (default: the accent colour) */
       doc.setTextColor(NC[0], NC[1], NC[2]);
-      txt(s.labName || 'Optix LAB MedSync', htx, y + 9);
+      txt(s.labName || 'Optix Medical Science', htx, y + 9);
       if (showTagline) {
         doc.setFont('times', 'italic'); doc.setFontSize(11);
         doc.setTextColor(A[0], A[1], A[2]);

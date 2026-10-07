@@ -1,4 +1,4 @@
-/* Optix LAB MedSync — Corporate / panel clients (companies, schools, hospitals...) with their own rates and a monthly account (udhaar).
+/* Optix Medical Science — Corporate / panel clients (companies, schools, hospitals...) with their own rates and a monthly account (udhaar).
    A panel has: contact details, a flat discount % and/or a special price per test. Patients linked to a panel are billed at the panel's prices and the bill
    goes to the panel's account instead of the patient. The panel pays later in one go (a receipt); the monthly statement shows what was billed and what is due. */
 (function () {

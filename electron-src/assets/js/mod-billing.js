@@ -1,5 +1,5 @@
 /* ============================================================
-   Optix LAB MedSync — New Bill POS  (route: #/billing/:patientId, opened from Patient Profile)
+   Optix Medical Science — New Bill POS  (route: #/billing/:patientId, opened from Patient Profile)
    Three-column point-of-sale: patient | test picker + cart | bill summary
    ============================================================ */
 (function () {

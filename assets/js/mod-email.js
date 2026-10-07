@@ -1,4 +1,4 @@
-/* Optix LAB MedSync — Email Center (#/email, admin + reception) — the email twin of the WhatsApp Center.
+/* Optix Medical Science — Email Center (#/email, admin + reception) — the email twin of the WhatsApp Center.
    Ready to send (one click / bulk), Email log with retry, and rules + the line added to every email.
    The actual sending lives in mod-results.js (App.mail); the server (/api/share/email) builds and sends the mail with the PDF attached. */
 (function () {

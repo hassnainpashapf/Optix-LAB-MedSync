@@ -1,5 +1,5 @@
 /* ============================================================
-   Optix LAB MedSync — sign-in + free-trial sign-up pages
+   Optix Medical Science — sign-in + free-trial sign-up pages
    Routes: #/login, #/signup (shown only while signed out)
    Split layout: animated brand half + form half. Exposes App.renderLogin / App.renderSignup.
    ============================================================ */
@@ -56,7 +56,7 @@
     return '<aside class="lg-brand" aria-hidden="true">' +
       '<div class="lg-orbs"><i></i><i></i><i></i><i></i></div><div class="lg-grid"></div>' +
       '<div class="lg-brand-in">' +
-        '<div class="lg-pill"><span class="lg-dot"></span>Optix LAB MedSync</div>' +
+        '<div class="lg-pill"><span class="lg-dot"></span>Optix Medical Science</div>' +
         '<h2 class="lg-hero">' + hero + '</h2>' +
         '<p class="lg-lead">' + lead + '</p>' +
         '<ul class="lg-feat">' + feats + '</ul>' +
@@ -192,7 +192,7 @@
         '<form class="login-card lg-card" id="loginForm" autocomplete="off">' +
           '<div class="login-logo">' +
             '<span class="login-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 32)) + '</span>' +
-            '<h1>' + esc(st.labName || 'Optix LAB MedSync') + '</h1>' +
+            '<h1>' + esc(st.labName || 'Optix Medical Science') + '</h1>' +
             '<p class="login-tag">' + esc(st.tagline || 'Accurate • Fast • Trusted') + '</p>' +
           '</div>' +
           (labs.length > 1 && !showLabId
@@ -253,7 +253,7 @@
       try {
         window.DB.useLab(labSel.value);
         var ns = window.DB.get('settings', 'main') || {};
-        var h1 = document.querySelector('.login-card h1'); if (h1) h1.textContent = ns.labName || 'Optix LAB MedSync';
+        var h1 = document.querySelector('.login-card h1'); if (h1) h1.textContent = ns.labName || 'Optix Medical Science';
         var tg = document.querySelector('.login-tag'); if (tg) tg.textContent = ns.tagline || 'Accurate • Fast • Trusted';
         var lm = document.querySelector('.login-mark'); if (lm) lm.innerHTML = ns.logo ? '<img src="' + esc(ns.logo) + '" alt="Lab logo">' : icon('flask', 32);
       } catch (e) {}

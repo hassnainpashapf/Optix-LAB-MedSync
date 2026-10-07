@@ -1,5 +1,5 @@
 /* ============================================================
-   Optix LAB MedSync — Superadmin Console
+   Optix Medical Science — Superadmin Console
    Manages lab installations: registry, version rollout, changelog.
    API contract:
      GET  /api/labs              -> [{labId,name,version,lastSeen,platform,targetVersion}]
@@ -503,7 +503,7 @@ function wireWhatsappCard() {
     btn.disabled = true; btn.textContent = 'Sending...';
     var params = 'token=' + encodeURIComponent(token) +
       '&to=' + encodeURIComponent(to) +
-      '&body=' + encodeURIComponent('Test message from Optix LAB MedSync — WhatsApp integration is working.');
+      '&body=' + encodeURIComponent('Test message from Optix Medical Science — WhatsApp integration is working.');
     fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params })
       .then(function (r) { return r.json().catch(function () { return {}; }); })
       .then(function (data) {
@@ -640,7 +640,7 @@ function renderLogin() {
     '<form class="login-card" id="saLoginForm" autocomplete="off">' +
     '<div class="login-logo">' +
     '<span class="login-mark">' + IC.flask + '</span>' +
-    '<h1>Optix LAB MedSync</h1>' +
+    '<h1>Optix Medical Science</h1>' +
     '<p class="login-tag">Superadmin Console</p>' +
     '</div>' +
     '<h2>Welcome back</h2>' +
@@ -778,7 +778,7 @@ function paintChrome() {
   if (!el) return;
   el.innerHTML =
     '<div class="hdr"><header class="topbar">' +
-    '<div class="tb-brand"><div class="brand-ico">' + IC.cloud + '</div><span class="t">Optix LAB MedSync</span> <span class="badge b-blue">SUPERADMIN</span></div>' +
+    '<div class="tb-brand"><div class="brand-ico">' + IC.cloud + '</div><span class="t">Optix Medical Science</span> <span class="badge b-blue">SUPERADMIN</span></div>' +
     '<div class="tb-right">' +
     '<span class="api-pill ' + (state.apiDown ? 'down' : 'ok') + '" id="apiPill"><span class="pdot"></span>' + (state.apiDown ? 'API unreachable' : 'API connected') + '</span>' +
     '<button class="btn btn-sm" id="refreshBtn">Refresh</button>' +
@@ -1807,7 +1807,7 @@ function mailCardHtml(m) {
     '<div><label class="label" for="mlPort">Port</label><input class="input" type="number" id="mlPort" value="' + esc(m.port || 587) + '" min="1" max="65535"></div>' +
     '<div><label class="label" for="mlUser">Username (email address)</label><input class="input" id="mlUser" value="' + esc(m.user || '') + '" placeholder="you@gmail.com" autocomplete="off"></div>' +
     '<div><label class="label" for="mlPass">Password / App password</label><div style="position:relative"><input class="input" type="password" id="mlPass" value="" placeholder="' + (m.passSet ? '•••••••• saved — leave empty to keep' : 'paste the app password') + '" autocomplete="new-password" style="padding-right:64px"><button type="button" id="mlEye" class="btn btn-sm" aria-label="Show password" aria-pressed="false" style="position:absolute;right:4px;top:50%;transform:translateY(-50%)">Show</button></div></div>' +
-    '<div class="span2"><label class="label" for="mlFrom">Send emails as</label><input class="input" id="mlFrom" value="' + esc(m.from || '') + '" placeholder="Optix LAB MedSync &lt;you@gmail.com&gt;"></div>' +
+    '<div class="span2"><label class="label" for="mlFrom">Send emails as</label><input class="input" id="mlFrom" value="' + esc(m.from || '') + '" placeholder="Optix Medical Science &lt;you@gmail.com&gt;"></div>' +
     '<div class="span2"><label style="display:flex;gap:8px;align-items:center;font-size:13.5px"><input type="checkbox" id="mlSecure"' + (m.secure ? ' checked' : '') + '> Use SSL/TLS from the start (tick only for port 465)</label></div>' +
     '</div>' +
     '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;align-items:center"><button class="btn btn-primary" id="mlSave">Save email settings</button>' +

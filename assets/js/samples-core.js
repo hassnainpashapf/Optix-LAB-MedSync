@@ -1,4 +1,4 @@
-/* Optix LAB MedSync — Sample tracking core (loaded at boot, small).
+/* Optix Medical Science — Sample tracking core (loaded at boot, small).
    - App.barcodeSvg(text, opts): dependency-free Code128 (subset B) SVG generator (works offline, old Chromium).
    - window.Samples: data helpers used by billing / invoices / results / patients and the #/samples page
      (assets/js/mod-samples.js, lazy). One `samples` row = one physical tube/container.

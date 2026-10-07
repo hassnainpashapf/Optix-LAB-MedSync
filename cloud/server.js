@@ -921,7 +921,7 @@ async function main() {
       if (!EMAIL_OK.test(to)) return res.status(400).json({ error: 'Enter an email address to send the test to' });
       if (!mailer.configured()) return res.status(400).json({ error: 'Save the email settings first' });
       try {
-        await mailer.send({ to, subject: 'Optix LAB MedSync — test email', text: 'This is a test email from your Optix LAB MedSync server. If you can read it, password-reset emails will be delivered.', html: '<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;color:#131845"><h2>Test email</h2><p>This is a test email from your <b>Optix LAB MedSync</b> server. If you can read it, password-reset emails will be delivered.</p></div>' });
+        await mailer.send({ to, subject: 'Optix Medical Science — test email', text: 'This is a test email from your Optix Medical Science server. If you can read it, password-reset emails will be delivered.', html: '<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;padding:24px;color:#131845"><h2>Test email</h2><p>This is a test email from your <b>Optix Medical Science</b> server. If you can read it, password-reset emails will be delivered.</p></div>' });
         res.json({ ok: true });
       } catch (e) { console.error('[labpos-cloud] mail test failed:', String((e && e.message) || e).slice(0, 200)); res.status(400).json({ error: mailer.friendlyError(e) }); }
     });
@@ -1082,7 +1082,7 @@ async function main() {
         const st = (await req.store.get('settings', 'main')) || {}, labName = clean1(st.labName || (req.lab && req.lab.name) || 'Your lab', 80);
         const kind = b.kind === 'doctor' ? 'doctor' : 'patient', name = clean1(b.name, 60), invNo = clean1(b.invoiceNo, 30);
         const mail = mailer.reportEmail({ labName, name, kind, link: linkOf(req, b.key), invNo, labPhone: clean1(st.phone, 40), labEmail: EMAIL_OK.test(String(st.email || '')) ? clean1(st.email, 80) : '', note: clean1(st.emailNote, 200) });
-        await mailer.send(Object.assign({ to, fromName: labName + ' (via Optix LAB MedSync)', replyTo: EMAIL_OK.test(String(st.email || '')) ? String(st.email).trim() : undefined,
+        await mailer.send(Object.assign({ to, fromName: labName + ' (via Optix Medical Science)', replyTo: EMAIL_OK.test(String(st.email || '')) ? String(st.email).trim() : undefined,
           attachments: [{ filename: 'Lab-Report-' + (invNo.replace(/[^A-Za-z0-9_-]/g, '') || 'report') + '.pdf', content: buf, contentType: 'application/pdf' }] }, mail));
         await auditLog(req, 'email-report', 'report', b.key, { label: kind + ' ' + maskEmail(to) + (invNo ? ' (' + invNo + ')' : '') });
         res.json({ ok: true });
@@ -1116,7 +1116,7 @@ async function main() {
       try {
         const m = (await req.store.getMeta('slack')) || {}; if (!m.webhook) return res.status(400).json({ error: 'Save the webhook URL first' });
         const st = (await req.store.get('settings', 'main')) || {};
-        await slackPost(decPw(m.webhook), '✅ Test message from Optix LAB MedSync — ' + slackEsc(clean1(st.labName || 'your lab', 60)) + '. Report notifications will appear here.');
+        await slackPost(decPw(m.webhook), '✅ Test message from Optix Medical Science — ' + slackEsc(clean1(st.labName || 'your lab', 60)) + '. Report notifications will appear here.');
         res.json({ ok: true });
       } catch (e) { res.status(502).json({ error: e.message }); }
     });
@@ -1240,7 +1240,7 @@ async function main() {
         const people = w.pats.concat(w.docs), em = people.map((x) => String(x.email || '').trim()).find((e) => EMAIL_OK.test(e));
         let sent = false;
         if (waOk(c.set.whatsapp)) { try { if (c.set.whatsapp.provider === 'gateway') await waGw.sendUrgent(c.lab.id, pwa(b.phone), msg, 'portal-code'); else await waServerSend(c.set.whatsapp, pwa(b.phone), msg); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (whatsapp) failed:', String(e.message || e).slice(0, 120)); } }
-        if (!sent && em && mailer.configured()) { try { await mailer.send(Object.assign({ to: em, fromName: lname + ' (via Optix LAB MedSync)' }, mailer.portalCodeEmail({ labName: lname, code, link: plink }))); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (email) failed:', String(e.message || e).slice(0, 120)); } }
+        if (!sent && em && mailer.configured()) { try { await mailer.send(Object.assign({ to: em, fromName: lname + ' (via Optix Medical Science)' }, mailer.portalCodeEmail({ labName: lname, code, link: plink }))); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (email) failed:', String(e.message || e).slice(0, 120)); } }
         if (!sent) await rawStore.setMeta(otpKey(c.lab, k), null);
       } catch (e) { if (!res.headersSent) res.json(SAME); }
     });

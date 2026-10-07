@@ -1,4 +1,4 @@
-# Optix LAB MedSync — Diagnostic Blood Lab POS — Build Spec
+# Optix Medical Science — Diagnostic Blood Lab POS — Build Spec
 
 Single-page web app. Vanilla HTML/CSS/JS, no frameworks, no build step.
 Data persists in browser localStorage (key `labpos_db_v1`). Currency PKR. UI language English.
@@ -11,7 +11,7 @@ User wants a Windows EXE installed on the local lab computer. Architecture:
 - **Desktop app (primary): Electron + embedded Express API + SQLite (node:sqlite, zero native deps).** Single install: app starts a local API on 127.0.0.1, frontend served from it. Real database file in the OS user-data dir — works fully offline.
 - `db.js` keeps its SYNC `DB.*` API as a hybrid mirror: `DB.init()` loads `GET /api/dump` into memory; reads sync from memory; writes update memory + background write-through (`POST /api/:table`, `PUT /api/:table/:id`, `DELETE /api/:table/:id`). `DB.reset()` → `POST /api/restore`. Auth: `POST /api/auth/login`.
 - **Server code** (`~/workspace/labpos/server/`): Express API + storage adapters — `sqlite.js` (node:sqlite, for EXE) and `pg.js` (node-postgres, for optional VPS cloud later). Same REST contract. `seed.js` shared (reuses db.js seed data).
-- **Electron** (`~/workspace/labpos/electron/`): main.js starts API + opens window; packaged for **win32 x64** with electron-packager on Linux (no wine needed) → zip containing `Optix LAB MedSync.exe`. Try electron-builder NSIS installer if wine is available; otherwise folder+exe is the deliverable.
+- **Electron** (`~/workspace/labpos/electron/`): main.js starts API + opens window; packaged for **win32 x64** with electron-packager on Linux (no wine needed) → zip containing `Optix Medical Science.exe`. Try electron-builder NSIS installer if wine is available; otherwise folder+exe is the deliverable.
 - **Cloud version (optional later):** same frontend + API + Postgres on VPS, frontend on Cloudflare Pages.
 - Build order: (1) 10 frontend agents finish → (2) parent QA in browser → (3) server + Electron → (4) package win32 → (5) deliver zip.
 
