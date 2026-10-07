@@ -2715,11 +2715,21 @@
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
         '<button class="btn btn-ghost" id="rvWaPatient">' + WA_ICON + ' Send to Patient (WhatsApp)</button>' +
         docWaBtn +
-        '<button class="btn btn-primary" id="rvPrint">' + PRINT_ICON + ' Print Report</button>' +
+        '<button class="btn btn-primary" id="rvPrint">' + PRINT_ICON + ' Print Report <span style="opacity:.7;font-weight:500;font-size:11px;margin-left:4px">Ctrl+P</span></button>' +
       '</div>',
       { wide: true, onOpen: function (ov, close) {
           document.getElementById('rvClose').addEventListener('click', close);
           document.getElementById('rvPrint').addEventListener('click', function () { close(); printReportChoice(invoiceId); });
+          /* Ctrl+P / Cmd+P while the report is open prints this report (with the lab header) instead of the browser printing the whole page */
+          function rvKey(e) {
+            if (!document.body.contains(ov)) { document.removeEventListener('keydown', rvKey, true); return; }
+            if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && String(e.key || '').toLowerCase() === 'p') {
+              e.preventDefault(); e.stopPropagation();
+              document.removeEventListener('keydown', rvKey, true);
+              close(); printReport(invoiceId);
+            }
+          }
+          document.addEventListener('keydown', rvKey, true);
           document.getElementById('rvWaPatient').addEventListener('click', function () { waManualSend(invoiceId, 'patient'); });
           var wdoc = document.getElementById('rvWaDoctor');
           if (wdoc && !wdoc.disabled) wdoc.addEventListener('click', function () { waManualSend(invoiceId, 'doctor'); });
