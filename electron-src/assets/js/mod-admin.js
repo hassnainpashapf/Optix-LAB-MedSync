@@ -1300,6 +1300,7 @@
       { id: 'templates', label: 'Report Templates' },
       { id: 'whatsapp', label: 'WhatsApp' },
       { id: 'sharing', label: 'Email & Slack' },
+      { id: 'portal', label: 'Patient portal' },
       { id: 'users', label: 'Users' },
       { id: 'backup', label: 'Backup' },
       { id: 'danger', label: 'Danger Zone' }
@@ -1317,6 +1318,7 @@
     else if (settingsTab === 'templates') renderSetTemplates();
     else if (settingsTab === 'whatsapp') renderSetWhatsapp();
     else if (settingsTab === 'sharing') renderSetSharing();
+    else if (settingsTab === 'portal') renderSetPortal();
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
@@ -1922,6 +1924,40 @@
     return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true };
   }
   /* ---- WhatsApp: admin only sees/edits their lab number; API hidden ---- */
+  /* ---- Patient & doctor portal: switch, link / QR to share, and "prepare old reports" ---- */
+  function renderSetPortal() {
+    var s = DB.get('settings', 'main') || {}, box = document.getElementById('setBody');
+    var cloud = !!(DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop);
+    if (!cloud) { box.innerHTML = '<p class="muted">The patient portal works for cloud labs (web / Android). Open your lab in the browser to set it up.</p>'; return; }
+    box.innerHTML = '<p class="muted">Loading…</p>';
+    DB.saas('GET', 'me').then(function (me) {
+      var slug = me.lab.slug, link = location.href.split('#')[0].replace(/index\.html$/, '') + '#/portal/' + slug;
+      var w = s.whatsapp || {}, waOn = !!(w.token && (w.provider === 'custom' ? w.baseUrl : w.instanceId));
+      var ready = 0, withPdf = 0;
+      try { DB.all('invoices').forEach(function (i) { var rs = DB.all('results').filter(function (r) { return r.invoiceId === i.id; }); if (rs.length && rs.every(function (r) { return r.status === 'ready'; })) { ready++; if (i.reportPdfKey) withPdf++; } }); } catch (e) {}
+      box.innerHTML =
+        '<div class="card" style="max-width:720px"><div class="card-h"><h3>Patient &amp; doctor portal</h3><span class="badge ' + (s.portalOn ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (s.portalOn ? 'ON' : 'OFF') + '</span></div><div class="card-b">' +
+        '<p class="muted" style="margin-top:0">Patients open one link, type their mobile number, get a <b>6-digit code</b> and see <b>all their reports</b>. Doctors who are on your Doctors list see the reports of the patients they referred and their monthly commission. Nobody else can see anything.</p>' +
+        '<label class="check" style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" id="ptOn"' + (s.portalOn ? ' checked' : '') + '> Switch the portal ON</label>' +
+        '<div id="ptBody" style="margin-top:14px;' + (s.portalOn ? '' : 'opacity:.55') + '">' +
+        '<label class="label">Link to share (put it on invoices, WhatsApp, or print the QR)</label><div style="display:flex;gap:8px"><input class="input" id="ptLink" readonly value="' + App.esc(link) + '"><button class="btn" id="ptCopy">Copy</button></div>' +
+        '<div id="ptQr" style="margin:12px 0"></div>' +
+        '<div style="background:#f6f8fd;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.6"><b>How the code is sent:</b> ' + (waOn ? 'on <b>WhatsApp</b>, from your lab\'s WhatsApp number (the one set up in Settings → WhatsApp).' : '<span style="color:#b45309">your WhatsApp is not set up yet, so codes go <b>by email</b> to people who have an email address on file. Set up Settings → WhatsApp for the best experience.</span>') +
+        '<br>Make sure patients\' and doctors\' <b>phone numbers</b> are saved correctly; that is how they are recognised.</div>' +
+        '<div style="margin-top:16px"><b>Reports ready for the portal:</b> ' + withPdf + ' of ' + ready + ' finished reports<div class="muted" style="font-size:12.5px;margin:4px 0 8px">New reports are prepared automatically. Use the button for the older ones.</div>' +
+        '<button class="btn btn-primary" id="ptPrep"' + (ready > withPdf ? '' : ' disabled') + '>Prepare ' + (ready - withPdf) + ' older report' + (ready - withPdf === 1 ? '' : 's') + '</button> <span class="muted" id="ptProg" style="font-size:13px"></span></div></div></div></div>';
+      if (App.qrDataUrlFor) { try { var q = App.qrDataUrlFor(link); if (q) document.getElementById('ptQr').innerHTML = '<img src="' + q + '" alt="QR" style="width:150px;height:150px;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff">'; } catch (e) {} }
+      else App.loadScript('assets/js/mod-results.js').then(function () { try { var q2 = App.qrDataUrlFor && App.qrDataUrlFor(link); var el = document.getElementById('ptQr'); if (q2 && el) el.innerHTML = '<img src="' + q2 + '" alt="QR" style="width:150px;height:150px;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff">'; } catch (e) {} });
+      document.getElementById('ptOn').addEventListener('change', function (e) { DB.update('settings', 'main', { portalOn: e.target.checked }); App.toast(e.target.checked ? 'Portal is ON' : 'Portal is OFF'); renderSetPortal(); });
+      document.getElementById('ptCopy').addEventListener('click', function () { var i = document.getElementById('ptLink'); i.select(); try { document.execCommand('copy'); App.toast('Link copied'); } catch (e) { App.toast('Select the link and copy it', 'err'); } });
+      var pb = document.getElementById('ptPrep'); if (pb) pb.addEventListener('click', function () {
+        pb.disabled = true;
+        var go = function () { App.preparePortalReports(function (d, t) { document.getElementById('ptProg').textContent = 'Preparing ' + d + ' of ' + t + '…'; }).then(function (n) { App.toast(n + ' report' + (n === 1 ? '' : 's') + ' prepared'); renderSetPortal(); }, function (e) { pb.disabled = false; App.toast((e && e.message) || 'Could not prepare', 'err'); }); };
+        if (App.preparePortalReports) go(); else App.loadScript('assets/js/mod-results.js').then(go, function () { pb.disabled = false; App.toast('Could not load', 'err'); });
+      });
+    }, function (e) { box.innerHTML = '<p style="color:#b91c1c">' + App.esc(e.message) + '</p>'; });
+  }
+
   /* ---- Email & Slack: how finished reports leave the lab besides WhatsApp ---- */
   function renderSetSharing() {
     var s = DB.get('settings', 'main') || {}, box = document.getElementById('setBody');
@@ -2224,7 +2260,7 @@
     });
   }
 
-  var SET_TABS = ['profile', 'account', 'templates', 'whatsapp', 'sharing', 'users', 'backup', 'danger'];
+  var SET_TABS = ['profile', 'account', 'templates', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
   App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });
   App.route('#/settings/:tab', function (p) { settingsTab = (p && SET_TABS.indexOf(p.tab) >= 0) ? p.tab : 'profile'; renderSettings(); });
 

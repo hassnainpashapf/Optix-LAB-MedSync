@@ -64,7 +64,7 @@
     { key: 'subscription', label: 'Subscription', icon: 'card',  route: '#/subscription', color: '#f59e0b', saas: true },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b',
       sub: [{ key: 'profile', label: 'Lab Profile', route: '#/settings' }, { key: 'account', label: 'My Account', route: '#/settings/account' }, { key: 'templates', label: 'Report Templates', route: '#/settings/templates' },
-        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' }, { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' }, { key: 'users', label: 'Users', route: '#/settings/users' }, { key: 'backup', label: 'Backup', route: '#/settings/backup' },
+        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' }, { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' }, { key: 'portal', label: 'Patient portal', route: '#/settings/portal' }, { key: 'users', label: 'Users', route: '#/settings/users' }, { key: 'backup', label: 'Backup', route: '#/settings/backup' },
         { key: 'danger', label: 'Danger Zone', route: '#/settings/danger', danger: true }] },
     { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
   ];
@@ -416,6 +416,13 @@
       try { window.DB.useLab(s.labId); } catch (e) {}
     }
 
+    /* patient / doctor portal: public page, works signed out and signed in */
+    if (hash.indexOf('#/portal') === 0) {
+      var _ph = hash;
+      if (window.App && App.renderPortal) App.renderPortal(_ph);
+      else App.loadScript('assets/js/mod-portal.js').then(function () { if (/^#\/portal/.test(location.hash)) App.renderPortal(location.hash); }, function () { toast('Could not load the portal', 'err'); });
+      return;
+    }
     /* password reset pages work signed out (and signed in: the emailed link must always open) */
     if (hash === '#/forgot' || hash.indexOf('#/reset') === 0) {
       var rf = hash === '#/forgot' ? 'renderForgot' : 'renderReset';

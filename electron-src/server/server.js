@@ -1113,6 +1113,127 @@ async function main() {
     });
   }
 
+  /* ---- Patient & doctor portal: a person types their mobile number, gets a 6-digit code on WhatsApp (the LAB's own WhatsApp API) or by email,
+     and sees only their own reports (patient) or the reports of the patients they referred plus their commission (doctor).
+     Codes are random, stored hashed, valid 10 minutes, 5 tries, and every step is rate limited; "request code" always answers the same
+     whether or not the number exists. The portal token is a different type of token that the normal API ignores. ---- */
+  if (!DESKTOP) {
+    const dns = require('dns').promises, net = require('net');
+    const PSECRET = SESSION_SECRET + ':portal', OTP_TTL = 10 * 60000, PTOKEN_TTL = 30 * 60000;
+    const prReq = new Map(), prVer = new Map(), prPhone = new Map(), prLab = new Map();
+    const linkOf = (req, key) => (PUBLIC_API_URL || (req.protocol + '://' + req.get('host'))) + '/r/' + key;
+    const pkey = (p) => String(p || '').replace(/\D/g, '').slice(-10);
+    const pwa = (p) => { let d = String(p || '').replace(/\D/g, ''); while (d.indexOf('00') === 0) d = d.slice(2); if (d.charAt(0) === '0') d = '92' + d.slice(1); return d; };
+    const isPrivateIp = (a) => {
+      if (net.isIPv6(a)) return /^(::1?|fe80|fc|fd|::ffff:(10|127|169\.254|172\.(1[6-9]|2\d|3[01])|192\.168))/i.test(a);
+      const o = a.split('.').map(Number); return o[0] === 10 || o[0] === 127 || o[0] === 0 || (o[0] === 169 && o[1] === 254) || (o[0] === 172 && o[1] >= 16 && o[1] <= 31) || (o[0] === 192 && o[1] === 168) || (o[0] === 100 && o[1] >= 64 && o[1] <= 127);
+    };
+    async function assertPublicUrl(u) {
+      if (process.env.PORTAL_ALLOW_PRIVATE === '1') return;
+      const url = new URL(u); if (url.protocol !== 'https:') throw new Error('The WhatsApp API address must start with https://');
+      const addrs = await dns.lookup(url.hostname, { all: true }); if (!addrs.length || addrs.some((x) => isPrivateIp(x.address))) throw new Error('That WhatsApp API address is not allowed.');
+    }
+    async function waServerSend(cfg, to, text) {
+      const ac = new AbortController(), t = setTimeout(() => ac.abort(), 15000);
+      try {
+        let r;
+        if (cfg.provider === 'custom' && cfg.baseUrl) { await assertPublicUrl(cfg.baseUrl); r = await fetch(cfg.baseUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to, text, token: cfg.token }), signal: ac.signal }); }
+        else r = await fetch('https://api.ultramsg.com/' + encodeURIComponent(cfg.instanceId) + '/messages/chat', { method: 'POST', body: new URLSearchParams({ token: cfg.token, to, body: text }), signal: ac.signal });
+        if (!r.ok) throw new Error('WhatsApp provider answered ' + r.status);
+      } finally { clearTimeout(t); }
+    }
+    const waOk = (w) => !!(w && ((w.provider === 'custom' && w.baseUrl && w.token) || (w.provider !== 'custom' && w.instanceId && w.token)));
+    async function portalCtx(slug) {
+      slug = String(slug || '').trim().toLowerCase(); if (!/^[a-z0-9][a-z0-9-]{2,39}$/.test(slug)) return null;
+      const lab = await saas.findBySlug(slug); if (!lab || saas.effStatus(lab) === 'suspended') return null;
+      const st = saas.storeFor(lab), set = (await st.get('settings', 'main')) || {}; if (!set.portalOn) return null;
+      return { lab, st, set };
+    }
+    async function whoIs(st, k) {
+      const pats = (await st.all('patients')).filter((p) => pkey(p.phone) === k || pkey(p.whatsapp) === k);
+      const docs = (await st.all('doctors')).filter((d) => pkey(d.phone) === k || pkey(d.whatsapp) === k);
+      return { pats, docs };
+    }
+    const otpKey = (lab, k) => 'portal_otp:' + crypto.createHash('sha256').update(lab.id + '|' + k).digest('hex').slice(0, 32);
+    const otpHash = (lab, k, code) => crypto.createHash('sha256').update(PSECRET + '|' + lab.id + '|' + k + '|' + code).digest('hex');
+
+    app.get('/api/portal/info', async (req, res) => {
+      const c = await portalCtx(req.query.lab);
+      if (!c) return res.json({ enabled: false });
+      res.json({ enabled: true, labName: c.set.labName || c.lab.name, tagline: c.set.tagline || '', logo: c.set.logo || '', whatsapp: waOk(c.set.whatsapp), email: mailer.configured() });
+    });
+    app.post('/api/portal/request', async (req, res) => {
+      const SAME = { ok: true, message: 'If this number is registered with the lab, a 6-digit code is on its way (WhatsApp, or email if WhatsApp is not available). It is valid for 10 minutes.' };
+      try {
+        const b = req.body || {}, k = pkey(b.phone);
+        if (!/^\d{10}$/.test(k)) return res.status(400).json({ error: 'Enter a valid mobile number (for example 0300 1234567)' });
+        if (bump(prReq, req.ip, 3600000).n > 12) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        const c = await portalCtx(b.lab); if (!c) return res.json(SAME);
+        res.json(SAME); /* answer first, send afterwards: the timing must not reveal whether the number exists */
+        if (bump(prPhone, c.lab.id + '|' + k, 3600000).n > 3 || bump(prLab, c.lab.id, 86400000).n > (+process.env.PORTAL_OTPS_PER_DAY || 200)) return;
+        const w = await whoIs(c.st, k); if (!w.pats.length && !w.docs.length) return;
+        const code = String(crypto.randomInt(0, 1000000)).padStart(6, '0');
+        await rawStore.setMeta(otpKey(c.lab, k), { h: otpHash(c.lab, k, code), exp: Date.now() + OTP_TTL, tries: 0 });
+        const lname = String(c.set.labName || c.lab.name || 'Lab').slice(0, 60), msg = lname + ': your report code is ' + code + '. It is valid for 10 minutes. Do not share it with anyone.';
+        const people = w.pats.concat(w.docs), em = people.map((x) => String(x.email || '').trim()).find((e) => EMAIL_OK.test(e));
+        let sent = false;
+        if (waOk(c.set.whatsapp)) { try { await waServerSend(c.set.whatsapp, pwa(b.phone), msg); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (whatsapp) failed:', String(e.message || e).slice(0, 120)); } }
+        if (!sent && em && mailer.configured()) { try { await mailer.send(Object.assign({ to: em, fromName: lname + ' (via Optix LAB MedSync)' }, mailer.portalCodeEmail({ labName: lname, code }))); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (email) failed:', String(e.message || e).slice(0, 120)); } }
+        if (!sent) await rawStore.setMeta(otpKey(c.lab, k), null);
+      } catch (e) { if (!res.headersSent) res.json(SAME); }
+    });
+    app.post('/api/portal/verify', async (req, res) => {
+      const BAD = { error: 'That code is wrong or has expired. Request a new one.' };
+      try {
+        if (bump(prVer, req.ip, 3600000).n > 40) return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+        const b = req.body || {}, k = pkey(b.phone), code = String(b.code || '').trim();
+        const c = await portalCtx(b.lab); if (!c || !/^\d{10}$/.test(k) || !/^\d{6}$/.test(code)) return res.status(401).json(BAD);
+        const rec = await rawStore.getMeta(otpKey(c.lab, k));
+        if (!rec || rec.exp < Date.now()) return res.status(401).json(BAD);
+        rec.tries = (rec.tries || 0) + 1;
+        if (rec.tries > 5) { await rawStore.setMeta(otpKey(c.lab, k), null); return res.status(401).json(BAD); }
+        const want = Buffer.from(rec.h, 'hex'), got = Buffer.from(otpHash(c.lab, k, code), 'hex');
+        if (want.length !== got.length || !crypto.timingSafeEqual(want, got)) { await rawStore.setMeta(otpKey(c.lab, k), rec); return res.status(401).json(BAD); }
+        await rawStore.setMeta(otpKey(c.lab, k), null); /* one use */
+        const w = await whoIs(c.st, k);
+        res.json({ ok: true, token: signToken(PSECRET, { lab: c.lab.id, ph: k, exp: Date.now() + PTOKEN_TTL }), expiresInMin: PTOKEN_TTL / 60000, patient: w.pats.length > 0, doctor: w.docs.length > 0 });
+      } catch (e) { res.status(401).json(BAD); }
+    });
+    app.get('/api/portal/data', async (req, res) => {
+      try {
+        const m = /^Bearer (.+)$/.exec(req.get('Authorization') || ''), t = m && readToken(PSECRET, m[1]);
+        if (!t || !t.lab || !/^\d{10}$/.test(String(t.ph))) return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        const lab = await saas.getLab(t.lab); if (!lab || saas.effStatus(lab) === 'suspended') return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        const st = saas.storeFor(lab), set = (await st.get('settings', 'main')) || {}; if (!set.portalOn) return res.status(403).json({ error: 'The portal is switched off for this lab.' });
+        const w = await whoIs(st, t.ph), invs = await st.all('invoices'), results = await st.all('results'), patById = {}; (await st.all('patients')).forEach((p) => { patById[p.id] = p; });
+        const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
+        const reportOf = (inv, forDoctor) => {
+          const rs = byInv[inv.id] || [], items = Array.isArray(inv.items) ? inv.items : [], done = rs.length > 0 && items.every((it) => rs.some((r) => r.testId === it.testId && r.status === 'ready') || rs.some((r) => r.status === 'ready' && it.isPackage));
+          const ready = rs.length > 0 && rs.every((r) => r.status === 'ready') && done, due = +inv.due || 0;
+          const key = inv.reportPdfKey, havePdf = !!key && REPORT_KEY_RE.test(String(key)) && fs.existsSync(path.join(REPORT_PDFS_DIR, key + '.pdf'));
+          return { no: inv.no || inv.id, date: inv.createdAt, patient: (patById[inv.patientId] || {}).name || '', tests: items.map((x) => x.name || x.code || '').filter(Boolean).join(', ').slice(0, 200),
+            status: ready ? ((due > 0.009 && !forDoctor) ? 'locked' : (havePdf ? 'ready' : 'preparing')) : 'pending', due: due > 0.009 ? Math.round(due) : 0, total: forDoctor ? Math.round(+inv.total || 0) : undefined,
+            link: ready && havePdf && (due <= 0.009 || forDoctor) ? linkOf(req, key) : '' };
+        };
+        const out = { ok: true, lab: { name: set.labName || lab.name }, patient: null, doctor: null };
+        if (w.pats.length) {
+          const ids = {}; w.pats.forEach((p) => { ids[p.id] = 1; });
+          out.patient = { names: w.pats.map((p) => p.name), reports: invs.filter((i) => ids[i.patientId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 200).map((i) => reportOf(i, false)) };
+        }
+        if (w.docs.length) {
+          const dids = {}; w.docs.forEach((d) => { dids[d.id] = d; });
+          const mine = invs.filter((i) => dids[i.doctorId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+          const mk = (d) => { const x = new Date(d); return isNaN(x) ? '' : x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2); };
+          const months = {}; mine.forEach((i) => { const k = mk(i.createdAt); if (!k) return; const m = months[k] = months[k] || { month: k, referrals: 0, billed: 0, commission: 0, paid: 0 }; const pct = +(dids[i.doctorId].commissionPct) || 0; m.referrals++; m.billed += +i.total || 0; m.commission += (+i.total || 0) * pct / 100; });
+          w.docs.forEach((d) => (d.commissionPaid || []).forEach((x) => { const k = mk(x.date); if (k && months[k]) months[k].paid += +x.amount || 0; }));
+          out.doctor = { names: w.docs.map((d) => d.name), months: Object.keys(months).sort().reverse().slice(0, 12).map((k) => { const m = months[k]; return { month: k, referrals: m.referrals, billed: Math.round(m.billed), commission: Math.round(m.commission), paid: Math.round(m.paid), due: Math.max(0, Math.round(m.commission - m.paid)) }; }),
+            reports: mine.slice(0, 200).map((i) => reportOf(i, true)) };
+        }
+        res.json(out);
+      } catch (e) { res.status(500).json({ error: 'Could not load your reports. Please try again.' }); }
+    });
+  }
+
   /* QR target: a phone-friendly, app-like viewer (sharp pinch-zoom, share/download). Scripts and the desktop
      updater ask for the raw PDF with ?raw=1 or without an HTML Accept header. */
   let viewerHtml = null;

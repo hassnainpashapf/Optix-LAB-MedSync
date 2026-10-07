@@ -577,10 +577,25 @@
         } });
   }
 
+  /* the patient / doctor portal shows a report only once its PDF exists: build it the moment a report is finished, and again when it is edited */
+  function portalAutoPrepare(ids) {
+    try {
+      var st = DB.get('settings', 'main') || {}; if (!st.portalOn || !shareOn()) return;
+      var chain = Promise.resolve();
+      ids.forEach(function (id) { chain = chain.then(function () { var inv = invOf(id); if (inv && waAllReady(id)) return pdfUrlFor(id).catch(function () {}); }); });
+    } catch (e) {}
+  }
+  App.preparePortalReports = function (onProgress) {
+    if (!shareOn()) return Promise.reject(new Error('Open this lab in the browser (cloud) to prepare reports'));
+    var todo = joinedRowsReadyInvoices().filter(function (i) { return !i.reportPdfKey; }), done = 0, n = 0;
+    return todo.reduce(function (p, inv) {
+      return p.then(function () { return pdfUrlFor(inv.id).then(function (u) { if (u) n++; }, function () {}).then(function () { done++; if (onProgress) onProgress(done, todo.length); }); });
+    }, Promise.resolve()).then(function () { return n; });
+  };
   function waAutoSendReady(invoiceIds) {
     try {
       var _ids = (invoiceIds || []).filter(function (id, i, a) { return id && a.indexOf(id) === i; });
-      slackAutoReady(_ids); emailAutoReady(_ids);
+      portalAutoPrepare(_ids); slackAutoReady(_ids); emailAutoReady(_ids);
     } catch (e) {}
     try {
       var ids = [];
