@@ -10,7 +10,7 @@ try { DatabaseSync = require('node:sqlite').DatabaseSync; } catch (e) { Database
 const fs = require('fs');
 const path = require('path');
 
-const TABLES = ['settings', 'users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'wa_log', 'report_templates', 'report_schedules', 'samples', 'closings', 'audit'];
+const TABLES = ['settings', 'users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'wa_log', 'report_templates', 'report_schedules', 'samples', 'closings', 'audit', 'stock_items', 'stock_moves'];
 
 async function openStore(dbPath) {
   fs.mkdirSync(path.dirname(dbPath), { recursive: true });

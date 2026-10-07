@@ -170,9 +170,11 @@
     report_schedules: { prefix: 'SCH', digits: 3 },
     wa_log: { prefix: 'WAL', digits: 4 },
     samples: { prefix: 'S', digits: 5 },
-    closings: { prefix: 'CL', digits: 4 }
+    closings: { prefix: 'CL', digits: 4 },
+    stock_items: { prefix: 'SI', digits: 3 },
+    stock_moves: { prefix: 'SM', digits: 5 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples', 'closings'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples', 'closings', 'stock_items', 'stock_moves'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -246,7 +248,7 @@
       },
       users: [], patients: [], tests: [], doctors: [],
       invoices: [], payments: [], expenses: [], results: [],
-      wa_log: [], samples: []
+      wa_log: [], samples: [], stock_items: [], stock_moves: []
     };
 
     function put(table, obj) {
@@ -546,6 +548,15 @@
       store.samples = [];
       if (!store.seq) store.seq = {};
       if (store.seq.samples == null) store.seq.samples = 0;
+      save(store);
+    }
+    /* existing installs lack the stock tables */
+    if (store && (!Array.isArray(store.stock_items) || !Array.isArray(store.stock_moves))) {
+      if (!Array.isArray(store.stock_items)) store.stock_items = [];
+      if (!Array.isArray(store.stock_moves)) store.stock_moves = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.stock_items == null) store.seq.stock_items = 0;
+      if (store.seq.stock_moves == null) store.seq.stock_moves = 0;
       save(store);
     }
     /* existing installs lack the daily cash-closing table */
@@ -848,7 +859,7 @@
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
         expenses: tables.expenses, results: tables.results,
         report_templates: tables.report_templates, report_schedules: tables.report_schedules,
-        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings
+        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || []
       };
       normalizeSeq(store);
       persist();

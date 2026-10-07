@@ -28,6 +28,7 @@
     card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
     chat: '<path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.5A8.4 8.4 0 1 1 21 11.5z"/><path d="M8.5 10.5h7M8.5 14h4"/>',
     shield: '<path d="M12 3l8 3v6c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/>',
+    box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 7.5 12 12.5l8.7-5"/><path d="M12 22V12.5"/>',
     tube: '<path d="M8 2h8"/><path d="M9 2v16.5a3 3 0 0 0 6 0V2"/><path d="M9 11h6"/>',
     scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M11 8v8M15 8v8M18 8v8"/>',
     finance: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/>'
@@ -42,6 +43,7 @@
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e' },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48' },
+    { key: 'stock',     label: 'Stock',      icon: 'box',       route: '#/stock',     color: '#0ea5e9' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', route: '#/results' }, { key: 'ready', label: 'Ready Reports', route: '#/results/ready' }] },
     { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests',     color: '#14b8a6' },
@@ -72,6 +74,7 @@
     tests:     ['admin', 'reception', 'technician'],
     doctors:   ['admin', 'reception'],
     samples:   ['admin', 'reception', 'technician'],
+    stock:     ['admin', 'technician'],
     results:   ['admin', 'technician'],
     expenses:  ['admin', 'reception'],
     finance:   ['admin', 'reception'],
@@ -579,10 +582,10 @@
     try { st = window.DB.get('settings', 'main') || {}; } catch (e) {}
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     /* grouped, professional sidebar: section labels, one icon style, active state on the left */
-    var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', doctors: 'Laboratory',
+    var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', doctors: 'Laboratory',
       invoices: 'Billing', dues: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
       whatsapp: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'patients', 'samples', 'results', 'tests', 'doctors', 'invoices', 'dues', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'doctors', 'invoices', 'dues', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     var lastSec = '';
@@ -1061,6 +1064,55 @@
       }
     });
   }
+
+
+  /* ---------- stock: reagents / consumables ----------
+     Everything is derived from the movement log (stock_moves): in (received, with lot + expiry), out (used by a test), waste, adjust (+/-).
+     Lots are used oldest-expiry first, so "expiring soon" / "expired" always describes what is really still on the shelf. */
+  App.stockState = function () {
+    var items = [], moves = [];
+    try { items = DB.all('stock_items') || []; moves = DB.all('stock_moves') || []; } catch (e) { return { rows: [], low: 0, out: 0, soon: 0, expired: 0, alerts: 0 }; }
+    var st = {}; try { st = DB.get('settings', 'main') || {}; } catch (e) {}
+    var warnDays = +st.stockExpiryDays > 0 ? +st.stockExpiryDays : 30;
+    var today = new Date().toISOString().slice(0, 10), warn = new Date(Date.now() + warnDays * 86400000).toISOString().slice(0, 10);
+    var by = {}; moves.forEach(function (m) { (by[m.itemId] = by[m.itemId] || []).push(m); });
+    var rows = items.filter(function (it) { return it.active !== false; }).map(function (it) {
+      var lots = [], drawn = 0;
+      (by[it.id] || []).forEach(function (m) {
+        var q = +m.qty || 0;
+        if (m.type === 'in') lots.push({ lot: m.lot || '', expiry: m.expiry || '', left: q });
+        else if (m.type === 'adjust') { if (q >= 0) lots.push({ lot: 'adjust', expiry: '', left: q }); else drawn += -q; }
+        else drawn += q;
+      });
+      lots.sort(function (a, b) { var x = a.expiry || '9999', y = b.expiry || '9999'; return x < y ? -1 : (x > y ? 1 : 0); });
+      var rest = drawn; lots.forEach(function (l) { var t = Math.min(l.left, rest); l.left -= t; rest -= t; });
+      var live = lots.filter(function (l) { return l.left > 1e-9; });
+      var onHand = live.reduce(function (a, l) { return a + l.left; }, 0) - rest;
+      var expiredQty = 0, soonQty = 0; var nearest = '';
+      live.forEach(function (l) { if (l.expiry) { if (!nearest) nearest = l.expiry; if (l.expiry < today) expiredQty += l.left; else if (l.expiry <= warn) soonQty += l.left; } });
+      var reorder = +it.reorderLevel || 0;
+      return { item: it, onHand: Math.round(onHand * 1000) / 1000, lots: live, nearest: nearest, expiredQty: expiredQty, soonQty: soonQty,
+        out: onHand <= 1e-9, low: onHand > 1e-9 && reorder > 0 && onHand <= reorder, expired: expiredQty > 1e-9, soon: soonQty > 1e-9 };
+    });
+    var c = { rows: rows, warnDays: warnDays };
+    c.out = rows.filter(function (r) { return r.out; }).length; c.low = rows.filter(function (r) { return r.low; }).length;
+    c.soon = rows.filter(function (r) { return r.soon; }).length; c.expired = rows.filter(function (r) { return r.expired; }).length;
+    c.alerts = rows.filter(function (r) { return r.out || r.low || r.soon || r.expired; }).length;
+    return c;
+  };
+  /* a finished result uses the stock its test is set up to use (Tests -> edit -> "Stock used per test"); once per invoice + test */
+  App.stockConsume = function (invoiceId, testId) {
+    try {
+      var t = DB.get('tests', testId); if (!t || !Array.isArray(t.consumes) || !t.consumes.length) return;
+      var ref = invoiceId + '|' + testId;
+      if ((DB.all('stock_moves') || []).some(function (m) { return m.ref === ref && m.type === 'out'; })) return;
+      var now = new Date().toISOString(), who = ''; try { who = (JSON.parse(localStorage.getItem('labpos_session') || '{}').name) || ''; } catch (e) {}
+      t.consumes.forEach(function (c) {
+        if (!(+c.qty > 0) || !DB.get('stock_items', c.itemId)) return;
+        DB.insert('stock_moves', { itemId: c.itemId, type: 'out', qty: +c.qty, ref: ref, note: 'Used for ' + invoiceId, date: now.slice(0, 10), createdAt: now, by: who });
+      });
+    } catch (e) { /* stock bookkeeping must never block saving a result */ }
+  };
 
   start();
 })();

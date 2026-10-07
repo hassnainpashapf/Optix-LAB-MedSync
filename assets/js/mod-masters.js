@@ -683,6 +683,9 @@ function testModal(t) {
       '</div>' +
       '<div id="tm-prows"></div>' +
       '<button type="button" id="tm-addp" class="btn btn-ghost btn-sm">+ Add Parameter</button></div>' +
+    '<div style="margin-top:14px"><label class="label">Stock used per test <span class="muted" style="font-weight:400">(optional &mdash; taken off your stock automatically when a result is saved)</span></label>' +
+      '<div id="tm-cons"></div><button type="button" id="tm-addc" class="btn btn-ghost btn-sm">+ Add stock item</button>' +
+      '<div class="muted" id="tm-nocons" style="font-size:12.5px;margin-top:4px" hidden>No stock items yet &mdash; add them in <b>Stock</b> first.</div></div>' +
     '<div style="margin-top:14px;border-top:1px solid var(--line);padding-top:14px">' +
       '<label style="display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer">' +
       '<input id="tm-ispkg" type="checkbox"' + (t.isPackage ? ' checked' : '') + '> This is a <span class="badge b-ready">Package</span> (bundle of tests at one price)</label>' +
@@ -709,6 +712,17 @@ function testModal(t) {
     (t.params || []).forEach(addRow);
     if (!(t.params || []).length) addRow(null);
     m.querySelector('#tm-addp').addEventListener('click', function () { addRow(null); });
+    /* stock used per test: [item][quantity][remove] rows */
+    var consBox = m.querySelector('#tm-cons'), stockItems = (DB.all('stock_items') || []).filter(function (i) { return i.active !== false; });
+    function addCons(c) {
+      c = c || {};
+      var sel = stockItems.map(function (i) { return '<option value="' + App.esc(i.id) + '"' + (i.id === c.itemId ? ' selected' : '') + '>' + App.esc(i.name) + ' (' + App.esc(i.unit || '') + ')</option>'; }).join('');
+      consBox.insertAdjacentHTML('beforeend', '<div class="tm-crow" style="display:grid;grid-template-columns:1fr 110px 36px;gap:8px;margin-bottom:8px"><select class="select tm-ci">' + sel + '</select>' +
+        '<input class="input tm-cq" type="number" min="0" step="any" placeholder="Qty per test" value="' + App.esc(c.qty == null ? '' : c.qty) + '"><button type="button" class="btn btn-ghost btn-sm tm-crm" title="Remove">✕</button></div>');
+      var row = consBox.lastElementChild; row.querySelector('.tm-crm').addEventListener('click', function () { row.remove(); });
+    }
+    (t.consumes || []).forEach(function (c) { if (stockItems.some(function (i) { return i.id === c.itemId; })) addCons(c); });
+    m.querySelector('#tm-addc').addEventListener('click', function () { if (!stockItems.length) { m.querySelector('#tm-nocons').hidden = false; return; } addCons(null); });
     /* template loader: fill parameters from a pre-defined template */
     var tplSel = m.querySelector('#tm-tpl'), tplGo = m.querySelector('#tm-tplgo');
     if (tplGo) tplGo.addEventListener('click', function () {
@@ -767,8 +781,10 @@ function testModal(t) {
         });
         params.push(pobj);
       });
+      var consumes = [];
+      Array.prototype.forEach.call(m.querySelectorAll('.tm-crow'), function (r) { var q = +r.querySelector('.tm-cq').value, id = r.querySelector('.tm-ci').value; if (id && q > 0) consumes.push({ itemId: id, qty: q }); });
       var data = {
-        code: code, name: name, category: category, price: price,
+        code: code, name: name, category: category, price: price, consumes: consumes,
         sampleType: m.querySelector('#tm-sample').value,
         tat: m.querySelector('#tm-tat').value.trim() || 'Same day',
         active: m.querySelector('#tm-active').checked,

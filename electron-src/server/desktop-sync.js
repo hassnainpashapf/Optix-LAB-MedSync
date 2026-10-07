@@ -23,6 +23,7 @@ const REFS = [
   ['results', 'invoiceId', 'invoices'], ['results', 'testId', 'tests'],
   ['patients', 'doctorId', 'doctors'],
   ['samples', 'invoiceId', 'invoices'], ['samples', 'patientId', 'patients'], ['samples', 'recollectOf', 'samples'], ['samples', 'recollectId', 'samples'],
+  ['stock_moves', 'itemId', 'stock_items'],
 ];
 
 function create(ctx) {

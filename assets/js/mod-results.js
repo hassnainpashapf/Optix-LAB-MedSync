@@ -749,6 +749,7 @@
               var bcrit = criticalOf(row, vals);
               patch.critical = bcrit.length ? bcrit : null;
               if (bcrit.length) { patch.criticalAck = null; _crit.push({ row: row, crits: bcrit }); }
+              try { if (App.stockConsume) App.stockConsume(row.invoice.id, row.res ? row.res.testId : row.item.testId); } catch (e) {}
               if (row.res) DB.update('results', row.res.id, patch);
               else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy, critical: patch.critical, criticalAck: patch.criticalAck || null });
               saved++;
@@ -910,6 +911,7 @@
     var crit = criticalOf(row, vals);
     patch.critical = crit.length ? crit : null;
     if (crit.length) patch.criticalAck = null;
+    try { if (App.stockConsume) App.stockConsume(row.invoice.id, row.res ? row.res.testId : row.item.testId); } catch (e) {}
     if (row.res) DB.update('results', row.res.id, patch);
     else DB.insert('results', { invoiceId: row.invoice.id, testId: row.item.testId, values: vals, status: 'ready', reportedAt: patch.reportedAt, reportedBy: patch.reportedBy, critical: patch.critical, criticalAck: patch.criticalAck || null });
     try { if (window.Samples) Samples.onResultsSaved([row.invoice.id]); } catch (e) {}
