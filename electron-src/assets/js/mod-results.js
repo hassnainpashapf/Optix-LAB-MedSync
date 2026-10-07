@@ -364,6 +364,7 @@
   App.waOnPaid = function (invoiceId) {
     try {
       var inv = invOf(invoiceId);
+      try { if (inv && (+inv.due || 0) <= 0.009 && waAllReady(invoiceId)) emailAutoReady([invoiceId]); } catch (e) {}
       if (!inv || (+inv.due || 0) > 0.009 || !waReady(waCfg()) || !waAllReady(invoiceId)) return;
       if (waAlreadySent(invoiceId, 'patient') && (!inv.doctorId || waAlreadySent(invoiceId, 'doctor'))) return;
       waAutoSendReady([invoiceId]);
@@ -454,7 +455,7 @@
   function shareStatus(force) {
     if (!shareOn()) return Promise.resolve({ email: false, slack: false, slackAuto: false });
     if (!force && _shareSt && Date.now() - _shareAt < 60000) return Promise.resolve(_shareSt);
-    return DB.share('GET', 'status').then(function (j) { _shareSt = j; _shareAt = Date.now(); return j; }, function () { return { email: false, slack: false, slackAuto: false }; });
+    return DB.share('GET', 'status').then(function (j) { _shareSt = j; _shareAt = Date.now(); return j; }, function () { return { email: true, unknown: true, slack: false, slackAuto: false }; });
   }
   App.shareStatus = shareStatus;
   /* the PDF engine is loaded on demand: make sure it is there before building the report PDF that email / Slack send */
@@ -465,6 +466,38 @@
   function slackNames(invoiceId) {
     var n = []; joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; }).forEach(function (r) { var t = testName(r); if (t && n.indexOf(t) < 0) n.push(t); });
     return n.join(', ');
+  }
+  /* auto-email the finished report (Settings -> Email & Slack, or the tick boxes in the report window): once per invoice,
+     only when the patient / doctor has an email address, and (like WhatsApp) not while a balance is unpaid unless the lab chose "send anyway" */
+  function emailAutoReady(ids) {
+    if (!shareOn()) return;
+    var cfgS = {}; try { cfgS = DB.get('settings', 'main') || {}; } catch (e) {}
+    if (!cfgS.emailAuto && !cfgS.emailAutoDoctor) return;
+    var dueRule = (cfgS.whatsapp && cfgS.whatsapp.dueRule) || 'note';
+    shareStatus().then(function (st) {
+      if (!st.email) return;
+      ids.forEach(function (id) {
+        try {
+          var inv = invOf(id); if (!inv || !waAllReady(id)) return;
+          if ((+inv.due || 0) > 0.009 && dueRule !== 'send') return; /* goes out once the balance is paid (App.waOnPaid) */
+          var pat = patOf(inv.patientId) || {}, doc = inv.doctorId ? DB.get('doctors', inv.doctorId) : null, EM = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+          var jobs = [];
+          if (cfgS.emailAuto && !inv.emailedAt && EM.test(String(pat.email || '').trim())) jobs.push({ flag: 'emailedAt', to: pat.email.trim(), kind: 'patient', name: pat.name });
+          if (cfgS.emailAutoDoctor && !inv.emailedDocAt && doc && EM.test(String(doc.email || '').trim())) jobs.push({ flag: 'emailedDocAt', to: doc.email.trim(), kind: 'doctor', name: doc.name });
+          if (!jobs.length) return;
+          var stamp = {}; jobs.forEach(function (j) { stamp[j.flag] = new Date().toISOString(); });
+          DB.update('invoices', id, stamp);
+          pdfUrlFor(id).then(function (url) {
+            var key = keyOfUrl(url); if (!key) throw new Error('Could not prepare the report PDF');
+            return Promise.all(jobs.map(function (j) {
+              return DB.share('POST', 'email', { key: key, to: j.to, kind: j.kind, name: j.name, invoiceNo: inv.no || inv.id })
+                .then(function () { App.toast('Report emailed to ' + (j.kind === 'doctor' ? 'Dr. ' : '') + (j.name || j.to)); })
+                .catch(function (e) { var u = {}; u[j.flag] = null; try { DB.update('invoices', id, u); } catch (x) {} App.toast('Auto email to ' + (j.name || j.to) + ' failed: ' + ((e && e.message) || 'error'), 'err'); });
+            }));
+          }).catch(function (e) { var u = {}; jobs.forEach(function (j) { u[j.flag] = null; }); try { DB.update('invoices', id, u); } catch (x) {} App.toast('Auto email failed: ' + ((e && e.message) || 'error'), 'err'); });
+        } catch (e) {}
+      });
+    });
   }
   /* auto-post to Slack the moment every test of an invoice is ready (once per invoice) */
   function slackAutoReady(ids) {
@@ -525,7 +558,8 @@
 
   function waAutoSendReady(invoiceIds) {
     try {
-      slackAutoReady((invoiceIds || []).filter(function (id, i, a) { return id && a.indexOf(id) === i; }));
+      var _ids = (invoiceIds || []).filter(function (id, i, a) { return id && a.indexOf(id) === i; });
+      slackAutoReady(_ids); emailAutoReady(_ids);
     } catch (e) {}
     try {
       var ids = [];
@@ -2804,6 +2838,7 @@
         previewQr(reportHtml(d), invoiceId) +
       '</div>' +
       '<div id="rvWaHist" style="margin-top:12px">' + waHistoryHtml(invoiceId) + '</div>' +
+      '<div id="rvAuto" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>' +
       '<div class="actions" style="margin-top:12px;flex-wrap:wrap;justify-content:flex-end;gap:8px">' +
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
         '<button class="btn btn-ghost" id="rvWaPatient">' + WA_ICON + ' Send to Patient (WhatsApp)</button>' +
@@ -2816,10 +2851,19 @@
           document.getElementById('rvPrint').addEventListener('click', function () { close(); printReportChoice(invoiceId); });
           shareStatus().then(function (st) { /* Email / Slack buttons appear only when the server can send them */
             var slot = document.getElementById('rvShare'); if (!slot || !document.body.contains(ov)) return;
-            var h = '';
-            if (st.email) h += '<button class="btn btn-ghost" id="rvEmPat">&#9993; Email Patient</button>' + (d.doc ? '<button class="btn btn-ghost" id="rvEmDoc">&#9993; Email Doctor</button>' : '');
+            var h = '', off = st.email ? '' : ' disabled title="Email sending is not set up on this server yet" style="opacity:.5;cursor:not-allowed"';
+            if (shareOn()) h += '<button class="btn btn-ghost" id="rvEmPat"' + off + '>&#9993; Email Patient</button>' + (d.doc ? '<button class="btn btn-ghost" id="rvEmDoc"' + off + '>&#9993; Email Doctor</button>' : '');
             if (st.slack) h += '<button class="btn btn-ghost" id="rvSlack">Send to Slack</button>';
             slot.innerHTML = h;
+            var auto = document.getElementById('rvAuto');
+            if (auto && shareOn() && st.email) {
+              var S0 = {}; try { S0 = DB.get('settings', 'main') || {}; } catch (e) {}
+              auto.innerHTML = '<label style="display:inline-flex;gap:6px;align-items:center;margin-right:18px"><input type="checkbox" id="rvAutoPat"' + (S0.emailAuto ? ' checked' : '') + '> Email every report to the patient automatically when it is ready</label>' +
+                (d.doc ? '<label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="rvAutoDoc"' + (S0.emailAutoDoctor ? ' checked' : '') + '> and to the doctor</label>' : '');
+              var a1 = document.getElementById('rvAutoPat'), a2 = document.getElementById('rvAutoDoc');
+              if (a1) a1.addEventListener('change', function () { try { DB.update('settings', 'main', { emailAuto: a1.checked }); App.toast(a1.checked ? 'Reports will be emailed to patients automatically (when they have an email on file)' : 'Automatic email to patients is off'); } catch (e) {} });
+              if (a2) a2.addEventListener('change', function () { try { DB.update('settings', 'main', { emailAutoDoctor: a2.checked }); App.toast(a2.checked ? 'Reports will also be emailed to the referring doctor (when they have an email on file)' : 'Automatic email to doctors is off'); } catch (e) {} });
+            }
             var b1 = document.getElementById('rvEmPat'); if (b1) b1.addEventListener('click', function () { emailReport(invoiceId, 'patient'); });
             var b2 = document.getElementById('rvEmDoc'); if (b2) b2.addEventListener('click', function () { emailReport(invoiceId, 'doctor'); });
             var b3 = document.getElementById('rvSlack'); if (b3) b3.addEventListener('click', function () { slackSend(invoiceId); });
