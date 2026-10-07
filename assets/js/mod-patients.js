@@ -634,7 +634,8 @@
       (inv.items || []).forEach(function (item) {
         var res = null;
         try {
-          res = DB.all('results').filter(function (r) { return r.invoiceId === inv.id && r.testId === item.testId; })[0] || null;
+          res = DB.all('results').filter(function (r) { return r.invoiceId === inv.id && r.testId === item.testId; })
+            .sort(function (a, b) { return (b.status === 'ready' ? 1 : 0) - (a.status === 'ready' ? 1 : 0) || String(b.reportedAt || '').localeCompare(String(a.reportedAt || '')); })[0] || null;
         } catch (e) { res = null; }
         testRows.push({ res: res, invoice: inv, item: item, test: DB.get('tests', item.testId) });
       });

@@ -116,7 +116,11 @@
     var invToday = invoices.filter(function (i) { return dayKey(i.createdAt) === today; });
     var testsToday = invToday.reduce(function (a, i) { return a + (i.items ? i.items.length : 0); }, 0);
     var pendingRes = results.filter(function (r) { return r.status === 'pending'; });
-    var reportedToday = results.filter(function (r) { return r.status === 'ready' && dayKey(r.reportedAt) === today; }).length;
+    var _rtSeen = {};
+    var reportedToday = results.filter(function (r) {
+      if (r.status !== 'ready' || dayKey(r.reportedAt) !== today) return false;
+      var k = r.invoiceId + '|' + r.testId; if (_rtSeen[k]) return false; _rtSeen[k] = 1; return true;   /* one per test, even if saved twice */
+    }).length;
     var mKey = today.slice(0, 7);
     var monthPatients = patients.filter(function (p) { return dayKey(p.createdAt).slice(0, 7) === mKey; }).length;
 

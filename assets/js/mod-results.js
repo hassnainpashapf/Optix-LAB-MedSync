@@ -484,16 +484,29 @@
     var out = [];
     var seen = {};
     var results = DB.all('results');
+    /* one result per invoice + test: a "ready" one beats a "pending" one, and among equals the newest wins.
+       (Duplicates used to pile up when a saved test still showed as pending and was entered again.) */
+    function stamp(r) { return String(r.reportedAt || '') + '|' + String(r._u || r._c || ''); }
+    function better(a, b) {
+      if ((a.status === 'ready') !== (b.status === 'ready')) return a.status === 'ready';
+      return stamp(a) > stamp(b);
+    }
+    var best = {};
     results.forEach(function (r) {
       var inv = invOf(r.invoiceId);
       if (!inv || !Array.isArray(inv.items)) return;
       var item = inv.items.filter(function (it) { return it.testId === r.testId; })[0];
       if (!item) return; // orphan result, skip
-      if (r.status !== status) return;
-      seen[r.invoiceId + '|' + r.testId] = true;
-      out.push({ res: r, invoice: inv, patient: patOf(inv.patientId), item: item, test: DB.get('tests', r.testId) });
+      var key = r.invoiceId + '|' + r.testId;
+      seen[key] = true;   /* any result (pending or ready) means this test is no longer a "new" pending item */
+      if (!best[key] || better(r, best[key].res)) best[key] = { res: r, inv: inv, item: item };
     });
-    // Synthesize pending rows for invoice items that have no result row yet
+    Object.keys(best).forEach(function (key) {
+      var b = best[key];
+      if (b.res.status !== status) return;
+      out.push({ res: b.res, invoice: b.inv, patient: patOf(b.inv.patientId), item: b.item, test: DB.get('tests', b.res.testId) });
+    });
+    // Synthesize pending rows for invoice items that have no result row at all yet
     if (status === 'pending') {
       DB.all('invoices').forEach(function (inv) {
         if (!Array.isArray(inv.items)) return;
