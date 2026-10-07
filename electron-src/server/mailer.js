@@ -81,18 +81,18 @@ function changedEmail({ labName, name }) {
 
 
 /* the report mail: fixed wording (staff cannot type free text into it, so it cannot be used to send arbitrary mail), the PDF attached, plus a link */
-function reportEmail({ labName, name, kind, link, invNo, labPhone, labEmail }) {
+function reportEmail({ labName, name, kind, link, invNo, labPhone, labEmail, note }) {
   const who = name ? name : (kind === 'doctor' ? 'Doctor' : 'Patient');
   const subject = (kind === 'doctor' ? 'Patient lab report' : 'Your lab report') + ' — ' + labName + (invNo ? ' (' + invNo + ')' : '');
   const lead = kind === 'doctor'
     ? 'The lab report' + (name ? ' of the patient you referred' : '') + ' is attached to this email as a PDF.'
     : 'Your lab report is ready. It is attached to this email as a PDF.';
   const contact = [labPhone ? 'Phone: ' + labPhone : '', labEmail ? 'Email: ' + labEmail : ''].filter(Boolean).join('  |  ');
-  const text = 'Dear ' + who + ',\n\n' + lead + '\n\nYou can also open or download it here (works on any phone):\n' + link + '\n\n' + labName + (contact ? '\n' + contact : '') +
+  const text = 'Dear ' + who + ',\n\n' + lead + (note ? '\n\n' + note : '') + '\n\nYou can also open or download it here (works on any phone):\n' + link + '\n\n' + labName + (contact ? '\n' + contact : '') +
     '\n\nIf you were not expecting this email, you can ignore it.';
   const html = '<div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;color:#1b2540">' +
     '<h2 style="margin:0 0 14px;color:#131845">' + esc(labName) + '</h2>' +
-    '<p>Dear ' + esc(who) + ',</p><p>' + esc(lead) + '</p>' +
+    '<p>Dear ' + esc(who) + ',</p><p>' + esc(lead) + '</p>' + (note ? '<p>' + esc(note) + '</p>' : '') +
     '<p style="margin:22px 0"><a href="' + esc(link) + '" style="background:#131845;color:#fff;text-decoration:none;padding:12px 22px;border-radius:8px;font-weight:bold;display:inline-block">Open / download report</a></p>' +
     '<p style="color:#5b6785;font-size:13px">' + esc(contact) + '</p>' +
     '<p style="color:#8a94ad;font-size:12px;margin-top:22px">If you were not expecting this email, you can ignore it.</p></div>';

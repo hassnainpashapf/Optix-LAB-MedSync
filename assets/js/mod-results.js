@@ -458,6 +458,14 @@
     return DB.share('GET', 'status').then(function (j) { _shareSt = j; _shareAt = Date.now(); return j; }, function () { return { email: true, unknown: true, slack: false, slackAuto: false }; });
   }
   App.shareStatus = shareStatus;
+  App.mail = { send: function (id, role, to, auto) { return mailSend(id, role, to, auto); }, ask: function (id, role) { emailReport(id, role); }, status: shareStatus, on: shareOn,
+    ready: function () { return joinedRowsReadyInvoices(); } };
+  function joinedRowsReadyInvoices() {
+    var seen = {}, out = [];
+    DB.all('results').forEach(function (r) { if (r.invoiceId && !seen[r.invoiceId]) { seen[r.invoiceId] = 1; var inv = invOf(r.invoiceId); if (inv && waAllReady(r.invoiceId)) out.push(inv); } });
+    out.sort(function (a, b) { return String(b.createdAt) < String(a.createdAt) ? -1 : 1; });
+    return out.slice(0, 300);
+  }
   /* the PDF engine is loaded on demand: make sure it is there before building the report PDF that email / Slack send */
   function pdfUrlFor(invoiceId) {
     return Promise.resolve(App.ensureJsPDF ? App.ensureJsPDF() : true).then(function () { return getReportPdfUrl(invoiceId, true); });
@@ -467,13 +475,32 @@
     var n = []; joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; }).forEach(function (r) { var t = testName(r); if (t && n.indexOf(t) < 0) n.push(t); });
     return n.join(', ');
   }
+  /* one place that emails a finished report and writes it to the Email log (used by the report window, the Email page and auto-send) */
+  function mailLog(e) {
+    try {
+      DB.insert('email_log', { invoiceId: e.invoiceId || null, to: e.to || '', toName: e.toName || '', toRole: e.toRole === 'doctor' ? 'doctor' : 'patient', kind: 'report',
+        status: e.status === 'sent' ? 'sent' : 'failed', error: String(e.error || '').slice(0, 200), auto: !!e.auto, ts: new Date().toISOString() });
+    } catch (x) {}
+  }
+  function mailSend(invoiceId, role, to, auto) {
+    var inv = invOf(invoiceId); if (!inv) return Promise.reject(new Error('Invoice not found'));
+    var pat = patOf(inv.patientId) || {}, doc = (role === 'doctor' && inv.doctorId) ? DB.get('doctors', inv.doctorId) : null, who = role === 'doctor' ? ((doc && doc.name) || 'Doctor') : (pat.name || 'Patient');
+    return pdfUrlFor(invoiceId).then(function (url) {
+      var key = keyOfUrl(url); if (!key) throw new Error('Could not prepare the report PDF');
+      return DB.share('POST', 'email', { key: key, to: to, kind: role, name: who, invoiceNo: inv.no || inv.id });
+    }).then(function () {
+      mailLog({ invoiceId: invoiceId, to: to, toName: who, toRole: role, status: 'sent', auto: auto });
+      var u = {}; u[role === 'doctor' ? 'emailedDocAt' : 'emailedAt'] = new Date().toISOString(); try { DB.update('invoices', invoiceId, u); } catch (x) {}
+      return true;
+    }, function (e) { mailLog({ invoiceId: invoiceId, to: to, toName: who, toRole: role, status: 'failed', error: (e && e.message) || 'error', auto: auto }); throw e; });
+  }
   /* auto-email the finished report (Settings -> Email & Slack, or the tick boxes in the report window): once per invoice,
      only when the patient / doctor has an email address, and (like WhatsApp) not while a balance is unpaid unless the lab chose "send anyway" */
   function emailAutoReady(ids) {
     if (!shareOn()) return;
     var cfgS = {}; try { cfgS = DB.get('settings', 'main') || {}; } catch (e) {}
     if (!cfgS.emailAuto && !cfgS.emailAutoDoctor) return;
-    var dueRule = (cfgS.whatsapp && cfgS.whatsapp.dueRule) || 'note';
+    var dueRule = cfgS.emailDueRule === 'send' ? 'send' : 'hold';
     shareStatus().then(function (st) {
       if (!st.email) return;
       ids.forEach(function (id) {
@@ -487,14 +514,11 @@
           if (!jobs.length) return;
           var stamp = {}; jobs.forEach(function (j) { stamp[j.flag] = new Date().toISOString(); });
           DB.update('invoices', id, stamp);
-          pdfUrlFor(id).then(function (url) {
-            var key = keyOfUrl(url); if (!key) throw new Error('Could not prepare the report PDF');
-            return Promise.all(jobs.map(function (j) {
-              return DB.share('POST', 'email', { key: key, to: j.to, kind: j.kind, name: j.name, invoiceNo: inv.no || inv.id })
-                .then(function () { App.toast('Report emailed to ' + (j.kind === 'doctor' ? 'Dr. ' : '') + (j.name || j.to)); })
-                .catch(function (e) { var u = {}; u[j.flag] = null; try { DB.update('invoices', id, u); } catch (x) {} App.toast('Auto email to ' + (j.name || j.to) + ' failed: ' + ((e && e.message) || 'error'), 'err'); });
-            }));
-          }).catch(function (e) { var u = {}; jobs.forEach(function (j) { u[j.flag] = null; }); try { DB.update('invoices', id, u); } catch (x) {} App.toast('Auto email failed: ' + ((e && e.message) || 'error'), 'err'); });
+          jobs.forEach(function (j) {
+            mailSend(id, j.kind, j.to, true)
+              .then(function () { App.toast('Report emailed to ' + (j.kind === 'doctor' ? 'Dr. ' : '') + (j.name || j.to)); })
+              .catch(function (e) { var u = {}; u[j.flag] = null; try { DB.update('invoices', id, u); } catch (x) {} App.toast('Auto email to ' + (j.name || j.to) + ' failed: ' + ((e && e.message) || 'error'), 'err'); });
+          });
         } catch (e) {}
       });
     });
@@ -543,10 +567,7 @@
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(addr)) { App.toast('Enter a valid email address', 'err'); return; }
             var save = ov.querySelector('#emSave').checked && addr !== cur;
             close(); App.toast('Sending email to ' + who + '…', 'info');
-            pdfUrlFor(invoiceId).then(function (url) {
-              var key = keyOfUrl(url); if (!key) throw new Error('Could not prepare the report PDF');
-              return DB.share('POST', 'email', { key: key, to: addr, kind: role, name: who, invoiceNo: inv.no || inv.id });
-            }).then(function () {
+            mailSend(invoiceId, role, addr, false).then(function () {
               App.toast('Report emailed to ' + addr);
               if (save) { try { DB.update(role === 'doctor' ? 'doctors' : 'patients', target.id, { email: addr }); } catch (e) {} }
             }).catch(function (e) { App.toast((e && e.message) || 'Email failed', 'err'); });

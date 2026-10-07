@@ -172,9 +172,10 @@
     samples: { prefix: 'S', digits: 5 },
     closings: { prefix: 'CL', digits: 4 },
     stock_items: { prefix: 'SI', digits: 3 },
-    stock_moves: { prefix: 'SM', digits: 5 }
+    stock_moves: { prefix: 'SM', digits: 5 },
+    email_log: { prefix: 'EL', digits: 5 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples', 'closings', 'stock_items', 'stock_moves'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -248,7 +249,7 @@
       },
       users: [], patients: [], tests: [], doctors: [],
       invoices: [], payments: [], expenses: [], results: [],
-      wa_log: [], samples: [], stock_items: [], stock_moves: []
+      wa_log: [], samples: [], stock_items: [], stock_moves: [], email_log: []
     };
 
     function put(table, obj) {
@@ -548,6 +549,13 @@
       store.samples = [];
       if (!store.seq) store.seq = {};
       if (store.seq.samples == null) store.seq.samples = 0;
+      save(store);
+    }
+    /* existing installs lack the email log */
+    if (store && !Array.isArray(store.email_log)) {
+      store.email_log = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.email_log == null) store.seq.email_log = 0;
       save(store);
     }
     /* existing installs lack the stock tables */
@@ -859,7 +867,7 @@
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
         expenses: tables.expenses, results: tables.results,
         report_templates: tables.report_templates, report_schedules: tables.report_schedules,
-        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || []
+        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || [], email_log: tables.email_log || []
       };
       normalizeSeq(store);
       persist();

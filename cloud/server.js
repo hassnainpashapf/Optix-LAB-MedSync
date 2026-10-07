@@ -1058,7 +1058,7 @@ async function main() {
         const buf = fs.readFileSync(f); if (buf.length > 12 * 1024 * 1024) return res.status(413).json({ error: 'The report PDF is too large to email. Send the link on WhatsApp instead.' });
         const st = (await req.store.get('settings', 'main')) || {}, labName = clean1(st.labName || (req.lab && req.lab.name) || 'Your lab', 80);
         const kind = b.kind === 'doctor' ? 'doctor' : 'patient', name = clean1(b.name, 60), invNo = clean1(b.invoiceNo, 30);
-        const mail = mailer.reportEmail({ labName, name, kind, link: linkOf(req, b.key), invNo, labPhone: clean1(st.phone, 40), labEmail: EMAIL_OK.test(String(st.email || '')) ? clean1(st.email, 80) : '' });
+        const mail = mailer.reportEmail({ labName, name, kind, link: linkOf(req, b.key), invNo, labPhone: clean1(st.phone, 40), labEmail: EMAIL_OK.test(String(st.email || '')) ? clean1(st.email, 80) : '', note: clean1(st.emailNote, 200) });
         await mailer.send(Object.assign({ to, fromName: labName + ' (via Optix LAB MedSync)', replyTo: EMAIL_OK.test(String(st.email || '')) ? String(st.email).trim() : undefined,
           attachments: [{ filename: 'Lab-Report-' + (invNo.replace(/[^A-Za-z0-9_-]/g, '') || 'report') + '.pdf', content: buf, contentType: 'application/pdf' }] }, mail));
         await auditLog(req, 'email-report', 'report', b.key, { label: kind + ' ' + maskEmail(to) + (invNo ? ' (' + invNo + ')' : '') });
