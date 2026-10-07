@@ -1462,7 +1462,7 @@
     var leftHtml =
       '<div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0">' +
         (s.logo
-          ? '<img src="' + App.esc(s.logo) + '" style="max-width:120px;max-height:72px;flex:none" alt="">'
+          ? '<img src="' + (d && d._tpl ? '{{logo}}' : App.esc(s.logo)) + '" style="max-width:120px;max-height:72px;flex:none" alt="">'
           : '') +
         '<div style="min-width:0">' +
           '<div style="margin:0;color:' + (/^#[0-9a-fA-F]{6}$/.test(s.labNameColor || '') ? s.labNameColor : '#000') + ';font-family:' + RPT.serif +
@@ -2323,6 +2323,7 @@
     var caseNo = String(inv.no || inv.id || '').replace(/\s*-\s*/g, ' - ').replace(/\s*\/\s*/g, ' / ');
     var patId = String(pat.id == null ? '' : pat.id);
     return String(html || '')
+      .replace(/\{\{\s*logo\s*\}\}/g, function () { return App.esc(s.logo || ''); })
       .replace(/\{\{\s*case_barcode\s*\}\}/g, function () { return barcodeHtml(caseNo).replace('margin:0 auto', 'margin:0'); })
       .replace(/\{\{\s*patient_barcode\s*\}\}/g, function () { return barcodeHtml(patId).replace('margin:0 auto', 'margin:0'); })
       .replace(/\{\{\s*case_no\s*\}\}/g, function () { return App.esc(caseNo); })
@@ -2330,7 +2331,7 @@
       .replace(/\{\{\s*qr\s*\}\}/g, function () { return s.showQr === false ? '' : '<img data-qr="1" style="width:70px;height:70px" alt="QR">'; });
   }
   /* the current automatic header / footer as editable HTML (pre-fills the Custom boxes in Settings -> Lab Profile) */
-  function prettyHtml(h) { return String(h).replace(/></g, '>\n<'); }
+  function prettyHtml(h) { return String(h).replace(/></g, '>\n<').replace(/&#39;/g, "'"); }
   App.reportHeaderTemplate = function (s) { return prettyHtml(reportHeaderHtml({ inv: {}, pat: {}, s: s || {}, _tpl: true })); };
   App.reportFooterTemplate = function (s) {
     var h = reportFooterHtml({ s: s || {} });

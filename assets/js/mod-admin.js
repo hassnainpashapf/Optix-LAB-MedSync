@@ -1407,7 +1407,7 @@
       + '<div style="grid-column:1/-1"><label class="label">Signatory Doctors <span class="muted" style="font-weight:400">(shown on lab reports)</span></label>'
       + '<div id="spSigList"></div>'
       + '<button class="btn btn-ghost" type="button" id="spSigAdd" style="margin-top:8px">+ Add Signatory</button></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(this is your current header — edit anything you want; <code>{{qr}}</code> <code>{{case_barcode}}</code> <code>{{case_no}}</code> <code>{{patient_barcode}}</code> <code>{{patient_id}}</code> are filled in for every report)</span></label>'
+      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(this is your current header — edit anything you want; <code>{{logo}}</code> <code>{{qr}}</code> <code>{{case_barcode}}</code> <code>{{case_no}}</code> <code>{{patient_barcode}}</code> <code>{{patient_id}}</code> are filled in for every report)</span></label>'
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spHeadSample">Load Sample</button>'
       + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Reset to automatic</button></div>'
       + '<textarea class="input" id="spHeadHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic header">' + App.esc(s.headerHtml || '') + '</textarea></div>'
