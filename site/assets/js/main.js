@@ -34,15 +34,17 @@ document.addEventListener('DOMContentLoaded', function () {
     // 2. Mobile menu.
     var burger = $('burger'), links = $('navLinks');
     if (burger && links) {
+      var setMenu = function (open) {
+        links.classList.toggle('open', open);
+        burger.classList.toggle('active', open);
+        burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        burger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      };
       burger.addEventListener('click', function () {
-        links.classList.toggle('open');
-        burger.classList.toggle('active');
+        setMenu(!links.classList.contains('open'));
       });
       links.querySelectorAll('a').forEach(function (a) {
-        a.addEventListener('click', function () {
-          links.classList.remove('open');
-          burger.classList.remove('active');
-        });
+        a.addEventListener('click', function () { setMenu(false); });
       });
     }
   } catch (e) {}

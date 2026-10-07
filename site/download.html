@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Download — Optix LAB MedSync</title>
-<meta name="description" content="Download the free Optix LAB MedSync desktop app for Windows and macOS. Your lab data stays on your computer.">
+<title>Download the App — Optix LAB MedSync</title>
+<meta name="description" content="Download the Optix LAB MedSync desktop app for Windows and macOS, or the Android app. The desktop app works offline and syncs with the cloud.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 48 48%27%3E%3Ccircle cx=%2724%27 cy=%2724%27 r=%2722%27 fill=%27%23e9f4fc%27 stroke=%27%235b9bd5%27 stroke-width=%272%27/%3E%3Cpath d=%27M24 8c-5 6.5-9 11.3-9 16.2A9 9 0 0 0 24 33.5a9 9 0 0 0 9-9.3C33 19.3 29 14.5 24 8z%27 fill=%27%235b9bd5%27 stroke=%27%230b1740%27 stroke-width=%272%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
@@ -15,7 +16,7 @@
 .dl-hero h1{color:#131845;font-size:clamp(2.2rem,4.4vw,3.4rem);font-weight:800;letter-spacing:-.02em;margin:22px 0 12px}
 .dl-hero .lede{max-width:620px;margin:0 auto}
 .nav-links a[aria-current="page"]{color:#131845;font-weight:800}
-.dl-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:10px 0 70px}
+.dl-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:10px auto 70px}
 @media(max-width:900px){.dl-grid{grid-template-columns:1fr}}
 .dl-card{background:#fff;border:1px solid #e6eef5;border-radius:22px;overflow:hidden;box-shadow:0 18px 44px rgba(19,24,69,.08);display:flex;flex-direction:column;transition:transform .3s ease,box-shadow .3s ease}
 .dl-card:hover{transform:translateY(-6px);box-shadow:0 26px 60px rgba(19,24,69,.13)}
@@ -31,6 +32,10 @@
 .dl-meta{color:#8a94a6;font-size:13px;margin:2px 0 0}
 .dl-win-list{display:flex;flex-direction:column;gap:8px;margin:6px 0 2px}
 .dl-win-row{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#f6fafd;border:1px solid #e6eef5;border-radius:12px;padding:8px 12px}
+.dl-android{grid-column:1 / -1;flex-direction:row;align-items:center;gap:24px;padding:26px 30px;scroll-margin-top:100px}
+.dl-android .dl-meta{flex:1;margin:0}
+.dl-android .dl-os{flex:none}
+@media(max-width:900px){.dl-android{flex-direction:column;align-items:flex-start;gap:14px}.dl-android .btn{width:100%}}
 .dl-win-row b{color:#131845;font-size:14px}
 .dl-win-row span{color:#5b6b80;font-size:12.5px;display:block}
 .dl-win-btn{flex:none;font-size:13px;padding:8px 14px}
@@ -67,18 +72,16 @@
       <span class="brand-tx"><b>Optix LAB MedSync</b><small>LAB MANAGEMENT SOFTWARE</small></span>
     </a>
     <nav class="nav-links" id="navLinks">
-      <a href="index.html#why">Why Choose Us</a>
-      <a href="index.html#services">Our Services</a>
-      <a href="index.html#how">How It Works</a>
-      <a href="index.html#about">About Us</a>
+      <a href="index.html#features">Features</a>
+      <a href="index.html#how">How it works</a>
       <a href="index.html#pricing">Pricing</a>
       <a href="download.html" aria-current="page">Download</a>
-      <a href="index.html#contact">Contact Us</a>
+      <a href="index.html#contact">Contact</a>
       <a href="/app/#/login" class="staff">Sign in</a>
       <a href="/app/#/signup" class="nav-trial">Start free trial</a>
     </nav>
     <div class="nav-cta">
-      <button class="burger" id="burger" aria-label="Menu"><span></span><span></span><span></span></button>
+      <button class="burger" id="burger" type="button" aria-label="Open menu" aria-controls="navLinks" aria-expanded="false"><span></span><span></span><span></span></button>
     </div>
   </div>
 </header>
@@ -92,10 +95,10 @@
           <path d="M12 3v11m0 0 4-4m-4 4-4-4" stroke="#0b1740" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="#0b1740" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
-        Free Desktop App
+        Desktop &amp; Android Apps
       </div>
       <h1 class="reveal">Download Optix LAB MedSync</h1>
-      <p class="lede reveal">Free desktop app for your lab — your data stays on your computer.</p>
+      <p class="lede reveal">Install the desktop app on your lab PC. It keeps working when the internet is down and syncs with the cloud when you are back online.</p>
     </div>
   </section>
 
@@ -119,7 +122,7 @@
             <div class="dl-win-row"><div><b>Windows 7</b><span>64-bit &middot; ~70 MB</span></div><a class="btn btn-navy dl-win-btn" href="https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-Setup-1.3.0-win7-8-x64.exe">Download</a></div>
             <div class="dl-win-row"><div><b>Windows 7</b><span>32-bit &middot; ~67 MB</span></div><a class="btn btn-navy dl-win-btn" href="https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-Setup-1.3.0-win7-8-x86.exe">Download</a></div>
           </div>
-          <p class="dl-meta">Free &bull; Offline installer &bull; Your database is preserved on updates</p>
+          <p class="dl-meta">Works offline &bull; Syncs with your cloud account &bull; Your database is preserved on updates</p>
         </div>
       </article>
       <article class="dl-card reveal">
@@ -134,8 +137,18 @@
           <p class="dl-ver">Version <b>1.3.0</b></p>
           <a class="btn btn-navy btn-block" href="https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-1.3.0-arm64.dmg.tar.gz">Download for Mac &mdash; Apple Silicon (M1/M2/M3)</a>
           <a class="btn btn-navy btn-block" style="margin-top:8px" href="https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-1.3.0-x64.dmg.tar.gz">Download for Mac &mdash; Intel</a>
-          <p class="dl-meta">Free &bull; Drag to Applications &bull; Your database is preserved on updates</p>
+          <p class="dl-meta">Works offline &bull; Drag to Applications &bull; Your database is preserved on updates</p>
         </div>
+      </article>
+      <article class="dl-card dl-android reveal" id="android">
+        <div class="dl-os">
+          <span class="os-ico" aria-hidden="true">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="9" width="10" height="11" rx="2"/><path d="M4 12.5v2M20 12.5v2M9.5 9 8 6.5M14.5 9 16 6.5M10 14.5h4"/></svg>
+          </span>
+          <div><b>Android</b><span>Android 6.0 or newer &middot; Version 2.0.2 &middot; ~3 MB</span></div>
+        </div>
+        <p class="dl-meta">Uses your lab account in the cloud, so it needs an internet connection. When Android asks, allow installing the downloaded file.</p>
+        <a class="btn btn-navy" href="https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.0.2.apk">Download APK</a>
       </article>
     </div>
   </section>
@@ -185,7 +198,7 @@
           </ul>
         </div>
       </div>
-      <p class="dl-note reveal">No internet needed after install &bull; Free updates &bull; Your data stays on your computer</p>
+      <p class="dl-note reveal">Works offline after install &bull; Syncs with the cloud when online &bull; First sign-in on a new PC needs internet</p>
     </div>
   </section>
 
@@ -213,51 +226,25 @@
         </svg>
         <a href="tel:03001234567">0300-1234567</a>
       </p>
-      <div class="f-social">
-        <a href="#" aria-label="LinkedIn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="4" stroke="#5b9bd5" stroke-width="1.8"/>
-            <path d="M8 10.5V17" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
-            <circle cx="8" cy="7.5" r="1.3" fill="#5b9bd5"/>
-            <path d="M12 17v-4a2.5 2.5 0 0 1 5 0v4" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
-          </svg>
-        </a>
-        <a href="#" aria-label="Instagram">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect x="3.5" y="3.5" width="17" height="17" rx="5" stroke="#5b9bd5" stroke-width="1.8"/>
-            <circle cx="12" cy="12" r="4" stroke="#5b9bd5" stroke-width="1.8"/>
-            <circle cx="17.2" cy="6.8" r="1.2" fill="#5b9bd5"/>
-          </svg>
-        </a>
-        <a href="#" aria-label="X">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M4.5 4.5l15 15M19.5 4.5l-15 15" stroke="#5b9bd5" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </a>
-      </div>
     </div>
     <div>
-      <b>Services</b>
-      <a href="index.html#services">Home Blood Draw</a>
-      <a href="index.html#services">Specimen Courier</a>
-      <a href="index.html#services">Test Packages</a>
-      <a href="index.html#specialty">Specialty Collections</a>
-    </div>
-    <div>
-      <b>Company</b>
-      <a href="index.html#why">Why Choose Us</a>
-      <a href="index.html#how">How It Works</a>
-      <a href="index.html#about">About Us</a>
+      <b>Product</b>
+      <a href="index.html#features">Features</a>
+      <a href="index.html#how">How it works</a>
       <a href="index.html#pricing">Pricing</a>
-      <a href="index.html#contact">Contact Us</a>
-      <a href="download.html">Download App</a>
+      <a href="download.html">Download</a>
       <a href="/app/#/login">Sign in</a>
+      <a href="/app/#/signup">Start free trial</a>
+    </div>
+    <div>
+      <b>Support</b>
+      <a href="index.html#contact">Contact</a>
+      <a href="index.html#faq">FAQ</a>
     </div>
     <div>
       <b>Legal</b>
       <a href="terms.html">Terms of Service</a>
       <a href="privacy.html">Privacy Policy</a>
-      <a href="index.html#faq">FAQ</a>
     </div>
   </div>
   <div class="foot-base">&#169; 2026 Optix LAB MedSync | All Rights Reserved &#8226; Powered by System Optix</div>
