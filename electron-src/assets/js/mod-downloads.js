@@ -3,18 +3,18 @@
   'use strict';
 
   var GH = 'https://labpos-api.150.230.52.29.sslip.io/releases/';
-  var DMG_URL = GH + 'Optix-LAB-MedSync-1.2.4-arm64.dmg.tar.gz';
+  var DMG_URL = GH + 'Optix-LAB-MedSync-1.3.0-arm64.dmg.tar.gz';
   /* TODO(parent): replace with the real published APK URL */
   var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.0.2.apk';
 
   /* 6 distinct installer binaries (Windows 11 and Windows 10 64-bit share one) */
   var WIN_OPTS = [
-    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.4-win10-11-x64.exe' },
-    { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.2.4-win10-x86.exe' },
-    { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.4-win7-8-x64.exe' },
-    { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.2.4-win7-8-x86.exe' },
-    { os: 'Windows 7',       arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.2.4-win7-8-x64.exe' },
-    { os: 'Windows 7',       arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.2.4-win7-8-x86.exe' }
+    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.3.0-win10-11-x64.exe' },
+    { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.3.0-win10-x86.exe' },
+    { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.3.0-win7-8-x64.exe' },
+    { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.3.0-win7-8-x86.exe' },
+    { os: 'Windows 7',       arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.3.0-win7-8-x64.exe' },
+    { os: 'Windows 7',       arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.3.0-win7-8-x86.exe' }
   ];
   var WIN_SIZE = '~100 MB';
 
@@ -47,7 +47,7 @@
     }).join('');
     return '<div class="card dl-card">' +
       '<div class="card-h"><div class="dl-ico">' + ICO.win + '</div>' +
-      '<div><h3>Windows</h3><p class="dl-ver">Windows 7, 8.1, 10, 11 &middot; Version 1.2.4 (cloud sync)</p></div></div>' +
+      '<div><h3>Windows</h3><p class="dl-ver">Windows 7, 8.1, 10, 11 &middot; Version 1.3.0 (cloud sync)</p></div></div>' +
       '<div class="card-b">' +
       '<button type="button" class="btn btn-primary dl-btn dl-win-toggle">' + ICO.dl +
         '<span class="dl-win-toggle-tx">Choose your Windows version</span>' + ICO.chev + '</button>' +
@@ -163,10 +163,10 @@
     '<div class="dl-grid">' +
     winCard() +
     dlCard({
-      title: 'Mac (Apple Silicon &amp; Intel)', version: '1.2.4', size: '~119 MB', file: 'for Mac (.dmg)', url: DMG_URL, icon: ICO.mac,
+      title: 'Mac (Apple Silicon &amp; Intel)', version: '1.3.0', size: '~119 MB', file: 'for Mac (.dmg)', url: DMG_URL, icon: ICO.mac,
       note: ICO.check + '<span>The download is a compressed <b>.dmg.tar.gz</b> — double-click it after downloading to extract the <b>.dmg</b> inside.</span>',
       steps: [
-        'Download the <b>.dmg.tar.gz</b> file (Apple Silicon M1/M2/M3 above; <a href="' + GH + 'Optix-LAB-MedSync-1.2.4-x64.dmg.tar.gz" style="font-weight:700">Intel Mac here</a>) and double-click it to extract the .dmg.',
+        'Download the <b>.dmg.tar.gz</b> file (Apple Silicon M1/M2/M3 above; <a href="' + GH + 'Optix-LAB-MedSync-1.3.0-x64.dmg.tar.gz" style="font-weight:700">Intel Mac here</a>) and double-click it to extract the .dmg.',
         'Open the .dmg and drag <b>Optix LAB MedSync</b> into Applications.',
         'On first launch: right-click the app &rarr; <b>Open</b> (the app is not Apple-notarized yet).',
         'Log in with your lab account credentials.'
