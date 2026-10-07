@@ -479,7 +479,15 @@
   function saasOn() {
     try { return !!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop) && !!window.LABPOS_API; } catch (e) { return false; }
   }
+  function paintSidePlan() {
+    var el = document.getElementById('sfPlan'); if (!el) return;
+    var l = subInfo && subInfo.lab, s = session();
+    if (!l || l.legacy || !s || s.role !== 'admin') { el.hidden = true; return; }
+    var txt = l.status === 'expired' ? 'Plan expired — renew' : (l.status === 'trial' ? 'Free trial · ' + Math.max(l.daysLeft == null ? 0 : l.daysLeft, 0) + ' days left' : l.planName + (l.daysLeft != null && l.daysLeft <= 7 ? ' · ' + Math.max(l.daysLeft, 0) + ' days left' : ' plan'));
+    el.textContent = txt; el.className = 'sf-plan ' + (l.status === 'expired' ? 'bad' : (l.status === 'trial' ? 'info' : 'ok')); el.hidden = false;
+  }
   function paintSubBanner() {
+    paintSidePlan();
     var b = document.getElementById('subBanner');
     if (!b) return;
     var l = subInfo && subInfo.lab, s = session();
@@ -563,25 +571,39 @@
     var st = {};
     try { st = window.DB.get('settings', 'main') || {}; } catch (e) {}
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
-    var items = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()); }).map(function (n) {
+    /* grouped, professional sidebar: section labels, one icon style, active state on the left */
+    var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', doctors: 'Laboratory',
+      invoices: 'Billing', dues: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
+      whatsapp: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
+    var ORDER = ['dashboard', 'patients', 'samples', 'results', 'tests', 'doctors', 'invoices', 'dues', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'downloads', 'subscription', 'settings'];
+    var visible = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()); })
+      .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
+    var lastSec = '';
+    var items = visible.map(function (n) {
+      var head = '';
+      if (SEC[n.key] && SEC[n.key] !== lastSec) { lastSec = SEC[n.key]; head = '<div class="nav-sec2">' + lastSec + '</div>'; }
       if (n.sub) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
         var subs = n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; });
         var open = n.key === activeKey || localStorage.getItem('labpos_nav_' + n.key) === '1';
-        return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
+        return head + '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
           '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-          '<span class="nav-ic" style="background:' + (n.color || '#64748b') + '1a;color:' + (n.color || '#64748b') + '">' + icon(n.icon, 19) + '</span><span class="nav-lb">' + n.label + '</span>' +
+          '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span>' +
           '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
           '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '">' + x.label + '</a>'; }).join('') + '</div></div>';
       }
-      return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
-        '<span class="nav-ic" style="background:' + (n.color || '#64748b') + '1a;color:' + (n.color || '#64748b') + '">' + icon(n.icon, 19) + '</span><span class="nav-lb">' + n.label + '</span></a>';
+      return head + '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
+        '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span></a>';
     }).join('');
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
       '<span class="brand-tx"><b>' + esc(st.labName || 'Optix LAB MedSync') + '</b><small>Diagnostic Lab</small></span>' +
       '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
-      '<div class="nav-sec">Main Menu</div>' +
-      '<nav class="nav">' + items + '</nav>';
+      '<nav class="nav">' + items + '</nav>' +
+      '<div class="side-foot"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a>' +
+      '<div class="sf-user"><span class="sf-av">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</span><span class="sf-tx"><b>' + esc(s.name || 'User') + '</b><small>' + esc((s.role || '').charAt(0).toUpperCase() + (s.role || '').slice(1)) + '</small></span>' +
+      '<button type="button" class="sf-out" id="sideLogout" title="Log out" aria-label="Log out">' + icon('logout', 17) + '</button></div></div>';
+    document.getElementById('sideLogout').addEventListener('click', logout);
+    paintSidePlan();
     /* topbar */
     var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
     /* current user record (for profile photo in avatar) */
