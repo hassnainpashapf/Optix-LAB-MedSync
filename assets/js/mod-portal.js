@@ -7,7 +7,7 @@
   var A = window.App, esc = A.esc, API = String(window.LABPOS_API || '').replace(/\/+$/, '');
   var SS = 'labpos_portal', LS = 'labpos_portal_ls', LLAB = 'labpos_portal_lab', LPH = 'labpos_portal_phone';
   var inApp = /OptixApp/.test(navigator.userAgent || '');
-  var S = { lab: '', info: null, step: 'phone', phone: '', token: '', data: null, role: '', view: 'home', q: '', filt: 'all', busy: false, err: '', note: '', cool: 0, remember: inApp };
+  var S = { doc: false, pwOpen: false, pwMsg: '', lab: '', info: null, step: 'phone', phone: '', token: '', data: null, role: '', view: 'home', q: '', filt: 'all', busy: false, err: '', note: '', cool: 0, remember: inApp };
 
   var CSS = '' +
     'body.portal-mode{background:#eef2fa;margin:0;font-family:"Plus Jakarta Sans",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1b2540}' +
@@ -118,6 +118,12 @@
       '<div class="pt-stats"><div class="pt-st"><div class="k">Cases this month</div><b>' + cur.referrals + '</b></div><div class="pt-st"><div class="k">Commission this month</div><b>' + money(cur.commission) + '</b></div>' +
       '<div class="pt-st ' + (totDue > 0 ? 'red' : 'grn') + '"><div class="k">Total commission due</div><b>' + money(totDue) + '</b></div><div class="pt-st"><div class="k">Reports waiting</div><b>' + waiting + '</b></div></div>' +
       '<div class="pt-card"><h2>Latest reports</h2>' + (D.reports.length ? D.reports.slice(0, 4).map(function (r) { return repHtml(r, true); }).join('') : '<p class="pt-sub" style="margin:0">No reports yet.</p>') + (D.reports.length > 4 ? '<button class="pt-link" data-v="patients">See all patients →</button>' : '') + '</div>';
+    if (S.doc) { /* a doctor with his own username + password can change it here */
+      h += '<div class="pt-card"><h2>My account</h2>' + (S.pwOpen ?
+        (S.pwMsg ? '<div class="pt-err">' + esc(S.pwMsg) + '</div>' : '') + '<input class="pt-in pt-s" id="ptCur" type="password" placeholder="Current password" autocomplete="current-password"><div style="height:8px"></div><input class="pt-in pt-s" id="ptNew" type="password" placeholder="New password (min 6 characters)" autocomplete="new-password">' +
+        '<button class="pt-btn" id="ptPwSave">Save new password</button><button class="pt-link" id="ptPwCancel">Cancel</button>'
+        : (S.pwMsg ? '<div class="pt-ok">' + esc(S.pwMsg) + '</div>' : '') + '<button class="pt-link" id="ptPw" style="margin-top:0">Change my password</button>') + '</div>';
+    }
     return h;
   }
   function barHtml() {
@@ -178,8 +184,19 @@
     on('ptVerify', verify); enter('ptCode', verify);
     on('ptResend', function () { if (S.cool > 0) return; S.err = ''; S.note = 'A new code was requested.'; S.busy = true; api('request', { body: { lab: S.lab, phone: S.phone } }).then(function () { S.busy = false; S.cool = 30; tick(); paint(); }, function (e) { S.busy = false; S.err = e.message; S.note = ''; paint(); }); paint(); });
     on('ptBack', function () { S.step = 'phone'; S.err = ''; S.note = ''; paint(); });
-    on('ptOut', function () { clear(); S.step = 'phone'; S.err = ''; S.note = ''; paint(); });
-    on('ptRef', function () { S.data = null; paint(); load(); });
+    on('ptOut', function () { if (S.doc) { A.logout(); return; } clear(); S.step = 'phone'; S.err = ''; S.note = ''; paint(); });
+    on('ptRef', function () { S.data = null; paint(); if (S.doc) A.renderDoctorHome(); else load(); });
+    on('ptPw', function () { S.pwOpen = true; S.pwMsg = ''; paint(); });
+    on('ptPwCancel', function () { S.pwOpen = false; S.pwMsg = ''; paint(); });
+    on('ptPwSave', function () {
+      var cur = (document.getElementById('ptCur') || {}).value || '', nw = (document.getElementById('ptNew') || {}).value || '';
+      if (nw.length < 6) { S.pwMsg = 'The new password must be at least 6 characters.'; paint(); return; }
+      var sess = null; try { sess = JSON.parse(localStorage.getItem('labpos_session') || 'null'); } catch (e) {}
+      window.fetch(API + '/api/auth/change-password', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (sess && sess.token) }, body: JSON.stringify({ current: cur, next: nw }) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not change the password'); return j; }); })
+        .then(function (j) { try { if (j.token && sess) { sess.token = j.token; localStorage.setItem('labpos_session', JSON.stringify(sess)); } } catch (e) {} S.pwOpen = false; S.pwMsg = 'Password changed.'; paint(); },
+          function (e) { S.pwMsg = e.message; paint(); });
+    });
     Array.prototype.forEach.call(document.querySelectorAll('[data-v]'), function (b) { b.addEventListener('click', function () { S.view = b.getAttribute('data-v'); S.q = ''; S.filt = 'all'; paint(); window.scrollTo(0, 0); }); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-role]'), function (b) { b.addEventListener('click', function () { S.role = b.getAttribute('data-role'); S.view = 'home'; S.q = ''; S.filt = 'all'; paint(); }); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-f]'), function (b) { b.addEventListener('click', function () { S.filt = b.getAttribute('data-f'); paint(); }); });
@@ -194,6 +211,21 @@
       paint();
     });
   }
+
+  /* signed in with a doctor login (Settings -> Users & Roles): the same dashboard, loaded with the session instead of a code */
+  A.renderDoctorHome = function () {
+    var sess = null; try { sess = JSON.parse(localStorage.getItem('labpos_session') || 'null'); } catch (e) {}
+    if (!sess || !sess.token) { location.hash = '#/login'; return; }
+    S.doc = true; S.step = 'app'; S.role = 'doctor'; S.lab = S.lab || sess.lab || 'doctor';
+    if (!S.data) { S.info = null; paint(); }
+    window.fetch(API + '/api/doctor/me', { headers: { Authorization: 'Bearer ' + sess.token } }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) {
+        if (r.status === 401) { A.logout(); return; }
+        if (!r.ok) { S.err = j.error || 'Could not load your dashboard.'; S.data = null; S.info = { enabled: true, labName: 'Doctor dashboard' }; paint(); return; }
+        S.err = ''; S.data = j; S.info = { enabled: true, labName: (j.lab && j.lab.name) || 'Doctor dashboard', tagline: 'Your referrals and commission' }; paint();
+      });
+    }, function () { S.err = 'No internet connection. Please check and try again.'; S.info = { enabled: true, labName: 'Doctor dashboard' }; paint(); });
+  };
 
   A.renderPortal = function (hash) {
     /* one-tap link from the WhatsApp message: #/portal/<lab>?p=<phone>&c=<code> -> sign in without typing, then hide the code from the address bar */

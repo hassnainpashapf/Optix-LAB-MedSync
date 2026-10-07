@@ -130,7 +130,7 @@
         : waPatientMessage(inv, pat, testNames, link);
       var whoName = toRole === 'doctor' ? (doc.name || 'doctor') : (pat.name || 'patient');
       App.toast('Sending report to ' + whoName + '…', 'info');
-      waSendText(cfg, to, msg, function (err) {
+      waSendText(cfg, to, msg, function (err, info) {
         waLogWaSend({
           invoiceId: invoiceId, to: to,
           toName: toRole === 'doctor' ? (doc.name || '') : (pat.name || ''),
@@ -138,7 +138,7 @@
           error: err ? String(err.message || err).slice(0, 200) : ''
         });
         if (err) App.toast('WhatsApp send failed: ' + String(err.message || err).slice(0, 120), 'err');
-        else App.toast('Report sent to ' + whoName + ' on WhatsApp');
+        else App.toast('Report ' + (info && info.queued ? 'queued for ' : 'sent to ') + whoName + ' on WhatsApp' + waWhen(info));
         waRefreshHistory(invoiceId);
       });
     }
@@ -186,9 +186,14 @@
   /* ---------- Auto-send report on ready ---------- */
 
   // TEXT message send (Ultramsg /messages/chat or custom provider). done(err)
-  function waSendText(cfg, to, text, done) {
+  /* "queued" answer of the lab's own number: reports leave one by one (default one a minute) so the number is not blocked */
+  function waWhen(info) {
+    if (!info || !info.queued || !(info.etaSec > 10)) return '';
+    var m = Math.max(1, Math.round(info.etaSec / 60)); return ' — queued, it goes out in about ' + m + ' min (one message a minute keeps your number safe)';
+  }
+  function waSendText(cfg, to, text, done, opts) {
     if (cfg.provider === 'gateway') { /* the lab's own linked WhatsApp number: the server sends it */
-      DB.waGw('POST', 'send', { to: to, text: text }).then(function () { done(); }, function (e) { done(e); });
+      DB.waGw('POST', 'send', { to: to, text: text, kind: opts && opts.kind }).then(function (r) { done(null, r); }, function (e) { done(e); });
       return;
     }
     var url, body, headers = {};
@@ -309,14 +314,14 @@
       return;
     }
     var msg = isNote ? waDueMessage(inv, pat, testNames) : waPatientMessage(inv, pat, testNames, link);
-    waSendText(cfg, to, msg, function (err) {
+    waSendText(cfg, to, msg, function (err, info) {
       waLogWaSend({
         invoiceId: invoiceId, to: to, toName: name, toRole: 'patient', kind: isNote ? 'due' : 'report',
         status: err ? 'failed' : 'sent',
         error: err ? String(err.message || err).slice(0, 200) : ''
       });
       if (err) App.toast('WhatsApp auto-send failed for ' + (name || 'patient'), 'err');
-      else App.toast(isNote ? 'Balance reminder sent on WhatsApp to ' + (name || 'patient') : 'Report auto-sent on WhatsApp to ' + (name || 'patient'));
+      else App.toast((isNote ? 'Balance reminder ' : 'Report ') + (info && info.queued ? 'queued on WhatsApp for ' : 'auto-sent on WhatsApp to ') + (name || 'patient') + waWhen(info));
     });
   }
 
@@ -332,14 +337,14 @@
       return;
     }
     var msg = waDoctorMessage(inv, doc, pat, testNames, link);
-    waSendText(cfg, to, msg, function (err) {
+    waSendText(cfg, to, msg, function (err, info) {
       waLogWaSend({
         invoiceId: invoiceId, to: to, toName: name, toRole: 'doctor',
         status: err ? 'failed' : 'sent',
         error: err ? String(err.message || err).slice(0, 200) : ''
       });
       if (err) App.toast('WhatsApp auto-send failed for ' + (name || 'doctor'), 'err');
-      else App.toast('Report auto-sent on WhatsApp to ' + (name || 'doctor'));
+      else App.toast('Report ' + (info && info.queued ? 'queued on WhatsApp for ' : 'auto-sent on WhatsApp to ') + (name || 'doctor') + waWhen(info));
     });
   }
 
@@ -422,7 +427,7 @@
         waSendText(cfg, t.to, msg, function (err) {
           try { DB.insert('wa_log', { kind: 'critical', invoiceId: inv.id, to: t.to, toName: t.name, toRole: t.role, status: err ? 'failed' : 'sent', error: err ? String(err.message || err).slice(0, 200) : '', ts: new Date().toISOString() }); } catch (e) {}
           if (err) App.toast('Critical alert WhatsApp failed for ' + t.name, 'err');
-        });
+        }, { kind: 'critical' });
         sent.push(t.name);
       });
     });

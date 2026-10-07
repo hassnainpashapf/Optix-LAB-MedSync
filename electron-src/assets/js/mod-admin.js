@@ -1301,7 +1301,7 @@
       { id: 'whatsapp', label: 'WhatsApp' },
       { id: 'sharing', label: 'Email & Slack' },
       { id: 'portal', label: 'Patient portal' },
-      { id: 'users', label: 'Users' },
+      { id: 'users', label: 'Users & Roles' },
       { id: 'backup', label: 'Backup' },
       { id: 'danger', label: 'Danger Zone' }
     ];
@@ -1939,6 +1939,9 @@
       else if (st.state === 'open') {
         body = '<p style="margin-top:0">Connected: <b>+' + App.esc(st.number) + '</b>. These messages are now sent from this number:</p>' +
           '<ul style="margin:0 0 12px;padding-left:18px;line-height:1.75;font-size:13.5px"><li><b>Report ready</b> to the patient (and, if switched on below, the referring doctor)</li><li><b>Balance pending</b> note to the patient</li><li><b>Critical result</b> alert to the referring doctor and your lab number</li><li><b>Sign-in code and link</b> when a patient or doctor opens the reports portal</li><li><b>Doctor statements</b>, when you press Send on WhatsApp</li></ul>' +
+          '<div style="margin:0 0 12px"><label class="label" for="gwGap">Sending speed (protects your number from being blocked)</label><select class="select" id="gwGap" style="max-width:380px">' +
+          [[30, 'One message every 30 seconds'], [60, 'One message every minute (recommended)'], [120, 'One message every 2 minutes'], [300, 'One message every 5 minutes']].map(function (o) { return '<option value="' + o[0] + '"' + ((+w.gapSeconds || 60) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+          '<div class="muted" style="font-size:12.5px;margin-top:5px">When many reports are sent together they wait in a line and leave one by one. <b>Sign-in codes and critical alerts are never delayed.</b></div></div>' +
           '<p class="muted" style="margin:0 0 12px;font-size:13px">You can change the wording in <b>WhatsApp → Templates &amp; rules</b>. Messages go only to people with a phone number saved in your records.</p>' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="gwTest">Send a test message to this number</button><button class="btn btn-ghost" id="gwOff" style="margin-left:auto;color:#b91c1c">Disconnect</button></div><p class="muted" id="gwMsg" style="margin:10px 0 0;font-size:13px"></p>';
       } else if (st.state === 'qr' && st.qr) {
@@ -1953,6 +1956,7 @@
       }
       box.innerHTML = head + body + '</div></div>';
       var on = document.getElementById('gwOn'); if (on) on.addEventListener('click', function () { on.disabled = true; last = ''; DB.waGw('POST', 'connect', {}).then(function (s) { draw(s); poll(); }, function (e) { on.disabled = false; App.toast(e.message, 'err'); }); });
+      var gp = document.getElementById('gwGap'); if (gp) gp.addEventListener('change', function () { setCfg({ gapSeconds: +gp.value }); App.toast('Sending speed saved: one message every ' + (+gp.value >= 60 ? (gp.value / 60) + ' min' : gp.value + ' seconds')); });
       var test = document.getElementById('gwTest'); if (test) test.addEventListener('click', function () { test.disabled = true; DB.waGw('POST', 'send', { to: st.number, text: '*' + ((DB.get('settings', 'main') || {}).labName || 'Your lab') + '*\n\nThis is a test message. Your WhatsApp number is linked and ready to send reports.' }).then(function () { document.getElementById('gwMsg').textContent = 'Sent! Check WhatsApp (it may appear in "Message yourself").'; test.disabled = false; }, function (e) { document.getElementById('gwMsg').textContent = e.message; document.getElementById('gwMsg').style.color = '#b91c1c'; test.disabled = false; }); });
       var off = document.getElementById('gwOff'); if (off) off.addEventListener('click', function () { App.confirm('Disconnect this WhatsApp number? Reports will stop going out on WhatsApp until you link a number again.').then(function (ok) { if (!ok) return; DB.waGw('POST', 'disconnect', {}).then(function () { setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' }); last = ''; draw({ enabled: true, state: 'idle', qr: '', number: '', err: '' }); }, function (e) { App.toast(e.message, 'err'); }); }); });
     }
@@ -2105,7 +2109,7 @@
 
   /* ---- Users (admin only) ---- */
   function roleBadge(r) {
-    var cls = r === 'admin' ? 'b-paid' : (r === 'reception' ? 'b-ready' : 'b-partial');
+    var cls = r === 'admin' ? 'b-paid' : (r === 'reception' ? 'b-ready' : (r === 'doctor' ? 'b-pending' : 'b-partial'));
     return '<span class="badge ' + cls + '">' + App.esc(r) + '</span>';
   }
 
@@ -2113,7 +2117,7 @@
     var users = DB.all('users').slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
     var me = sess();
     var html = '<div class="toolbar" style="margin-bottom:12px">'
-      + '<button class="btn btn-primary btn-sm" id="uAdd" style="margin-left:auto">+ Add User</button></div>'
+      + '<button class="btn btn-ghost btn-sm" id="uAddDoc" style="margin-left:auto">+ Doctor login</button> <button class="btn btn-primary btn-sm" id="uAdd">+ Add User</button></div>'
       + '<div class="tbl-wrap"><table class="table"><thead><tr>'
       + '<th>Name</th><th>Username</th><th>Role</th><th>Status</th><th style="text-align:right">Actions</th>'
       + '</tr></thead><tbody>';
@@ -2122,7 +2126,7 @@
       html += '<tr>'
         + '<td><strong>' + App.esc(u.name) + '</strong>' + (isMe ? ' <span class="badge b-ready">you</span>' : '') + '</td>'
         + '<td>' + App.esc(u.username) + '</td>'
-        + '<td>' + roleBadge(u.role) + '</td>'
+        + '<td>' + roleBadge(u.role) + (u.role === 'doctor' ? '<div class="muted" style="font-size:12px;margin-top:3px">' + App.esc(((DB.get('doctors', u.doctorId) || {}).name) || 'no doctor linked') + '</div>' : '') + '</td>'
         + '<td>' + (u.active ? '<span class="badge b-paid">active</span>' : '<span class="badge b-unpaid">inactive</span>') + '</td>'
         + '<td style="text-align:right;white-space:nowrap" class="actions">'
         + '<button class="btn btn-ghost btn-sm" data-uedit="' + App.esc(u.id) + '">Edit</button> '
@@ -2132,10 +2136,15 @@
         + '</td></tr>';
     });
     html += '</tbody></table></div>'
-      + '<p class="muted" style="font-size:12.5px;margin-top:12px">Roles — <strong>admin</strong>: everything · <strong>reception</strong>: billing, invoices, dues, patients, doctors, expenses · <strong>technician</strong>: results, tests & patients (view).</p>';
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:16px">'
+      + [['admin', 'Admin', 'Everything: settings, users, reports, backup, billing.'], ['reception', 'Reception', 'Patients, invoices, dues, expenses, doctors, WhatsApp and email.'], ['technician', 'Technician', 'Samples, lab results, stock and tests. No billing.'], ['doctor', 'Doctor', 'Own login: sees only the reports of the patients he referred and his commission. Cannot see anything else.']]
+        .map(function (r) { return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px"><div>' + roleBadge(r[0]) + '</div><div class="muted" style="font-size:12.5px;margin-top:6px;line-height:1.5">' + r[2] + '</div></div>'; }).join('')
+      + '</div>'
+      + '<p class="muted" style="font-size:12.5px;margin-top:10px">A <strong>doctor login</strong> does not use up one of your staff seats. Create it with <b>+ Doctor login</b>, then give the doctor your <b>Lab ID</b>, his username and password. He signs in on the normal sign-in page (web or Android app).</p>';
     document.getElementById('setBody').innerHTML = html;
 
-    document.getElementById('uAdd').addEventListener('click', function () { if (App.limitHit && App.limitHit('users')) return; openUserModal(null); });
+    document.getElementById('uAdd').addEventListener('click', function () { openUserModal(null); });
+    document.getElementById('uAddDoc').addEventListener('click', function () { openUserModal(null, 'doctor'); });
     document.querySelectorAll('[data-uedit]').forEach(function (b) {
       b.addEventListener('click', function () { openUserModal(DB.get('users', b.getAttribute('data-uedit'))); });
     });
@@ -2163,39 +2172,56 @@
     });
   }
 
-  function openUserModal(u) {
+  function openUserModal(u, presetRole) {
     var isEdit = !!u;
-    u = u || { name: '', username: '', role: 'reception', active: true };
+    u = u || { name: '', username: '', role: presetRole || 'reception', active: true };
+    var allDocs = DB.all('doctors').slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
     var body = '<div class="form-grid">'
       + '<div><label class="label">Full Name *</label><input class="input" id="ufName" value="' + App.esc(u.name) + '"></div>'
       + '<div><label class="label">Username *</label><input class="input" id="ufUser" value="' + App.esc(u.username) + '"' + (isEdit ? ' disabled' : '') + '></div>'
       + (isEdit ? '' : '<div><label class="label">Password *</label><input class="input" id="ufPass" type="password" placeholder="min 4 characters"></div>')
       + '<div><label class="label">Role *</label><select class="select" id="ufRole">'
-      + ['admin', 'reception', 'technician'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + r + '</option>'; }).join('')
+      + ['admin', 'reception', 'technician', 'doctor'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + r + '</option>'; }).join('')
+      + '</select></div>'
+      + '<div id="ufDocBox" style="' + (u.role === 'doctor' ? '' : 'display:none') + '"><label class="label">Which doctor? *</label><select class="select" id="ufDoc"><option value="">— choose —</option>'
+      + allDocs.map(function (d) { return '<option value="' + App.esc(d.id) + '"' + (u.doctorId === d.id ? ' selected' : '') + '>' + App.esc(d.name) + (d.clinic ? ' — ' + App.esc(d.clinic) : '') + '</option>'; }).join('')
       + '</select></div>'
       + '</div>'
+      + '<p class="muted" id="ufRoleNote" style="font-size:12.5px;margin:10px 0 0"></p>'
       + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">'
       + '<button class="btn btn-ghost" id="ufCancel">Cancel</button>'
       + '<button class="btn btn-primary" id="ufSave">' + (isEdit ? 'Save Changes' : 'Add User') + '</button></div>';
     var close = App.modal(isEdit ? 'Edit User' : 'Add User', body, {
       onOpen: function (ov, close) {
         document.getElementById('ufCancel').addEventListener('click', close);
+        var roleNote = { admin: 'Full access to everything in the lab.', reception: 'Patients, billing, invoices, dues, doctors, WhatsApp and email. No settings.', technician: 'Samples, lab results, stock and tests. No billing.', doctor: 'Signs in with this username and password and sees ONLY his own dashboard: reports of the patients he referred and his commission. Nothing else.' };
+        function syncRole() {
+          var rv = document.getElementById('ufRole').value; document.getElementById('ufDocBox').style.display = rv === 'doctor' ? '' : 'none';
+          document.getElementById('ufRoleNote').textContent = roleNote[rv] || '';
+        }
+        document.getElementById('ufRole').addEventListener('change', syncRole);
+        document.getElementById('ufDoc').addEventListener('change', function () { var d = DB.get('doctors', this.value), n = document.getElementById('ufName'); if (d && !n.value.trim()) n.value = d.name; });
+        syncRole();
         document.getElementById('ufSave').addEventListener('click', function () {
           var name = document.getElementById('ufName').value.trim();
           var username = document.getElementById('ufUser').value.trim().toLowerCase();
-          var roleV = document.getElementById('ufRole').value;
+          var roleV = document.getElementById('ufRole').value, docId = document.getElementById('ufDoc').value;
           if (!name) return App.toast('Name is required.', 'err');
           if (!username) return App.toast('Username is required.', 'err');
+          if (roleV === 'doctor' && !docId) return App.toast('Choose which doctor this login is for.', 'err');
           if (isEdit) {
-            DB.update('users', u.id, { name: name, role: roleV });
+            DB.update('users', u.id, roleV === 'doctor' ? { name: name, role: roleV, doctorId: docId } : { name: name, role: roleV, doctorId: null });
             App.toast('User updated.');
           } else {
             var pass = document.getElementById('ufPass').value;
+            if (pass.length < 6 && roleV === 'doctor') return App.toast('Give the doctor a password of at least 6 characters.', 'err');
             if (pass.length < 4) return App.toast('Password must be at least 4 characters.', 'err');
             var dup = DB.all('users').some(function (x) { return x.username.toLowerCase() === username; });
             if (dup) return App.toast('Username already exists.', 'err');
-            DB.insert('users', { name: name, username: username, password: pass, role: roleV, active: true });
-            App.toast('User added.');
+            if (roleV !== 'doctor' && App.limitHit && App.limitHit('users')) return;
+            var rec = { name: name, username: username, password: pass, role: roleV, active: true }; if (roleV === 'doctor') rec.doctorId = docId;
+            DB.insert('users', rec);
+            App.toast(roleV === 'doctor' ? 'Doctor login created. Give him the Lab ID, this username and the password.' : 'User added.');
           }
           close();
           renderSettings();

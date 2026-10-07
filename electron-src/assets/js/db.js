@@ -65,6 +65,9 @@
   function sessToken() {
     try { var s = JSON.parse(localStorage.getItem(SESS_KEY) || 'null'); return (s && s.token) || ''; } catch (e) { return ''; }
   }
+  function sessRole() {
+    try { var s = JSON.parse(localStorage.getItem(SESS_KEY) || 'null'); return (s && s.role) || ''; } catch (e) { return ''; }
+  }
   function authHeaders(extra) {
     var h = extra || {};
     var t = sessToken();
@@ -656,6 +659,8 @@
       try { base = window.LABPOS_API || null; } catch (e) {}
       if (!base || !window.fetch) return Promise.resolve(false);
       API = base; unreachable = false;
+      /* a doctor's login only ever sees the doctor dashboard: it must not (and cannot) download the lab's data */
+      if (sessToken() && sessRole() === 'doctor') { cloud = true; remote = false; return Promise.resolve(true); }
       return loadDump().then(function (dump) {
         store = dump; remote = true;
         if (sessToken()) cloud = true; /* valid token = token-auth cloud API; no token = open desktop server */
@@ -694,7 +699,8 @@
           return j;
         });
       }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); }).then(function (j) {
-        try { localStorage.setItem(SESS_KEY, JSON.stringify({ token: j.token })); } catch (e) {}
+        try { localStorage.setItem(SESS_KEY, JSON.stringify({ token: j.token, role: j.user && j.user.role })); } catch (e) {}
+        if (j.user && j.user.role === 'doctor') { cloud = true; remote = false; return j; }
         return loadDump().then(function (dump) { store = dump; remote = true; return j; });
       });
     },

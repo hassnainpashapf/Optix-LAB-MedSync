@@ -60,6 +60,7 @@
       '<div class="card"><div class="k">Auto-send</div><b style="font-size:17px;margin-top:9px">' + (cfg.autoPatient !== false ? 'Patient ✓ ' : '') + (cfg.autoDoctor === true ? 'Doctor ✓' : '') + ((cfg.autoPatient === false && cfg.autoDoctor !== true) ? 'Off' : '') + '</b></div></div>' +
       /* Ready to send / Message log / Templates & rules are sidebar sub-menu items (#/whatsapp, #/whatsapp/log, #/whatsapp/templates); this labels the open list */
       '<div class="wc-cur"><b>' + (tab === 'tpl' ? 'Templates &amp; rules' : (tab === 'log' ? 'Message log' : 'Ready to send')) + '</b><span>' + (tab === 'tpl' ? 'Messages and sending rules' : (tab === 'log' ? L.length + ' message' + (L.length === 1 ? '' : 's') : waiting + ' waiting')) + '</span></div>';
+    if (cfg.provider === 'gateway') h = h.replace('<div class="wc-cur">', '<div id="wcQueue" class="card" style="margin-bottom:14px;display:none"><div class="card-b" style="padding:12px 16px"></div></div><div class="wc-cur">');
     if (tab === 'tpl' && s.role === 'admin') h += tplHtml(cfg);
     else if (tab === 'log') h += logHtml(L);
     else h += readyHtml(rdy, ready);
@@ -157,8 +158,26 @@
   }
   function sendOne(invId, role, cb) { App.wa.manual(invId, role); if (cb) setTimeout(cb, 900); }
 
+  /* the lab's own number sends one message at a time: show what is waiting and whether anything failed */
+  var qTimer = null;
+  function pollQueue() {
+    clearInterval(qTimer);
+    function once() {
+      var box = document.getElementById('wcQueue'); if (!box || !/#\/whatsapp/.test(location.hash)) { clearInterval(qTimer); return; }
+      DB.waGw('GET', 'outbox').then(function (o) {
+        var fails = (o.recent || []).filter(function (x) { return !x.ok; });
+        if (!o.waiting && !fails.length) { box.style.display = 'none'; return; }
+        box.style.display = '';
+        var wait = o.waiting ? '<b>' + o.waiting + ' message' + (o.waiting === 1 ? '' : 's') + ' waiting</b> in the sending line — next one in about ' + o.nextInSec + ' s. They go out one by one (one every ' + (o.gapSec >= 60 ? Math.round(o.gapSec / 60) + ' min' : o.gapSec + ' s') + ') to keep your WhatsApp number safe.' : '';
+        var bad = fails.length ? '<div style="margin-top:6px;color:#b91c1c;font-size:13px">Could not send: ' + fails.slice(0, 3).map(function (x) { return esc(x.to) + ' (' + esc(x.error || 'error') + ')'; }).join('; ') + '</div>' : '';
+        box.firstChild.innerHTML = '<div style="font-size:13.5px">' + wait + '</div>' + bad;
+      }, function () {});
+    }
+    once(); qTimer = setInterval(once, 5000);
+  }
   function wire() {
     var v = document.getElementById('view'); if (!v || !App.wa) return;
+    if (document.getElementById('wcQueue')) pollQueue();
     function on(id, ev, fn) { var e = document.getElementById(id); if (e) e.addEventListener(ev, fn); }
     Array.prototype.forEach.call(v.querySelectorAll('[data-tab]'), function (b) { b.addEventListener('click', function () { if (tab === 'tpl') tplDraft = readDraft(); tab = b.getAttribute('data-tab'); paint(); }); });
     Array.prototype.forEach.call(v.querySelectorAll('[data-send]'), function (b) { b.addEventListener('click', function () { var p = b.getAttribute('data-send').split('|'); sendOne(p[0], p[1], paint); }); });

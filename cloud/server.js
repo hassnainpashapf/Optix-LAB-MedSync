@@ -498,7 +498,7 @@ async function main() {
     const nowYm = ymOf(Date.now()); let add = 0;
     for (const r of rows) {
       if (!r || r.id == null || await req.store.get(table, String(r.id))) continue;
-      if (table === 'users') { if (r.active !== false) add++; } else if (ymOf(+r._c || Date.now()) === nowYm) add++;
+      if (table === 'users') { if (r.active !== false && r.role !== 'doctor') add++; } else if (ymOf(+r._c || Date.now()) === nowYm) add++;
     }
     if (!add) return null;
     const use = await saas.usageOf(req.lab), planName = ((await saas.getPlans())[req.lab.plan] || {}).name || req.lab.plan;
@@ -519,6 +519,9 @@ async function main() {
       const u = ts && await ts.get('users', t.uid); /* re-check: deleted/disabled users lose access immediately */
       if (u && u.active !== false && (!t.pv || t.pv === pvOf(u))) { req.user = { id: u.id, role: u.role, name: u.name }; req.store = ts; req.lab = lab; }
     }
+    /* a doctor's login is sandboxed on the server: it may only read its own dashboard (and change its own password) — never the lab's tables */
+    if (req.user && req.user.role === 'doctor' && !((req.method === 'GET' && req.path === '/doctor/me') || (req.method === 'POST' && req.path === '/auth/change-password')))
+      return res.status(403).json({ error: 'This doctor login can only open the doctor dashboard.', code: 'DOCTOR_ONLY' });
     if (req.user && saas && req.lab) {
       const st = saas.effStatus(req.lab);
       if (st === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
@@ -1160,6 +1163,33 @@ async function main() {
     const otpKey = (lab, k) => 'portal_otp:' + crypto.createHash('sha256').update(lab.id + '|' + k).digest('hex').slice(0, 32);
     const otpHash = (lab, k, code) => crypto.createHash('sha256').update(PSECRET + '|' + lab.id + '|' + k + '|' + code).digest('hex');
 
+    async function portalBuild(req, lab, st, set, w) {
+      const invs = await st.all('invoices'), results = await st.all('results'), patById = {}; (await st.all('patients')).forEach((p) => { patById[p.id] = p; });
+        const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
+        const reportOf = (inv, forDoctor) => {
+          const rs = byInv[inv.id] || [], items = Array.isArray(inv.items) ? inv.items : [], done = rs.length > 0 && items.every((it) => rs.some((r) => r.testId === it.testId && r.status === 'ready') || rs.some((r) => r.status === 'ready' && it.isPackage));
+          const ready = rs.length > 0 && rs.every((r) => r.status === 'ready') && done, due = +inv.due || 0;
+          const key = inv.reportPdfKey, havePdf = !!key && REPORT_KEY_RE.test(String(key)) && fs.existsSync(path.join(REPORT_PDFS_DIR, key + '.pdf'));
+          return { no: inv.no || inv.id, date: inv.createdAt, patient: (patById[inv.patientId] || {}).name || '', tests: items.map((x) => x.name || x.code || '').filter(Boolean).join(', ').slice(0, 200),
+            status: ready ? ((due > 0.009 && !forDoctor) ? 'locked' : (havePdf ? 'ready' : 'preparing')) : 'pending', due: due > 0.009 ? Math.round(due) : 0, total: forDoctor ? Math.round(+inv.total || 0) : undefined,
+            link: ready && havePdf && (due <= 0.009 || forDoctor) ? linkOf(req, key) : '' };
+        };
+        const out = { ok: true, lab: { name: set.labName || lab.name }, patient: null, doctor: null };
+        if (w.pats.length) {
+          const ids = {}; w.pats.forEach((p) => { ids[p.id] = 1; });
+          out.patient = { names: w.pats.map((p) => p.name), reports: invs.filter((i) => ids[i.patientId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 200).map((i) => reportOf(i, false)) };
+        }
+        if (w.docs.length) {
+          const dids = {}; w.docs.forEach((d) => { dids[d.id] = d; });
+          const mine = invs.filter((i) => dids[i.doctorId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+          const mk = (d) => { const x = new Date(d); return isNaN(x) ? '' : x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2); };
+          const months = {}; mine.forEach((i) => { const k = mk(i.createdAt); if (!k) return; const m = months[k] = months[k] || { month: k, referrals: 0, billed: 0, commission: 0, paid: 0 }; const pct = +(dids[i.doctorId].commissionPct) || 0; m.referrals++; m.billed += +i.total || 0; m.commission += (+i.total || 0) * pct / 100; });
+          w.docs.forEach((d) => (d.commissionPaid || []).forEach((x) => { const k = mk(x.date); if (k && months[k]) months[k].paid += +x.amount || 0; }));
+          out.doctor = { names: w.docs.map((d) => d.name), months: Object.keys(months).sort().reverse().slice(0, 12).map((k) => { const m = months[k]; return { month: k, referrals: m.referrals, billed: Math.round(m.billed), commission: Math.round(m.commission), paid: Math.round(m.paid), due: Math.max(0, Math.round(m.commission - m.paid)) }; }),
+            reports: mine.slice(0, 200).map((i) => reportOf(i, true)) };
+        }
+        return out;
+    }
     app.get('/api/portal/info', async (req, res) => {
       const c = await portalCtx(req.query.lab);
       if (!c) return res.json({ enabled: false });
@@ -1182,7 +1212,7 @@ async function main() {
         const msg = '*' + lname + '*\n\nYour report access code is *' + code + '*.\nIt is valid for 10 minutes. Please do not share this code with anyone.\n\nOr tap to open your reports:\n' + plink;
         const people = w.pats.concat(w.docs), em = people.map((x) => String(x.email || '').trim()).find((e) => EMAIL_OK.test(e));
         let sent = false;
-        if (waOk(c.set.whatsapp)) { try { if (c.set.whatsapp.provider === 'gateway') await waGw.sendText(c.lab.id, pwa(b.phone), msg); else await waServerSend(c.set.whatsapp, pwa(b.phone), msg); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (whatsapp) failed:', String(e.message || e).slice(0, 120)); } }
+        if (waOk(c.set.whatsapp)) { try { if (c.set.whatsapp.provider === 'gateway') await waGw.sendUrgent(c.lab.id, pwa(b.phone), msg, 'portal-code'); else await waServerSend(c.set.whatsapp, pwa(b.phone), msg); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (whatsapp) failed:', String(e.message || e).slice(0, 120)); } }
         if (!sent && em && mailer.configured()) { try { await mailer.send(Object.assign({ to: em, fromName: lname + ' (via Optix LAB MedSync)' }, mailer.portalCodeEmail({ labName: lname, code, link: plink }))); sent = true; } catch (e) { console.error('[labpos-cloud] portal code (email) failed:', String(e.message || e).slice(0, 120)); } }
         if (!sent) await rawStore.setMeta(otpKey(c.lab, k), null);
       } catch (e) { if (!res.headersSent) res.json(SAME); }
@@ -1211,38 +1241,28 @@ async function main() {
         if (!t || !t.lab || !/^\d{10}$/.test(String(t.ph))) return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
         const lab = await saas.getLab(t.lab); if (!lab || saas.effStatus(lab) === 'suspended') return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
         const st = saas.storeFor(lab), set = (await st.get('settings', 'main')) || {}; if (!set.portalOn) return res.status(403).json({ error: 'The portal is switched off for this lab.' });
-        const w = await whoIs(st, t.ph), invs = await st.all('invoices'), results = await st.all('results'), patById = {}; (await st.all('patients')).forEach((p) => { patById[p.id] = p; });
-        const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
-        const reportOf = (inv, forDoctor) => {
-          const rs = byInv[inv.id] || [], items = Array.isArray(inv.items) ? inv.items : [], done = rs.length > 0 && items.every((it) => rs.some((r) => r.testId === it.testId && r.status === 'ready') || rs.some((r) => r.status === 'ready' && it.isPackage));
-          const ready = rs.length > 0 && rs.every((r) => r.status === 'ready') && done, due = +inv.due || 0;
-          const key = inv.reportPdfKey, havePdf = !!key && REPORT_KEY_RE.test(String(key)) && fs.existsSync(path.join(REPORT_PDFS_DIR, key + '.pdf'));
-          return { no: inv.no || inv.id, date: inv.createdAt, patient: (patById[inv.patientId] || {}).name || '', tests: items.map((x) => x.name || x.code || '').filter(Boolean).join(', ').slice(0, 200),
-            status: ready ? ((due > 0.009 && !forDoctor) ? 'locked' : (havePdf ? 'ready' : 'preparing')) : 'pending', due: due > 0.009 ? Math.round(due) : 0, total: forDoctor ? Math.round(+inv.total || 0) : undefined,
-            link: ready && havePdf && (due <= 0.009 || forDoctor) ? linkOf(req, key) : '' };
-        };
-        const out = { ok: true, lab: { name: set.labName || lab.name }, patient: null, doctor: null };
-        if (w.pats.length) {
-          const ids = {}; w.pats.forEach((p) => { ids[p.id] = 1; });
-          out.patient = { names: w.pats.map((p) => p.name), reports: invs.filter((i) => ids[i.patientId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 200).map((i) => reportOf(i, false)) };
-        }
-        if (w.docs.length) {
-          const dids = {}; w.docs.forEach((d) => { dids[d.id] = d; });
-          const mine = invs.filter((i) => dids[i.doctorId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-          const mk = (d) => { const x = new Date(d); return isNaN(x) ? '' : x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2); };
-          const months = {}; mine.forEach((i) => { const k = mk(i.createdAt); if (!k) return; const m = months[k] = months[k] || { month: k, referrals: 0, billed: 0, commission: 0, paid: 0 }; const pct = +(dids[i.doctorId].commissionPct) || 0; m.referrals++; m.billed += +i.total || 0; m.commission += (+i.total || 0) * pct / 100; });
-          w.docs.forEach((d) => (d.commissionPaid || []).forEach((x) => { const k = mk(x.date); if (k && months[k]) months[k].paid += +x.amount || 0; }));
-          out.doctor = { names: w.docs.map((d) => d.name), months: Object.keys(months).sort().reverse().slice(0, 12).map((k) => { const m = months[k]; return { month: k, referrals: m.referrals, billed: Math.round(m.billed), commission: Math.round(m.commission), paid: Math.round(m.paid), due: Math.max(0, Math.round(m.commission - m.paid)) }; }),
-            reports: mine.slice(0, 200).map((i) => reportOf(i, true)) };
-        }
-        res.json(out);
+        res.json(await portalBuild(req, lab, st, set, await whoIs(st, t.ph)));
       } catch (e) { res.status(500).json({ error: 'Could not load your reports. Please try again.' }); }
+    });
+
+    /* ---- a doctor who has a login (Settings -> Users & Roles): the same data as the portal, without any code step ---- */
+    app.get('/api/doctor/me', needUser, async (req, res) => {
+      try {
+        if (req.user.role !== 'doctor') return res.status(403).json({ error: 'This page is for doctor logins.' });
+        const u = await req.store.get('users', req.user.id), doc = u && u.doctorId ? await req.store.get('doctors', String(u.doctorId)) : null;
+        if (!doc) return res.status(404).json({ error: 'This login is not linked to a doctor. Ask the lab admin.' });
+        const lab = req.lab || await saas.getLab('main'), set = (await req.store.get('settings', 'main')) || {};
+        res.json(await portalBuild(req, lab, req.store, set, { pats: [], docs: [doc] }));
+      } catch (e) { res.status(500).json({ error: 'Could not load your dashboard. Please try again.' }); }
     });
 
     /* ---- the lab's own WhatsApp number, linked with a QR code (see wa-gateway.js) ---- */
     const waUser = new Map();
     const labOf = (req) => (req.lab ? req.lab.id : 'main');
-    app.get('/api/wa/status', needUser, (req, res) => res.json(waGw.status(labOf(req))));
+    /* the lab's chosen "sending speed" (seconds between queued messages, 10-600, default 60) */
+    const applyGap = async (req) => { try { const st = (await req.store.get('settings', 'main')) || {}; waGw.setGap(labOf(req), st.whatsapp && st.whatsapp.gapSeconds); } catch (e) { /* default */ } };
+    app.get('/api/wa/status', needUser, async (req, res) => { await applyGap(req); res.json(waGw.status(labOf(req))); });
+    app.get('/api/wa/outbox', needUser, async (req, res) => { await applyGap(req); res.json(waGw.outbox(labOf(req))); });
     app.post('/api/wa/connect', needAdmin, async (req, res) => {
       try { await waGw.start(labOf(req), { fresh: true }); res.json(waGw.status(labOf(req))); } catch (e) { res.status(400).json({ error: e.message }); }
     });
@@ -1253,8 +1273,10 @@ async function main() {
       try {
         if (bump(waUser, req.user.id, 60000).n > 20) return res.status(429).json({ error: 'Too many WhatsApp messages in a minute. Please wait a moment.' });
         const b = req.body || {}; if (typeof b.text !== 'string' || !b.text.trim() || b.text.length > 4000) return res.status(400).json({ error: 'The message is empty or too long' });
-        await waGw.sendText(labOf(req), b.to, b.text); res.json({ ok: true });
-      } catch (e) { res.status(/limit|not linked|not on WhatsApp|look right/.test(e.message) ? 400 : 502).json({ error: e.message }); }
+        await applyGap(req);
+        if (b.kind === 'critical') { await waGw.sendUrgent(labOf(req), b.to, b.text, 'critical'); return res.json({ ok: true, queued: false }); } /* critical alerts must not wait in line */
+        res.json(Object.assign({ ok: true }, waGw.sendText(labOf(req), b.to, b.text, 'report')));
+      } catch (e) { res.status(/limit|not linked|not on WhatsApp|look right|waiting/.test(e.message) ? 400 : 502).json({ error: e.message }); }
     });
     app.post('/api/wa/send-doc', needUser, async (req, res) => {
       try {
@@ -1263,8 +1285,8 @@ async function main() {
         const f = REPORT_KEY_RE.test(key) ? path.join(REPORT_PDFS_DIR, key + '.pdf') : '', o = path.join(REPORT_PDFS_DIR, key + '.owner'), me = labOf(req);
         if (!f || !fs.existsSync(f) || (fs.existsSync(o) ? fs.readFileSync(o, 'utf8').trim() : 'main') !== me) return res.status(404).json({ error: 'The report PDF was not found' });
         const buf = fs.readFileSync(f); if (buf.length > 12 * 1024 * 1024) return res.status(413).json({ error: 'The report PDF is too large to send on WhatsApp' });
-        await waGw.sendDocument(me, b.to, buf, b.fileName || 'Lab-Report.pdf', b.caption || ''); res.json({ ok: true });
-      } catch (e) { res.status(/limit|not linked|not on WhatsApp|look right/.test(e.message) ? 400 : 502).json({ error: e.message }); }
+        await applyGap(req); res.json(Object.assign({ ok: true }, waGw.sendDocument(me, b.to, buf, b.fileName || 'Lab-Report.pdf', b.caption || '')));
+      } catch (e) { res.status(/limit|not linked|not on WhatsApp|look right|waiting/.test(e.message) ? 400 : 502).json({ error: e.message }); }
     });
     /* bring back every lab that had linked a number before this restart */
     setTimeout(async () => { try { const ids = []; for (const l of (await saas.loadLabs(true)).values()) ids.push(l.id); await waGw.boot(ids); } catch (e) { /* the gateway is optional */ } }, 5000);
@@ -1354,6 +1376,18 @@ async function main() {
       if (b.username.length < 2 || b.username.length > 64) throw new Error('Username must be 2-64 characters');
       const dup = (await req.store.all('users')).some((u) => u.id !== (b.id != null ? String(b.id) : req.params.id) && String(u.username).toLowerCase() === b.username.toLowerCase());
       if (dup) throw new Error('This username is already taken');
+    }
+    if (req.user.role !== 'admin') delete b.doctorId;
+    else {
+      const ROLES = ['admin', 'reception', 'technician', 'doctor'];
+      if (b.role !== undefined && ROLES.indexOf(b.role) < 0) throw new Error('Unknown role');
+      const before = existing ? ((await req.store.get('users', String(req.params.id))) || {}) : {};
+      const role = b.role !== undefined ? b.role : before.role;
+      if (role === 'doctor') {
+        const did = b.doctorId !== undefined ? b.doctorId : before.doctorId;
+        if (!did || !(await req.store.get('doctors', String(did)))) throw new Error('Choose the doctor this login belongs to');
+        b.doctorId = String(did);
+      } else if (b.role !== undefined || b.doctorId !== undefined) b.doctorId = null;
     }
     if (typeof b.password === 'string' && b.password.length > 256) throw new Error('Password is too long');
     if (typeof b.password === 'string' && b.password) {

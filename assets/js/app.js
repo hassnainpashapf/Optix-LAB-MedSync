@@ -64,7 +64,7 @@
     { key: 'subscription', label: 'Subscription', icon: 'card',  route: '#/subscription', color: '#f59e0b', saas: true },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b',
       sub: [{ key: 'profile', label: 'Lab Profile', route: '#/settings' }, { key: 'account', label: 'My Account', route: '#/settings/account' }, { key: 'templates', label: 'Report Templates', route: '#/settings/templates' },
-        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' }, { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' }, { key: 'portal', label: 'Patient portal', route: '#/settings/portal' }, { key: 'users', label: 'Users', route: '#/settings/users' }, { key: 'backup', label: 'Backup', route: '#/settings/backup' },
+        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' }, { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' }, { key: 'portal', label: 'Patient portal', route: '#/settings/portal' }, { key: 'users', label: 'Users & Roles', route: '#/settings/users' }, { key: 'backup', label: 'Backup', route: '#/settings/backup' },
         { key: 'danger', label: 'Danger Zone', route: '#/settings/danger', danger: true }] },
     { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
   ];
@@ -423,6 +423,12 @@
       else App.loadScript('assets/js/mod-portal.js').then(function () { if (/^#\/portal/.test(location.hash)) App.renderPortal(location.hash); }, function () { toast('Could not load the portal', 'err'); });
       return;
     }
+    /* a doctor's login: only the doctor dashboard (the server refuses everything else) */
+    if (s && s.role === 'doctor') {
+      if (window.App && App.renderDoctorHome) App.renderDoctorHome();
+      else App.loadScript('assets/js/mod-portal.js').then(function () { App.renderDoctorHome(); }, function () { toast('Could not load the dashboard', 'err'); });
+      return;
+    }
     /* password reset pages work signed out (and signed in: the emailed link must always open) */
     if (hash === '#/forgot' || hash.indexOf('#/reset') === 0) {
       var rf = hash === '#/forgot' ? 'renderForgot' : 'renderReset';
@@ -534,7 +540,7 @@
       var l = subInfo && subInfo.lab; if (!l || l.legacy || !saasOn()) return false;
       var cap = kind === 'users' ? l.limits.users : l.limits.invoicesPerMonth; if (!cap) return false;
       var n;
-      if (kind === 'users') n = DB.all('users').filter(function (u) { return u.active !== false; }).length;
+      if (kind === 'users') n = DB.all('users').filter(function (u) { return u.active !== false && u.role !== 'doctor'; }).length; /* doctor logins are not staff seats */
       else { var m = new Date(), k = m.getFullYear() * 12 + m.getMonth(); n = DB.all('invoices').filter(function (i) { var d = new Date(i.createdAt || 0); return !isNaN(d) && d.getFullYear() * 12 + d.getMonth() === k; }).length; }
       if (n < cap) return false;
       var admin = session() && session().role === 'admin';

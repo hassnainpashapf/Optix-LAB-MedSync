@@ -108,7 +108,7 @@ function create(ctx) {
   function daysLeft(l) { const e = endOf(l); return e ? Math.ceil((Date.parse(e) - Date.now()) / DAY) : null; }
   async function usageOf(lab) {
     const st = storeFor(lab);
-    const users = (await st.all('users')).filter(u => u.active !== false).length;
+    const users = (await st.all('users')).filter(u => u.active !== false && u.role !== 'doctor').length; /* doctor logins do not use up a staff seat */
     const invoices = await st.all('invoices');
     const m = new Date(); const month = m.getFullYear() * 12 + m.getMonth();
     let invMonth = 0, last = 0;
