@@ -171,7 +171,7 @@
           field('liUser', 'user', 'Username', { ph: 'Enter username', auto: 'username', focus: !showLabId || !!lget(LKEY) }) +
           field('liPass', 'lock', 'Password', { ph: 'Enter password', type: 'password', pw: true, auto: 'current-password' }) +
           '<div class="lg-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
-          (showLabId ? '<div class="lg-forgot"><a href="' + (desk ? WEB + '/app/#/forgot' : '#/forgot') + '"' + (desk ? ' target="_blank" rel="noopener"' : '') + '>Forgot password?</a></div>' : '') +
+          (showLabId && !desk ? '<div class="lg-forgot" id="lgForgot" hidden><a href="#/forgot">Forgot password?</a></div>' : '') + /* shown only when the server can send email */
           '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Sign In</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
           (showLabId ? '<p class="lg-new">New to Optix? <a href="' + signupHref + '"' + signupAttr + '>Start your 14-day free trial</a></p>' : '') +
           '<div class="login-div"><span>or</span></div>' +
@@ -183,6 +183,10 @@
       '</div></div>';
     wireBrand('login');
     wirePw('liPass');
+    try { /* "Forgot password?" appears only once the server has an email sender configured (SMTP) */
+      var fg = document.getElementById('lgForgot');
+      if (fg && window.LABPOS_API && window.fetch) window.fetch(window.LABPOS_API + '/api/auth/mail-status').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { if (j && j.mail) fg.hidden = false; }).catch(function () {});
+    } catch (e) {}
     if (window.__loginNote) { showErr(window.__loginNote); window.__loginNote = ''; } /* e.g. "This lab account is suspended" */
 
     var labSel = document.getElementById('liLab');
