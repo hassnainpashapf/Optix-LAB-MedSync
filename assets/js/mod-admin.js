@@ -561,7 +561,7 @@
     }
     /* ---- report templates (worker 8): saved {type,from,to,preset} presets ---- */
     var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This month', lastMonth: 'Last month', custom: 'Custom range' };
-    var REP_TYPE_LBL = { all: 'All', tests: 'Tests', finance: 'Finance', dues: 'Dues', patients: 'Patients', labs: 'Labs' };
+    var REP_TYPE_LBL = { tests: 'Tests', finance: 'Finance', dues: 'Dues', patients: 'Patients', labs: 'Labs' };
     function repTplList() { return DB.all('report_templates') || []; }
     function repTplDesc(t) {
       var tl = REP_TYPE_LBL[t.type] || 'All';
@@ -683,7 +683,7 @@
        (report_schedules), this UI, and manual "Run now", which opens the
        user's email client with the report pre-composed via mailto:. */
     var SCHED_PRESETS = { today: 'Today', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This Month', lastMonth: 'Last Month' };
-    var SCHED_TYPES = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports' };
+    var SCHED_TYPES = { tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports' };
     var SCHED_FREQ = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
     var SCHED_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -1308,10 +1308,11 @@
     } /* end if (repChosen) */
   }
 
-  App.route('#/reports', function () { rep.type = 'tests'; renderReports(); });
+  App.route('#/reports', function () { location.replace('#/reports/tests'); });
   App.route('#/reports/:tab', function (p) {
     var valid = ['tests', 'finance', 'dues', 'patients', 'labs'];
     var tab = (p && p.tab) ? p.tab.toLowerCase() : 'tests';
+    if (tab === 'all') { location.replace('#/reports/tests'); return; }
     rep.type = valid.indexOf(tab) >= 0 ? tab : 'tests';
     renderReports();
   });

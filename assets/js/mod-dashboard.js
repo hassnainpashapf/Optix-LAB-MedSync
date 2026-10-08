@@ -182,7 +182,7 @@
           '<span style="width:44px;height:44px;border-radius:12px;background:#f973161a;color:#f97316;display:grid;place-items:center;flex:none">' + App.icon('file', 22) + '</span>' +
           '<span><b style="font-size:15px;color:var(--ink)">Invoices</b><br><small style="color:var(--muted)">Billing & payments</small></span>' +
         '</div></a>' +
-      '<a href="#/reports" class="card dbq-card" style="text-decoration:none">' +
+      '<a href="#/reports/tests" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
           '<span style="width:44px;height:44px;border-radius:12px;background:#6366f11a;color:#6366f1;display:grid;place-items:center;flex:none">' + App.icon('chart', 22) + '</span>' +
           '<span><b style="font-size:15px;color:var(--ink)">Reports</b><br><small style="color:var(--muted)">Analytics & insights</small></span>' +
