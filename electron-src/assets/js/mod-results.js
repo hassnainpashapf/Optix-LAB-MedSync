@@ -3659,6 +3659,29 @@
     return [g.pat.name, g.pat.phone, g.pat.whatsapp, g.pat.id, g.inv.no, g.inv.id, vn.labText, vn.caseText, d && d.name, g.inv.reference,
       g.rows.map(function (r) { return testName(r); }).join(' ')].join(' ').toLowerCase();
   }
+  /* ---------- Old Reports KPI cards: global totals over every finished report ---------- */
+  function oldKpis(all) {
+    var today = App.today(), ym = today.slice(0, 7);
+    var nToday = 0, nMonth = 0, due = 0;
+    all.forEach(function (g) {
+      var d = g.inv ? (+g.inv.due || 0) : 0; if (d > 0.009) due += d;
+      var l = String(g.last || '');
+      if (l.slice(0, 10) === today) nToday++;
+      if (l.slice(0, 7) === ym) nMonth++;
+    });
+    function card(cls, ico, label, val, sub) {
+      return '<div class="kpi-card ' + cls + '"><div class="kpi-ico">' + ico + '</div>' +
+        '<div class="kpi-label">' + label + '</div>' +
+        '<div class="kpi-num">' + val + '</div>' +
+        '<div class="kpi-sub">' + sub + '</div></div>';
+    }
+    return '<div class="kpi-row">' +
+      card('k-navy', App.icon('file', 22), 'TOTAL REPORTS', App.esc(all.length), 'finished reports') +
+      card('k-green', STAT_ICONS.check, 'REPORTED TODAY', App.esc(nToday), 'results completed') +
+      card('k-blue', STAT_ICONS.cal, 'REPORTED THIS MONTH', App.esc(nMonth), 'this month') +
+      card('k-amber', App.icon('wallet', 22), 'UNPAID DUES', App.esc(App.money(due)), 'outstanding') +
+      '</div>';
+  }
   function renderOld() {
     var view = document.getElementById('view'), all = oldList(), ed = true;
     var q = old.q.trim().toLowerCase();
@@ -3690,7 +3713,7 @@
           '<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" data-ov="' + App.esc(inv.id) + '">View</button> <button class="btn btn-ghost btn-sm" data-op="' + App.esc(inv.id) + '">Print</button> <button class="btn btn-ghost btn-sm" data-oe="' + App.esc(inv.id) + '">Edit</button> <button class="btn btn-ghost btn-sm" data-od="' + App.esc(inv.id) + '" style="color:#b91c1c">Delete</button></td></tr>';
       }).join('') + '</tbody></table></div>' +
       (pages > 1 ? '<div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px"><button class="btn btn-ghost btn-sm" id="olPrev"' + (old.page <= 1 ? ' disabled' : '') + '>&larr; Newer</button><span class="muted" style="font-size:13px">Page ' + old.page + ' of ' + pages + '</span><button class="btn btn-ghost btn-sm" id="olNext"' + (old.page >= pages ? ' disabled' : '') + '>Older &rarr;</button></div>' : '');
-    view.innerHTML = '<div class="page-head"><div><h1>Old Reports</h1><p class="muted" style="margin:2px 0 0">Every finished report. Search it, view or print it, correct the values, or delete it.</p></div></div>' + bar + '<div class="card"><div class="card-b">' + body + '</div></div>';
+    view.innerHTML = '<div class="page-head"><div><h1>Old Reports</h1><p class="muted" style="margin:2px 0 0">Every finished report. Search it, view or print it, correct the values, or delete it.</p></div></div>' + oldKpis(all) + bar + '<div class="card"><div class="card-b">' + body + '</div></div>';
     var on = function (id, fn) { var e = document.getElementById(id); if (e) e.addEventListener('input', fn); };
     on('olQ', function () { old.q = this.value; old.page = 1; var pos = this.selectionStart; renderOld(); var e = document.getElementById('olQ'); e.focus(); try { e.setSelectionRange(pos, pos); } catch (x) {} });
     ['olFrom:from', 'olTo:to', 'olDoc:doc'].forEach(function (s) { var p2 = s.split(':'); var e = document.getElementById(p2[0]); if (e) e.addEventListener('change', function () { old[p2[1]] = this.value; old.page = 1; renderOld(); }); });
