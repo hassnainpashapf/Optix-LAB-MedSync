@@ -2203,16 +2203,28 @@
 
     /* 3: signatory doctors in one row, spread across */
     var sigs = (Array.isArray(s.signatories) ? s.signatories : [])
-      .filter(function (g) { return g && g.name; });
+      .filter(function (g) { return g && g.name && g.active !== false; });
     var sigHtml = '';
     if (sigs.length) {
       sigHtml =
-        '<div class="rpt-sigs" style="display:flex;justify-content:space-between;gap:10px;margin:6px 0 4px">' +
+        '<div class="rpt-sigs" style="display:flex;justify-content:space-around;gap:12px;margin:6px 0 4px">' +
           sigs.map(function (g) {
-            return '<div class="rpt-sig" style="flex:1;text-align:center">' +
-              '<div style="font-weight:700;font-size:0.9em">' + App.esc(g.name) + '</div>' +
-              (g.qual ? '<div style="font-size:0.78em">' + App.esc(g.qual) + '</div>' : '') +
-              (g.title ? '<div style="font-size:0.78em">' + App.esc(g.title) + '</div>' : '') +
+            var sigPic = '';
+            var hasSig = s.enableSignatures !== false && (g.sigImg || g.signature);
+            var hasStamp = s.showStamps !== false && g.stampImg;
+            if (hasSig || hasStamp) {
+              sigPic = '<div style="height:44px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:2px;gap:6px">' +
+                (hasSig ? '<img src="' + (g.sigImg || g.signature) + '" style="max-height:42px;max-width:125px;object-fit:contain" alt="Signature">' : '') +
+                (hasStamp ? '<img src="' + g.stampImg + '" style="max-height:38px;max-width:55px;object-fit:contain" alt="Stamp">' : '') +
+                '</div>';
+            } else {
+              sigPic = '<div style="height:10px"></div>';
+            }
+            return '<div class="rpt-sig" style="flex:1;text-align:center;min-width:0">' +
+              sigPic +
+              '<div style="font-weight:700;font-size:0.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(g.name) + '</div>' +
+              (g.qual ? '<div style="font-size:0.78em;color:#333">' + App.esc(g.qual) + '</div>' : '') +
+              (g.title ? '<div style="font-size:0.78em;color:#555">' + App.esc(g.title) + (g.regNo ? ' (' + App.esc(g.regNo) + ')' : '') + '</div>' : '') +
             '</div>';
           }).join('') + '</div>';
     }
@@ -2252,6 +2264,7 @@
       : '';
     return '<div class="rpt-footer">' + ftHtml + line1 + rule + sigHtml + addrHtml + discHtml + powered + '</div>';
   }
+  window.reportFooterHtml = reportFooterHtml;
 
 
   /* ---------- result entry: pick from a menu instead of typing ----------
@@ -3399,13 +3412,15 @@
     var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
     var fVerLines = doc.splitTextToSize(fVerNote, CW);
-    var fSigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title); });
+    var fSigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title) && g.active !== false; });
     var fSw = fSigs.length ? CW / fSigs.length : CW;
+    var fHasSigImg = s.enableSignatures !== false && fSigs.some(function (g) { return !!(g.sigImg || g.signature); });
+    var fSigImgH = fHasSigImg ? 9 : 0;
     var fSigBlockH = 0;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
     var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
     fSigs.forEach(function (g, k) {
-      var h = fSigNameLines[k].length * 4.1 + (g.qual ? 3.9 : 0) + (g.title ? 3.9 : 0);
+      var h = fSigImgH + fSigNameLines[k].length * 4.1 + (g.qual ? 3.9 : 0) + (g.title ? 3.9 : 0);
       if (h > fSigBlockH) fSigBlockH = h;
     });
     var fAddrParts = [];
@@ -3443,11 +3458,23 @@
     // signatories, centered columns
     fSigs.forEach(function (g, k) {
       var fCx = M + fSw * (k + 0.5), fSy = y;
+      var sigImgData = (s.enableSignatures !== false) ? (g.sigImg || g.signature) : null;
+      if (sigImgData) {
+        try {
+          doc.addImage(sigImgData, 'PNG', fCx - 13, fSy, 26, 8.5);
+        } catch (e) {}
+      }
+      if (s.showStamps !== false && g.stampImg) {
+        try {
+          doc.addImage(g.stampImg, 'PNG', fCx + 10, fSy, 8, 8);
+        } catch (e) {}
+      }
+      if (fSigImgH) fSy += fSigImgH + 1;
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
       txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 4.1;
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(40, 40, 40);
       if (g.qual)  { txt(g.qual,  fCx, fSy, { align: 'center' }); fSy += 3.9; }
-      if (g.title) { txt(g.title, fCx, fSy, { align: 'center' }); fSy += 3.9; }
+      if (g.title) { txt(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fCx, fSy, { align: 'center' }); fSy += 3.9; }
     });
     y += fSigBlockH + 3;
     // rule + address line

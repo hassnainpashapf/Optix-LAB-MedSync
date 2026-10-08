@@ -1329,6 +1329,7 @@
       { id: 'profile', label: 'Edit Report Form' },
       { id: 'account', label: 'My Account' },
       { id: 'templates', label: 'Report Templates' },
+      { id: 'signatures', label: 'Digital Signatures' },
       { id: 'whatsapp', label: 'WhatsApp' },
       { id: 'sharing', label: 'Email & Slack' },
       { id: 'portal', label: 'Patient portal' },
@@ -1347,6 +1348,7 @@
     if (settingsTab === 'profile') renderSetProfile();
     else if (settingsTab === 'account') renderSetAccount();
     else if (settingsTab === 'templates') renderSetTemplates();
+    else if (settingsTab === 'signatures') renderSetSignatures();
     else if (settingsTab === 'whatsapp') renderSetWhatsapp();
     else if (settingsTab === 'sharing') renderSetSharing();
     else if (settingsTab === 'portal') renderSetPortal();
@@ -2133,6 +2135,539 @@
       draw(st); if (st.state === 'qr' || st.state === 'connecting') poll();
     }, function (e) { box.innerHTML = ''; });
   }
+
+  /* ==========================================================================
+     DEDICATED DASHBOARD: PATHOLOGIST & RADIOLOGIST DIGITAL SIGNATURES (#/settings/signatures)
+     Doctor Signatures, Official Stamps, Department Verification, Report Integration
+     ========================================================================== */
+  function renderSetSignatures() {
+    var box = document.getElementById('setBody');
+    if (!box) return;
+    var s = DB.get('settings', 'main') || {};
+
+    var DEFAULT_SIGS = [
+      { id: 'sig-1', name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist', regNo: 'PMC 45210-P', dept: 'Histopathology', active: true, sigImg: '', stampImg: '' },
+      { id: 'sig-2', name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: 'Consultant Hematologist', regNo: 'PMC 51890-P', dept: 'Hematology', active: true, sigImg: '', stampImg: '' },
+      { id: 'sig-3', name: 'ABDAL INAM UL HAQ KHANZADA', qual: 'M.Phil (Microbiology)', title: 'Lab Technologist', regNo: 'MLT 1284', dept: 'Microbiology', active: true, sigImg: '', stampImg: '' },
+      { id: 'sig-4', name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Senior Lab Technologist', regNo: 'MLT 0922', dept: 'Biochemistry', active: true, sigImg: '', stampImg: '' }
+    ];
+
+    var list = (Array.isArray(s.signatories) && s.signatories.length)
+      ? JSON.parse(JSON.stringify(s.signatories))
+      : JSON.parse(JSON.stringify(DEFAULT_SIGS));
+
+    list.forEach(function (d, i) {
+      if (!d.id) d.id = 'sig-' + (i + 1);
+      if (d.active === undefined) d.active = true;
+    });
+
+    var enableSignatures = s.enableSignatures !== false;
+    var showStamps = s.showStamps !== false;
+    var verNote = s.verNote || s.verificationNote ||
+      'Electronically verified report. No signatures necessary. Sample brought to the main lab. Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.';
+
+    var CSS =
+      '.dsig-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;flex-wrap:wrap}' +
+      '.dsig-head h2{margin:0 0 4px;font-size:20px;font-weight:800;color:var(--brand-d);display:flex;align-items:center;gap:8px}' +
+      '.dsig-head p{margin:0;font-size:13px;color:var(--muted)}' +
+      '.dsig-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin:16px 0}' +
+      '.dsig-card{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:16px;box-shadow:var(--sh-sm);display:flex;flex-direction:column;gap:12px;transition:box-shadow .2s}' +
+      '.dsig-card:hover{box-shadow:var(--sh-md)}' +
+      '.dsig-card.is-off{opacity:.65;background:#f8fafc}' +
+      '.dsig-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}' +
+      '.dsig-card-title{font-weight:800;font-size:14.5px;color:var(--brand-d)}' +
+      '.dsig-card-sub{font-size:12px;color:var(--ink2);margin-top:2px}' +
+      '.dsig-preview-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0}' +
+      '.dsig-box{border:1px dashed #cbd5e1;border-radius:8px;padding:8px;min-height:68px;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative}' +
+      '.dsig-box img{max-height:48px;max-width:100%;object-fit:contain}' +
+      '.dsig-box-label{font-size:10px;font-weight:800;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}' +
+      '.dsig-card-acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:auto;padding-top:10px;border-top:1px solid var(--line)}' +
+      '.dsig-cfg-card{background:#f8fafc;border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px}' +
+      '.dsig-prev-box{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:18px;margin-top:20px;box-shadow:var(--sh-sm)}';
+
+    function saveAll(msg) {
+      DB.update('settings', 'main', {
+        signatories: list,
+        enableSignatures: enableSignatures,
+        showStamps: showStamps,
+        verNote: verNote
+      });
+      App.toast(msg || 'Signatures & Doctor settings saved.', 'ok');
+      draw();
+    }
+
+    function openDoctorModal(editIdx) {
+      var isEdit = editIdx !== null && editIdx !== undefined;
+      var d = isEdit ? list[editIdx] : { name: '', qual: '', title: 'Consultant Pathologist', dept: 'General', regNo: '', active: true, sigImg: '', stampImg: '' };
+
+      var body =
+        '<div class="form-grid">' +
+          '<div style="grid-column:1/-1"><label class="label">Doctor / Verifier Full Name *</label>' +
+          '<input class="input" id="dfName" placeholder="e.g. DR. AAFRINISH AMANAT" value="' + App.esc(d.name || '') + '"></div>' +
+          '<div><label class="label">Qualifications *</label>' +
+          '<input class="input" id="dfQual" placeholder="e.g. MBBS, M.Phil, FCPS" value="' + App.esc(d.qual || '') + '"></div>' +
+          '<div><label class="label">Designation / Title</label>' +
+          '<input class="input" id="dfTitle" placeholder="e.g. Consultant Pathologist" value="' + App.esc(d.title || '') + '"></div>' +
+          '<div><label class="label">Specialty / Department</label>' +
+          '<select class="select" id="dfDept">' +
+            ['General', 'Hematology', 'Histopathology', 'Chemical Pathology', 'Microbiology', 'Radiology', 'Molecular Biology'].map(function (dp) {
+              return '<option value="' + dp + '"' + ((d.dept === dp) ? ' selected' : '') + '>' + dp + '</option>';
+            }).join('') +
+          '</select></div>' +
+          '<div><label class="label">PMDC / License Reg No.</label>' +
+          '<input class="input" id="dfReg" placeholder="e.g. PMDC 45210-P" value="' + App.esc(d.regNo || '') + '"></div>' +
+          '<div style="grid-column:1/-1"><label class="check"><input type="checkbox" id="dfActive"' + (d.active !== false ? ' checked' : '') + '> <span>Active (Include in printed test reports)</span></label></div>' +
+        '</div>' +
+        '<div class="actions" style="margin-top:18px">' +
+          '<button class="btn btn-ghost" id="dfCancel">Cancel</button>' +
+          '<button class="btn btn-primary" id="dfSave">' + (isEdit ? 'Update Doctor' : 'Add Doctor') + '</button>' +
+        '</div>';
+
+      App.modal(isEdit ? 'Edit Verifying Doctor' : 'Add Verifying Doctor', body, {
+        onOpen: function (root, close) {
+          root.querySelector('#dfCancel').addEventListener('click', close);
+          root.querySelector('#dfSave').addEventListener('click', function () {
+            var nm = root.querySelector('#dfName').value.trim();
+            if (!nm) { App.toast('Doctor name is required', 'err'); return; }
+            d.name = nm;
+            d.qual = root.querySelector('#dfQual').value.trim();
+            d.title = root.querySelector('#dfTitle').value.trim();
+            d.dept = root.querySelector('#dfDept').value;
+            d.regNo = root.querySelector('#dfReg').value.trim();
+            d.active = root.querySelector('#dfActive').checked;
+            if (!isEdit) {
+              d.id = 'sig-' + (list.length + 1);
+              list.push(d);
+            }
+            close();
+            saveAll('Doctor ' + d.name + ' saved.');
+          });
+        }
+      });
+    }
+
+    function openSigPadModal(idx) {
+      var d = list[idx];
+      if (!d) return;
+
+      var body =
+        '<div style="display:flex;gap:8px;border-bottom:1px solid var(--line);margin-bottom:14px;padding-bottom:8px" id="spTabNav">' +
+          '<button class="btn btn-sm btn-primary" id="spTabDraw">✏️ Draw Signature</button>' +
+          '<button class="btn btn-sm btn-ghost" id="spTabUpload">📁 Upload Image</button>' +
+          '<button class="btn btn-sm btn-ghost" id="spTabCallig">✍️ Calligraphy Font</button>' +
+        '</div>' +
+        '<div id="spPanelDraw">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12.5px">' +
+            '<div>Ink: <button class="btn btn-sm btn-ghost sp-ink on" data-col="#1d4ed8" style="color:#1d4ed8;font-weight:700">● Blue</button> <button class="btn btn-sm btn-ghost sp-ink" data-col="#0f172a" style="color:#0f172a;font-weight:700">● Black</button></div>' +
+            '<button class="btn btn-sm btn-ghost" id="spClear">Clear Canvas</button>' +
+          '</div>' +
+          '<canvas id="dsCanvas" width="460" height="150" style="border:2px dashed #94a3b8;border-radius:10px;background:#fff;cursor:crosshair;touch-action:none;display:block;width:100%"></canvas>' +
+          '<p class="muted" style="font-size:11.5px;margin:6px 0 0">Sign smoothly using your mouse, trackpad, or touchscreen.</p>' +
+        '</div>' +
+        '<div id="spPanelUpload" hidden>' +
+          '<label class="label">Select signature image (PNG / JPG)</label>' +
+          '<input type="file" id="spFile" accept="image/*" class="input" style="padding:6px">' +
+          '<div id="spUploadPrev" style="margin-top:12px;min-height:90px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center">' +
+            '<span class="muted" style="font-size:12.5px">Image preview will appear here</span>' +
+          '</div>' +
+          '<label class="check" style="margin-top:10px;font-size:12.5px"><input type="checkbox" id="spMakeTrans" checked> Remove white background (Transparentize ink)</label>' +
+        '</div>' +
+        '<div id="spPanelCallig" hidden>' +
+          '<label class="label">Preview calligraphy signature for ' + App.esc(d.name) + '</label>' +
+          '<div id="spCalligPrev" style="margin-top:8px;background:#fff;border:1px dashed #cbd5e1;border-radius:8px;padding:24px;text-align:center;font-family:\'Brush Script MT\',cursive;font-size:36px;color:#1e40af;letter-spacing:1px;box-shadow:inset 0 0 10px rgba(0,0,0,.02)">' +
+            App.esc(d.name) +
+          '</div>' +
+        '</div>' +
+        '<div class="actions" style="margin-top:18px">' +
+          '<button class="btn btn-ghost" id="spModalCancel">Cancel</button>' +
+          '<button class="btn btn-primary" id="spModalSave">Apply & Save Signature</button>' +
+        '</div>';
+
+      App.modal('Digital Signature for ' + d.name, body, {
+        onOpen: function (root, close) {
+          var mode = 'draw';
+          var inkColor = '#1d4ed8';
+          var canvas = root.querySelector('#dsCanvas');
+          var ctx = canvas ? canvas.getContext('2d') : null;
+          var drawing = false;
+          var uploadedDataUrl = '';
+
+          var pnlDraw = root.querySelector('#spPanelDraw');
+          var pnlUpload = root.querySelector('#spPanelUpload');
+          var pnlCallig = root.querySelector('#spPanelCallig');
+
+          var btnDraw = root.querySelector('#spTabDraw');
+          var btnUpload = root.querySelector('#spTabUpload');
+          var btnCallig = root.querySelector('#spTabCallig');
+
+          function switchTab(t) {
+            mode = t;
+            btnDraw.className = 'btn btn-sm ' + (t === 'draw' ? 'btn-primary' : 'btn-ghost');
+            btnUpload.className = 'btn btn-sm ' + (t === 'upload' ? 'btn-primary' : 'btn-ghost');
+            btnCallig.className = 'btn btn-sm ' + (t === 'callig' ? 'btn-primary' : 'btn-ghost');
+            pnlDraw.hidden = t !== 'draw';
+            pnlUpload.hidden = t !== 'upload';
+            pnlCallig.hidden = t !== 'callig';
+          }
+
+          btnDraw.addEventListener('click', function () { switchTab('draw'); });
+          btnUpload.addEventListener('click', function () { switchTab('upload'); });
+          btnCallig.addEventListener('click', function () { switchTab('callig'); });
+
+          // Ink buttons
+          root.querySelectorAll('.sp-ink').forEach(function (b) {
+            b.addEventListener('click', function () {
+              root.querySelectorAll('.sp-ink').forEach(function (x) { x.classList.remove('on'); });
+              b.classList.add('on');
+              inkColor = b.getAttribute('data-col');
+            });
+          });
+
+          // Canvas drawing logic
+          function getPos(e) {
+            var rect = canvas.getBoundingClientRect();
+            var scaleX = canvas.width / rect.width;
+            var scaleY = canvas.height / rect.height;
+            var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+          }
+          function startDraw(e) {
+            e.preventDefault();
+            drawing = true;
+            var pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+            ctx.strokeStyle = inkColor;
+            ctx.lineWidth = 2.8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+          }
+          function moveDraw(e) {
+            if (!drawing) return;
+            e.preventDefault();
+            var pos = getPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+          }
+          function endDraw(e) {
+            if (!drawing) return;
+            e.preventDefault();
+            drawing = false;
+          }
+
+          if (canvas) {
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', moveDraw);
+            window.addEventListener('mouseup', endDraw);
+            canvas.addEventListener('touchstart', startDraw, { passive: false });
+            canvas.addEventListener('touchmove', moveDraw, { passive: false });
+            window.addEventListener('touchend', endDraw, { passive: false });
+          }
+
+          root.querySelector('#spClear').addEventListener('click', function () {
+            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+          });
+
+          // File upload logic
+          var fileInp = root.querySelector('#spFile');
+          var upPrev = root.querySelector('#spUploadPrev');
+          fileInp.addEventListener('change', function () {
+            var file = this.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function (evt) {
+              uploadedDataUrl = evt.target.result;
+              upPrev.innerHTML = '<img src="' + uploadedDataUrl + '" style="max-height:80px;max-width:240px;object-fit:contain">';
+            };
+            reader.readAsDataURL(file);
+          });
+
+          root.querySelector('#spModalCancel').addEventListener('click', close);
+          root.querySelector('#spModalSave').addEventListener('click', function () {
+            var finalImg = '';
+            if (mode === 'draw') {
+              if (canvas) finalImg = canvas.toDataURL('image/png');
+            } else if (mode === 'upload') {
+              if (!uploadedDataUrl) { App.toast('Please select a signature image first', 'err'); return; }
+              var makeTrans = root.querySelector('#spMakeTrans').checked;
+              if (makeTrans) {
+                // remove white background
+                var img = new Image();
+                img.onload = function () {
+                  var off = document.createElement('canvas');
+                  off.width = img.width;
+                  off.height = img.height;
+                  var octx = off.getContext('2d');
+                  octx.drawImage(img, 0, 0);
+                  var imgData = octx.getImageData(0, 0, off.width, off.height);
+                  var data = imgData.data;
+                  for (var i = 0; i < data.length; i += 4) {
+                    var r = data[i], g = data[i+1], b = data[i+2];
+                    if (r > 215 && g > 215 && b > 215) {
+                      data[i+3] = 0;
+                    }
+                  }
+                  octx.putImageData(imgData, 0, 0);
+                  d.sigImg = off.toDataURL('image/png');
+                  close();
+                  saveAll('Signature saved for ' + d.name);
+                };
+                img.src = uploadedDataUrl;
+                return;
+              } else {
+                finalImg = uploadedDataUrl;
+              }
+            } else if (mode === 'callig') {
+              var cCanvas = document.createElement('canvas');
+              cCanvas.width = 460;
+              cCanvas.height = 120;
+              var cCtx = cCanvas.getContext('2d');
+              cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+              cCtx.font = 'italic 42px "Brush Script MT", cursive, sans-serif';
+              cCtx.fillStyle = '#1d4ed8';
+              cCtx.textAlign = 'center';
+              cCtx.fillText(d.name, cCanvas.width / 2, 70);
+              // underline flourish
+              cCtx.beginPath();
+              cCtx.moveTo(cCanvas.width / 2 - 120, 85);
+              cCtx.bezierCurveTo(cCanvas.width / 2 - 40, 95, cCanvas.width / 2 + 60, 75, cCanvas.width / 2 + 130, 90);
+              cCtx.strokeStyle = '#1d4ed8';
+              cCtx.lineWidth = 2.5;
+              cCtx.stroke();
+              finalImg = cCanvas.toDataURL('image/png');
+            }
+
+            if (finalImg) {
+              d.sigImg = finalImg;
+              close();
+              saveAll('Signature saved for ' + d.name);
+            }
+          });
+        }
+      });
+    }
+
+    function openStampModal(idx) {
+      var d = list[idx];
+      if (!d) return;
+
+      var body =
+        '<div>' +
+          '<label class="label">Select Official Stamp Seal image (PNG / JPG)</label>' +
+          '<input type="file" id="stFile" accept="image/*" class="input" style="padding:6px">' +
+          '<div id="stPrev" style="margin-top:14px;min-height:100px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:10px;display:flex;align-items:center;justify-content:center">' +
+            (d.stampImg
+              ? '<img src="' + d.stampImg + '" style="max-height:85px;max-width:140px;object-fit:contain">'
+              : '<span class="muted" style="font-size:12.5px">No stamp uploaded yet</span>') +
+          '</div>' +
+          '<p class="muted" style="font-size:12px;margin:8px 0 0">Recommended: Official round or rectangular lab verification stamp on transparent background.</p>' +
+        '</div>' +
+        '<div class="actions" style="margin-top:18px">' +
+          '<button class="btn btn-ghost" id="stCancel">Cancel</button>' +
+          (d.stampImg ? '<button class="btn btn-danger" id="stRemove">Remove Stamp</button>' : '') +
+          '<button class="btn btn-primary" id="stSave">Save Stamp</button>' +
+        '</div>';
+
+      App.modal('Official Stamp for ' + d.name, body, {
+        onOpen: function (root, close) {
+          var stampData = d.stampImg || '';
+          var finp = root.querySelector('#stFile');
+          var prv = root.querySelector('#stPrev');
+          finp.addEventListener('change', function () {
+            var file = this.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              stampData = e.target.result;
+              prv.innerHTML = '<img src="' + stampData + '" style="max-height:85px;max-width:140px;object-fit:contain">';
+            };
+            reader.readAsDataURL(file);
+          });
+          root.querySelector('#stCancel').addEventListener('click', close);
+          var rmBtn = root.querySelector('#stRemove');
+          if (rmBtn) {
+            rmBtn.addEventListener('click', function () {
+              d.stampImg = '';
+              close();
+              saveAll('Stamp removed for ' + d.name);
+            });
+          }
+          root.querySelector('#stSave').addEventListener('click', function () {
+            if (!stampData) { App.toast('Please select a stamp image', 'err'); return; }
+            d.stampImg = stampData;
+            close();
+            saveAll('Stamp saved for ' + d.name);
+          });
+        }
+      });
+    }
+
+    function draw() {
+      var sigCount = list.filter(function (d) { return !!(d.sigImg || d.signature); }).length;
+      var stampCount = list.filter(function (d) { return !!d.stampImg; }).length;
+
+      var kpiHtml =
+        '<div class="kpi-grid" style="margin-bottom:16px">' +
+          '<div class="kpi t-navy"><div class="kpi-ic">' + App.icon('users', 20) + '</div><div class="kpi-lb">VERIFYING DOCTORS</div><div class="kpi-nm">' + list.length + '</div><div class="kpi-sb">pathologists &amp; team</div></div>' +
+          '<div class="kpi t-blue"><div class="kpi-ic">' + App.icon('edit', 20) + '</div><div class="kpi-lb">DIGITAL SIGNATURES</div><div class="kpi-nm">' + sigCount + ' / ' + list.length + '</div><div class="kpi-sb">e-signatures ready</div></div>' +
+          '<div class="kpi t-amber"><div class="kpi-ic">' + App.icon('shield', 20) + '</div><div class="kpi-lb">OFFICIAL STAMPS</div><div class="kpi-nm">' + stampCount + ' / ' + list.length + '</div><div class="kpi-sb">clinic seals uploaded</div></div>' +
+          '<div class="kpi t-green"><div class="kpi-ic">' + App.icon('check', 20) + '</div><div class="kpi-lb">REPORT INTEGRATION</div><div class="kpi-nm">' + (enableSignatures ? 'ACTIVE' : 'OFF') + '</div><div class="kpi-sb">auto-embed on PDFs</div></div>' +
+        '</div>';
+
+      var cardsHtml = list.map(function (d, i) {
+        var hasSig = !!(d.sigImg || d.signature);
+        var hasStamp = !!d.stampImg;
+        return '<div class="dsig-card ' + (d.active ? '' : 'is-off') + '">' +
+          '<div class="dsig-card-top">' +
+            '<div>' +
+              '<div class="dsig-card-title">' + App.esc(d.name) + '</div>' +
+              '<div class="dsig-card-sub"><b>' + App.esc(d.qual || '—') + '</b></div>' +
+              '<div style="font-size:11.5px;color:var(--muted);margin-top:2px">' +
+                App.esc(d.title || '') + (d.regNo ? ' &middot; ' + App.esc(d.regNo) : '') +
+              '</div>' +
+            '</div>' +
+            '<span class="badge ' + (d.active ? 'b-ready' : 'b-pending') + '">' + (d.active ? 'Active' : 'Hidden') + '</span>' +
+          '</div>' +
+          '<div class="dsig-preview-row">' +
+            '<div class="dsig-box">' +
+              '<div class="dsig-box-label">Digital Signature</div>' +
+              (hasSig
+                ? '<img src="' + (d.sigImg || d.signature) + '" alt="Signature">'
+                : '<span style="font-size:11.5px;color:var(--muted)">No signature</span>') +
+            '</div>' +
+            '<div class="dsig-box">' +
+              '<div class="dsig-box-label">Official Stamp</div>' +
+              (hasStamp
+                ? '<img src="' + d.stampImg + '" alt="Stamp">'
+                : '<span style="font-size:11.5px;color:var(--muted)">No stamp</span>') +
+            '</div>' +
+          '</div>' +
+          '<div class="dsig-card-acts">' +
+            '<button class="btn btn-sm btn-primary dsig-btn-sig" data-i="' + i + '">' + App.icon('edit', 13) + (hasSig ? ' Change Sig' : ' + Add Sig') + '</button>' +
+            '<button class="btn btn-sm btn-ghost dsig-btn-stamp" data-i="' + i + '">' + (hasStamp ? 'Change Stamp' : '+ Stamp') + '</button>' +
+            '<button class="btn btn-sm btn-ghost dsig-btn-edit" data-i="' + i + '">Edit</button>' +
+            (i > 0 ? '<button class="btn btn-sm btn-ghost dsig-btn-up" data-i="' + i + '" title="Move left/up">&uarr;</button>' : '') +
+            (i < list.length - 1 ? '<button class="btn btn-sm btn-ghost dsig-btn-dn" data-i="' + i + '" title="Move right/down">&darr;</button>' : '') +
+            '<button class="btn btn-sm btn-danger dsig-btn-del" data-i="' + i + '" title="Remove doctor" style="margin-left:auto">&times;</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      var dummyReport = {
+        s: {
+          signatories: list,
+          enableSignatures: enableSignatures,
+          showStamps: showStamps,
+          verNote: verNote,
+          address: s.address || '154-A-HBFC Opposite Jinnah Hospital, Lahore',
+          phone: s.phone || '0322-8441899',
+          website: s.website || 'www.optixlab.com'
+        }
+      };
+
+      box.innerHTML =
+        '<style>' + CSS + '</style>' +
+        '<div class="dsig-head">' +
+          '<div>' +
+            '<h2>' + App.icon('edit', 22) + ' Pathologist &amp; Radiologist Digital Signatures</h2>' +
+            '<p>Manage doctors, consultants, digital e-signatures, official verification stamps, and report inclusion.</p>' +
+          '</div>' +
+          '<div style="display:flex;gap:8px">' +
+            '<button class="btn btn-primary" id="dsigAddDoctor">' + App.icon('plus', 14) + ' Add Verifying Doctor</button>' +
+          '</div>' +
+        '</div>' +
+        kpiHtml +
+        '<div class="dsig-cfg-card">' +
+          '<div style="font-weight:800;font-size:14.5px;color:var(--brand-d);margin-bottom:10px">Global Report Signature Controls</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;margin-bottom:12px">' +
+            '<label class="check" style="font-weight:700">' +
+              '<input type="checkbox" id="dsigEnable"' + (enableSignatures ? ' checked' : '') + '> ' +
+              '<span>Enable Electronic Signatures on Lab Reports &amp; PDFs</span>' +
+            '</label>' +
+            '<label class="check" style="font-weight:700">' +
+              '<input type="checkbox" id="dsigShowStamps"' + (showStamps ? ' checked' : '') + '> ' +
+              '<span>Show Official Doctor Stamps / Seals on Reports</span>' +
+            '</label>' +
+          '</div>' +
+          '<label class="label" style="margin-top:8px">Report Verification Statement (Printed above doctors)</label>' +
+          '<textarea class="input" id="dsigVerNote" rows="2" style="font-size:13px">' + App.esc(verNote) + '</textarea>' +
+          '<div style="margin-top:12px;display:flex;justify-content:flex-end">' +
+            '<button class="btn btn-primary" id="dsigSaveGlobal">Save Signature Settings</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="dsig-grid">' + cardsHtml + '</div>' +
+        '<div class="dsig-prev-box">' +
+          '<div style="font-weight:800;font-size:14px;color:var(--brand-d);margin-bottom:10px;display:flex;align-items:center;gap:6px">' +
+            App.icon('file', 16) + ' Live Report Footer Preview (What Patients See on Report)' +
+          '</div>' +
+          '<div style="background:#fff;border:1px solid #000;border-radius:4px;padding:16px 20px">' +
+            (window.reportFooterHtml ? reportFooterHtml(dummyReport) : '<p class="muted">Report footer preview</p>') +
+          '</div>' +
+        '</div>';
+
+      // Attach handlers
+      document.getElementById('dsigAddDoctor').addEventListener('click', function () { openDoctorModal(null); });
+
+      document.getElementById('dsigSaveGlobal').addEventListener('click', function () {
+        enableSignatures = document.getElementById('dsigEnable').checked;
+        showStamps = document.getElementById('dsigShowStamps').checked;
+        verNote = document.getElementById('dsigVerNote').value.trim();
+        saveAll('Global signature settings saved.');
+      });
+
+      box.querySelectorAll('.dsig-btn-sig').forEach(function (btn) {
+        btn.addEventListener('click', function () { openSigPadModal(parseInt(btn.getAttribute('data-i'), 10)); });
+      });
+
+      box.querySelectorAll('.dsig-btn-stamp').forEach(function (btn) {
+        btn.addEventListener('click', function () { openStampModal(parseInt(btn.getAttribute('data-i'), 10)); });
+      });
+
+      box.querySelectorAll('.dsig-btn-edit').forEach(function (btn) {
+        btn.addEventListener('click', function () { openDoctorModal(parseInt(btn.getAttribute('data-i'), 10)); });
+      });
+
+      box.querySelectorAll('.dsig-btn-up').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var i = parseInt(btn.getAttribute('data-i'), 10);
+          if (i > 0) {
+            var temp = list[i - 1];
+            list[i - 1] = list[i];
+            list[i] = temp;
+            saveAll('Order updated.');
+          }
+        });
+      });
+
+      box.querySelectorAll('.dsig-btn-dn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var i = parseInt(btn.getAttribute('data-i'), 10);
+          if (i < list.length - 1) {
+            var temp = list[i + 1];
+            list[i + 1] = list[i];
+            list[i] = temp;
+            saveAll('Order updated.');
+          }
+        });
+      });
+
+      box.querySelectorAll('.dsig-btn-del').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var i = parseInt(btn.getAttribute('data-i'), 10);
+          var docName = list[i].name;
+          App.confirm('Remove doctor ' + docName + ' from signatories?').then(function (ok) {
+            if (!ok) return;
+            list.splice(i, 1);
+            saveAll('Doctor ' + docName + ' removed.');
+          });
+        });
+      });
+    }
+
+    draw();
+  }
+
   /* ---- WhatsApp: admin only sees/edits their lab number; API hidden ---- */
   /* ---- Patient & doctor portal: switch, link / QR to share, and "prepare old reports" ---- */
   function renderSetPortal() {
@@ -3101,7 +3636,7 @@
     });
   }
 
-  var SET_TABS = ['profile', 'account', 'templates', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
+  var SET_TABS = ['profile', 'account', 'templates', 'signatures', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
   /* Dropdown Lists live under Patients now (#/patients/lists); the old Settings address still works */
   App.route('#/patients/lists', function () {
     if (role() !== 'admin') return denied();
@@ -3111,5 +3646,6 @@
   App.route('#/settings/lists', function () { App.nav('#/patients/lists'); });
   App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });
   App.route('#/settings/:tab', function (p) { settingsTab = (p && SET_TABS.indexOf(p.tab) >= 0) ? p.tab : 'profile'; renderSettings(); });
+  App.route('#/signatures', function () { App.nav('#/settings/signatures'); });
 
 })();
