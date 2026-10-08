@@ -42,7 +42,8 @@
   /* ---------------- nav + permissions ---------------- */
   var NAV = [
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
-    { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e' },
+    { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
+      sub: [{ key: 'all', label: 'All Patients', route: '#/patients' }, { key: 'lists', label: 'Dropdown Lists', route: '#/patients/lists', roles: ['admin'] }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48' },
     { key: 'stock',     label: 'Stock',      icon: 'box',       route: '#/stock',     color: '#0ea5e9' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
@@ -66,7 +67,7 @@
     { key: 'subscription', label: 'Subscription', icon: 'card',  route: '#/subscription', color: '#f59e0b', saas: true },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b',
       sub: [{ key: 'profile', label: 'Lab Profile', route: '#/settings' }, { key: 'account', label: 'My Account', route: '#/settings/account' }, { key: 'templates', label: 'Report Templates', route: '#/settings/templates' },
-        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' }, { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' }, { key: 'portal', label: 'Patient portal', route: '#/settings/portal' }, { key: 'users', label: 'Users & Roles', route: '#/settings/users' }, { key: 'lists', label: 'Dropdown Lists', route: '#/settings/lists' }, { key: 'backup', label: 'Backup', route: '#/settings/backup' },
+        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' }, { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' }, { key: 'portal', label: 'Patient portal', route: '#/settings/portal' }, { key: 'users', label: 'Users & Roles', route: '#/settings/users' }, { key: 'backup', label: 'Backup', route: '#/settings/backup' },
         { key: 'danger', label: 'Danger Zone', route: '#/settings/danger', danger: true }] },
     { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
   ];
@@ -634,8 +635,8 @@
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
     function itemHtml(n) {
-      if (n.sub) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
-        var subs = n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; });
+      var subs = n.sub ? n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; }) : [];
+      if (n.sub && subs.length >= 2) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
         var open = n.key === activeKey;
         return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
           '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +

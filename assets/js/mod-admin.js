@@ -1305,7 +1305,6 @@
       { id: 'sharing', label: 'Email & Slack' },
       { id: 'portal', label: 'Patient portal' },
       { id: 'users', label: 'Users & Roles' },
-      { id: 'lists', label: 'Dropdown Lists' },
       { id: 'backup', label: 'Backup' },
       { id: 'danger', label: 'Danger Zone' }
     ];
@@ -1324,7 +1323,6 @@
     else if (settingsTab === 'sharing') renderSetSharing();
     else if (settingsTab === 'portal') renderSetPortal();
     else if (settingsTab === 'users') renderSetUsers();
-    else if (settingsTab === 'lists') renderSetLists();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
   }
@@ -2504,7 +2502,14 @@
     });
   }
 
-  var SET_TABS = ['profile', 'account', 'templates', 'whatsapp', 'sharing', 'portal', 'users', 'lists', 'backup', 'danger'];
+  var SET_TABS = ['profile', 'account', 'templates', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
+  /* Dropdown Lists live under Patients now (#/patients/lists); the old Settings address still works */
+  App.route('#/patients/lists', function () {
+    if (role() !== 'admin') return denied();
+    document.getElementById('view').innerHTML = '<div class="page-head"><div><h1>Dropdown Lists</h1><p class="muted" style="margin:2px 0 0">The choices in your forms: registration and destination location, reference, blood group, referred-by doctors and more.</p></div></div><div class="card"><div class="card-b"><div id="setBody"></div></div></div>';
+    renderSetLists();
+  });
+  App.route('#/settings/lists', function () { App.nav('#/patients/lists'); });
   App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });
   App.route('#/settings/:tab', function (p) { settingsTab = (p && SET_TABS.indexOf(p.tab) >= 0) ? p.tab : 'profile'; renderSettings(); });
 
