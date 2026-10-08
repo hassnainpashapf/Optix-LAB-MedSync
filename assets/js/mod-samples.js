@@ -1030,7 +1030,7 @@
   }
 
   App.route('#/samples', render);
-  App.route('#/samples/stickers', renderStickersDashboard);
+  App.route('#/samples/stickers', function () { App.nav('#/samples'); });
 
   /* ============================================================
      HOME SAMPLE COLLECTION BOOKING & DISPATCH CENTER
