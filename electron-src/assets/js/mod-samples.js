@@ -808,18 +808,12 @@
 
       view.innerHTML =
         '<style>' + CSS + STK_CSS + '</style>' +
-        '<div class="stk-header">' +
-          '<div class="stk-head-title">' +
-            '<h2>' + App.icon('tube', 22) + ' Tube Stickers & Barcode Center</h2>' +
-            '<p>Dedicated 50×25mm Thermal Label Printing & Specimen Tube Barcodes for Diagnostic Equipment</p>' +
-          '</div>' +
-          '<div class="stk-head-acts">' +
-            '<button class="btn btn-primary" id="stkPrintAllToday">' + App.icon('printer', 15) + ' Print All Today\'s Stickers</button>' +
-            '<button class="btn btn-ghost" id="stkGenMissing">' + App.icon('plus', 14) + ' Generate Missing Tubes</button>' +
-            '<a class="btn btn-ghost" href="#/samples">' + App.icon('scan', 14) + ' Sample Tracking</a>' +
-          '</div>' +
-        '</div>' +
         kpiHtml +
+        '<div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">' +
+          '<button class="btn btn-primary" id="stkPrintAllToday">' + App.icon('printer', 15) + ' Print All Today\'s Stickers</button>' +
+          '<button class="btn btn-ghost" id="stkGenMissing">' + App.icon('plus', 14) + ' Generate Missing Tubes</button>' +
+          '<a class="btn btn-ghost" href="#/samples">' + App.icon('scan', 14) + ' Sample Tracking</a>' +
+        '</div>' +
         '<div class="stk-layout">' +
           '<div class="card"><div class="card-b">' +
             '<div class="smp-filters" style="margin-bottom:12px">' +
@@ -1030,7 +1024,7 @@
   }
 
   App.route('#/samples', render);
-  App.route('#/samples/stickers', function () { App.nav('#/samples'); });
+  App.route('#/samples/stickers', renderStickersDashboard);
 
   /* ============================================================
      HOME SAMPLE COLLECTION BOOKING & DISPATCH CENTER
@@ -1115,23 +1109,6 @@
       + '</style>'
       + '<div class="hs-dash">'
 
-      /* Header */
-      + '<div class="hs-head-bar">'
-      +   '<div>'
-      +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-      +       '<a href="#/samples" class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px">← Samples</a>'
-      +       '<span style="font-size:12px;color:var(--muted)">/ Laboratory</span>'
-      +     '</div>'
-      +     '<h1 style="margin:0;font-size:23px;font-weight:800;color:var(--ink);letter-spacing:-.01em">🛵 Home Sample Collection Booking &amp; Dispatch Center</h1>'
-      +     '<p class="muted" style="margin:4px 0 0;font-size:13px">Coordinate doorstep specimen collections, assign field phlebotomist riders, track live dispatch status, and manage intake specimen check-ins.</p>'
-      +   '</div>'
-      +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-      +     '<button class="btn btn-ghost btn-sm" id="hsRidersBtn">👥 Phlebotomist Riders (' + riders.length + ')</button>'
-      +     '<button class="btn btn-ghost btn-sm" id="hsSeedBtn">⚡ Seed Sample Bookings</button>'
-      +     '<button class="btn btn-primary btn-sm" id="hsBookBtn">+ Book Home Collection</button>'
-      +   '</div>'
-      + '</div>'
-
       /* 4 KPI Cards */
       + '<div class="hs-stat-grid">'
       +   '<div class="hs-kpi-card" style="border-left:4px solid #0284c7">'
@@ -1157,6 +1134,13 @@
       +     '<div class="hs-kpi-val" style="color:#15803d">' + receivedCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">intake today</span></div>'
       +     '<div class="hs-kpi-sub">Received &amp; ready for testing</div>'
       +   '</div>'
+      + '</div>'
+
+      /* Action Buttons Below Cards */
+      + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">'
+      +   '<button class="btn btn-ghost btn-sm" id="hsRidersBtn">👥 Phlebotomist Riders (' + riders.length + ')</button>'
+      +   '<button class="btn btn-ghost btn-sm" id="hsSeedBtn">⚡ Seed Sample Bookings</button>'
+      +   '<button class="btn btn-primary btn-sm" id="hsBookBtn">+ Book Home Collection</button>'
       + '</div>'
 
       /* Pipeline Tabs */
@@ -1844,7 +1828,7 @@
     renderHomeSamplingDashboard();
   }
 
-  App.route('#/home-sampling', function () { App.nav('#/samples'); });
-  App.route('#/samples/home', function () { App.nav('#/samples'); });
+  App.route('#/home-sampling', renderHomeSamplingDashboard);
+  App.route('#/samples/home', renderHomeSamplingDashboard);
 })();
 
