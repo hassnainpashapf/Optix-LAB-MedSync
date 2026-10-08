@@ -2033,7 +2033,11 @@
     /* body rows: thin separators, param name regular weight */
     var rowsHtml;
     if (params.length) {
-      rowsHtml = params.map(function (p) {
+      var shown = params.filter(function (p) {
+        return cols.some(function (c) { var v = (c.values || {})[p.name]; return v != null && String(v).trim() !== ''; });
+      });
+      if (!shown.length) shown = params; /* no values entered: keep blank layout */
+      rowsHtml = shown.map(function (p) {
         var pref = refFor(p, d.pat);
         var cells = cols.map(function (c, ci) {
           return valCell((c.values || {})[p.name], pref, ci === 0);
@@ -3283,8 +3287,10 @@
         var titleH = titleLines.length * 6;
 
         // Build rows up-front so the whole section page-breaks cleanly.
+        var shown = params.filter(function (p) { var v = vals[p.name]; return v != null && String(v).trim() !== ''; });
+        if (!shown.length) shown = params; /* no values entered: keep blank layout */
         var rows = params.length
-          ? params.map(function (p) { return buildRow(p, vals); })
+          ? shown.map(function (p) { return buildRow(p, vals); })
           : [buildRow({ name: 'Result', ref: '', unit: '' },
                       { Result: vals['Result'] != null ? String(vals['Result']) : '' })];
 
