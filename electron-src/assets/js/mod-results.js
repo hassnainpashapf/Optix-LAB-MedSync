@@ -3007,13 +3007,13 @@
       doc.setTextColor(20, 20, 20);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
       var vnp = App.visitNos(inv);
-      txt('Lab #:', hnx, y + 5, { align: 'right' });
+      txt('Inv #:', hnx, y + 5, { align: 'right' });
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt(vnp.labText.replace('LAB # ', ''), hnx, y + 10, { align: 'right', charSpace: 0.6 });
+      txt(vnp.labText.replace('INV # ', ''), hnx, y + 10, { align: 'right', charSpace: 0.6 });
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-      txt('Case #:', hnx, y + 15.5, { align: 'right' });
+      txt('P #:', hnx, y + 15.5, { align: 'right' });
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt(vnp.caseText.replace('CASE # ', ''), hnx, y + 20.5, { align: 'right', charSpace: 0.6 });
+      txt(vnp.caseText.replace('P # ', ''), hnx, y + 20.5, { align: 'right', charSpace: 0.6 });
 
       // --- QR 26mm at far right ---
       if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
@@ -3672,14 +3672,14 @@
     var slice = rows.slice((old.page - 1) * OLD_PER, old.page * OLD_PER);
     var docs = (DB.all('doctors') || []).slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
     var bar = '<div class="toolbar" style="margin-bottom:14px;flex-wrap:wrap;gap:8px">' +
-      '<input class="input search" id="olQ" placeholder="Search name, phone, patient ID, invoice, LAB #, test, doctor…" value="' + App.esc(old.q) + '" style="max-width:380px;flex:1;min-width:220px">' +
+      '<input class="input search" id="olQ" placeholder="Search name, phone, patient ID, invoice, INV #, test, doctor…" value="' + App.esc(old.q) + '" style="max-width:380px;flex:1;min-width:220px">' +
       '<label class="muted" style="font-size:12.5px;display:flex;align-items:center;gap:6px">From <input class="input" id="olFrom" type="date" value="' + App.esc(old.from) + '" style="width:auto"></label>' +
       '<label class="muted" style="font-size:12.5px;display:flex;align-items:center;gap:6px">To <input class="input" id="olTo" type="date" value="' + App.esc(old.to) + '" style="width:auto"></label>' +
       '<select class="select" id="olDoc" style="width:auto"><option value="">All doctors</option>' + docs.map(function (d) { return '<option value="' + App.esc(d.id) + '"' + (old.doc === d.id ? ' selected' : '') + '>' + App.esc(d.name) + '</option>'; }).join('') + '</select>' +
       ((old.q || old.from || old.to || old.doc) ? '<button class="btn btn-ghost btn-sm" id="olClear">Clear</button>' : '') +
       '<div style="margin-left:auto;font-weight:700;font-size:14px;color:var(--ink2)">Old Reports <span class="badge b-ready" style="margin-left:6px">' + rows.length + (rows.length !== all.length ? ' of ' + all.length : '') + '</span></div></div>';
     var body = !slice.length ? App.empty(all.length ? 'No report matches your search.' : 'No finished reports yet.') :
-      '<div class="tbl-wrap"><table class="table"><thead><tr><th>LAB # / Invoice</th><th>Registered</th><th>Patient</th><th>Tests</th><th>Doctor</th><th>Reported</th><th>Bill</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + slice.map(function (g) {
+      '<div class="tbl-wrap"><table class="table"><thead><tr><th>INV # / Invoice no.</th><th>Registered</th><th>Patient</th><th>Tests</th><th>Doctor</th><th>Reported</th><th>Bill</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + slice.map(function (g) {
         var inv = g.inv, vn = App.visitNos(inv), d = inv.doctorId ? DB.get('doctors', inv.doctorId) : null, names = g.rows.map(function (r) { return testName(r); }).filter(Boolean);
         return '<tr><td><b>' + App.esc(vn.labText) + '</b><div class="muted mono" style="font-size:11.5px">' + App.esc(inv.no || inv.id) + '</div></td><td>' + App.esc(App.d(inv.createdAt)) + '</td>' +
           '<td><b>' + App.esc(g.pat.name || '—') + '</b><div class="muted" style="font-size:12px">' + App.esc([g.pat.age ? g.pat.age + ' yrs' : '', g.pat.gender || '', g.pat.phone || g.pat.whatsapp || ''].filter(Boolean).join(' · ')) + '</div></td>' +
