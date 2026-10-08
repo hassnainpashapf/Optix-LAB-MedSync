@@ -1130,19 +1130,6 @@
         + '</div>';
     }
 
-    /* report type selector: always visible at the top of the page */
-    var typeCardHtml = ''
-      + '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-      + '<span style="font-weight:700;margin-right:8px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:0.05em">Report Dashboard:</span>'
-      + ['all', 'tests', 'finance', 'dues', 'patients', 'labs'].map(function (t) {
-          var lbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues Aging', patients: 'Patient Reports', labs: 'Lab Comparison' }[t];
-          var active = rep.type === t;
-          var rUrl = t === 'all' ? '#/reports' : '#/reports/' + t;
-          return '<a href="' + rUrl + '" class="btn ' + (active ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-reptype="' + t + '" style="font-weight:600">' + lbl + '</a>';
-        }).join('')
-      + '<a class="btn btn-sm btn-ghost" id="repFinance" href="#/finance/profit" style="margin-left:auto;color:var(--brand-d);font-weight:600">Profit &amp; Loss / Cash Closing &rarr;</a>'
-      + '</div></div>';
-
     var allOverviewHtml = ''
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
       +   '<div class="card"><div class="card-h" style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Top Conducted Tests</h3><a href="#/reports/tests" class="btn btn-ghost btn-sm" style="font-weight:600">Full Test Reports &rarr;</a></div><div class="card-b">'
@@ -1177,7 +1164,6 @@
     var repChosen = true;
     var html = ''
       + '<style>' + ADM_STAT_CSS + '</style>'
-      + typeCardHtml
       + repKpis
       + filterCard
       + ((showAll || showFinance) ? cmpCard : '')
@@ -1208,15 +1194,6 @@
 
     document.getElementById('view').innerHTML = html;
     admCountUp();
-
-    /* report type selector: route hash navigation */
-    document.querySelectorAll('[data-reptype]').forEach(function (b) {
-      b.addEventListener('click', function (e) {
-        e.preventDefault();
-        var t = b.getAttribute('data-reptype');
-        location.hash = t === 'all' ? '#/reports' : '#/reports/' + t;
-      });
-    });
 
     /* multi-lab comparison: own CSV export button inside the labs card */
     var labCmpBtn = document.getElementById('labCmpCsv');
