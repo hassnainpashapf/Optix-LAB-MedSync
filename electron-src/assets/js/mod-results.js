@@ -1702,15 +1702,14 @@
         ['Father / Husband Name', t(pat.father || pat.fatherName, '.')],
         ['Age / Sex', ageSex],
         ['Blood Group', t(pat.blood, 'Unknown')],
-        ['NIC', t(pat.cnic || pat.nic)],
         ['Phone', t(pat.phone)],
         ['Address', t(pat.address, '.')]
       ],
       right: [
         ['Registration Date', dts(inv.createdAt)],
-        ['Collect Report At', dts(d.maxReported)],
-        ['Registration Location', t(s.headOffice || s.address)],
-        ['Destination Location', t(s.destinationLocation || s.mainLab || s.headOffice || s.address)],
+        ['Reporting Date', dts(d.maxReported)],
+        ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address))],
+        ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address))],
         ['Reference', t(s.reference, 'Standard')],
         ['Consultant', t((d.doc && d.doc.name), 'SELF')]
       ]

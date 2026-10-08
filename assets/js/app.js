@@ -1210,6 +1210,17 @@
     var paid = (lab.payments || []).reduce(function (a, x) { return a + (+x.amount || 0); }, 0), open = +lab.openingBalance || 0;
     return { opening: open, cost: cost, paid: paid, balance: Math.round((open + cost - paid) * 100) / 100 };
   };
+  /* Visit details (registration date, registration location, destination): filled in automatically, the person can change them */
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  App.toLocalInput = function (v) {   /* ISO / Date -> value for <input type="datetime-local"> (browser local time) */
+    var d = v ? new Date(v) : new Date(); if (isNaN(d.getTime())) d = new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  };
+  App.fromLocalInput = function (v) { var d = v ? new Date(v) : null; return (d && !isNaN(d.getTime()) ? d : new Date()).toISOString(); };
+  App.visitDefaults = function () {   /* where the lab registers patients / sends reports unless told otherwise (Settings -> Lab Profile) */
+    var s = {}; try { s = DB.get('settings', 'main') || {}; } catch (e) {}
+    return { regLocation: s.headOffice || s.address || s.labName || '', destLocation: s.destinationLocation || s.mainLab || s.headOffice || s.address || s.labName || '' };
+  };
   App.testsById = function () { var m = {}; (DB.all('tests') || []).forEach(function (t) { m[t.id] = t; }); return m; };
 
   App.stockState = function () {

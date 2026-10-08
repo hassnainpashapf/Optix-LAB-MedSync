@@ -267,6 +267,9 @@
           DB.all('doctors').map(function (d) {
             return '<option value="' + App.esc(d.id) + '"' + (d.id === doctorId ? ' selected' : '') + '>' + App.esc(d.name) + '</option>';
           }).join('') + '</select></div>' +
+        '<div><label class="label">Registration date &amp; time</label><input id="ei-regdate" class="input" type="datetime-local" value="' + App.toLocalInput(inv.createdAt) + '"></div>' +
+        '<div><label class="label">Registration location</label><input id="ei-regloc" class="input" maxlength="120" value="' + App.esc(inv.regLocation != null && inv.regLocation !== '' ? inv.regLocation : App.visitDefaults().regLocation) + '"></div>' +
+        '<div><label class="label">Destination location</label><input id="ei-destloc" class="input" maxlength="120" value="' + App.esc(inv.destLocation != null && inv.destLocation !== '' ? inv.destLocation : App.visitDefaults().destLocation) + '"></div>' +
       '</div>' +
       '<div id="ei-total" style="text-align:right;font-weight:800;margin:12px 0"></div>' +
       '<div class="actions"><button class="btn btn-ghost" id="ei-cancel">Cancel</button>' +
@@ -350,13 +353,15 @@
           });
           var t = calcTotal();
           var due = r2(t.total - (+inv.paid || 0));
-          DB.update('invoices', id, inv.panelId ? {   /* a company's bill is never collected from the patient: it always stays paid, the account just changes */
+          var visit = { regLocation: root.querySelector('#ei-regloc').value.trim(), destLocation: root.querySelector('#ei-destloc').value.trim() };
+          if (root.querySelector('#ei-regdate').value && root.querySelector('#ei-regdate').value !== App.toLocalInput(inv.createdAt)) visit.createdAt = App.fromLocalInput(root.querySelector('#ei-regdate').value);
+          DB.update('invoices', id, Object.assign(visit, inv.panelId ? {   /* a company's bill is never collected from the patient: it always stays paid, the account just changes */
             items: items, subtotal: t.sub, discount: t.disc, total: t.total, paid: t.total, due: 0, status: 'paid', doctorId: doctorId || null
           } : {
             items: items, subtotal: t.sub, discount: t.disc, total: t.total,
             due: due < 0.01 ? 0 : due, status: statusOf(+inv.paid || 0, t.total),
             doctorId: doctorId || null
-          });
+          }));
           try { if (window.Samples) Samples.syncInvoice(DB.get('invoices', id)); } catch (e) { if (window.console) console.error(e); }
           try { App.outsourceSync(id, true); } catch (e) { if (window.console) console.error(e); }
           App.toast('Invoice ' + inv.no + ' updated');

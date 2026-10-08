@@ -229,6 +229,8 @@
       }
       var inv = DB.insert('invoices', {
         panelId: pn ? pn.id : null,
+        regLocation: (document.getElementById('blRegLoc') || {}).value ? document.getElementById('blRegLoc').value.trim() : '',
+        destLocation: (document.getElementById('blDestLoc') || {}).value ? document.getElementById('blDestLoc').value.trim() : '',
         patientId: state.patient.id,
         doctorId: state.doctorId || null,
         items: state.cart.map(function (l) { return { testId: l.testId, code: l.code, name: l.name, price: l.price, isPackage: !!l.isPackage, includes: l.includes || null }; }),
@@ -238,7 +240,7 @@
         paid: t.paid,
         due: t.due,
         status: status,
-        createdAt: new Date().toISOString(),
+        createdAt: App.fromLocalInput((document.getElementById('blRegDate') || {}).value),
         createdBy: currentUser()
       });
       DB.update('invoices', inv.id, { no: inv.id });
@@ -383,6 +385,10 @@
       '<div class="bl-panel bl-col-summary"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">3</span>Bill Summary</span></div><div class="bl-panel-b">' +
         '<div class="bl-sec" style="margin-top:0"><label class="label">Selected tests</label>' +
         '<div id="blCart" style="max-height:210px;overflow:auto"></div></div>' +
+        '<div class="bl-sec"><label class="label" for="blRegDate">Registration date &amp; time</label><input class="input" id="blRegDate" type="datetime-local" value="' + App.toLocalInput() + '">' +
+        '<div class="muted" style="font-size:11.5px;margin-top:3px">Filled in automatically. Change it if needed.</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><div><label class="label" for="blRegLoc">Registration location</label><input class="input" id="blRegLoc" maxlength="120" value="' + App.esc(App.visitDefaults().regLocation) + '"></div>' +
+        '<div><label class="label" for="blDestLoc">Destination location</label><input class="input" id="blDestLoc" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '"></div></div></div>' +
         (panels.length ? '<div class="bl-sec"><label class="label">Bill to</label><select class="select" id="blPanel"><option value="">Patient pays (normal)</option>' + panels.map(function (x) { return '<option value="' + App.esc(x.id) + '"' + (x.id === state.panelId ? ' selected' : '') + '>' + App.esc(x.name) + ' (company account)</option>'; }).join('') + '</select><div class="muted" id="blPanelNote" style="font-size:12.5px;margin-top:5px"></div></div>' : '') +
         '<div class="bl-sec"><label class="label">Referral doctor (optional)</label>' +
         '<select class="select" id="blDoctor"><option value="">Walk-in (no referral)</option>' +
