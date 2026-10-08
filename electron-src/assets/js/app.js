@@ -186,7 +186,7 @@
     if (!window.OptixChat) return;
     try {
       if (!session() || (location.hash || '').indexOf('#/login') === 0) OptixChat.hide();
-      else OptixChat.show();
+      /* minimized by default — the user opens it via the floating button; never auto-show */
     } catch (e) {}
   }
   window.addEventListener('hashchange', function () { chatbotVisibility(); });
