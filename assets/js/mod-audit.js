@@ -71,14 +71,43 @@
     return c.slice(0, 2).map(function (x) { return esc(fname(x.f)) + ': <s>' + esc(x.from || '—') + '</s> → <ins>' + esc(x.to || '—') + '</ins>'; }).join('<br>') + (c.length > 2 ? '<br><span class="au-sub">+' + (c.length - 2) + ' more</span>' : '');
   }
 
+  var IC_TOTAL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>';
+  var IC_PLUS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>';
+  var IC_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+  var IC_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
+
+  function kpi(cls, icon, label, num, sub) {
+    return '<div class="kpi ' + cls + '">'
+      + '<div class="kpi-ic">' + icon + '</div>'
+      + '<div class="kpi-lb">' + label + '</div>'
+      + '<div class="kpi-nm">' + num + '</div>'
+      + '<div class="kpi-sb">' + sub + '</div>'
+      + '</div>';
+  }
+
   function render() {
     css();
     var s = App.session();
     if (!s || s.role !== 'admin') return '<div class="card"><div class="card-b">' + App.empty('Only the lab admin can view the audit log.') + '</div></div>';
     if (!data && !err) { load(false); return '<div class="card"><div class="card-b">' + App.empty('Loading…') + '</div></div>'; }
     if (err && !data) return '<div class="card"><div class="card-b">' + App.empty(err) + '<div style="text-align:center;margin-top:8px"><button class="btn btn-primary" id="auRetry">Retry</button></div></div></div>';
+
+    var countCreated = 0, countUpdated = 0, countDeleted = 0;
+    rows.forEach(function (r) {
+      if (r.action === 'create' || r.action === 'bulk') countCreated++;
+      else if (r.action === 'update') countUpdated++;
+      else if (r.action === 'delete' || r.action === 'restore' || r.action === 'reseed' || r.action === 'login_failed') countDeleted++;
+    });
+
+    var kpiCards = '<div class="kpi-grid">'
+      + kpi('t-navy', IC_TOTAL, 'Total Events', (data && data.total != null) ? data.total : rows.length, ((data && data.total === 1) ? '1 event' : ((data ? data.total : rows.length) + ' events')) + ' logged')
+      + kpi('t-green', IC_PLUS, 'New Records', countCreated, 'created / added')
+      + kpi('t-blue', IC_EDIT, 'Changes Made', countUpdated, 'modifications recorded')
+      + kpi('t-red', IC_TRASH, 'Deletions / Sensitive', countDeleted, 'deleted or sensitive')
+      + '</div>';
+
     var users = data.users || {}, tables = data.tables || [];
-    var h = '<div class="card" style="margin-bottom:16px"><div class="au-f">' +
+    var h = kpiCards + '<div class="card" style="margin-bottom:16px"><div class="au-f">' +
       '<label>Period<select class="select" id="auRange">' + [['1', 'Today'], ['7', 'Last 7 days'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['all', 'All time'], ['custom', 'Custom range']].map(function (o) { return '<option value="' + o[0] + '"' + (F.range === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></label>' +
       (F.range === 'custom' ? '<label>From<input type="date" class="input" id="auFrom" value="' + esc(F.from) + '"></label><label>To<input type="date" class="input" id="auTo" value="' + esc(F.to) + '"></label>' : '') +
       '<label>User<select class="select" id="auUser"><option value="">Everyone</option>' + Object.keys(users).map(function (k) { return '<option value="' + esc(k) + '"' + (F.user === k ? ' selected' : '') + '>' + esc(users[k]) + '</option>'; }).join('') + '</select></label>' +

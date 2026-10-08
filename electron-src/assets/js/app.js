@@ -59,9 +59,8 @@
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
     { key: 'finance',   label: 'Cash & Profit', icon: 'finance', route: '#/finance', color: '#0ea5a4',
       sub: [{ key: 'closing', label: 'Daily Cash Closing', route: '#/finance' }, { key: 'profit', label: 'Profit & Loss', route: '#/finance/profit', roles: ['admin'] }] },
-    { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports',   color: '#6366f1',
+    { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports/tests',   color: '#6366f1',
       sub: [
-        { key: 'all',      label: 'All Reports',      route: '#/reports' },
         { key: 'tests',    label: 'Test Reports',     route: '#/reports/tests' },
         { key: 'finance',  label: 'Finance Reports',  route: '#/reports/finance' },
         { key: 'dues',     label: 'Dues Aging',       route: '#/reports/dues' },
@@ -737,22 +736,22 @@
     });
     visible.forEach(function (n) { if (!placed[n.key] && BOTTOM.indexOf(n.key) < 0) items += itemHtml(n); });
     BOTTOM.forEach(function (k) { if (byKey[k]) items += itemHtml(byKey[k]); });
+    /* current user record (for profile photo in avatar & sidebar) */
+    var _me = null;
+    try { _me = window.DB.get('users', s.userId); } catch (e) {}
+    var _avatarInner = (_me && _me.photo) ? '<img src="' + _me.photo + '" alt="">' : esc((s.name || 'U').charAt(0).toUpperCase());
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
       '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Sync') + '</b><small>Medical Management</small></span>' +
       '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
       '<nav class="nav">' + items + '</nav>' +
       '<div class="side-foot"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a>' +
-      '<div class="sf-user"><span class="sf-av">' + esc((s.name || 'U').charAt(0).toUpperCase()) + '</span><span class="sf-tx"><b>' + esc(s.name || 'User') + '</b><small>' + esc(roleLabel(s)) + '</small></span>' +
+      '<div class="sf-user"><span class="sf-av">' + ((_me && _me.photo) ? '<img src="' + _me.photo + '" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">' : esc((s.name || 'U').charAt(0).toUpperCase())) + '</span><span class="sf-tx"><b>' + esc(s.name || 'User') + '</b><small>' + esc(roleLabel(s)) + '</small></span>' +
       '<button type="button" class="sf-out" id="sideLogout" title="Log out" aria-label="Log out">' + icon('logout', 17) + '</button></div></div>';
     document.getElementById('sideLogout').addEventListener('click', logout);
     paintSidePlan();
     /* topbar */
     var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
-    /* current user record (for profile photo in avatar) */
-    var _me = null;
-    try { _me = window.DB.get('users', s.userId); } catch (e) {}
-    var _avatarInner = (_me && _me.photo) ? '<img src="' + _me.photo + '" alt="">' : esc((s.name || 'U').charAt(0).toUpperCase());
     /* time-aware greeting for the header */
     var _gh = new Date().getHours();
     var _greet = _gh < 12 ? 'Good morning' : (_gh < 17 ? 'Good afternoon' : 'Good evening');
@@ -863,7 +862,7 @@
     var h = (location.hash || '').split('?')[0], subs = document.querySelectorAll('.nav-sub-it');
     for (var j = 0; j < subs.length; j++) {
       var dh = subs[j].getAttribute('data-href');
-      var on = (dh === h) || (dh === '#/reports' && (h === '#/reports' || h === '#/reports/all'));
+      var on = (dh === h) || (dh === '#/reports/tests' && (h === '#/reports' || h === '#/reports/all'));
       subs[j].classList.toggle('on', on);
     }
     /* folders: the one holding the current page opens (the others keep whatever the user chose) */
@@ -902,7 +901,7 @@
         var op = o.querySelector('.nav-par'); if (op) op.setAttribute('aria-expanded', 'false');
       });
       if (b.getAttribute('data-nav') === 'reports' && (location.hash || '').indexOf('#/reports') === -1) {
-        location.hash = '#/reports';
+        location.hash = '#/reports/tests';
       }
     }
   });

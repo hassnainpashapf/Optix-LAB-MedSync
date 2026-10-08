@@ -234,14 +234,14 @@
   /* ============================================================
      REPORTS  (#/reports) — admin only
      ============================================================ */
-  var rep = { from: null, to: null, type: 'all', preset: 'thisMonth' };
+  var rep = { from: null, to: null, type: 'tests', preset: 'thisMonth' };
   function repInit() {
     if (!rep.from) {
       var t = App.today();
       rep.from = t.slice(0, 8) + '01'; // first of month
       rep.to = t;
     }
-    if (!rep.type) rep.type = 'all';
+    if (!rep.type || rep.type === 'all') rep.type = 'tests';
     if (!rep.preset) rep.preset = 'thisMonth';
   }
   function setPreset(p) {
@@ -293,7 +293,6 @@
     var pInvCount = pInv.length;
 
     /* ---- report type visibility flags ---- */
-    var showAll = rep.type === 'all';
     var showTests = rep.type === 'tests';
     var showFinance = rep.type === 'finance';
     var showDues = rep.type === 'dues';
@@ -375,13 +374,13 @@
       .sort(function (a, b) { return b.billed - a.billed; });
 
     /* ---- report sections shared by CSV export + print ---- */
-    var repTypeLbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports', labs: 'Lab Comparison' }[rep.type] || rep.type;
+    var repTypeLbl = { tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports', labs: 'Lab Comparison' }[rep.type] || rep.type;
     var repSecs = {
-      finance: rep.type === 'all' || rep.type === 'finance',
-      tests: rep.type === 'all' || rep.type === 'tests',
-      doctors: rep.type === 'all' || rep.type === 'tests',
-      dues: rep.type === 'all' || rep.type === 'dues',
-      patients: rep.type === 'all' || rep.type === 'patients'
+      finance: rep.type === 'finance',
+      tests: rep.type === 'tests',
+      doctors: rep.type === 'tests',
+      dues: rep.type === 'dues',
+      patients: rep.type === 'patients'
     };
     function csvEsc(v) {
       var s = (v === null || v === undefined) ? '' : String(v);
@@ -589,7 +588,7 @@
       if (!id) { App.toast('Select a template first.', 'err'); return; }
       var t = repTplList().filter(function (x) { return String(x.id) === String(id); })[0];
       if (!t) { App.toast('Template not found.', 'err'); return; }
-      rep.type = t.type || 'all';
+      rep.type = t.type || 'tests';
       rep.from = t.from || rep.from;
       rep.to = t.to || rep.to;
       rep.preset = t.preset || 'custom';
@@ -994,12 +993,6 @@
     var duesCard = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Dues Aging</h3>'
       + '<span class="muted" style="font-weight:500;font-size:13px">by invoice age</span></div><div class="card-b">'
-      + '<div class="kpi-grid" style="margin-bottom:16px">'
-      + kpi('t-navy', CLOCK, buckets[0].label, App.money(buckets[0].total), buckets[0].count + ' bill(s)')
-      + kpi('t-amber', ALERT, buckets[1].label, App.money(buckets[1].total), buckets[1].count + ' bill(s)')
-      + kpi('t-purple', ALERT, buckets[2].label, App.money(buckets[2].total), buckets[2].count + ' bill(s)')
-      + kpi('t-red', X_ICON, buckets[3].label, App.money(buckets[3].total), buckets[3].count + ' bill(s)')
-      + '</div>'
       + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Invoice</th><th>Patient</th><th>Date</th><th style="text-align:right">Total</th><th style="text-align:right">Paid</th><th style="text-align:right">Due</th></tr></thead><tbody>'
       + duesRowsHtml + '</tbody></table></div>'
       + '</div></div>';
@@ -1130,31 +1123,6 @@
         + '</div>';
     }
 
-    var allOverviewHtml = ''
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
-      +   '<div class="card"><div class="card-h" style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Top Conducted Tests</h3><a href="#/reports/tests" class="btn btn-ghost btn-sm" style="font-weight:600">Full Test Reports &rarr;</a></div><div class="card-b">'
-      +     '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
-      +     top5Html
-      +     '</tbody></table></div>'
-      +   '</div></div>'
-      +   '<div class="card"><div class="card-h" style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Dues Aging Snapshot</h3><a href="#/reports/dues" class="btn btn-ghost btn-sm" style="font-weight:600">Full Dues &rarr;</a></div><div class="card-b">'
-      +     '<div class="kpi-grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0">'
-      +       kpi('t-navy', CLOCK, buckets[0].label, App.money(buckets[0].total), buckets[0].count + ' bill(s)')
-      +       kpi('t-amber', ALERT, buckets[1].label, App.money(buckets[1].total), buckets[1].count + ' bill(s)')
-      +       kpi('t-purple', ALERT, buckets[2].label, App.money(buckets[2].total), buckets[2].count + ' bill(s)')
-      +       kpi('t-red', X_ICON, buckets[3].label, App.money(buckets[3].total), buckets[3].count + ' bill(s)')
-      +     '</div>'
-      +   '</div></div>'
-      + '</div>'
-      + '<div class="card" style="margin-bottom:18px"><div class="card-h" style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Patient Activity Overview</h3><a href="#/reports/patients" class="btn btn-ghost btn-sm" style="font-weight:600">Patient Reports Archive &rarr;</a></div><div class="card-b">'
-      +   '<div class="kpi-grid" style="margin-bottom:0">'
-      +     kpi('t-navy', USERS, 'Total Patients', allPatients.length, 'all registered')
-      +     kpi('t-green', USERS, 'New This Month', mNewCount, 'registered this month')
-      +     kpi('t-amber', USERS, 'New in Period', periodNew, 'first visit in period')
-      +     kpi('t-purple', USERS, 'Returning in Period', periodReturning, 'repeat visits in period')
-      +   '</div>'
-      + '</div></div>';
-
     var finCallout = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
       + '<span style="font-size:13.5px;color:var(--muted)">Need detailed shift-wise cash balance or annual income statement?</span>'
@@ -1166,12 +1134,11 @@
       + '<style>' + ADM_STAT_CSS + '</style>'
       + repKpis
       + filterCard
-      + ((showAll || showFinance) ? cmpCard : '')
-      + repSlotSchedules + repSlotBuilder + ((showAll || showFinance) ? repSlotTemplates : '')
-      + (showAll ? (finSumCard + allOverviewHtml) : '')
+      + (showFinance ? cmpCard : '')
+      + repSlotSchedules + repSlotBuilder + (showFinance ? repSlotTemplates : '')
       + (showFinance ? (finSumCard + finCallout) : '')
       + (showDues ? duesCard : '')
-      + (showPatients ? (patCard + finCard) : '')
+      + (showPatients ? finCard : '')
       + (showLabs ? labsCardHtml : '')
       + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
       + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
@@ -1341,11 +1308,11 @@
     } /* end if (repChosen) */
   }
 
-  App.route('#/reports', function () { rep.type = 'all'; renderReports(); });
+  App.route('#/reports', function () { rep.type = 'tests'; renderReports(); });
   App.route('#/reports/:tab', function (p) {
-    var valid = ['all', 'tests', 'finance', 'dues', 'patients', 'labs'];
-    var tab = (p && p.tab) ? p.tab.toLowerCase() : 'all';
-    rep.type = valid.indexOf(tab) >= 0 ? tab : 'all';
+    var valid = ['tests', 'finance', 'dues', 'patients', 'labs'];
+    var tab = (p && p.tab) ? p.tab.toLowerCase() : 'tests';
+    rep.type = valid.indexOf(tab) >= 0 ? tab : 'tests';
     renderReports();
   });
 
@@ -1813,43 +1780,146 @@
     _paintPreview();
   }
 
-  /* ---- My Account — change own username / password ---- */
+  /* ---- My Account — change own details, photo, username, password ---- */
   function renderSetAccount() {
     var me = sess();
     var u = me ? DB.get('users', me.userId) : null;
     if (!u) { document.getElementById('setBody').innerHTML = App.empty('Account not found. Please log in again.'); return; }
-    var html = '<div class="form-grid" style="max-width:560px">'
-      + '<div><label class="label">Full Name</label><input class="input" id="maName" value="' + App.esc(u.name || '') + '"></div>'
-      + '<div><label class="label">Username *</label><input class="input" id="maUser" value="' + App.esc(u.username || '') + '"></div>'
-      + '<div><label class="label">New Password</label><input class="input" id="maPass" type="password" placeholder="min 4 characters"></div>'
-      + '<div><label class="label">Confirm New Password</label><input class="input" id="maPass2" type="password" placeholder="repeat new password"></div>'
+
+    var photoVal = u.photo || '';
+    var roleLbl = (u.role === 'admin' ? 'Administrator' : (u.role === 'technician' ? 'Lab Technician' : 'Staff Member'));
+
+    function renderAvatar() {
+      var av = document.getElementById('maPhotoPreview');
+      if (!av) return;
+      if (photoVal) {
+        av.innerHTML = '<img src="' + photoVal + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="Avatar">';
+      } else {
+        av.innerHTML = '<span>' + App.esc((u.name || u.username || 'U').charAt(0).toUpperCase()) + '</span>';
+      }
+    }
+
+    var html = '<div style="max-width:680px">'
+      + '<style>'
+      + '.ma-card{background:var(--card,#fff);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:18px}'
+      + '.ma-title{font-size:14px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.05em;margin:0 0 14px}'
+      + '.ma-photo-row{display:flex;align-items:center;gap:18px;margin-bottom:18px;flex-wrap:wrap}'
+      + '.ma-photo{width:84px;height:84px;border-radius:50%;background:var(--brand-grad,linear-gradient(135deg,#0284c7,#1e3a8a));color:#fff;display:grid;place-items:center;font-size:30px;font-weight:800;overflow:hidden;flex:none;box-shadow:0 4px 14px rgba(19,24,69,.25);border:2px solid #fff}'
+      + '.ma-photo img{width:100%;height:100%;object-fit:cover;display:block}'
+      + '.ma-role-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:rgba(2,132,199,.12);color:#0284c7;margin-left:8px}'
+      + '</style>'
+      + '<div class="ma-card">'
+      + '<div class="ma-title">Profile Picture &amp; Personal Info</div>'
+      + '<div class="ma-photo-row">'
+      + '  <div class="ma-photo" id="maPhotoPreview"></div>'
+      + '  <div>'
+      + '    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'
+      + '      <button type="button" class="btn btn-sm btn-ghost" id="maUploadBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Photo</button>'
+      + '      <button type="button" class="btn btn-sm btn-ghost" id="maRemoveBtn" style="color:var(--red)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Remove</button>'
+      + '      <input type="file" id="maFile" accept="image/*" hidden>'
+      + '    </div>'
+      + '    <div class="muted" style="font-size:12px">JPG, PNG or WebP. Auto-compressed to profile size.</div>'
+      + '  </div>'
       + '</div>'
-      + '<p class="muted" style="font-size:12.5px;margin-top:10px">Leave the password fields blank to keep your current password.</p>'
-      + '<div style="margin-top:14px"><button class="btn btn-primary" id="maSave">Save Changes</button></div>';
+      + '<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px">'
+      + '  <div><label class="label">Full Name *</label><input class="input" id="maName" value="' + App.esc(u.name || '') + '" placeholder="e.g. Dr. Sarah Khan"></div>'
+      + '  <div><label class="label">Username *</label><input class="input" id="maUser" value="' + App.esc(u.username || '') + '" placeholder="username"></div>'
+      + '  <div><label class="label">Email Address</label><input class="input" id="maEmail" type="email" value="' + App.esc(u.email || '') + '" placeholder="user@lab.com"></div>'
+      + '  <div><label class="label">Phone Number</label><input class="input" id="maPhone" type="tel" value="' + App.esc(u.phone || '') + '" placeholder="03xx-xxxxxxx"></div>'
+      + '  <div style="grid-column:1/-1"><label class="label">Address / Location</label><input class="input" id="maAddress" value="' + App.esc(u.address || '') + '" placeholder="Street address, City"></div>'
+      + '  <div style="grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-top:2px">'
+      + '    <span>Account Role:</span><span class="ma-role-badge">' + App.esc(roleLbl) + '</span>'
+      + '    <span style="margin-left:auto;font-size:12px">User ID: ' + App.esc(u.id) + '</span>'
+      + '  </div>'
+      + '</div>'
+      + '</div>'
+      + '<div class="ma-card">'
+      + '<div class="ma-title">Security &amp; Password</div>'
+      + '<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px">'
+      + '  <div><label class="label">New Password</label><input class="input" id="maPass" type="password" placeholder="min 4 characters"></div>'
+      + '  <div><label class="label">Confirm New Password</label><input class="input" id="maPass2" type="password" placeholder="repeat new password"></div>'
+      + '</div>'
+      + '<p class="muted" style="font-size:12px;margin:8px 0 0">Leave password fields blank if you do not want to change your current password.</p>'
+      + '</div>'
+      + '<div style="margin-top:16px"><button class="btn btn-primary" id="maSave" style="min-width:140px">Save Changes</button></div>'
+      + '</div>';
+
     document.getElementById('setBody').innerHTML = html;
+    renderAvatar();
+
+    var fi = document.getElementById('maFile');
+    var ub = document.getElementById('maUploadBtn');
+    var rb = document.getElementById('maRemoveBtn');
+    if (ub && fi) ub.addEventListener('click', function () { fi.click(); });
+    if (fi) {
+      fi.addEventListener('change', function () {
+        var file = fi.files && fi.files[0];
+        if (!file) return;
+        if (!/^image\//.test(file.type)) { App.toast('Please select an image file', 'err'); return; }
+        var reader = new FileReader();
+        reader.onload = function () {
+          var img = new Image();
+          img.onload = function () {
+            var w = img.width, h = img.height;
+            var scale = Math.min(1, 192 / Math.max(w, h));
+            var cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+            var cv = document.createElement('canvas');
+            cv.width = cw; cv.height = ch;
+            cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+            photoVal = cv.toDataURL('image/jpeg', 0.85);
+            renderAvatar();
+          };
+          img.onerror = function () { App.toast('Could not process this image', 'err'); };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    if (rb) {
+      rb.addEventListener('click', function () {
+        photoVal = '';
+        renderAvatar();
+      });
+    }
+
     document.getElementById('maSave').addEventListener('click', function () {
       var name = document.getElementById('maName').value.trim();
       var username = document.getElementById('maUser').value.trim();
+      var email = document.getElementById('maEmail').value.trim();
+      var phone = document.getElementById('maPhone').value.trim();
+      var address = document.getElementById('maAddress').value.trim();
       var p1 = document.getElementById('maPass').value;
       var p2 = document.getElementById('maPass2').value;
-      if (username.length < 3) return App.toast('Username must be at least 3 characters.', 'err');
+
+      if (!username || username.length < 3) return App.toast('Username must be at least 3 characters.', 'err');
       var clash = DB.all('users').some(function (x) {
         return x.id !== u.id && String(x.username || '').toLowerCase() === username.toLowerCase();
       });
       if (clash) return App.toast('That username is already taken.', 'err');
-      var patch = { username: username, name: name || u.name };
+
+      var patch = {
+        username: username,
+        name: name || u.name || username,
+        email: email,
+        phone: phone,
+        address: address,
+        photo: photoVal
+      };
+
       if (p1 || p2) {
         if (p1.length < 4) return App.toast('New password must be at least 4 characters.', 'err');
         if (p1 !== p2) return App.toast('Passwords do not match.', 'err');
         patch.password = p1;
       }
+
       DB.update('users', u.id, patch);
       try {
         var s = sess() || {};
         s.name = patch.name;
+        s.photo = patch.photo;
         localStorage.setItem('labpos_session', JSON.stringify(s));
       } catch (e) {}
-      App.toast('Account updated.');
+      App.toast('Account updated successfully!');
       if (App.renderShell) App.renderShell();
       renderSettings();
     });
