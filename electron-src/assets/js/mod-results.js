@@ -1659,10 +1659,10 @@
     var rightHtml =
       '<div style="flex:none;color:#000;font-size:0.95em;line-height:1.3;display:flex;align-items:flex-start;gap:12px">' +
         '<div style="text-align:left">' +
-        '<div style="margin-top:2px">' + (_tpl ? '{{lab_barcode}}' : barcodeHtml(_caseCode).replace('margin:0 auto', 'margin:0')) +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2">' + (_tpl ? '{{lab_no}}' : App.esc(_caseNo)) + '</div></div>' +
-        '<div style="margin-top:7px">' + (_tpl ? '{{case_number_barcode}}' : barcodeHtml(_patCode).replace('margin:0 auto', 'margin:0')) +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2">' + (_tpl ? '{{case_number}}' : App.esc(_patId)) + '</div></div>' +
+        '<div style="margin-top:2px">' + (_tpl ? '{{lab_barcode}}' : barcodeHtml(_caseCode, '100%', '15px').replace('margin:0 auto', 'margin:0')) +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2;white-space:nowrap">' + (_tpl ? '{{lab_no}}' : App.esc(_caseNo)) + '</div></div>' +
+        '<div style="margin-top:7px">' + (_tpl ? '{{case_number_barcode}}' : barcodeHtml(_patCode, '100%', '15px').replace('margin:0 auto', 'margin:0')) +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2;white-space:nowrap">' + (_tpl ? '{{case_number}}' : App.esc(_patId)) + '</div></div>' +
         '</div>' +
         (showQr
           ? (_tpl ? '<div>{{qr}}</div>' : '<div><img data-qr="1" style="width:70px;height:70px" alt="QR"></div>')
@@ -2500,7 +2500,7 @@
   function fillTokens(html, d) {
     var inv = (d && d.inv) || {}, pat = (d && d.pat) || {}, s = (d && d.s) || {};
     var vn = App.visitNos(inv);   /* lab_no / case_number; the old names case_no / patient_id keep their place (top / second) and now show the same two numbers */
-    var bc = function (code) { return barcodeHtml(code).replace('margin:0 auto', 'margin:0'); };
+    var bc = function (code) { return barcodeHtml(code, '124px', '15px').replace('margin:0 auto', 'margin:0'); };
     return String(html || '')
       .replace(/\{\{\s*logo\s*\}\}/g, function () { return App.esc(s.logo || ''); })
       .replace(/\{\{\s*(?:lab_barcode|case_barcode)\s*\}\}/g, function () { return bc(vn.labCode); })

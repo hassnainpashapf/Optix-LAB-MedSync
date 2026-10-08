@@ -1260,7 +1260,7 @@
     return { regLocation: s.headOffice || s.address || s.labName || '', destLocation: s.destinationLocation || s.mainLab || s.headOffice || s.address || s.labName || '' };
   };
   /* Report numbers. LAB # counts every report the lab has made, 01, 02, 03 ... and never starts over; CASE # counts the reports of ONE day and starts at 01
-     again every day. Printed as "INV # 57 - 10/2026" (month / year of the registration date) and "P # 03 - 08/10/2026" (the full date).
+     again every day. Printed as "INV # 57 - 10/2026" (month / year of the registration date) and "P # 03 - 08/10" (day / month).
      New bills store labNo / caseNo; older bills (made before this existed) are numbered by the order they were made. */
   function localDay(v) { var d = new Date(v); if (isNaN(d.getTime())) return ''; return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
   function visitMaps() {
@@ -1278,10 +1278,10 @@
   App.visitNos = function (inv) {
     inv = inv || {}; var m = visitMaps(), ln = (+inv.labNo > 0) ? +inv.labNo : (m.lab[inv.id] || 1), cn = (+inv.caseNo > 0) ? +inv.caseNo : (m.cas[inv.id] || 1);
     var d = new Date(inv.createdAt || Date.now()); if (isNaN(d.getTime())) d = new Date();
-    var my = pad2(d.getMonth() + 1) + '/' + d.getFullYear(), dm = pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear(), p = function (n) { return n < 10 ? '0' + n : String(n); };
+    var my = pad2(d.getMonth() + 1) + '/' + d.getFullYear(), dm = pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1), p = function (n) { return n < 10 ? '0' + n : String(n); };
     /* "INV # 57 - 10/2026" (count of all reports, month / year) and "P # 03 - 08/10" (count of the day's reports, day / month) */
     return { lab: ln, cas: cn, labText: 'INV # ' + p(ln) + ' - ' + my, caseText: 'P # ' + p(cn) + ' - ' + dm,
-      labCode: 'INV' + p(ln) + '-' + pad2(d.getMonth() + 1) + '-' + d.getFullYear(), caseCode: 'P' + p(cn) + '-' + pad2(d.getDate()) + '-' + pad2(d.getMonth() + 1) + '-' + d.getFullYear() };
+      labCode: 'INV' + p(ln) + '-' + pad2(d.getMonth() + 1) + '-' + d.getFullYear(), caseCode: 'P' + p(cn) + '-' + pad2(d.getDate()) + '-' + pad2(d.getMonth() + 1) };
   };
   App.testsById = function () { var m = {}; (DB.all('tests') || []).forEach(function (t) { m[t.id] = t; }); return m; };
 
