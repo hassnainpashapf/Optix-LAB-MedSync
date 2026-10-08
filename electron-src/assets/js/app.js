@@ -1156,8 +1156,9 @@
     try {
       if (!(window.DB && DB.init)) { boot(); return; }
       var hasApi = !!window.LABPOS_API;
-      if (hasApi) bootSplash(true, 'Loading your lab data…');
-      var t = hasApi ? null : setTimeout(boot, 3500);
+      var hasSess = !!session();
+      if (hasApi && hasSess) bootSplash(true, 'Loading your lab data…');
+      var t = (hasApi && hasSess) ? null : setTimeout(boot, 3500);
       DB.init().then(function () {
         if (t) clearTimeout(t);
         if (hasApi && DB.isUnreachable && DB.isUnreachable() && session()) {

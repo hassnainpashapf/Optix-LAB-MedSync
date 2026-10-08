@@ -686,11 +686,30 @@
       try { base = window.LABPOS_API || null; } catch (e) {}
       if (!base || !window.fetch) return Promise.resolve(false);
       API = base; unreachable = false;
+      /* when no user is signed in, skip the heavy authenticated dump and load public info directly so login renders instantly */
+      if (!sessToken()) {
+        cloud = true; remote = false;
+        var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var to = ctl ? setTimeout(function () { ctl.abort(); }, 3500) : null;
+        return window.fetch(API + '/api/public-info', { signal: ctl ? ctl.signal : undefined }).then(function (r) {
+          if (to) clearTimeout(to);
+          return r.ok ? r.json() : null;
+        }).then(function (info) {
+          if (info && info.labName) {
+            store.settings.labName = info.labName;
+            if (info.tagline) store.settings.tagline = info.tagline;
+            if (info.logo) store.settings.logo = info.logo;
+          }
+          return true;
+        }).catch(function () {
+          if (to) clearTimeout(to);
+          return true;
+        });
+      }
       /* a doctor's login only ever sees the doctor dashboard: it must not (and cannot) download the lab's data */
-      if (sessToken() && sessRole() === 'doctor') { cloud = true; remote = false; return Promise.resolve(true); }
+      if (sessRole() === 'doctor') { cloud = true; remote = false; return Promise.resolve(true); }
       return loadDump().then(function (dump) {
-        store = dump; remote = true;
-        if (sessToken()) cloud = true; /* valid token = token-auth cloud API; no token = open desktop server */
+        store = dump; remote = true; cloud = true;
         return true;
       }).catch(function (err) {
         cloud = true; remote = false;
