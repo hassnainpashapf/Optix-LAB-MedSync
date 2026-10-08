@@ -80,6 +80,7 @@
     dues:      ['admin', 'reception'],
     discounts: ['admin', 'reception'],
     onlinepay: ['admin', 'reception'],
+    'online-payments': ['admin', 'reception'],
     panels:    ['admin', 'reception'],
     outsourced: ['admin', 'reception', 'technician'],
     patients:  ['admin', 'reception', 'technician'],
@@ -103,11 +104,12 @@
     var seg = (path || '').replace(/^#\//, '').split('?')[0].split('/')[0];
     if (seg === 'invoice') seg = 'invoices';
     if (seg === 'patient') seg = 'patients';
+    if (seg === 'online-payments') seg = 'onlinepay';
     return seg || 'dashboard';
   }
   /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
      Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
-  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
+  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['onlinepay', 'Online Payments'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
     ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Cash & daily closing'], ['reports', 'Reports'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['downloads', 'Downloads']];
   function roleDef(s) {
     s = s || session(); if (!s || s.role !== 'custom') return null;

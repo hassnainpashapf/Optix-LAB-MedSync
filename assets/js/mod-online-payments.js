@@ -113,8 +113,28 @@
     var all = (DB.all('onlinepay_claims') || []).slice()
       .sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); }); /* newest first */
     var counts = { all: all.length, pending: 0, approved: 0, rejected: 0 };
-    all.forEach(function (c) { if (counts[c.status] !== undefined) counts[c.status]++; });
+    var sums = { pending: 0, approved: 0 };
+    all.forEach(function (c) {
+      if (counts[c.status] !== undefined) counts[c.status]++;
+      var amt = Number(c.amount) || 0;
+      if (c.status === 'pending') sums.pending += amt;
+      if (c.status === 'approved') sums.approved += amt;
+    });
     var list = (F.status === 'all') ? all : all.filter(function (c) { return c.status === F.status; });
+
+    var CARD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>';
+    var CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>';
+    var X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>';
+    function kpi(cls, icon, label, num, sub, tabKey) {
+      return '<div class="kpi ' + cls + '" data-opq-tab="' + tabKey + '" style="cursor:pointer" title="Filter by ' + label + '"><div class="kpi-ic">' + icon + '</div><div class="kpi-lb">' + label + '</div><div class="kpi-nm">' + num + '</div><div class="kpi-sb">' + sub + '</div></div>';
+    }
+    var statGrid = '<div class="kpi-grid" style="margin-bottom:16px">' +
+      kpi('t-navy', CARD, 'ALL CLAIMS', all.length, 'all online payments', 'all') +
+      kpi('t-amber', CLOCK, 'PENDING', counts.pending, sums.pending ? App.money(sums.pending) + ' to verify' : 'awaiting verification', 'pending') +
+      kpi('t-green', CHECK, 'APPROVED', counts.approved, sums.approved ? App.money(sums.approved) + ' collected' : 'verified & applied', 'approved') +
+      kpi('t-red', X, 'REJECTED', counts.rejected, 'rejected claims', 'rejected') +
+      '</div>';
 
     var tabs = ['all', 'pending', 'approved', 'rejected'].map(function (st) {
       var lb = st.charAt(0).toUpperCase() + st.slice(1);
@@ -147,6 +167,7 @@
         : 'No online payment claims yet.') + '</td></tr>';
 
     document.getElementById('view').innerHTML =
+      statGrid +
       '<div class="tabs" style="margin-bottom:16px">' + tabs + '</div>' +
       '<div class="card"><div class="card-b"><div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Invoice No</th><th>Patient</th><th>Method</th><th>TID</th>' +
