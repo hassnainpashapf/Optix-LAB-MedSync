@@ -1652,16 +1652,17 @@
       '</div>';
 
     /* RIGHT: QR on top, then Case # barcode + ID, then Patient ID barcode + ID */
-    var _caseNo = spacedNo(inv.no || inv.id);
-    var _patId = String(pat.id == null ? '' : pat.id);
+    var _vn = App.visitNos(inv);                 /* LAB # (counts all reports) and CASE # (counts today's reports) with month / year */
+    var _caseNo = _vn.labText, _caseCode = _vn.labCode;
+    var _patId = _vn.caseText, _patCode = _vn.caseCode;
     var _tpl = !!(d && d._tpl);   /* template mode: per-report parts are written as {{tokens}} for the editable Custom Header box */
     var rightHtml =
       '<div style="flex:none;color:#000;font-size:0.95em;line-height:1.3;display:flex;align-items:flex-start;gap:12px">' +
         '<div style="text-align:left">' +
-        '<div style="margin-top:2px">' + (_tpl ? '{{case_barcode}}' : barcodeHtml(_caseNo).replace('margin:0 auto', 'margin:0')) +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2">' + (_tpl ? '{{case_no}}' : App.esc(_caseNo)) + '</div></div>' +
-        '<div style="margin-top:7px">' + (_tpl ? '{{patient_barcode}}' : barcodeHtml(_patId).replace('margin:0 auto', 'margin:0')) +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2">' + (_tpl ? '{{patient_id}}' : App.esc(_patId)) + '</div></div>' +
+        '<div style="margin-top:2px">' + (_tpl ? '{{lab_barcode}}' : barcodeHtml(_caseCode).replace('margin:0 auto', 'margin:0')) +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2">' + (_tpl ? '{{lab_no}}' : App.esc(_caseNo)) + '</div></div>' +
+        '<div style="margin-top:7px">' + (_tpl ? '{{case_number_barcode}}' : barcodeHtml(_patCode).replace('margin:0 auto', 'margin:0')) +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2">' + (_tpl ? '{{case_number}}' : App.esc(_patId)) + '</div></div>' +
         '</div>' +
         (showQr
           ? (_tpl ? '<div>{{qr}}</div>' : '<div><img data-qr="1" style="width:70px;height:70px" alt="QR"></div>')
@@ -2498,14 +2499,14 @@
   /* {{tokens}} usable inside a Custom Report Header / Footer; filled for every report */
   function fillTokens(html, d) {
     var inv = (d && d.inv) || {}, pat = (d && d.pat) || {}, s = (d && d.s) || {};
-    var caseNo = String(inv.no || inv.id || '').replace(/\s*-\s*/g, ' - ').replace(/\s*\/\s*/g, ' / ');
-    var patId = String(pat.id == null ? '' : pat.id);
+    var vn = App.visitNos(inv);   /* lab_no / case_number; the old names case_no / patient_id keep their place (top / second) and now show the same two numbers */
+    var bc = function (code) { return barcodeHtml(code).replace('margin:0 auto', 'margin:0'); };
     return String(html || '')
       .replace(/\{\{\s*logo\s*\}\}/g, function () { return App.esc(s.logo || ''); })
-      .replace(/\{\{\s*case_barcode\s*\}\}/g, function () { return barcodeHtml(caseNo).replace('margin:0 auto', 'margin:0'); })
-      .replace(/\{\{\s*patient_barcode\s*\}\}/g, function () { return barcodeHtml(patId).replace('margin:0 auto', 'margin:0'); })
-      .replace(/\{\{\s*case_no\s*\}\}/g, function () { return App.esc(caseNo); })
-      .replace(/\{\{\s*patient_id\s*\}\}/g, function () { return App.esc(patId); })
+      .replace(/\{\{\s*(?:lab_barcode|case_barcode)\s*\}\}/g, function () { return bc(vn.labCode); })
+      .replace(/\{\{\s*(?:case_number_barcode|patient_barcode)\s*\}\}/g, function () { return bc(vn.caseCode); })
+      .replace(/\{\{\s*(?:lab_no|case_no)\s*\}\}/g, function () { return App.esc(vn.labText); })
+      .replace(/\{\{\s*(?:case_number|patient_id)\s*\}\}/g, function () { return App.esc(vn.caseText); })
       .replace(/\{\{\s*qr\s*\}\}/g, function () { return s.showQr === false ? '' : '<img data-qr="1" style="width:70px;height:70px" alt="QR">'; });
   }
   /* the current automatic header / footer as editable HTML (pre-fills the Custom boxes in Settings -> Lab Profile) */
@@ -3005,13 +3006,14 @@
       var hnx = W - M - (showQr ? qrS + 15 : 0);
       doc.setTextColor(20, 20, 20);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-      txt('Patient No.:', hnx, y + 5, { align: 'right' });
+      var vnp = App.visitNos(inv);
+      txt('Lab #:', hnx, y + 5, { align: 'right' });
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt(dash(pat.id), hnx, y + 10, { align: 'right', charSpace: 1.4 });
+      txt(vnp.labText.replace('LAB # ', ''), hnx, y + 10, { align: 'right', charSpace: 0.6 });
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
       txt('Case #:', hnx, y + 15.5, { align: 'right' });
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt(dash(inv.no || inv.id), hnx, y + 20.5, { align: 'right', charSpace: 1.4 });
+      txt(vnp.caseText.replace('CASE # ', ''), hnx, y + 20.5, { align: 'right', charSpace: 0.6 });
 
       // --- QR 26mm at far right ---
       if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);

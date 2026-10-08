@@ -227,7 +227,9 @@
       if (pn && +pn.creditLimit > 0 && App.panelAccount(pn).balance + t.total > +pn.creditLimit + 0.009) {
         if (!window.confirm(pn.name + ' would go over its credit limit of ' + App.money(pn.creditLimit) + ' (it already owes ' + App.money(Math.max(0, App.panelAccount(pn).balance)) + '). Save this bill anyway?')) return;
       }
+      var billAt = App.fromLocalInput((document.getElementById('blRegDate') || {}).value), vn = App.nextVisitNos(billAt);
       var inv = DB.insert('invoices', {
+        labNo: vn.labNo, caseNo: vn.caseNo,
         panelId: pn ? pn.id : null,
         regLocation: (document.getElementById('blRegLoc') || {}).value ? document.getElementById('blRegLoc').value.trim() : '',
         destLocation: (document.getElementById('blDestLoc') || {}).value ? document.getElementById('blDestLoc').value.trim() : '',
@@ -240,7 +242,7 @@
         paid: t.paid,
         due: t.due,
         status: status,
-        createdAt: App.fromLocalInput((document.getElementById('blRegDate') || {}).value),
+        createdAt: billAt,
         createdBy: currentUser()
       });
       DB.update('invoices', inv.id, { no: inv.id });

@@ -347,7 +347,9 @@
           });
           if (items.length && !(App.limitHit && App.limitHit('invoices'))) {
             var bTotal = items.reduce(function (a, l) { return a + (+l.price || 0); }, 0);
+            var vn = App.nextVisitNos(regISO);
             var inv = DB.insert('invoices', {
+              labNo: vn.labNo, caseNo: vn.caseNo,
               patientId: np.id, doctorId: null, items: items,
               subtotal: bTotal, discount: 0, total: bTotal, paid: pnl ? bTotal : 0, due: pnl ? 0 : bTotal,
               status: pnl ? 'paid' : 'unpaid', panelId: pnl ? pnl.id : null, regLocation: regLoc, destLocation: destLoc, createdAt: regISO, createdBy: ptUser()

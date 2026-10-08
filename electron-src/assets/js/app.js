@@ -1221,6 +1221,29 @@
     var s = {}; try { s = DB.get('settings', 'main') || {}; } catch (e) {}
     return { regLocation: s.headOffice || s.address || s.labName || '', destLocation: s.destinationLocation || s.mainLab || s.headOffice || s.address || s.labName || '' };
   };
+  /* Report numbers. LAB # counts every report the lab has made, 01, 02, 03 ... and never starts over; CASE # counts the reports of ONE day and starts at 01
+     again every day. Both are printed with the month and year of the registration date, e.g. "LAB # 57 - 10/2026" and "CASE # 03 - 10/2026".
+     New bills store labNo / caseNo; older bills (made before this existed) are numbered by the order they were made. */
+  function localDay(v) { var d = new Date(v); if (isNaN(d.getTime())) return ''; return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+  function visitMaps() {
+    var all = (DB.all('invoices') || []).slice().sort(function (a, b) { return (String(a.createdAt || '') + '|' + a.id).localeCompare(String(b.createdAt || '') + '|' + b.id); });
+    var lab = {}, cas = {}, legacyLab = 0, dayCount = {};
+    all.forEach(function (i) { if (!(+i.labNo > 0)) { legacyLab++; lab[i.id] = legacyLab; } else lab[i.id] = +i.labNo; });
+    all.forEach(function (i) { var dk = localDay(i.createdAt); if (!(+i.caseNo > 0)) { dayCount[dk] = (dayCount[dk] || 0) + 1; cas[i.id] = dayCount[dk]; } else cas[i.id] = +i.caseNo; });
+    return { lab: lab, cas: cas, all: all };
+  }
+  App.nextVisitNos = function (createdAt, exceptId) {   /* the numbers for a bill that is being made now (registration date = createdAt) */
+    var m = visitMaps(), day = localDay(createdAt), lab = 0, cas = 0;
+    m.all.forEach(function (i) { if (i.id === exceptId) return; lab = Math.max(lab, m.lab[i.id] || 0); if (localDay(i.createdAt) === day) cas = Math.max(cas, m.cas[i.id] || 0); });
+    return { labNo: lab + 1, caseNo: cas + 1 };
+  };
+  App.visitNos = function (inv) {
+    inv = inv || {}; var m = visitMaps(), ln = (+inv.labNo > 0) ? +inv.labNo : (m.lab[inv.id] || 1), cn = (+inv.caseNo > 0) ? +inv.caseNo : (m.cas[inv.id] || 1);
+    var d = new Date(inv.createdAt || Date.now()); if (isNaN(d.getTime())) d = new Date();
+    var my = pad2(d.getMonth() + 1) + '/' + d.getFullYear(), p = function (n) { return n < 10 ? '0' + n : String(n); };
+    return { lab: ln, cas: cn, labText: 'LAB # ' + p(ln) + ' - ' + my, caseText: 'CASE # ' + p(cn) + ' - ' + my,
+      labCode: 'LAB' + p(ln) + '-' + pad2(d.getMonth() + 1) + '-' + d.getFullYear(), caseCode: 'CASE' + p(cn) + '-' + pad2(d.getMonth() + 1) + '-' + d.getFullYear() };
+  };
   App.testsById = function () { var m = {}; (DB.all('tests') || []).forEach(function (t) { m[t.id] = t; }); return m; };
 
   App.stockState = function () {

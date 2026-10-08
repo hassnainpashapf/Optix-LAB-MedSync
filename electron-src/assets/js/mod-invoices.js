@@ -354,7 +354,7 @@
           var t = calcTotal();
           var due = r2(t.total - (+inv.paid || 0));
           var visit = { regLocation: root.querySelector('#ei-regloc').value.trim(), destLocation: root.querySelector('#ei-destloc').value.trim() };
-          if (root.querySelector('#ei-regdate').value && root.querySelector('#ei-regdate').value !== App.toLocalInput(inv.createdAt)) visit.createdAt = App.fromLocalInput(root.querySelector('#ei-regdate').value);
+          if (root.querySelector('#ei-regdate').value && root.querySelector('#ei-regdate').value !== App.toLocalInput(inv.createdAt)) { visit.createdAt = App.fromLocalInput(root.querySelector('#ei-regdate').value); var vd = function (x) { var q = new Date(x); return q.getFullYear() + '-' + q.getMonth() + '-' + q.getDate(); }; if (vd(visit.createdAt) !== vd(inv.createdAt)) visit.caseNo = App.nextVisitNos(visit.createdAt, inv.id).caseNo; }
           DB.update('invoices', id, Object.assign(visit, inv.panelId ? {   /* a company's bill is never collected from the patient: it always stays paid, the account just changes */
             items: items, subtotal: t.sub, discount: t.disc, total: t.total, paid: t.total, due: 0, status: 'paid', doctorId: doctorId || null
           } : {
