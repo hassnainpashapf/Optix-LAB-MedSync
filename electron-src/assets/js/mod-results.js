@@ -3641,6 +3641,95 @@
     });
   }
 
+
+  /* ---------- Old Reports: every finished report, newest first. Search, filter, view, print, edit the values, delete. ---------- */
+  var old = { q: '', from: '', to: '', doc: '', page: 1 }, OLD_PER = 25;
+  function oldList() {
+    var by = {}, order = [];
+    joinedRows('ready').forEach(function (r) {
+      var id = r.invoice && r.invoice.id; if (!id) return;
+      if (!by[id]) { by[id] = { inv: r.invoice, pat: r.patient || patOf(r.invoice.patientId) || {}, rows: [], last: '' }; order.push(id); }
+      by[id].rows.push(r); if (r.res && r.res.reportedAt && r.res.reportedAt > by[id].last) by[id].last = r.res.reportedAt;
+    });
+    return order.map(function (id) { return by[id]; }).sort(function (a, b) { return String(b.inv.createdAt || '').localeCompare(String(a.inv.createdAt || '')); });
+  }
+  function oldText(g) {
+    var vn = App.visitNos(g.inv), d = g.inv.doctorId ? DB.get('doctors', g.inv.doctorId) : null;
+    return [g.pat.name, g.pat.phone, g.pat.whatsapp, g.pat.id, g.inv.no, g.inv.id, vn.labText, vn.caseText, d && d.name, g.inv.reference,
+      g.rows.map(function (r) { return testName(r); }).join(' ')].join(' ').toLowerCase();
+  }
+  function renderOld() {
+    var view = document.getElementById('view'), all = oldList(), ed = true;
+    var q = old.q.trim().toLowerCase();
+    var rows = all.filter(function (g) {
+      var day = String(g.inv.createdAt || '').slice(0, 10);
+      if (old.from && day < old.from) return false;
+      if (old.to && day > old.to) return false;
+      if (old.doc && g.inv.doctorId !== old.doc) return false;
+      return !q || oldText(g).indexOf(q) >= 0;
+    });
+    var pages = Math.max(1, Math.ceil(rows.length / OLD_PER)); if (old.page > pages) old.page = pages;
+    var slice = rows.slice((old.page - 1) * OLD_PER, old.page * OLD_PER);
+    var docs = (DB.all('doctors') || []).slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    var bar = '<div class="toolbar" style="margin-bottom:14px;flex-wrap:wrap;gap:8px">' +
+      '<input class="input search" id="olQ" placeholder="Search name, phone, patient ID, invoice, LAB #, test, doctor…" value="' + App.esc(old.q) + '" style="max-width:380px;flex:1;min-width:220px">' +
+      '<label class="muted" style="font-size:12.5px;display:flex;align-items:center;gap:6px">From <input class="input" id="olFrom" type="date" value="' + App.esc(old.from) + '" style="width:auto"></label>' +
+      '<label class="muted" style="font-size:12.5px;display:flex;align-items:center;gap:6px">To <input class="input" id="olTo" type="date" value="' + App.esc(old.to) + '" style="width:auto"></label>' +
+      '<select class="select" id="olDoc" style="width:auto"><option value="">All doctors</option>' + docs.map(function (d) { return '<option value="' + App.esc(d.id) + '"' + (old.doc === d.id ? ' selected' : '') + '>' + App.esc(d.name) + '</option>'; }).join('') + '</select>' +
+      ((old.q || old.from || old.to || old.doc) ? '<button class="btn btn-ghost btn-sm" id="olClear">Clear</button>' : '') +
+      '<div style="margin-left:auto;font-weight:700;font-size:14px;color:var(--ink2)">Old Reports <span class="badge b-ready" style="margin-left:6px">' + rows.length + (rows.length !== all.length ? ' of ' + all.length : '') + '</span></div></div>';
+    var body = !slice.length ? App.empty(all.length ? 'No report matches your search.' : 'No finished reports yet.') :
+      '<div class="tbl-wrap"><table class="table"><thead><tr><th>LAB # / Invoice</th><th>Registered</th><th>Patient</th><th>Tests</th><th>Doctor</th><th>Reported</th><th>Bill</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + slice.map(function (g) {
+        var inv = g.inv, vn = App.visitNos(inv), d = inv.doctorId ? DB.get('doctors', inv.doctorId) : null, names = g.rows.map(function (r) { return testName(r); }).filter(Boolean);
+        return '<tr><td><b>' + App.esc(vn.labText) + '</b><div class="muted mono" style="font-size:11.5px">' + App.esc(inv.no || inv.id) + '</div></td><td>' + App.esc(App.d(inv.createdAt)) + '</td>' +
+          '<td><b>' + App.esc(g.pat.name || '—') + '</b><div class="muted" style="font-size:12px">' + App.esc([g.pat.age ? g.pat.age + ' yrs' : '', g.pat.gender || '', g.pat.phone || g.pat.whatsapp || ''].filter(Boolean).join(' · ')) + '</div></td>' +
+          '<td style="max-width:260px;font-size:13px">' + App.esc(names.slice(0, 3).join(', ')) + (names.length > 3 ? ' <span class="muted">+' + (names.length - 3) + ' more</span>' : '') + '</td>' +
+          '<td>' + App.esc(d ? d.name : 'Self') + '</td><td class="muted">' + App.esc(g.last ? App.d(g.last) : '—') + '</td>' +
+          '<td>' + ((+inv.due || 0) > 0.009 ? '<span class="badge b-unpaid">Due ' + App.esc(App.money(inv.due)) + '</span>' : '<span class="badge b-paid">Paid</span>') + '</td>' +
+          '<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" data-ov="' + App.esc(inv.id) + '">View</button> <button class="btn btn-ghost btn-sm" data-op="' + App.esc(inv.id) + '">Print</button> <button class="btn btn-ghost btn-sm" data-oe="' + App.esc(inv.id) + '">Edit</button> <button class="btn btn-ghost btn-sm" data-od="' + App.esc(inv.id) + '" style="color:#b91c1c">Delete</button></td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      (pages > 1 ? '<div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px"><button class="btn btn-ghost btn-sm" id="olPrev"' + (old.page <= 1 ? ' disabled' : '') + '>&larr; Newer</button><span class="muted" style="font-size:13px">Page ' + old.page + ' of ' + pages + '</span><button class="btn btn-ghost btn-sm" id="olNext"' + (old.page >= pages ? ' disabled' : '') + '>Older &rarr;</button></div>' : '');
+    view.innerHTML = '<div class="page-head"><div><h1>Old Reports</h1><p class="muted" style="margin:2px 0 0">Every finished report. Search it, view or print it, correct the values, or delete it.</p></div></div>' + bar + '<div class="card"><div class="card-b">' + body + '</div></div>';
+    var on = function (id, fn) { var e = document.getElementById(id); if (e) e.addEventListener('input', fn); };
+    on('olQ', function () { old.q = this.value; old.page = 1; var pos = this.selectionStart; renderOld(); var e = document.getElementById('olQ'); e.focus(); try { e.setSelectionRange(pos, pos); } catch (x) {} });
+    ['olFrom:from', 'olTo:to', 'olDoc:doc'].forEach(function (s) { var p2 = s.split(':'); var e = document.getElementById(p2[0]); if (e) e.addEventListener('change', function () { old[p2[1]] = this.value; old.page = 1; renderOld(); }); });
+    var cl = document.getElementById('olClear'); if (cl) cl.addEventListener('click', function () { old = { q: '', from: '', to: '', doc: '', page: 1 }; renderOld(); });
+    var pv = document.getElementById('olPrev'); if (pv) pv.addEventListener('click', function () { old.page--; renderOld(); });
+    var nx = document.getElementById('olNext'); if (nx) nx.addEventListener('click', function () { old.page++; renderOld(); });
+    view.querySelectorAll('[data-ov]').forEach(function (b) { b.addEventListener('click', function () { viewReport(b.getAttribute('data-ov')); }); });
+    view.querySelectorAll('[data-op]').forEach(function (b) { b.addEventListener('click', function () { printReportChoice(b.getAttribute('data-op')); }); });
+    view.querySelectorAll('[data-oe]').forEach(function (b) { b.addEventListener('click', function () { manageReport(b.getAttribute('data-oe'), 'edit'); }); });
+    view.querySelectorAll('[data-od]').forEach(function (b) { b.addEventListener('click', function () { manageReport(b.getAttribute('data-od'), 'delete'); }); });
+  }
+  /* edit the values of a finished report, test by test, or delete one test / the whole report (the test goes back to "Pending Entry", the bill is untouched) */
+  function manageReport(invoiceId, mode) {
+    var g = oldList().filter(function (x) { return x.inv.id === invoiceId; })[0]; if (!g) { App.toast('Report not found.', 'err'); return; }
+    var vn = App.visitNos(g.inv);
+    App.modal((mode === 'delete' ? 'Delete report — ' : 'Edit report — ') + vn.labText.replace('LAB # ', 'LAB # '),
+      '<p class="muted" style="margin-top:0">' + App.esc(g.pat.name || '') + ' · ' + App.esc(g.inv.no || g.inv.id) + ' · ' + App.esc(App.d(g.inv.createdAt)) + '</p>' +
+      (mode === 'delete' ? '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;font-size:13px;margin-bottom:10px">Deleting a result removes its values and the report. The test goes back to <b>Pending Entry</b>; the bill and the payment stay as they are. This cannot be undone.</div>' : '') +
+      '<div id="mrList">' + g.rows.map(function (r) {
+        return '<div style="display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:10px;margin-bottom:6px"><div style="flex:1"><b>' + App.esc(testName(r)) + '</b><div class="muted" style="font-size:12px">Reported ' + App.esc(r.res && r.res.reportedAt ? App.dt(r.res.reportedAt) : '—') + '</div></div>' +
+          '<button class="btn btn-ghost btn-sm" data-mre="' + App.esc(r.res ? r.res.id : '') + '">Edit values</button><button class="btn btn-ghost btn-sm" data-mrd="' + App.esc(r.res ? r.res.id : '') + '" style="color:#b91c1c">Delete</button></div>';
+      }).join('') + '</div>' +
+      '<div style="display:flex;justify-content:space-between;gap:10px;margin-top:14px"><button class="btn btn-ghost" id="mrAll" style="color:#b91c1c">Delete the whole report</button><button class="btn btn-primary" id="mrClose">Done</button></div>',
+      { wide: true, onOpen: function (ov, close) {
+        ov.querySelector('#mrClose').addEventListener('click', function () { close(); renderOld(); });
+        ov.querySelectorAll('[data-mre]').forEach(function (b) { b.addEventListener('click', function () {
+          var row = g.rows.filter(function (r) { return r.res && r.res.id === b.getAttribute('data-mre'); })[0]; if (!row) return;
+          close(); openEntry(row, function () { renderOld(); });
+        }); });
+        function del(ids, label) {
+          App.confirm('Delete ' + label + '? This cannot be undone.').then(function (ok) {
+            if (!ok) return; ids.forEach(function (id) { if (id) DB.remove('results', id); });
+            App.toast('Deleted. The test is back in Pending Entry.'); close(); renderOld();
+          });
+        }
+        ov.querySelectorAll('[data-mrd]').forEach(function (b) { b.addEventListener('click', function () { del([b.getAttribute('data-mrd')], 'this result'); }); });
+        ov.querySelector('#mrAll').addEventListener('click', function () { del(g.rows.map(function (r) { return r.res && r.res.id; }), 'the whole report (' + g.rows.length + ' result' + (g.rows.length === 1 ? '' : 's') + ')'); });
+      } });
+  }
+  App.route('#/results/old', function () { renderOld(); });
   App.route('#/results', function () { tab = 'pending'; render(); });
   App.route('#/results/ready', function () { tab = 'ready'; render(); });
 
