@@ -4,3 +4,8 @@ npm-debug.log
 *.db
 .git
 .DS_Store
+releases
+backups
+report-pdfs
+stage
+.bak*
