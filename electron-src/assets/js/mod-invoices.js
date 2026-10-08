@@ -19,12 +19,24 @@
       return !!(s && (s.role === 'technician' || (window.App && App.hideMoney && App.hideMoney())));
     } catch (e) { return false; }
   }
+  var STAT_TINTS = {
+    brand: { sc: '#0284c7', line: '#aecbe3', soft: '#ebf4f9', circle: '#ddecf5' },
+    navy:  { sc: '#0284c7', line: '#aecbe3', soft: '#ebf4f9', circle: '#ddecf5' },
+    blue:  { sc: '#2563eb', line: '#a9c9ec', soft: '#e7f0fe', circle: '#dde9fb' },
+    amber: { sc: '#d97706', line: '#e9cb96', soft: '#fef4e2', circle: '#fde8c8' },
+    green: { sc: '#16a34a', line: '#9fd8b8', soft: '#e6f7f0', circle: '#d8f2e4' },
+    red:   { sc: '#dc2626', line: '#e6aaaa', soft: '#fdecec', circle: '#fad2d2' }
+  };
+
   function kpiCard(icon, tint, label, value, sub) {
-    var kTint = (tint === 'brand') ? 'navy' : tint;
-    return '<div class="kpi t-' + kTint + '"><div class="kpi-ic">' + icon + '</div>' +
-      '<div class="kpi-lb">' + App.esc(label) + '</div>' +
-      '<div class="kpi-nm">' + value + '</div>' +
-      '<div class="kpi-sb">' + sub + '</div></div>';
+    var c = STAT_TINTS[tint] || STAT_TINTS.blue;
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:' + c.sc + ';--sc-line:' + c.line + ';--sc-soft:' + c.soft + ';display:flex;flex-direction:column;justify-content:space-between;height:128px;min-height:128px;box-sizing:border-box;position:relative;background:linear-gradient(55deg,#ffffff 52%,' + c.soft + ' 52%);border:1.5px solid ' + c.line + ' !important;border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow:hidden">' +
+      '<div style="position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;background:' + c.circle + ';opacity:0.65;pointer-events:none"></div>' +
+      '<div class="stat-ico" style="position:relative;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:' + c.sc + ';background:linear-gradient(135deg,' + c.soft + ' 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px ' + c.line + ',0 1px 3px rgba(15,30,46,.06);margin-bottom:6px;flex:0 0 auto">' + icon + '</div>' +
+      '<div class="lb" style="position:relative;font-size:10.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;flex:0 0 auto">' + App.esc(label) + '</div>' +
+      '<div class="vl" style="position:relative;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0 0 4px 0;flex:0 0 auto">' + value + '</div>' +
+      '<div class="dl" style="position:relative;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto">' + sub + '</div>' +
+      '</div>';
   }
 
   /* ---------- shared helpers ---------- */
@@ -625,7 +637,7 @@
     view.innerHTML =
       '<div class="card"><div class="card-b">' +
         SC_STYLE +
-        '<div class="kpi-grid">' + invStats + '</div>' +
+        '<div class="stat-grid">' + invStats + '</div>' +
         '<div class="toolbar" style="margin:0 0 12px;gap:8px;flex-wrap:nowrap">' +
           '<input id="f-q" class="input" style="flex:1;min-width:0;width:auto;padding:8px 12px;font-size:13px" placeholder="Search invoice no, patient, phone..." value="' + App.esc(F.q) + '">' +
           '<select id="f-date" class="select" style="width:auto;flex:0 0 auto;padding:8px 10px;font-size:13px">' +
@@ -886,7 +898,7 @@
     document.getElementById('view').innerHTML =
       SC_STYLE +
       pendingBadge +
-      '<div class="kpi-grid">' + duesStats + '</div>' +
+      '<div class="stat-grid">' + duesStats + '</div>' +
       '<div class="card"><div class="card-b"><div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:right">Total</th>' +
         '<th style="text-align:right">Paid</th><th style="text-align:right">Due</th><th>Status</th><th>Actions</th>' +
@@ -945,7 +957,7 @@
 
     document.getElementById('view').innerHTML =
       SC_STYLE +
-      '<div class="kpi-grid">' + discStats + '</div>' +
+      '<div class="stat-grid">' + discStats + '</div>' +
       '<div class="card"><div class="card-b"><div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:right">Total</th>' +
         '<th style="text-align:right">Discount</th><th style="text-align:right">Paid</th>' +

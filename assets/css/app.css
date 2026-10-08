@@ -1403,23 +1403,28 @@ nav.nav{padding:2px 10px 8px}
 
 
 /* ===== Unified KPI stat cards (.kpi) — single source of truth for all pages ===== */
-.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
-.kpi{position:relative;overflow:hidden;background:#fff;border:1px solid #e5e9f2;border-radius:16px;box-shadow:0 1px 3px rgba(15,23,42,.06);padding:16px;min-height:132px}
-.kpi::after{content:"";position:absolute;top:0;right:0;width:60%;height:100%;background:linear-gradient(115deg,rgba(255,255,255,0) 20%,var(--tbg) 120%);pointer-events:none}
-.kpi-ic{width:40px;height:40px;border-radius:12px;background:var(--tbg);color:var(--tfg);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;position:relative;z-index:1}
-.kpi-ic svg{width:20px;height:20px}
-.kpi-lb{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:700;position:relative;z-index:1}
-.kpi-nm{font-size:30px;font-weight:800;color:#0f172a;margin-top:2px;position:relative;z-index:1}
-.kpi-sb{font-size:12.5px;color:#64748b;margin-top:2px;position:relative;z-index:1}
-.kpi.t-navy{--tbg:#ebf4f8;--tfg:#131845}
-.kpi.t-green{--tbg:#e6f7f0;--tfg:#059669}
-.kpi.t-blue{--tbg:#e8f0fe;--tfg:#2563eb}
-.kpi.t-amber{--tbg:#fef4e2;--tfg:#d97706}
-.kpi.t-red{--tbg:#fdecec;--tfg:#dc2626}
-.kpi.t-purple{--tbg:#f1eafe;--tfg:#7c3aed}
-.kpi.hot{border-color:#fca5a5}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px;align-items:stretch}
+@media(max-width:1100px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.kpi-grid{grid-template-columns:repeat(2,1fr);gap:10px}}
+.kpi{position:relative;overflow:hidden;background:#ffffff;border:1.5px solid var(--tline, #e5e9f2) !important;border-radius:14px;box-shadow:0 2px 8px rgba(15,23,42,.04);padding:14px 16px;min-height:128px;height:128px;box-sizing:border-box;display:flex;flex-direction:column;justify-content:space-between;transition:transform .18s ease,box-shadow .18s ease}
+.kpi:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(15,23,42,.08)}
+.kpi::before{content:"";position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;background:var(--tcirc, var(--tbg));opacity:.65;pointer-events:none;z-index:1}
+.kpi::after{content:"";position:absolute;inset:0;background:linear-gradient(55deg,#ffffff 52%,var(--tbg) 52%);pointer-events:none;z-index:0}
+.kpi>*{position:relative;z-index:2}
+.kpi-ic{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--tbg) 0%,#ffffff 160%);color:var(--tfg);box-shadow:inset 0 0 0 1px var(--tline,#e5e9f2),0 1px 3px rgba(15,30,46,.06);display:grid;place-items:center;margin-bottom:6px;flex:0 0 auto}
+.kpi-ic svg{width:17px;height:17px}
+.kpi-lb{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:3px;flex:0 0 auto}
+.kpi-nm{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0 0 4px 0;flex:0 0 auto}
+.kpi-sb{font-size:11.5px;color:var(--muted);font-weight:500;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto}
+.kpi.t-navy{--tbg:#ebf4f9;--tfg:#0284c7;--tline:#aecbe3;--tcirc:#ddecf5}
+.kpi.t-green{--tbg:#e6f7f0;--tfg:#16a34a;--tline:#9fd8b8;--tcirc:#d8f2e4}
+.kpi.t-blue{--tbg:#e7f0fe;--tfg:#2563eb;--tline:#a9c9ec;--tcirc:#dde9fb}
+.kpi.t-amber{--tbg:#fef4e2;--tfg:#d97706;--tline:#e9cb96;--tcirc:#fde8c8}
+.kpi.t-red{--tbg:#fdecec;--tfg:#dc2626;--tline:#e6aaaa;--tcirc:#fad2d2}
+.kpi.t-purple{--tbg:#f1eafe;--tfg:#7c3aed;--tline:#d8b4fe;--tcirc:#e9d5ff}
+.kpi.hot{border-color:#e6aaaa !important}
 .kpi.hot .kpi-nm{color:#b91c1c}
-.kpi.warn{border-color:#fcd34d}
+.kpi.warn{border-color:#e9cb96 !important}
 
 /* ============ Optix Assistant chatbot widget (.oxc-*) ============ */
 .oxc-fab{position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;

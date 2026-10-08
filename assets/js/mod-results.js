@@ -3487,13 +3487,22 @@
   };
 
   var KPI_TINTS = { amber: 't-amber', green: 't-green', blue: 't-blue', red: 't-red', navy: 't-navy', brand: 't-navy', purple: 't-purple', violet: 't-purple' };
+  var STAT_TINTS = {
+    brand: { sc: '#0284c7', line: '#aecbe3', soft: '#ebf4f9', circle: '#ddecf5' },
+    blue:  { sc: '#2563eb', line: '#a9c9ec', soft: '#e7f0fe', circle: '#dde9fb' },
+    amber: { sc: '#d97706', line: '#e9cb96', soft: '#fef4e2', circle: '#fde8c8' },
+    green: { sc: '#16a34a', line: '#9fd8b8', soft: '#e6f7f0', circle: '#d8f2e4' },
+    red:   { sc: '#dc2626', line: '#e6aaaa', soft: '#fdecec', circle: '#fad2d2' }
+  };
+
   function statCard(icon, tint, label, value, sub) {
-    var t = KPI_TINTS[tint] || 't-navy';
-    return '<div class="kpi ' + t + '">' +
-      '<div class="kpi-ic">' + icon + '</div>' +
-      '<div class="kpi-lb">' + App.esc(label) + '</div>' +
-      '<div class="kpi-nm">' + value + '</div>' +
-      '<div class="kpi-sb">' + sub + '</div>' +
+    var c = STAT_TINTS[tint] || STAT_TINTS.blue;
+    return '<div class="stat" data-tint="' + tint + '" style="--sc:' + c.sc + ';--sc-line:' + c.line + ';--sc-soft:' + c.soft + ';display:flex;flex-direction:column;justify-content:space-between;height:128px;min-height:128px;box-sizing:border-box;position:relative;background:linear-gradient(55deg,#ffffff 52%,' + c.soft + ' 52%);border:1.5px solid ' + c.line + ' !important;border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow:hidden">' +
+      '<div style="position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;background:' + c.circle + ';opacity:0.65;pointer-events:none"></div>' +
+      '<div class="stat-ico" style="position:relative;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:' + c.sc + ';background:linear-gradient(135deg,' + c.soft + ' 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px ' + c.line + ',0 1px 3px rgba(15,30,46,.06);margin-bottom:6px;flex:0 0 auto">' + icon + '</div>' +
+      '<div class="lb" style="position:relative;font-size:10.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;flex:0 0 auto">' + App.esc(label) + '</div>' +
+      '<div class="vl" style="position:relative;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0 0 4px 0;flex:0 0 auto">' + value + '</div>' +
+      '<div class="dl" style="position:relative;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto">' + sub + '</div>' +
       '</div>';
   }
 
@@ -3531,7 +3540,7 @@
       oldestDays = (oldestDays === null) ? d : Math.max(oldestDays, d);
     });
     var statsHtml = STAT_CSS +
-      '<div class="pgstat"><div class="kpi-grid">' +
+      '<div class="pgstat"><div class="stat-grid">' +
       statCard(STAT_ICONS.alert, 'amber', 'Pending Results', pendingRows.length, 'awaiting entry') +
       statCard(STAT_ICONS.check, 'green', 'Reported Today', reportedToday, 'results completed') +
       statCard(STAT_ICONS.cal, 'blue', 'Reported This Month', reportedMonth, 'this month') +
