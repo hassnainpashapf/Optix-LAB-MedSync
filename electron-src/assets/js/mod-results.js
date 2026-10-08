@@ -24,6 +24,16 @@
   function invOf(id) { return DB.get('invoices', id) || null; }
   function patOf(pid) { return DB.get('patients', pid) || {}; }
 
+  /* patient-case number for patient-facing report outputs ('P # 03 - 08/10');
+     falls back to the old invoice-number behavior when the invoice is missing */
+  function rptCaseText(inv) {
+    if (!inv || (!inv.id && !inv.no)) return (inv && (inv.no || inv.id)) || '';
+    try {
+      if (typeof App !== 'undefined' && App.visitNos) { var vn = App.visitNos(inv); if (vn && vn.caseText) return vn.caseText; }
+    } catch (e) {}
+    return inv.no || inv.id || '';
+  }
+
   function waPhone(p) {
     return App.normWa(p); /* shared helper (app.js) */
   }
@@ -46,7 +56,7 @@
   function waSummaryText(inv, pat) {
     var s = DB.get('settings', 'main') || {};
     return (s.labName || 'Lab') + '\nAssalam-o-Alaikum ' + (pat.name || '') + ',\n' +
-      'Your lab report is ready.\nInvoice: ' + inv.no + ' (' + App.d(inv.createdAt) + ')\n' +
+      'Your lab report is ready.\nPatient No: ' + rptCaseText(inv) + ' (' + App.d(inv.createdAt) + ')\n' +
       'Please collect it from the lab or reply here. Shukriya!';
   }
   /* ---------- manual send buttons (finalized report view) ----------
@@ -1903,8 +1913,8 @@
 
   /* ---------- worker 4/20: one test section ----------
      Bold section title; medium-grey header bar (TEST | NORMAL VALUE | UNIT);
-     bordered RESULT box on the right (grey "RESULT" strip, barcode, case #,
-     timestamp); borderless param rows with the result value right-aligned
+     bordered RESULT box on the right (grey "RESULT" strip, patient-no barcode,
+     patient no. 'P # NN', visit date 'DD/MM'); borderless param rows with the result value right-aligned
      in its own 4th column; abnormal values render red-bold with ↑/↓.
      No-params tests get a single "Result" row; vals['Remarks'] renders
      below the rows.
@@ -1952,8 +1962,8 @@
        borders) plus one RESULT box per report: the current report first,
        then one per previous report of the same test for this patient
        (newest first, capped at 2). Each box shows:
-         line 1: RESULT (bold), line 2: 6:7:2025 (d:m:yyyy),
-         line 3: 11-Jul-25  15:33
+         line 1: RESULT (bold), line 2: patient no. 'P # NN',
+         line 3: visit date 'DD/MM'
      - Body rows with dotted separators; param name regular weight.
      - Abnormal values (abnormalDir): red (#c00) bold with ↑ (high) or ↓
        (low) before the value — current and previous columns alike.
@@ -1967,11 +1977,12 @@
     var testId = (r.item && (r.item.testId || r.item.id)) || '';
     var prev = (d.prevByTest && testId && d.prevByTest[testId]) || [];
     var invNo = (d.inv && (d.inv.no || d.inv.id)) || '';
+    var vn = null; try { vn = d.inv ? App.visitNos(d.inv) : null; } catch (e) { vn = null; }
 
     /* result columns: current report first, then previous (newest first) */
-    var cols = [{ reportedAt: (r.res && r.res.reportedAt) || d.maxReported || '', values: vals, invoiceNo: invNo }]
+    var cols = [{ reportedAt: (r.res && r.res.reportedAt) || d.maxReported || '', values: vals, invoiceNo: invNo, caseText: (vn && vn.caseText) || '', caseCode: (vn && vn.caseCode) || '' }]
       .concat(prev.map(function (p) {
-        return { reportedAt: p.reportedAt || '', values: p.values || {}, invoiceNo: p.invoiceNo || '' };
+        return { reportedAt: p.reportedAt || '', values: p.values || {}, invoiceNo: p.invoiceNo || '', caseText: p.caseText || '', caseCode: p.caseCode || '' };
       }));
     var cmp = cols.length > 1; /* comparison print: previous results beside the new ones */
     if (cmp) d._cmpLegend = true;
@@ -1988,17 +1999,21 @@
     if (!/report\s*:?\s*$/i.test(title)) title += ' REPORT';
 
     /* RESULT header boxes — span the full header height (grid-row: span 2):
-       barcode of the case/invoice number, then the case number, then the
+       barcode of the patient number, then the patient number, then the
        date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
+      var bv = c.caseCode ? { code: c.caseCode, text: c.caseText } : (vn ? { code: vn.caseCode, text: vn.caseText } : null);
+      var bt = bv && bv.text ? String(bv.text).split(' - ') : [];
+      var bNum = bt[0] || (c.invoiceNo || invNo);
+      var bDate = bt[1] || '';
       return '<div style="border:2px solid #000;background:#fff;box-sizing:border-box;' +
         'padding:0;line-height:1.25;font-size:0.76em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%">' +
         '<div style="font-weight:700;color:#000;font-size:1em;background:#bfbfbf;padding:3px 0;border-bottom:2px solid #000;text-align:center;width:100%">RESULT</div>' +
         '<div style="padding:3px 3px 2px;display:flex;flex-direction:column;align-items:center;width:100%;box-sizing:border-box">' +
-        '<div style="width:100%;margin:0 0 2px">' + barcodeHtml(c.invoiceNo || invNo, '100%', '11px') + '</div>' +
-        '<div style="color:#000;font-size:1em;white-space:nowrap">' + App.esc(c.invoiceNo || invNo) + '</div>' +
+        '<div style="width:100%;margin:0 0 2px">' + barcodeHtml((bv && bv.code) || c.invoiceNo || invNo, '100%', '11px') + '</div>' +
+        '<div style="color:#000;font-size:1em;white-space:nowrap">' + App.esc(bNum) + '</div>' +
         '<div style="font-size:1em;color:#000;white-space:nowrap">' +
-          App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
+          (bDate ? App.esc(bDate) : App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;')) +
         '</div></div>' +
       '</div>';
     }).join('');
@@ -2451,7 +2466,7 @@
     /* ---------- worker 3/4: integrated comparison data ----------
        Previous-report data: for the same patient (inv.patientId), find OTHER
        invoices (id !== invoiceId) with ready results, newest first.
-       d.prevByTest = map testId -> array of { invoiceNo, reportedAt, values }
+       d.prevByTest = map testId -> array of { invoiceNo, caseText, caseCode, reportedAt, values }
        (capped at 2 previous columns per test for readability). */
     var prevByTest = {};
     var otherInvRows = joinedRows('ready').filter(function (r) {
@@ -2471,6 +2486,8 @@
       if (prevByTest[tid].length >= 2) return;  /* cap: 2 previous columns */
       prevByTest[tid].push({
         invoiceNo: r.invoice.no || r.invoice.id,
+        caseText: App.visitNos(r.invoice).caseText,
+        caseCode: App.visitNos(r.invoice).caseCode,
         reportedAt: (r.res && r.res.reportedAt) || r.invoice.createdAt || '',
         values: (r.res && r.res.values) || {}
       });
@@ -2865,8 +2882,8 @@
       '<h2 style="text-align:center">Report Comparison</h2>' +
       '<p style="text-align:center" class="muted">' + App.esc(dNew.pat.name || '') + '</p>' +
       '<table class="table"><thead><tr><th>Parameter</th><th>Normal Value</th><th>Unit</th>' +
-      '<th>Previous<br><span class="muted">' + App.esc(dOld.inv.no) + ' (' + App.d(dOld.inv.createdAt) + ')</span></th>' +
-      '<th>Current<br><span class="muted">' + App.esc(dNew.inv.no) + ' (' + App.d(dNew.inv.createdAt) + ')</span></th>' +
+      '<th>Previous<br><span class="muted">' + App.esc(rptCaseText(dOld.inv)) + ' (' + App.d(dOld.inv.createdAt) + ')</span></th>' +
+      '<th>Current<br><span class="muted">' + App.esc(rptCaseText(dNew.inv)) + ' (' + App.d(dNew.inv.createdAt) + ')</span></th>' +
       '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
   }
 
@@ -3184,7 +3201,7 @@
       }
 
       // ---- the RESULT box (top-right of each section) ----
-      function resultBox(bx, byy, caseNo, tsStr) {
+      function resultBox(bx, byy, patCode, patText, ddmm) {
         var cx = bx + RBW / 2, yy = byy + 5.5;
         doc.setDrawColor(60, 60, 60); doc.setLineWidth(0.4);
         doc.rect(bx, byy, RBW, BOX_H);                       // outer border
@@ -3194,17 +3211,17 @@
         doc.setTextColor(INK[0], INK[1], INK[2]);
         txt('RESULT', cx, byy + 3.9, { align: 'center' });
         if (showBc) {
-          drawBarcode(bx, yy + 1, RBW, 6.5, caseNo);
+          drawBarcode(bx, yy + 1, RBW, 6.5, patCode);
           yy += 8.5;
         } else {
           yy += 1.5;
         }
         doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
-        txt(dash(caseNo), cx, yy + 3.4, { align: 'center' });
-        if (tsStr) {
+        txt(dash(patText), cx, yy + 3.4, { align: 'center' });
+        if (ddmm) {
           doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
           doc.setTextColor(60, 60, 60);
-          txt(tsStr, cx, yy + 7.2, { align: 'center' });
+          txt(ddmm, cx, yy + 7.2, { align: 'center' });
         }
       }
 
@@ -3274,6 +3291,11 @@
 
       /* ----- one section per ready row ----- */
       var caseNo = inv.no || inv.id;
+      /* patient-visit numbers for the RESULT box (falls back to invoice no. if unavailable) */
+      var pvn = null;
+      if (inv && typeof App !== 'undefined' && App.visitNos) {
+        try { pvn = App.visitNos(inv); } catch (e) { pvn = null; }
+      }
 
       d.readyRows.forEach(function (r) {
         var test = r.test || {};
@@ -3316,8 +3338,17 @@
         doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5);
         doc.setTextColor(INK[0], INK[1], INK[2]);
         titleLines.forEach(function (tl, i) { txt(tl, M, y + 5 + i * 6); });
-        resultBox(W - M - RBW, y - 1, caseNo,
-                  fmtTs((r.res && r.res.reportedAt) || d.maxReported || inv.createdAt));
+        /* patient code/text/date in the RESULT box (invoice no. + timestamp as fallback) */
+        var repV = (r.res && r.res.reportedAt) || d.maxReported || inv.createdAt;
+        var repDt = new Date(repV); if (isNaN(repDt.getTime())) repDt = new Date();
+        var pDDMM = p2(repDt.getDate()) + '/' + p2(repDt.getMonth() + 1);
+        var boxCode = caseNo, boxText = dash(caseNo), boxDate = fmtTs(repV);
+        if (pvn && pvn.caseCode) {
+          boxCode = pvn.caseCode;
+          boxText = String(pvn.caseText || '').split(' - ')[0] || String(pvn.caseText || '');
+          boxDate = pDDMM;
+        }
+        resultBox(W - M - RBW, y - 1, boxCode, boxText, boxDate);
         y += Math.max(titleH, BOX_H) + 2;
 
         // Grey bar + rows.
@@ -3840,11 +3871,11 @@
       '<div style="font-family:inherit;max-width:900px;margin:0 auto">' +
       '<h2 style="text-align:center">Report Comparison</h2>' +
       '<p style="text-align:center" class="muted">' + App.esc(d1.pat.name || '') + ' — ' +
-      App.esc(d1.inv.no) + ' (' + App.d(d1.inv.createdAt) + ') vs ' +
-      App.esc(d2.inv.no) + ' (' + App.d(d2.inv.createdAt) + ')</p>' +
+      App.esc(rptCaseText(d1.inv)) + ' (' + App.d(d1.inv.createdAt) + ') vs ' +
+      App.esc(rptCaseText(d2.inv)) + ' (' + App.d(d2.inv.createdAt) + ')</p>' +
       '<table class="table"><thead><tr><th>Parameter</th><th>Normal Value</th><th>Unit</th>' +
-      '<th>' + App.esc(d1.inv.no) + '<br><span class="muted">' + App.d(d1.inv.createdAt) + '</span></th>' +
-      '<th>' + App.esc(d2.inv.no) + '<br><span class="muted">' + App.d(d2.inv.createdAt) + '</span></th>' +
+      '<th>' + App.esc(rptCaseText(d1.inv)) + '<br><span class="muted">' + App.d(d1.inv.createdAt) + '</span></th>' +
+      '<th>' + App.esc(rptCaseText(d2.inv)) + '<br><span class="muted">' + App.d(d2.inv.createdAt) + '</span></th>' +
       '</tr></thead><tbody>' + rowsHtml + '</tbody></table>' +
       '<p class="muted" style="font-size:12px">↑ increased &nbsp; ↓ decreased &nbsp; = unchanged &nbsp; highlighted rows differ between reports</p>' +
       '<div style="text-align:center;margin-top:16px"><button class="btn btn-primary" id="cmpPrint">Print Comparison</button></div>' +
