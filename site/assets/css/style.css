@@ -1187,3 +1187,23 @@ img{height:auto}
   .serve-blob{display:none}
   .serve-card{position:relative;left:auto;right:auto;top:auto;bottom:auto}
 }
+
+/* "One platform" section: Lab is live, the other modules are on the way (honest badges) */
+.platform{padding:96px 0 84px;background:#fff}
+.platform .eyebrow{color:#131845}.platform .eyebrow .dot{background:#131845}
+.platform h2.center{color:#131845}
+.pl-grid{list-style:none;margin:44px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.pl-card{position:relative;background:#f4f7fc;border:1px solid #e1e8f4;border-radius:18px;padding:26px 22px 22px;display:flex;flex-direction:column;gap:10px;transition:transform .2s,box-shadow .2s}
+.pl-card:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(19,24,69,.10)}
+.pl-card.pl-live{background:linear-gradient(180deg,#eef4ff,#f7faff);border-color:#b9cdf2}
+.pl-badge{align-self:flex-start;font-size:11.5px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;padding:4px 10px;border-radius:99px}
+.pl-badge.live{background:#e3f6ec;color:#047857}.pl-badge.soon{background:#fff4de;color:#b45309}
+.pl-ico{width:46px;height:46px;border-radius:13px;background:#fff;border:1px solid #dbe4f3;display:grid;place-items:center;color:#131845}
+.pl-ico svg{width:26px;height:26px;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pl-card h3{margin:2px 0 0;font-size:19px;color:#131845}
+.pl-card p{margin:0;color:#5b6b80;font-size:14.5px;line-height:1.6;flex:1}
+.pl-link{margin-top:6px;font-weight:700;font-size:14px;color:#131845;text-decoration:none}
+.pl-link:hover{text-decoration:underline}
+.pl-note{max-width:720px;margin:26px auto 0;text-align:center;color:#6b7a90;font-size:13.5px}
+@media(max-width:1020px){.pl-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.platform{padding:64px 0 56px}.pl-grid{grid-template-columns:1fr}}
