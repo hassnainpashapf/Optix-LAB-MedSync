@@ -1643,6 +1643,9 @@ async function main() {
   /* the web app is also served from this server (/app/): a second address that keeps working when Cloudflare Pages cannot be reached from some networks.
      The files (index.html + assets/) are copied to <releases>/webapp; HTML is never cached so a new release shows up at once. */
   app.use('/app', express.static(path.join(RELEASES_DIR, 'webapp'), { dotfiles: 'deny', index: 'index.html', setHeaders: (res, f) => { res.setHeader('Cache-Control', /\.html$/.test(f) ? 'no-cache' : 'public, max-age=3600'); } }));
+  /* the superadmin console is served here too (/superadmin/): same reason as /app/ above — reachable when pages.dev is filtered.
+     Its files (index.html + assets/) are copied to <releases>/superadmin; HTML is never cached. */
+  app.use('/superadmin', express.static(path.join(RELEASES_DIR, 'superadmin'), { dotfiles: 'deny', index: 'index.html', setHeaders: (res, f) => { res.setHeader('Cache-Control', /\.html$/.test(f) ? 'no-cache' : 'public, max-age=3600'); } }));
 
   /* ---- landing / optional static frontend ---- */
   if (WWW_ROOT && fs.existsSync(WWW_ROOT)) {
