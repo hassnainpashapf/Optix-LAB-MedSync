@@ -1702,7 +1702,7 @@
         ['Father / Husband Name', t(pat.father || pat.fatherName, '.')],
         ['Age / Sex', ageSex],
         ['Blood Group', t(pat.blood, 'Unknown')],
-        ['Phone', t(pat.phone)],
+        ['Phone', t(pat.phone || pat.whatsapp)],
         ['Address', t(pat.address, '.')]
       ],
       right: [

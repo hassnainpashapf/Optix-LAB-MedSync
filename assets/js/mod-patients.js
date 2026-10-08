@@ -192,17 +192,10 @@
       }).join('') +
       '</select></div>' +
       '</div>' +
-      '<div class="form-row"><label class="label" for="ptf-phone">Phone</label>' +
-      '<div class="ptf-phone-wrap"><input class="input" id="ptf-phone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + val('phone') + '">' +
-      '<span id="ptf-wa">' + waBtn(waTarget(p), 'Chat on WhatsApp') + '</span></div>' +
-      '<div class="f-err" id="ptf-e-phone"></div></div>' +
-      '<div class="form-row"><label class="label" for="ptf-whatsapp">WhatsApp No.</label>' +
-      '<div class="ptf-phone-wrap"><input class="input" id="ptf-whatsapp" maxlength="20" placeholder="03xxxxxxxxx" value="' + val('whatsapp') + '">' +
+      '<div class="form-row"><label class="label" for="ptf-whatsapp">Mobile / WhatsApp No.</label>' +
+      '<div class="ptf-phone-wrap"><input class="input" id="ptf-whatsapp" maxlength="20" placeholder="e.g. 0300-1234567" value="' + (p.whatsapp || p.phone ? App.esc(p.whatsapp || p.phone) : '') + '">' +
       '<span id="ptf-wa2">' + waBtn(waTarget(p), 'Chat on WhatsApp') + '</span></div>' +
       '<div class="f-err" id="ptf-e-whatsapp"></div></div>' +
-      '<div class="form-row"><label class="label" for="ptf-email">Email</label>' +
-      '<input class="input" id="ptf-email" type="email" maxlength="80" placeholder="e.g. name@mail.com" value="' + val('email') + '">' +
-      '<div class="f-err" id="ptf-e-email"></div></div>' +
       '<div class="form-row"><label class="label" for="ptf-doctor">Referred By</label>' +
       '<select class="select" id="ptf-doctor">' + docOpts + '</select></div>' +
       panelFieldHTML(p) +
@@ -235,21 +228,13 @@
     var form = document.getElementById('ptf-form');
     if (!form) return;
     document.getElementById('ptf-cancel').addEventListener('click', close);
-    // live-update the WhatsApp button next to the phone field as the user types
-    var phoneInput = document.getElementById('ptf-phone');
-    var waWrap = document.getElementById('ptf-wa');
-    if (phoneInput && waWrap) {
-      phoneInput.addEventListener('input', function () {
-        waWrap.innerHTML = waBtn(phoneInput.value, 'Chat on WhatsApp');
-        checkDuplicate();
-      });
-    }
-    // live-update the WhatsApp button next to the WhatsApp field (falls back to phone)
-    var waInput = document.getElementById('ptf-whatsapp');
+    // the one number box: the WhatsApp button next to it follows what is typed, and a number that already exists is flagged
+    var phoneInput = document.getElementById('ptf-whatsapp');
     var waWrap2 = document.getElementById('ptf-wa2');
-    if (waInput && waWrap2) {
-      waInput.addEventListener('input', function () {
-        waWrap2.innerHTML = waBtn(waInput.value || (phoneInput ? phoneInput.value : ''), 'Chat on WhatsApp');
+    if (phoneInput && waWrap2) {
+      phoneInput.addEventListener('input', function () {
+        waWrap2.innerHTML = waBtn(phoneInput.value, 'Chat on WhatsApp');
+        checkDuplicate();
       });
     }
     // duplicate detection: warn if the phone number matches an existing patient
@@ -314,12 +299,10 @@
       var name = document.getElementById('ptf-name').value.trim();
       var ageRaw = document.getElementById('ptf-age').value.trim();
       var gender = document.getElementById('ptf-gender').value;
-      var phone = document.getElementById('ptf-phone').value.trim();
-      var whatsapp = document.getElementById('ptf-whatsapp').value.trim();
+      var num = document.getElementById('ptf-whatsapp').value.trim();   /* the single mobile / WhatsApp number */
       var address = document.getElementById('ptf-address').value.trim();
       var father = document.getElementById('ptf-father').value.trim();
       var dob = document.getElementById('ptf-dob').value;
-      var email = document.getElementById('ptf-email').value.trim();
       var blood = document.getElementById('ptf-blood').value;
       var doctorId = document.getElementById('ptf-doctor').value || null;
       var panelEl = document.getElementById('ptf-panel'), panelId = panelEl ? (panelEl.value || null) : null, panelRef = panelEl ? document.getElementById('ptf-panelref').value.trim() : '';
@@ -328,18 +311,18 @@
       var regLocEl = document.getElementById('ptf-regloc'), destLocEl = document.getElementById('ptf-destloc');
       var regLoc = regLocEl ? regLocEl.value.trim() : '', destLoc = destLocEl ? destLocEl.value.trim() : '';
       var ok = true;
-      setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-phone', ''); setErr('ptf-e-email', ''); setErr('ptf-e-whatsapp', '');
+      setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-whatsapp', '');
       if (name.length < 2) { setErr('ptf-e-name', 'Please enter the full name.'); ok = false; }
       var age = parseInt(ageRaw, 10);
       if (!ageRaw || isNaN(age) || age < 1 || age > 120) { setErr('ptf-e-age', 'Enter a valid age (1–120).'); ok = false; }
       if (!gender) { setErr('ptf-e-gender', 'Please select gender.'); ok = false; }
-      if (phone && !/^[+\d][\d\s\-()]{5,19}$/.test(phone)) { setErr('ptf-e-phone', 'Enter a valid phone number.'); ok = false; }
-      if (whatsapp && !/^[+\d][\d\s\-()]{5,19}$/.test(whatsapp)) { setErr('ptf-e-whatsapp', 'Enter a valid WhatsApp number.'); ok = false; }
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setErr('ptf-e-email', 'Enter a valid email address.'); ok = false; }
+      if (num && !/^[+\d][\d\s\-()]{5,19}$/.test(num)) { setErr('ptf-e-whatsapp', 'Enter a valid mobile number.'); ok = false; }
       if (!ok) return;
-      var data = { name: name, age: age, gender: gender, phone: phone, whatsapp: whatsapp, address: address,
-        father: father, dob: dob, email: email,
+      var data = { name: name, age: age, gender: gender, address: address,
+        father: father, dob: dob,
         blood: blood, doctorId: doctorId, notes: notes };
+      /* one number serves WhatsApp, reports and the patient portal; an existing patient's numbers are only touched when the box was changed */
+      if (!(existing && existing.id) || num !== String(existing.whatsapp || existing.phone || '')) { data.phone = num; data.whatsapp = num; }
       if (panelEl) { data.panelId = panelId; data.panelRef = panelRef; }
       if (existing && existing.id) {
         if (document.getElementById('ptf-regdate').value && document.getElementById('ptf-regdate').value !== App.toLocalInput(existing.createdAt)) data.createdAt = regISO;   /* only when the person changed it */
