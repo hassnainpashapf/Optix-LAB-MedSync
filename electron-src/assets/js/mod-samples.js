@@ -395,6 +395,8 @@
     var bulk = document.getElementById('smpBulk');
     bulk.hidden = !n;
     bulk.innerHTML = n ? '<b>' + n + ' selected</b><button class="btn btn-primary btn-sm" data-bulk="print">' + App.icon('printer', 14) + ' Print labels</button><button class="btn btn-ghost btn-sm" data-bulk="clear">Clear</button>' : '';
+    var kp = document.getElementById('spKpis');
+    if (kp) kp.outerHTML = sampleKpis();
   }
 
   function generateMissing() {
@@ -493,7 +495,7 @@
     function kpi(cls, icon, label, num, sub) {
       return '<div class="sp-kpi ' + cls + '"><div class="sp-chip">' + icon + '</div><div class="sp-label">' + label + '</div><div class="sp-num">' + num + '</div><div class="sp-sub">' + sub + '</div></div>';
     }
-    return '<div class="sp-kpis">' +
+    return '<div class="sp-kpis" id="spKpis">' +
       kpi('sp-navy', TUBE, 'TOTAL SAMPLES', all.length, 'all tubes') +
       kpi('sp-amber', CLOCK, 'TO COLLECT', c.pending, 'awaiting collection') +
       kpi('sp-blue', FLASK, 'IN LAB', c.collected + c.received, 'at the lab') +
