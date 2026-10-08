@@ -43,7 +43,7 @@
   var NAV = [
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
-      sub: [{ key: 'all', label: 'All Patients', route: '#/patients' }, { key: 'lists', label: 'Dropdown Lists', route: '#/patients/lists', roles: ['admin'] }] },
+      sub: [{ key: 'all', label: 'All Patients', route: '#/patients' }, { key: 'new', label: 'Add Patient', route: '#/patients/new' }, { key: 'lists', label: 'Edit Patient Form', route: '#/patients/lists', roles: ['admin'] }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48' },
     { key: 'stock',     label: 'Stock',      icon: 'box',       route: '#/stock',     color: '#0ea5e9' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',

@@ -2506,7 +2506,7 @@
   /* Dropdown Lists live under Patients now (#/patients/lists); the old Settings address still works */
   App.route('#/patients/lists', function () {
     if (role() !== 'admin') return denied();
-    document.getElementById('view').innerHTML = '<div class="page-head"><div><h1>Dropdown Lists</h1><p class="muted" style="margin:2px 0 0">The choices in your forms: registration and destination location, reference, blood group, referred-by doctors and more.</p></div></div><div class="card"><div class="card-b"><div id="setBody"></div></div></div>';
+    document.getElementById('view').innerHTML = '<div class="page-head"><div><h1>Edit Patient Form</h1><p class="muted" style="margin:2px 0 0">The choices (dropdown menus) in your patient and bill forms: registration and destination location, reference, blood group, referred-by doctors and more.</p></div></div><div class="card"><div class="card-b"><div id="setBody"></div></div></div>';
     renderSetLists();
   });
   App.route('#/settings/lists', function () { App.nav('#/patients/lists'); });
