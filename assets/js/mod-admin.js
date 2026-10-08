@@ -940,14 +940,7 @@
         + label + ' <span>' + arrow + ' ' + c.txt + '</span></span>';
     }
 
-    var cmpCard = ''
-      + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
-      + '<span class="muted" style="font-size:13px;font-weight:600;white-space:nowrap">vs previous period (' + App.esc(pFrom) + ' – ' + App.esc(pTo) + ')</span>'
-      + cmpBadge('Billed', billed, pBilled, false)
-      + cmpBadge('Collected', collected, pCollected, false)
-      + cmpBadge('Expenses', expTotal, pExpTotal, true)
-      + cmpBadge('Net', net, pNet, false)
-      + '</div></div>';
+    var cmpCard = '';
 
     /* ---- on-screen Finance Summary card (same rows as the print handler) ---- */
     var finSumCard = ''
@@ -1533,8 +1526,7 @@
     var html = ''
       + '<style>'
       + '.pt-trend-dash { max-width: 1300px; margin: 0 auto; }'
-      + '.pt-head-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }'
-      + '.pt-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }'
+      + '.pt-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; }'
       + '.pt-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
       + '.pt-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
       + '.pt-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
@@ -1547,26 +1539,48 @@
       + '.pt-param-card:hover { border-color: #3b82f6; box-shadow: 0 3px 10px rgba(59,130,246,.08); }'
       + '@media print { .sidebar, .topbar, .pt-head-bar .btn, .pt-filter-box, .no-print { display: none !important; } .main { padding: 0 !important; } }'
       + '</style>'
-      + '<div class="pt-trend-dash">'
+      + '<div class="pt-trend-dash">';
 
-      /* Page Header */
-      + '<div class="pt-head-bar">'
-      +   '<div>'
-      +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-      +       '<a href="#/reports/tests" class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px">← Reports</a>'
-      +       '<span style="font-size:12px;color:var(--muted)">/ Insights</span>'
-      +     '</div>'
-      +     '<h1 style="margin:0;font-size:23px;font-weight:800;color:var(--ink);letter-spacing:-.01em">📈 Patient Historical Trend &amp; Delta Analysis Center</h1>'
-      +     '<p class="muted" style="margin:4px 0 0;font-size:13px">Track multi-visit biometric trajectories, evaluate delta percentage variations, and monitor patient health progress over time.</p>'
-      +   '</div>'
-      +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" class="no-print">'
-      +     '<button class="btn btn-ghost btn-sm" id="ptRefreshBtn">🔄 Refresh</button>'
-      +     '<button class="btn btn-ghost btn-sm" id="ptCsvBtn">📥 Export CSV</button>'
-      +     '<button class="btn btn-primary btn-sm" id="ptPrintBtn">' + PRINT_ICON + ' Print Trend Report</button>'
-      +   '</div>'
+    /* 4 KPI Stat Cards */
+    var baselineValText = basePt ? (basePt.raw + ' ' + (selSeries ? selSeries.unit : '')) : '—';
+    var latestValText = latestPt ? (latestPt.raw + ' ' + (selSeries ? selSeries.unit : '')) : '—';
+    var deltaSign = baseDelta > 0 ? '▲ +' : (baseDelta < 0 ? '▼ ' : '');
+    var deltaValText = (basePt && latestPt && selSeries)
+      ? (deltaSign + (Math.round(Math.abs(baseDelta) * 100) / 100) + ' ' + selSeries.unit + ' (' + (baseDeltaPct >= 0 ? '+' : '') + (Math.round(baseDeltaPct * 10) / 10) + '%)')
+      : '—';
+
+    /* 1. 4 KPI Stat Cards directly at top */
+    html += '<div class="pt-card-grid">'
+      + '<div class="pt-kpi-card" style="border-left:4px solid #3b82f6">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Historical Readings</span><span style="font-size:16px">📊</span></div>'
+      +   '<div class="pt-kpi-val">' + pts.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">readings</span></div>'
+      +   '<div class="pt-kpi-sub">' + (pts.length > 1 ? 'From ' + App.d(basePt.t) + ' to ' + App.d(latestPt.t) : (pts.length ? '1 visit recorded' : '0 readings recorded')) + '</div>'
+      + '</div>'
+      + '<div class="pt-kpi-card" style="border-left:4px solid #8b5cf6">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Baseline (Initial) Reading</span><span style="font-size:16px">🏷️</span></div>'
+      +   '<div class="pt-kpi-val">' + App.esc(baselineValText) + '</div>'
+      +   '<div class="pt-kpi-sub">' + (basePt ? App.d(basePt.t) + ' (' + App.esc(basePt.inv) + ')' : '—') + '</div>'
+      + '</div>'
+      + '<div class="pt-kpi-card" style="border-left:4px solid ' + latestSevCol + '">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Latest (Current) Reading</span>' + latestSevBadge + '</div>'
+      +   '<div class="pt-kpi-val" style="color:' + latestSevCol + '">' + App.esc(latestValText) + '</div>'
+      +   '<div class="pt-kpi-sub">' + (latestPt ? 'Tested on ' + App.d(latestPt.t) + ' (' + App.esc(latestPt.inv) + ')' : '—') + '</div>'
+      + '</div>'
+      + '<div class="pt-kpi-card" style="border-left:4px solid ' + dirColor + '">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Net Delta from Baseline</span><span style="font-size:16px">📈</span></div>'
+      +   '<div class="pt-kpi-val" style="color:' + dirColor + ';font-size:18px">' + App.esc(deltaValText) + '</div>'
+      +   '<div class="pt-kpi-sub" style="color:' + dirColor + ';font-weight:600">' + App.esc(dirNote) + '</div>'
+      + '</div>'
       + '</div>'
 
-      /* Patient & Parameter Selector Controls */
+      /* 2. Action buttons row below cards */
+      + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap" class="no-print">'
+      +   '<button class="btn btn-ghost btn-sm" id="ptRefreshBtn">🔄 Refresh</button>'
+      +   '<button class="btn btn-ghost btn-sm" id="ptCsvBtn">📥 Export CSV</button>'
+      +   '<button class="btn btn-primary btn-sm" id="ptPrintBtn">' + PRINT_ICON + ' Print Trend Report</button>'
+      + '</div>'
+
+      /* 3. Patient & Parameter Selector Controls (Below cards) */
       + '<div class="card pt-filter-box" style="margin-bottom:18px"><div class="card-b" style="padding:14px 16px">'
       +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
       +     '<div style="flex:1;min-width:260px">'
@@ -1604,7 +1618,7 @@
       +   '</div>'
       + '</div></div>'
 
-      /* Patient Demographics & Profile Summary Banner */
+      /* 4. Patient Demographics & Profile Summary Banner (Below cards) */
       + '<div class="pt-pat-banner">'
       +   '<div class="pt-avatar-circle">' + App.esc((curPat.name || 'P').charAt(0).toUpperCase()) + '</div>'
       +   '<div style="flex:1;min-width:220px">'
@@ -1639,51 +1653,11 @@
         + '<a href="#/results" class="btn btn-primary">Go to Lab Results &rarr;</a>'
         + '<a href="#/billing/' + App.esc(curPat.id) + '" class="btn btn-ghost">+ New Bill for Patient</a>'
         + '</div>'
-        + '</div></div></div>';
+        + '</div></div></div></div>';
       document.getElementById('view').innerHTML = html;
       wireTrendsEvents();
       return;
     }
-
-    /* 4 KPI Stat Cards */
-    var baselineValText = basePt ? (basePt.raw + ' ' + selSeries.unit) : '—';
-    var latestValText = latestPt ? (latestPt.raw + ' ' + selSeries.unit) : '—';
-    var deltaSign = baseDelta > 0 ? '▲ +' : (baseDelta < 0 ? '▼ ' : '');
-    var deltaValText = (basePt && latestPt)
-      ? (deltaSign + (Math.round(Math.abs(baseDelta) * 100) / 100) + ' ' + selSeries.unit + ' (' + (baseDeltaPct >= 0 ? '+' : '') + (Math.round(baseDeltaPct * 10) / 10) + '%)')
-      : '—';
-
-    html += '<div class="pt-card-grid">'
-
-      /* KPI 1: Historical Readings */
-      + '<div class="pt-kpi-card" style="border-left:4px solid #3b82f6">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Historical Readings</span><span style="font-size:16px">📊</span></div>'
-      +   '<div class="pt-kpi-val">' + pts.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">readings</span></div>'
-      +   '<div class="pt-kpi-sub">' + (pts.length > 1 ? 'From ' + App.d(basePt.t) + ' to ' + App.d(latestPt.t) : '1 visit recorded') + '</div>'
-      + '</div>'
-
-      /* KPI 2: Baseline Value */
-      + '<div class="pt-kpi-card" style="border-left:4px solid #8b5cf6">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Baseline (Initial) Reading</span><span style="font-size:16px">🏷️</span></div>'
-      +   '<div class="pt-kpi-val">' + App.esc(baselineValText) + '</div>'
-      +   '<div class="pt-kpi-sub">' + (basePt ? App.d(basePt.t) + ' (' + App.esc(basePt.inv) + ')' : '—') + '</div>'
-      + '</div>'
-
-      /* KPI 3: Latest Value */
-      + '<div class="pt-kpi-card" style="border-left:4px solid ' + latestSevCol + '">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Latest (Current) Reading</span>' + latestSevBadge + '</div>'
-      +   '<div class="pt-kpi-val" style="color:' + latestSevCol + '">' + App.esc(latestValText) + '</div>'
-      +   '<div class="pt-kpi-sub">' + (latestPt ? 'Tested on ' + App.d(latestPt.t) + ' (' + App.esc(latestPt.inv) + ')' : '—') + '</div>'
-      + '</div>'
-
-      /* KPI 4: Net Delta from Baseline */
-      + '<div class="pt-kpi-card" style="border-left:4px solid ' + dirColor + '">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Net Delta from Baseline</span><span style="font-size:16px">📈</span></div>'
-      +   '<div class="pt-kpi-val" style="color:' + dirColor + ';font-size:18px">' + App.esc(deltaValText) + '</div>'
-      +   '<div class="pt-kpi-sub" style="color:' + dirColor + ';font-weight:600">' + App.esc(dirNote) + '</div>'
-      + '</div>'
-
-      + '</div>';
 
     /* Visual Trend SVG Graph Card */
     html += '<div class="card" style="margin-bottom:20px">'
