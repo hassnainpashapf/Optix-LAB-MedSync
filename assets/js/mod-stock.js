@@ -8,16 +8,27 @@
   var UNITS = ['tests', 'kit', 'vial', 'bottle', 'box', 'pack', 'pcs', 'ml', 'L', 'g'];
 
   var CSS = '' +
-    '.sk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}' +
-    '.sk-st{padding:14px 16px;cursor:default}.sk-st .k{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}' +
-    '.sk-st b{display:block;font-size:26px;margin-top:4px;color:var(--ink)}.sk-st.bad b{color:#b91c1c}.sk-st.warn b{color:#b45309}' +
+    '.sk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}' +
+    '.sk-st{min-height:118px;padding:18px;position:relative;overflow:hidden;cursor:default}.sk-st>*{position:relative;z-index:1}' +
+    '.sk-st .k{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}' +
+    '.sk-st b{display:block;font-size:32px;margin-top:4px;color:var(--ink)}' +
+    '.chip{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}' +
+    '.sk-st.t-navy{background:#eef2ff}.sk-st.t-navy .chip{background:#e0e7ff;color:#3730a3}' +
+    '.sk-st.t-amber{background:#fffbeb}.sk-st.t-amber .chip{background:#fef3c7;color:#b45309}' +
+    '.sk-st.t-blue{background:#eff6ff}.sk-st.t-blue .chip{background:#dbeafe;color:#1d4ed8}' +
+    '.sk-st.t-red{background:#fef2f2}.sk-st.t-red .chip{background:#fee2e2;color:#b91c1c}' +
+    '.sk-st::after{content:"";position:absolute;top:-32px;right:-32px;width:110px;height:110px;border-radius:50%;pointer-events:none}' +
+    '.sk-st.t-navy::after{background:rgba(224,231,255,.55)}.sk-st.t-amber::after{background:rgba(254,243,199,.55)}' +
+    '.sk-st.t-blue::after{background:rgba(219,234,254,.55)}.sk-st.t-red::after{background:rgba(254,226,226,.55)}' +
+    '.sk-st.bad b{color:#b91c1c}.sk-st.warn b{color:#b45309}' +
     '.sk-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 18px}.sk-bar .grow{flex:1;min-width:200px}' +
     '.sk-chip{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:99px;white-space:nowrap;margin:1px 4px 1px 0}' +
     '.sk-chip.ok{background:#e6f7f0;color:#047857}.sk-chip.low{background:#fff4e0;color:#b45309}.sk-chip.out{background:#fdecec;color:#b91c1c}.sk-chip.exp{background:#fdecec;color:#b91c1c}.sk-chip.soon{background:#fff4e0;color:#b45309}' +
     '.sk-alert{border:1px solid #f0d9a0;background:#fff8e6;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13.5px;line-height:1.7}' +
     '.sk-name{font-weight:700;color:var(--ink)}.sk-sub{font-size:12px;color:var(--muted)}.sk-num{font-weight:800;font-size:15px}' +
     '.sk-h{width:100%;border-collapse:collapse}.sk-h th,.sk-h td{padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px;text-align:left}' +
-    '@media(max-width:900px){.sk-stats{grid-template-columns:1fr 1fr}}';
+    '@media(max-width:900px){.sk-stats{grid-template-columns:1fr 1fr}}' +
+    '@media(max-width:560px){.sk-stats{grid-template-columns:1fr}}';
   function css() { if (document.getElementById('skCss')) return; var s = document.createElement('style'); s.id = 'skCss'; s.textContent = CSS; document.head.appendChild(s); }
 
   function num(n) { n = Math.round((+n || 0) * 100) / 100; return String(n); }
@@ -47,10 +58,10 @@
     });
     var al = S.rows.filter(function (r) { return r.out || r.low || r.expired || r.soon; });
     var h = '<div class="sk-stats">' +
-      '<div class="card sk-st"><div class="k">Items</div><b>' + S.rows.length + '</b></div>' +
-      '<div class="card sk-st ' + (S.low + S.out ? 'warn' : '') + '"><div class="k">Low / out of stock</div><b>' + (S.low + S.out) + '</b></div>' +
-      '<div class="card sk-st ' + (S.soon ? 'warn' : '') + '"><div class="k">Expiring in ' + S.warnDays + ' days</div><b>' + S.soon + '</b></div>' +
-      '<div class="card sk-st ' + (S.expired ? 'bad' : '') + '"><div class="k">Expired</div><b>' + S.expired + '</b></div></div>';
+      '<div class="card sk-st t-navy"><div class="chip"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4L7.5 4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg></div><div class="k">Items</div><b>' + S.rows.length + '</b></div>' +
+      '<div class="card sk-st t-amber ' + (S.low + S.out ? 'warn' : '') + '"><div class="chip"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div><div class="k">Low / out of stock</div><b>' + (S.low + S.out) + '</b></div>' +
+      '<div class="card sk-st t-blue ' + (S.soon ? 'warn' : '') + '"><div class="chip"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><circle cx="16" cy="16" r="6"/><path d="M16 14v2l1.5 1.5"/></svg></div><div class="k">Expiring in ' + S.warnDays + ' days</div><b>' + S.soon + '</b></div>' +
+      '<div class="card sk-st t-red ' + (S.expired ? 'bad' : '') + '"><div class="chip"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div><div class="k">Expired</div><b>' + S.expired + '</b></div></div>';
     if (al.length) {
       h += '<div class="sk-alert"><b>Needs attention</b><br>' + al.slice(0, 8).map(function (r) {
         var bits = []; if (r.out) bits.push('out of stock'); else if (r.low) bits.push('only ' + num(r.onHand) + ' ' + esc(r.item.unit || '') + ' left (reorder at ' + num(r.item.reorderLevel) + ')');

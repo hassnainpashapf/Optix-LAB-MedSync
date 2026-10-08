@@ -40,7 +40,28 @@
   function stBadge(v) { return '<span class="badge ' + ST[v.j.status][0] + '">' + ST[v.j.status][1] + '</span>' + (v.late ? ' <span class="badge b-unpaid">late</span>' : ''); }
 
   /* ---------- dashboard ---------- */
-  function dashHtml(all) {
+  var TINTS = { amber:{bg:'#fffbeb',wash:'#fef3c7',ink:'#b45309'}, blue:{bg:'#eff6ff',wash:'#dbeafe',ink:'#1d4ed8'}, red:{bg:'#fef2f2',wash:'#fee2e2',ink:'#b91c1c'}, green:{bg:'#f0fdf4',wash:'#dcfce7',ink:'#15803d'}, purple:{bg:'#faf5ff',wash:'#f3e8ff',ink:'#7e22ce'} };
+  var ICONS = {
+    truck: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
+    clock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
+    building: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M8 10h.01M16 10h.01M12 10h.01M8 14h.01M16 14h.01M12 14h.01"/></svg>',
+    alert: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    check: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>',
+    cash: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
+    scale: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l7-4 7 4"/><path d="M3 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M17 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M8 21h8"/></svg>'
+  };
+  function stat(label, val, sub, tint, hot, icon) {
+    var t = TINTS[tint] || TINTS.blue;
+    return '<div class="card" style="margin:0;background:' + t.bg + ';position:relative;overflow:hidden' + (hot ? ';border-color:#fca5a5' : '') + '">' +
+      '<div style="position:absolute;width:110px;height:110px;border-radius:50%;background:' + t.wash + ';opacity:.55;top:-38px;right:-38px"></div>' +
+      '<div class="card-b" style="position:relative">' +
+      '<div style="width:38px;height:38px;border-radius:12px;background:' + t.wash + ';color:' + t.ink + ';display:flex;align-items:center;justify-content:center;margin-bottom:8px">' + icon + '</div>' +
+      '<div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:700">' + label + '</div>' +
+      '<div style="font-size:30px;font-weight:800;margin-top:4px;color:' + (hot ? '#b91c1c' : t.ink) + '">' + val + '</div>' +
+      '<div class="muted" style="font-size:12.5px;margin-top:2px">' + sub + '</div>' +
+      '</div></div>';
+  }
+  function dashData(all) {
     var mk = mkOf(new Date()), c = { to_send: 0, sent: 0, late: 0, back: 0, cost: 0, margin: 0 }, byLab = {};
     all.forEach(function (v) {
       if (v.j.status === 'to_send') c.to_send++; if (v.j.status === 'sent') c.sent++; if (v.late) c.late++;
@@ -50,17 +71,26 @@
       if (v.j.status === 'received' && mkOf(v.j.receivedAt) === mk) c.back++;
     });
     var owed = labs().reduce(function (s, l) { return s + Math.max(0, App.refLabAccount(l).balance); }, 0);
-    function stat(label, val, sub, hot) { return '<div class="card" style="margin:0' + (hot ? ';border-color:#fca5a5' : '') + '"><div class="card-b"><div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:700">' + label + '</div><div style="font-size:26px;font-weight:800;margin-top:4px;' + (hot ? 'color:#b91c1c' : '') + '">' + val + '</div><div class="muted" style="font-size:12.5px;margin-top:2px">' + sub + '</div></div></div>'; }
     var attention = all.filter(function (v) { return v.j.status === 'to_send' || v.late; }).sort(function (a, b) { return (b.late ? 1 : 0) - (a.late ? 1 : 0) || String(a.j.createdAt).localeCompare(String(b.j.createdAt)); }).slice(0, 8);
     var labRows = Object.keys(byLab).map(function (k) { return byLab[k]; }).sort(function (a, b) { return b.cost - a.cost; });
+    return { mk: mk, c: c, byLab: byLab, owed: owed, attention: attention, labRows: labRows };
+  }
+  function statCards(d) {
     return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px">' +
-      stat('To send', c.to_send, 'waiting at your lab') + stat('At reference lab', c.sent, 'result awaited') + stat('Running late', c.late, 'past the promised days', c.late > 0) +
-      stat('Results back', c.back, 'this month') + stat('Cost this month', rs(c.cost), c.margin ? 'margin ' + rs(c.margin) : 'what reference labs charge') + stat('You owe', rs(owed), 'to all reference labs', owed > 0) + '</div>' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px">' +
-      '<div class="card" style="margin:0"><div class="card-h"><h3>Needs attention</h3></div><div class="card-b flush">' + (attention.length ? '<div class="tbl-wrap"><table class="table"><tbody>' + attention.map(function (v) {
+      stat('To send', d.c.to_send, 'waiting at your lab', 'amber', false, ICONS.truck) +
+      stat('At reference lab', d.c.sent, 'result awaited', 'blue', false, ICONS.building) +
+      stat('Running late', d.c.late, 'past the promised days', 'red', d.c.late > 0, ICONS.alert) +
+      stat('Results back', d.c.back, 'this month', 'green', false, ICONS.check) +
+      stat('Cost this month', rs(d.c.cost), d.c.margin ? 'margin ' + rs(d.c.margin) : 'what reference labs charge', 'purple', false, ICONS.cash) +
+      stat('You owe', rs(d.owed), 'to all reference labs', 'red', d.owed > 0, ICONS.scale) +
+      '</div>';
+  }
+  function dashBody(d) {
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px">' +
+      '<div class="card" style="margin:0"><div class="card-h"><h3>Needs attention</h3></div><div class="card-b flush">' + (d.attention.length ? '<div class="tbl-wrap"><table class="table"><tbody>' + d.attention.map(function (v) {
         return '<tr><td><b>' + esc(v.pat.name || '—') + '</b><div class="muted" style="font-size:12px">' + esc(v.inv.no || v.inv.id || '') + ' · ' + esc(v.t.name || '') + '</div></td><td>' + esc(v.lab.name || '') + '</td><td>' + stBadge(v) + '</td></tr>';
       }).join('') + '</tbody></table></div>' : '<div class="card-b">' + App.empty('Nothing waiting. All caught up.') + '</div>') + '</div></div>' +
-      '<div class="card" style="margin:0"><div class="card-h"><h3>By reference lab</h3><span class="sub muted" style="margin-left:8px">' + esc(monthLabel(mk)) + '</span></div><div class="card-b flush">' + (labRows.length ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Lab</th><th style="text-align:right">Open</th><th style="text-align:right">Tests</th><th style="text-align:right">Cost</th></tr></thead><tbody>' + labRows.map(function (l) {
+      '<div class="card" style="margin:0"><div class="card-h"><h3>By reference lab</h3><span class="sub muted" style="margin-left:8px">' + esc(monthLabel(d.mk)) + '</span></div><div class="card-b flush">' + (d.labRows.length ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Lab</th><th style="text-align:right">Open</th><th style="text-align:right">Tests</th><th style="text-align:right">Cost</th></tr></thead><tbody>' + d.labRows.map(function (l) {
         return '<tr><td><b>' + esc(l.name) + '</b></td><td style="text-align:right">' + l.open + '</td><td style="text-align:right">' + l.n + '</td><td style="text-align:right">' + rs(l.cost) + '</td></tr>';
       }).join('') + '</tbody></table></div>' : '<div class="card-b">' + App.empty('No outsourced tests yet. Mark a test as outsourced in Tests, then bill it.') + '</div>') + '</div></div></div>';
   }
@@ -218,11 +248,11 @@
     if (!canEdit()) { el.innerHTML = '<div class="card"><div class="card-b">' + App.empty('You do not have access to Outsourced tests.') + '</div></div>'; return; }
     if (tab === 'dash' || tab === 'jobs') reconcile();
     var all = (DB.all('outsourced') || []).map(view);
+    var d = dashData(all);
     var tabs = [['dash', 'Dashboard'], ['jobs', 'Tests'], ['labs', 'Reference labs']];
     var open = all.filter(function (v) { return v.j.status !== 'received'; }).length;
-    el.innerHTML = '<div class="page-head"><div><h1>Outsourced tests</h1><p class="muted" style="margin:2px 0 0">Tests you send to another lab: what is out, what came back, and what you owe.</p></div></div>' +
-      '<div class="tabs" id="osTabs" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">' + tabs.map(function (t) { return '<button type="button" class="btn ' + (tab === t[0] ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-tab="' + t[0] + '">' + t[1] + (t[0] === 'jobs' && open ? ' <span class="badge b-pending" style="margin-left:4px">' + open + '</span>' : '') + '</button>'; }).join('') + '</div>' +
-      '<div id="osBody">' + (tab === 'dash' ? dashHtml(all) : tab === 'jobs' ? '<div class="card"><div class="card-b">' + jobsHtml(all) + '</div></div>' : '<div class="card"><div class="card-b">' + labsHtml() + '</div></div>') + '</div>';
+    var tabsHtml = '<div class="tabs" id="osTabs" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">' + tabs.map(function (t) { return '<button type="button" class="btn ' + (tab === t[0] ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-tab="' + t[0] + '">' + t[1] + (t[0] === 'jobs' && open ? ' <span class="badge b-pending" style="margin-left:4px">' + open + '</span>' : '') + '</button>'; }).join('') + '</div>';
+    el.innerHTML = tabsHtml + statCards(d) + '<div id="osBody">' + (tab === 'dash' ? dashBody(d) : tab === 'jobs' ? '<div class="card"><div class="card-b">' + jobsHtml(all) + '</div></div>' : '<div class="card"><div class="card-b">' + labsHtml() + '</div></div>') + '</div>';
     el.querySelectorAll('#osTabs [data-tab]').forEach(function (b) { b.addEventListener('click', function () { tab = b.getAttribute('data-tab'); render(); }); });
     if (tab === 'jobs') wireJobs(all); if (tab === 'labs') wireLabs();
   }
