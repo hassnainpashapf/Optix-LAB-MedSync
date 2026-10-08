@@ -475,6 +475,34 @@
       '#view .smp-table td.actions .btn{flex:1 1 calc(50% - 8px)}.smp-thgrid{zoom:1.35}.smp-a4pg{zoom:.36}.smp-ld-cp{margin-left:0}.smp-scan-row .btn span{display:none}' +
     '}';
 
+  /* ---------- KPI cards (computed from the GLOBAL UNFILTERED sample list) ---------- */
+  function sampleKpis() {
+    var all = [];
+    try { all = S.all() || []; } catch (e) {}
+    var c = { pending: 0, collected: 0, received: 0, processing: 0, done: 0, rejected: 0 };
+    all.forEach(function (s) {
+      var st = s && s.status;
+      if (c[st] !== undefined) c[st]++;
+    });
+    var TUBE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6.3L4.6 18.1a1.5 1.5 0 0 0 1.3 2.2h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.3V3"/></svg>';
+    var CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    var FLASK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v6L4.5 18a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 8V2"/><path d="M8.5 2h7"/><path d="M7 15h10"/></svg>';
+    var COG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>';
+    var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>';
+    var X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>';
+    function kpi(cls, icon, label, num, sub) {
+      return '<div class="sp-kpi ' + cls + '"><div class="sp-chip">' + icon + '</div><div class="sp-label">' + label + '</div><div class="sp-num">' + num + '</div><div class="sp-sub">' + sub + '</div></div>';
+    }
+    return '<div class="sp-kpis">' +
+      kpi('sp-navy', TUBE, 'TOTAL SAMPLES', all.length, 'all tubes') +
+      kpi('sp-amber', CLOCK, 'TO COLLECT', c.pending, 'awaiting collection') +
+      kpi('sp-blue', FLASK, 'IN LAB', c.collected + c.received, 'at the lab') +
+      kpi('sp-purple', COG, 'PROCESSING', c.processing, 'being processed') +
+      kpi('sp-green', CHECK, 'DONE', c.done, 'completed') +
+      kpi('sp-red', X, 'REJECTED', c.rejected, 'rejected tubes') +
+      '</div>';
+  }
+
   function render() {
     var view = document.getElementById('view');
     if (!view) return;
@@ -496,6 +524,7 @@
         '<div class="smp-result" id="smpResult"><div class="smp-hint"><span>Each scan moves the tube one step:</span>' +
           '<b>To collect</b><i>&rarr;</i><b>Collected</b><i>&rarr;</i><b>In lab</b><i>&rarr;</i><b>Processing</b><i>&rarr;</i><b>Done</b></div></div>' +
       '</div>' +
+      sampleKpis() +
       '<div class="card"><div class="card-b">' +
         '<div class="smp-filters">' +
           '<input class="input search smp-q" id="smpQ" placeholder="Search patient, invoice or barcode…" value="' + esc(F.q) + '">' +
