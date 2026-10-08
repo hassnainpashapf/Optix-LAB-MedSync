@@ -194,7 +194,7 @@
       '<div class="ptf-phone-wrap"><input class="input" id="ptf-whatsapp" maxlength="20" placeholder="e.g. 0300-1234567" value="' + (p.whatsapp || p.phone ? App.esc(p.whatsapp || p.phone) : '') + '">' +
       '<span id="ptf-wa2">' + waBtn(waTarget(p), 'Chat on WhatsApp') + '</span></div>' +
       '<div class="f-err" id="ptf-e-whatsapp"></div></div>' +
-      '<div class="form-row"><label class="label" for="ptf-doctor">Referred By</label>' +
+      '<div class="form-row"><label class="label" for="ptf-doctor">Consultant</label>' +
       '<select class="select" id="ptf-doctor">' + docOpts + '</select></div>' +
       panelFieldHTML(p) +
       '<div class="form-2col">' +

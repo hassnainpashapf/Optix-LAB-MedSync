@@ -394,7 +394,7 @@
         '<div><label class="label" for="blDestLoc">Destination location</label><input class="input" id="blDestLoc" list="blDestLoc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '">' + App.datalistHtml('blDestLoc-dl', 'destLocation', App.visitDefaults().destLocation) + '</div></div>' +
         '<div style="margin-top:8px"><label class="label" for="blRef">Reference <span class="muted" style="font-weight:400">(shown on the report)</span></label><select class="select" id="blRef">' + App.optionsHtml('reference', App.listOptions('reference')[0] || '') + '</select></div></div>' +
         (panels.length ? '<div class="bl-sec"><label class="label">Bill to</label><select class="select" id="blPanel"><option value="">Patient pays (normal)</option>' + panels.map(function (x) { return '<option value="' + App.esc(x.id) + '"' + (x.id === state.panelId ? ' selected' : '') + '>' + App.esc(x.name) + ' (company account)</option>'; }).join('') + '</select><div class="muted" id="blPanelNote" style="font-size:12.5px;margin-top:5px"></div></div>' : '') +
-        '<div class="bl-sec"><label class="label">Referral doctor (optional)</label>' +
+        '<div class="bl-sec"><label class="label">Consultant (optional)</label>' +
         '<select class="select" id="blDoctor"><option value="">Walk-in (no referral)</option>' +
           doctors.map(function (d) {
             return '<option value="' + App.esc(d.id) + '">' + App.esc(d.name) + ' — ' + App.esc(d.commissionPct || 0) + '%</option>';

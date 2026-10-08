@@ -263,7 +263,7 @@
       '</div>' +
       '<div class="form-grid">' +
         '<div><label class="label">Discount (Rs)</label><input id="ei-disc" class="input" type="number" min="0" step="any" value="' + discount + '"></div>' +
-        '<div><label class="label">Referral Doctor</label><select id="ei-doc" class="select"><option value="">Self / walk-in</option>' +
+        '<div><label class="label">Consultant</label><select id="ei-doc" class="select"><option value="">Self / walk-in</option>' +
           DB.all('doctors').map(function (d) {
             return '<option value="' + App.esc(d.id) + '"' + (d.id === doctorId ? ' selected' : '') + '>' + App.esc(d.name) + '</option>';
           }).join('') + '</select></div>' +
@@ -401,7 +401,7 @@
         (p ? ' &nbsp;(' + App.esc(String(p.age || '')) + ' / ' + App.esc(p.gender || '') + ')' : '') +
         '<br><strong>Phone:</strong> ' + App.esc((p && p.phone) || '—') +
         (p && p.address ? '<br><strong>Address:</strong> ' + App.esc(p.address) : '') + '</div>' +
-        '<div><strong>Referred by:</strong> ' + App.esc(d ? d.name : 'Self') +
+        '<div><strong>Consultant:</strong> ' + App.esc(d ? d.name : 'Self') +
         (d ? '<br><span style="color:#555;font-size:12px">' + App.esc(d.clinic || '') + '</span>' : '') +
         (inv.panelId && DB.get('panels', inv.panelId) ? '<br><strong>Billed to:</strong> ' + App.esc(DB.get('panels', inv.panelId).name) + (p && p.panelRef ? '<br><span style="color:#555;font-size:12px">ID: ' + App.esc(p.panelRef) + '</span>' : '') : '') + '</div>' +
       '</div>' +
@@ -647,7 +647,7 @@
             '<div style="margin-top:10px"><a class="btn btn-sm btn-ghost" href="#/patient/' + App.esc(p.id) + '">View Patient</a></div>'
             : '<div style="color:var(--muted);font-size:13px">No patient record linked.</div>') +
         '</div></div>' +
-        '<div class="card"><div class="card-h">Referral Doctor</div><div class="card-b">' +
+        '<div class="card"><div class="card-h">Consultant</div><div class="card-b">' +
           (d ? '<div style="font-size:16px;font-weight:700">' + App.esc(d.name) + '</div>' +
             '<div style="color:var(--muted);font-size:13px;margin-top:4px">' + App.esc(d.clinic || '') +
             (d.phone ? ' &nbsp;•&nbsp; ' + App.esc(d.phone) : '') + '</div>' +

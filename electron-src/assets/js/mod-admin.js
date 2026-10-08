@@ -2178,7 +2178,7 @@
     }
     function doctorsHtml() {
       var docs = DB.all('doctors').slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
-      return '<div class="card" style="margin:0"><div class="card-h"><h3>Referred By (doctors)</h3></div><div class="card-b"><p class="muted" style="font-size:12.5px;margin:0 0 10px">The doctors in the "Referred By" menu. Rename one here, or add a new one. Commission, clinic and statements are in the full <a href="#/doctors">Doctors page</a>.</p>' +
+      return '<div class="card" style="margin:0"><div class="card-h"><h3>Consultant (doctors)</h3></div><div class="card-b"><p class="muted" style="font-size:12.5px;margin:0 0 10px">The doctors in the "Consultant" menu. Rename one here, or add a new one. Commission, clinic and statements are in the full <a href="#/doctors">Doctors page</a>.</p>' +
         docs.map(function (d) { return '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><input class="input dl-doc" data-id="' + App.esc(d.id) + '" value="' + App.esc(d.name || '') + '" maxlength="80" style="flex:1;min-width:0"><button type="button" class="btn btn-ghost btn-sm" data-docsave="' + App.esc(d.id) + '">Save name</button></div>'; }).join('') +
         '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><input class="input" id="dlDocNew" placeholder="New doctor name…" maxlength="80" style="flex:1;min-width:160px"><input class="input" id="dlDocPct" type="number" min="0" max="100" step="0.5" placeholder="Commission %" style="width:130px"><button type="button" class="btn btn-ghost btn-sm" id="dlDocAdd">+ Add doctor</button></div></div></div>';
     }
