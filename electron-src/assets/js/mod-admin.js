@@ -1312,10 +1312,651 @@
   App.route('#/reports/:tab', function (p) {
     var valid = ['tests', 'finance', 'dues', 'patients', 'labs'];
     var tab = (p && p.tab) ? p.tab.toLowerCase() : 'tests';
+    if (tab === 'trends') { renderPatientTrendsDashboard(); return; }
     if (tab === 'all') { location.replace('#/reports/tests'); return; }
     rep.type = valid.indexOf(tab) >= 0 ? tab : 'tests';
     renderReports();
   });
+  App.route('#/reports/trends', function () { renderPatientTrendsDashboard(); });
+  App.route('#/trends', function () { renderPatientTrendsDashboard(); });
+
+  /* ============================================================
+     PATIENT HISTORICAL TREND & DELTA ANALYSIS CENTER
+     Route: #/reports/trends or #/trends
+     ============================================================ */
+  var trendsState = {
+    patientId: null,
+    paramIndex: 0,
+    visitLimit: 'all',
+    searchQ: '',
+    sortDesc: false
+  };
+
+  function buildTrendSvg(m, pts) {
+    var W = 1000, H = 340, L = 60, R = 50, T = 30, B = 50, n = pts.length;
+    var b = App.refBounds ? App.refBounds(m.ref) : null;
+    var vals = pts.map(function (q) { return q.v; });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    if (b) {
+      if (b.lo != null) { mn = Math.min(mn, b.lo); mx = Math.max(mx, b.lo); }
+      if (b.hi != null) { mn = Math.min(mn, b.hi); mx = Math.max(mx, b.hi); }
+    }
+    var span = (mx - mn) || Math.abs(mx) || 1;
+    mn -= span * 0.15;
+    mx += span * 0.15;
+    if (mn < 0 && Math.min.apply(null, vals) >= 0 && (!b || b.lo == null || b.lo >= 0)) mn = 0;
+
+    var X = function (i) { return n === 1 ? (L + (W - L - R) / 2) : L + (W - L - R) * i / (n - 1); };
+    var Y = function (v) { return T + (H - T - B) * (1 - (v - mn) / (mx - mn)); };
+    var f = function (v) { return Math.abs(v) >= 100 ? String(Math.round(v)) : String(Math.round(v * 100) / 100); };
+
+    var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block;overflow:visible" role="img" aria-label="' + App.esc(m.name) + ' historical trend graph">';
+
+    /* Horizontal grid lines and value ticks */
+    for (var k = 0; k <= 4; k++) {
+      var gv = mn + (mx - mn) * k / 4;
+      var gy = Y(gv);
+      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy + '" y2="' + gy + '" stroke="#e2e8f0" stroke-width="1"/>';
+      g += '<text x="' + (L - 10) + '" y="' + (gy + 4) + '" text-anchor="end" font-size="11" font-weight="600" fill="#64748b">' + f(gv) + '</text>';
+    }
+
+    /* Normal reference range band */
+    if (b) {
+      var yTop = b.hi != null ? Y(b.hi) : T;
+      var yBot = b.lo != null ? Y(b.lo) : (H - B);
+      var bandHeight = Math.max(2, yBot - yTop);
+      g += '<rect x="' + L + '" y="' + yTop + '" width="' + (W - L - R) + '" height="' + bandHeight + '" fill="#16a34a" opacity="0.10"/>';
+      if (b.hi != null) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yTop + '" y2="' + yTop + '" stroke="#16a34a" stroke-dasharray="4 4" stroke-width="1.5" opacity="0.75"/>';
+      if (b.lo != null) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yBot + '" y2="' + yBot + '" stroke="#16a34a" stroke-dasharray="4 4" stroke-width="1.5" opacity="0.75"/>';
+      g += '<text x="' + (W - R - 6) + '" y="' + (yTop + 14) + '" text-anchor="end" font-size="11" font-weight="700" fill="#15803d">Normal Ref Band: ' + App.esc(m.ref) + ' ' + App.esc(m.unit) + '</text>';
+    }
+
+    /* Trend line connection */
+    if (n > 1) {
+      var ptsStr = pts.map(function (q, i) { return X(i) + ',' + Y(q.v); }).join(' ');
+      g += '<polyline fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="' + ptsStr + '"/>';
+    }
+
+    /* Data points */
+    var COL_SEV = { ok: '#16a34a', mild: '#d97706', moderate: '#ea580c', critical: '#dc2626' };
+    pts.forEach(function (q, i) {
+      var col = COL_SEV[q.sev || 'ok'] || '#16a34a';
+      var x = X(i);
+      var y = Y(q.v);
+      var isHigh = y > T + 32;
+
+      g += '<g style="cursor:pointer">';
+      g += '<title>' + App.esc(m.name + ': ' + q.raw + ' ' + m.unit + ' | Visit: ' + App.d(q.t) + ' (' + q.inv + ')') + '</title>';
+      /* Point circle */
+      g += '<circle cx="' + x + '" cy="' + y + '" r="7" fill="#ffffff" stroke="' + col + '" stroke-width="3.5"/>';
+      /* Value callout pill */
+      var valY = isHigh ? (y - 14) : (y + 22);
+      g += '<rect x="' + (x - 26) + '" y="' + (valY - 11) + '" width="52" height="16" rx="4" fill="#ffffff" stroke="' + col + '" stroke-width="1" opacity="0.95"/>';
+      g += '<text x="' + x + '" y="' + (valY + 1) + '" text-anchor="middle" font-size="11" font-weight="800" fill="' + col + '">' + App.esc(f(q.v)) + '</text>';
+      /* X-axis labels */
+      g += '<text x="' + x + '" y="' + (H - 26) + '" text-anchor="middle" font-size="11" font-weight="600" fill="#334155">' + App.esc(App.d(q.t)) + '</text>';
+      g += '<text x="' + x + '" y="' + (H - 12) + '" text-anchor="middle" font-size="10" font-weight="500" fill="#64748b">' + App.esc(q.inv) + '</text>';
+      g += '</g>';
+    });
+
+    g += '</svg>';
+    return g;
+  }
+
+  function renderPatientTrendsDashboard() {
+    if (role() !== 'admin' && !(role() === 'custom' && App.canPage('reports'))) return denied();
+
+    /* Ensure results module is loaded */
+    if (!App.trendSeries || !App.refFor || !App.refBounds) {
+      var viewLoading = document.getElementById('view');
+      if (viewLoading) viewLoading.innerHTML = '<div class="card"><div class="card-b">' + App.empty('Loading Patient Historical Trends Engine…') + '</div></div>';
+      App.loadScript('assets/js/mod-results.js').then(function () {
+        renderPatientTrendsDashboard();
+      }, function () {
+        App.toast('Could not load test results module', 'err');
+      });
+      return;
+    }
+
+    var allPatients = DB.all('patients') || [];
+    var allInvoices = DB.all('invoices') || [];
+    var allResults = DB.all('results') || [];
+    var readyResults = allResults.filter(function (r) { return r.status === 'ready' && r.values; });
+
+    var invById = {};
+    allInvoices.forEach(function (i) { invById[i.id] = i; });
+
+    var patResultsMap = {};
+    readyResults.forEach(function (r) {
+      var inv = invById[r.invoiceId];
+      if (inv && inv.patientId) {
+        patResultsMap[inv.patientId] = (patResultsMap[inv.patientId] || 0) + 1;
+      }
+    });
+
+    /* Patients with test results sorted by number of test records descending */
+    var patsWithResults = allPatients.filter(function (p) { return (patResultsMap[p.id] || 0) > 0; });
+    patsWithResults.sort(function (a, b) {
+      return (patResultsMap[b.id] || 0) - (patResultsMap[a.id] || 0);
+    });
+
+    /* Parse query string from URL */
+    var hashQ = (location.hash || '').split('?')[1] || '';
+    var qObj = {};
+    hashQ.split('&').forEach(function (pair) {
+      var s = pair.split('=');
+      if (s[0]) qObj[decodeURIComponent(s[0])] = decodeURIComponent(s[1] || '');
+    });
+
+    if (qObj.patientId || qObj.id) {
+      trendsState.patientId = qObj.patientId || qObj.id;
+    }
+
+    /* Selected patient selection fallback */
+    var curPat = trendsState.patientId ? DB.get('patients', trendsState.patientId) : null;
+    if (!curPat && patsWithResults.length) {
+      curPat = patsWithResults[0];
+      trendsState.patientId = curPat.id;
+    } else if (!curPat && allPatients.length) {
+      curPat = allPatients[0];
+      trendsState.patientId = curPat.id;
+    }
+
+    if (!curPat) {
+      var emptyHtml = '<div class="page-head"><div><h1>📈 Patient Historical Trend &amp; Delta Analysis Center</h1>'
+        + '<p class="muted">Track multi-visit biometric trajectories, evaluate delta variations, and monitor patient health recovery over time.</p></div></div>'
+        + '<div class="card"><div class="card-b">' + App.empty('No patients registered in the system yet. Register patients and enter lab results to see trend charts.') + '</div></div>';
+      document.getElementById('view').innerHTML = emptyHtml;
+      return;
+    }
+
+    /* Retrieve trend series for current patient */
+    var series = curPat ? App.trendSeries(curPat) : [];
+    if (qObj.param && series.length) {
+      var foundIdx = -1;
+      series.forEach(function (s, i) {
+        if (s.name.toLowerCase() === qObj.param.toLowerCase()) foundIdx = i;
+      });
+      if (foundIdx >= 0) trendsState.paramIndex = foundIdx;
+    }
+    if (trendsState.paramIndex >= series.length) {
+      trendsState.paramIndex = 0;
+    }
+
+    var selSeries = series[trendsState.paramIndex] || null;
+    var pts = selSeries ? selSeries.pts.slice() : [];
+
+    /* Apply visit limit filter if needed */
+    if (trendsState.visitLimit === 'last3') pts = pts.slice(-3);
+    else if (trendsState.visitLimit === 'last5') pts = pts.slice(-5);
+    else if (trendsState.visitLimit === 'last10') pts = pts.slice(-10);
+
+    /* Compute delta check metrics */
+    var basePt = pts.length ? pts[0] : null;
+    var latestPt = pts.length ? pts[pts.length - 1] : null;
+    var prevPt = pts.length > 1 ? pts[pts.length - 2] : null;
+
+    var prevDelta = (prevPt && latestPt) ? (latestPt.v - prevPt.v) : 0;
+    var prevDeltaPct = (prevPt && prevPt.v !== 0) ? ((prevDelta / Math.abs(prevPt.v)) * 100) : 0;
+
+    var baseDelta = (basePt && latestPt) ? (latestPt.v - basePt.v) : 0;
+    var baseDeltaPct = (basePt && basePt.v !== 0) ? ((baseDelta / Math.abs(basePt.v)) * 100) : 0;
+
+    /* Clinical direction assessment */
+    var dirNote = 'Baseline Recording';
+    var dirColor = '#16a34a';
+    if (selSeries && basePt && latestPt) {
+      var dLatest = App.outDist ? App.outDist(selSeries, latestPt.v) : 0;
+      var dBase = App.outDist ? App.outDist(selSeries, basePt.v) : 0;
+      if (dLatest === 0) {
+        if (dBase > 0) { dirNote = 'Normalized: Successfully returned to normal range'; dirColor = '#16a34a'; }
+        else { dirNote = 'Healthy: Value consistently within normal limits'; dirColor = '#16a34a'; }
+      } else if (dLatest < dBase) {
+        dirNote = 'Improving: Moving closer to normal reference band'; dirColor = '#059669';
+      } else if (dLatest > dBase) {
+        dirNote = 'Alert: Deviation from normal reference range expanded'; dirColor = '#dc2626';
+      } else {
+        dirNote = 'Deviation: Persistently outside reference bounds'; dirColor = '#d97706';
+      }
+    }
+
+    var patInvs = allInvoices.filter(function (i) { return i.patientId === curPat.id; });
+    var patReadyCount = patResultsMap[curPat.id] || 0;
+
+    var COL_SEV = { ok: '#16a34a', mild: '#d97706', moderate: '#ea580c', critical: '#dc2626' };
+    var latestSevCol = latestPt ? (COL_SEV[latestPt.sev || 'ok'] || '#16a34a') : '#16a34a';
+    var latestSevBadge = latestPt ? (latestPt.sev
+      ? '<span class="badge" style="background:' + latestSevCol + '18;color:' + latestSevCol + ';font-weight:800;border:1px solid ' + latestSevCol + '44">' + (latestPt.dir === 'high' ? '↑ HIGH' : '↓ LOW') + (latestPt.sev === 'critical' ? ' · CRITICAL' : '') + '</span>'
+      : '<span class="badge" style="background:#16a34a18;color:#16a34a;font-weight:700;border:1px solid #16a34a44">Normal</span>') : '—';
+
+    /* Build HTML */
+    var html = ''
+      + '<style>'
+      + '.pt-trend-dash { max-width: 1300px; margin: 0 auto; }'
+      + '.pt-head-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }'
+      + '.pt-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }'
+      + '.pt-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
+      + '.pt-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
+      + '.pt-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
+      + '.pt-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; font-variant-numeric: tabular-nums; }'
+      + '.pt-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
+      + '.pt-pat-banner { display: flex; align-items: center; gap: 16px; background: #fff; border: 1.5px solid var(--bd); border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
+      + '.pt-avatar-circle { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; display: grid; place-items: center; font-size: 19px; font-weight: 800; flex: 0 0 50px; }'
+      + '.pt-param-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }'
+      + '.pt-param-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 12px; padding: 14px 16px; transition: border-color .15s, box-shadow .15s; }'
+      + '.pt-param-card:hover { border-color: #3b82f6; box-shadow: 0 3px 10px rgba(59,130,246,.08); }'
+      + '@media print { .sidebar, .topbar, .pt-head-bar .btn, .pt-filter-box, .no-print { display: none !important; } .main { padding: 0 !important; } }'
+      + '</style>'
+      + '<div class="pt-trend-dash">'
+
+      /* Page Header */
+      + '<div class="pt-head-bar">'
+      +   '<div>'
+      +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+      +       '<a href="#/reports/tests" class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px">← Reports</a>'
+      +       '<span style="font-size:12px;color:var(--muted)">/ Insights</span>'
+      +     '</div>'
+      +     '<h1 style="margin:0;font-size:23px;font-weight:800;color:var(--ink);letter-spacing:-.01em">📈 Patient Historical Trend &amp; Delta Analysis Center</h1>'
+      +     '<p class="muted" style="margin:4px 0 0;font-size:13px">Track multi-visit biometric trajectories, evaluate delta percentage variations, and monitor patient health progress over time.</p>'
+      +   '</div>'
+      +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap" class="no-print">'
+      +     '<button class="btn btn-ghost btn-sm" id="ptRefreshBtn">🔄 Refresh</button>'
+      +     '<button class="btn btn-ghost btn-sm" id="ptCsvBtn">📥 Export CSV</button>'
+      +     '<button class="btn btn-primary btn-sm" id="ptPrintBtn">' + PRINT_ICON + ' Print Trend Report</button>'
+      +   '</div>'
+      + '</div>'
+
+      /* Patient & Parameter Selector Controls */
+      + '<div class="card pt-filter-box" style="margin-bottom:18px"><div class="card-b" style="padding:14px 16px">'
+      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
+      +     '<div style="flex:1;min-width:260px">'
+      +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Select Patient</label>'
+      +       '<select class="select" id="ptPatSelect" style="font-weight:600;width:100%">'
+      +         allPatients.map(function (p) {
+                  var rCount = patResultsMap[p.id] || 0;
+                  var isSel = curPat && curPat.id === p.id;
+                  return '<option value="' + App.esc(p.id) + '"' + (isSel ? ' selected' : '') + '>'
+                    + App.esc(p.name) + ' (' + App.esc(p.id) + ')' + (rCount ? ' — ' + rCount + ' report(s)' : ' — no reports')
+                    + '</option>';
+                }).join('')
+      +       '</select>'
+      +     '</div>'
+      +     '<div style="flex:1;min-width:240px">'
+      +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Biometric Parameter</label>'
+      +       '<select class="select" id="ptParamSelect" style="font-weight:600;width:100%"' + (!series.length ? ' disabled' : '') + '>'
+      +         (series.length ? series.map(function (m, i) {
+                  var isSel = trendsState.paramIndex === i;
+                  return '<option value="' + i + '"' + (isSel ? ' selected' : '') + '>'
+                    + App.esc(m.name) + ' (' + m.pts.length + ' visit' + (m.pts.length > 1 ? 's' : '') + ')' + (m.ref ? ' [ref: ' + App.esc(m.ref) + ']' : '')
+                    + '</option>';
+                }).join('') : '<option value="">No numeric parameters reported</option>')
+      +       '</select>'
+      +     '</div>'
+      +     '<div style="min-width:160px">'
+      +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Visits Range</label>'
+      +       '<select class="select" id="ptRangeSelect" style="font-weight:600">'
+      +         '<option value="all"' + (trendsState.visitLimit === 'all' ? ' selected' : '') + '>All Historical Visits</option>'
+      +         '<option value="last3"' + (trendsState.visitLimit === 'last3' ? ' selected' : '') + '>Last 3 Visits</option>'
+      +         '<option value="last5"' + (trendsState.visitLimit === 'last5' ? ' selected' : '') + '>Last 5 Visits</option>'
+      +         '<option value="last10"' + (trendsState.visitLimit === 'last10' ? ' selected' : '') + '>Last 10 Visits</option>'
+      +       '</select>'
+      +     '</div>'
+      +   '</div>'
+      + '</div></div>'
+
+      /* Patient Demographics & Profile Summary Banner */
+      + '<div class="pt-pat-banner">'
+      +   '<div class="pt-avatar-circle">' + App.esc((curPat.name || 'P').charAt(0).toUpperCase()) + '</div>'
+      +   '<div style="flex:1;min-width:220px">'
+      +     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +       '<h3 style="margin:0;font-size:17px;font-weight:800;color:var(--ink)">' + App.esc(curPat.name) + '</h3>'
+      +       '<span class="badge b-id mono">' + App.esc(curPat.id) + '</span>'
+      +       (curPat.gender ? '<span class="badge" style="background:#e0e7ff;color:#3730a3;font-weight:600">' + App.esc(curPat.gender) + '</span>' : '')
+      +       (curPat.age ? '<span class="badge" style="background:#f1f5f9;color:#334155;font-weight:600">' + App.esc(curPat.age) + ' yrs</span>' : '')
+      +     '</div>'
+      +     '<div style="display:flex;gap:12px;margin-top:5px;font-size:12px;color:var(--muted);flex-wrap:wrap">'
+      +       '<span>📞 ' + App.esc(curPat.phone || 'No phone') + '</span>'
+      +       '<span>🗓 Registered ' + App.esc(App.d(curPat.createdAt)) + '</span>'
+      +       '<span>🧾 ' + patInvs.length + ' Total Visits</span>'
+      +       '<span>🔬 ' + patReadyCount + ' Finalized Lab Reports</span>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="display:flex;gap:8px">'
+      +     '<a href="#/patient/' + App.esc(curPat.id) + '" class="btn btn-ghost btn-sm">👤 Patient Profile &rarr;</a>'
+      +     '<a href="#/billing/' + App.esc(curPat.id) + '" class="btn btn-primary btn-sm">+ New Bill</a>'
+      +   '</div>'
+      + '</div>';
+
+    if (!series.length) {
+      html += '<div class="card"><div class="card-b" style="text-align:center;padding:40px 20px">'
+        + '<div style="font-size:42px;margin-bottom:12px">🧪</div>'
+        + '<h3 style="margin:0 0 6px">No Numeric Lab Test Results Found</h3>'
+        + '<p class="muted" style="margin:0 0 16px;max-width:500px;margin-left:auto;margin-right:auto">'
+        + 'Patient <b>' + App.esc(curPat.name) + '</b> does not have finalized numeric test results yet. '
+        + 'When tests like Blood Sugar, CBC, Creatinine, Lipid Profile, or Electrolytes are finalized with numeric values in Lab Results, their multi-visit historical trend graphs and delta analyses will display here.'
+        + '</p>'
+        + '<div style="display:flex;justify-content:center;gap:10px">'
+        + '<a href="#/results" class="btn btn-primary">Go to Lab Results &rarr;</a>'
+        + '<a href="#/billing/' + App.esc(curPat.id) + '" class="btn btn-ghost">+ New Bill for Patient</a>'
+        + '</div>'
+        + '</div></div></div>';
+      document.getElementById('view').innerHTML = html;
+      wireTrendsEvents();
+      return;
+    }
+
+    /* 4 KPI Stat Cards */
+    var baselineValText = basePt ? (basePt.raw + ' ' + selSeries.unit) : '—';
+    var latestValText = latestPt ? (latestPt.raw + ' ' + selSeries.unit) : '—';
+    var deltaSign = baseDelta > 0 ? '▲ +' : (baseDelta < 0 ? '▼ ' : '');
+    var deltaValText = (basePt && latestPt)
+      ? (deltaSign + (Math.round(Math.abs(baseDelta) * 100) / 100) + ' ' + selSeries.unit + ' (' + (baseDeltaPct >= 0 ? '+' : '') + (Math.round(baseDeltaPct * 10) / 10) + '%)')
+      : '—';
+
+    html += '<div class="pt-card-grid">'
+
+      /* KPI 1: Historical Readings */
+      + '<div class="pt-kpi-card" style="border-left:4px solid #3b82f6">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Historical Readings</span><span style="font-size:16px">📊</span></div>'
+      +   '<div class="pt-kpi-val">' + pts.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">readings</span></div>'
+      +   '<div class="pt-kpi-sub">' + (pts.length > 1 ? 'From ' + App.d(basePt.t) + ' to ' + App.d(latestPt.t) : '1 visit recorded') + '</div>'
+      + '</div>'
+
+      /* KPI 2: Baseline Value */
+      + '<div class="pt-kpi-card" style="border-left:4px solid #8b5cf6">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Baseline (Initial) Reading</span><span style="font-size:16px">🏷️</span></div>'
+      +   '<div class="pt-kpi-val">' + App.esc(baselineValText) + '</div>'
+      +   '<div class="pt-kpi-sub">' + (basePt ? App.d(basePt.t) + ' (' + App.esc(basePt.inv) + ')' : '—') + '</div>'
+      + '</div>'
+
+      /* KPI 3: Latest Value */
+      + '<div class="pt-kpi-card" style="border-left:4px solid ' + latestSevCol + '">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Latest (Current) Reading</span>' + latestSevBadge + '</div>'
+      +   '<div class="pt-kpi-val" style="color:' + latestSevCol + '">' + App.esc(latestValText) + '</div>'
+      +   '<div class="pt-kpi-sub">' + (latestPt ? 'Tested on ' + App.d(latestPt.t) + ' (' + App.esc(latestPt.inv) + ')' : '—') + '</div>'
+      + '</div>'
+
+      /* KPI 4: Net Delta from Baseline */
+      + '<div class="pt-kpi-card" style="border-left:4px solid ' + dirColor + '">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Net Delta from Baseline</span><span style="font-size:16px">📈</span></div>'
+      +   '<div class="pt-kpi-val" style="color:' + dirColor + ';font-size:18px">' + App.esc(deltaValText) + '</div>'
+      +   '<div class="pt-kpi-sub" style="color:' + dirColor + ';font-weight:600">' + App.esc(dirNote) + '</div>'
+      + '</div>'
+
+      + '</div>';
+
+    /* Visual Trend SVG Graph Card */
+    html += '<div class="card" style="margin-bottom:20px">'
+      + '<div class="card-h" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'
+      +   '<div>'
+      +     '<h3 style="margin:0;font-size:16px">' + App.esc(selSeries.name) + ' — Historical Trajectory Graph</h3>'
+      +     '<span class="muted" style="font-size:12px">Reference Range: <b>' + App.esc(selSeries.ref || 'Not specified') + ' ' + App.esc(selSeries.unit) + '</b></span>'
+      +   '</div>'
+      +   '<div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap">'
+      +     '<span><span style="color:#16a34a">●</span> Normal</span>'
+      +     '<span><span style="color:#d97706">●</span> Mild/Moderate</span>'
+      +     '<span><span style="color:#dc2626">●</span> Critical Alert</span>'
+      +     '<span><span style="display:inline-block;width:12px;height:10px;background:#16a34a22;border:1px dashed #16a34a;vertical-align:middle"></span> Normal Band</span>'
+      +   '</div>'
+      + '</div>'
+      + '<div class="card-b" style="padding:16px 20px">'
+      +   (pts.length === 1 ? '<p class="muted" style="margin:0 0 10px;font-size:12.5px">📌 Only 1 reading recorded so far. Continuous connection curves connect automatically across upcoming visits.</p>' : '')
+      +   buildTrendSvg(selSeries, pts)
+      + '</div></div>';
+
+    /* Delta Analysis & Clinical Velocity Table Card */
+    var deltaRowsHtml = pts.map(function (q, idx) {
+      var prev = idx > 0 ? pts[idx - 1] : null;
+      var d = prev ? (q.v - prev.v) : null;
+      var dTxt = '';
+      if (d == null) {
+        dTxt = '<span class="muted">— (Baseline)</span>';
+      } else if (d === 0) {
+        dTxt = '<span class="muted">No change (0.0)</span>';
+      } else {
+        var pct = (prev && prev.v !== 0) ? ((d / Math.abs(prev.v)) * 100) : 0;
+        var da = App.outDist ? App.outDist(selSeries, prev.v) : 0;
+        var db = App.outDist ? App.outDist(selSeries, q.v) : 0;
+        var col = (da === 0 && db === 0) ? '#64748b' : (db < da ? '#16a34a' : '#dc2626');
+        dTxt = '<span style="color:' + col + ';font-weight:700">' + (d > 0 ? '▲ +' : '▼ ') + (Math.round(Math.abs(d) * 100) / 100) + ' ' + App.esc(selSeries.unit) + ' (' + (pct >= 0 ? '+' : '') + (Math.round(pct * 10) / 10) + '%)</span>';
+      }
+
+      /* Cumulative delta from baseline */
+      var cD = idx > 0 ? (q.v - basePt.v) : 0;
+      var cPct = (idx > 0 && basePt.v !== 0) ? ((cD / Math.abs(basePt.v)) * 100) : 0;
+      var cTxt = idx === 0 ? '<span class="muted">Baseline Visit</span>'
+        : '<span style="font-weight:600;color:' + (cD > 0 ? '#b45309' : (cD < 0 ? '#1d4ed8' : '#64748b')) + '">'
+          + (cD > 0 ? '▲ +' : (cD < 0 ? '▼ ' : '')) + (Math.round(Math.abs(cD) * 100) / 100) + ' (' + (cPct >= 0 ? '+' : '') + (Math.round(cPct * 10) / 10) + '%)</span>';
+
+      /* Velocity & status flags */
+      var sevCol = COL_SEV[q.sev || 'ok'] || '#16a34a';
+      var statusBadge = q.sev
+        ? '<span class="badge" style="background:' + sevCol + '18;color:' + sevCol + ';font-weight:800;border:1px solid ' + sevCol + '44">' + (q.dir === 'high' ? '↑ HIGH' : '↓ LOW') + (q.sev === 'critical' ? ' · CRITICAL' : '') + '</span>'
+        : '<span class="badge" style="background:#16a34a18;color:#16a34a;font-weight:700;border:1px solid #16a34a44">Normal</span>';
+
+      var velFlag = '';
+      if (idx === 0) velFlag = '<span class="muted">Initial Baseline</span>';
+      else {
+        var absPct = Math.abs(pct);
+        if (absPct <= 10) velFlag = '<span class="badge" style="background:#f1f5f9;color:#475569">Normal Fluctuation (≤10%)</span>';
+        else if (absPct <= 25) velFlag = '<span class="badge" style="background:#fef3c7;color:#b45309">Moderate Shift (10-25%)</span>';
+        else if (absPct <= 40) velFlag = '<span class="badge" style="background:#ffedd5;color:#c2410c">Significant Delta (>25%)</span>';
+        else velFlag = '<span class="badge" style="background:#fee2e2;color:#b91c1c;font-weight:800">Critical Shift (>40%)</span>';
+      }
+
+      return '<tr>'
+        + '<td style="font-weight:700;color:var(--muted)">#' + (idx + 1) + '</td>'
+        + '<td><b>' + App.esc(App.d(q.t)) + '</b></td>'
+        + '<td><a href="#/invoice/' + App.esc(q.invId || q.inv) + '" class="mono" style="font-weight:600;text-decoration:none">' + App.esc(q.inv) + '</a></td>'
+        + '<td><span style="font-size:14px;font-weight:800;color:' + sevCol + '">' + App.esc(q.raw) + '</span> <span class="muted">' + App.esc(selSeries.unit) + '</span></td>'
+        + '<td><span class="muted">' + App.esc(selSeries.ref || '—') + '</span></td>'
+        + '<td>' + statusBadge + '</td>'
+        + '<td>' + dTxt + '</td>'
+        + '<td>' + cTxt + '</td>'
+        + '<td>' + velFlag + '</td>'
+        + '<td style="text-align:right"><button class="btn btn-ghost btn-sm" data-pt-inv="' + App.esc(q.invId || q.inv) + '">View Report</button></td>'
+        + '</tr>';
+    }).reverse().join('');
+
+    html += '<div class="card" style="margin-bottom:20px">'
+      + '<div class="card-h"><h3 style="margin:0">Delta Check &amp; Clinical Progress Log</h3>'
+      + '<span class="muted" style="font-size:12.5px">' + pts.length + ' chronologically recorded readings</span></div>'
+      + '<div class="card-b" style="padding:0">'
+      +   '<div class="tbl-wrap"><table class="table"><thead><tr>'
+      +     '<th>#</th><th>Visit Date</th><th>Invoice No</th><th>Result Value</th><th>Reference Range</th>'
+      +     '<th>Clinical Status</th><th>Delta (vs Prior)</th><th>Cumulative Δ</th><th>Velocity / Variance</th><th style="text-align:right">Action</th>'
+      +   '</tr></thead><tbody>' + deltaRowsHtml + '</tbody></table></div>'
+      + '</div></div>';
+
+    /* Multi-Parameter Health Overview Grid (Other parameters tested for this patient) */
+    html += '<div class="card" style="margin-bottom:24px">'
+      + '<div class="card-h"><h3 style="margin:0">Multi-Parameter Clinical Overview (' + series.length + ' Monitored Tests)</h3>'
+      + '<span class="muted" style="font-size:12.5px">Quick biometric summary across all tests finalized for ' + App.esc(curPat.name) + '</span></div>'
+      + '<div class="card-b">'
+      +   '<div class="pt-param-grid">'
+      +     series.map(function (m, i) {
+              var isCurrent = trendsState.paramIndex === i;
+              var mPts = m.pts;
+              var mBase = mPts[0];
+              var mLatest = mPts[mPts.length - 1];
+              var mDelta = (mBase && mLatest) ? (mLatest.v - mBase.v) : 0;
+              var mDeltaPct = (mBase && mBase.v !== 0) ? ((mDelta / Math.abs(mBase.v)) * 100) : 0;
+              var mSev = mLatest ? (COL_SEV[mLatest.sev || 'ok'] || '#16a34a') : '#16a34a';
+
+              return '<div class="pt-param-card"' + (isCurrent ? ' style="border-color:#3b82f6;background:#f8faff"' : '') + '>'
+                + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'
+                +   '<strong style="font-size:14px;color:var(--ink)">' + App.esc(m.name) + '</strong>'
+                +   (isCurrent ? '<span class="badge b-ready">Active</span>' : '<span class="badge b-pending">' + mPts.length + ' visits</span>')
+                + '</div>'
+                + '<div class="muted" style="font-size:11.5px;margin-bottom:8px">Normal: ' + App.esc(m.ref || '—') + ' ' + App.esc(m.unit) + '</div>'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-bottom:10px">'
+                +   '<div><div class="muted" style="font-size:10px;text-transform:uppercase">Baseline</div><div style="font-size:13px;font-weight:700">' + App.esc(mBase ? mBase.raw : '—') + '</div></div>'
+                +   '<div style="font-size:14px;color:var(--muted)">→</div>'
+                +   '<div><div class="muted" style="font-size:10px;text-transform:uppercase">Latest</div><div style="font-size:14px;font-weight:800;color:' + mSev + '">' + App.esc(mLatest ? mLatest.raw : '—') + '</div></div>'
+                +   '<div><div class="muted" style="font-size:10px;text-transform:uppercase">Delta</div><div style="font-size:12px;font-weight:800;color:' + (mDelta > 0 ? '#b45309' : (mDelta < 0 ? '#1d4ed8' : '#64748b')) + '">' + (mDelta > 0 ? '▲ +' : (mDelta < 0 ? '▼ ' : '')) + (Math.round(Math.abs(mDeltaPct) * 10) / 10) + '%</div></div>'
+                + '</div>'
+                + '<button class="btn ' + (isCurrent ? 'btn-ghost' : 'btn-primary') + ' btn-sm" style="width:100%" data-pt-focus-param="' + i + '">'
+                +   (isCurrent ? 'Viewing in Main Graph ✓' : 'Focus This Parameter ↗')
+                + '</button>'
+                + '</div>';
+            }).join('')
+      +   '</div>'
+      + '</div></div>';
+
+    html += '</div>'; /* end .pt-trend-dash */
+
+    document.getElementById('view').innerHTML = html;
+    wireTrendsEvents();
+
+    function wireTrendsEvents() {
+      /* Patient select change */
+      var patSel = document.getElementById('ptPatSelect');
+      if (patSel) {
+        patSel.addEventListener('change', function () {
+          trendsState.patientId = this.value;
+          trendsState.paramIndex = 0;
+          location.hash = '#/reports/trends?patientId=' + encodeURIComponent(this.value);
+        });
+      }
+
+      /* Parameter select change */
+      var paramSel = document.getElementById('ptParamSelect');
+      if (paramSel) {
+        paramSel.addEventListener('change', function () {
+          trendsState.paramIndex = +this.value;
+          renderPatientTrendsDashboard();
+        });
+      }
+
+      /* Range select change */
+      var rangeSel = document.getElementById('ptRangeSelect');
+      if (rangeSel) {
+        rangeSel.addEventListener('change', function () {
+          trendsState.visitLimit = this.value;
+          renderPatientTrendsDashboard();
+        });
+      }
+
+      /* Refresh button */
+      var refBtn = document.getElementById('ptRefreshBtn');
+      if (refBtn) {
+        refBtn.addEventListener('click', function () {
+          renderPatientTrendsDashboard();
+          App.toast('Patient trends data refreshed.');
+        });
+      }
+
+      /* Focus parameter card buttons */
+      document.querySelectorAll('[data-pt-focus-param]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          trendsState.paramIndex = +this.getAttribute('data-pt-focus-param');
+          renderPatientTrendsDashboard();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
+
+      /* View report button */
+      document.querySelectorAll('[data-pt-inv]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var invId = this.getAttribute('data-pt-inv');
+          if (App.viewLabReport) App.viewLabReport(invId);
+          else App.loadScript('assets/js/mod-results.js').then(function () { App.viewLabReport(invId); });
+        });
+      });
+
+      /* CSV Export */
+      var csvBtn = document.getElementById('ptCsvBtn');
+      if (csvBtn) {
+        csvBtn.addEventListener('click', function () {
+          if (!selSeries || !pts.length) { App.toast('No trend data to export', 'err'); return; }
+          var csvLines = ['Visit_Number,Date,Invoice,Parameter,Value,Unit,Reference_Range,Status,Delta_Prior,Delta_Pct,Cumulative_Delta'];
+          pts.forEach(function (q, idx) {
+            var prev = idx > 0 ? pts[idx - 1] : null;
+            var d = prev ? (q.v - prev.v) : 0;
+            var dPct = (prev && prev.v !== 0) ? ((d / Math.abs(prev.v)) * 100) : 0;
+            var cD = idx > 0 ? (q.v - basePt.v) : 0;
+            csvLines.push([
+              idx + 1,
+              csvEsc(App.d(q.t)),
+              csvEsc(q.inv),
+              csvEsc(selSeries.name),
+              q.v,
+              csvEsc(selSeries.unit),
+              csvEsc(selSeries.ref),
+              csvEsc(q.sev ? (q.dir + '_' + q.sev) : 'normal'),
+              d,
+              Math.round(dPct * 10) / 10,
+              cD
+            ].join(','));
+          });
+          var blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+          var link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = 'trend_' + (curPat.name || 'patient').replace(/[^a-zA-Z0-9]/g, '_') + '_' + (selSeries.name || 'test').replace(/[^a-zA-Z0-9]/g, '_') + '.csv';
+          link.click();
+          App.toast('Historical trend CSV exported.');
+        });
+      }
+
+      /* Print Trend Summary */
+      var printBtn = document.getElementById('ptPrintBtn');
+      if (printBtn) {
+        printBtn.addEventListener('click', function () {
+          if (!selSeries || !pts.length) { App.toast('No data to print', 'err'); return; }
+          var mainSet = DB.get('settings', 'main') || {};
+
+          var printHtml = '<div style="margin-bottom:14px;border-bottom:2px solid #131845;padding-bottom:10px">'
+            + '<div style="text-align:center;font-size:18px;font-weight:800;letter-spacing:.04em;color:#131845;margin-bottom:4px">PATIENT HISTORICAL TREND &amp; DELTA ANALYSIS REPORT</div>'
+            + '<div style="text-align:center;font-size:12px;color:#64748b">Biometric Trajectory &amp; Multi-Visit Comparison Analysis</div>'
+            + '</div>'
+
+            /* Patient demographics table */
+            + '<table class="table" style="margin-bottom:14px"><tbody>'
+            + '<tr><td><strong>Patient Name:</strong> ' + App.esc(curPat.name) + '</td><td><strong>MR # / Patient ID:</strong> ' + App.esc(curPat.id) + '</td><td><strong>Age / Gender:</strong> ' + App.esc(curPat.age ? curPat.age + 'y' : '—') + ' / ' + App.esc(curPat.gender || '—') + '</td></tr>'
+            + '<tr><td><strong>Contact:</strong> ' + App.esc(curPat.phone || '—') + '</td><td><strong>Evaluated Parameter:</strong> <b>' + App.esc(selSeries.name) + '</b></td><td><strong>Normal Reference:</strong> ' + App.esc(selSeries.ref || '—') + ' ' + App.esc(selSeries.unit) + '</td></tr>'
+            + '<tr><td><strong>Baseline Reading:</strong> ' + App.esc(baselineValText) + '</td><td><strong>Latest Reading:</strong> ' + App.esc(latestValText) + '</td><td><strong>Net Trajectory:</strong> ' + App.esc(deltaValText) + '</td></tr>'
+            + '</tbody></table>'
+
+            /* SVG Chart */
+            + '<div style="margin:16px 0;border:1px solid #cbd5e1;border-radius:8px;padding:12px;background:#ffffff">'
+            + buildTrendSvg(selSeries, pts)
+            + '</div>'
+
+            /* Delta Table */
+            + '<h4 style="margin:14px 0 8px">Visit-by-Visit Clinical Comparison</h4>'
+            + '<table class="table" style="margin-bottom:18px"><thead><tr>'
+            + '<th>#</th><th>Date</th><th>Invoice</th><th>Result Value</th><th>Reference Range</th><th>Status</th><th>Change vs Prior</th><th>Cumulative Δ</th>'
+            + '</tr></thead><tbody>'
+            + pts.map(function (q, idx) {
+                var prev = idx > 0 ? pts[idx - 1] : null;
+                var d = prev ? (q.v - prev.v) : null;
+                var dStr = (d == null) ? '—' : ((d > 0 ? '+' : '') + (Math.round(d * 100) / 100) + ' ' + selSeries.unit);
+                var cD = idx > 0 ? (q.v - basePt.v) : 0;
+                var cStr = idx === 0 ? 'Baseline' : ((cD > 0 ? '+' : '') + (Math.round(cD * 100) / 100) + ' ' + selSeries.unit);
+                return '<tr>'
+                  + '<td>' + (idx + 1) + '</td>'
+                  + '<td>' + App.esc(App.d(q.t)) + '</td>'
+                  + '<td>' + App.esc(q.inv) + '</td>'
+                  + '<td><strong>' + App.esc(q.raw) + '</strong> ' + App.esc(selSeries.unit) + '</td>'
+                  + '<td>' + App.esc(selSeries.ref || '—') + '</td>'
+                  + '<td>' + (q.sev ? (q.dir + ' (' + q.sev + ')') : 'Normal') + '</td>'
+                  + '<td>' + App.esc(dStr) + '</td>'
+                  + '<td>' + App.esc(cStr) + '</td>'
+                  + '</tr>';
+              }).join('')
+            + '</tbody></table>'
+
+            /* Doctor signatures & stamp footer */
+            + '<div style="margin-top:30px;display:flex;justify-content:space-between;align-items:flex-end">'
+            +   '<div><div style="font-size:11px;color:#64748b">Generated by Optix Medical Sync</div><div style="font-size:11px;color:#64748b">Report Date: ' + App.dt(new Date()) + '</div></div>'
+            +   '<div style="text-align:center;min-width:180px;border-top:1px solid #333;padding-top:6px;font-size:12px;font-weight:700">Verified by Pathologist</div>'
+            + '</div>';
+
+          App.print('Patient Historical Trend Report — ' + curPat.name, printHtml);
+        });
+      }
+    }
+  }
 
   /* ============================================================
      SETTINGS  (#/settings) — admin only

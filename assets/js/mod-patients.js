@@ -579,7 +579,7 @@
 
     var html = '' + WA_CSS +
       '<div class="page-head"><div><a class="back-link" href="#/patients">← All Patients</a><h1>Patient Profile</h1></div>' +
-      (edit ? '<div class="head-actions"><a class="btn btn-primary" href="#/billing/' + App.esc(p.id) + '">+ New Bill</a>' +
+      (edit ? '<div class="head-actions"><a class="btn btn-ghost" href="#/reports/trends?patientId=' + App.esc(p.id) + '">📈 Historical Trends</a><a class="btn btn-primary" href="#/billing/' + App.esc(p.id) + '">+ New Bill</a>' +
         '<button class="btn btn-ghost" id="pt-edit">Edit Details</button>' +
         '<button class="btn btn-danger" id="pt-del">Delete</button></div>' : '') + '</div>' +
 
@@ -615,7 +615,8 @@
         : App.empty('No tests ordered yet for this patient.')) +
       '</div></div>' +
 
-      '<div class="card" id="trCard" style="display:none"><div class="card-h"><h3>Result Trends</h3><span class="muted">parameter-wise history</span></div>' +
+      '<div class="card" id="trCard" style="display:none"><div class="card-h" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px"><div style="display:flex;align-items:center;gap:10px"><h3 style="margin:0">Result Trends</h3><span class="muted">parameter-wise history</span></div>' +
+      '<a href="#/reports/trends?patientId=' + App.esc(p.id) + '" class="btn btn-primary btn-sm" style="margin-left:auto">📈 Open Trends &amp; Delta Dashboard &rarr;</a></div>' +
       '<div class="card-b" id="trHost"></div></div>' +
 
       '<div class="card"><div class="card-h"><h3>Invoice History</h3><span class="muted">' + st.visits + ' invoice(s)</span>' +

@@ -64,6 +64,7 @@
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports/tests',   color: '#6366f1',
       sub: [
         { key: 'tests',    label: 'Test Reports',     route: '#/reports/tests' },
+        { key: 'trends',   label: 'Patient Trends & Delta', route: '#/reports/trends' },
         { key: 'finance',  label: 'Finance Reports',  route: '#/reports/finance' },
         { key: 'dues',     label: 'Dues Aging',       route: '#/reports/dues' },
         { key: 'patients', label: 'Patient Reports',  route: '#/reports/patients' },
@@ -114,6 +115,9 @@
     var seg = (path || '').replace(/^#\//, '').split('?')[0].split('/')[0];
     if (seg === 'invoice') seg = 'invoices';
     if (seg === 'patient') seg = 'patients';
+    if (seg === 'receipts') seg = 'invoices';
+    if (seg === 'trends') seg = 'reports';
+    if (seg === 'signatures') seg = 'settings';
     if (seg === 'online-payments') seg = 'onlinepay';
     return seg || 'dashboard';
   }

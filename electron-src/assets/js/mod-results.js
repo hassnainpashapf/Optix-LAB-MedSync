@@ -2462,6 +2462,12 @@
     host.querySelector('#trSel').addEventListener('change', function () { draw(+this.value); });
     draw(0);
   };
+  App.parseAbnNum = parseAbnNum;
+  App.abnormalSeverity = abnormalSeverity;
+  App.trendSeries = trendSeries;
+  App.refBounds = refBounds;
+  App.outDist = outDist;
+  App.trendSvg = trendSvg;
 
   function reportData(invoiceId, ropts) {
     var inv = invOf(invoiceId);
