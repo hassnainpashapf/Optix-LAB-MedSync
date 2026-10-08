@@ -10,25 +10,22 @@
   }
 
   var ICONS = {
-    cash: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
-    flask: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/></svg>',
-    alert: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
-    users: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-    check: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14l-3-3"/></svg>'
+    cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
+    flask: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/></svg>',
+    alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14l-3-3"/></svg>'
   };
-
-  /* shared KPI card markup (CSS in app.css) — tint names map to t-navy/t-green/… */
-  var KPI_TINTS = { brand: 'navy', blue: 'blue', amber: 'amber', green: 'green', red: 'red', purple: 'purple' };
 
   function statCard(icon, tint, label, value, sub, raw, isMoney) {
     var countAttrs = (typeof raw === 'number' && isFinite(raw))
       ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"'
       : '';
-    return '<div class="kpi t-' + (KPI_TINTS[tint] || tint) + '">' +
-      '<div class="kpi-ic">' + icon + '</div>' +
-      '<div class="kpi-lb">' + App.esc(label) + '</div>' +
-      '<div class="kpi-nm"' + countAttrs + '>' + value + '</div>' +
-      '<div class="kpi-sb">' + sub + '</div>' +
+    return '<div class="stat" data-tint="' + tint + '">' +
+      '<div class="stat-ico">' + icon + '</div>' +
+      '<div class="lb">' + App.esc(label) + '</div>' +
+      '<div class="vl"' + countAttrs + '>' + value + '</div>' +
+      '<div class="dl">' + sub + '</div>' +
       '</div>';
   }
 
@@ -46,8 +43,8 @@
       'animation:dbShimmer 1.15s infinite}' +
       '@keyframes dbShimmer{to{transform:translateX(100%)}}' +
       '@media (prefers-reduced-motion:reduce){.db-skel .sk::after{animation:none;transform:none}}' +
-      '.db-skel .stat{min-height:118px;box-shadow:none}' +
-      '.db-skel .stat-ico{border-radius:50%;width:32px;height:32px}' +
+      '.db-skel .stat{min-height:128px;box-shadow:none}' +
+      '.db-skel .stat-ico{border-radius:10px;width:34px;height:34px}' +
       '</style>';
 
     function skelStat() {
@@ -132,23 +129,23 @@
     if (isTech) {
       stats =
         statCard(ICONS.flask, 'blue', "Today's Tests", String(testsToday), invToday.length + ' invoices today', testsToday, false) +
-        statCard(ICONS.alert, 'amber', 'Pending Results', String(pendingRes.length), 'awaiting entry', pendingRes.length, false) +
         statCard(ICONS.check, 'green', 'Reported Today', String(reportedToday), 'results completed', reportedToday, false) +
+        statCard(ICONS.alert, 'amber', 'Pending Results', String(pendingRes.length), 'awaiting entry', pendingRes.length, false) +
         statCard(ICONS.users, 'brand', 'Total Patients', String(patients.length), monthPatients + ' new this month', patients.length, false);
     } else {
       stats =
-        statCard(ICONS.cash, 'brand', "Today's Collection", App.money(todayCol), payToday.length + ' payments today', todayCol, true) +
-        statCard(ICONS.flask, 'blue', "Today's Tests", String(testsToday), invToday.length + ' invoices today', testsToday, false) +
+        statCard(ICONS.cash, 'blue', "Today's Collection", App.money(todayCol), payToday.length + ' payments today', todayCol, true) +
+        statCard(ICONS.flask, 'green', "Today's Tests", String(testsToday), invToday.length + ' invoices today', testsToday, false) +
         statCard(ICONS.alert, 'amber', 'Pending Results', String(pendingRes.length), 'awaiting entry', pendingRes.length, false) +
-        statCard(ICONS.users, 'green', 'Total Patients', String(patients.length), monthPatients + ' new this month', patients.length, false);
+        statCard(ICONS.users, 'brand', 'Total Patients', String(patients.length), monthPatients + ' new this month', patients.length, false);
     }
 
     // ---- quick-access cards — 6 shortcuts ----
     var quickCss =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 6 : 7) + ',1fr);gap:12px;margin-bottom:14px}' +
-    '.dbq-card{transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
-    '.dbq-card .card-b{padding:10px 12px!important}' +
+    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 6 : 7) + ',1fr);gap:12px;margin-bottom:14px;align-items:stretch}' +
+    '.dbq-card{display:flex;flex-direction:column;height:100%;transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
+    '.dbq-card .card-b{padding:10px 12px!important;flex:1;display:flex;align-items:center;gap:12px;box-sizing:border-box}' +
     '.dbq-card b{font-size:13px!important}.dbq-card small{font-size:11px!important}' +
     '@media(max-width:1200px){.dbw-grid{grid-template-columns:repeat(3,1fr)}}' +
     '@media(max-width:900px){.dbw-grid{grid-template-columns:1fr}}' +
@@ -300,18 +297,10 @@
     '--line:#e3ecf7;--line2:#edf2f9;--bg:#f4f7fc;--card:#ffffff;' +
     '--sh-sm:0 2px 8px rgba(19,24,69,.06);--sh-md:0 18px 45px rgba(11,23,64,.10);' +
     'font-family:"Plus Jakarta Sans",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink)}' +
-    '.db-page .stat{border-radius:20px;box-shadow:0 18px 45px rgba(11,23,64,.10);border:1px solid #eef3fa}' +
-    '.db-page .stat[data-tint="brand"]{--sc-line:#c9d4f2;--sc-soft:#e9edf9}' +
-    '.db-page .stat[data-tint="blue"]{--sc-line:#c9e2f2;--sc-soft:#ebf4f8}' +
-    '.db-page .stat-ico{border-radius:50%;box-shadow:inset 0 0 0 1px var(--sc-line),0 4px 10px rgba(11,23,64,.08)}' +
-    '.db-page .stat .vl{color:var(--ink)}' +
-    '.db-page .stat .lb{color:var(--muted)}' +
-    '.db-page .card{border-radius:20px;box-shadow:0 18px 45px rgba(11,23,64,.10);border:2px solid var(--bd) !important}' +
+    '.db-page .card{border-radius:16px;box-shadow:var(--sh-md);border:1px solid var(--line)}' +
     '.db-page .card-h h3{color:var(--ink);font-weight:800;letter-spacing:-.01em}' +
     '</style>' +
     '<style>' +
-    '/* shared compact stat card CSS now in app.css */' +
-    '.stat .dl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}' +
     '.db-charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}' +
     '@media(max-width:1000px){.db-charts{grid-template-columns:1fr}}' +
     '.dbc-card .card-h{align-items:flex-start}.dbc-card .card-h h3{font-size:17px;font-weight:800;letter-spacing:-.01em}.dbc-sub{font-size:12.5px;color:var(--muted);margin-top:2px;font-weight:600}' +
@@ -327,7 +316,7 @@
     '@media (prefers-reduced-motion:reduce){.stat{animation:none}.stat:hover{transform:none}}' +
     '</style>' +
 
-    '<div class="kpi-grid">' + stats + '</div>' +
+    '<div class="stat-grid">' + stats + '</div>' +
 
     quickCss + quickAccess +
 
