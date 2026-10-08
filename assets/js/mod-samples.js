@@ -1844,7 +1844,7 @@
     renderHomeSamplingDashboard();
   }
 
-  App.route('#/home-sampling', renderHomeSamplingDashboard);
-  App.route('#/samples/home', renderHomeSamplingDashboard);
+  App.route('#/home-sampling', function () { App.nav('#/samples'); });
+  App.route('#/samples/home', function () { App.nav('#/samples'); });
 })();
 
