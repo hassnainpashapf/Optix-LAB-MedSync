@@ -143,7 +143,7 @@
       function go() {
         try {
           window.google.accounts.id.initialize({ client_id: cfg.clientId, callback: function (resp) { if (resp && resp.credential) onCredential(resp.credential); }, ux_mode: 'popup' });
-          window.google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', logo_alignment: 'left', width: Math.min(360, Math.max(240, box.parentNode.clientWidth || 320)) });
+          window.google.accounts.id.renderButton(box, { theme: 'outline', size: 'small', shape: 'pill', text: 'continue_with', logo_alignment: 'left', width: 210 });
           wrap.hidden = false;
         } catch (e) { /* Google script blocked: the normal form still works */ }
       }
@@ -187,8 +187,6 @@
     document.body.innerHTML =
       '<div class="login-wrap lg-split">' + brandHtml('login') +
       '<div class="lg-form">' + bubblesHtml() +
-        '<a class="lg-back" href="' + WEB + '/"' + (desk ? ' target="_blank" rel="noopener"' : '') + '>' +
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Back to website</a>' +
         '<form class="login-card lg-card" id="loginForm" autocomplete="off">' +
           '<div class="login-logo">' +
             '<span class="login-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 32)) + '</span>' +
@@ -206,13 +204,17 @@
           '<div class="lg-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
           (showLabId && !desk ? '<div class="lg-forgot" id="lgForgot" hidden><a href="#/forgot">Forgot password?</a></div>' : '') + /* shown only when the server can send email */
           '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Sign In</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
-          (showLabId && !desk ? '<div class="lg-google" id="lgGoogle" hidden><div class="login-div"><span>or</span></div><div class="lg-gbtn" id="lgGBtn"></div></div>' : '') +
-          (showLabId ? '<p class="lg-new">New to Optix? <a href="' + signupHref + '"' + signupAttr + '>Start your 14-day free trial</a></p>' : '') +
-          (showLabId ? '<p class="lg-new" style="margin-top:6px">Patient or doctor? <a id="lgPortal" href="' + (desk ? WEB + '/app/#/portal' : '#/portal') + '"' + signupAttr + '>See your reports</a></p>' : '') +
-          '<div class="login-div"><span>or</span></div>' +
-          (desk
-            ? '<a class="btn btn-ghost btn-block" href="' + WEB + '/superadmin/" target="_blank" rel="noopener">Superadmin Login</a>'
-            : '<a class="btn btn-ghost btn-block" href="/superadmin/">Superadmin Login</a>') +
+          '<div class="lg-alt">' +
+            (showLabId && !desk ? '<div class="lg-google" id="lgGoogle" hidden><div class="lg-gbtn" id="lgGBtn"></div></div>' : '') +
+            '<nav class="lg-alt-links">' +
+              (showLabId ? '<a href="' + signupHref + '"' + signupAttr + '>Start free trial</a><i>·</i>' : '') +
+              (showLabId ? '<a id="lgPortal" href="' + (desk ? WEB + '/app/#/portal' : '#/portal') + '"' + signupAttr + '>Patient / doctor reports</a><i>·</i>' : '') +
+              (desk
+                ? '<a href="' + WEB + '/superadmin/" target="_blank" rel="noopener">Superadmin</a><i>·</i>'
+                : '<a href="/superadmin/">Superadmin</a><i>·</i>') +
+              '<a href="' + WEB + '/"' + (desk ? ' target="_blank" rel="noopener"' : '') + '>Back to website</a>' +
+            '</nav>' +
+          '</div>' +
         '</form>' +
         '<p class="login-foot"><span class="lg-secure">' + ic('shield', 13) + (desk ? 'Desktop app &middot; works offline, syncs when online' : 'Secure, encrypted sign-in') + '</span>Powered by System Optix</p>' +
       '</div></div>';
