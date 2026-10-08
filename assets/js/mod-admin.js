@@ -2545,7 +2545,8 @@
         + '<button class="btn btn-ghost btn-sm" data-uedit="' + App.esc(u.id) + '">Edit</button> '
         + '<button class="btn btn-ghost btn-sm" data-upw="' + App.esc(u.id) + '">Password</button> '
         + '<button class="btn btn-ghost btn-sm" data-utoggle="' + App.esc(u.id) + '"' + (isMe ? ' disabled style="opacity:.4"' : '') + '>'
-        + (u.active ? 'Deactivate' : 'Activate') + '</button>'
+        + (u.active ? 'Deactivate' : 'Activate') + '</button> '
+        + '<button class="btn btn-ghost btn-sm" data-udel="' + App.esc(u.id) + '"' + (isMe ? ' disabled style="opacity:.4;cursor:not-allowed"' : ' style="color:#b91c1c"') + '>Delete</button>'
         + '</td></tr>';
     });
     html += '</tbody></table></div>'
@@ -2590,6 +2591,24 @@
           if (!ok) return;
           DB.update('users', u.id, { active: !u.active });
           App.toast('User ' + action + 'd.');
+          renderSettings();
+        });
+      });
+    });
+    document.querySelectorAll('[data-udel]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var u = DB.get('users', b.getAttribute('data-udel'));
+        if (!u) return;
+        var me2 = sess();
+        if (me2 && u.id === me2.userId) return App.toast('You cannot delete your own account.', 'err');
+        if (u.role === 'admin') {
+          var admins = DB.all('users').filter(function (x) { return x.active && x.role === 'admin' && x.id !== u.id; });
+          if (!admins.length) return App.toast('Cannot delete the last admin account.', 'err');
+        }
+        App.confirm('Permanently delete user "' + u.name + '" (' + u.username + ')? This will remove their login and cannot be undone.').then(function (ok) {
+          if (!ok) return;
+          DB.remove('users', u.id);
+          App.toast('User deleted successfully.');
           renderSettings();
         });
       });
@@ -2639,6 +2658,7 @@
 
   function openUserModal(u, presetRole) {
     var isEdit = !!u;
+    var me = sess();
     u = u || { name: '', username: '', role: presetRole || 'reception', active: true };
     var allDocs = DB.all('doctors').slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
     var body = '<div class="form-grid">'
@@ -2654,12 +2674,29 @@
       + '</select></div>'
       + '</div>'
       + '<p class="muted" id="ufRoleNote" style="font-size:12.5px;margin:10px 0 0"></p>'
-      + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">'
+      + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:18px">'
+      + (isEdit && (!me || u.id !== me.userId) ? '<button class="btn btn-ghost btn-sm" id="ufDelete" type="button" style="margin-right:auto;color:#b91c1c">Delete User</button>' : '')
       + '<button class="btn btn-ghost" id="ufCancel">Cancel</button>'
       + '<button class="btn btn-primary" id="ufSave">' + (isEdit ? 'Save Changes' : 'Add User') + '</button></div>';
     var close = App.modal(isEdit ? 'Edit User' : 'Add User', body, {
       onOpen: function (ov, close) {
         document.getElementById('ufCancel').addEventListener('click', close);
+        var delBtn = document.getElementById('ufDelete');
+        if (delBtn) {
+          delBtn.addEventListener('click', function () {
+            if (u.role === 'admin') {
+              var admins = DB.all('users').filter(function (x) { return x.active && x.role === 'admin' && x.id !== u.id; });
+              if (!admins.length) return App.toast('Cannot delete the last admin account.', 'err');
+            }
+            App.confirm('Permanently delete user "' + u.name + '" (' + u.username + ')? This will remove their login and cannot be undone.').then(function (ok) {
+              if (!ok) return;
+              DB.remove('users', u.id);
+              App.toast('User deleted successfully.');
+              close();
+              renderSettings();
+            });
+          });
+        }
         var roleNote = { custom: 'Sees only the pages ticked in this role (set under Your own roles).', admin: 'Full access to everything in the lab.', reception: 'Patients, billing, invoices, dues, doctors, WhatsApp and email. No settings.', technician: 'Samples, lab results, stock and tests. No billing.', doctor: 'Signs in with this username and password and sees ONLY his own dashboard: reports of the patients he referred and his commission. Nothing else.' };
         function syncRole() {
           var rv = document.getElementById('ufRole').value; document.getElementById('ufDocBox').style.display = rv === 'doctor' ? '' : 'none';
