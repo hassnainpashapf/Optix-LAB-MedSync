@@ -555,6 +555,112 @@
     App.print('Invoice ' + inv.no, invoicePrintHTML(inv));
   }
 
+  /* ---------- 80mm & 58mm POS thermal counter receipt ---------- */
+  function thermalReceiptHTML(inv, opts) {
+    var width = (opts && opts.width) || 80;
+    var s = DB.get('settings', 'main') || {};
+    var p = patientOf(inv);
+    var d = doctorOf(inv);
+    var visitNos = App.visitNos(inv);
+    var tokenNo = visitNos.cas;
+
+    var mmW = width === 58 ? 58 : 80;
+    var printW = width === 58 ? '52mm' : '74mm';
+    var fontSize = width === 58 ? '10px' : '11.5px';
+
+    var items = inv.items || [];
+    var itemRows = items.map(function (it, idx) {
+      return '<tr>' +
+        '<td style="padding:2px 0;text-align:left;word-break:break-word">' + (idx + 1) + '. ' + App.esc(it.name) + '</td>' +
+        '<td style="padding:2px 0;text-align:right;white-space:nowrap;font-weight:700">' + App.money(it.price) + '</td>' +
+      '</tr>';
+    }).join('');
+
+    var bcSvg = '';
+    try {
+      if (App.barcodeSvg && inv.no) {
+        bcSvg = App.barcodeSvg(inv.no, { height: 8, quiet: 2, cssHeight: '26px' });
+      }
+    } catch (e) {}
+
+    var qrImg = '';
+    try {
+      if (App.qrDataUrlFor) {
+        var qrData = 'INV:' + inv.no + '|PAT:' + (p ? p.name : '') + '|TOTAL:' + inv.total;
+        var qUrl = App.qrDataUrlFor(qrData);
+        if (qUrl) qrImg = '<div style="text-align:center;margin:6px 0"><img src="' + qUrl + '" style="width:72px;height:72px;display:inline-block"></div>';
+      }
+    } catch (e) {}
+
+    var css =
+      '<style>' +
+      '@page { size: ' + mmW + 'mm auto; margin: 0; }' +
+      'body, html { margin: 0; padding: 0; background: #fff; font-family: "Courier New", Courier, monospace, -apple-system, sans-serif; font-size: ' + fontSize + '; color: #000; line-height: 1.35; }' +
+      '.pos-slip { width: ' + printW + '; margin: 0 auto; padding: 2mm 1mm; box-sizing: border-box; }' +
+      '.pos-hdr { text-align: center; margin-bottom: 6px; }' +
+      '.pos-title { font-size: 15px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px; }' +
+      '.pos-sub { font-size: 10.5px; margin-bottom: 2px; }' +
+      '.pos-token { text-align: center; border: 2px dashed #000; padding: 4px; margin: 6px 0; font-size: 13.5px; font-weight: 900; letter-spacing: 0.5px; }' +
+      '.pos-sep { border-top: 1px dashed #000; margin: 5px 0; }' +
+      '.pos-table { width: 100%; border-collapse: collapse; font-size: inherit; }' +
+      '.pos-tot-row { display: flex; justify-content: space-between; padding: 1.5px 0; }' +
+      '.pos-net { font-size: 13.5px; font-weight: 900; border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 3px 0; margin: 3px 0; }' +
+      '.pos-due { font-weight: 900; color: #000; }' +
+      '.pos-ftr { text-align: center; font-size: 10px; margin-top: 7px; line-height: 1.3; }' +
+      '</style>';
+
+    return css +
+      '<div class="pos-slip">' +
+        '<div class="pos-hdr">' +
+          '<div class="pos-title">' + App.esc(s.labName || 'OPTIX LAB & DIAGNOSTICS') + '</div>' +
+          (s.tagline ? '<div class="pos-sub">' + App.esc(s.tagline) + '</div>' : '') +
+          (s.address ? '<div class="pos-sub">' + App.esc(s.address) + '</div>' : '') +
+          (s.phone ? '<div class="pos-sub">Tel: ' + App.esc(s.phone) + '</div>' : '') +
+        '</div>' +
+        '<div class="pos-token">TOKEN / VISIT #: ' + (tokenNo < 10 ? '0' + tokenNo : tokenNo) + '</div>' +
+        '<div class="pos-sep"></div>' +
+        '<div><b>Invoice:</b> ' + App.esc(inv.no) + '</div>' +
+        '<div><b>Date:</b> ' + App.dt(inv.createdAt) + '</div>' +
+        '<div><b>Patient:</b> ' + App.esc(p ? p.name : 'Walk-in') + (p && p.age ? ' (' + p.age + 'Y/' + (p.gender || '') + ')' : '') + '</div>' +
+        (p && p.id ? '<div><b>MR No:</b> ' + App.esc(p.id) + '</div>' : '') +
+        (p && p.phone ? '<div><b>Phone:</b> ' + App.esc(p.phone) + '</div>' : '') +
+        (d ? '<div><b>Ref By:</b> ' + App.esc(d.name) + '</div>' : '') +
+        '<div class="pos-sep"></div>' +
+        '<table class="pos-table">' +
+          '<thead><tr style="border-bottom:1px dashed #000">' +
+            '<th style="text-align:left;padding-bottom:3px">Test Description</th>' +
+            '<th style="text-align:right;padding-bottom:3px">Amount</th>' +
+          '</tr></thead>' +
+          '<tbody>' + itemRows + '</tbody>' +
+        '</table>' +
+        '<div class="pos-sep"></div>' +
+        '<div class="pos-tot-row"><span>Subtotal:</span><span>' + App.money(inv.subtotal) + '</span></div>' +
+        (inv.discount ? '<div class="pos-tot-row"><span>Discount:</span><span>-' + App.money(inv.discount) + '</span></div>' : '') +
+        '<div class="pos-tot-row pos-net"><span>TOTAL AMOUNT:</span><span>' + App.money(inv.total) + '</span></div>' +
+        '<div class="pos-tot-row"><span>Paid Amount:</span><span style="font-weight:700">' + App.money(inv.paid) + '</span></div>' +
+        '<div class="pos-tot-row pos-due"><span>BALANCE DUE:</span><span>' + App.money(inv.due) + '</span></div>' +
+        '<div class="pos-sep"></div>' +
+        (bcSvg ? '<div style="text-align:center;margin:6px 0 2px">' + bcSvg + '<div style="font-size:9.5px;font-weight:700">' + App.esc(inv.no) + '</div></div>' : '') +
+        qrImg +
+        '<div class="pos-ftr">' +
+          '<div><b>Expected Report Time:</b> Today by ' + (function () { var dt = new Date(); dt.setHours(dt.getHours() + 4); return App.t ? App.t(dt) : '6:00 PM'; })() + '</div>' +
+          '<div style="margin-top:4px">* Please present this slip to collect reports *</div>' +
+          '<div style="margin-top:2px">Billed by: ' + App.esc(inv.createdBy || 'Reception') + '</div>' +
+          '<div style="margin-top:4px;font-size:9.5px;color:#555">Powered by System Optix</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function printThermalSlip(invId, width) {
+    var inv = DB.get('invoices', invId);
+    if (!inv) { App.toast('Invoice not found', 'err'); return; }
+    var w = width || 80;
+    var html = thermalReceiptHTML(inv, { width: w });
+    App.print('Counter Slip ' + inv.no, html, { noHeader: true });
+  }
+  App.printThermalSlip = printThermalSlip;
+  App.thermalReceiptHTML = thermalReceiptHTML;
+
   /* ---------- filtering ---------- */
   function filteredInvoices() {
     var list = DB.all('invoices').slice();
@@ -600,6 +706,7 @@
         '<td style="text-align:right;font-weight:700;color:' + (inv.due > 0 ? 'var(--red)' : 'var(--muted)') + '">' + App.money(inv.due) + '</td>' +
         '<td>' + App.badge(inv.status) + panelChip(inv) + smpChip(inv.id) + '</td>' +
         '<td class="actions"><a class="btn btn-sm btn-ghost" href="#/invoice/' + App.esc(inv.id) + '">View</a>' +
+        ' <button class="btn btn-sm btn-ghost" data-slip="' + App.esc(inv.id) + '" title="Print 80mm POS Counter Slip">🧾 Slip</button>' +
         ' <button class="btn btn-sm btn-ghost" data-stickers="' + App.esc(inv.id) + '" title="Print 50×25mm Tube Stickers">🏷️ Stickers</button>' +
         (r2(inv.due) > 0 ? ' <button class="btn btn-sm btn-primary" data-collect="' + App.esc(inv.id) + '">Collect</button>' : '') +
         ' <button class="btn btn-sm btn-ghost" data-edit="' + App.esc(inv.id) + '">Edit</button>' +
@@ -653,6 +760,7 @@
             '<option value="partial"' + (F.status === 'partial' ? ' selected' : '') + '>Partial</option>' +
             '<option value="unpaid"' + (F.status === 'unpaid' ? ' selected' : '') + '>Unpaid</option>' +
           '</select>' +
+          '<a class="btn btn-ghost" href="#/receipts" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:8px 12px;white-space:nowrap">' + App.icon('printer', 14) + ' POS Slips</a>' +
           '<a class="btn btn-ghost" href="#/samples/stickers" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:8px 12px;white-space:nowrap">' + App.icon('tube', 14) + ' Tube Stickers</a>' +
         '</div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr>' +
@@ -665,6 +773,11 @@
     function update() {
       var list = filteredInvoices();
       document.getElementById('inv-rows').innerHTML = invoiceRows(list);
+      view.querySelectorAll('[data-slip]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          printThermalSlip(btn.getAttribute('data-slip'), 80);
+        });
+      });
       view.querySelectorAll('[data-stickers]').forEach(function (btn) {
         btn.addEventListener('click', function () {
           var invId = btn.getAttribute('data-stickers');
@@ -772,6 +885,7 @@
       '<div class="toolbar">' +
         '<a class="btn btn-ghost" href="#/invoices">← Back to Invoices</a>' +
         '<div style="flex:1"></div>' +
+        '<button class="btn btn-ghost" id="iv-thermal">🧾 Print POS Slip (80mm)</button>' +
         '<button class="btn btn-ghost" id="iv-stickers">🏷️ Tube Stickers (50×25mm)</button>' +
         '<button class="btn btn-ghost" id="iv-print">' + SC_ICONS.printer + ' Print Invoice</button>' +
         '<button class="btn btn-ghost" id="iv-edit">Edit</button>' +
@@ -837,6 +951,8 @@
         '<tbody>' + payRows + '</tbody></table></div></div>';
 
     document.getElementById('iv-print').addEventListener('click', function () { printInvoice(inv.id); });
+    var thmBtn = document.getElementById('iv-thermal');
+    if (thmBtn) thmBtn.addEventListener('click', function () { printThermalSlip(inv.id, 80); });
     var stkBtn = document.getElementById('iv-stickers');
     if (stkBtn) stkBtn.addEventListener('click', function () {
       App.loadScript('assets/js/mod-samples.js').then(function () {
@@ -1001,6 +1117,264 @@
     });
   }
 
+  /* ==========================================================================
+     DEDICATED DASHBOARD: POS THERMAL SLIP & COUNTER CENTER (#/receipts)
+     Fast 80mm & 58mm Thermal Receipt Printing, Counter Tokens & Reception POS
+     ========================================================================== */
+  var RCP = {
+    q: '',
+    date: 'today',
+    pickDate: App.today(),
+    status: 'all',
+    selectedId: null,
+    width: 80,
+    page: 0
+  };
+
+  function renderReceiptsDashboard() {
+    setRefresh(renderReceiptsDashboard);
+    var view = document.getElementById('view');
+    if (!view) return;
+
+    var s = DB.get('settings', 'main') || {};
+    var all = DB.all('invoices').slice();
+    all.sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
+
+    function getFilteredList() {
+      var q = RCP.q.trim().toLowerCase();
+      var t = App.today();
+      return all.filter(function (inv) {
+        if (RCP.date !== 'all') {
+          var k = dayKey(inv.createdAt);
+          if (RCP.date === 'today' && k !== t) return false;
+          if (RCP.date === 'yesterday' && k !== addDays(t, -1)) return false;
+          if (RCP.date === 'last7' && (k < addDays(t, -6) || k > t)) return false;
+          if (RCP.date === 'pick' && k !== (RCP.pickDate || t)) return false;
+        }
+        if (RCP.status === 'paid' && inv.status !== 'paid') return false;
+        if (RCP.status === 'due' && inv.due <= 0) return false;
+        if (q) {
+          var p = patientOf(inv);
+          var hay = (inv.no + ' ' + (p ? p.name + ' ' + (p.phone || '') + ' ' + (p.id || '') : '')).toLowerCase();
+          if (hay.indexOf(q) < 0) return false;
+        }
+        return true;
+      });
+    }
+
+    function computeStats() {
+      var t = App.today();
+      var todayInvs = all.filter(function (i) { return dayKey(i.createdAt) === t; });
+      var todayCash = todayInvs.reduce(function (sum, i) { return sum + (+i.paid || 0); }, 0);
+      var todayDues = todayInvs.filter(function (i) { return i.due > 0; }).length;
+      return {
+        count: todayInvs.length,
+        cash: todayCash,
+        dues: todayDues,
+        width: RCP.width
+      };
+    }
+
+    function renderUI() {
+      var st = computeStats();
+      var list = getFilteredList();
+
+      if (!RCP.selectedId && list.length) RCP.selectedId = list[0].id;
+      if (RCP.selectedId && !list.some(function (x) { return x.id === RCP.selectedId; })) {
+        RCP.selectedId = list.length ? list[0].id : null;
+      }
+      var curInv = RCP.selectedId ? DB.get('invoices', RCP.selectedId) : null;
+
+      var kpiHtml =
+        '<div class="kpi-grid" style="margin-bottom:16px">' +
+          '<div class="kpi t-navy"><div class="kpi-ic">' + SC_ICONS.doc + '</div><div class="kpi-lb">TODAY\'S BILLED SLIPS</div><div class="kpi-nm">' + st.count + '</div><div class="kpi-sb">counter invoices today</div></div>' +
+          '<div class="kpi t-green"><div class="kpi-ic">' + SC_ICONS.cash + '</div><div class="kpi-lb">CASH COLLECTED TODAY</div><div class="kpi-nm">' + App.money(st.cash) + '</div><div class="kpi-sb">received at counter</div></div>' +
+          '<div class="kpi t-amber"><div class="kpi-ic">' + SC_ICONS.clock + '</div><div class="kpi-lb">INVOICES WITH DUES</div><div class="kpi-nm">' + st.dues + '</div><div class="kpi-sb">partial / pending payment</div></div>' +
+          '<div class="kpi t-blue"><div class="kpi-ic">' + SC_ICONS.printer + '</div><div class="kpi-lb">THERMAL PAPER FORMAT</div><div class="kpi-nm">' + RCP.width + 'mm</div><div class="kpi-sb">' + (RCP.width === 80 ? 'Standard POS Roll' : 'Mini 58mm Roll') + '</div></div>' +
+        '</div>';
+
+      var PAGE_SIZE = 30;
+      var totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+      if (RCP.page >= totalPages) RCP.page = totalPages - 1;
+      var from = RCP.page * PAGE_SIZE;
+      var slice = list.slice(from, from + PAGE_SIZE);
+
+      var tableRows = '';
+      if (!slice.length) {
+        tableRows = '<tr><td colspan="7">' + App.empty('No invoices found matching current filter.') + '</td></tr>';
+      } else {
+        tableRows = slice.map(function (inv) {
+          var p = patientOf(inv);
+          var isCur = curInv && curInv.id === inv.id;
+          var vNos = App.visitNos(inv);
+          return '<tr class="' + (isCur ? 'is-sel' : '') + '" style="cursor:pointer" data-rcp-row="' + App.esc(inv.id) + '">' +
+            '<td><span class="badge" style="font-weight:900;background:#f1f5f9;color:var(--brand-d)">#' + (vNos.cas < 10 ? '0' + vNos.cas : vNos.cas) + '</span></td>' +
+            '<td><b style="color:var(--brand-d)">' + App.esc(inv.no) + '</b><div style="font-size:11.5px;color:var(--muted)">' + App.d(inv.createdAt) + '</div></td>' +
+            '<td><div style="font-weight:700">' + App.esc(p ? p.name : 'Walk-in') + '</div><div style="font-size:11.5px;color:var(--muted)">' + (p && p.phone ? App.esc(p.phone) : '') + (p && p.id ? ' &middot; MR: ' + App.esc(p.id) : '') + '</div></td>' +
+            '<td style="text-align:center">' + (inv.items ? inv.items.length : 0) + '</td>' +
+            '<td style="text-align:right"><div><b>' + App.money(inv.total) + '</b></div><div style="font-size:11.5px;color:var(--green)">Paid ' + App.money(inv.paid) + '</div></td>' +
+            '<td>' + (inv.due > 0 ? '<span style="color:var(--red);font-weight:800">' + App.money(inv.due) + '</span>' : '<span style="color:var(--green);font-weight:700">Paid</span>') + '</td>' +
+            '<td class="actions" style="text-align:right;white-space:nowrap">' +
+              '<button class="btn btn-sm btn-primary rcp-btn-print" data-id="' + App.esc(inv.id) + '" title="Print 80mm Counter Slip" onclick="event.stopPropagation()">' + SC_ICONS.printer + ' 80mm</button> ' +
+              '<button class="btn btn-sm btn-ghost rcp-btn-print58" data-id="' + App.esc(inv.id) + '" title="Print 58mm Counter Slip" onclick="event.stopPropagation()">58mm</button>' +
+            '</td>' +
+          '</tr>';
+        }).join('');
+      }
+
+      var slipPreview = '';
+      if (curInv) {
+        slipPreview =
+          '<div style="background:#fff;border:1px dashed #475569;border-radius:8px;padding:14px;box-shadow:0 4px 16px rgba(0,0,0,.08);max-height:58vh;overflow:auto">' +
+            thermalReceiptHTML(curInv, { width: RCP.width }) +
+          '</div>' +
+          '<div style="margin-top:14px">' +
+            '<button class="btn btn-primary" id="rcpPrintCur" style="width:100%;justify-content:center;font-weight:800;padding:11px">' +
+              SC_ICONS.printer + ' Print Counter Slip (' + RCP.width + 'mm)' +
+            '</button>' +
+          '</div>';
+      } else {
+        slipPreview = '<div style="padding:40px 10px;text-align:center;color:var(--muted)">Select an invoice from the list to preview the thermal slip.</div>';
+      }
+
+      view.innerHTML =
+        '<style>' +
+        '.rcp-layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;align-items:start}' +
+        '@media(max-width:980px){.rcp-layout{grid-template-columns:1fr}}' +
+        '.rcp-prev-box{position:sticky;top:16px;background:#f8fafc;border:1px solid var(--bd);border-radius:14px;padding:16px;box-shadow:var(--sh-sm)}' +
+        '</style>' +
+        '<div class="dsig-head">' +
+          '<div>' +
+            '<h2 style="display:flex;align-items:center;gap:8px">' + SC_ICONS.printer + ' POS Thermal Slip &amp; Counter Center</h2>' +
+            '<p style="color:var(--muted);font-size:13px;margin:2px 0 0">Dedicated 80mm &amp; 58mm Thermal Counter Slips, Patient Tokens, and Direct Thermal Printing for Reception Desks</p>' +
+          '</div>' +
+          '<div style="display:flex;gap:8px;align-items:center">' +
+            '<button class="btn btn-primary" id="rcpPrintAllToday">' + SC_ICONS.printer + ' Print All Today\'s Slips</button>' +
+            '<a class="btn btn-ghost" href="#/invoices">All Invoices</a>' +
+          '</div>' +
+        '</div>' +
+        kpiHtml +
+        '<div class="rcp-layout">' +
+          '<div class="card"><div class="card-b">' +
+            '<div class="smp-filters" style="margin-bottom:12px">' +
+              '<input class="input search" id="rcpSearch" placeholder="Search invoice no, patient, phone, MR#..." value="' + App.esc(RCP.q) + '" style="flex:1 1 240px">' +
+              '<select class="select" id="rcpDate">' +
+                [['today', 'Today'], ['yesterday', 'Yesterday'], ['last7', 'Last 7 days'], ['all', 'All dates'], ['pick', 'Pick date...']].map(function (o) {
+                  return '<option value="' + o[0] + '"' + (RCP.date === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+                }).join('') +
+              '</select>' +
+              '<input type="date" class="input" id="rcpPickDate" value="' + App.esc(RCP.pickDate) + '" ' + (RCP.date === 'pick' ? '' : 'hidden') + '>' +
+              '<select class="select" id="rcpStatus">' +
+                '<option value="all">All Payments</option>' +
+                '<option value="paid"' + (RCP.status === 'paid' ? ' selected' : '') + '>Fully Paid</option>' +
+                '<option value="due"' + (RCP.status === 'due' ? ' selected' : '') + '>Has Due Balance</option>' +
+              '</select>' +
+              '<select class="select" id="rcpWidthFilter">' +
+                '<option value="80"' + (RCP.width === 80 ? ' selected' : '') + '>80mm POS Width</option>' +
+                '<option value="58"' + (RCP.width === 58 ? ' selected' : '') + '>58mm Mini Width</option>' +
+              '</select>' +
+            '</div>' +
+            '<div class="tbl-wrap"><table class="table smp-table"><thead><tr>' +
+              '<th>Token</th><th>Invoice</th><th>Patient &amp; Phone</th><th style="text-align:center">Tests</th><th style="text-align:right">Total</th><th>Due</th><th style="text-align:right">Print Slip</th>' +
+            '</tr></thead><tbody>' + tableRows + '</tbody></table></div>' +
+            '<div class="smp-pager">' +
+              (list.length > PAGE_SIZE
+                ? '<span class="muted">' + (from + 1) + '–' + Math.min(from + PAGE_SIZE, list.length) + ' of ' + list.length + ' invoices</span>' +
+                  '<button class="btn btn-sm" id="rcpPrev"' + (RCP.page === 0 ? ' disabled' : '') + '>&larr; Prev</button>' +
+                  '<button class="btn btn-sm" id="rcpNext"' + (RCP.page >= totalPages - 1 ? ' disabled' : '') + '>Next &rarr;</button>'
+                : (list.length ? '<span class="muted">' + list.length + ' counter slip' + (list.length === 1 ? '' : 's') + '</span>' : '')) +
+            '</div>' +
+          '</div></div>' +
+          '<div class="rcp-prev-box">' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">' +
+              '<h3 style="margin:0;font-size:15px;font-weight:800;display:flex;align-items:center;gap:6px">' + SC_ICONS.printer + ' Live Slip Preview</h3>' +
+              '<div style="display:flex;gap:4px">' +
+                '<button class="btn btn-sm ' + (RCP.width === 80 ? 'btn-primary' : 'btn-ghost') + '" id="rcpSw80">80mm</button>' +
+                '<button class="btn btn-sm ' + (RCP.width === 58 ? 'btn-primary' : 'btn-ghost') + '" id="rcpSw58">58mm</button>' +
+              '</div>' +
+            '</div>' +
+            slipPreview +
+            '<div style="margin-top:14px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--muted);line-height:1.45">' +
+              '<label class="check" style="font-weight:700;color:var(--ink);margin-bottom:6px">' +
+                '<input type="checkbox" id="rcpAutoPrint"' + (s.autoPrintThermalSlip ? ' checked' : '') + '> Auto-print slip when new bill is created' +
+              '</label>' +
+              '<b>Receipt Printers:</b> Compatible with all Epson, Xprinter, Sunmi, Rongta, Bixolon, Black Copper 80mm &amp; 58mm thermal printers.<br>' +
+              'Set printer margin to <b>None</b> for seamless continuous feed.' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      // Attach handlers
+      document.getElementById('rcpSearch').addEventListener('input', function () { RCP.q = this.value; RCP.page = 0; renderUI(); });
+      document.getElementById('rcpDate').addEventListener('change', function () {
+        RCP.date = this.value; RCP.page = 0;
+        document.getElementById('rcpPickDate').hidden = RCP.date !== 'pick';
+        renderUI();
+      });
+      var pdEl = document.getElementById('rcpPickDate');
+      if (pdEl) pdEl.addEventListener('change', function () { RCP.pickDate = this.value; RCP.page = 0; renderUI(); });
+      document.getElementById('rcpStatus').addEventListener('change', function () { RCP.status = this.value; RCP.page = 0; renderUI(); });
+      document.getElementById('rcpWidthFilter').addEventListener('change', function () {
+        RCP.width = parseInt(this.value, 10); renderUI();
+      });
+
+      document.getElementById('rcpSw80').addEventListener('click', function () { RCP.width = 80; renderUI(); });
+      document.getElementById('rcpSw58').addEventListener('click', function () { RCP.width = 58; renderUI(); });
+
+      var autoEl = document.getElementById('rcpAutoPrint');
+      if (autoEl) {
+        autoEl.addEventListener('change', function () {
+          DB.update('settings', 'main', { autoPrintThermalSlip: this.checked });
+          App.toast('Auto-print preference updated.', 'ok');
+        });
+      }
+
+      var bPrCur = document.getElementById('rcpPrintCur');
+      if (bPrCur && curInv) {
+        bPrCur.addEventListener('click', function () { printThermalSlip(curInv.id, RCP.width); });
+      }
+
+      view.querySelectorAll('[data-rcp-row]').forEach(function (tr) {
+        tr.addEventListener('click', function () {
+          RCP.selectedId = this.getAttribute('data-rcp-row');
+          renderUI();
+        });
+      });
+
+      view.querySelectorAll('.rcp-btn-print').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          printThermalSlip(btn.getAttribute('data-id'), 80);
+        });
+      });
+
+      view.querySelectorAll('.rcp-btn-print58').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          printThermalSlip(btn.getAttribute('data-id'), 58);
+        });
+      });
+
+      var pPrev = document.getElementById('rcpPrev');
+      if (pPrev) pPrev.addEventListener('click', function () { RCP.page = Math.max(0, RCP.page - 1); renderUI(); });
+      var pNext = document.getElementById('rcpNext');
+      if (pNext) pNext.addEventListener('click', function () { RCP.page++; renderUI(); });
+
+      document.getElementById('rcpPrintAllToday').addEventListener('click', function () {
+        var t = App.today();
+        var todayList = all.filter(function (i) { return dayKey(i.createdAt) === t; });
+        if (!todayList.length) { App.toast('No counter slips billed today', 'info'); return; }
+        App.confirm('Print all ' + todayList.length + ' today\'s counter slips sequentially?').then(function (ok) {
+          if (!ok) return;
+          var combined = todayList.map(function (inv) {
+            return '<div style="page-break-after:always;break-after:page">' + thermalReceiptHTML(inv, { width: RCP.width }) + '</div>';
+          }).join('');
+          App.print('All Today Slips (' + todayList.length + ')', combined, { noHeader: true });
+        });
+      });
+    }
+
+    renderUI();
+  }
+
   /* ---------- register ---------- */
   /* the barcode drawing lives in the results module; load it ahead so printing never has to wait */
   if (!App.barcodeHtml && App.loadScript) App.loadScript('assets/js/mod-results.js').catch(function () {});
@@ -1008,4 +1382,5 @@
   App.route('#/invoice/:id', renderInvoiceDetail);
   App.route('#/dues', renderDues);
   App.route('#/discounts', renderDiscounts);
+  App.route('#/receipts', renderReceiptsDashboard);
 })();

@@ -277,6 +277,12 @@
       var smpN = 0;
       try { if (window.Samples) smpN = Samples.createForInvoice(inv).length; } catch (e) { if (window.console) console.error(e); }
       App.toast('Invoice ' + inv.id + ' saved' + (t.due > 0 ? ' • Due ' + App.money(t.due) : '') + (smpN ? ' • ' + smpN + ' sample' + (smpN === 1 ? '' : 's') + ' to collect' : ''));
+      try {
+        var sMain = DB.get('settings', 'main') || {};
+        if (sMain.autoPrintThermalSlip && App.printThermalSlip) {
+          setTimeout(function () { App.printThermalSlip(inv.id, 80); }, 300);
+        }
+      } catch (e) {}
       App.nav('#/invoice/' + inv.id);
     }
 
