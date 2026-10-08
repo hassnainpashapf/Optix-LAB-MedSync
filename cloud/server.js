@@ -1214,6 +1214,53 @@ async function main() {
       } catch (e) { console.error('[labpos-cloud] report email failed:', String((e && e.message) || e).slice(0, 200)); res.status(502).json({ error: mailer.friendlyError(e) }); }
     });
 
+    app.post('/api/backup/email', needAdmin, async (req, res) => {
+      try {
+        const b = req.body || {}, to = String(b.email || '').trim();
+        if (!EMAIL_OK.test(to) || to.length > 120 || /[,;\s]/.test(to)) {
+          return res.status(400).json({ error: 'Valid email address darj karein.' });
+        }
+        if (!mailer.configured()) {
+          return res.json({ ok: false, mailNotConfigured: true, error: 'Server mail is not configured yet.' });
+        }
+        const dump = sanitizeDump(await req.store.dump());
+        const jsonStr = JSON.stringify(dump, null, 2);
+        const buf = Buffer.from(jsonStr, 'utf8');
+        const st = (await req.store.get('settings', 'main')) || {};
+        const labName = clean1(st.labName || (req.lab && req.lab.name) || 'Optix Medical Sync', 80);
+        const dateStr = new Date().toISOString().slice(0, 10);
+        const fname = 'optix-lab-backup-' + (labName.replace(/[^a-zA-Z0-9_-]/g, '_') || 'lab') + '-' + dateStr + '.json';
+
+        await mailer.send({
+          to,
+          fromName: labName + ' Backup',
+          subject: `[Optix LAB MedSync] System Database Backup - ${dateStr}`,
+          text: `Assalam-o-Alaikum,\n\nYour Optix LAB MedSync database backup (${fname}) is attached to this email.\n\nLab: ${labName}\nDate: ${new Date().toLocaleString()}\nSize: ${(buf.length / 1024).toFixed(1)} KB\n\nYou can keep this safe in your Google Drive or restore it from Settings -> Backup.`,
+          html: `<div style="font-family:Arial,sans-serif;max-width:580px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px;background:#ffffff">
+            <h2 style="color:#0f172a;margin:0 0 12px 0">Optix LAB MedSync — Database Backup</h2>
+            <p style="color:#475569;font-size:15px;line-height:1.6">Your latest lab database backup has been generated successfully and is attached to this email.</p>
+            <div style="background:#f8fafc;border-left:4px solid #3b82f6;padding:14px 18px;margin:18px 0;border-radius:6px">
+              <p style="margin:4px 0;color:#1e293b"><strong>Lab Name:</strong> ${labName}</p>
+              <p style="margin:4px 0;color:#1e293b"><strong>Backup File:</strong> <code>${fname}</code></p>
+              <p style="margin:4px 0;color:#1e293b"><strong>Size:</strong> ${(buf.length / 1024).toFixed(1)} KB</p>
+              <p style="margin:4px 0;color:#1e293b"><strong>Generated At:</strong> ${new Date().toLocaleString()}</p>
+            </div>
+            <p style="color:#64748b;font-size:13px;line-height:1.5">You can keep this backup file safe in your Google Drive. In case of any system emergency or migration, you can restore your entire data from <strong>Settings &rarr; Backup</strong> in Optix LAB MedSync.</p>
+          </div>`,
+          attachments: [{
+            filename: fname,
+            content: buf,
+            contentType: 'application/json'
+          }]
+        });
+        await auditLog(req, 'backup-email', 'system', '', { label: `Backup sent to ${maskEmail(to)}` });
+        res.json({ ok: true, emailed: true, filename: fname, size: buf.length });
+      } catch (e) {
+        console.error('[labpos-cloud] backup email failed:', String((e && e.message) || e).slice(0, 200));
+        res.status(502).json({ error: mailer.friendlyError(e) });
+      }
+    });
+
     async function slackPost(url, text) {
       const ac = new AbortController(), to = setTimeout(() => ac.abort(), 8000);
       try {

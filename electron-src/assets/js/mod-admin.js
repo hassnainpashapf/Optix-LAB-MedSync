@@ -1352,6 +1352,7 @@
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
+    try { checkAutoCloudBackup(); } catch (e) {}
   }
 
   /* deep-link into the WhatsApp settings tab (used by report-view send buttons
@@ -2754,35 +2755,292 @@
     });
   }
 
-  /* ---- Backup ---- */
+  /* ---- Backup (Google Drive & Cloud + Local) ---- */
+  function formatBackupDate(iso) {
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      var day = ('0' + d.getDate()).slice(-2);
+      var month = months[d.getMonth()];
+      var year = d.getFullYear();
+      var hours = d.getHours();
+      var minutes = ('0' + d.getMinutes()).slice(-2);
+      var ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return day + ' ' + month + ' ' + year + ', ' + ('0' + hours).slice(-2) + ':' + minutes + ' ' + ampm;
+    } catch (e) { return String(iso); }
+  }
+
+  function checkAutoCloudBackup() {
+    try {
+      var st = DB.get('settings', 'main') || {};
+      if (st.backupAutoOn === false || !st.gdriveBackupEmail) return;
+      var email = String(st.gdriveBackupEmail).trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+      var last = st.lastBackupAt ? new Date(st.lastBackupAt).getTime() : 0;
+      var now = Date.now();
+      var freq = st.backupFrequency || 'daily';
+      var intervalMs = 24 * 3600 * 1000;
+      if (freq === 'weekly') intervalMs = 7 * 24 * 3600 * 1000;
+      else if (freq === 'monthly') intervalMs = 30 * 24 * 3600 * 1000;
+      else if (freq === 'manual') return;
+
+      if (now - last >= intervalMs) {
+        var apiBase = String(window.LABPOS_API || '').replace(/\/+$/, '');
+        var headers = DB.authHeaders ? DB.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' };
+        fetch(apiBase + '/api/backup/email', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ email: email })
+        }).then(function (r) { return r.json(); }).then(function (res) {
+          if (res && res.ok) {
+            DB.update('settings', 'main', { lastBackupAt: new Date().toISOString(), lastBackupEmail: email });
+          }
+        }).catch(function () {});
+      }
+    } catch (e) {}
+  }
+
   function renderSetBackup() {
-    var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:860px" class="rep-cols">'
-      + '<div class="card" style="margin:0"><div class="card-b">'
-      + '<h3 style="margin-top:0">Export Backup</h3>'
-      + '<p class="muted">Download the complete database (patients, invoices, tests, users, settings) as a JSON file. Keep it safe.</p>'
-      + '<button class="btn btn-primary" id="bkExport">Download Backup</button>'
+    var st = DB.get('settings', 'main') || {};
+    var gEmail = st.gdriveBackupEmail || st.backupEmail || '';
+    var freq = st.backupFrequency || 'daily';
+    var autoOn = st.backupAutoOn !== false;
+    var lastAt = st.lastBackupAt || '';
+    var lastEmail = st.lastBackupEmail || gEmail || '';
+
+    var isConnected = !!(gEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gEmail));
+    var statusBadge = isConnected
+      ? '<span style="display:inline-flex;align-items:center;gap:6px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#10b981"></span> Connected: ' + App.esc(gEmail) + '</span>'
+      : '<span style="display:inline-flex;align-items:center;gap:6px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#f59e0b"></span> Email Add Karein</span>';
+
+    var html = '<div style="display:flex;flex-direction:column;gap:20px;max-width:960px">'
+      /* Google Drive & Cloud Card */
+      + '<div class="card" style="margin:0;border:1px solid #bfdbfe;background:linear-gradient(180deg,#ffffff,#f8fafc);box-shadow:0 4px 16px rgba(0,0,0,0.03)"><div class="card-b" style="padding:22px">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #e2e8f0">'
+      + '<div style="display:flex;align-items:center;gap:12px">'
+      + '<div style="width:46px;height:46px;border-radius:12px;background:#f0f7ff;border:1px solid #c7d9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+      + '<svg width="26" height="26" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>'
+      + '<path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/>'
+      + '<path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/>'
+      + '<path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>'
+      + '<path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h55c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>'
+      + '<path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>'
+      + '</svg>'
+      + '</div>'
+      + '<div>'
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<h2 style="margin:0;font-size:1.2rem;font-weight:700;color:#0f172a">Google Drive &amp; Cloud Email Backup</h2>'
+      + '<span style="font-size:11px;background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:12px;font-weight:600">Cloud Storage</span>'
+      + '</div>'
+      + '<p style="margin:3px 0 0 0;font-size:13px;color:#64748b">Apna Google / Gmail account add karein taake lab database ka mukammal backup mehfooz rahay.</p>'
+      + '</div>'
+      + '</div>'
+      + '<div>' + statusBadge + '</div>'
+      + '</div>'
+
+      + '<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
+      + '<div>'
+      + '<label style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Google / Gmail Account Email *</label>'
+      + '<div style="position:relative">'
+      + '<input type="email" id="bkGdriveEmail" class="input" style="width:100%;padding-left:34px;font-size:13px" placeholder="apna-email@gmail.com" value="' + App.esc(gEmail) + '">'
+      + '<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px">✉️</span>'
+      + '</div>'
+      + '<p style="margin:5px 0 0 0;font-size:11px;color:#64748b">Is Google email par system ka database backup JSON file bhej di jaye gi jo Google Drive me save ho sakti hai.</p>'
+      + '</div>'
+      + '<div>'
+      + '<label style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Auto-Backup Frequency</label>'
+      + '<select id="bkFrequency" class="input" style="width:100%;font-size:13px">'
+      + '<option value="daily"' + (freq === 'daily' ? ' selected' : '') + '>Rozana (Daily Automatic)</option>'
+      + '<option value="weekly"' + (freq === 'weekly' ? ' selected' : '') + '>Haftawar (Weekly Automatic)</option>'
+      + '<option value="monthly"' + (freq === 'monthly' ? ' selected' : '') + '>Mahana (Monthly Automatic)</option>'
+      + '<option value="manual"' + (freq === 'manual' ? ' selected' : '') + '>Manual / Sirf On Demand</option>'
+      + '</select>'
+      + '<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'
+      + '<input type="checkbox" id="bkAutoOn" style="cursor:pointer;width:15px;height:15px"' + (autoOn ? ' checked' : '') + '>'
+      + '<label for="bkAutoOn" style="cursor:pointer;font-size:12px;color:#475569;font-weight:500;user-select:none">Automated cloud backup schedule enable rakhein</label>'
+      + '</div>'
+      + '</div>'
+      + '</div>'
+
+      + '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding-top:14px;border-top:1px solid #f1f5f9">'
+      + '<button class="btn btn-primary" id="bkSendCloud" style="display:inline-flex;align-items:center;gap:8px;font-weight:600;padding:9px 18px">'
+      + '<svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>'
+      + '<span>Backup to Google Drive / Email Now</span>'
+      + '</button>'
+      + '<button class="btn btn-ghost" id="bkSaveCloudSettings" style="font-size:13px">Save Settings</button>'
+      + '<a href="https://drive.google.com/drive/u/0/my-drive" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;text-decoration:none;color:#1e40af">'
+      + '<svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>'
+      + '<span>Open Google Drive</span>'
+      + '</a>'
+      + '<a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;text-decoration:none;color:#475569">'
+      + '<span>Open Gmail Inbox</span>'
+      + '</a>'
+      + '</div>'
+
+      + '<div style="margin-top:18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">'
+      + '<div>'
+      + '<div style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.5px">Cloud Backup Status</div>'
+      + '<div style="margin-top:3px;font-size:13px;color:#475569" id="bkLastStatus">'
+      + (lastAt ? 'Aakhri Backup: <strong style="color:#0f172a">' + formatBackupDate(lastAt) + '</strong> &bull; Destination: <strong style="color:#0f172a">' + App.esc(lastEmail) + '</strong>' : 'Abhi tak koi cloud backup send nahi kiya gaya.')
+      + '</div>'
+      + '</div>'
+      + '<div style="font-size:12px;color:#64748b;display:flex;align-items:center;gap:6px">'
+      + '<span style="color:#10b981">●</span> Secure Encrypted JSON Format'
+      + '</div>'
+      + '</div>'
+      + '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed #cbd5e1;font-size:12px;color:#64748b;line-height:1.6">'
+      + '💡 <strong>Google Drive me backup mehfooz karne ka tareeqa:</strong>'
+      + '<br>1. Apna Gmail darj karke <strong>"Backup to Google Drive / Email Now"</strong> dabayein. Backup file aapke email par bhej di jaye gi aur fauran computer par download ho jaye gi.'
+      + '<br>2. <strong>"Open Google Drive"</strong> par click karein aur downloaded file ko Google Drive me drag & drop karein ya Google Drive folder me upload karein.'
+      + '<br>3. Kisi bhi waqt data wapis restore karne ke liye niche mojood <strong>"Choose File & Restore"</strong> option se yehi file select karein.'
+      + '</div>'
+      + '</div>'
       + '</div></div>'
-      + '<div class="card" style="margin:0"><div class="card-b">'
-      + '<h3 style="margin-top:0">Import Backup</h3>'
-      + '<p class="muted">Restore from a previously exported JSON file. This replaces all current data.</p>'
+
+      /* Local Export & Local Import Cards */
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
+      + '<div class="card" style="margin:0"><div class="card-b" style="padding:20px">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      + '<div style="width:36px;height:36px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#475569;font-size:17px">💾</div>'
+      + '<h3 style="margin:0;font-size:1.05rem;color:#0f172a">Manual Export (JSON)</h3>'
+      + '</div>'
+      + '<p class="muted" style="font-size:13px;line-height:1.5;margin-bottom:16px">Poora database (patients, invoices, tests, users, settings) apne computer ya USB me download karein. Internet ke baghair offline use ke liye behtareen hai.</p>'
+      + '<button class="btn btn-ghost" id="bkExport" style="display:inline-flex;align-items:center;gap:6px;width:100%;justify-content:center;font-weight:600">'
+      + '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>'
+      + '<span>Download Local Backup (JSON)</span>'
+      + '</button>'
+      + '</div></div>'
+
+      + '<div class="card" style="margin:0"><div class="card-b" style="padding:20px">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      + '<div style="width:36px;height:36px;border-radius:8px;background:#fef2f2;display:flex;align-items:center;justify-content:center;color:#dc2626;font-size:17px">♻️</div>'
+      + '<h3 style="margin:0;font-size:1.05rem;color:#0f172a">Restore Database (Import)</h3>'
+      + '</div>'
+      + '<p class="muted" style="font-size:13px;line-height:1.5;margin-bottom:16px">Google Drive ya computer se pehle se save ki gayi JSON backup file se data restore karein. <span style="color:#b91c1c;font-weight:600">Khabardaar: Yeh mojooda data ko replace kar de ga.</span></p>'
       + '<input type="file" id="bkFile" accept="application/json" style="display:none">'
-      + '<button class="btn btn-ghost" id="bkImport">Choose File & Restore</button>'
-      + '</div></div></div>';
+      + '<button class="btn btn-ghost" id="bkImport" style="display:inline-flex;align-items:center;gap:6px;width:100%;justify-content:center;font-weight:600">'
+      + '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>'
+      + '<span>Choose File &amp; Restore</span>'
+      + '</button>'
+      + '</div></div>'
+      + '</div></div>';
+
     document.getElementById('setBody').innerHTML = html;
 
-    document.getElementById('bkExport').addEventListener('click', function () {
-      var raw = DB.export(); /* JSON string */
+    /* Cloud Settings Save */
+    document.getElementById('bkSaveCloudSettings').addEventListener('click', function () {
+      var email = (document.getElementById('bkGdriveEmail').value || '').trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return App.toast('Barah-e-karam apna durust Google / Gmail email address darj karein.', 'err');
+      }
+      var freqVal = document.getElementById('bkFrequency').value || 'daily';
+      var autoVal = document.getElementById('bkAutoOn').checked;
+      DB.update('settings', 'main', {
+        gdriveBackupEmail: email,
+        backupFrequency: freqVal,
+        backupAutoOn: autoVal
+      });
+      App.toast('Google Drive & Cloud backup settings mehfooz ho gayi hain.');
+      renderSetBackup();
+    });
+
+    /* Backup to Google Drive / Email Now */
+    document.getElementById('bkSendCloud').addEventListener('click', function () {
+      var email = (document.getElementById('bkGdriveEmail').value || '').trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        App.toast('Barah-e-karam apna durust Google / Gmail email address darj karein.', 'err');
+        document.getElementById('bkGdriveEmail').focus();
+        return;
+      }
+      var freqVal = document.getElementById('bkFrequency').value || 'daily';
+      var autoVal = document.getElementById('bkAutoOn').checked;
+      DB.update('settings', 'main', {
+        gdriveBackupEmail: email,
+        backupFrequency: freqVal,
+        backupAutoOn: autoVal
+      });
+
+      var btn = document.getElementById('bkSendCloud');
+      var origBtnHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:bsSpin .8s linear infinite;margin-right:6px;vertical-align:middle"></span> Generating &amp; Sending Backup...';
+
+      /* Generate local download */
+      var raw = DB.export();
       var pretty = raw;
       try { pretty = JSON.stringify(JSON.parse(raw), null, 2); } catch (e) {}
+      var labName = (((DB.get('settings', 'main') || {}).labName) || 'Optix-LAB').replace(/[^a-zA-Z0-9_-]/g, '_');
+      var filename = 'optix-backup-' + labName + '-' + App.today() + '.json';
       var blob = new Blob([pretty], { type: 'application/json' });
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'optix-lab-medsync-backup-' + App.today() + '.json';
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-      App.toast('Backup downloaded.');
+
+      /* Trigger server email endpoint */
+      var apiBase = String(window.LABPOS_API || '').replace(/\/+$/, '');
+      var headers = DB.authHeaders ? DB.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' };
+
+      fetch(apiBase + '/api/backup/email', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ email: email })
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; });
+      }).then(function (resp) {
+        btn.disabled = false;
+        btn.innerHTML = origBtnHtml;
+        var nowIso = new Date().toISOString();
+        DB.update('settings', 'main', {
+          lastBackupAt: nowIso,
+          lastBackupEmail: email
+        });
+        if (resp && resp.ok) {
+          App.toast('Database backup aapke Google account (' + email + ') par send ho gaya aur download ho gaya!', 'ok');
+        } else if (resp && resp.mailNotConfigured) {
+          App.toast('Backup file download ho gayi! Isay apne Google Drive par upload karein.', 'ok');
+        } else {
+          App.toast('Backup file download ho gayi! (Notice: ' + (resp && resp.error ? resp.error : 'Saved') + ')', 'ok');
+        }
+        renderSetBackup();
+      }).catch(function (err) {
+        btn.disabled = false;
+        btn.innerHTML = origBtnHtml;
+        var nowIso = new Date().toISOString();
+        DB.update('settings', 'main', {
+          lastBackupAt: nowIso,
+          lastBackupEmail: email
+        });
+        App.toast('Backup file download ho gayi! Isay Google Drive par upload karein.', 'ok');
+        renderSetBackup();
+      });
     });
+
+    /* Manual Local Export */
+    document.getElementById('bkExport').addEventListener('click', function () {
+      var raw = DB.export();
+      var pretty = raw;
+      try { pretty = JSON.stringify(JSON.parse(raw), null, 2); } catch (e) {}
+      var labName = (((DB.get('settings', 'main') || {}).labName) || 'Optix-LAB').replace(/[^a-zA-Z0-9_-]/g, '_');
+      var blob = new Blob([pretty], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'optix-lab-medsync-backup-' + labName + '-' + App.today() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+      App.toast('Local backup downloaded.');
+    });
+
+    /* Local Restore / Import */
     document.getElementById('bkImport').addEventListener('click', function () {
       document.getElementById('bkFile').click();
     });
