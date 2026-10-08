@@ -49,7 +49,8 @@
     { key: 'stock',     label: 'Stock',      icon: 'box',       route: '#/stock',     color: '#0ea5e9' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', route: '#/results' }, { key: 'ready', label: 'Ready Reports', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', route: '#/results/old' }] },
-    { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests',     color: '#14b8a6' },
+    { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests',     color: '#14b8a6',
+      sub: [{ key: 'all', label: 'All Tests Catalog', route: '#/tests' }, { key: 'packages', label: 'Health Packages & Deals', route: '#/packages' }] },
     { key: 'outsourced', label: 'Outsourced', icon: 'scan',     route: '#/outsourced', color: '#d946ef' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316',
       sub: [{ key: 'all', label: 'All Invoices', route: '#/invoices' }, { key: 'thermal', label: 'POS Thermal Slips (80/58mm)', route: '#/receipts' }] },
@@ -116,6 +117,7 @@
     if (seg === 'invoice') seg = 'invoices';
     if (seg === 'patient') seg = 'patients';
     if (seg === 'receipts') seg = 'invoices';
+    if (seg === 'packages') seg = 'tests';
     if (seg === 'trends') seg = 'reports';
     if (seg === 'signatures') seg = 'settings';
     if (seg === 'online-payments') seg = 'onlinepay';

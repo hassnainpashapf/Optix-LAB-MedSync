@@ -1058,9 +1058,815 @@ function doctorModal(d) {
   }});
 }
 
+/* ============================================================
+   #/packages — Health Packages & Screening Deals Center
+   ============================================================ */
+
+var pkgFilter = { q: '', cat: 'all', status: 'all' };
+
+function renderPackages() {
+  var r = sessionRole();
+  if (r !== 'admin' && r !== 'reception' && !(r === 'custom' && App.canPage('tests'))) { deny(); return; }
+
+  var allTests = DB.all('tests') || [];
+  var testMap = {};
+  allTests.forEach(function (t) { testMap[t.id] = t; });
+
+  var pkgs = allTests.filter(function (t) { return t.isPackage; });
+  var activePkgs = pkgs.filter(function (p) { return p.active !== false; });
+
+  var allInvoices = DB.all('invoices') || [];
+  var pkgBilledCount = 0;
+  allInvoices.forEach(function (iv) {
+    (iv.items || []).forEach(function (it) {
+      if (it.testId && testMap[it.testId] && testMap[it.testId].isPackage) {
+        pkgBilledCount++;
+      }
+    });
+  });
+
+  /* Calculate covered tests and average savings */
+  var uniqueCovered = {};
+  var totalRegPrice = 0;
+  var totalDealPrice = 0;
+  activePkgs.forEach(function (p) {
+    totalDealPrice += (+p.price || 0);
+    var regSum = 0;
+    (p.includes || []).forEach(function (tid) {
+      uniqueCovered[tid] = true;
+      var subT = testMap[tid];
+      if (subT) regSum += (+subT.price || 0);
+    });
+    totalRegPrice += regSum;
+  });
+
+  var avgSavingsPct = totalRegPrice > 0 ? Math.round(((totalRegPrice - totalDealPrice) / totalRegPrice) * 100) : 0;
+  if (avgSavingsPct < 0) avgSavingsPct = 0;
+
+  var coveredCount = Object.keys(uniqueCovered).length;
+
+  /* Categories present in packages */
+  var pkgCats = ['all'];
+  pkgs.forEach(function (p) {
+    if (p.category && pkgCats.indexOf(p.category) < 0) pkgCats.push(p.category);
+  });
+
+  /* Filter packages */
+  var filtered = pkgs.filter(function (p) {
+    if (pkgFilter.status === 'active' && p.active === false) return false;
+    if (pkgFilter.status === 'inactive' && p.active !== false) return false;
+    if (pkgFilter.cat !== 'all' && p.category !== pkgFilter.cat) return false;
+    if (pkgFilter.q) {
+      var q = pkgFilter.q.toLowerCase();
+      var inName = (p.name || '').toLowerCase().indexOf(q) >= 0;
+      var inCode = (p.code || '').toLowerCase().indexOf(q) >= 0;
+      var inBadge = (p.dealBadge || '').toLowerCase().indexOf(q) >= 0;
+      var inIncludes = (p.includes || []).some(function (tid) {
+        var it = testMap[tid];
+        return it && (it.name.toLowerCase().indexOf(q) >= 0 || (it.code && it.code.toLowerCase().indexOf(q) >= 0));
+      });
+      if (!inName && !inCode && !inBadge && !inIncludes) return false;
+    }
+    return true;
+  });
+
+  var html = ''
+    + '<style>'
+    + '.pkg-dash { max-width: 1300px; margin: 0 auto; }'
+    + '.pkg-head-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }'
+    + '.pkg-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }'
+    + '.pkg-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
+    + '.pkg-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
+    + '.pkg-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
+    + '.pkg-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; }'
+    + '.pkg-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
+    + '.pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px; margin-bottom: 24px; }'
+    + '.pkg-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(15,23,42,.04); transition: transform .15s, box-shadow .15s; }'
+    + '.pkg-card:hover { border-color: #0ea5e9; box-shadow: 0 4px 16px rgba(14,165,233,.12); transform: translateY(-2px); }'
+    + '.pkg-badge-deal { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .05em; }'
+    + '.pkg-inc-tag { display: inline-flex; align-items: center; gap: 4px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px 7px; font-size: 12px; margin: 3px 4px 3px 0; color: #334155; }'
+    + '.pkg-price-bar { background: #f0fdf4; border: 1px dashed #86efac; border-radius: 10px; padding: 10px 14px; margin: 14px 0 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }'
+    + '</style>'
+    + '<div class="pkg-dash">'
+
+    /* Header */
+    + '<div class="pkg-head-bar">'
+    +   '<div>'
+    +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+    +       '<a href="#/tests" class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px">← Tests Catalog</a>'
+    +       '<span style="font-size:12px;color:var(--muted)">/ Laboratory</span>'
+    +     '</div>'
+    +     '<h1 style="margin:0;font-size:23px;font-weight:800;color:var(--ink);letter-spacing:-.01em">🎁 Health Packages &amp; Screening Deals Center</h1>'
+    +     '<p class="muted" style="margin:4px 0 0;font-size:13px">Create promotional test bundles, configure discounted full-body screening panels, and generate 1-click bills &amp; counter flyers.</p>'
+    +   '</div>'
+    +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    +     '<button class="btn btn-ghost btn-sm" id="pkgSeedBtn">⚡ Quick Seed Premier Deals</button>'
+    +     '<button class="btn btn-primary btn-sm" id="pkgAddBtn">+ Create Health Package</button>'
+    +   '</div>'
+    + '</div>'
+
+    /* 4 Stat KPI Cards */
+    + '<div class="pkg-stat-grid">'
+    +   '<div class="pkg-kpi-card" style="border-left:4px solid #0ea5e9">'
+    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Active Health Packages</span><span style="font-size:17px">🎁</span></div>'
+    +     '<div class="pkg-kpi-val">' + activePkgs.length + ' <span style="font-size:14px;color:var(--muted);font-weight:600">deals</span></div>'
+    +     '<div class="pkg-kpi-sub">' + pkgs.length + ' total packages configured</div>'
+    +   '</div>'
+
+    +   '<div class="pkg-kpi-card" style="border-left:4px solid #10b981">'
+    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Diagnostic Tests Covered</span><span style="font-size:17px">🔬</span></div>'
+    +     '<div class="pkg-kpi-val">' + coveredCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">tests</span></div>'
+    +     '<div class="pkg-kpi-sub">Included across active bundles</div>'
+    +   '</div>'
+
+    +   '<div class="pkg-kpi-card" style="border-left:4px solid #f59e0b">'
+    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Average Patient Savings</span><span style="font-size:17px">🏷️</span></div>'
+    +     '<div class="pkg-kpi-val" style="color:#b45309">~' + avgSavingsPct + '% <span style="font-size:14px;color:var(--muted);font-weight:600">OFF</span></div>'
+    +     '<div class="pkg-kpi-sub">Bundle discount vs individual tests</div>'
+    +   '</div>'
+
+    +   '<div class="pkg-kpi-card" style="border-left:4px solid #8b5cf6">'
+    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Package Billings</span><span style="font-size:17px">🧾</span></div>'
+    +     '<div class="pkg-kpi-val">' + pkgBilledCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">orders</span></div>'
+    +     '<div class="pkg-kpi-sub">Total times booked in patient invoices</div>'
+    +   '</div>'
+    + '</div>'
+
+    /* Filter Toolbar */
+    + '<div class="card" style="margin-bottom:20px"><div class="card-b" style="padding:12px 16px">'
+    +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
+    +     '<input class="input search" id="pkgSearch" placeholder="Search package name, code, or included test..." value="' + App.esc(pkgFilter.q) + '" style="max-width:320px">'
+    +     '<div style="display:flex;gap:8px;align-items:center">'
+    +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">Category:</span>'
+    +       '<select class="select" id="pkgCatSelect" style="width:auto;padding:5px 10px;font-size:13px">'
+    +         pkgCats.map(function (c) {
+                return '<option value="' + App.esc(c) + '"' + (pkgFilter.cat === c ? ' selected' : '') + '>'
+                  + (c === 'all' ? 'All Categories' : App.esc(c)) + '</option>';
+              }).join('')
+    +       '</select>'
+    +     '</div>'
+    +     '<div style="display:flex;gap:8px;align-items:center">'
+    +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">Status:</span>'
+    +       '<select class="select" id="pkgStatusSelect" style="width:auto;padding:5px 10px;font-size:13px">'
+    +         '<option value="all"' + (pkgFilter.status === 'all' ? ' selected' : '') + '>All Status</option>'
+    +         '<option value="active"' + (pkgFilter.status === 'active' ? ' selected' : '') + '>Active Only</option>'
+    +         '<option value="inactive"' + (pkgFilter.status === 'inactive' ? ' selected' : '') + '>Inactive Only</option>'
+    +       '</select>'
+    +     '</div>'
+    +     '<button class="btn btn-ghost btn-sm" id="pkgResetFilter" style="margin-left:auto">Clear Filters</button>'
+    +   '</div>'
+    + '</div></div>';
+
+  if (!filtered.length) {
+    html += '<div class="card"><div class="card-b" style="text-align:center;padding:48px 20px">'
+      + '<div style="font-size:44px;margin-bottom:12px">🎁</div>'
+      + '<h3 style="margin:0 0 6px">No Health Packages Found</h3>'
+      + '<p class="muted" style="margin:0 0 18px;max-width:480px;margin-left:auto;margin-right:auto">'
+      + (pkgs.length ? 'No health packages match your current search and filter criteria.' : 'No health screening packages created yet. Click below to automatically seed 6 popular Pakistani lab packages or create your custom deal.')
+      + '</p>'
+      + '<div style="display:flex;gap:10px;justify-content:center">'
+      +   '<button class="btn btn-primary" id="pkgEmptySeedBtn">⚡ Quick Seed Premier Packages</button>'
+      +   '<button class="btn btn-ghost" id="pkgEmptyAddBtn">+ Create Custom Package</button>'
+      + '</div>'
+      + '</div></div></div>';
+    view().innerHTML = html;
+    wirePackagesEvents();
+    return;
+  }
+
+  /* Render Package Cards */
+  html += '<div class="pkg-grid">';
+  filtered.forEach(function (pkg) {
+    var regSum = 0;
+    var incTests = (pkg.includes || []).map(function (tid) {
+      var it = testMap[tid];
+      if (it) regSum += (+it.price || 0);
+      return it;
+    }).filter(Boolean);
+
+    var dealPrice = +pkg.price || 0;
+    var savings = Math.max(0, regSum - dealPrice);
+    var savingsPct = regSum > 0 ? Math.round((savings / regSum) * 100) : 0;
+
+    var badgeText = pkg.dealBadge || 'SPECIAL DEAL';
+    var badgeStyle = 'background:#fef3c7;color:#b45309;border:1px solid #fde68a';
+    if (/best/i.test(badgeText)) badgeStyle = 'background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5';
+    else if (/exec/i.test(badgeText)) badgeStyle = 'background:#f3e8ff;color:#7e22ce;border:1px solid #d8b4fe';
+    else if (/pop/i.test(badgeText)) badgeStyle = 'background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd';
+
+    html += '<div class="pkg-card">'
+      + '<div>'
+      /* Card Header */
+      +   '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px">'
+      +     '<span class="pkg-badge-deal" style="' + badgeStyle + '">' + App.esc(badgeText) + '</span>'
+      +     '<button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" data-pkg-toggle="' + App.esc(pkg.id) + '">'
+      +       (pkg.active !== false ? '🟢 Active' : '⚪ Inactive')
+      +     '</button>'
+      +   '</div>'
+
+      /* Name & Code */
+      +   '<h3 style="margin:0 0 4px;font-size:17px;font-weight:800;color:var(--ink)">' + App.esc(pkg.name) + '</h3>'
+      +   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+      +     '<span class="mono" style="font-size:12px;font-weight:700;color:var(--muted)">' + App.esc(pkg.code) + '</span>'
+      +     (pkg.category ? '<span class="badge" style="background:#f1f5f9;color:#475569;font-size:11px">' + App.esc(pkg.category) + '</span>' : '')
+      +   '</div>'
+
+      /* Preparation Instructions */
+      +   (pkg.prepNote ? '<div style="background:#f8fafc;border-left:3px solid #0ea5e9;padding:6px 10px;border-radius:4px;font-size:11.5px;color:#334155;margin-bottom:10px">🍽️ ' + App.esc(pkg.prepNote) + '</div>' : '')
+
+      /* Included Tests List */
+      +   '<div style="margin-bottom:12px">'
+      +     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px">' + incTests.length + ' Included Diagnostic Tests:</div>'
+      +     '<div style="max-height:120px;overflow-y:auto;padding-right:4px">'
+      +       incTests.map(function (it) {
+                return '<span class="pkg-inc-tag" title="' + App.esc(it.name) + ' (' + App.money(+it.price || 0) + ')">'
+                  + App.esc(it.code || it.name) + ' <span style="color:var(--muted);font-size:11px">(' + App.money(+it.price || 0) + ')</span>'
+                  + '</span>';
+              }).join('')
+      +     '</div>'
+      +   '</div>'
+      + '</div>'
+
+      /* Price & Savings Bar */
+      + '<div>'
+      +   '<div class="pkg-price-bar">'
+      +     '<div>'
+      +       '<div style="font-size:11px;color:#64748b;text-decoration:line-through">Catalog Sum: ' + App.money(regSum) + '</div>'
+      +       '<div style="font-size:20px;font-weight:800;color:#15803d;line-height:1.2">' + App.money(dealPrice) + '</div>'
+      +     '</div>'
+      +     (savings > 0 ? '<span class="badge" style="background:#16a34a;color:#fff;font-weight:800;font-size:12px;padding:4px 8px">SAVE ' + App.money(savings) + ' (' + savingsPct + '% OFF)</span>' : '')
+      +   '</div>'
+
+      /* Action Buttons */
+      +   '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+      +     '<button class="btn btn-primary btn-sm" style="flex:1" data-pkg-bill="' + App.esc(pkg.id) + '">🧾 Quick Bill Deal</button>'
+      +     '<button class="btn btn-ghost btn-sm" data-pkg-flyer="' + App.esc(pkg.id) + '" title="Print Counter Flyer">🖨️ Flyer</button>'
+      +     '<button class="btn btn-ghost btn-sm" data-pkg-edit="' + App.esc(pkg.id) + '">Edit</button>'
+      +     '<button class="btn btn-ghost btn-sm" data-pkg-del="' + App.esc(pkg.id) + '" style="color:var(--red)">Delete</button>'
+      +   '</div>'
+      + '</div>'
+
+      + '</div>';
+  });
+  html += '</div>';
+
+  html += '</div>'; /* end .pkg-dash */
+
+  view().innerHTML = html;
+  wirePackagesEvents();
+
+  function wirePackagesEvents() {
+    /* Filter inputs */
+    var searchEl = document.getElementById('pkgSearch');
+    if (searchEl) {
+      searchEl.addEventListener('input', function () {
+        pkgFilter.q = this.value;
+        renderPackages();
+      });
+    }
+
+    var catEl = document.getElementById('pkgCatSelect');
+    if (catEl) {
+      catEl.addEventListener('change', function () {
+        pkgFilter.cat = this.value;
+        renderPackages();
+      });
+    }
+
+    var stEl = document.getElementById('pkgStatusSelect');
+    if (stEl) {
+      stEl.addEventListener('change', function () {
+        pkgFilter.status = this.value;
+        renderPackages();
+      });
+    }
+
+    var resetBtn = document.getElementById('pkgResetFilter');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        pkgFilter = { q: '', cat: 'all', status: 'all' };
+        renderPackages();
+      });
+    }
+
+    /* Create package */
+    var addBtn = document.getElementById('pkgAddBtn');
+    if (addBtn) addBtn.addEventListener('click', function () { openPackageModal(null); });
+    var empAddBtn = document.getElementById('pkgEmptyAddBtn');
+    if (empAddBtn) empAddBtn.addEventListener('click', function () { openPackageModal(null); });
+
+    /* Seed deals */
+    var seedBtn = document.getElementById('pkgSeedBtn');
+    if (seedBtn) seedBtn.addEventListener('click', function () { seedPremierPackages(); });
+    var empSeedBtn = document.getElementById('pkgEmptySeedBtn');
+    if (empSeedBtn) empSeedBtn.addEventListener('click', function () { seedPremierPackages(); });
+
+    /* Toggle Active */
+    document.querySelectorAll('[data-pkg-toggle]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = this.getAttribute('data-pkg-toggle');
+        var p = DB.get('tests', id);
+        if (p) {
+          DB.update('tests', id, { active: p.active === false ? true : false });
+          App.toast(p.active === false ? 'Package activated.' : 'Package paused.');
+          renderPackages();
+        }
+      });
+    });
+
+    /* Quick Bill */
+    document.querySelectorAll('[data-pkg-bill]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = this.getAttribute('data-pkg-bill');
+        var p = DB.get('tests', id);
+        if (p) quickBillPackage(p);
+      });
+    });
+
+    /* Print Flyer */
+    document.querySelectorAll('[data-pkg-flyer]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = this.getAttribute('data-pkg-flyer');
+        var p = DB.get('tests', id);
+        if (p) printPackageFlyer(p);
+      });
+    });
+
+    /* Edit Package */
+    document.querySelectorAll('[data-pkg-edit]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = this.getAttribute('data-pkg-edit');
+        var p = DB.get('tests', id);
+        if (p) openPackageModal(p);
+      });
+    });
+
+    /* Delete Package */
+    document.querySelectorAll('[data-pkg-del]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = this.getAttribute('data-pkg-del');
+        var p = DB.get('tests', id);
+        if (!p) return;
+        App.confirm('Delete Health Package', 'Are you sure you want to delete "' + p.name + '"? This will not delete the individual diagnostic tests.', function () {
+          DB.remove('tests', id);
+          App.toast('Package deleted.');
+          renderPackages();
+        });
+      });
+    });
+  }
+}
+
+/* Modal to add / edit a health package */
+function openPackageModal(pkg) {
+  var isNew = !pkg;
+  pkg = pkg || {
+    name: '',
+    code: 'PKG-' + Math.floor(100 + Math.random() * 900),
+    category: 'Health Packages',
+    dealBadge: 'BEST VALUE',
+    price: 2999,
+    sampleType: 'Serum + EDTA Blood',
+    tat: 'Same day',
+    prepNote: '10-12 hours fasting required. Water permitted.',
+    active: true,
+    isPackage: true,
+    includes: []
+  };
+
+  var allTests = (DB.all('tests') || []).filter(function (t) { return !t.isPackage && t.active !== false; })
+    .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+
+  var picked = {};
+  (pkg.includes || []).forEach(function (id) { picked[id] = true; });
+
+  var BADGES = ['BEST VALUE', 'POPULAR', 'EXECUTIVE', 'SPECIAL DEAL', 'WOMEN HEALTH', 'SENIOR CITIZEN', 'DIABETES CARE', 'CARDIAC CARE'];
+
+  var body = ''
+    + '<form id="pmForm" style="display:flex;flex-direction:column;gap:14px">'
+    + '<div class="form-grid">'
+    +   '<div><label class="label">Package Name *</label><input class="input" id="pmName" value="' + App.esc(pkg.name) + '" placeholder="e.g. Executive Full Body Checkup" required></div>'
+    +   '<div><label class="label">Package Code *</label><input class="input mono" id="pmCode" value="' + App.esc(pkg.code) + '" placeholder="e.g. PKG-EXEC-01" required></div>'
+    +   '<div><label class="label">Category</label><input class="input" id="pmCat" value="' + App.esc(pkg.category || 'Health Packages') + '" list="pmCatList"><datalist id="pmCatList"><option value="Executive Screening"><option value="Diabetes Care"><option value="Cardiac Care"><option value="Women Health"><option value="Senior Citizens"><option value="Basic Health"></datalist></div>'
+    +   '<div><label class="label">Promotional Badge</label><select class="select" id="pmBadge">'
+    +     BADGES.map(function (b) { return '<option value="' + b + '"' + (pkg.dealBadge === b ? ' selected' : '') + '>' + b + '</option>'; }).join('')
+    +   '</select></div>'
+    +   '<div><label class="label">Sample Type(s)</label><input class="input" id="pmSample" value="' + App.esc(pkg.sampleType || 'Serum + EDTA Blood') + '" placeholder="e.g. Serum + EDTA Blood + Urine"></div>'
+    +   '<div><label class="label">Turnaround Time (TAT)</label><input class="input" id="pmTat" value="' + App.esc(pkg.tat || 'Same day') + '"></div>'
+    +   '<div style="grid-column:1/-1"><label class="label">Patient Preparation &amp; Fasting Guidelines</label><input class="input" id="pmPrep" value="' + App.esc(pkg.prepNote || '') + '" placeholder="e.g. 10-12 hours fasting required. Drink water only."></div>'
+    + '</div>'
+
+    /* Interactive Test Picker with Live Tally */
+    + '<div>'
+    +   '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+    +     '<label class="label" style="margin:0;font-weight:700">Select Included Diagnostic Tests *</label>'
+    +     '<input class="input search" id="pmTestFilter" placeholder="Filter tests..." style="width:200px;padding:4px 8px;font-size:12px">'
+    +   '</div>'
+    +   '<div id="pmTestList" style="max-height:180px;overflow-y:auto;border:1.5px solid var(--bd);border-radius:8px;padding:8px 10px;background:#fafafa">'
+    +     allTests.map(function (t) {
+            return '<label style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;cursor:pointer;font-size:13px" class="pm-test-item">'
+              + '<input type="checkbox" data-pm-tid="' + App.esc(t.id) + '" data-pm-price="' + (+t.price || 0) + '"' + (picked[t.id] ? ' checked' : '') + '> '
+              + '<span><strong>' + App.esc(t.name) + '</strong> <span class="muted">(' + App.esc(t.code || '') + ' · ' + App.money(+t.price || 0) + ')</span></span>'
+              + '</label>';
+          }).join('')
+    +   '</div>'
+    + '</div>'
+
+    /* Live Savings Calculation Card */
+    + '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px">'
+    +   '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:center">'
+    +     '<div><div class="muted" style="font-size:11px;text-transform:uppercase">Individual Sum:</div><div style="font-size:16px;font-weight:800;color:#334155" id="pmRegTotal">Rs. 0</div></div>'
+    +     '<div><label class="label" style="margin:0 0 3px;font-size:11px;text-transform:uppercase;color:#15803d">Bundle Price (PKR) *</label><input class="input" type="number" id="pmPrice" value="' + (+pkg.price || 0) + '" min="0" step="1" style="font-weight:800;font-size:15px;color:#15803d" required></div>'
+    +     '<div><div class="muted" style="font-size:11px;text-transform:uppercase">Patient Savings:</div><div style="font-size:15px;font-weight:800;color:#16a34a" id="pmSavingsTxt">Save Rs. 0 (0%)</div></div>'
+    +   '</div>'
+    + '</div>'
+
+    + '<div style="display:flex;align-items:center;gap:8px">'
+    +   '<input type="checkbox" id="pmActive"' + (pkg.active !== false ? ' checked' : '') + '><label for="pmActive" style="font-size:13.5px;font-weight:600;cursor:pointer">Package is active and available for billing</label>'
+    + '</div>'
+
+    + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px">'
+    +   '<button type="button" class="btn btn-ghost" id="pmCancel">Cancel</button>'
+    +   '<button type="submit" class="btn btn-primary">' + (isNew ? 'Create Package' : 'Save Changes') + '</button>'
+    + '</div>'
+    + '</form>';
+
+  App.modal(isNew ? '🎁 Create New Health Package' : '✏️ Edit Health Package Deal', body, {
+    wide: true,
+    onOpen: function (ov, close) {
+      var form = ov.querySelector('#pmForm');
+      var testFilter = ov.querySelector('#pmTestFilter');
+      var testList = ov.querySelector('#pmTestList');
+      var priceInp = ov.querySelector('#pmPrice');
+      var regTotalEl = ov.querySelector('#pmRegTotal');
+      var savingsTxtEl = ov.querySelector('#pmSavingsTxt');
+
+      function updateCalculation() {
+        var total = 0;
+        ov.querySelectorAll('[data-pm-tid]:checked').forEach(function (cb) {
+          total += (+cb.getAttribute('data-pm-price') || 0);
+        });
+        regTotalEl.textContent = App.money(total);
+        var pVal = parseFloat(priceInp.value) || 0;
+        var diff = total - pVal;
+        var pct = total > 0 ? Math.round((diff / total) * 100) : 0;
+        if (diff > 0) {
+          savingsTxtEl.innerHTML = '<span style="color:#15803d">Save ' + App.money(diff) + ' (' + pct + '% OFF)</span>';
+        } else if (diff === 0) {
+          savingsTxtEl.innerHTML = '<span style="color:#64748b">No discount (0%)</span>';
+        } else {
+          savingsTxtEl.innerHTML = '<span style="color:#dc2626">Price higher by ' + App.money(Math.abs(diff)) + '</span>';
+        }
+      }
+
+      ov.querySelectorAll('[data-pm-tid]').forEach(function (cb) {
+        cb.addEventListener('change', updateCalculation);
+      });
+      priceInp.addEventListener('input', updateCalculation);
+      updateCalculation();
+
+      testFilter.addEventListener('input', function () {
+        var q = this.value.toLowerCase().trim();
+        ov.querySelectorAll('.pm-test-item').forEach(function (item) {
+          var txt = item.textContent.toLowerCase();
+          item.style.display = txt.indexOf(q) >= 0 ? 'flex' : 'none';
+        });
+      });
+
+      ov.querySelector('#pmCancel').addEventListener('click', close);
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var name = ov.querySelector('#pmName').value.trim();
+        var code = ov.querySelector('#pmCode').value.trim();
+        var cat = ov.querySelector('#pmCat').value.trim();
+        var badge = ov.querySelector('#pmBadge').value;
+        var sample = ov.querySelector('#pmSample').value.trim();
+        var tat = ov.querySelector('#pmTat').value.trim();
+        var prep = ov.querySelector('#pmPrep').value.trim();
+        var price = parseFloat(priceInp.value);
+        var active = ov.querySelector('#pmActive').checked;
+
+        if (!name || !code) { App.toast('Name and code are required.', 'err'); return; }
+        if (isNaN(price) || price < 0) { App.toast('Enter a valid package price.', 'err'); return; }
+
+        var selectedIds = [];
+        ov.querySelectorAll('[data-pm-tid]:checked').forEach(function (cb) {
+          selectedIds.push(cb.getAttribute('data-pm-tid'));
+        });
+
+        if (!selectedIds.length) {
+          App.toast('Select at least one test for the package.', 'err');
+          return;
+        }
+
+        var dup = DB.all('tests').some(function (t) {
+          return t.id !== pkg.id && String(t.code || '').toLowerCase() === code.toLowerCase();
+        });
+        if (dup) { App.toast('A test or package with this code already exists.', 'err'); return; }
+
+        var data = {
+          name: name,
+          code: code,
+          category: cat || 'Health Packages',
+          dealBadge: badge,
+          sampleType: sample || 'Serum + EDTA Blood',
+          tat: tat || 'Same day',
+          prepNote: prep,
+          price: price,
+          active: active,
+          isPackage: true,
+          includes: selectedIds
+        };
+
+        if (isNew) {
+          DB.insert('tests', data);
+          App.toast('Health Package created successfully.');
+        } else {
+          DB.update('tests', pkg.id, data);
+          App.toast('Health Package updated.');
+        }
+        close();
+        renderPackages();
+      });
+    }
+  });
+}
+
+/* Quick bill a package directly to a patient */
+function quickBillPackage(pkg) {
+  var allPats = DB.all('patients') || [];
+  var body = ''
+    + '<div style="margin-bottom:14px">'
+    +   '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:12px 14px;margin-bottom:14px">'
+    +     '<div style="display:flex;justify-content:space-between;align-items:center">'
+    +       '<strong>' + App.esc(pkg.name) + ' (' + App.esc(pkg.code) + ')</strong>'
+    +       '<span style="font-size:16px;font-weight:800;color:#15803d">' + App.money(+pkg.price || 0) + '</span>'
+    +     '</div>'
+    +     '<div class="muted" style="font-size:12px;margin-top:4px">' + (pkg.includes || []).length + ' diagnostic tests bundled in deal</div>'
+    +   '</div>'
+    +   '<label class="label" style="font-weight:700">Select Patient to Bill</label>'
+    +   '<select class="select" id="qbPatientSelect" style="width:100%;font-size:14px;margin-bottom:10px">'
+    +     '<option value="">— Select an existing patient —</option>'
+    +     allPats.map(function (p) {
+            return '<option value="' + App.esc(p.id) + '">' + App.esc(p.name) + ' (' + App.esc(p.id) + ' • ' + App.esc(p.phone || 'no phone') + ')</option>';
+          }).join('')
+    +   '</select>'
+    +   '<div style="text-align:center;color:var(--muted);font-size:12px;margin:8px 0">— OR —</div>'
+    +   '<button type="button" class="btn btn-ghost btn-sm" id="qbWalkInBtn" style="width:100%">+ Bill as Quick Walk-in Patient</button>'
+    + '</div>'
+    + '<div style="display:flex;justify-content:flex-end;gap:10px">'
+    +   '<button class="btn btn-ghost" id="qbCancel">Cancel</button>'
+    +   '<button class="btn btn-primary" id="qbProceed">Proceed to Billing POS &rarr;</button>'
+    + '</div>';
+
+  App.modal('🧾 Quick Bill Health Package', body, {
+    onOpen: function (ov, close) {
+      var patSel = ov.querySelector('#qbPatientSelect');
+      var proceedBtn = ov.querySelector('#qbProceed');
+      var walkInBtn = ov.querySelector('#qbWalkInBtn');
+      var cancelBtn = ov.querySelector('#qbCancel');
+
+      cancelBtn.addEventListener('click', close);
+
+      function billTo(patientId) {
+        /* Store pre-loaded package into sessionStorage cart */
+        sessionStorage.setItem('labpos_precart', JSON.stringify([{
+          testId: pkg.id,
+          code: pkg.code,
+          name: pkg.name,
+          price: +pkg.price || 0,
+          isPackage: true,
+          includes: pkg.includes || []
+        }]));
+        close();
+        App.nav('#/billing/' + patientId);
+      }
+
+      proceedBtn.addEventListener('click', function () {
+        var pid = patSel.value;
+        if (!pid) { App.toast('Please select a patient.', 'err'); return; }
+        billTo(pid);
+      });
+
+      walkInBtn.addEventListener('click', function () {
+        /* Create quick walk-in patient */
+        var now = new Date();
+        var patName = 'Walk-in (' + App.dt(now).split(' ')[1] + ')';
+        var newP = DB.insert('patients', {
+          name: patName,
+          phone: '',
+          gender: 'Other',
+          age: 30,
+          notes: 'Created via Quick Package Deal (' + pkg.name + ')',
+          createdAt: now.toISOString()
+        });
+        App.toast('Walk-in patient created.');
+        billTo(newP.id);
+      });
+    }
+  });
+}
+
+/* Print official promotional counter flyer / pamphlet for the package */
+function printPackageFlyer(pkg) {
+  var s = DB.get('settings', 'main') || {};
+  var allTests = DB.all('tests') || [];
+  var testMap = {};
+  allTests.forEach(function (t) { testMap[t.id] = t; });
+
+  var regSum = 0;
+  var items = (pkg.includes || []).map(function (tid) {
+    var it = testMap[tid];
+    if (it) regSum += (+it.price || 0);
+    return it;
+  }).filter(Boolean);
+
+  var dealPrice = +pkg.price || 0;
+  var savings = Math.max(0, regSum - dealPrice);
+  var savingsPct = regSum > 0 ? Math.round((savings / regSum) * 100) : 0;
+
+  var flyerHtml = ''
+    + '<div style="max-width:800px;margin:0 auto;font-family:system-ui,sans-serif;color:#131845;padding:10px">'
+    + '<div style="text-align:center;border-bottom:3px solid #131845;padding-bottom:14px;margin-bottom:18px">'
+    +   '<div style="font-size:24px;font-weight:900;letter-spacing:.03em;color:#131845;text-transform:uppercase">' + App.esc(s.labName || 'Optix Medical Sync') + '</div>'
+    +   '<div style="font-size:12.5px;color:#64748b;margin:4px 0">' + App.esc(s.address || '') + ' • Helpline: ' + App.esc(s.phone || '') + '</div>'
+    +   '<div style="display:inline-block;background:#131845;color:#fff;font-weight:800;font-size:13px;padding:4px 14px;border-radius:20px;letter-spacing:.08em;margin-top:8px">PROMOTIONAL HEALTH SCREENING PACKAGE</div>'
+    + '</div>'
+
+    + '<div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:2px solid #cbd5e1;border-radius:12px;padding:16px 20px;margin-bottom:20px">'
+    +   '<div>'
+    +     '<span style="background:#fee2e2;color:#b91c1c;font-weight:800;font-size:11px;padding:3px 8px;border-radius:6px;letter-spacing:.05em">' + App.esc(pkg.dealBadge || 'SPECIAL DEAL') + '</span>'
+    +     '<h2 style="margin:6px 0 2px;font-size:24px;font-weight:900;color:#131845">' + App.esc(pkg.name) + '</h2>'
+    +     '<div style="font-size:13px;color:#64748b">Package Code: <strong class="mono">' + App.esc(pkg.code) + '</strong> &bull; ' + App.esc(pkg.category || 'Health Package') + '</div>'
+    +   '</div>'
+    +   '<div style="text-align:right">'
+    +     '<div style="font-size:13px;color:#64748b;text-decoration:line-through">Normal Price: ' + App.money(regSum) + '</div>'
+    +     '<div style="font-size:28px;font-weight:900;color:#15803d;line-height:1.1">' + App.money(dealPrice) + '</div>'
+    +     (savings > 0 ? '<div style="font-size:13px;font-weight:800;color:#b91c1c">Save ' + App.money(savings) + ' (' + savingsPct + '% OFF)</div>' : '')
+    +   '</div>'
+    + '</div>'
+
+    + '<h3 style="font-size:16px;font-weight:800;margin:0 0 10px;border-bottom:1.5px solid #cbd5e1;padding-bottom:6px">Included Diagnostic Tests (' + items.length + ' Tests)</h3>'
+    + '<table class="table" style="margin-bottom:18px"><thead><tr>'
+    + '<th>#</th><th>Test Name</th><th>Test Code</th><th>Sample Type</th><th style="text-align:right">Catalog Price</th>'
+    + '</tr></thead><tbody>'
+    + items.map(function (it, i) {
+        return '<tr>'
+          + '<td>' + (i + 1) + '</td>'
+          + '<td><strong>' + App.esc(it.name) + '</strong></td>'
+          + '<td><span class="mono">' + App.esc(it.code || '—') + '</span></td>'
+          + '<td>' + App.esc(it.sampleType || 'Blood') + '</td>'
+          + '<td style="text-align:right">' + App.money(+it.price || 0) + '</td>'
+          + '</tr>';
+      }).join('')
+    + '<tr><td colspan="4" style="text-align:right;font-weight:700">Total Standard Price:</td><td style="text-align:right;font-weight:700">' + App.money(regSum) + '</td></tr>'
+    + '<tr style="background:#f0fdf4"><td colspan="4" style="text-align:right;font-weight:900;color:#15803d;font-size:15px">Special Package Deal Price:</td><td style="text-align:right;font-weight:900;color:#15803d;font-size:16px">' + App.money(dealPrice) + '</td></tr>'
+    + '</tbody></table>'
+
+    + (pkg.prepNote ? '<div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:12px 14px;margin-bottom:18px;font-size:13px">'
+    + '<strong style="color:#b45309">📌 Patient Preparation &amp; Fasting Guidelines:</strong> ' + App.esc(pkg.prepNote) + '</div>' : '')
+
+    + '<div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #131845;padding-top:14px;margin-top:24px;font-size:12px;color:#64748b">'
+    +   '<div>Report Turnaround: <b>' + App.esc(pkg.tat || 'Same day') + '</b> &bull; Sample Collection Available At Counter &amp; Home</div>'
+    +   '<div><b>' + App.esc(s.labName || 'Optix Medical Sync') + '</b> &bull; ' + App.esc(s.phone || '') + '</div>'
+    + '</div>'
+    + '</div>';
+
+  App.print('Health Package Deal — ' + pkg.name, flyerHtml);
+}
+
+/* Quick seed 6 premier Pakistani lab packages */
+function seedPremierPackages() {
+  var all = DB.all('tests') || [];
+
+  function findOrMakeTest(name, code, price, category, sampleType) {
+    var q = name.toLowerCase();
+    for (var i = 0; i < all.length; i++) {
+      if (!all[i].isPackage && (all[i].name.toLowerCase().indexOf(q) >= 0 || (all[i].code && all[i].code.toLowerCase() === code.toLowerCase()))) {
+        return all[i].id;
+      }
+    }
+    /* create placeholder test if not in database */
+    var newT = DB.insert('tests', {
+      name: name,
+      code: code,
+      price: price,
+      category: category,
+      sampleType: sampleType,
+      active: true,
+      params: [{ name: name, unit: '', ref: '' }]
+    });
+    all.push(newT);
+    return newT.id;
+  }
+
+  var cbcId = findOrMakeTest('Complete Blood Count (CBC)', 'CBC', 800, 'Hematology', 'EDTA Blood');
+  var bsfId = findOrMakeTest('Blood Sugar Fasting (BSF)', 'BSF', 350, 'Biochemistry', 'Fluoride Blood');
+  var creatId = findOrMakeTest('Serum Creatinine', 'CREAT', 600, 'Renal Function', 'Serum');
+  var urineId = findOrMakeTest('Urine Routine Examination (R/E)', 'URINE-RE', 450, 'Clinical Pathology', 'Urine');
+  var lipidId = findOrMakeTest('Lipid Profile', 'LIPID', 1600, 'Biochemistry', 'Serum');
+  var lftId = findOrMakeTest('Liver Function Tests (LFT)', 'LFT', 1400, 'Biochemistry', 'Serum');
+  var uricId = findOrMakeTest('Serum Uric Acid', 'URIC', 550, 'Biochemistry', 'Serum');
+  var hba1cId = findOrMakeTest('HbA1c (Glycated Hemoglobin)', 'HBA1C', 1200, 'Special Chemistry', 'EDTA Blood');
+  var tshId = findOrMakeTest('Thyroid Stimulating Hormone (TSH)', 'TSH', 1200, 'Endocrinology', 'Serum');
+  var vitDId = findOrMakeTest('Vitamin D (25-OH)', 'VIT-D', 2800, 'Endocrinology', 'Serum');
+  var calciumId = findOrMakeTest('Serum Calcium', 'CA', 600, 'Biochemistry', 'Serum');
+  var tropId = findOrMakeTest('Troponin-I', 'TROP-I', 1800, 'Cardiac Markers', 'Serum');
+  var ureaId = findOrMakeTest('Blood Urea', 'UREA', 500, 'Renal Function', 'Serum');
+  var electroId = findOrMakeTest('Serum Electrolytes (Na, K, Cl)', 'ELECTRO', 1100, 'Biochemistry', 'Serum');
+
+  var presetBundles = [
+    {
+      name: 'Basic Health Screening Deal',
+      code: 'PKG-BASIC-01',
+      category: 'Basic Health',
+      dealBadge: 'POPULAR',
+      price: 1499,
+      sampleType: 'Serum + EDTA Blood + Urine',
+      tat: 'Same day',
+      prepNote: '10-12 hours fasting recommended. Water is permitted.',
+      includes: [cbcId, bsfId, creatId, urineId]
+    },
+    {
+      name: 'Executive Full Body Health Profile',
+      code: 'PKG-EXEC-01',
+      category: 'Executive Screening',
+      dealBadge: 'BEST VALUE',
+      price: 4499,
+      sampleType: 'Serum + EDTA Blood + Urine',
+      tat: 'Same day',
+      prepNote: 'Strict 10-12 hours overnight fasting. Avoid heavy fatty meal night before.',
+      includes: [cbcId, bsfId, lipidId, lftId, creatId, uricId, urineId]
+    },
+    {
+      name: 'Diabetic Comprehensive Care Package',
+      code: 'PKG-DIAB-01',
+      category: 'Diabetes Care',
+      dealBadge: 'SPECIAL DEAL',
+      price: 2999,
+      sampleType: 'Serum + EDTA Blood + Fluoride',
+      tat: 'Same day',
+      prepNote: '10-12 hours fasting. Take your morning diabetes medicines after blood collection.',
+      includes: [hba1cId, bsfId, creatId, lipidId, urineId]
+    },
+    {
+      name: 'Cardiac Risk & Lipid Health Profile',
+      code: 'PKG-CARD-01',
+      category: 'Cardiac Care',
+      dealBadge: 'HEART HEALTH',
+      price: 3699,
+      sampleType: 'Serum + EDTA Blood',
+      tat: 'Same day',
+      prepNote: '12 hours fasting required. Rest quietly for 15 minutes prior to blood draw.',
+      includes: [lipidId, bsfId, tropId, ureaId, electroId]
+    },
+    {
+      name: 'Well-Woman Vital Health Checkup',
+      code: 'PKG-WOMEN-01',
+      category: 'Women Health',
+      dealBadge: 'WELL-WOMAN',
+      price: 4999,
+      sampleType: 'Serum + EDTA Blood + Urine',
+      tat: 'Same day',
+      prepNote: 'Morning sample preferred. Overnight fasting 8-10 hours.',
+      includes: [cbcId, tshId, calciumId, vitDId, urineId, bsfId]
+    },
+    {
+      name: 'Senior Citizen Vital Geriatric Panel',
+      code: 'PKG-SNR-01',
+      category: 'Senior Citizens',
+      dealBadge: 'GOLDEN AGE',
+      price: 3999,
+      sampleType: 'Serum + EDTA Blood + Urine',
+      tat: 'Same day',
+      prepNote: '10 hours fasting. Bring all your current prescription medicines.',
+      includes: [cbcId, creatId, ureaId, lftId, lipidId, uricId, bsfId, electroId]
+    }
+  ];
+
+  var addedCount = 0;
+  presetBundles.forEach(function (b) {
+    var exists = DB.all('tests').some(function (t) { return t.code === b.code; });
+    if (!exists) {
+      DB.insert('tests', Object.assign({ isPackage: true, active: true }, b));
+      addedCount++;
+    }
+  });
+
+  if (addedCount > 0) {
+    App.toast(addedCount + ' premier health packages seeded.');
+  } else {
+    App.toast('All premier health packages already exist.');
+  }
+  renderPackages();
+}
+
 /* ---------- register routes ---------- */
 
 App.route('/tests', renderTests);
 App.route('/doctors', renderDoctors);
+App.route('/packages', renderPackages);
+App.route('#/packages', renderPackages);
 
 })();

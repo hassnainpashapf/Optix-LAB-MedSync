@@ -55,9 +55,17 @@
     var fixedPatient = patientId ? DB.get('patients', patientId) : null;
     if (!fixedPatient) { App.toast('Patient not found.', 'err'); App.nav('#/patients'); return; }
     var view = document.getElementById('view');
+    var initCart = [];
+    try {
+      var rawPre = sessionStorage.getItem('labpos_precart');
+      if (rawPre) {
+        initCart = JSON.parse(rawPre) || [];
+        sessionStorage.removeItem('labpos_precart');
+      }
+    } catch (ePre) { initCart = []; }
     var state = {
       patient: fixedPatient,
-      cart: [],            // [{testId, code, name, price}]
+      cart: Array.isArray(initCart) ? initCart : [],            // [{testId, code, name, price, isPackage, includes}]
       doctorId: '',
       panelId: (fixedPatient.panelId && DB.get('panels', fixedPatient.panelId) && DB.get('panels', fixedPatient.panelId).active !== false) ? fixedPatient.panelId : '',   /* corporate client: bill goes to their account */
       discType: 'rs',      // 'rs' | 'pct'
