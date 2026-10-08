@@ -2680,6 +2680,7 @@
     });
   }
   App.getReportPdfUrl = getReportPdfUrl;
+  App.barcodeHtml = barcodeHtml;   /* the invoice print draws the same barcodes */
 
   function qrDataUrlFor(url) {
     try {

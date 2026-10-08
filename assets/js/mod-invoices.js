@@ -211,14 +211,10 @@
     var s = DB.get('settings', 'main') || {};
     var p = inv ? patientOf(inv) : null;
     var html =
-      '<div style="text-align:center;margin-bottom:18px">' +
-        '<div style="font-size:26px;font-weight:800">' + App.esc(s.labName || 'Lab') + '</div>' +
-        '<div style="color:#555;font-size:13px">' + App.esc(s.address || '') + ' &nbsp;|&nbsp; ' + App.esc(s.phone || '') + '</div>' +
-      '</div>' +
       '<div style="font-size:20px;font-weight:800;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:16px">PAYMENT RECEIPT</div>' +
       '<table style="width:100%;font-size:14px;border-collapse:collapse;margin-bottom:16px">' +
         '<tr><td style="padding:6px;color:#555">Receipt No</td><td style="padding:6px;font-weight:700">' + App.esc(py.id) + '</td></tr>' +
-        '<tr><td style="padding:6px;color:#555">Date</td><td style="padding:6px">' + App.d(py.date) + ' ' + (App.dt(py.date).split(' ').slice(-1) || '') + '</td></tr>' +
+        '<tr><td style="padding:6px;color:#555">Date</td><td style="padding:6px">' + (String(py.date || '').length > 10 ? App.dt(py.date) : App.d(py.date)) + '</td></tr>' +
         '<tr><td style="padding:6px;color:#555">Invoice</td><td style="padding:6px;font-weight:700">' + App.esc(inv ? inv.no : '—') + '</td></tr>' +
         '<tr><td style="padding:6px;color:#555">Patient</td><td style="padding:6px">' + App.esc(p ? p.name : 'Walk-in') + '</td></tr>' +
         '<tr><td style="padding:6px;color:#555">Method</td><td style="padding:6px">' + App.esc(py.method) + '</td></tr>' +
@@ -371,6 +367,19 @@
       }
     });
   }
+
+  /* the same two barcodes and QR the report carries: INV # (count, month/year) and P # (count of the day, day/month); the QR holds the invoice and patient details */
+  function codesHTML(inv, p) {
+    var vn = App.visitNos(inv), s = DB.get('settings', 'main') || {}, bc = App.barcodeHtml;
+    var qrText = [inv.no || inv.id, (p && p.id) || '', s.labName || '', App.d(inv.createdAt)].filter(Boolean).join(' | '), qr = '';
+    try { if (typeof qrcode !== 'undefined') { var q = qrcode(0, 'M'); q.addData(qrText); q.make(); qr = q.createDataURL(4, 4); } } catch (e) { qr = ''; }
+    var line = 'font-weight:700;letter-spacing:1px;font-size:11px;margin-top:3px;line-height:1.2;white-space:nowrap;font-family:Arial,sans-serif';
+    return '<div style="display:flex;align-items:flex-start;gap:12px;color:#000"><div style="text-align:left">' +
+      '<div>' + (bc ? bc(vn.labCode, '100%', '15px').replace('margin:0 auto', 'margin:0') : '') + '<div style="' + line + '">' + App.esc(vn.labText) + '</div></div>' +
+      '<div style="margin-top:7px">' + (bc ? bc(vn.caseCode, '100%', '15px').replace('margin:0 auto', 'margin:0') : '') + '<div style="' + line + '">' + App.esc(vn.caseText) + '</div></div></div>' +
+      (qr ? '<img src="' + qr + '" style="width:72px;height:72px" alt="QR">' : '') + '</div>';
+  }
+
   function invoicePrintHTML(inv) {
     var s = DB.get('settings', 'main') || {};
     var p = patientOf(inv);
@@ -384,17 +393,14 @@
       return '<tr><td>' + (i + 1) + '</td><td>' + App.d(py.date) + '</td><td>' + App.esc(py.method) +
         '</td><td>' + App.esc(py.note || '—') + '</td><td style="text-align:right">' + App.money(py.amount) + '</td></tr>';
     }).join('') : '<tr><td colspan="5" style="text-align:center;color:#888">No payments recorded</td></tr>';
-    return '' +
-      '<div style="text-align:center;margin-bottom:18px">' +
-        '<div style="font-size:26px;font-weight:800">' + App.esc(s.labName || 'Lab') + '</div>' +
-        '<div style="color:#555;font-size:13px">' + App.esc(s.tagline || '') + '</div>' +
-        '<div style="color:#555;font-size:13px">' + App.esc(s.address || '') + ' &nbsp;|&nbsp; ' + App.esc(s.phone || '') + '</div>' +
-      '</div>' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:16px">' +
-        '<div style="font-size:20px;font-weight:800">INVOICE</div>' +
-        '<div style="text-align:right"><div><strong>' + App.esc(inv.no) + '</strong></div>' +
-        '<div style="font-size:13px;color:#555">Date: ' + App.d(inv.createdAt) + ' ' + App.dt(inv.createdAt).split(' ').slice(-1) + '</div>' +
-        '<div style="font-size:13px">Status: <strong>' + inv.status.toUpperCase() + '</strong></div></div>' +
+    return '' +   /* the lab header (logo, name, address, phone, email) is printed once, by App.print */
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:16px">' +
+        '<div><div style="font-size:20px;font-weight:800">INVOICE</div>' +
+          '<div style="font-size:13.5px;margin-top:6px"><strong>Invoice No:</strong> ' + App.esc(inv.no || inv.id) + '</div>' +
+          '<div style="font-size:13.5px"><strong>Patient No:</strong> ' + App.esc((p && p.id) || '—') + '</div>' +
+          '<div style="font-size:13px;color:#555;margin-top:4px">Date: ' + App.dt(inv.createdAt) + '</div>' +
+          '<div style="font-size:13px">Status: <strong>' + inv.status.toUpperCase() + '</strong></div></div>' +
+        codesHTML(inv, p) +
       '</div>' +
       '<div style="display:flex;gap:32px;margin-bottom:16px;font-size:14px">' +
         '<div><strong>Patient:</strong> ' + App.esc(p ? p.name : 'Walk-in') +
@@ -768,6 +774,8 @@
   }
 
   /* ---------- register ---------- */
+  /* the barcode drawing lives in the results module; load it ahead so printing never has to wait */
+  if (!App.barcodeHtml && App.loadScript) App.loadScript('assets/js/mod-results.js').catch(function () {});
   App.route('#/invoices', renderInvoices);
   App.route('#/invoice/:id', renderInvoiceDetail);
   App.route('#/dues', renderDues);

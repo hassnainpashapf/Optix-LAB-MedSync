@@ -804,6 +804,20 @@
       return null;
     },
 
+    /* like insert, but with an id the caller chose (e.g. the invoice that carries its patient's number). Returns null when that id is already taken. */
+    insertAs: function (table, id, obj) {
+      if (table === 'settings' || ARRAY_TABLES.indexOf(table) < 0 || !id) return null;
+      var rows = (store[table] = store[table] || []);
+      for (var i = 0; i < rows.length; i++) { if (rows[i].id === id) return null; }
+      var row = copy(obj) || {};
+      row.id = id;
+      if (table === 'invoices' && !row.no) row.no = row.id;
+      rows.push(row);
+      persist();
+      apiWrite('POST', table, null, row);
+      return copy(row);
+    },
+
     insert: function (table, obj) {
       if (table === 'settings' || ARRAY_TABLES.indexOf(table) < 0) return null;
       var row = copy(obj) || {};

@@ -228,7 +228,7 @@
         if (!window.confirm(pn.name + ' would go over its credit limit of ' + App.money(pn.creditLimit) + ' (it already owes ' + App.money(Math.max(0, App.panelAccount(pn).balance)) + '). Save this bill anyway?')) return;
       }
       var billAt = App.fromLocalInput((document.getElementById('blRegDate') || {}).value), vn = App.nextVisitNos(billAt);
-      var inv = DB.insert('invoices', {
+      var invData = {
         labNo: vn.labNo, caseNo: vn.caseNo,
         panelId: pn ? pn.id : null,
         reference: (document.getElementById('blRef') || {}).value || '',
@@ -245,7 +245,8 @@
         status: status,
         createdAt: billAt,
         createdBy: currentUser()
-      });
+      };
+      var inv = DB.insertAs('invoices', App.invoiceIdFor(state.patient.id), invData) || DB.insert('invoices', invData);
       DB.update('invoices', inv.id, { no: inv.id });
       try { App.outsourceSync(inv.id, true); } catch (e) { if (window.console) console.error(e); }
       if (t.paid > 0 && !pn) {
