@@ -21,14 +21,18 @@
     '.sk-st.t-navy::after{background:rgba(224,231,255,.55)}.sk-st.t-amber::after{background:rgba(254,243,199,.55)}' +
     '.sk-st.t-blue::after{background:rgba(219,234,254,.55)}.sk-st.t-red::after{background:rgba(254,226,226,.55)}' +
     '.sk-st.bad b{color:#b91c1c}.sk-st.warn b{color:#b45309}' +
-    '.sk-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:14px 18px}.sk-bar .grow{flex:1;min-width:200px}' +
+    '.sk-bar{display:flex;gap:10px;flex-wrap:nowrap;align-items:center;padding:14px 18px}' +
+    '.sk-bar .grow{flex:1 1 auto;min-width:200px;width:auto}' +
+    '.sk-bar .select{flex:0 0 auto;width:auto;max-width:100%}' +
+    '.sk-bar .btn{flex:0 0 auto;white-space:nowrap}' +
     '.sk-chip{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:99px;white-space:nowrap;margin:1px 4px 1px 0}' +
     '.sk-chip.ok{background:#e6f7f0;color:#047857}.sk-chip.low{background:#fff4e0;color:#b45309}.sk-chip.out{background:#fdecec;color:#b91c1c}.sk-chip.exp{background:#fdecec;color:#b91c1c}.sk-chip.soon{background:#fff4e0;color:#b45309}' +
     '.sk-alert{border:1px solid #f0d9a0;background:#fff8e6;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13.5px;line-height:1.7}' +
     '.sk-name{font-weight:700;color:var(--ink)}.sk-sub{font-size:12px;color:var(--muted)}.sk-num{font-weight:800;font-size:15px}' +
     '.sk-h{width:100%;border-collapse:collapse}.sk-h th,.sk-h td{padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px;text-align:left}' +
     '@media(max-width:900px){.sk-stats{grid-template-columns:1fr 1fr}}' +
-    '@media(max-width:560px){.sk-stats{grid-template-columns:1fr}}';
+    '@media(max-width:560px){.sk-stats{grid-template-columns:1fr}}' +
+    '@media(max-width:760px){.sk-bar{flex-wrap:wrap}.sk-bar .grow{flex:1 1 100%;min-width:0}}';
   function css() { if (document.getElementById('skCss')) return; var s = document.createElement('style'); s.id = 'skCss'; s.textContent = CSS; document.head.appendChild(s); }
 
   function num(n) { n = Math.round((+n || 0) * 100) / 100; return String(n); }
@@ -42,6 +46,32 @@
     if (r.expired) h += '<span class="sk-chip exp">Expired: ' + num(r.expiredQty) + '</span>';
     if (r.soon) h += '<span class="sk-chip soon">Expiring: ' + num(r.soonQty) + '</span>';
     return h || '<span class="sk-chip ok">OK</span>';
+  }
+
+  function warnOpts(cur) {
+    var presets = [15, 30, 60, 90], h = '';
+    presets.forEach(function (d) { h += '<option value="' + d + '"' + (cur === d ? ' selected' : '') + '>Warn ' + d + ' days before expiry</option>'; });
+    if (presets.indexOf(cur) < 0 && cur > 0) h += '<option value="' + cur + '" selected>Warn ' + cur + ' days before expiry</option>';
+    h += '<option value="custom">Custom…</option>';
+    return h;
+  }
+
+  function warnCustom(cur) {
+    App.modal('Custom expiry warning',
+      '<div><label class="label">Warn how many days before a lot expires? (1–365)</label>' +
+      '<input class="input" id="swDays" type="number" min="1" max="365" step="1" value="' + (+cur || 30) + '">' +
+      '<div class="sk-sub" id="swErr" style="color:#b91c1c;margin-top:6px;display:none">Enter a whole number of days between 1 and 365.</div></div>' +
+      '<div class="actions" style="margin-top:16px"><button class="btn btn-ghost" id="swCancel">Cancel</button><button class="btn btn-primary" id="swSave">Save</button></div>',
+      { onOpen: function (ov, close) {
+          var $ = function (id) { return ov.querySelector('#' + id); };
+          $('swCancel').addEventListener('click', function () { close(); render(); });
+          $('swSave').addEventListener('click', function () {
+            var n = Math.floor(+$('swDays').value);
+            if (!(n >= 1 && n <= 365)) { $('swErr').style.display = ''; App.toast('Enter a whole number of days between 1 and 365', 'err'); return; }
+            try { DB.update('settings', 'main', { stockExpiryDays: n }); } catch (x) {}
+            close(); App.toast('Expiry warning set to ' + n + ' days.'); render();
+          });
+        } });
   }
 
   function render() {
@@ -72,7 +102,7 @@
     h += '<div class="card" style="margin-bottom:16px"><div class="sk-bar">' +
       '<input class="input grow" id="skQ" placeholder="Search item, category, vendor…" value="' + esc(F.q) + '">' +
       '<select class="select" id="skShow"><option value="all"' + (F.show === 'all' ? ' selected' : '') + '>All items</option><option value="alerts"' + (F.show === 'alerts' ? ' selected' : '') + '>Only items needing attention</option></select>' +
-      '<select class="select" id="skWarn" title="How early to warn before a lot expires">' + [15, 30, 60, 90].map(function (d) { return '<option value="' + d + '"' + (S.warnDays === d ? ' selected' : '') + '>Warn ' + d + ' days before expiry</option>'; }).join('') + '</select>' +
+      '<select class="select" id="skWarn" title="How early to warn before a lot expires">' + warnOpts(S.warnDays) + '</select>' +
       (canEdit() ? '<button class="btn btn-primary" id="skRecv">+ Receive stock</button><button class="btn btn-ghost" id="skAdd">+ Add item</button>' : '') + '</div></div>';
     if (!S.rows.length) {
       h += '<div class="card"><div class="card-b">' + App.empty('No stock items yet. Click "Add item" for each reagent or consumable you buy (for example "CBC reagent kit"), then "Receive stock" when a delivery arrives.') + '</div></div>';
@@ -96,7 +126,11 @@
     function on(id, ev, fn) { var e = document.getElementById(id); if (e) e.addEventListener(ev, fn); }
     on('skQ', 'input', function (e) { F.q = e.target.value.trim(); var p = e.target.selectionStart; render(); var n = document.getElementById('skQ'); if (n) { n.focus(); try { n.setSelectionRange(p, p); } catch (x) {} } });
     on('skShow', 'change', function (e) { F.show = e.target.value; render(); });
-    on('skWarn', 'change', function (e) { try { DB.update('settings', 'main', { stockExpiryDays: +e.target.value }); } catch (x) {} render(); });
+    on('skWarn', 'change', function (e) {
+      var v = e.target.value;
+      if (v === 'custom') { warnCustom(S.warnDays); return; }
+      try { DB.update('settings', 'main', { stockExpiryDays: +v }); } catch (x) {} render();
+    });
     on('skAdd', 'click', function () { itemForm(null); });
     on('skRecv', 'click', function () { receive(''); });
     function each(attr, fn) { Array.prototype.forEach.call(v.querySelectorAll('[' + attr + ']'), function (b) { b.addEventListener('click', function () { fn(b.getAttribute(attr)); }); }); }

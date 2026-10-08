@@ -257,9 +257,25 @@
     var rows = list.map(function (p) { var a = App.panelAccount(p); var mb = (DB.all('invoices') || []).filter(function (i) { return i.panelId === p.id && mkOf(i.createdAt) === thisMk; }).reduce(function (s, i) { return s + (+i.total || 0); }, 0); return { p: p, acc: a, month: mb }; });
     var owed = rows.reduce(function (s, r) { return s + Math.max(0, r.acc.balance); }, 0), monthTot = rows.reduce(function (s, r) { return s + r.month; }, 0);
     var shown = rows.filter(function (r) { return !q || (r.p.name + ' ' + (r.p.contact || '') + ' ' + (r.p.phone || '')).toLowerCase().indexOf(q) >= 0; });
-    function stat(label, val, sub) { return '<div class="card" style="margin:0"><div class="card-b"><div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:700">' + label + '</div><div style="font-size:24px;font-weight:800;margin-top:4px">' + val + '</div><div class="muted" style="font-size:12.5px;margin-top:2px">' + sub + '</div></div></div>'; }
-    view.innerHTML = '<div class="page-head"><div><h1>Corporate clients</h1><p class="muted" style="margin:2px 0 0">Companies, schools and hospitals with their own rates and a monthly account.</p></div><button class="btn btn-primary" id="pnNew">+ Add client</button></div>' +
-      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:14px">' + stat('Clients', String(list.filter(function (p) { return p.active !== false; }).length), 'active') + stat('Billed this month', rs(monthTot), 'on credit') + stat('To collect', rs(owed), 'across all clients') + '</div>' +
+    var TINTS = { navy:{bg:'#eef2ff',wash:'#e0e7ff',ink:'#3730a3'}, green:{bg:'#f0fdf4',wash:'#dcfce7',ink:'#15803d'}, amber:{bg:'#fffbeb',wash:'#fef3c7',ink:'#b45309'} };
+    var ICONS = {
+      users: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+      cash: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
+      scale: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l7-4 7 4"/><path d="M3 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M17 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M8 21h8"/></svg>'
+    };
+    function stat(label, val, sub, tint, icon) {
+      var t = TINTS[tint] || TINTS.navy;
+      return '<div class="card" style="margin:0;background:' + t.bg + ';position:relative;overflow:hidden">' +
+        '<div style="position:absolute;width:110px;height:110px;border-radius:50%;background:' + t.wash + ';opacity:.55;top:-38px;right:-38px"></div>' +
+        '<div class="card-b" style="position:relative">' +
+        '<div style="width:38px;height:38px;border-radius:12px;background:' + t.wash + ';color:' + t.ink + ';display:flex;align-items:center;justify-content:center;margin-bottom:8px">' + icon + '</div>' +
+        '<div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:700">' + label + '</div>' +
+        '<div style="font-size:24px;font-weight:800;margin-top:4px;color:' + t.ink + '">' + val + '</div>' +
+        '<div class="muted" style="font-size:12.5px;margin-top:2px">' + sub + '</div>' +
+        '</div></div>';
+    }
+    view.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:14px">' + stat('Clients', String(list.filter(function (p) { return p.active !== false; }).length), 'active', 'navy', ICONS.users) + stat('Billed this month', rs(monthTot), 'on credit', 'green', ICONS.cash) + stat('To collect', rs(owed), 'across all clients', 'amber', ICONS.scale) + '</div>' +
+      '<div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="pnNew">+ Add client</button></div>' +
       '<div class="card"><div class="card-b"><input class="input search" id="pnSearch" placeholder="Search client…" value="' + esc(q) + '" style="max-width:340px;margin-bottom:12px">' +
       (shown.length ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Client</th><th>Rates</th><th style="text-align:right">This month</th><th style="text-align:right">Outstanding</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + shown.map(function (r) {
         var p = r.p, rr = (p.rates || []).length, lim = +p.creditLimit > 0;
