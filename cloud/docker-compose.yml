@@ -29,6 +29,10 @@ services:
       - "${API_PORT:-4000}:4000"
     env_file:
       - .env
+    volumes:
+      - ./releases.json:/app/releases.json
+      - ./releases:/app/releases
+      - ./report-pdfs:/app/report-pdfs
     environment:
       PORT: 4000
       BIND_HOST: 0.0.0.0
