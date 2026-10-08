@@ -1428,6 +1428,17 @@
       + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Reset to automatic</button></div>'
       + '<textarea class="input" id="spFootHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea></div>'
       + '</div></details>'
+      + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Online Payments</div></div>'
+      + '<div style="grid-column:1/-1"><label class="check" for="opEnabled" style="align-items:flex-start"><input type="checkbox" id="opEnabled"' + (s.opEnabled ? ' checked' : '') + ' style="margin-top:2px;width:20px;height:20px;accent-color:var(--brand)">'
+      + '<span>Enable online payments<span class="muted" style="display:block;font-weight:500;font-size:12px;margin-top:2px">When ON, patients are shown the payment options below and can share their transaction ID after paying.</span></span></label></div>'
+      + '<div><label class="label">JazzCash number</label><input class="input" id="opJazzcashNo" placeholder="e.g. 0300-1234567" value="' + App.esc(s.opJazzcashNo || '') + '"></div>'
+      + '<div><label class="label">JazzCash account title</label><input class="input" id="opJazzcashTitle" value="' + App.esc(s.opJazzcashTitle || '') + '"></div>'
+      + '<div><label class="label">Easypaisa number</label><input class="input" id="opEasypaisaNo" placeholder="e.g. 0300-1234567" value="' + App.esc(s.opEasypaisaNo || '') + '"></div>'
+      + '<div><label class="label">Easypaisa account title</label><input class="input" id="opEasypaisaTitle" value="' + App.esc(s.opEasypaisaTitle || '') + '"></div>'
+      + '<div><label class="label">Bank name</label><input class="input" id="opBankName" value="' + App.esc(s.opBankName || '') + '"></div>'
+      + '<div><label class="label">IBAN</label><input class="input" id="opIban" placeholder="PK36XXXX0000000000000000" value="' + App.esc(s.opIban || '') + '"></div>'
+      + '<div><label class="label">Raast ID</label><input class="input" id="opRaastId" value="' + App.esc(s.opRaastId || '') + '"></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Instructions shown to patients</label><textarea class="input" id="opInstructions" rows="2" maxlength="500" placeholder="Send payment and share the TID">' + App.esc(s.opInstructions || '') + '</textarea></div>'
       + '</div>'
       + '<div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" id="spSave">Save Profile</button>' +
         '<button class="btn btn-ghost" id="spPreviewBtn">👁 Preview Report</button></div>'
@@ -1652,7 +1663,16 @@
         requireSampleCollected: document.getElementById('spReqSmp').checked,
         reportFontSize: document.getElementById('spFontSize').value,
         headerHtml: (document.getElementById('spHeadHtml').value === _tplHead ? '' : document.getElementById('spHeadHtml').value.trim()),
-        footerHtml: (document.getElementById('spFootHtml').value === _tplFoot ? '' : document.getElementById('spFootHtml').value.trim())
+        footerHtml: (document.getElementById('spFootHtml').value === _tplFoot ? '' : document.getElementById('spFootHtml').value.trim()),
+        opEnabled: document.getElementById('opEnabled').checked,
+        opJazzcashNo: document.getElementById('opJazzcashNo').value.trim(),
+        opJazzcashTitle: document.getElementById('opJazzcashTitle').value.trim(),
+        opEasypaisaNo: document.getElementById('opEasypaisaNo').value.trim(),
+        opEasypaisaTitle: document.getElementById('opEasypaisaTitle').value.trim(),
+        opBankName: document.getElementById('opBankName').value.trim(),
+        opIban: document.getElementById('opIban').value.trim(),
+        opRaastId: document.getElementById('opRaastId').value.trim(),
+        opInstructions: document.getElementById('opInstructions').value.trim()
       });
       App.toast('Report form saved.');
       if (App.renderShell) App.renderShell();

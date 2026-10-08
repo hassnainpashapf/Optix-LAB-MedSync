@@ -53,6 +53,7 @@
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316' },
     { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues',      color: '#ef4444' },
     { key: 'discounts', label: 'Discounts',  icon: 'coins',     route: '#/discounts', color: '#f59e0b' },
+    { key: 'onlinepay', label: 'Online Payments', icon: 'card', route: '#/online-payments', color: '#10b981' },
     { key: 'panels',    label: 'Corporate',  icon: 'users',     route: '#/panels',    color: '#7c3aed' },
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors',   color: '#ec4899' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
@@ -78,6 +79,7 @@
     invoices:  ['admin', 'reception'],
     dues:      ['admin', 'reception'],
     discounts: ['admin', 'reception'],
+    onlinepay: ['admin', 'reception'],
     panels:    ['admin', 'reception'],
     outsourced: ['admin', 'reception', 'technician'],
     patients:  ['admin', 'reception', 'technician'],
@@ -144,6 +146,50 @@
     /* cloud mode: drop the in-memory server data so nothing leaks to the next login */
     if (wasCloud) location.reload();
   }
+
+  /* ---------------- Optix Assistant chatbot ----------------
+     The widget module (assets/js/mod-chatbot.js) is injected lazily and only
+     after a session exists; it never loads or shows before login. init() gets
+     the lab context from the session/settings — no API keys anywhere here. */
+  var __chatJsState = null;
+  function chatbotCtx() {
+    var s = session();
+    if (!s) return null;
+    var labId = s.labId || '', labName = 'Optix Medical Sync';
+    try { var L = window.DB.labById(labId); if (L && L.name) labName = L.name; } catch (e) {}
+    if (labName === 'Optix Medical Sync') {
+      try { var st = window.DB.get('settings', 'main'); if (st && st.labName) labName = st.labName; } catch (e2) {}
+    }
+    return { labId: labId, labName: labName };
+  }
+  function ensureChatbot() {
+    var ctx = chatbotCtx();
+    if (!ctx) { chatbotVisibility(); return; } /* signed out: make sure nothing shows */
+    if (__chatJsState) return; /* already injected or loading */
+    __chatJsState = 'loading';
+    var sc = document.createElement('script');
+    sc.src = 'assets/js/mod-chatbot.js?v=132z';
+    sc.async = true;
+    sc.onload = function () {
+      __chatJsState = 'ready';
+      try {
+        if (window.OptixChat && OptixChat.init) {
+          OptixChat.init({ endpoint: 'https://labpos-api.150.230.52.29.sslip.io/api/chat', context: 'app', labName: ctx.labName, labId: ctx.labId });
+        }
+      } catch (e) {}
+      chatbotVisibility();
+    };
+    sc.onerror = function () { __chatJsState = null; /* fail silently; render() retries on the next route change */ };
+    document.head.appendChild(sc);
+  }
+  function chatbotVisibility() {
+    if (!window.OptixChat) return;
+    try {
+      if (!session() || (location.hash || '').indexOf('#/login') === 0) OptixChat.hide();
+      else OptixChat.show();
+    } catch (e) {}
+  }
+  window.addEventListener('hashchange', function () { chatbotVisibility(); });
 
   /* ---------------- helpers ---------------- */
   function esc(s) {
@@ -454,6 +500,7 @@
     }
     /* a doctor's login: only the doctor dashboard (the server refuses everything else) */
     if (s && s.role === 'doctor') {
+      ensureChatbot(); chatbotVisibility();
       if (window.App && App.renderDoctorHome) App.renderDoctorHome();
       else App.loadScript('assets/js/mod-portal.js').then(function () { App.renderDoctorHome(); }, function () { toast('Could not load the dashboard', 'err'); });
       return;
@@ -468,6 +515,9 @@
     if (!s && hash !== '#/login' && hash !== '#/signup') { location.hash = '#/login'; return; }
     if (s && (hash === '#/login' || hash === '#/signup' || hash === '' || hash === '#')) { location.hash = '#/dashboard'; return; }
     if (!hash) { location.hash = s ? '#/dashboard' : '#/login'; return; }
+
+    /* Optix Assistant: inject the widget once a session exists; keep it off the login page */
+    ensureChatbot(); chatbotVisibility();
 
     if (hash === '#/login') { if (window.App && App.renderLogin) App.renderLogin(); return; }
     if (hash === '#/signup') { if (window.App && App.renderSignup) App.renderSignup(); return; }
@@ -630,9 +680,9 @@
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     /* grouped, professional sidebar: section labels, one icon style, active state on the left */
     var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
-      invoices: 'Billing', dues: 'Billing', discounts: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
+      invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
       whatsapp: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
@@ -654,7 +704,7 @@
     var TOP = ['dashboard', 'patients', 'samples', 'results', 'invoices'];
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['tests', 'outsourced', 'stock', 'doctors'] },
-      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'panels', 'expenses', 'finance'] },
+      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance'] },
       { id: 'ins', label: 'Insights', icon: 'chart', keys: ['reports', 'audit'] },
       { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'email', 'downloads'] },
       { id: 'acc', label: 'Account', icon: 'gear', keys: ['subscription'] } /* one page = shown as the page itself, not a folder */

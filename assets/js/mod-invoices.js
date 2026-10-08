@@ -148,6 +148,84 @@
     });
   }
 
+  /* ---------- online payment claim (feat/online-payments) ---------- */
+  function openOnlinePayModal(invoiceId) {
+    var inv = DB.get('invoices', invoiceId);
+    if (!inv) { App.toast('Invoice not found', 'err'); return; }
+    if (r2(inv.due) <= 0) { App.toast('No due remaining on ' + inv.no, 'err'); return; }
+    var p = patientOf(inv);
+    var body =
+      '<div class="form-grid">' +
+        '<div><label class="label">Invoice</label><div style="font-weight:700">' + App.esc(inv.no) + '</div>' +
+        '<div style="color:var(--muted);font-size:13px">' + App.esc(p ? p.name : 'Walk-in') + '</div></div>' +
+        '<div><label class="label">Total Due</label><div style="font-weight:800;font-size:18px;color:var(--red)">' + App.money(inv.due) + '</div></div>' +
+        '<div><label class="label">Method *</label>' +
+        '<select id="opc-method" class="select">' +
+          '<option value="JazzCash">JazzCash</option>' +
+          '<option value="Easypaisa">Easypaisa</option>' +
+          '<option value="Bank">Bank</option>' +
+        '</select></div>' +
+        '<div><label class="label">Transaction ID (TID) *</label>' +
+        '<input id="opc-tid" class="input" placeholder="e.g. 03451234567 or bank ref"></div>' +
+        '<div><label class="label">Amount Paid *</label>' +
+        '<input id="opc-amount" class="input" type="number" min="1" step="any" value="' + inv.due + '"></div>' +
+        '<div><label class="label">Sender Name</label>' +
+        '<input id="opc-sendername" class="input" placeholder="Name on the account"></div>' +
+        '<div style="grid-column:1/-1"><label class="label">Sender Mobile</label>' +
+        '<input id="opc-sendernum" class="input" placeholder="Mobile number used for the transfer"></div>' +
+        '<div id="opc-err" style="grid-column:1/-1;color:var(--red);font-size:13px;font-weight:600"></div>' +
+      '</div>' +
+      '<div class="actions" style="margin-top:18px">' +
+        '<button class="btn btn-ghost" id="opc-cancel">Cancel</button>' +
+        '<button class="btn btn-primary" id="opc-save">Record Payment Claim</button>' +
+      '</div>';
+    App.modal('Record Online Payment', body, {
+      onOpen: function (root, close) {
+        var errEl = root.querySelector('#opc-err');
+        root.querySelector('#opc-cancel').addEventListener('click', close);
+        root.querySelector('#opc-save').addEventListener('click', function () {
+          errEl.textContent = '';
+          var cur = DB.get('invoices', invoiceId); // re-read in case of double clicks
+          if (!cur || r2(cur.due) <= 0) { close(); refresh(); return; }
+          var method = root.querySelector('#opc-method').value;
+          var tid = root.querySelector('#opc-tid').value.trim();
+          var amount = r2(parseFloat(root.querySelector('#opc-amount').value));
+          var senderName = root.querySelector('#opc-sendername').value.trim();
+          var senderNumber = root.querySelector('#opc-sendernum').value.trim();
+          if (!tid) {
+            errEl.textContent = 'Transaction ID is required.'; App.toast('Transaction ID is required', 'err'); return;
+          }
+          if (!(amount > 0)) {
+            errEl.textContent = 'Enter a valid amount greater than 0.'; App.toast('Enter a valid amount', 'err'); return;
+          }
+          if (amount > r2(cur.due) + 0.009) {
+            errEl.textContent = 'Amount cannot exceed due (' + App.money(cur.due) + ').';
+            App.toast('Amount cannot exceed due (' + App.money(cur.due) + ')', 'err'); return;
+          }
+          var claim = {
+            id: 'OPC-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+            invoiceId: invoiceId,
+            patientId: cur.patientId || null,
+            patientName: p ? p.name : 'Walk-in',
+            method: method,
+            tid: tid,
+            amount: amount,
+            senderName: senderName,
+            senderNumber: senderNumber,
+            status: 'pending',
+            rejectReason: '',
+            createdAt: Date.now(),
+            createdBy: sessUser()
+          };
+          DB.insert('onlinepay_claims', claim);
+          close();
+          App.toast('Payment claim recorded — pending verification');
+          refresh();
+        });
+      }
+    });
+  }
+
   /* ---------- delete invoice ---------- */
   function deleteInvoice(id) {
     var inv = DB.get('invoices', id);
@@ -392,6 +470,25 @@
       return '<tr><td>' + (i + 1) + '</td><td>' + App.d(py.date) + '</td><td>' + App.esc(py.method) +
         '</td><td>' + App.esc(py.note || '—') + '</td><td style="text-align:right">' + App.money(py.amount) + '</td></tr>';
     }).join('') : '<tr><td colspan="5" style="text-align:center;color:#888">No payments recorded</td></tr>';
+    var opBox = (function () { /* worker 7/15: online-payments Pay Online block for the printed invoice */
+      var due = Number(inv.due || 0);
+      if (!s.opEnabled || !(due > 0)) return '';
+      var lines = [];
+      if (s.opJazzcashNo) lines.push('<div>JazzCash: <strong>' + App.esc(s.opJazzcashNo) + '</strong>' + (s.opJazzcashTitle ? ' (' + App.esc(s.opJazzcashTitle) + ')' : '') + '</div>');
+      if (s.opEasypaisaNo) lines.push('<div>Easypaisa: <strong>' + App.esc(s.opEasypaisaNo) + '</strong>' + (s.opEasypaisaTitle ? ' (' + App.esc(s.opEasypaisaTitle) + ')' : '') + '</div>');
+      if (s.opBankName || s.opIban || s.opRaastId) lines.push('<div>Bank: <strong>' + App.esc(s.opBankName || '') + '</strong>' + (s.opIban ? ', IBAN: ' + App.esc(s.opIban) : '') + (s.opRaastId ? ', Raast ID: ' + App.esc(s.opRaastId) : '') + '</div>');
+      if (!lines.length && !s.opInstructions) return '';
+      var qr = '';
+      if (App.qrDataUrlFor && (s.opRaastId || s.opIban)) {
+        try {
+          var q = App.qrDataUrlFor('Raast: ' + (s.opRaastId || '—') + ' | IBAN: ' + (s.opIban || '—') + ' | Invoice: ' + (inv.no || inv.id) + ' | Amount: Rs ' + due);
+          if (q) qr = '<img src="' + q + '" style="width:56px;height:56px;margin-left:10px;flex:0 0 auto" alt="Pay QR">';
+        } catch (e) {}
+      }
+      return '<div style="border:1px solid #cbd5e1;border-radius:6px;padding:8px 10px;margin-bottom:16px;font-size:12.5px;line-height:1.55;display:flex;align-items:center">' +
+        '<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:13px;margin-bottom:2px">Pay Online</div>' + lines.join('') +
+        (s.opInstructions ? '<div style="color:#64748b;font-size:11.5px;margin-top:2px">' + App.esc(s.opInstructions) + '</div>' : '') + '</div>' + qr + '</div>';
+    })();
     return '' +   /* the lab header (logo, name, address, phone, email) is printed once, by App.print */
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:16px">' +
         '<div><div style="font-size:20px;font-weight:800">INVOICE</div>' +
@@ -423,6 +520,7 @@
         (inv.panelId ? '<div style="font-weight:700;color:#334155">Charged to the company account</div>' : '<div>Paid: ' + App.money(inv.paid) + '</div>' +
         '<div style="font-weight:800;color:#dc2626">Due: ' + App.money(inv.due) + '</div>') +
       '</div>' +
+      opBox +
       '<div style="font-weight:700;margin-bottom:6px">Payments Received</div>' +
       '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px">' +
         '<thead><tr style="background:#f1f5f9"><th style="text-align:left;padding:8px;border:1px solid #ddd">#</th>' +
@@ -616,6 +714,29 @@
         : '<div class="card-b"><div style="color:var(--muted);font-size:13.5px">No sample tubes were created for this invoice (it was billed before sample tracking was enabled).</div></div>') +
       '</div>';
 
+    // Online payments (shown only when opEnabled in settings AND there is a due amount)
+    var opPayCard = '';
+    if (s.opEnabled && r2(inv.due) > 0) {
+      var opRows = '';
+      if (s.opJazzcashNo) opRows += '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line)"><span style="font-weight:700">JazzCash</span><span style="text-align:right">' + App.esc(s.opJazzcashNo) + (s.opJazzcashTitle ? '<br><span style="color:var(--muted);font-size:12px">' + App.esc(s.opJazzcashTitle) + '</span>' : '') + '</span></div>';
+      if (s.opEasypaisaNo) opRows += '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line)"><span style="font-weight:700">Easypaisa</span><span style="text-align:right">' + App.esc(s.opEasypaisaNo) + (s.opEasypaisaTitle ? '<br><span style="color:var(--muted);font-size:12px">' + App.esc(s.opEasypaisaTitle) + '</span>' : '') + '</span></div>';
+      if (s.opBankName || s.opIban || s.opRaastId) opRows += '<div style="display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed var(--line)"><span style="font-weight:700">Bank</span><span style="text-align:right">' + (s.opBankName ? App.esc(s.opBankName) : '') + (s.opIban ? '<br><span class="mono">IBAN: ' + App.esc(s.opIban) + '</span>' : '') + (s.opRaastId ? '<br><span class="mono">Raast ID: ' + App.esc(s.opRaastId) + '</span>' : '') + '</span></div>';
+      var opQrHtml = '';
+      try {
+        if (App.qrDataUrlFor) {
+          var opQr = App.qrDataUrlFor('Raast: ' + (s.opRaastId || '') + ' | IBAN: ' + (s.opIban || '') + ' | Invoice: ' + inv.no + ' | Amount: Rs ' + r2(inv.due));
+          if (opQr) opQrHtml = '<div style="margin:10px 0;text-align:center"><img src="' + opQr + '" alt="Payment QR" style="width:140px;height:140px;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff"><div style="font-size:12px;color:var(--muted);margin-top:4px">Scan to pay ' + App.money(inv.due) + '</div></div>';
+        }
+      } catch (e) {}
+      opPayCard =
+        '<div class="card" style="margin-bottom:18px"><div class="card-h">Pay Online</div><div class="card-b">' +
+          opRows +
+          opQrHtml +
+          (s.opInstructions ? '<div style="font-size:13px;color:var(--muted);margin-top:8px;white-space:pre-wrap">' + App.esc(s.opInstructions) + '</div>' : '') +
+          '<div style="margin-top:10px"><button class="btn btn-primary" id="iv-onlinepay">I have paid — record TID</button></div>' +
+        '</div></div>';
+    }
+
     view.innerHTML =
       '<div class="toolbar">' +
         '<a class="btn btn-ghost" href="#/invoices">← Back to Invoices</a>' +
@@ -674,6 +795,8 @@
         '</div>' +
       '</div>' +
 
+      opPayCard +
+
       smpCard +
 
       '<div class="card"><div class="card-h">Payment History</div>' +
@@ -686,6 +809,8 @@
     document.getElementById('iv-wa').addEventListener('click', function () { shareInvoiceWhatsApp(inv.id); });
     var cBtn = document.getElementById('iv-collect');
     if (cBtn) cBtn.addEventListener('click', function () { openPaymentModal(inv.id); });
+    var opBtn = document.getElementById('iv-onlinepay');
+    if (opBtn) opBtn.addEventListener('click', function () { openOnlinePayModal(inv.id); });
     document.getElementById('iv-del').addEventListener('click', function () { deleteInvoice(inv.id); });
     var spBtn = document.getElementById('iv-smp-print');
     if (spBtn) spBtn.addEventListener('click', function () { Samples.printLabels(smpList.map(function (s) { return s.id; })); });
@@ -752,8 +877,15 @@
         '<button class="btn btn-sm btn-danger" data-del="' + App.esc(inv.id) + '">Delete</button></td></tr>';
     }).join('') : '<tr><td colspan="8">' + App.empty('🎉 No outstanding dues. All invoices are paid.') + '</td></tr>';
 
+    /* pending online-payment claims indicator (worker 9/15: DUES BADGE) */
+    var pendingClaims = (DB.all('onlinepay_claims') || []).filter(function (c) { return c.status === 'pending'; }).length;
+    var pendingBadge = pendingClaims > 0
+      ? '<div style="margin-bottom:12px"><a href="#/online-payments" class="badge b-pending" style="text-decoration:none">' + pendingClaims + ' online payment(s) pending verification</a></div>'
+      : '';
+
     document.getElementById('view').innerHTML =
       SC_STYLE +
+      pendingBadge +
       '<div class="kpi-grid">' + duesStats + '</div>' +
       '<div class="card"><div class="card-b"><div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:right">Total</th>' +

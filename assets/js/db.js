@@ -179,9 +179,10 @@
     email_log: { prefix: 'EL', digits: 5 },
     panels: { prefix: 'PN', digits: 3 },
     ref_labs: { prefix: 'RL', digits: 3 },
-    outsourced: { prefix: 'OS', digits: 5 }
+    outsourced: { prefix: 'OS', digits: 5 },
+    onlinepay_claims: { prefix: 'OPC', digits: 4 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced', 'onlinepay_claims'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -255,7 +256,7 @@
       },
       users: [], patients: [], tests: [], doctors: [],
       invoices: [], payments: [], expenses: [], results: [],
-      wa_log: [], samples: [], stock_items: [], stock_moves: [], email_log: [], panels: [], ref_labs: [], outsourced: []
+      wa_log: [], samples: [], stock_items: [], stock_moves: [], email_log: [], panels: [], ref_labs: [], outsourced: [], onlinepay_claims: []
     };
 
     function put(table, obj) {
@@ -578,6 +579,13 @@
       store.email_log = [];
       if (!store.seq) store.seq = {};
       if (store.seq.email_log == null) store.seq.email_log = 0;
+      save(store);
+    }
+    /* existing installs lack the online-payments claim queue */
+    if (store && !Array.isArray(store.onlinepay_claims)) {
+      store.onlinepay_claims = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.onlinepay_claims == null) store.seq.onlinepay_claims = 0;
       save(store);
     }
     /* existing installs lack the stock tables */
@@ -919,7 +927,7 @@
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
         expenses: tables.expenses, results: tables.results,
         report_templates: tables.report_templates, report_schedules: tables.report_schedules,
-        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || [], email_log: tables.email_log || [], panels: tables.panels || [], ref_labs: tables.ref_labs || [], outsourced: tables.outsourced || []
+        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || [], email_log: tables.email_log || [], panels: tables.panels || [], ref_labs: tables.ref_labs || [], outsourced: tables.outsourced || [], onlinepay_claims: tables.onlinepay_claims || []
       };
       normalizeSeq(store);
       persist();
