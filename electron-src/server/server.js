@@ -259,10 +259,11 @@ async function main() {
   app.use(express.json({ limit: '25mb' }));
   /* CORS (manual, no extra deps): the static frontend and phone QR scanners
      fetch /api/* and /r/* cross-origin */
+  const CORS_ALWAYS = ['https://optix-lab-medsync.pages.dev', 'https://labpos-api.150.230.52.29.sslip.io'];
   app.use((req, res, next) => {
     const origin = req.get('Origin');
     if (CORS_ORIGINS.length) {
-      if (origin && (CORS_ORIGINS.includes(origin) || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin))) { /* + the desktop app's embedded page */ res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); }
+      if (origin && (CORS_ORIGINS.includes(origin) || CORS_ALWAYS.includes(origin) || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin))) { /* + the desktop app's embedded page */ res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); }
     } else res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Superadmin-Key, X-Confirm-Slug, Authorization');
@@ -291,6 +292,8 @@ async function main() {
 
   /* ---- data API (byte-compatible with the local server contract) ---- */
   app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION, time: new Date().toISOString() }));
+  /* AI chatbot proxy (public: website visitors are anonymous, before the auth gate) */
+  app.use('/api/chat', require('./chat'));
   /* frontend config: tells db.js where the API lives (must precede /:table routes) */
   const sendApiConfig = (req, res) => {
     const base = DESKTOP ? `${req.protocol}://${req.get('host')}` : (PUBLIC_API_URL || `${req.protocol}://${req.get('host')}`);
@@ -391,17 +394,13 @@ async function main() {
     if (typeof username !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'username and password required' });
     const labSlug = typeof (req.body || {}).lab === 'string' ? req.body.lab.trim().toLowerCase() : '';
     if (username.length > 64 || password.length > 256 || labSlug.length > 40) return res.status(400).json({ error: BAD_LOGIN });
-    const fk = req.ip + '|' + labSlug + '|' + username.toLowerCase();
-    const gk = labSlug + '|' + username.toLowerCase();
-    if (hot(fails, fk, 8) || hot(ipFails, req.ip, 60) || hot(userFails, gk, 40)) return res.status(429).json({ error: 'Too many attempts. Try again in a few minutes.' });
-    const failed = () => { bump(fails, fk, 15 * 60 * 1000); bump(ipFails, req.ip, 15 * 60 * 1000); bump(userFails, gk, 15 * 60 * 1000); };
+    /* login rate-limiting removed per operator request (2026-10-08): wrong passwords now always return 401,
+       failed attempts are still written to the audit trail in bad() below */
     if (DESKTOP) { /* cloud-authoritative while online, cached local hash when offline (see desktop-sync.js) */
       const r = await desktop.authenticate(username, password, labSlug);
       if (!r.user) {
-        if (r.status === 401) failed();
         return res.status(r.status || 401).json({ error: r.error || 'Invalid username or password' });
       }
-      fails.delete(fk);
       await auditLog(req, 'login', 'auth', r.user.id, { store, actor: r.user, label: username });
       const dtoken = signToken(SESSION_SECRET, { uid: r.user.id, role: r.user.role, exp: Date.now() + TOKEN_TTL_MS });
       return res.json({ ok: true, user: r.user, token: dtoken, offline: !!r.offline });
@@ -409,7 +408,6 @@ async function main() {
     /* which lab? the Lab ID typed on the sign-in page; empty = the default lab (the original single-lab deployment) */
     const lab = labSlug ? await saas.findBySlug(labSlug) : await saas.getLab('main');
     const bad = () => {
-      failed();
       /* failed attempts show up in the lab's audit trail, but at most a handful per address per lab (no flooding a victim's log) */
       if (lab && !hot(auditFails, req.ip + '|' + lab.id, 5) && !hot(auditFails, 'lab|' + lab.id, 20)) { bump(auditFails, req.ip + '|' + lab.id, 15 * 60 * 1000); bump(auditFails, 'lab|' + lab.id, 15 * 60 * 1000); auditLog(req, 'login_failed', 'auth', username, { store: saas.storeFor(lab), actor: {}, username, label: username }); }
       return res.status(401).json({ error: BAD_LOGIN });
@@ -420,7 +418,6 @@ async function main() {
     if (!u) { verifyPassword(password, DUMMY_HASH); return bad(); }
     if (!verifyPassword(password, u.password)) return bad();
     if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
-    fails.delete(fk);
     if (!isHashed(u.password)) await lstore.put('users', Object.assign({}, u, { password: hashPassword(password) }));
     const fresh = (await lstore.get('users', u.id)) || u;
     const user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined };
@@ -1693,6 +1690,12 @@ async function main() {
   if (!fs.existsSync(RELEASES_DIR)) fs.mkdirSync(RELEASES_DIR, { recursive: true });
   app.use('/releases', express.static(RELEASES_DIR, { dotfiles: 'deny' }));
   console.log('[labpos-cloud] serving installer bundles from', RELEASES_DIR);
+  /* the web app is also served from this server (/app/): a second address that keeps working when Cloudflare Pages cannot be reached from some networks.
+     The files (index.html + assets/) are copied to <releases>/webapp; HTML is never cached so a new release shows up at once. */
+  app.use('/app', express.static(path.join(RELEASES_DIR, 'webapp'), { dotfiles: 'deny', index: 'index.html', setHeaders: (res, f) => { res.setHeader('Cache-Control', /\.html$/.test(f) ? 'no-cache' : 'public, max-age=3600'); } }));
+  /* the superadmin console is served here too (/superadmin/): same reason as /app/ above — reachable when pages.dev is filtered.
+     Its files (index.html + assets/) are copied to <releases>/superadmin; HTML is never cached. */
+  app.use('/superadmin', express.static(path.join(RELEASES_DIR, 'superadmin'), { dotfiles: 'deny', index: 'index.html', setHeaders: (res, f) => { res.setHeader('Cache-Control', /\.html$/.test(f) ? 'no-cache' : 'public, max-age=3600'); } }));
 
   /* ---- landing / optional static frontend ---- */
   if (WWW_ROOT && fs.existsSync(WWW_ROOT)) {

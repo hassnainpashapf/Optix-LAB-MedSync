@@ -9,12 +9,12 @@
 
   /* 6 distinct installer binaries (Windows 11 and Windows 10 64-bit share one) */
   var WIN_OPTS = [
-    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win10-11-x64.exe' },
-    { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win10-x86.exe' },
-    { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win7-8-x64.exe' },
-    { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win7-8-x86.exe' },
-    { os: 'Windows 7',       arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win7-8-x64.exe' },
-    { os: 'Windows 7',       arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win7-8-x86.exe' }
+    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win10-11-x64.exe' },
+    { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win10-x86.exe' },
+    { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win7-8-x64.exe' },
+    { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win7-8-x86.exe' },
+    { os: 'Windows 7',       arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win7-8-x64.exe' },
+    { os: 'Windows 7',       arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win7-8-x86.exe' }
   ];
   var WIN_SIZE = '~100 MB';
 
@@ -47,7 +47,7 @@
     }).join('');
     return '<div class="card dl-card">' +
       '<div class="card-h"><div class="dl-ico">' + ICO.win + '</div>' +
-      '<div><h3>Windows</h3><p class="dl-ver">Windows 7, 8.1, 10, 11 &middot; Version 1.3.1 (cloud sync)</p></div></div>' +
+      '<div><h3>Windows</h3><p class="dl-ver">Windows 7, 8.1, 10, 11 &middot; Version 1.4.0 (cloud sync)</p></div></div>' +
       '<div class="card-b">' +
       '<button type="button" class="btn btn-primary dl-btn dl-win-toggle">' + ICO.dl +
         '<span class="dl-win-toggle-tx">Choose your Windows version</span>' + ICO.chev + '</button>' +
