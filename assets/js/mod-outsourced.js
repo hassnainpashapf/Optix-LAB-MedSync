@@ -252,7 +252,7 @@
     var tabs = [['dash', 'Dashboard'], ['jobs', 'Tests'], ['labs', 'Reference labs']];
     var open = all.filter(function (v) { return v.j.status !== 'received'; }).length;
     var tabsHtml = '<div class="tabs" id="osTabs" style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">' + tabs.map(function (t) { return '<button type="button" class="btn ' + (tab === t[0] ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-tab="' + t[0] + '">' + t[1] + (t[0] === 'jobs' && open ? ' <span class="badge b-pending" style="margin-left:4px">' + open + '</span>' : '') + '</button>'; }).join('') + '</div>';
-    el.innerHTML = tabsHtml + statCards(d) + '<div id="osBody">' + (tab === 'dash' ? dashBody(d) : tab === 'jobs' ? '<div class="card"><div class="card-b">' + jobsHtml(all) + '</div></div>' : '<div class="card"><div class="card-b">' + labsHtml() + '</div></div>') + '</div>';
+    el.innerHTML = statCards(d) + tabsHtml + '<div id="osBody">' + (tab === 'dash' ? dashBody(d) : tab === 'jobs' ? '<div class="card"><div class="card-b">' + jobsHtml(all) + '</div></div>' : '<div class="card"><div class="card-b">' + labsHtml() + '</div></div>') + '</div>';
     el.querySelectorAll('#osTabs [data-tab]').forEach(function (b) { b.addEventListener('click', function () { tab = b.getAttribute('data-tab'); render(); }); });
     if (tab === 'jobs') wireJobs(all); if (tab === 'labs') wireLabs();
   }
