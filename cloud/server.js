@@ -391,17 +391,13 @@ async function main() {
     if (typeof username !== 'string' || typeof password !== 'string') return res.status(400).json({ error: 'username and password required' });
     const labSlug = typeof (req.body || {}).lab === 'string' ? req.body.lab.trim().toLowerCase() : '';
     if (username.length > 64 || password.length > 256 || labSlug.length > 40) return res.status(400).json({ error: BAD_LOGIN });
-    const fk = req.ip + '|' + labSlug + '|' + username.toLowerCase();
-    const gk = labSlug + '|' + username.toLowerCase();
-    if (hot(fails, fk, 8) || hot(ipFails, req.ip, 60) || hot(userFails, gk, 40)) return res.status(429).json({ error: 'Too many attempts. Try again in a few minutes.' });
-    const failed = () => { bump(fails, fk, 15 * 60 * 1000); bump(ipFails, req.ip, 15 * 60 * 1000); bump(userFails, gk, 15 * 60 * 1000); };
+    /* login rate-limiting removed per operator request (2026-10-08): wrong passwords now always return 401,
+       failed attempts are still written to the audit trail in bad() below */
     if (DESKTOP) { /* cloud-authoritative while online, cached local hash when offline (see desktop-sync.js) */
       const r = await desktop.authenticate(username, password, labSlug);
       if (!r.user) {
-        if (r.status === 401) failed();
         return res.status(r.status || 401).json({ error: r.error || 'Invalid username or password' });
       }
-      fails.delete(fk);
       await auditLog(req, 'login', 'auth', r.user.id, { store, actor: r.user, label: username });
       const dtoken = signToken(SESSION_SECRET, { uid: r.user.id, role: r.user.role, exp: Date.now() + TOKEN_TTL_MS });
       return res.json({ ok: true, user: r.user, token: dtoken, offline: !!r.offline });
@@ -409,7 +405,6 @@ async function main() {
     /* which lab? the Lab ID typed on the sign-in page; empty = the default lab (the original single-lab deployment) */
     const lab = labSlug ? await saas.findBySlug(labSlug) : await saas.getLab('main');
     const bad = () => {
-      failed();
       /* failed attempts show up in the lab's audit trail, but at most a handful per address per lab (no flooding a victim's log) */
       if (lab && !hot(auditFails, req.ip + '|' + lab.id, 5) && !hot(auditFails, 'lab|' + lab.id, 20)) { bump(auditFails, req.ip + '|' + lab.id, 15 * 60 * 1000); bump(auditFails, 'lab|' + lab.id, 15 * 60 * 1000); auditLog(req, 'login_failed', 'auth', username, { store: saas.storeFor(lab), actor: {}, username, label: username }); }
       return res.status(401).json({ error: BAD_LOGIN });
@@ -420,7 +415,6 @@ async function main() {
     if (!u) { verifyPassword(password, DUMMY_HASH); return bad(); }
     if (!verifyPassword(password, u.password)) return bad();
     if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
-    fails.delete(fk);
     if (!isHashed(u.password)) await lstore.put('users', Object.assign({}, u, { password: hashPassword(password) }));
     const fresh = (await lstore.get('users', u.id)) || u;
     const user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined };
