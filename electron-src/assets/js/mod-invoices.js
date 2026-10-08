@@ -7,11 +7,11 @@
   /* ---------- dashboard-style stat cards: shared compact CSS now in app.css ---------- */
   var SC_STYLE = '';
   var SC_ICONS = {
-    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
-    cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
-    cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
-    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
-    printer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>'
+    doc: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
+    cash: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
+    cal: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+    clock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>',
+    printer: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>'
   };
   function scIsTech() {
     try {
@@ -1239,19 +1239,24 @@
 
       view.innerHTML =
         '<style>' +
+        '.rcp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;flex-wrap:wrap}' +
+        '.rcp-head h2{margin:0 0 4px;font-size:20px;font-weight:800;color:var(--brand-d);display:flex;align-items:center;gap:8px}' +
+        '.rcp-head h2 svg{width:22px;height:22px;max-width:22px;max-height:22px;flex-shrink:0}' +
+        '.rcp-head p{margin:0;font-size:13px;color:var(--muted)}' +
         '.rcp-layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;align-items:start}' +
         '@media(max-width:980px){.rcp-layout{grid-template-columns:1fr}}' +
         '.rcp-prev-box{position:sticky;top:16px;background:#f8fafc;border:1px solid var(--bd);border-radius:14px;padding:16px;box-shadow:var(--sh-sm)}' +
+        '.rcp-prev-box h3 svg{width:18px;height:18px;max-width:18px;max-height:18px;flex-shrink:0}' +
         '</style>' +
-        '<div class="dsig-head">' +
-          '<div>' +
-            '<h2 style="display:flex;align-items:center;gap:8px">' + SC_ICONS.printer + ' POS Thermal Slip &amp; Counter Center</h2>' +
-            '<p style="color:var(--muted);font-size:13px;margin:2px 0 0">Dedicated 80mm &amp; 58mm Thermal Counter Slips, Patient Tokens, and Direct Thermal Printing for Reception Desks</p>' +
-          '</div>' +
-          '<div style="display:flex;gap:8px;align-items:center">' +
-            '<button class="btn btn-primary" id="rcpPrintAllToday">' + SC_ICONS.printer + ' Print All Today\'s Slips</button>' +
-            '<a class="btn btn-ghost" href="#/invoices">All Invoices</a>' +
-          '</div>' +
+        '<div class="rcp-head">' +
+        '<div>' +
+          '<h2 style="display:flex;align-items:center;gap:8px">' + SC_ICONS.printer + ' POS Thermal Slip &amp; Counter Center</h2>' +
+          '<p style="color:var(--muted);font-size:13px;margin:2px 0 0">Dedicated 80mm &amp; 58mm Thermal Counter Slips, Patient Tokens, and Direct Thermal Printing for Reception Desks</p>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;align-items:center">' +
+          '<button class="btn btn-primary" id="rcpPrintAllToday">' + SC_ICONS.printer + ' Print All Today\'s Slips</button>' +
+          '<a class="btn btn-ghost" href="#/invoices">All Invoices</a>' +
+        '</div>' +
         '</div>' +
         kpiHtml +
         '<div class="rcp-layout">' +
