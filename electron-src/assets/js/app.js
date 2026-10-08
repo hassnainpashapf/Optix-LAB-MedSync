@@ -1259,16 +1259,6 @@
     var s = {}; try { s = DB.get('settings', 'main') || {}; } catch (e) {}
     return { regLocation: s.headOffice || s.address || s.labName || '', destLocation: s.destinationLocation || s.mainLab || s.headOffice || s.address || s.labName || '' };
   };
-  /* One number for a patient and their bill: patient P-0007 -> invoice INV-0007; the same patient's next bill is INV-0007-2, then INV-0007-3 ... */
-  App.invoiceIdFor = function (patientId) {
-    var s = {}; try { s = DB.get('settings', 'main') || {}; } catch (e) {}
-    var pfx = s.invoicePrefix || 'INV', m = /(\d+)$/.exec(String(patientId || ''));
-    var base = pfx + '-' + (m ? m[1] : String(Date.now()).slice(-6)), taken = {};
-    (DB.all('invoices') || []).forEach(function (i) { taken[i.id] = 1; });
-    if (!taken[base]) return base;
-    for (var n = 2; n < 1000; n++) if (!taken[base + '-' + n]) return base + '-' + n;
-    return base + '-' + Date.now();
-  };
   /* Report numbers. LAB # counts every report the lab has made, 01, 02, 03 ... and never starts over; CASE # counts the reports of ONE day and starts at 01
      again every day. Printed as "INV # 57 - 10/2026" (month / year of the registration date) and "P # 03 - 08/10" (day / month).
      New bills store labNo / caseNo; older bills (made before this existed) are numbered by the order they were made. */

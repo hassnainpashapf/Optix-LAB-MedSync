@@ -246,7 +246,7 @@
         createdAt: billAt,
         createdBy: currentUser()
       };
-      var inv = DB.insertAs('invoices', App.invoiceIdFor(state.patient.id), invData) || DB.insert('invoices', invData);
+      var inv = DB.insert('invoices', invData);
       DB.update('invoices', inv.id, { no: inv.id });
       try { App.outsourceSync(inv.id, true); } catch (e) { if (window.console) console.error(e); }
       if (t.paid > 0 && !pn) {

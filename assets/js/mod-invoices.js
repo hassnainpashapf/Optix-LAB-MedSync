@@ -371,7 +371,7 @@
   /* the same two barcodes and QR the report carries: INV # (count, month/year) and P # (count of the day, day/month); the QR holds the invoice and patient details */
   function codesHTML(inv, p) {
     var vn = App.visitNos(inv), s = DB.get('settings', 'main') || {}, bc = App.barcodeHtml;
-    var qrText = [inv.no || inv.id, (p && p.id) || '', s.labName || '', App.d(inv.createdAt)].filter(Boolean).join(' | '), qr = '';
+    var qrText = [inv.no || inv.id, 'Patient ' + String(App.visitNos(inv).cas), (p && p.id) || '', s.labName || '', App.d(inv.createdAt)].filter(Boolean).join(' | '), qr = '';
     try { if (typeof qrcode !== 'undefined') { var q = qrcode(0, 'M'); q.addData(qrText); q.make(); qr = q.createDataURL(4, 4); } } catch (e) { qr = ''; }
     var line = 'font-weight:700;letter-spacing:1px;font-size:11px;margin-top:3px;line-height:1.2;white-space:nowrap;font-family:Arial,sans-serif';
     return '<div style="display:flex;align-items:flex-start;gap:12px;color:#000"><div style="text-align:left">' +
@@ -397,7 +397,7 @@
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:16px">' +
         '<div><div style="font-size:20px;font-weight:800">INVOICE</div>' +
           '<div style="font-size:13.5px;margin-top:6px"><strong>Invoice No:</strong> ' + App.esc(inv.no || inv.id) + '</div>' +
-          '<div style="font-size:13.5px"><strong>Patient No:</strong> ' + App.esc((p && p.id) || '—') + '</div>' +
+          '<div style="font-size:13.5px"><strong>Patient No:</strong> ' + (function () { var n = App.visitNos(inv).cas; return n < 10 ? '0' + n : String(n); })() + ' <span style="color:#666;font-size:12px">(today)</span>' + ((p && p.id) ? ' &nbsp;<span style="color:#666;font-size:12px">ID: ' + App.esc(p.id) + '</span>' : '') + '</div>' +
           '<div style="font-size:13px;color:#555;margin-top:4px">Date: ' + App.dt(inv.createdAt) + '</div>' +
           '<div style="font-size:13px">Status: <strong>' + inv.status.toUpperCase() + '</strong></div></div>' +
         codesHTML(inv, p) +

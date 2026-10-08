@@ -353,7 +353,7 @@
               subtotal: bTotal, discount: 0, total: bTotal, paid: pnl ? bTotal : 0, due: pnl ? 0 : bTotal,
               status: pnl ? 'paid' : 'unpaid', panelId: pnl ? pnl.id : null, regLocation: regLoc, destLocation: destLoc, reference: refVal, createdAt: regISO, createdBy: ptUser()
             };
-            var inv = DB.insertAs('invoices', App.invoiceIdFor(np.id), invData) || DB.insert('invoices', invData);
+            var inv = DB.insert('invoices', invData);
             DB.update('invoices', inv.id, { no: inv.id });
             try { App.outsourceSync(inv.id, true); } catch (e) { if (window.console) console.error(e); }
             items.forEach(function (l) {
