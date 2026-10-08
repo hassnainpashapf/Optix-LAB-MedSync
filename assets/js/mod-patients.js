@@ -1,4 +1,4 @@
-/* Optix Medical Science — Patients module (Agent 7)
+/* Optix Medical Sync — Patients module (Agent 7)
    Routes: #/patients (list + search + add) and #/patient/:id (profile + history + edit/delete).
    Depends on: window.DB, window.App (see SPEC.md). Touches no other files. */
 (function () {

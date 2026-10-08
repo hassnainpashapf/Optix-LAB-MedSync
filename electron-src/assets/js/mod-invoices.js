@@ -1,4 +1,4 @@
-/* Optix Medical Science — Invoices & Dues module
+/* Optix Medical Sync — Invoices & Dues module
    Routes: #/invoices, #/invoice/:id, #/dues
    Depends on: DB (db.js), App (app.js) as specified in SPEC.md */
 (function () {

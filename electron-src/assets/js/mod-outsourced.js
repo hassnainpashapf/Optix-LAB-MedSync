@@ -1,4 +1,4 @@
-/* Optix Medical Science — Outsourced tests (#/outsourced): tests the lab sends to another (reference) lab.
+/* Optix Medical Sync — Outsourced tests (#/outsourced): tests the lab sends to another (reference) lab.
    Its own dashboard: what still has to be sent, what is out at the reference lab (and what is late), what came back, what it costs and what is owed to
    each reference lab. A job is made automatically for every bill that contains an outsourced test (App.outsourceSync). */
 (function () {

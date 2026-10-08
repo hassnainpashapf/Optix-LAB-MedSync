@@ -1,4 +1,4 @@
-/* Optix Medical Science — Stock (#/stock): reagents, kits and consumables.
+/* Optix Medical Sync — Stock (#/stock): reagents, kits and consumables.
    Receive stock (lot + expiry), it is used up automatically when a test result is saved (Tests -> edit -> "Stock used per test"),
    record waste / corrections, and get alerts for low stock, expiring and expired lots. All numbers come from the movement log (App.stockState). */
 (function () {

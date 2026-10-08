@@ -1,4 +1,4 @@
-/* Optix Medical Science — Patient & doctor dashboard (#/portal, #/portal/<lab-id>)
+/* Optix Medical Sync — Patient & doctor dashboard (#/portal, #/portal/<lab-id>)
    Works like a small app: sign in once with a mobile number + 6-digit code (optionally "keep me signed in on this phone"), then
    a bottom bar: Home / Reports (patient) or Home / Patients / Commission (doctor). Public page: no staff login, no staff data,
    it only talks to /api/portal/*. */

@@ -1,4 +1,4 @@
-/* Optix Medical Science — WhatsApp Center (#/whatsapp, admin + reception)
+/* Optix Medical Sync — WhatsApp Center (#/whatsapp, admin + reception)
    Ready-to-send reports (one click / bulk), message log with retry, editable message templates + sending rules.
    Sending logic lives in mod-results.js (App.wa); this page only drives it. */
 (function () {

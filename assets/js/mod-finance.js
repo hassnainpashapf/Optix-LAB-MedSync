@@ -1,5 +1,5 @@
 /* ============================================================
-   Optix Medical Science — Finance module: Daily Cash Closing + Profit & Loss
+   Optix Medical Sync — Finance module: Daily Cash Closing + Profit & Loss
    Routes: #/finance (closing tab, admin + reception), #/finance/profit (admin only)
    Depends on: window.DB, window.App. ES5-style (no ?. / ?? / replaceAll).
    ============================================================ */
@@ -662,7 +662,7 @@
       var hr = '<div style="border-top:1px dashed #000;margin:5px 0"></div>';
       var html = '<style>@page{size:80mm auto;margin:2mm}body{padding:0!important;font-size:11px}</style>' +
         '<div style="width:72mm;margin:0 auto;font-family:\'Courier New\',monospace;font-size:11px;line-height:1.45;color:#000">' +
-        '<div style="text-align:center"><b style="font-size:14px">' + esc(s.labName || 'Optix Medical Science') + '</b><br>' + esc(s.phone || '') + '</div>' + hr +
+        '<div style="text-align:center"><b style="font-size:14px">' + esc(s.labName || 'Optix Medical Sync') + '</b><br>' + esc(s.phone || '') + '</div>' + hr +
         '<div style="text-align:center;font-weight:bold">DAILY CASH CLOSING</div>' +
         '<div style="text-align:center">' + esc(fmtDay(c.date)) + '</div>' +
         '<div style="text-align:center">' + esc(status) + '</div>' + hr +

@@ -1,4 +1,4 @@
-/* Optix Medical Science — app framework: hash router, auth, shell, shared UI helpers.
+/* Optix Medical Sync — app framework: hash router, auth, shell, shared UI helpers.
    Exposes window.App. Loaded after db.js, before mod-*.js. */
 (function () {
   'use strict';
@@ -336,7 +336,7 @@
       '<style>' + css + '</style></head><body>' +
       (noHeader ? '' :
       '<div class="ph">' + (s.logo ? '<img class="ph-logo" src="' + esc(s.logo) + '" alt="Lab logo">' : '') +
-      '<h1' + (/^#[0-9a-fA-F]{6}$/.test(s.labNameColor || '') ? ' style="color:' + s.labNameColor + '"' : '') + '>' + esc(s.labName || 'Optix Medical Science') + '</h1>' +
+      '<h1' + (/^#[0-9a-fA-F]{6}$/.test(s.labNameColor || '') ? ' style="color:' + s.labNameColor + '"' : '') + '>' + esc(s.labName || 'Optix Medical Sync') + '</h1>' +
       '<div class="tag">' + esc(s.tagline || '') + '</div>' +
       '<div class="addr">' + esc(s.address || '') + ' &nbsp;•&nbsp; ' + esc(s.phone || '') +
       (s.email ? ' &nbsp;•&nbsp; ' + esc(s.email) : '') + '</div></div>') +
@@ -591,7 +591,7 @@
     var w = null;
     try { w = JSON.parse(sessionStorage.getItem('labpos_welcome') || 'null'); sessionStorage.removeItem('labpos_welcome'); } catch (e) {}
     if (!w) return;
-    modal('Welcome to Optix Medical Science 🎉',
+    modal('Welcome to Optix Medical Sync 🎉',
       '<p style="margin:0 0 12px">Your lab <b>' + esc(w.name || '') + '</b> is ready. You have a <b>' + (w.days || 14) + '-day free trial</b> with everything unlocked.</p>' +
       '<div style="background:#eef3fb;border:1px solid #cdd9f0;border-radius:12px;padding:12px 14px;margin-bottom:12px"><div class="muted" style="font-size:12px">Your Lab ID &mdash; your staff need it to sign in</div><div style="font-size:22px;font-weight:800;letter-spacing:.02em;color:#131845">' + esc(w.slug) + '</div></div>' +
       '<ol style="margin:0 0 4px 18px;padding:0;line-height:1.9;font-size:14px"><li>Open <b>Settings</b> and add your lab logo, address and phone</li><li>Review the <b>Tests</b> list (5000+ test catalog can be imported)</li><li>Add your <b>staff</b> (reception / technician) in Settings &rarr; Users</li><li>Create your first <b>patient &amp; invoice</b></li></ol>' +
@@ -676,7 +676,7 @@
     BOTTOM.forEach(function (k) { if (byKey[k]) items += itemHtml(byKey[k]); });
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
-      '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Science') + '</b><small>Diagnostic Lab</small></span>' +
+      '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Sync') + '</b><small>Medical Management</small></span>' +
       '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
       '<nav class="nav">' + items + '</nav>' +
       '<div class="side-foot"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a>' +

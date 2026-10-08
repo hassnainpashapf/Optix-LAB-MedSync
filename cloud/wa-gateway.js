@@ -69,7 +69,7 @@ function create({ raw, log }) {
     try {
       const b = await lib(); S.auth = S.auth || await dbAuth(labId);
       let version; try { version = (await b.fetchLatestBaileysVersion()).version; } catch (e) { version = undefined; }
-      const sock = b.default({ version, auth: S.auth.state, logger: pino({ level: 'silent' }), printQRInTerminal: false, browser: ['Optix Medical Science', 'Chrome', '1.0'], markOnlineOnConnect: false, syncFullHistory: false, generateHighQualityLinkPreview: false });
+      const sock = b.default({ version, auth: S.auth.state, logger: pino({ level: 'silent' }), printQRInTerminal: false, browser: ['Optix Medical Sync', 'Chrome', '1.0'], markOnlineOnConnect: false, syncFullHistory: false, generateHighQualityLinkPreview: false });
       S.sock = sock;
       sock.ev.on('creds.update', () => S.auth.saveCreds().catch(() => {}));
       /* WhatsApp's "login complete" message: show CONNECTED right away (the library waits for one more reply that can be slow) */

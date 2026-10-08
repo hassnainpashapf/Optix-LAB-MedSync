@@ -1,4 +1,4 @@
-/* Optix Medical Science — Audit Log (#/audit, admin only)
+/* Optix Medical Sync — Audit Log (#/audit, admin only)
    Who created / changed / deleted what and when (written by the server, cannot be edited or deleted from the app).
    Filters: date range, user, area, action, search. Click a row for the field-by-field before/after. CSV export. */
 (function () {

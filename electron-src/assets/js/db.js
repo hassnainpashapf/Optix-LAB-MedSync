@@ -1,4 +1,4 @@
-/* Optix Medical Science — DB layer (localStorage). Exposes window.DB. See SPEC.md for schema.
+/* Optix Medical Sync — DB layer (localStorage). Exposes window.DB. See SPEC.md for schema.
    MULTI-TENANT: each lab gets its own isolated store under 'labpos_db_' + labId.
    The registry 'labpos_labs_v1' lists all labs. Switch stores with DB.useLab(labId). */
 (function () {
@@ -39,7 +39,7 @@
     if (reg) return reg;
     var legacy = null;
     try { legacy = localStorage.getItem(LEGACY_KEY); } catch (e) {}
-    var labName = 'Optix Medical Science';
+    var labName = 'Optix Medical Sync';
     if (legacy) {
       try {
         var s = JSON.parse(legacy);
@@ -237,7 +237,7 @@
       seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0, samples: 0 },
       settings: {
         id: 'main',
-        labName: opts.labName || 'Optix Medical Science',
+        labName: opts.labName || 'Optix Medical Sync',
         tagline: 'Accurate • Fast • Trusted',
         address: 'Main Road, Gulberg, Lahore',
         phone: '0300-1234567',
@@ -528,7 +528,7 @@
   function applyMigrations() {
     /* rebrand: existing installs seeded with the old default name */
     if (store && store.settings && (store.settings.labName === 'City Blood Lab' || store.settings.labName === 'Optxic LAB')) {
-      store.settings.labName = 'Optix Medical Science'; save(store);
+      store.settings.labName = 'Optix Medical Sync'; save(store);
     }
     /* existing installs lack the WhatsApp config object */
     if (store && store.settings && !store.settings.whatsapp) {

@@ -1,4 +1,4 @@
-// Optix Medical Science — SaaS landing helpers (pricing, trial days, support contact).
+// Optix Medical Sync — SaaS landing helpers (pricing, trial days, support contact).
 // Vanilla JS. The page always renders with built-in numbers; live prices from the
 // API replace them in place if/when they arrive (4 s timeout, failures are silent).
 (function () {
@@ -85,7 +85,7 @@
     var wa = digits(i.supportWhatsapp);
     if (wa.length >= 10) return { href: 'https://wa.me/' + wa, external: true };
     if (/^[^\s@]+@[^\s@]+$/.test(i.supportEmail || '')) {
-      return { href: 'mailto:' + i.supportEmail + '?subject=' + encodeURIComponent('Optix Medical Science Enterprise plan'), external: false };
+      return { href: 'mailto:' + i.supportEmail + '?subject=' + encodeURIComponent('Optix Medical Sync Enterprise plan'), external: false };
     }
     var ph = digits(i.supportPhone);
     if (ph.length >= 10) return { href: 'tel:' + ph, external: false };

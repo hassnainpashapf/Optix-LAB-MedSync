@@ -1,4 +1,4 @@
-/* Optix Medical Science — Profile module (#/profile)
+/* Optix Medical Sync — Profile module (#/profile)
    Personal account settings: photo, name, username, email, phone, address, password. */
 (function () {
   'use strict';

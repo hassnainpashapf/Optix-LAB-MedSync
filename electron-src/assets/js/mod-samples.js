@@ -1,4 +1,4 @@
-/* Optix Medical Science — Samples module (route: #/samples)
+/* Optix Medical Sync — Samples module (route: #/samples)
    Barcode scan -> status workflow, label printing (50x25 mm thermal / A4 3x8), reject + re-collect.
    Data helpers live in samples-core.js (window.Samples); this file is the UI (lazy loaded). */
 (function () {
@@ -144,7 +144,7 @@
     '</div>';
   }
   function labelsHTML(list, fmt, copies) {
-    var labName = settings().labName || 'Optix Medical Science';
+    var labName = settings().labName || 'Optix Medical Sync';
     var a4 = fmt === 'a4', items = [];
     list.forEach(function (s) { for (var i = 0; i < copies; i++) items.push(oneLabel(s, a4, labName)); });
     if (!a4) return '<style>' + LABEL_CSS + '</style>' + items.join('');

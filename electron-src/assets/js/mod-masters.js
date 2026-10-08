@@ -1,5 +1,5 @@
 /* ============================================================
-   Optix Medical Science — Masters module (Agent 8)
+   Optix Medical Sync — Masters module (Agent 8)
    Routes: #/tests (test catalog), #/doctors (referral doctors)
    Depends on: window.DB, window.App (see SPEC.md)
    ============================================================ */

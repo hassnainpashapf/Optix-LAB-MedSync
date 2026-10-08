@@ -1,4 +1,4 @@
-/* Optix Medical Science — Doctor referral statement (opened from Doctors -> "Statement" / "Monthly statements").
+/* Optix Medical Sync — Doctor referral statement (opened from Doctors -> "Statement" / "Monthly statements").
    For a month: every invoice a doctor referred, the amount billed, the commission it earns (the doctor's commission % of the invoice total, the
    same rule as the Doctors page), what has already been paid out and what is still due. Print, PDF, WhatsApp (with a link to the PDF) and CSV. */
 (function () {

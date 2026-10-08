@@ -1,4 +1,4 @@
-/* Optix Medical Science — Dashboard module (#/dashboard)
+/* Optix Medical Sync — Dashboard module (#/dashboard)
    Layout: stat cards row, quick-access cards, two big 7-day graph cards
    (collections vs expenses / tests & invoices), Recent Patients, Tests in Progress. */
 (function () {

@@ -149,7 +149,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!phoneOk(phone)) return setErr(ctErr, 'Please enter a valid phone number (10–13 digits).');
         if (msg.length < 5) return setErr(ctErr, 'Please enter your message (min 5 characters).');
         var lines = [
-          'Hello Optix Medical Science!',
+          'Hello Optix Medical Sync!',
           'Name: ' + name,
           'Phone: ' + phone,
           'Message: ' + msg
