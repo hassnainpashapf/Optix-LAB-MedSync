@@ -59,7 +59,15 @@
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
     { key: 'finance',   label: 'Cash & Profit', icon: 'finance', route: '#/finance', color: '#0ea5a4',
       sub: [{ key: 'closing', label: 'Daily Cash Closing', route: '#/finance' }, { key: 'profit', label: 'Profit & Loss', route: '#/finance/profit', roles: ['admin'] }] },
-    { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports',   color: '#6366f1' },
+    { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports',   color: '#6366f1',
+      sub: [
+        { key: 'all',      label: 'All Reports',      route: '#/reports' },
+        { key: 'tests',    label: 'Test Reports',     route: '#/reports/tests' },
+        { key: 'finance',  label: 'Finance Reports',  route: '#/reports/finance' },
+        { key: 'dues',     label: 'Dues Aging',       route: '#/reports/dues' },
+        { key: 'patients', label: 'Patient Reports',  route: '#/reports/patients' },
+        { key: 'labs',     label: 'Lab Comparison',   route: '#/reports/labs' }
+      ] },
     { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads', color: '#06b6d4' },
     { key: 'email',     label: 'Email',      icon: 'mail',      route: '#/email',     color: '#0ea5e9', cloudOnly: true,
       sub: [{ key: 'ready', label: 'Ready to send', route: '#/email' }, { key: 'log', label: 'Email log', route: '#/email/log' }, { key: 'tpl', label: 'Templates & rules', route: '#/email/templates', roles: ['admin'] }] },
@@ -703,11 +711,11 @@
     }
     /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
        A new page only needs its key added to a folder below (a key that is in no folder simply shows at the bottom). */
-    var TOP = ['dashboard', 'patients', 'samples', 'results', 'invoices'];
+    var TOP = ['dashboard', 'patients', 'samples', 'results', 'invoices', 'reports'];
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['tests', 'outsourced', 'stock', 'doctors'] },
       { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance'] },
-      { id: 'ins', label: 'Insights', icon: 'chart', keys: ['reports', 'audit'] },
+      { id: 'ins', label: 'Insights', icon: 'shield', keys: ['audit'] },
       { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'email', 'downloads'] },
       { id: 'acc', label: 'Account', icon: 'gear', keys: ['subscription'] } /* one page = shown as the page itself, not a folder */
     ];
@@ -854,7 +862,8 @@
     /* sub-menu: highlight the child that matches the current page and keep its group open */
     var h = (location.hash || '').split('?')[0], subs = document.querySelectorAll('.nav-sub-it');
     for (var j = 0; j < subs.length; j++) {
-      var on = subs[j].getAttribute('data-href') === h;
+      var dh = subs[j].getAttribute('data-href');
+      var on = (dh === h) || (dh === '#/reports' && (h === '#/reports' || h === '#/reports/all'));
       subs[j].classList.toggle('on', on);
     }
     /* folders: the one holding the current page opens (the others keep whatever the user chose) */
@@ -892,6 +901,9 @@
         if (o === g) return; o.classList.remove('open');
         var op = o.querySelector('.nav-par'); if (op) op.setAttribute('aria-expanded', 'false');
       });
+      if (b.getAttribute('data-nav') === 'reports' && (location.hash || '').indexOf('#/reports') === -1) {
+        location.hash = '#/reports';
+      }
     }
   });
 

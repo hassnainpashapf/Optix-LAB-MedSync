@@ -294,10 +294,11 @@
 
     /* ---- report type visibility flags ---- */
     var showAll = rep.type === 'all';
-    var showTests = showAll || rep.type === 'tests';
-    var showFinance = showAll || rep.type === 'finance';
-    var showDues = showAll || rep.type === 'dues';
-    var showPatients = showAll || rep.type === 'patients';
+    var showTests = rep.type === 'tests';
+    var showFinance = rep.type === 'finance';
+    var showDues = rep.type === 'dues';
+    var showPatients = rep.type === 'patients';
+    var showLabs = rep.type === 'labs';
 
     /* ---- this-month snapshot row (real data) ---- */
     var mFrom = App.today().slice(0, 8) + '01', mTo = App.today();
@@ -1107,8 +1108,20 @@
         + kpi('t-green', TREND, 'Top Conducted', App.esc(topTest.name || topTest.code), topTest.count + ' tests')
         + kpi('t-amber', USERS, 'Doctor Referrals', dwRows.length, 'referring doctors')
         + '</div>';
+    } else if (rep.type === 'labs') {
+      var totalLabsCount = labCmpRows.length;
+      var totalLabBills = labCmpRows.reduce(function (s, r) { return s + r.bills; }, 0);
+      var totalLabBilled = labCmpRows.reduce(function (s, r) { return s + r.billed; }, 0);
+      var totalLabColl = labCmpRows.reduce(function (s, r) { return s + r.collected; }, 0);
+      var topLab = labCmpRows.slice().sort(function (a, b) { return b.net - a.net; })[0];
+      repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
+        + kpi('t-navy', USERS, 'Total Branches', totalLabsCount, 'registered labs')
+        + kpi('t-blue', RECEIPT, 'Combined Bills', totalLabBills, App.money(totalLabBilled) + ' billed')
+        + kpi('t-green', CASH, 'Total Collected', App.money(totalLabColl), 'across all labs')
+        + kpi('t-amber', TREND, 'Top Branch', App.esc(topLab ? topLab.name : '—'), topLab ? (App.money(topLab.net) + ' net') : 'no data')
+        + '</div>';
     } else {
-      /* all or finance or labs */
+      /* all or finance */
       repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
         + kpi('t-navy', RECEIPT, 'Total Billed', App.money(billed), invoices.length + ' bills · ' + testsCount + ' tests')
         + kpi('t-green', CASH, 'Collected', App.money(collected), payments.length + ' payments received')
@@ -1120,13 +1133,45 @@
     /* report type selector: always visible at the top of the page */
     var typeCardHtml = ''
       + '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-      + '<span style="font-weight:700;margin-right:8px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:0.05em">Report Type:</span>'
+      + '<span style="font-weight:700;margin-right:8px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:0.05em">Report Dashboard:</span>'
       + ['all', 'tests', 'finance', 'dues', 'patients', 'labs'].map(function (t) {
-          var lbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports', labs: 'Lab Comparison' }[t];
+          var lbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues Aging', patients: 'Patient Reports', labs: 'Lab Comparison' }[t];
           var active = rep.type === t;
-          return '<button type="button" class="btn ' + (active ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-reptype="' + t + '" style="font-weight:600">' + lbl + '</button>';
+          var rUrl = t === 'all' ? '#/reports' : '#/reports/' + t;
+          return '<a href="' + rUrl + '" class="btn ' + (active ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-reptype="' + t + '" style="font-weight:600">' + lbl + '</a>';
         }).join('')
       + '<a class="btn btn-sm btn-ghost" id="repFinance" href="#/finance/profit" style="margin-left:auto;color:var(--brand-d);font-weight:600">Profit &amp; Loss / Cash Closing &rarr;</a>'
+      + '</div></div>';
+
+    var allOverviewHtml = ''
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
+      +   '<div class="card"><div class="card-h" style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Top Conducted Tests</h3><a href="#/reports/tests" class="btn btn-ghost btn-sm" style="font-weight:600">Full Test Reports &rarr;</a></div><div class="card-b">'
+      +     '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+      +     top5Html
+      +     '</tbody></table></div>'
+      +   '</div></div>'
+      +   '<div class="card"><div class="card-h" style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Dues Aging Snapshot</h3><a href="#/reports/dues" class="btn btn-ghost btn-sm" style="font-weight:600">Full Dues &rarr;</a></div><div class="card-b">'
+      +     '<div class="kpi-grid" style="grid-template-columns:1fr 1fr;gap:10px;margin-bottom:0">'
+      +       kpi('t-navy', CLOCK, buckets[0].label, App.money(buckets[0].total), buckets[0].count + ' bill(s)')
+      +       kpi('t-amber', ALERT, buckets[1].label, App.money(buckets[1].total), buckets[1].count + ' bill(s)')
+      +       kpi('t-purple', ALERT, buckets[2].label, App.money(buckets[2].total), buckets[2].count + ' bill(s)')
+      +       kpi('t-red', X_ICON, buckets[3].label, App.money(buckets[3].total), buckets[3].count + ' bill(s)')
+      +     '</div>'
+      +   '</div></div>'
+      + '</div>'
+      + '<div class="card" style="margin-bottom:18px"><div class="card-h" style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0">Patient Activity Overview</h3><a href="#/reports/patients" class="btn btn-ghost btn-sm" style="font-weight:600">Patient Reports Archive &rarr;</a></div><div class="card-b">'
+      +   '<div class="kpi-grid" style="margin-bottom:0">'
+      +     kpi('t-navy', USERS, 'Total Patients', allPatients.length, 'all registered')
+      +     kpi('t-green', USERS, 'New This Month', mNewCount, 'registered this month')
+      +     kpi('t-amber', USERS, 'New in Period', periodNew, 'first visit in period')
+      +     kpi('t-purple', USERS, 'Returning in Period', periodReturning, 'repeat visits in period')
+      +   '</div>'
+      + '</div></div>';
+
+    var finCallout = ''
+      + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
+      + '<span style="font-size:13.5px;color:var(--muted)">Need detailed shift-wise cash balance or annual income statement?</span>'
+      + '<div style="display:flex;gap:10px"><a href="#/finance" class="btn btn-ghost btn-sm" style="font-weight:600">Daily Cash Closing &rarr;</a><a href="#/finance/profit" class="btn btn-primary btn-sm" style="font-weight:600">Profit &amp; Loss Statement &rarr;</a></div>'
       + '</div></div>';
 
     var repChosen = true;
@@ -1135,12 +1180,13 @@
       + typeCardHtml
       + repKpis
       + filterCard
-      + cmpCard
-      + repSlotSchedules + repSlotBuilder + repSlotTemplates + repSlotLabs
-      + (showPatients ? finCard : '')
-      + (showFinance ? finSumCard : '')
+      + ((showAll || showFinance) ? cmpCard : '')
+      + repSlotSchedules + repSlotBuilder + ((showAll || showFinance) ? repSlotTemplates : '')
+      + (showAll ? (finSumCard + allOverviewHtml) : '')
+      + (showFinance ? (finSumCard + finCallout) : '')
       + (showDues ? duesCard : '')
-      + (showPatients ? patCard : '')
+      + (showPatients ? (patCard + finCard) : '')
+      + (showLabs ? labsCardHtml : '')
       + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
       + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
       + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
@@ -1149,8 +1195,8 @@
       + '<div class="card"><div class="card-h"><h3 style="margin:0">Doctor-wise Referrals</h3></div><div class="card-b">'
       + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
       + dwRowsHtml
-      + '</tbody></table></div></div></div></div>' : '')
-      + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
+      + '</tbody></table></div></div></div></div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
       + '<div class="card"><div class="card-h"><h3 style="margin:0">Revenue by Test Category</h3></div><div class="card-b">'
       + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Category</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
       + catRowsHtml
@@ -1163,9 +1209,13 @@
     document.getElementById('view').innerHTML = html;
     admCountUp();
 
-    /* report type selector: rendered in both the empty and chosen states */
+    /* report type selector: route hash navigation */
     document.querySelectorAll('[data-reptype]').forEach(function (b) {
-      b.addEventListener('click', function () { rep.type = b.getAttribute('data-reptype'); renderReports(); });
+      b.addEventListener('click', function (e) {
+        e.preventDefault();
+        var t = b.getAttribute('data-reptype');
+        location.hash = t === 'all' ? '#/reports' : '#/reports/' + t;
+      });
     });
 
     /* multi-lab comparison: own CSV export button inside the labs card */
@@ -1198,16 +1248,16 @@
 
     /* the controls below only exist after a report type is explicitly chosen */
     if (repChosen) {
-    document.getElementById('repFrom').addEventListener('change', function (e) { rep.from = e.target.value; rep.preset = 'custom'; renderReports(); });
-    document.getElementById('repTo').addEventListener('change', function (e) { rep.to = e.target.value; rep.preset = 'custom'; renderReports(); });
+    var rfFrom = document.getElementById('repFrom'); if (rfFrom) rfFrom.addEventListener('change', function (e) { rep.from = e.target.value; rep.preset = 'custom'; renderReports(); });
+    var rfTo = document.getElementById('repTo'); if (rfTo) rfTo.addEventListener('change', function (e) { rep.to = e.target.value; rep.preset = 'custom'; renderReports(); });
     /* report templates (worker 8) */
-    document.getElementById('tplApply').addEventListener('click', repTplApply);
-    document.getElementById('tplDel').addEventListener('click', repTplDel);
-    document.getElementById('tplSave').addEventListener('click', repTplSave);
+    var tplApp = document.getElementById('tplApply'); if (tplApp) tplApp.addEventListener('click', repTplApply);
+    var tplDl = document.getElementById('tplDel'); if (tplDl) tplDl.addEventListener('click', repTplDel);
+    var tplSv = document.getElementById('tplSave'); if (tplSv) tplSv.addEventListener('click', repTplSave);
     document.querySelectorAll('[data-preset]').forEach(function (b) {
       b.addEventListener('click', function () { setPreset(b.getAttribute('data-preset')); });
     });
-    document.getElementById('repBuilder').addEventListener('click', function () { openBuilder(); });
+    var rBld = document.getElementById('repBuilder'); if (rBld) rBld.addEventListener('click', function () { openBuilder(); });
     document.getElementById('repCsv').addEventListener('click', function () {
       try {
         var L = [];
@@ -1314,7 +1364,13 @@
     } /* end if (repChosen) */
   }
 
-  App.route('#/reports', renderReports);
+  App.route('#/reports', function () { rep.type = 'all'; renderReports(); });
+  App.route('#/reports/:tab', function (p) {
+    var valid = ['all', 'tests', 'finance', 'dues', 'patients', 'labs'];
+    var tab = (p && p.tab) ? p.tab.toLowerCase() : 'all';
+    rep.type = valid.indexOf(tab) >= 0 ? tab : 'all';
+    renderReports();
+  });
 
   /* ============================================================
      SETTINGS  (#/settings) — admin only
