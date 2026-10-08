@@ -108,6 +108,7 @@
     '.smp-lbl .l-bc{margin-top:.5mm;text-align:center;line-height:0;flex:none}' +
     '.smp-lbl .l-bc svg{display:inline-block}' +
     '.smp-lbl .l-foot{display:flex;justify-content:space-between;align-items:baseline;gap:2mm;margin-top:.35mm;line-height:1.1}' +
+    '.smp-lbl .l-tube{font-weight:800;border:1px solid #000;border-radius:2px;padding:0 1.2mm;font-size:5.4pt;line-height:1.1;white-space:nowrap}' +
     '.smp-lbl .l-code{font-family:"Courier New",monospace;font-size:7.2pt;font-weight:800;letter-spacing:.2px}' +
     '.smp-lbl .l-date{font-size:5.4pt;white-space:nowrap}' +
     /* A4 sheet cells are larger: scale the same layout up */
@@ -118,6 +119,18 @@
     '.smp-sheet{display:grid;grid-template-columns:repeat(3,66.6mm);grid-auto-rows:35.9mm;page-break-after:always;break-after:page;width:199.8mm}' +
     '.smp-sheet:last-child{page-break-after:auto;break-after:auto}';
 
+  function tubeTag(tb) {
+    if (!tb) return 'Sample';
+    var t = String(tb).toLowerCase();
+    if (t.indexOf('edta') >= 0 || t.indexOf('lavender') >= 0 || t.indexOf('purple') >= 0) return 'EDTA (Purple)';
+    if (t.indexOf('serum') >= 0 || t.indexOf('red') >= 0 || t.indexOf('gold') >= 0) return 'Serum (Red)';
+    if (t.indexOf('fluoride') >= 0 || t.indexOf('grey') >= 0 || t.indexOf('gray') >= 0 || t.indexOf('sugar') >= 0) return 'Fluoride (Grey)';
+    if (t.indexOf('citrate') >= 0 || t.indexOf('blue') >= 0) return 'Citrate (Blue)';
+    if (t.indexOf('urine') >= 0) return 'Urine';
+    if (t.indexOf('stool') >= 0) return 'Stool';
+    if (t.indexOf('swab') >= 0) return 'Swab';
+    return tb;
+  }
   function testsLine(names, maxChars) {
     var out = '', used = 0;
     for (var i = 0; i < names.length; i++) {
@@ -131,13 +144,16 @@
     var p = null;
     try { p = s.patientId ? DB.get('patients', s.patientId) : null; } catch (e) {}
     var name = p ? p.name : (s.patientName || 'Walk-in');
+    var mrNo = p && p.id ? p.id : (s.patientId || '');
+    var invNo = s.invoiceNo || s.invoiceId || '';
+    var subId = (mrNo ? 'MR: ' + mrNo : '') + (mrNo && invNo ? ' · ' : '') + (invNo ? invNo : (labName || ''));
     var maxPx = a4 ? 62 : 46.4;                                  /* printable width in mm */
     var mods = App.barcodeModules(s.barcode, 4);
     var modMm = Math.min(a4 ? 0.3 : 0.25, maxPx / mods);        /* 0.25 mm = exactly 2 dots on a 203 dpi thermal printer */
     var svg = App.barcodeSvg(s.barcode, { height: 10, quiet: 4, width: (mods * modMm).toFixed(2) + 'mm', cssHeight: (a4 ? 12 : 8.2) + 'mm' });
     return '<div class="smp-lbl' + (a4 ? ' l-a4' : '') + '">' +
       '<div class="l-top"><span class="l-name">' + esc(name) + '</span><span class="l-as">' + esc(patientLine(p)) + '</span></div>' +
-      '<div class="l-sub"><span>' + esc(labName) + '</span><b>' + esc(s.tube) + '</b></div>' +
+      '<div class="l-sub"><span style="font-weight:700">' + esc(subId) + '</span><b class="l-tube">' + esc(tubeTag(s.tube)) + '</b></div>' +
       '<div class="l-tests">' + esc(testsLine(s.testNames || [], a4 ? 110 : 80)) + '</div>' +
       '<div class="l-bc">' + svg + '</div>' +
       '<div class="l-foot"><span class="l-code">' + esc(s.barcode) + '</span><span class="l-date">' + esc(shortStamp(s.collectedAt || s.createdAt)) + '</span></div>' +
@@ -603,6 +619,392 @@
     if (!isTouch()) scan.focus();
   }
 
+  function tubeBadge(tb) {
+    var t = String(tb || '').toLowerCase();
+    var bg = '#f3f4f6', fg = '#374151', bd = '#e5e7eb', dot = '#9ca3af';
+    if (t.indexOf('edta') >= 0 || t.indexOf('purple') >= 0 || t.indexOf('lavender') >= 0) {
+      bg = '#f3e8ff'; fg = '#7e22ce'; bd = '#d8b4fe'; dot = '#9333ea';
+    } else if (t.indexOf('serum') >= 0 || t.indexOf('red') >= 0 || t.indexOf('gold') >= 0) {
+      bg = '#fee2e2'; fg = '#b91c1c'; bd = '#fca5a5'; dot = '#dc2626';
+    } else if (t.indexOf('fluoride') >= 0 || t.indexOf('grey') >= 0 || t.indexOf('gray') >= 0) {
+      bg = '#f1f5f9'; fg = '#475569'; bd = '#cbd5e1'; dot = '#64748b';
+    } else if (t.indexOf('citrate') >= 0 || t.indexOf('blue') >= 0) {
+      bg = '#e0f2fe'; fg = '#0369a1'; bd = '#7dd3fc'; dot = '#0284c7';
+    } else if (t.indexOf('urine') >= 0) {
+      bg = '#fef9c3'; fg = '#a16207'; bd = '#fde047'; dot = '#ca8a04';
+    } else if (t.indexOf('heparin') >= 0 || t.indexOf('green') >= 0) {
+      bg = '#dcfce7'; fg = '#15803d'; bd = '#86efac'; dot = '#16a34a';
+    }
+    return '<span style="display:inline-flex;align-items:center;gap:5px;background:' + bg + ';color:' + fg + ';border:1px solid ' + bd + ';border-radius:999px;padding:2px 8px;font-size:11.5px;font-weight:700;white-space:nowrap"><span style="width:7px;height:7px;border-radius:50%;background:' + dot + '"></span>' + esc(tubeTag(tb)) + '</span>';
+  }
+
+  /* ==========================================================================
+     DEDICATED DASHBOARD: TUBE STICKERS & BARCODE CENTER (#/samples/stickers)
+     Direct 50x25mm Thermal Label Printing & Batch Specimen Barcodes
+     ========================================================================== */
+  var STK = {
+    q: '',
+    range: 'today',
+    date: App.today(),
+    tube: 'all',
+    status: 'all',
+    page: 0,
+    selectedId: null,
+    checked: {},
+    copies: 1,
+    fmt: lsGet('labpos_smp_fmt', 'thermal')
+  };
+
+  var STK_CSS =
+    '.stk-layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:16px;align-items:start}' +
+    '@media(max-width:980px){.stk-layout{grid-template-columns:1fr}}' +
+    '.stk-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;flex-wrap:wrap}' +
+    '.stk-head-title h2{margin:0 0 4px;font-size:20px;font-weight:800;color:var(--brand-d);display:flex;align-items:center;gap:8px}' +
+    '.stk-head-title p{margin:0;font-size:13px;color:var(--muted)}' +
+    '.stk-head-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}' +
+    '.stk-preview-box{position:sticky;top:16px;background:#f8fafc;border:1px solid var(--bd);border-radius:14px;padding:16px;box-shadow:var(--sh-sm)}' +
+    '.stk-prev-card{background:#e2e8f0;border-radius:10px;padding:18px 8px;display:flex;justify-content:center;align-items:center;min-height:140px;margin-bottom:14px;overflow:hidden}' +
+    '.stk-prev-zoom{zoom:1.7;display:flex;justify-content:center}' +
+    '.stk-prev-zoom .smp-lbl{box-shadow:0 4px 14px rgba(0,0,0,.18);border-radius:2px}' +
+    '.stk-prev-empty{font-size:13px;color:var(--muted);text-align:center;padding:20px 10px}' +
+    '.stk-tip-box{font-size:11.5px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;line-height:1.45;margin-top:14px}' +
+    '.stk-tip-box b{color:var(--ink);font-weight:700}';
+
+  function renderStickersDashboard() {
+    var view = document.getElementById('view');
+    if (!view) return;
+    if (!cleaned) { cleaned = true; try { S.cleanupOrphans(); } catch (e) {} }
+
+    function getFilteredList() {
+      var all = S.all() || [];
+      var q = STK.q.trim().toLowerCase();
+      var filtered = all.filter(function (s) {
+        if (STK.range !== 'all') {
+          var k = dayKey(s.createdAt), t = App.today();
+          if (STK.range === 'today' && k !== t) return false;
+          if (STK.range === 'yesterday' && k !== addDays(t, -1)) return false;
+          if (STK.range === 'last7' && (k < addDays(t, -6) || k > t)) return false;
+          if (STK.range === 'last30' && (k < addDays(t, -29) || k > t)) return false;
+          if (STK.range === 'pick' && k !== (STK.date || t)) return false;
+        }
+        if (STK.tube !== 'all') {
+          var tb = String(s.tube || '').toLowerCase();
+          if (STK.tube === 'edta' && tb.indexOf('edta') < 0 && tb.indexOf('purple') < 0) return false;
+          if (STK.tube === 'serum' && tb.indexOf('serum') < 0 && tb.indexOf('red') < 0) return false;
+          if (STK.tube === 'fluoride' && tb.indexOf('fluoride') < 0 && tb.indexOf('grey') < 0 && tb.indexOf('gray') < 0) return false;
+          if (STK.tube === 'citrate' && tb.indexOf('citrate') < 0 && tb.indexOf('blue') < 0) return false;
+          if (STK.tube === 'urine' && tb.indexOf('urine') < 0) return false;
+        }
+        if (STK.status !== 'all' && s.status !== STK.status) return false;
+        if (q) {
+          var hay = (s.barcode + ' ' + s.patientName + ' ' + s.invoiceNo + ' ' + s.patientId + ' ' + s.tube + ' ' + (s.testNames || []).join(' ')).toLowerCase();
+          if (hay.indexOf(q) < 0) return false;
+        }
+        return true;
+      });
+      filtered.sort(function (a, b) {
+        if (a.createdAt !== b.createdAt) return a.createdAt < b.createdAt ? 1 : -1;
+        return String(a.barcode).localeCompare(String(b.barcode), undefined, { numeric: true });
+      });
+      return filtered;
+    }
+
+    function computeStats() {
+      var all = S.all() || [];
+      var todayKey = App.today();
+      var todayTubes = all.filter(function (s) { return dayKey(s.createdAt) === todayKey; });
+      var todayInvs = {};
+      todayTubes.forEach(function (s) { if (s.invoiceId) todayInvs[s.invoiceId] = true; });
+      var pendingCount = todayTubes.filter(function (s) { return s.status === 'pending'; }).length;
+      var readyCount = todayTubes.filter(function (s) { return s.status !== 'pending' && s.status !== 'rejected'; }).length;
+      return {
+        invoices: Object.keys(todayInvs).length,
+        tubes: todayTubes.length,
+        pending: pendingCount,
+        ready: readyCount
+      };
+    }
+
+    function renderUI() {
+      var st = computeStats();
+      var list = getFilteredList();
+
+      // ensure selected sample is valid
+      if (!STK.selectedId && list.length) STK.selectedId = list[0].id;
+      if (STK.selectedId && !list.some(function (x) { return x.id === STK.selectedId; })) {
+        STK.selectedId = list.length ? list[0].id : null;
+      }
+      var currentSample = STK.selectedId ? S.get(STK.selectedId) : null;
+
+      var checkedCount = Object.keys(STK.checked).length;
+
+      var kpiHtml =
+        '<div class="kpi-grid" style="margin-bottom:16px">' +
+          '<div class="kpi t-navy"><div class="kpi-ic">' + App.icon('file', 20) + '</div><div class="kpi-lb">TODAY\'S INVOICES</div><div class="kpi-nm">' + st.invoices + '</div><div class="kpi-sb">billed today</div></div>' +
+          '<div class="kpi t-blue"><div class="kpi-ic">' + App.icon('tube', 20) + '</div><div class="kpi-lb">TUBES TODAY</div><div class="kpi-nm">' + st.tubes + '</div><div class="kpi-sb">specimen tubes</div></div>' +
+          '<div class="kpi t-amber"><div class="kpi-ic">' + App.icon('clock', 20) + '</div><div class="kpi-lb">TO COLLECT</div><div class="kpi-nm">' + st.pending + '</div><div class="kpi-sb">awaiting collection</div></div>' +
+          '<div class="kpi t-green"><div class="kpi-ic">' + App.icon('check', 20) + '</div><div class="kpi-lb">COLLECTED / IN LAB</div><div class="kpi-nm">' + st.ready + '</div><div class="kpi-sb">tubes received</div></div>' +
+        '</div>';
+
+      var previewHtml = '';
+      if (currentSample) {
+        var labelHtml = oneLabel(currentSample, false);
+        previewHtml =
+          '<div class="stk-prev-card">' +
+            '<div class="stk-prev-zoom">' + labelHtml + '</div>' +
+          '</div>' +
+          '<div style="margin-bottom:12px;font-size:12.5px;color:var(--ink);line-height:1.4">' +
+            '<div><b>Patient:</b> ' + esc(currentSample.patientName) + ' ' + esc(currentSample.patientId ? '(MR: ' + currentSample.patientId + ')' : '') + '</div>' +
+            '<div><b>Invoice:</b> ' + esc(currentSample.invoiceNo || '—') + ' &middot; <b>Barcode:</b> <code>' + esc(currentSample.barcode) + '</code></div>' +
+            '<div style="margin-top:4px"><b>Tube:</b> ' + tubeBadge(currentSample.tube) + '</div>' +
+          '</div>' +
+          '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">' +
+            '<label style="font-size:13px;font-weight:700">Copies:</label>' +
+            '<input type="number" id="stkCopies" class="input" min="1" max="10" value="' + STK.copies + '" style="width:70px;padding:6px 8px;font-weight:700">' +
+            '<select id="stkFmt" class="select" style="padding:6px 8px;font-size:12.5px;flex:1">' +
+              '<option value="thermal"' + (STK.fmt === 'thermal' ? ' selected' : '') + '>50×25mm Thermal Roll</option>' +
+              '<option value="a4"' + (STK.fmt === 'a4' ? ' selected' : '') + '>A4 Sheet (3×8 Labels)</option>' +
+            '</select>' +
+          '</div>' +
+          '<button class="btn btn-primary" id="stkPrintCurrent" style="width:100%;justify-content:center;font-weight:800;padding:10px 14px">' +
+            App.icon('printer', 16) + ' Print This Sticker Now' +
+          '</button>' +
+          (checkedCount > 1
+            ? '<button class="btn btn-ghost" id="stkPrintChecked" style="width:100%;margin-top:8px;justify-content:center;font-weight:700">' +
+                App.icon('printer', 14) + ' Print ' + checkedCount + ' Selected Stickers' +
+              '</button>'
+            : '');
+      } else {
+        previewHtml = '<div class="stk-prev-empty">No tube selected. Click on a tube row to preview sticker.</div>';
+      }
+
+      var PAGE_SIZE = 40;
+      var totalPages = Math.max(1, Math.ceil(list.length / PAGE_SIZE));
+      if (STK.page >= totalPages) STK.page = totalPages - 1;
+      var from = STK.page * PAGE_SIZE;
+      var slice = list.slice(from, from + PAGE_SIZE);
+
+      var tableRows = '';
+      if (!slice.length) {
+        tableRows = '<tr><td colspan="7">' + App.empty('No sample tube stickers found matching current filters.') + '</td></tr>';
+      } else {
+        tableRows = slice.map(function (s) {
+          var isCur = currentSample && currentSample.id === s.id;
+          var isChk = !!STK.checked[s.id];
+          return '<tr class="' + (isCur ? 'is-sel' : '') + '" style="cursor:pointer" data-row-id="' + esc(s.id) + '">' +
+            '<td><input type="checkbox" class="stk-ck" data-id="' + esc(s.id) + '" ' + (isChk ? 'checked' : '') + ' onclick="event.stopPropagation()"></td>' +
+            '<td><span class="mono" style="font-weight:800;color:var(--brand-d);font-size:13px">' + esc(s.barcode) + '</span></td>' +
+            '<td><div style="font-weight:700">' + esc(s.patientName) + '</div>' +
+              '<div style="font-size:11.5px;color:var(--muted)">' + (s.patientId ? 'MR: ' + esc(s.patientId) : '') + (s.patientId && s.invoiceNo ? ' &middot; ' : '') + esc(s.invoiceNo || '') + '</div></td>' +
+            '<td>' + tubeBadge(s.tube) + '</td>' +
+            '<td><div style="max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:12.5px;color:var(--ink2)" title="' + esc((s.testNames || []).join(', ')) + '">' + esc((s.testNames || []).join(', ')) + '</div></td>' +
+            '<td>' + S.badge(s.status) + '</td>' +
+            '<td class="actions" style="text-align:right;white-space:nowrap">' +
+              '<button class="btn btn-sm btn-ghost stk-quick-print" data-id="' + esc(s.id) + '" title="Print 1 label immediately" onclick="event.stopPropagation()">' + App.icon('printer', 13) + ' Print</button>' +
+            '</td>' +
+          '</tr>';
+        }).join('');
+      }
+
+      view.innerHTML =
+        '<style>' + CSS + STK_CSS + '</style>' +
+        '<div class="stk-header">' +
+          '<div class="stk-head-title">' +
+            '<h2>' + App.icon('tube', 22) + ' Tube Stickers & Barcode Center</h2>' +
+            '<p>Dedicated 50×25mm Thermal Label Printing & Specimen Tube Barcodes for Diagnostic Equipment</p>' +
+          '</div>' +
+          '<div class="stk-head-acts">' +
+            '<button class="btn btn-primary" id="stkPrintAllToday">' + App.icon('printer', 15) + ' Print All Today\'s Stickers</button>' +
+            '<button class="btn btn-ghost" id="stkGenMissing">' + App.icon('plus', 14) + ' Generate Missing Tubes</button>' +
+            '<a class="btn btn-ghost" href="#/samples">' + App.icon('scan', 14) + ' Sample Tracking</a>' +
+          '</div>' +
+        '</div>' +
+        kpiHtml +
+        '<div class="stk-layout">' +
+          '<div class="card"><div class="card-b">' +
+            '<div class="smp-filters" style="margin-bottom:12px">' +
+              '<input class="input search smp-q" id="stkSearch" placeholder="Search barcode, patient, MR#, invoice, test..." value="' + esc(STK.q) + '">' +
+              '<select class="select" id="stkRange">' +
+                [['today', 'Today'], ['yesterday', 'Yesterday'], ['last7', 'Last 7 days'], ['last30', 'Last 30 days'], ['all', 'All dates'], ['pick', 'Pick date...']].map(function (o) {
+                  return '<option value="' + o[0] + '"' + (STK.range === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+                }).join('') +
+              '</select>' +
+              '<input type="date" class="input" id="stkDate" value="' + esc(STK.date) + '" ' + (STK.range === 'pick' ? '' : 'hidden') + '>' +
+              '<select class="select" id="stkTubeFilter">' +
+                '<option value="all">All Tubes</option>' +
+                '<option value="edta"' + (STK.tube === 'edta' ? ' selected' : '') + '>EDTA (Purple)</option>' +
+                '<option value="serum"' + (STK.tube === 'serum' ? ' selected' : '') + '>Serum (Red)</option>' +
+                '<option value="citrate"' + (STK.tube === 'citrate' ? ' selected' : '') + '>Citrate (Blue)</option>' +
+                '<option value="fluoride"' + (STK.tube === 'fluoride' ? ' selected' : '') + '>Fluoride (Grey)</option>' +
+                '<option value="urine"' + (STK.tube === 'urine' ? ' selected' : '') + '>Urine</option>' +
+              '</select>' +
+              '<select class="select" id="stkStatusFilter">' +
+                '<option value="all">All Statuses</option>' +
+                '<option value="pending"' + (STK.status === 'pending' ? ' selected' : '') + '>To collect</option>' +
+                '<option value="collected"' + (STK.status === 'collected' ? ' selected' : '') + '>Collected</option>' +
+                '<option value="received"' + (STK.status === 'received' ? ' selected' : '') + '>In lab</option>' +
+                '<option value="done"' + (STK.status === 'done' ? ' selected' : '') + '>Done</option>' +
+              '</select>' +
+            '</div>' +
+            (checkedCount > 0
+              ? '<div class="smp-bulk" style="margin-bottom:12px">' +
+                  '<b>' + checkedCount + ' sticker(s) selected</b>' +
+                  '<button class="btn btn-primary btn-sm" id="stkBulkPrint">' + App.icon('printer', 14) + ' Print Selected Stickers</button>' +
+                  '<button class="btn btn-ghost btn-sm" id="stkBulkClear">Clear Selection</button>' +
+                '</div>'
+              : '') +
+            '<div class="tbl-wrap"><table class="table smp-table"><thead><tr>' +
+              '<th style="width:36px"><input type="checkbox" id="stkCheckAll" title="Select all on this page"></th>' +
+              '<th>Barcode</th>' +
+              '<th>Patient & MR#</th>' +
+              '<th>Tube Type</th>' +
+              '<th>Tests</th>' +
+              '<th>Status</th>' +
+              '<th style="text-align:right">Action</th>' +
+            '</tr></thead><tbody>' + tableRows + '</tbody></table></div>' +
+            '<div class="smp-pager">' +
+              (list.length > PAGE_SIZE
+                ? '<span class="muted">' + (from + 1) + '–' + Math.min(from + PAGE_SIZE, list.length) + ' of ' + list.length + ' tubes</span>' +
+                  '<button class="btn btn-sm" id="stkPrev"' + (STK.page === 0 ? ' disabled' : '') + '>&larr; Prev</button>' +
+                  '<button class="btn btn-sm" id="stkNext"' + (STK.page >= totalPages - 1 ? ' disabled' : '') + '>Next &rarr;</button>'
+                : (list.length ? '<span class="muted">' + list.length + ' tube sticker' + (list.length === 1 ? '' : 's') + '</span>' : '')) +
+            '</div>' +
+          '</div></div>' +
+          '<div class="stk-preview-box">' +
+            '<h3 style="margin:0 0 12px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:6px">' +
+              App.icon('printer', 16) + ' Live Sticker Preview' +
+            '</h3>' +
+            previewHtml +
+            '<div class="stk-tip-box">' +
+              '<b>Thermal Printer Standard:</b> 50mm width × 25mm height.<br>' +
+              'Barcode uses Code128 standard supported by all lab analyzers and handheld laser scanners.<br>' +
+              'Set printer margin to <b>None</b> for seamless thermal alignment.' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+
+      // Attach event listeners
+      document.getElementById('stkSearch').addEventListener('input', function () {
+        STK.q = this.value; STK.page = 0; renderUI();
+      });
+      document.getElementById('stkRange').addEventListener('change', function () {
+        STK.range = this.value; STK.page = 0; renderUI();
+      });
+      var dtEl = document.getElementById('stkDate');
+      if (dtEl) dtEl.addEventListener('change', function () {
+        STK.date = this.value; STK.page = 0; renderUI();
+      });
+      document.getElementById('stkTubeFilter').addEventListener('change', function () {
+        STK.tube = this.value; STK.page = 0; renderUI();
+      });
+      document.getElementById('stkStatusFilter').addEventListener('change', function () {
+        STK.status = this.value; STK.page = 0; renderUI();
+      });
+
+      var chkAll = document.getElementById('stkCheckAll');
+      if (chkAll) {
+        var pageIds = slice.map(function (x) { return x.id; });
+        chkAll.checked = pageIds.length > 0 && pageIds.every(function (id) { return STK.checked[id]; });
+        chkAll.addEventListener('change', function () {
+          pageIds.forEach(function (id) {
+            if (chkAll.checked) STK.checked[id] = true;
+            else delete STK.checked[id];
+          });
+          renderUI();
+        });
+      }
+
+      view.querySelectorAll('.stk-ck').forEach(function (ck) {
+        ck.addEventListener('change', function () {
+          var id = this.getAttribute('data-id');
+          if (this.checked) STK.checked[id] = true;
+          else delete STK.checked[id];
+          renderUI();
+        });
+      });
+
+      view.querySelectorAll('[data-row-id]').forEach(function (tr) {
+        tr.addEventListener('click', function () {
+          STK.selectedId = this.getAttribute('data-row-id');
+          renderUI();
+        });
+      });
+
+      view.querySelectorAll('.stk-quick-print').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = this.getAttribute('data-id');
+          var s = S.get(id);
+          if (s) {
+            App.print('Sticker ' + s.barcode, printCss('thermal') + labelsHTML([s], 'thermal', 1), { noHeader: true });
+          }
+        });
+      });
+
+      var btnPrev = document.getElementById('stkPrev');
+      if (btnPrev) btnPrev.addEventListener('click', function () { STK.page = Math.max(0, STK.page - 1); renderUI(); });
+      var btnNext = document.getElementById('stkNext');
+      if (btnNext) btnNext.addEventListener('click', function () { STK.page++; renderUI(); });
+
+      var cpEl = document.getElementById('stkCopies');
+      if (cpEl) cpEl.addEventListener('input', function () {
+        STK.copies = Math.max(1, Math.min(20, parseInt(this.value, 10) || 1));
+      });
+      var fmtEl = document.getElementById('stkFmt');
+      if (fmtEl) fmtEl.addEventListener('change', function () {
+        STK.fmt = this.value; lsSet('labpos_smp_fmt', STK.fmt);
+      });
+
+      var btnCur = document.getElementById('stkPrintCurrent');
+      if (btnCur && currentSample) {
+        btnCur.addEventListener('click', function () {
+          App.print('Sticker ' + currentSample.barcode, printCss(STK.fmt) + labelsHTML([currentSample], STK.fmt, STK.copies), { noHeader: true });
+        });
+      }
+
+      var btnChk = document.getElementById('stkPrintChecked');
+      if (btnChk) {
+        btnChk.addEventListener('click', function () {
+          var ids = Object.keys(STK.checked);
+          var selectedSamples = ids.map(function (id) { return S.get(id); }).filter(Boolean);
+          if (selectedSamples.length) {
+            App.print('Selected Stickers (' + selectedSamples.length + ')', printCss(STK.fmt) + labelsHTML(selectedSamples, STK.fmt, STK.copies), { noHeader: true });
+          }
+        });
+      }
+
+      var bulkPr = document.getElementById('stkBulkPrint');
+      if (bulkPr) {
+        bulkPr.addEventListener('click', function () {
+          var ids = Object.keys(STK.checked);
+          openLabelDialog(ids);
+        });
+      }
+      var bulkClr = document.getElementById('stkBulkClear');
+      if (bulkClr) {
+        bulkClr.addEventListener('click', function () {
+          STK.checked = {}; renderUI();
+        });
+      }
+
+      document.getElementById('stkPrintAllToday').addEventListener('click', function () {
+        var todayKey = App.today();
+        var todayTubes = (S.all() || []).filter(function (s) { return dayKey(s.createdAt) === todayKey; });
+        if (!todayTubes.length) {
+          App.toast('No sample tubes generated for today yet.', 'info');
+          return;
+        }
+        openLabelDialog(todayTubes.map(function (s) { return s.id; }));
+      });
+
+      document.getElementById('stkGenMissing').addEventListener('click', function () {
+        generateMissing();
+        setTimeout(renderUI, 300);
+      });
+    }
+
+    renderUI();
+  }
+
   /* keep the scan box focused (barcode scanners "type" the code): refocus after clicks, and when a printable key is typed anywhere */
   function scanActive() { return location.hash === '#/samples' && document.getElementById('smpScan') && !document.body.classList.contains('modal-open'); }
   function focusScan() {
@@ -628,4 +1030,6 @@
   }
 
   App.route('#/samples', render);
+  App.route('#/samples/stickers', renderStickersDashboard);
 })();
+

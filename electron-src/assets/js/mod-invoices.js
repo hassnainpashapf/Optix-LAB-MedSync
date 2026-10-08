@@ -600,6 +600,7 @@
         '<td style="text-align:right;font-weight:700;color:' + (inv.due > 0 ? 'var(--red)' : 'var(--muted)') + '">' + App.money(inv.due) + '</td>' +
         '<td>' + App.badge(inv.status) + panelChip(inv) + smpChip(inv.id) + '</td>' +
         '<td class="actions"><a class="btn btn-sm btn-ghost" href="#/invoice/' + App.esc(inv.id) + '">View</a>' +
+        ' <button class="btn btn-sm btn-ghost" data-stickers="' + App.esc(inv.id) + '" title="Print 50×25mm Tube Stickers">🏷️ Stickers</button>' +
         (r2(inv.due) > 0 ? ' <button class="btn btn-sm btn-primary" data-collect="' + App.esc(inv.id) + '">Collect</button>' : '') +
         ' <button class="btn btn-sm btn-ghost" data-edit="' + App.esc(inv.id) + '">Edit</button>' +
         ' <button class="btn btn-sm btn-danger" data-del="' + App.esc(inv.id) + '">Delete</button>' +
@@ -652,6 +653,7 @@
             '<option value="partial"' + (F.status === 'partial' ? ' selected' : '') + '>Partial</option>' +
             '<option value="unpaid"' + (F.status === 'unpaid' ? ' selected' : '') + '>Unpaid</option>' +
           '</select>' +
+          '<a class="btn btn-ghost" href="#/samples/stickers" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:8px 12px;white-space:nowrap">' + App.icon('tube', 14) + ' Tube Stickers</a>' +
         '</div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr>' +
           '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:center">Tests</th>' +
@@ -663,6 +665,23 @@
     function update() {
       var list = filteredInvoices();
       document.getElementById('inv-rows').innerHTML = invoiceRows(list);
+      view.querySelectorAll('[data-stickers]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var invId = btn.getAttribute('data-stickers');
+          App.loadScript('assets/js/mod-samples.js').then(function () {
+            var smps = window.Samples ? Samples.forInvoice(invId) : [];
+            if (!smps.length && window.Samples) {
+              var inv = DB.get('invoices', invId);
+              if (inv) smps = Samples.createForInvoice(inv);
+            }
+            if (smps.length && App.openLabelDialog) {
+              App.openLabelDialog(smps.map(function (s) { return s.id; }));
+            } else {
+              App.toast('No specimen tube stickers for this invoice', 'info');
+            }
+          });
+        });
+      });
       view.querySelectorAll('[data-collect]').forEach(function (btn) {
         btn.addEventListener('click', function () { openPaymentModal(btn.getAttribute('data-collect')); });
       });
@@ -753,6 +772,7 @@
       '<div class="toolbar">' +
         '<a class="btn btn-ghost" href="#/invoices">← Back to Invoices</a>' +
         '<div style="flex:1"></div>' +
+        '<button class="btn btn-ghost" id="iv-stickers">🏷️ Tube Stickers (50×25mm)</button>' +
         '<button class="btn btn-ghost" id="iv-print">' + SC_ICONS.printer + ' Print Invoice</button>' +
         '<button class="btn btn-ghost" id="iv-edit">Edit</button>' +
         '<button class="btn btn-ghost" id="iv-wa">WhatsApp</button>' +
@@ -817,6 +837,18 @@
         '<tbody>' + payRows + '</tbody></table></div></div>';
 
     document.getElementById('iv-print').addEventListener('click', function () { printInvoice(inv.id); });
+    var stkBtn = document.getElementById('iv-stickers');
+    if (stkBtn) stkBtn.addEventListener('click', function () {
+      App.loadScript('assets/js/mod-samples.js').then(function () {
+        var smps = window.Samples ? Samples.forInvoice(inv.id) : [];
+        if (!smps.length && window.Samples) smps = Samples.createForInvoice(inv);
+        if (smps.length && App.openLabelDialog) {
+          App.openLabelDialog(smps.map(function (s) { return s.id; }));
+        } else {
+          App.toast('No specimen tube stickers for this invoice', 'info');
+        }
+      });
+    });
     document.getElementById('iv-edit').addEventListener('click', function () { openEditInvoice(inv.id); });
     document.getElementById('iv-wa').addEventListener('click', function () { shareInvoiceWhatsApp(inv.id); });
     var cBtn = document.getElementById('iv-collect');
