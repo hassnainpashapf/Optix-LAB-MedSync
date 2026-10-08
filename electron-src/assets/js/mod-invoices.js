@@ -19,13 +19,12 @@
       return !!(s && (s.role === 'technician' || (window.App && App.hideMoney && App.hideMoney())));
     } catch (e) { return false; }
   }
-  function scCard(icon, tint, label, value, sub) {
-    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
-      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
-      '<div class="lb">' + App.esc(label) + '</div>' +
-      '<div class="vl">' + value + '</div>' +
-      '<div class="dl">' + sub + '</div>' +
-    '</div>';
+  function kpiCard(icon, tint, label, value, sub) {
+    var kTint = (tint === 'brand') ? 'navy' : tint;
+    return '<div class="kpi t-' + kTint + '"><div class="kpi-ic">' + icon + '</div>' +
+      '<div class="kpi-lb">' + App.esc(label) + '</div>' +
+      '<div class="kpi-nm">' + value + '</div>' +
+      '<div class="kpi-sb">' + sub + '</div></div>';
   }
 
   /* ---------- shared helpers ---------- */
@@ -514,21 +513,21 @@
     var ivDueAll = ivAll.filter(function (i) { return i.status !== 'paid'; });
     var ivOutstanding = ivDueAll.reduce(function (s, i) { return s + (+i.due || 0); }, 0);
     var invStats =
-      scCard(SC_ICONS.doc, 'brand', 'Invoices This Month', String(ivMonth.length), 'invoices created') +
-      scCard(SC_ICONS.cash, 'green', 'Billed This Month',
+      kpiCard(SC_ICONS.doc, 'brand', 'Invoices This Month', String(ivMonth.length), 'invoices created') +
+      kpiCard(SC_ICONS.cash, 'green', 'Billed This Month',
         ivIsTech ? String(ivMonth.length) : App.money(ivBilled),
         ivIsTech ? 'invoices this month' : 'total invoiced value') +
-      scCard(SC_ICONS.cal, 'blue', 'Collected This Month',
+      kpiCard(SC_ICONS.cal, 'blue', 'Collected This Month',
         ivIsTech ? String(ivMonthPays.length) : App.money(ivCollected),
         ivIsTech ? 'payments this month' : 'payments received') +
-      scCard(SC_ICONS.clock, 'amber', 'Outstanding Dues',
+      kpiCard(SC_ICONS.clock, 'amber', 'Outstanding Dues',
         ivIsTech ? String(ivDueAll.length) : App.money(ivOutstanding),
         ivIsTech ? 'invoices with dues' : 'yet to collect');
 
     view.innerHTML =
       '<div class="card"><div class="card-b">' +
         SC_STYLE +
-        '<div class="stat-grid">' + invStats + '</div>' +
+        '<div class="kpi-grid">' + invStats + '</div>' +
         '<div class="toolbar" style="margin:0 0 12px;gap:8px;flex-wrap:nowrap">' +
           '<input id="f-q" class="input" style="flex:1;min-width:0;width:auto;padding:8px 12px;font-size:13px" placeholder="Search invoice no, patient, phone..." value="' + App.esc(F.q) + '">' +
           '<select id="f-date" class="select" style="width:auto;flex:0 0 auto;padding:8px 10px;font-size:13px">' +
@@ -725,14 +724,14 @@
     var duesOverdue = list.filter(function (i) { return String(i.createdAt || '').slice(0, 10) <= cutKey; });
     var duesOverdueAmt = duesOverdue.reduce(function (s, i) { return s + (+i.due || 0); }, 0);
     var duesStats =
-      scCard(SC_ICONS.cash, 'brand', 'Total Outstanding',
+      kpiCard(SC_ICONS.cash, 'brand', 'Total Outstanding',
         duesIsTech ? String(list.length) : App.money(totalDue),
         duesIsTech ? 'invoices with dues' : list.length + ' unpaid invoice(s)') +
-      scCard(SC_ICONS.doc, 'blue', 'Unpaid Invoices', String(duesUnpaid.length), 'zero payment received') +
-      scCard(SC_ICONS.clock, 'amber', 'Overdue 30+ Days',
+      kpiCard(SC_ICONS.doc, 'blue', 'Unpaid Invoices', String(duesUnpaid.length), 'zero payment received') +
+      kpiCard(SC_ICONS.clock, 'amber', 'Overdue 30+ Days',
         duesIsTech ? String(duesOverdue.length) : App.money(duesOverdueAmt),
         duesIsTech ? 'invoices overdue' : duesOverdue.length + ' invoice(s) overdue') +
-      scCard(SC_ICONS.cal, 'green', 'Collected This Month',
+      kpiCard(SC_ICONS.cal, 'green', 'Collected This Month',
         duesIsTech ? String(duesMonthPays.length) : App.money(duesCollected),
         duesIsTech ? 'payments this month' : 'payments received');
 
@@ -755,7 +754,7 @@
 
     document.getElementById('view').innerHTML =
       SC_STYLE +
-      '<div class="stat-grid">' + duesStats + '</div>' +
+      '<div class="kpi-grid">' + duesStats + '</div>' +
       '<div class="card"><div class="card-b"><div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:right">Total</th>' +
         '<th style="text-align:right">Paid</th><th style="text-align:right">Due</th><th>Status</th><th>Actions</th>' +
@@ -785,14 +784,14 @@
     var withDisc = all.filter(function (inv) { return disc(inv) > 0; });
     var biggest = all.reduce(function (m, inv) { return Math.max(m, disc(inv)); }, 0);
     var discStats =
-      scCard(SC_ICONS.cash, 'brand', 'Total Discount Given',
+      kpiCard(SC_ICONS.cash, 'brand', 'Total Discount Given',
         isTech ? String(withDisc.length) : App.money(totalDisc),
         isTech ? 'invoices with discount' : withDisc.length + ' discounted invoice(s)') +
-      scCard(SC_ICONS.cal, 'green', 'Discounts This Month',
+      kpiCard(SC_ICONS.cal, 'green', 'Discounts This Month',
         isTech ? String(withDisc.length) : App.money(monthDisc),
         isTech ? 'invoices with discount' : 'given this month') +
-      scCard(SC_ICONS.doc, 'blue', 'Invoices With Discount', String(withDisc.length), 'have a discount') +
-      scCard(SC_ICONS.cash, 'amber', 'Biggest Discount',
+      kpiCard(SC_ICONS.doc, 'blue', 'Invoices With Discount', String(withDisc.length), 'have a discount') +
+      kpiCard(SC_ICONS.cash, 'amber', 'Biggest Discount',
         isTech ? String(withDisc.length) : App.money(biggest),
         isTech ? 'invoices with discount' : 'on a single invoice');
 
@@ -814,7 +813,7 @@
 
     document.getElementById('view').innerHTML =
       SC_STYLE +
-      '<div class="stat-grid">' + discStats + '</div>' +
+      '<div class="kpi-grid">' + discStats + '</div>' +
       '<div class="card"><div class="card-b"><div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:right">Total</th>' +
         '<th style="text-align:right">Discount</th><th style="text-align:right">Paid</th>' +

@@ -493,15 +493,15 @@
     var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>';
     var X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>';
     function kpi(cls, icon, label, num, sub) {
-      return '<div class="sp-kpi ' + cls + '"><div class="sp-chip">' + icon + '</div><div class="sp-label">' + label + '</div><div class="sp-num">' + num + '</div><div class="sp-sub">' + sub + '</div></div>';
+      return '<div class="kpi ' + cls + '"><div class="kpi-ic">' + icon + '</div><div class="kpi-lb">' + label + '</div><div class="kpi-nm">' + num + '</div><div class="kpi-sb">' + sub + '</div></div>';
     }
-    return '<div class="sp-kpis" id="spKpis">' +
-      kpi('sp-navy', TUBE, 'TOTAL SAMPLES', all.length, 'all tubes') +
-      kpi('sp-amber', CLOCK, 'TO COLLECT', c.pending, 'awaiting collection') +
-      kpi('sp-blue', FLASK, 'IN LAB', c.collected + c.received, 'at the lab') +
-      kpi('sp-purple', COG, 'PROCESSING', c.processing, 'being processed') +
-      kpi('sp-green', CHECK, 'DONE', c.done, 'completed') +
-      kpi('sp-red', X, 'REJECTED', c.rejected, 'rejected tubes') +
+    return '<div class="kpi-grid" id="spKpis">' +
+      kpi('t-navy', TUBE, 'TOTAL SAMPLES', all.length, 'all tubes') +
+      kpi('t-amber', CLOCK, 'TO COLLECT', c.pending, 'awaiting collection') +
+      kpi('t-blue', FLASK, 'IN LAB', c.collected + c.received, 'at the lab') +
+      kpi('t-purple', COG, 'PROCESSING', c.processing, 'being processed') +
+      kpi('t-green', CHECK, 'DONE', c.done, 'completed') +
+      kpi('t-red', X, 'REJECTED', c.rejected, 'rejected tubes') +
       '</div>';
   }
 

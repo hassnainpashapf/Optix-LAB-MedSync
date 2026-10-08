@@ -8,26 +8,6 @@
   var UNITS = ['tests', 'kit', 'vial', 'bottle', 'box', 'pack', 'pcs', 'ml', 'L', 'g'];
 
   var CSS = '' +
-    '.sk-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:16px}' +
-    '.sk-st{background:#fff;border:1px solid #e6eaf2;border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.06);min-height:118px;padding:18px;position:relative;overflow:hidden;cursor:default}.sk-st>*{position:relative;z-index:1}' +
-    '.sk-st .k{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#8a94a6}' +
-    '.sk-st b{display:block;font-size:32px;font-weight:800;margin-top:4px;color:#101828}' +
-    '.chip{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:10px}' +
-    '.sk-st.t-navy .chip{background:rgba(29,78,216,.12);color:#1d4ed8}' +
-    '.sk-st.t-amber .chip{background:rgba(217,119,6,.12);color:#d97706}' +
-    '.sk-st.t-blue .chip{background:rgba(37,99,235,.12);color:#2563eb}' +
-    '.sk-st.t-red .chip{background:rgba(220,38,38,.12);color:#dc2626}' +
-    '.sk-st::after{content:"";position:absolute;top:-32px;right:-32px;width:110px;height:110px;border-radius:50%;pointer-events:none;background:linear-gradient(135deg,rgba(148,163,184,.10),rgba(148,163,184,0))}' +
-    '.sk-st.t-navy::after{background:linear-gradient(135deg,rgba(29,78,216,.14),rgba(29,78,216,0))}' +
-    '.sk-st.t-amber::after{background:linear-gradient(135deg,rgba(217,119,6,.14),rgba(217,119,6,0))}' +
-    '.sk-st.t-blue::after{background:linear-gradient(135deg,rgba(37,99,235,.14),rgba(37,99,235,0))}' +
-    '.sk-st.t-red::after{background:linear-gradient(135deg,rgba(220,38,38,.14),rgba(220,38,38,0))}' +
-    '.sk-st.warn{background:#fff;border:1px solid #f3d9a8}' +
-    '.sk-st.warn::after{background:linear-gradient(135deg,rgba(217,119,6,.14),rgba(217,119,6,0))}' +
-    '.sk-st.warn b{color:#b45309}' +
-    '.sk-st.bad{background:#fff;border:1px solid #f3b8b8}' +
-    '.sk-st.bad::after{background:linear-gradient(135deg,rgba(220,38,38,.14),rgba(220,38,38,0))}' +
-    '.sk-st.bad b{color:#b91c1c}' +
     '.sk-bar{display:flex;gap:10px;flex-wrap:nowrap;align-items:center;padding:14px 18px}' +
     '.sk-bar .grow{flex:1 1 auto;min-width:200px;width:auto}' +
     '.sk-bar .select{flex:0 0 auto;width:auto;max-width:100%}' +
@@ -37,8 +17,6 @@
     '.sk-alert{border:1px solid #f0d9a0;background:#fff8e6;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13.5px;line-height:1.7}' +
     '.sk-name{font-weight:700;color:var(--ink)}.sk-sub{font-size:12px;color:var(--muted)}.sk-num{font-weight:800;font-size:15px}' +
     '.sk-h{width:100%;border-collapse:collapse}.sk-h th,.sk-h td{padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px;text-align:left}' +
-    '@media(max-width:900px){.sk-stats{grid-template-columns:1fr 1fr}}' +
-    '@media(max-width:560px){.sk-stats{grid-template-columns:1fr}}' +
     '@media(max-width:760px){.sk-bar{flex-wrap:wrap}.sk-bar .grow{flex:1 1 100%;min-width:0}}';
   function css() { if (document.getElementById('skCss')) return; var s = document.createElement('style'); s.id = 'skCss'; s.textContent = CSS; document.head.appendChild(s); }
 
@@ -94,31 +72,19 @@
       return sa - sb || String(a.item.name).localeCompare(String(b.item.name));
     });
     var al = S.rows.filter(function (r) { return r.out || r.low || r.expired || r.soon; });
-    var h = '<div class="sk-stats">' +
-      '<div class="card sk-st t-navy" style="background:#fff;border:1px solid #e8ecf1;border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.08);min-height:118px;padding:18px;position:relative;overflow:hidden">' +
-        '<span class="sk-wash" style="position:absolute;top:0;right:0;width:130px;height:130px;background:linear-gradient(135deg,rgba(224,231,255,0) 0%,rgba(224,231,255,.65) 100%);border-radius:0 16px 0 100%;pointer-events:none"></span>' +
-        '<div class="chip" style="width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;background:#eef2ff;color:#3730a3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4L7.5 4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg></div>' +
-        '<div class="k" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#98a2b3">Items</div>' +
-        '<b style="display:block;font-size:32px;font-weight:800;line-height:1.15;margin-top:4px">' + S.rows.length + '</b>' +
-        '<div class="sk-sub" style="font-size:12px;color:#98a2b3;margin-top:2px">tracked in stock</div></div>' +
-      '<div class="card sk-st t-amber ' + (S.low + S.out ? 'warn' : '') + '" style="background:#fff;border:1px solid #e8ecf1;border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.08);min-height:118px;padding:18px;position:relative;overflow:hidden">' +
-        '<span class="sk-wash" style="position:absolute;top:0;right:0;width:130px;height:130px;background:linear-gradient(135deg,rgba(254,243,199,0) 0%,rgba(254,243,199,.65) 100%);border-radius:0 16px 0 100%;pointer-events:none"></span>' +
-        '<div class="chip" style="width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;background:#fef3c7;color:#b45309"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>' +
-        '<div class="k" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#98a2b3">Low / out of stock</div>' +
-        '<b style="display:block;font-size:32px;font-weight:800;line-height:1.15;margin-top:4px">' + (S.low + S.out) + '</b>' +
-        '<div class="sk-sub" style="font-size:12px;color:#98a2b3;margin-top:2px">need restocking</div></div>' +
-      '<div class="card sk-st t-blue ' + (S.soon ? 'warn' : '') + '" style="background:#fff;border:1px solid #e8ecf1;border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.08);min-height:118px;padding:18px;position:relative;overflow:hidden">' +
-        '<span class="sk-wash" style="position:absolute;top:0;right:0;width:130px;height:130px;background:linear-gradient(135deg,rgba(219,234,254,0) 0%,rgba(219,234,254,.65) 100%);border-radius:0 16px 0 100%;pointer-events:none"></span>' +
-        '<div class="chip" style="width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;background:#dbeafe;color:#1d4ed8"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><circle cx="16" cy="16" r="6"/><path d="M16 14v2l1.5 1.5"/></svg></div>' +
-        '<div class="k" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#98a2b3">Expiring in ' + S.warnDays + ' days</div>' +
-        '<b style="display:block;font-size:32px;font-weight:800;line-height:1.15;margin-top:4px">' + S.soon + '</b>' +
-        '<div class="sk-sub" style="font-size:12px;color:#98a2b3;margin-top:2px">lots expiring soon</div></div>' +
-      '<div class="card sk-st t-red ' + (S.expired ? 'bad' : '') + '" style="background:#fff;border:1px solid #e8ecf1;border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.08);min-height:118px;padding:18px;position:relative;overflow:hidden">' +
-        '<span class="sk-wash" style="position:absolute;top:0;right:0;width:130px;height:130px;background:linear-gradient(135deg,rgba(254,226,226,0) 0%,rgba(254,226,226,.65) 100%);border-radius:0 16px 0 100%;pointer-events:none"></span>' +
-        '<div class="chip" style="width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:10px;background:#fee2e2;color:#b91c1c"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>' +
-        '<div class="k" style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#98a2b3">Expired</div>' +
-        '<b style="display:block;font-size:32px;font-weight:800;line-height:1.15;margin-top:4px">' + S.expired + '</b>' +
-        '<div class="sk-sub" style="font-size:12px;color:#98a2b3;margin-top:2px">lots past expiry</div></div></div>';
+    var h = '<div class="kpi-grid">' +
+'      <div class="kpi t-navy"><div class="kpi-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4L7.5 4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg></div>' +
+'        <div class="kpi-lb">Items</div><div class="kpi-nm">' + S.rows.length + '</div>' +
+'        <div class="kpi-sb">tracked in stock</div></div>' +
+'      <div class="kpi t-amber ' + (S.low + S.out ? 'warn' : '') + '"><div class="kpi-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>' +
+'        <div class="kpi-lb">Low / out of stock</div><div class="kpi-nm">' + (S.low + S.out) + '</div>' +
+'        <div class="kpi-sb">need restocking</div></div>' +
+'      <div class="kpi t-blue ' + (S.soon ? 'warn' : '') + '"><div class="kpi-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><circle cx="16" cy="16" r="6"/><path d="M16 14v2l1.5 1.5"/></svg></div>' +
+'        <div class="kpi-lb">Expiring in ' + S.warnDays + ' days</div><div class="kpi-nm">' + S.soon + '</div>' +
+'        <div class="kpi-sb">lots expiring soon</div></div>' +
+'      <div class="kpi t-red ' + (S.expired ? 'hot' : '') + '"><div class="kpi-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg></div>' +
+'        <div class="kpi-lb">Expired</div><div class="kpi-nm">' + S.expired + '</div>' +
+'        <div class="kpi-sb">lots past expiry</div></div></div>';
     if (al.length) {
       h += '<div class="sk-alert"><b>Needs attention</b><br>' + al.slice(0, 8).map(function (r) {
         var bits = []; if (r.out) bits.push('out of stock'); else if (r.low) bits.push('only ' + num(r.onHand) + ' ' + esc(r.item.unit || '') + ' left (reorder at ' + num(r.item.reorderLevel) + ')');

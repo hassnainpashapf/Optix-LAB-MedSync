@@ -1963,7 +1963,7 @@
        then one per previous report of the same test for this patient
        (newest first, capped at 2). Each box shows:
          line 1: RESULT (bold), line 2: patient no. 'P # NN',
-         line 3: visit date 'DD/MM'
+         line 3: full reported timestamp 'DD-Mon-YYYY HH:MM'
      - Body rows with dotted separators; param name regular weight.
      - Abnormal values (abnormalDir): red (#c00) bold with ↑ (high) or ↓
        (low) before the value — current and previous columns alike.
@@ -2005,7 +2005,6 @@
       var bv = c.caseCode ? { code: c.caseCode, text: c.caseText } : (vn ? { code: vn.caseCode, text: vn.caseText } : null);
       var bt = bv && bv.text ? String(bv.text).split(' - ') : [];
       var bNum = bt[0] || (c.invoiceNo || invNo);
-      var bDate = bt[1] || '';
       return '<div style="border:2px solid #000;background:#fff;box-sizing:border-box;' +
         'padding:0;line-height:1.25;font-size:0.76em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%">' +
         '<div style="font-weight:700;color:#000;font-size:1em;background:#bfbfbf;padding:3px 0;border-bottom:2px solid #000;text-align:center;width:100%">RESULT</div>' +
@@ -2013,7 +2012,7 @@
         '<div style="width:100%;margin:0 0 2px">' + barcodeHtml((bv && bv.code) || c.invoiceNo || invNo, '100%', '11px') + '</div>' +
         '<div style="color:#000;font-size:1em;white-space:nowrap">' + App.esc(bNum) + '</div>' +
         '<div style="font-size:1em;color:#000;white-space:nowrap">' +
-          (bDate ? App.esc(bDate) : App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;')) +
+          App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
         '</div></div>' +
       '</div>';
     }).join('');
@@ -3340,13 +3339,11 @@
         titleLines.forEach(function (tl, i) { txt(tl, M, y + 5 + i * 6); });
         /* patient code/text/date in the RESULT box (invoice no. + timestamp as fallback) */
         var repV = (r.res && r.res.reportedAt) || d.maxReported || inv.createdAt;
-        var repDt = new Date(repV); if (isNaN(repDt.getTime())) repDt = new Date();
-        var pDDMM = p2(repDt.getDate()) + '/' + p2(repDt.getMonth() + 1);
         var boxCode = caseNo, boxText = dash(caseNo), boxDate = fmtTs(repV);
         if (pvn && pvn.caseCode) {
           boxCode = pvn.caseCode;
           boxText = String(pvn.caseText || '').split(' - ')[0] || String(pvn.caseText || '');
-          boxDate = pDDMM;
+          boxDate = fmtTs(repV);
         }
         resultBox(W - M - RBW, y - 1, boxCode, boxText, boxDate);
         y += Math.max(titleH, BOX_H) + 2;
@@ -3489,12 +3486,14 @@
     clock: svgIcon('<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>')
   };
 
+  var KPI_TINTS = { amber: 't-amber', green: 't-green', blue: 't-blue', red: 't-red', navy: 't-navy', brand: 't-navy', purple: 't-purple', violet: 't-purple' };
   function statCard(icon, tint, label, value, sub) {
-    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
-      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
-      '<div class="lb">' + App.esc(label) + '</div>' +
-      '<div class="vl">' + value + '</div>' +
-      '<div class="dl">' + sub + '</div>' +
+    var t = KPI_TINTS[tint] || 't-navy';
+    return '<div class="kpi ' + t + '">' +
+      '<div class="kpi-ic">' + icon + '</div>' +
+      '<div class="kpi-lb">' + App.esc(label) + '</div>' +
+      '<div class="kpi-nm">' + value + '</div>' +
+      '<div class="kpi-sb">' + sub + '</div>' +
       '</div>';
   }
 
@@ -3532,7 +3531,7 @@
       oldestDays = (oldestDays === null) ? d : Math.max(oldestDays, d);
     });
     var statsHtml = STAT_CSS +
-      '<div class="pgstat"><div class="stat-grid">' +
+      '<div class="pgstat"><div class="kpi-grid">' +
       statCard(STAT_ICONS.alert, 'amber', 'Pending Results', pendingRows.length, 'awaiting entry') +
       statCard(STAT_ICONS.check, 'green', 'Reported Today', reportedToday, 'results completed') +
       statCard(STAT_ICONS.cal, 'blue', 'Reported This Month', reportedMonth, 'this month') +
@@ -3706,14 +3705,13 @@
       if (l.slice(0, 10) === today) nToday++;
       if (l.slice(0, 7) === ym) nMonth++;
     });
-    function card(rgb, accent, paths, label, val, sub) {
-      return '<div style="flex:1 1 200px;min-width:0;background:#fff;border:1px solid #e5e9f0;border-radius:16px;padding:18px;position:relative;overflow:hidden;box-shadow:0 1px 3px rgba(16,24,40,.08)">' +
-        '<div style="position:absolute;inset:0;pointer-events:none;background:linear-gradient(135deg,transparent 55%,rgba(' + rgb + ',.14) 130%)"></div>' +
-        '<div style="position:relative;width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(' + rgb + ',.12);color:' + accent + ';margin-bottom:12px">' +
-        '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg></div>' +
-        '<div style="position:relative;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8a94a6;margin-bottom:6px">' + label + '</div>' +
-        '<div style="position:relative;font-size:28px;font-weight:800;letter-spacing:-.02em;color:#111827;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap">' + val + '</div>' +
-        '<div style="position:relative;font-size:12.5px;color:#8a94a6;font-weight:500;margin-top:6px">' + sub + '</div></div>';
+    function card(tint, paths, label, val, sub) {
+      return '<div class="kpi ' + tint + '">' +
+        '<div class="kpi-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg></div>' +
+        '<div class="kpi-lb">' + label + '</div>' +
+        '<div class="kpi-nm">' + val + '</div>' +
+        '<div class="kpi-sb">' + sub + '</div>' +
+        '</div>';
     }
     var I = {
       file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
@@ -3721,11 +3719,11 @@
       cal: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
       wallet: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>'
     };
-    return '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:18px">' +
-      card('19,24,69', '#131845', I.file, 'TOTAL REPORTS', App.esc(all.length), 'finished reports') +
-      card('5,150,105', '#059669', I.check, 'REPORTED TODAY', App.esc(nToday), 'results completed') +
-      card('37,99,235', '#2563eb', I.cal, 'REPORTED THIS MONTH', App.esc(nMonth), 'this month') +
-      card('217,119,6', '#d97706', I.wallet, 'UNPAID DUES', App.esc(App.money(due)), 'outstanding') +
+    return '<div class="kpi-grid">' +
+      card('t-navy', I.file, 'TOTAL REPORTS', App.esc(all.length), 'finished reports') +
+      card('t-green', I.check, 'REPORTED TODAY', App.esc(nToday), 'results completed') +
+      card('t-blue', I.cal, 'REPORTED THIS MONTH', App.esc(nMonth), 'this month') +
+      card('t-amber', I.wallet, 'UNPAID DUES', App.esc(App.money(due)), 'outstanding') +
       '</div>';
   }
   function renderOld() {

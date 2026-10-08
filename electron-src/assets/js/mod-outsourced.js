@@ -40,7 +40,7 @@
   function stBadge(v) { return '<span class="badge ' + ST[v.j.status][0] + '">' + ST[v.j.status][1] + '</span>' + (v.late ? ' <span class="badge b-unpaid">late</span>' : ''); }
 
   /* ---------- dashboard ---------- */
-  /* stat-card tints now driven by CSS classes (.os-amber etc.) in app.css */
+  /* stat-card tints driven by shared .kpi t-* classes in app.css */
   var ICONS = {
     truck: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
     clock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
@@ -51,11 +51,11 @@
     scale: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l7-4 7 4"/><path d="M3 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M17 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M8 21h8"/></svg>'
   };
   function stat(label, val, sub, tint, hot, icon) {
-    return '<div class="card os-stat os-' + tint + (hot ? ' hot' : '') + '">' +
-      '<div class="os-ic">' + icon + '</div>' +
-      '<div class="os-lb">' + label + '</div>' +
-      '<div class="os-nm">' + val + '</div>' +
-      '<div class="os-sb">' + sub + '</div>' +
+    return '<div class="kpi t-' + tint + (hot ? ' hot' : '') + '">' +
+      '<div class="kpi-ic">' + icon + '</div>' +
+      '<div class="kpi-lb">' + label + '</div>' +
+      '<div class="kpi-nm">' + val + '</div>' +
+      '<div class="kpi-sb">' + sub + '</div>' +
       '</div>';
   }
   function dashData(all) {
@@ -73,7 +73,7 @@
     return { mk: mk, c: c, byLab: byLab, owed: owed, attention: attention, labRows: labRows };
   }
   function statCards(d) {
-    return '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:14px">' +
+    return '<div class="kpi-grid">' +
       stat('To send', d.c.to_send, 'waiting at your lab', 'amber', false, ICONS.truck) +
       stat('At reference lab', d.c.sent, 'result awaited', 'blue', false, ICONS.building) +
       stat('Running late', d.c.late, 'past the promised days', 'red', d.c.late > 0, ICONS.alert) +

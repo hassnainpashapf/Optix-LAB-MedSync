@@ -17,15 +17,18 @@
     check: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.1V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14l-3-3"/></svg>'
   };
 
+  /* shared KPI card markup (CSS in app.css) — tint names map to t-navy/t-green/… */
+  var KPI_TINTS = { brand: 'navy', blue: 'blue', amber: 'amber', green: 'green', red: 'red', purple: 'purple' };
+
   function statCard(icon, tint, label, value, sub, raw, isMoney) {
     var countAttrs = (typeof raw === 'number' && isFinite(raw))
       ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"'
       : '';
-    return '<div class="stat" data-tint="' + tint + '" style="--sc:var(--' + tint + ')">' +
-      '<div class="stat-ico" style="--sc:var(--' + tint + ');--sc-soft:var(--' + tint + '-soft)">' + icon + '</div>' +
-      '<div class="lb">' + App.esc(label) + '</div>' +
-      '<div class="vl"' + countAttrs + '>' + value + '</div>' +
-      '<div class="dl">' + sub + '</div>' +
+    return '<div class="kpi t-' + (KPI_TINTS[tint] || tint) + '">' +
+      '<div class="kpi-ic">' + icon + '</div>' +
+      '<div class="kpi-lb">' + App.esc(label) + '</div>' +
+      '<div class="kpi-nm"' + countAttrs + '>' + value + '</div>' +
+      '<div class="kpi-sb">' + sub + '</div>' +
       '</div>';
   }
 
@@ -81,7 +84,7 @@
         return isMoney ? 'Rs ' + raw.toLocaleString('en-US') : String(raw);
       }
       function run() {
-        var els = document.querySelectorAll('#view .stat .vl[data-count]');
+        var els = document.querySelectorAll('#view .kpi .kpi-nm[data-count]');
         var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         for (var i = 0; i < els.length; i++) (function (el) {
           var target = parseFloat(el.getAttribute('data-count')) || 0;
@@ -324,7 +327,7 @@
     '@media (prefers-reduced-motion:reduce){.stat{animation:none}.stat:hover{transform:none}}' +
     '</style>' +
 
-    '<div class="stat-grid">' + stats + '</div>' +
+    '<div class="kpi-grid">' + stats + '</div>' +
 
     quickCss + quickAccess +
 
