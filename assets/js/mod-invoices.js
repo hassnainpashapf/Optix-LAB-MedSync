@@ -118,7 +118,7 @@
         '<div><label class="label">Amount Received *</label>' +
         '<input id="pm-amount" class="input" type="number" min="1" step="any" value="' + inv.due + '"></div>' +
         '<div><label class="label">Payment Method</label>' +
-        '<select id="pm-method" class="select"><option>Cash</option><option>Bank</option><option>Card</option></select></div>' +
+        '<select id="pm-method" class="select">' + App.optionsHtml('paymentMethod', 'Cash') + '</select></div>' +
         '<div style="grid-column:1/-1"><label class="label">Note (optional)</label>' +
         '<input id="pm-note" class="input" placeholder="e.g. partial payment, jazzcash ref..."></div>' +
       '</div>' +
@@ -268,8 +268,9 @@
             return '<option value="' + App.esc(d.id) + '"' + (d.id === doctorId ? ' selected' : '') + '>' + App.esc(d.name) + '</option>';
           }).join('') + '</select></div>' +
         '<div><label class="label">Registration date &amp; time</label><input id="ei-regdate" class="input" type="datetime-local" value="' + App.toLocalInput(inv.createdAt) + '"></div>' +
-        '<div><label class="label">Registration location</label><input id="ei-regloc" class="input" maxlength="120" value="' + App.esc(inv.regLocation != null && inv.regLocation !== '' ? inv.regLocation : App.visitDefaults().regLocation) + '"></div>' +
-        '<div><label class="label">Destination location</label><input id="ei-destloc" class="input" maxlength="120" value="' + App.esc(inv.destLocation != null && inv.destLocation !== '' ? inv.destLocation : App.visitDefaults().destLocation) + '"></div>' +
+        '<div><label class="label">Registration location</label><input id="ei-regloc" list="ei-regloc-dl" class="input" maxlength="120" value="' + App.esc(inv.regLocation != null && inv.regLocation !== '' ? inv.regLocation : App.visitDefaults().regLocation) + '">' + App.datalistHtml('ei-regloc-dl', 'regLocation', App.visitDefaults().regLocation) + '</div>' +
+        '<div><label class="label">Destination location</label><input id="ei-destloc" list="ei-destloc-dl" class="input" maxlength="120" value="' + App.esc(inv.destLocation != null && inv.destLocation !== '' ? inv.destLocation : App.visitDefaults().destLocation) + '">' + App.datalistHtml('ei-destloc-dl', 'destLocation', App.visitDefaults().destLocation) + '</div>' +
+        '<div><label class="label">Reference</label><select id="ei-ref" class="select">' + App.optionsHtml('reference', inv.reference || App.listOptions('reference')[0] || '') + '</select></div>' +
       '</div>' +
       '<div id="ei-total" style="text-align:right;font-weight:800;margin:12px 0"></div>' +
       '<div class="actions"><button class="btn btn-ghost" id="ei-cancel">Cancel</button>' +
@@ -353,7 +354,7 @@
           });
           var t = calcTotal();
           var due = r2(t.total - (+inv.paid || 0));
-          var visit = { regLocation: root.querySelector('#ei-regloc').value.trim(), destLocation: root.querySelector('#ei-destloc').value.trim() };
+          var visit = { regLocation: root.querySelector('#ei-regloc').value.trim(), destLocation: root.querySelector('#ei-destloc').value.trim(), reference: root.querySelector('#ei-ref').value };
           if (root.querySelector('#ei-regdate').value && root.querySelector('#ei-regdate').value !== App.toLocalInput(inv.createdAt)) { visit.createdAt = App.fromLocalInput(root.querySelector('#ei-regdate').value); var vd = function (x) { var q = new Date(x); return q.getFullYear() + '-' + q.getMonth() + '-' + q.getDate(); }; if (vd(visit.createdAt) !== vd(inv.createdAt)) visit.caseNo = App.nextVisitNos(visit.createdAt, inv.id).caseNo; }
           DB.update('invoices', id, Object.assign(visit, inv.panelId ? {   /* a company's bill is never collected from the patient: it always stays paid, the account just changes */
             items: items, subtotal: t.sub, discount: t.disc, total: t.total, paid: t.total, due: 0, status: 'paid', doctorId: doctorId || null

@@ -133,7 +133,7 @@
       '<p class="muted" style="margin-top:0">Outstanding now: <b style="color:' + (acc.balance > 0 ? '#b91c1c' : 'inherit') + '">' + rs(acc.balance) + '</b></p>' +
       '<div class="form-grid"><div><label class="label">Amount (Rs) *</label><input class="input" id="prAmt" type="number" min="1" step="any" value="' + (acc.balance > 0 ? acc.balance : '') + '"></div>' +
       '<div><label class="label">Date</label><input class="input" id="prDate" type="date" value="' + App.today() + '"></div>' +
-      '<div><label class="label">Method</label><select class="select" id="prMeth"><option>Cash</option><option>Bank</option><option>Cheque</option><option>Online</option></select></div>' +
+      '<div><label class="label">Method</label><select class="select" id="prMeth">' + App.optionsHtml('paymentMethod', 'Cash') + '</select></div>' +
       '<div><label class="label">Note (cheque no. etc.)</label><input class="input" id="prNote" maxlength="80"></div></div>' +
       '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px"><button class="btn btn-ghost" id="prCancel">Cancel</button><button class="btn btn-primary" id="prSave">Save payment</button></div>',
       { onOpen: function (ov, close) {

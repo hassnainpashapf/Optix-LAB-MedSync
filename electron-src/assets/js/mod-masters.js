@@ -659,9 +659,7 @@ function testModal(t) {
   var isNew = !t;
   t = t || { code: '', name: '', category: '', price: '', sampleType: 'Blood', tat: 'Same day', active: true, params: [] };
   var cats = categories();
-  var sampleOpts = ['Blood', 'Serum', 'Plasma', 'Urine', 'Stool', 'Other'].map(function (s) {
-    return '<option' + (t.sampleType === s ? ' selected' : '') + '>' + s + '</option>';
-  }).join('');
+  var sampleOpts = App.optionsHtml('sampleType', t.sampleType || '');
 
   var body =
     '<form id="tm-form">' +

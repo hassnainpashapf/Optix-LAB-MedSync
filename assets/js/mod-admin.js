@@ -34,7 +34,7 @@
   }
   function inRange(day, from, to) { return day >= from && day <= to; }
 
-  var EXP_CATS = ['Rent', 'Salaries', 'Reagents', 'Utilities', 'Other'];
+  function expCats() { return App.listOptions('expenseCategory'); }
 
   /* dashboard-style premium stat cards — markup + CSS copied from the
      dashboard statCard() pattern (stat-grid > stat > stat-ico + lb/vl/dl),
@@ -196,7 +196,7 @@
     var body = '<div class="form-grid">'
       + '<div><label class="label">Title *</label><input class="input" id="exfTitle" value="' + App.esc(exp.title) + '" placeholder="e.g. CBC reagent kit"></div>'
       + '<div><label class="label">Category *</label><select class="select" id="exfCat">'
-      + EXP_CATS.map(function (c) { return '<option value="' + c + '"' + (exp.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join('')
+      + App.optionsHtml('expenseCategory', exp.category)
       + '</select></div>'
       + '<div><label class="label">Amount (Rs) *</label><input class="input" id="exfAmt" type="number" min="1" step="any" value="' + App.esc(exp.amount) + '" placeholder="0"></div>'
       + '<div><label class="label">Date *</label><input class="input" id="exfDate" type="date" value="' + App.esc(toDay(exp.date) || App.today()) + '"></div>'
@@ -1305,6 +1305,7 @@
       { id: 'sharing', label: 'Email & Slack' },
       { id: 'portal', label: 'Patient portal' },
       { id: 'users', label: 'Users & Roles' },
+      { id: 'lists', label: 'Dropdown Lists' },
       { id: 'backup', label: 'Backup' },
       { id: 'danger', label: 'Danger Zone' }
     ];
@@ -1323,6 +1324,7 @@
     else if (settingsTab === 'sharing') renderSetSharing();
     else if (settingsTab === 'portal') renderSetPortal();
     else if (settingsTab === 'users') renderSetUsers();
+    else if (settingsTab === 'lists') renderSetLists();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
   }
@@ -2160,6 +2162,62 @@
     });
   }
 
+
+  /* ---- Dropdown Lists: the admin edits the choices that appear in forms ---- */
+  function renderSetLists() {
+    var st = DB.get('settings', 'main') || {}, work = {};
+    App.LIST_DEFS.forEach(function (d) { work[d.key] = App.listOptions(d.key).slice(); });
+    function cardHtml(d) {
+      var rows = work[d.key].map(function (v, i) {
+        var lock = (d.locked || []).indexOf(v) >= 0;
+        return '<div class="dl-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><input class="input dl-in" data-k="' + d.key + '" data-i="' + i + '" value="' + App.esc(v) + '"' + (lock ? ' disabled' : '') + ' maxlength="60" style="flex:1;min-width:0">' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-up="' + d.key + ':' + i + '" title="Move up"' + (i === 0 || lock ? ' disabled' : '') + '>&uarr;</button><button type="button" class="btn btn-ghost btn-sm" data-down="' + d.key + ':' + i + '" title="Move down"' + (i === work[d.key].length - 1 || lock ? ' disabled' : '') + '>&darr;</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-del="' + d.key + ':' + i + '" title="Remove"' + (lock ? ' disabled' : '') + ' style="color:#b91c1c">&times;</button></div>';
+      }).join('');
+      return '<div class="card" style="margin:0" data-card="' + d.key + '"><div class="card-h"><h3>' + App.esc(d.label) + '</h3></div><div class="card-b"><p class="muted" style="font-size:12.5px;margin:0 0 10px">' + App.esc(d.hint) + '</p>' + (rows || '<p class="muted" style="font-size:13px;margin:0 0 8px">Empty. Add the first one below.</p>') +
+        '<div style="display:flex;gap:6px;margin-top:8px"><input class="input dl-new" data-k="' + d.key + '" placeholder="Add a new one…" maxlength="60" style="flex:1;min-width:0"><button type="button" class="btn btn-ghost btn-sm" data-add="' + d.key + '">+ Add</button></div>' +
+        '<div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="btn btn-primary btn-sm" data-save="' + d.key + '">Save</button><button type="button" class="btn btn-ghost btn-sm" data-reset="' + d.key + '">Reset to default</button></div></div></div>';
+    }
+    function doctorsHtml() {
+      var docs = DB.all('doctors').slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+      return '<div class="card" style="margin:0"><div class="card-h"><h3>Referred By (doctors)</h3></div><div class="card-b"><p class="muted" style="font-size:12.5px;margin:0 0 10px">The doctors in the "Referred By" menu. Rename one here, or add a new one. Commission, clinic and statements are in the full <a href="#/doctors">Doctors page</a>.</p>' +
+        docs.map(function (d) { return '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><input class="input dl-doc" data-id="' + App.esc(d.id) + '" value="' + App.esc(d.name || '') + '" maxlength="80" style="flex:1;min-width:0"><button type="button" class="btn btn-ghost btn-sm" data-docsave="' + App.esc(d.id) + '">Save name</button></div>'; }).join('') +
+        '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><input class="input" id="dlDocNew" placeholder="New doctor name…" maxlength="80" style="flex:1;min-width:160px"><input class="input" id="dlDocPct" type="number" min="0" max="100" step="0.5" placeholder="Commission %" style="width:130px"><button type="button" class="btn btn-ghost btn-sm" id="dlDocAdd">+ Add doctor</button></div></div></div>';
+    }
+    function paint() {
+      var keep = document.activeElement && document.activeElement.getAttribute ? document.activeElement.getAttribute('data-k') + '|' + (document.activeElement.getAttribute('data-i') || 'new') : '';
+      document.getElementById('setBody').innerHTML = '<p class="muted" style="margin:0 0 14px;font-size:13.5px">The choices that appear in your forms. Change a name, add a new choice, remove one or move it up/down, then press <b>Save</b> on that list. Records already saved keep what they had.</p>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;align-items:start">' + doctorsHtml() + App.LIST_DEFS.map(cardHtml).join('') + '</div>';
+      wire();
+    }
+    function readInputs() { document.querySelectorAll('.dl-in').forEach(function (e) { var k = e.getAttribute('data-k'), i = +e.getAttribute('data-i'); if (work[k] && work[k][i] != null && !e.disabled) work[k][i] = e.value; }); }
+    function wire() {
+      var b = document.getElementById('setBody');
+      b.querySelectorAll('[data-add]').forEach(function (x) { x.addEventListener('click', function () { var k = x.getAttribute('data-add'), inp = b.querySelector('.dl-new[data-k="' + k + '"]'), v = inp.value.trim(); if (!v) return; readInputs(); if (work[k].some(function (y) { return y.toLowerCase() === v.toLowerCase(); })) return App.toast('That is already in the list.', 'err'); work[k].push(v); paint(); }); });
+      b.querySelectorAll('.dl-new').forEach(function (inp) { inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); b.querySelector('[data-add="' + inp.getAttribute('data-k') + '"]').click(); } }); });
+      function move(attr, delta) { b.querySelectorAll('[' + attr + ']').forEach(function (x) { x.addEventListener('click', function () { var p2 = x.getAttribute(attr).split(':'), k = p2[0], i = +p2[1], j = i + delta; readInputs(); if (j < 0 || j >= work[k].length) return; var t = work[k][i]; work[k][i] = work[k][j]; work[k][j] = t; paint(); }); }); }
+      move('data-up', -1); move('data-down', 1);
+      b.querySelectorAll('[data-del]').forEach(function (x) { x.addEventListener('click', function () { var p2 = x.getAttribute('data-del').split(':'); readInputs(); work[p2[0]].splice(+p2[1], 1); paint(); }); });
+      b.querySelectorAll('[data-save]').forEach(function (x) { x.addEventListener('click', function () {
+        var k = x.getAttribute('data-save'); readInputs(); var out = [], seen = {};
+        work[k].forEach(function (v) { v = String(v).trim(); if (v && !seen[v.toLowerCase()]) { seen[v.toLowerCase()] = 1; out.push(v); } });
+        if (k === 'paymentMethod' && !seen['cash']) out.unshift('Cash');
+        if (!out.length && k !== 'regLocation' && k !== 'destLocation') return App.toast('Keep at least one choice in this list.', 'err');
+        var cur = DB.get('settings', 'main') || {}, fl = Object.assign({}, cur.formLists || {}); fl[k] = out; DB.update('settings', 'main', Object.assign({}, cur, { formLists: fl })); work[k] = out.slice(); App.toast('Saved.'); paint();
+      }); });
+      b.querySelectorAll('[data-reset]').forEach(function (x) { x.addEventListener('click', function () {
+        var k = x.getAttribute('data-reset'); App.confirm('Put this list back to the original choices?').then(function (ok) { if (!ok) return; var cur = DB.get('settings', 'main') || {}, fl = Object.assign({}, cur.formLists || {}); delete fl[k]; DB.update('settings', 'main', Object.assign({}, cur, { formLists: fl })); work[k] = App.listOptions(k).slice(); App.toast('Back to the original list.'); paint(); });
+      }); });
+      b.querySelectorAll('[data-docsave]').forEach(function (x) { x.addEventListener('click', function () { var id = x.getAttribute('data-docsave'), v = b.querySelector('.dl-doc[data-id="' + id + '"]').value.trim(); if (!v) return App.toast('A doctor needs a name.', 'err'); DB.update('doctors', id, { name: v }); App.toast('Name saved.'); }); });
+      var da = document.getElementById('dlDocAdd'); if (da) da.addEventListener('click', function () {
+        var n = document.getElementById('dlDocNew').value.trim(), c = parseFloat(document.getElementById('dlDocPct').value); if (!n) return App.toast('Type the doctor name.', 'err');
+        if (DB.all('doctors').some(function (d) { return String(d.name).toLowerCase() === n.toLowerCase(); })) return App.toast('This doctor already exists.', 'err');
+        DB.insert('doctors', { name: n, clinic: '', phone: '', whatsapp: '', email: '', commissionPct: isNaN(c) ? 0 : Math.min(100, Math.max(0, c)) }); App.toast('Doctor added.'); paint();
+      });
+    }
+    paint();
+  }
+
   /* ---- Users (admin only) ---- */
   function roleBadge(r, u) {
     if (r === 'custom') { var d = (((DB.get('settings', 'main') || {}).customRoles) || []).filter(function (x) { return u && x.id === u.roleId; })[0]; return '<span class="badge b-ready">' + App.esc(d ? d.name : 'custom (missing)') + '</span>'; }
@@ -2446,7 +2504,7 @@
     });
   }
 
-  var SET_TABS = ['profile', 'account', 'templates', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
+  var SET_TABS = ['profile', 'account', 'templates', 'whatsapp', 'sharing', 'portal', 'users', 'lists', 'backup', 'danger'];
   App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });
   App.route('#/settings/:tab', function (p) { settingsTab = (p && SET_TABS.indexOf(p.tab) >= 0) ? p.tab : 'profile'; renderSettings(); });
 

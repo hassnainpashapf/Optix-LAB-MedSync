@@ -187,9 +187,7 @@
       '<input class="input" id="ptf-dob" type="date" value="' + val('dob') + '"></div>' +
       '<div class="form-row"><label class="label" for="ptf-blood">Blood Group</label>' +
       '<select class="select" id="ptf-blood">' +
-      bloods.map(function (b) {
-        return '<option value="' + b + '"' + ((p.blood || '') === b ? ' selected' : '') + '>' + (b || 'Select…') + '</option>';
-      }).join('') +
+      App.optionsHtml('bloodGroup', p.blood || '', 'Select…') +
       '</select></div>' +
       '</div>' +
       '<div class="form-row"><label class="label" for="ptf-whatsapp">Mobile / WhatsApp No.</label>' +
@@ -204,10 +202,11 @@
       '<input class="input" id="ptf-regdate" type="datetime-local" value="' + App.toLocalInput(p.createdAt) + '">' +
       '<div class="muted" style="font-size:11.5px;margin-top:3px">Filled in automatically. Change it if needed.</div></div>' +
       (!p.id ? '<div class="form-row"><label class="label" for="ptf-regloc">Registration Location</label>' +
-      '<input class="input" id="ptf-regloc" maxlength="120" value="' + App.esc(App.visitDefaults().regLocation) + '"></div>' : '<div></div>') +
+      '<input class="input" id="ptf-regloc" list="ptf-regloc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().regLocation) + '">' + App.datalistHtml('ptf-regloc-dl', 'regLocation', App.visitDefaults().regLocation) + '</div>' : '<div></div>') +
       '</div>' +
       (!p.id ? '<div class="form-row"><label class="label" for="ptf-destloc">Destination Location <span class="ptf-opt">(where the report is for)</span></label>' +
-      '<input class="input" id="ptf-destloc" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '"></div>' : '') +
+      '<input class="input" id="ptf-destloc" list="ptf-destloc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '">' + App.datalistHtml('ptf-destloc-dl', 'destLocation', App.visitDefaults().destLocation) + '</div>' +
+      '<div class="form-row"><label class="label" for="ptf-ref">Reference <span class="ptf-opt">(shown on the report)</span></label><select class="select" id="ptf-ref">' + App.optionsHtml('reference', App.listOptions('reference')[0] || '') + '</select></div>' : '') +
       '<div class="form-row"><label class="label" for="ptf-address">Address</label>' +
       '<textarea class="input" id="ptf-address" rows="2" maxlength="200" placeholder="Street, area, city">' + val('address') + '</textarea></div>' +
       '<div class="form-row"><label class="label" for="ptf-notes">Notes / Medical History</label>' +
@@ -309,7 +308,7 @@
       var notes = document.getElementById('ptf-notes').value.trim();
       var regISO = App.fromLocalInput(document.getElementById('ptf-regdate').value);
       var regLocEl = document.getElementById('ptf-regloc'), destLocEl = document.getElementById('ptf-destloc');
-      var regLoc = regLocEl ? regLocEl.value.trim() : '', destLoc = destLocEl ? destLocEl.value.trim() : '';
+      var regLoc = regLocEl ? regLocEl.value.trim() : '', destLoc = destLocEl ? destLocEl.value.trim() : '', refEl = document.getElementById('ptf-ref'), refVal = refEl ? refEl.value : '';
       var ok = true;
       setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-whatsapp', '');
       if (name.length < 2) { setErr('ptf-e-name', 'Please enter the full name.'); ok = false; }
@@ -352,7 +351,7 @@
               labNo: vn.labNo, caseNo: vn.caseNo,
               patientId: np.id, doctorId: null, items: items,
               subtotal: bTotal, discount: 0, total: bTotal, paid: pnl ? bTotal : 0, due: pnl ? 0 : bTotal,
-              status: pnl ? 'paid' : 'unpaid', panelId: pnl ? pnl.id : null, regLocation: regLoc, destLocation: destLoc, createdAt: regISO, createdBy: ptUser()
+              status: pnl ? 'paid' : 'unpaid', panelId: pnl ? pnl.id : null, regLocation: regLoc, destLocation: destLoc, reference: refVal, createdAt: regISO, createdBy: ptUser()
             });
             DB.update('invoices', inv.id, { no: inv.id });
             try { App.outsourceSync(inv.id, true); } catch (e) { if (window.console) console.error(e); }

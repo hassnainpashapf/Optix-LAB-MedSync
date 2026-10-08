@@ -231,6 +231,7 @@
       var inv = DB.insert('invoices', {
         labNo: vn.labNo, caseNo: vn.caseNo,
         panelId: pn ? pn.id : null,
+        reference: (document.getElementById('blRef') || {}).value || '',
         regLocation: (document.getElementById('blRegLoc') || {}).value ? document.getElementById('blRegLoc').value.trim() : '',
         destLocation: (document.getElementById('blDestLoc') || {}).value ? document.getElementById('blDestLoc').value.trim() : '',
         patientId: state.patient.id,
@@ -389,8 +390,9 @@
         '<div id="blCart" style="max-height:210px;overflow:auto"></div></div>' +
         '<div class="bl-sec"><label class="label" for="blRegDate">Registration date &amp; time</label><input class="input" id="blRegDate" type="datetime-local" value="' + App.toLocalInput() + '">' +
         '<div class="muted" style="font-size:11.5px;margin-top:3px">Filled in automatically. Change it if needed.</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><div><label class="label" for="blRegLoc">Registration location</label><input class="input" id="blRegLoc" maxlength="120" value="' + App.esc(App.visitDefaults().regLocation) + '"></div>' +
-        '<div><label class="label" for="blDestLoc">Destination location</label><input class="input" id="blDestLoc" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '"></div></div></div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><div><label class="label" for="blRegLoc">Registration location</label><input class="input" id="blRegLoc" list="blRegLoc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().regLocation) + '">' + App.datalistHtml('blRegLoc-dl', 'regLocation', App.visitDefaults().regLocation) + '</div>' +
+        '<div><label class="label" for="blDestLoc">Destination location</label><input class="input" id="blDestLoc" list="blDestLoc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '">' + App.datalistHtml('blDestLoc-dl', 'destLocation', App.visitDefaults().destLocation) + '</div></div>' +
+        '<div style="margin-top:8px"><label class="label" for="blRef">Reference <span class="muted" style="font-weight:400">(shown on the report)</span></label><select class="select" id="blRef">' + App.optionsHtml('reference', App.listOptions('reference')[0] || '') + '</select></div></div>' +
         (panels.length ? '<div class="bl-sec"><label class="label">Bill to</label><select class="select" id="blPanel"><option value="">Patient pays (normal)</option>' + panels.map(function (x) { return '<option value="' + App.esc(x.id) + '"' + (x.id === state.panelId ? ' selected' : '') + '>' + App.esc(x.name) + ' (company account)</option>'; }).join('') + '</select><div class="muted" id="blPanelNote" style="font-size:12.5px;margin-top:5px"></div></div>' : '') +
         '<div class="bl-sec"><label class="label">Referral doctor (optional)</label>' +
         '<select class="select" id="blDoctor"><option value="">Walk-in (no referral)</option>' +
@@ -407,7 +409,7 @@
           '<div class="bl-total"><span>Total</span><strong id="blTotal">Rs 0</strong></div>' +
         '</div>' +
         '<div class="bl-sec" id="blMethSec"><label class="label">Payment method</label>' +
-        '<div class="bl-seg" id="blMethod"><button data-m="Cash" class="on">Cash</button><button data-m="Bank">Bank</button><button data-m="Card">Card</button></div></div>' +
+        '<div class="bl-seg" id="blMethod" style="flex-wrap:wrap">' + App.listOptions('paymentMethod').map(function (m, i) { return '<button data-m="' + App.esc(m) + '"' + (i === 0 ? ' class="on"' : '') + '>' + App.esc(m) + '</button>'; }).join('') + '</div></div>' +
         '<div class="bl-sec" id="blTendSec"><label class="label">Amount tendered</label>' +
         '<input class="input" id="blTendered" type="number" min="0" placeholder="0"></div>' +
         '<div class="bl-row" id="blChangeRow" style="margin-top:6px"></div>' +

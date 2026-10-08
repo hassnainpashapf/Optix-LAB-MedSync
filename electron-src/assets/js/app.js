@@ -66,7 +66,7 @@
     { key: 'subscription', label: 'Subscription', icon: 'card',  route: '#/subscription', color: '#f59e0b', saas: true },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b',
       sub: [{ key: 'profile', label: 'Lab Profile', route: '#/settings' }, { key: 'account', label: 'My Account', route: '#/settings/account' }, { key: 'templates', label: 'Report Templates', route: '#/settings/templates' },
-        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' }, { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' }, { key: 'portal', label: 'Patient portal', route: '#/settings/portal' }, { key: 'users', label: 'Users & Roles', route: '#/settings/users' }, { key: 'backup', label: 'Backup', route: '#/settings/backup' },
+        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' }, { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' }, { key: 'portal', label: 'Patient portal', route: '#/settings/portal' }, { key: 'users', label: 'Users & Roles', route: '#/settings/users' }, { key: 'lists', label: 'Dropdown Lists', route: '#/settings/lists' }, { key: 'backup', label: 'Backup', route: '#/settings/backup' },
         { key: 'danger', label: 'Danger Zone', route: '#/settings/danger', danger: true }] },
     { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
   ];
@@ -1209,6 +1209,43 @@
     var cost = (DB.all('outsourced') || []).filter(function (j) { return j.refLabId === lab.id && live[j.invoiceId] && (j.status === 'sent' || j.status === 'received'); }).reduce(function (a, j) { return a + (+j.cost || 0); }, 0);
     var paid = (lab.payments || []).reduce(function (a, x) { return a + (+x.amount || 0); }, 0), open = +lab.openingBalance || 0;
     return { opening: open, cost: cost, paid: paid, balance: Math.round((open + cost - paid) * 100) / 100 };
+  };
+  /* Dropdown lists the lab can edit in Settings -> Dropdown Lists (saved in settings.formLists). A list that was never edited uses these defaults. */
+  var LIST_DEFAULTS = {
+    regLocation: [], destLocation: [],
+    reference: ['Standard', 'Urgent', 'Camp', 'Corporate', 'VIP'],
+    bloodGroup: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
+    sampleType: ['Blood', 'Serum', 'Plasma', 'Urine', 'Stool', 'Other'],
+    expenseCategory: ['Rent', 'Salaries', 'Reagents', 'Utilities', 'Other'],
+    paymentMethod: ['Cash', 'Bank', 'Card']
+  };
+  App.LIST_DEFS = [
+    { key: 'regLocation', label: 'Registration Location', hint: 'Where the patient is registered (branch, collection centre, camp). Shown as suggestions when you register a patient or make a bill; you can still type something else.' },
+    { key: 'destLocation', label: 'Destination Location', hint: 'Where the sample / report goes (main lab, outside lab). Same: suggestions, and you can still type another.' },
+    { key: 'reference', label: 'Reference', hint: 'The "Reference" line on the report (Standard, Urgent, Camp ...). The first one is used when nothing is chosen.' },
+    { key: 'bloodGroup', label: 'Blood Group', hint: 'The blood group choices on the patient form.' },
+    { key: 'sampleType', label: 'Sample Type', hint: 'The sample type choices when you add or edit a test.' },
+    { key: 'expenseCategory', label: 'Expense Categories', hint: 'The category choices when you add an expense.' },
+    { key: 'paymentMethod', label: 'Payment Methods', hint: 'How money is received on a bill. "Cash" is fixed (the daily cash closing counts it); add others like JazzCash, Easypaisa, Cheque.', locked: ['Cash'] }
+  ];
+  App.listOptions = function (key) {
+    var s = {}; try { s = DB.get('settings', 'main') || {}; } catch (e) {}
+    var l = s.formLists && Array.isArray(s.formLists[key]) ? s.formLists[key] : (LIST_DEFAULTS[key] || []), out = [], seen = {};
+    l.forEach(function (x) { x = String(x == null ? '' : x).trim(); if (x && !seen[x.toLowerCase()]) { seen[x.toLowerCase()] = 1; out.push(x); } });
+    if (key === 'paymentMethod' && !seen['cash']) out.unshift('Cash');
+    return out;
+  };
+  App.listDefault = function (key) { return LIST_DEFAULTS[key] ? LIST_DEFAULTS[key].slice() : []; };
+  /* <option>s for a select: the list, plus the current value when it is no longer in the list (old records keep what they had) */
+  App.optionsHtml = function (key, current, blankLabel) {
+    var o = App.listOptions(key), h = blankLabel != null ? '<option value="">' + App.esc(blankLabel) + '</option>' : '';
+    if (current && o.indexOf(current) < 0) o = o.concat([current]);
+    return h + o.map(function (x) { return '<option value="' + App.esc(x) + '"' + (x === current ? ' selected' : '') + '>' + App.esc(x) + '</option>'; }).join('');
+  };
+  /* location boxes: suggestions come from the list (and the Lab Profile address); anything can still be typed */
+  App.datalistHtml = function (id, key, dflt) {
+    var o = App.listOptions(key); if (dflt && o.indexOf(dflt) < 0) o.unshift(dflt);
+    return '<datalist id="' + id + '">' + o.map(function (x) { return '<option value="' + App.esc(x) + '">'; }).join('') + '</datalist>';
   };
   /* Visit details (registration date, registration location, destination): filled in automatically, the person can change them */
   function pad2(n) { return (n < 10 ? '0' : '') + n; }

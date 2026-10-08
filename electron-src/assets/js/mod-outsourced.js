@@ -165,7 +165,7 @@
     var l = DB.get('ref_labs', id); if (!l) return; var a = App.refLabAccount(l);
     App.modal('Payment to ' + l.name,
       '<p class="muted" style="margin-top:0">You owe now: <b style="color:' + (a.balance > 0 ? '#b91c1c' : 'inherit') + '">' + rs(a.balance) + '</b></p><div class="form-grid"><div><label class="label">Amount (Rs) *</label><input class="input" id="rpAmt" type="number" min="1" step="any" value="' + (a.balance > 0 ? a.balance : '') + '"></div><div><label class="label">Date</label><input class="input" id="rpDate" type="date" value="' + App.today() + '"></div>' +
-      '<div><label class="label">Method</label><select class="select" id="rpMeth"><option>Cash</option><option>Bank</option><option>Cheque</option><option>Online</option></select></div><div><label class="label">Note</label><input class="input" id="rpNote" maxlength="80"></div></div>' +
+      '<div><label class="label">Method</label><select class="select" id="rpMeth">' + App.optionsHtml('paymentMethod', 'Cash') + '</select></div><div><label class="label">Note</label><input class="input" id="rpNote" maxlength="80"></div></div>' +
       '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px"><button class="btn btn-ghost" id="rpCancel">Cancel</button><button class="btn btn-primary" id="rpSave">Save payment</button></div>',
       { onOpen: function (ov, close) {
         var $ = function (i) { return ov.querySelector('#' + i); };

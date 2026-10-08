@@ -1711,7 +1711,7 @@
         ['Reporting Date', dts(d.maxReported)],
         ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address))],
         ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address))],
-        ['Reference', t(s.reference, 'Standard')],
+        ['Reference', t(inv.reference, t(s.reference, 'Standard'))],
         ['Consultant', t((d.doc && d.doc.name), 'SELF')]
       ]
     };
