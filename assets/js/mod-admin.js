@@ -234,15 +234,14 @@
   /* ============================================================
      REPORTS  (#/reports) — admin only
      ============================================================ */
-  var rep = { from: null, to: null, type: null, preset: 'thisMonth' };
+  var rep = { from: null, to: null, type: 'all', preset: 'thisMonth' };
   function repInit() {
     if (!rep.from) {
       var t = App.today();
       rep.from = t.slice(0, 8) + '01'; // first of month
       rep.to = t;
     }
-    /* NOTE: rep.type intentionally NOT defaulted — the Reports page shows an
-       empty state until the user explicitly picks a report type. */
+    if (!rep.type) rep.type = 'all';
     if (!rep.preset) rep.preset = 'thisMonth';
   }
   function setPreset(p) {
@@ -311,13 +310,16 @@
     var mExpT = mExpenses.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
     var mNet = mColl - mExpT;
     var mTests = mInvoices.reduce(function (s, iv) { return s + ((iv.items || []).length); }, 0);
-    var repStats = '';
-    if (showTests || showFinance) {
-      repStats =
-      admStat(AICONS.cash, 'green', 'Month Collection', App.money(mColl), 'collected in ' + mShort, mColl, true, null, true) +
-      admStat(AICONS.receipt, 'red', 'Month Expenses', App.money(mExpT), mExpenses.length + ' entries in ' + mShort, mExpT, true, null, true) +
-      admStat(AICONS.trend, 'brand', 'Net (This Month)', App.money(mNet), mNet >= 0 ? 'surplus so far' : 'deficit so far', mNet, true, null, true) +
-      admStat(AICONS.flask, 'blue', 'Tests Billed', mTests, mInvoices.length + ' bills in ' + mShort, mTests, false, null, true);
+    var CASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>';
+    var RECEIPT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>';
+    var TREND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+    var FLASK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v6L4.5 18a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 8V2"/><path d="M8.5 2h7"/><path d="M7 15h10"/></svg>';
+    var USERS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+    var ALERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    var CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    var X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>';
+    function kpi(cls, icon, label, num, sub) {
+      return '<div class="kpi ' + cls + '"><div class="kpi-ic">' + icon + '</div><div class="kpi-lb">' + label + '</div><div class="kpi-nm">' + num + '</div><div class="kpi-sb">' + sub + '</div></div>';
     }
 
     var methods = { Cash: 0, Bank: 0, Card: 0, Other: 0 };
@@ -856,27 +858,33 @@
     }
 
     function presetBtn(p, label) {
-      return '<button class="btn ' + (rep.preset === p ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-preset="' + p + '">'
+      return '<button class="btn ' + (rep.preset === p ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-preset="' + p + '" style="font-weight:600">'
         + label + '</button>';
     }
     var filterCard = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
-      +   '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">'
-      +     '<div><label class="label">From</label><input class="input" type="date" id="repFrom" value="' + App.esc(from) + '"></div>'
-      +     '<div><label class="label">To</label><input class="input" type="date" id="repTo" value="' + App.esc(to) + '"></div>'
-      +     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
+      +     '<div style="display:flex;gap:8px;align-items:center">'
+      +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Dates:</span>'
+      +       '<input class="input" type="date" id="repFrom" value="' + App.esc(from) + '" style="width:auto;padding:6px 10px;font-size:13px">'
+      +       '<span style="color:var(--muted);font-weight:700">–</span>'
+      +       '<input class="input" type="date" id="repTo" value="' + App.esc(to) + '" style="width:auto;padding:6px 10px;font-size:13px">'
+      +     '</div>'
+      +     '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
       +       presetBtn('today', 'Today')
       +       presetBtn('yesterday', 'Yesterday')
       +       presetBtn('last7', 'Last 7 days')
       +       presetBtn('last30', 'Last 30 days')
       +       presetBtn('thisMonth', 'This Month')
       +       presetBtn('lastMonth', 'Last Month')
-      +       (rep.preset === 'custom' ? '<span class="muted" style="font-size:12px">Custom range</span>' : '')
+      +       (rep.preset === 'custom' ? '<span class="muted" style="font-size:12px;font-weight:600">Custom range</span>' : '')
       +     '</div>'
-      +     '<button class="btn btn-ghost" id="repCsv" style="margin-left:auto">' + DL_ICON + ' Export CSV</button>'
-      +     '<button class="btn btn-ghost" id="repBuilder">🛠 Builder</button>'
-      +     '<button class="btn btn-ghost" id="repSchedBtn">⏰ Schedules</button>'
-      +     '<button class="btn btn-ghost" id="repPrint">' + PRINT_ICON + ' Print Report</button>'
+      +     '<div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;align-items:center">'
+      +       '<button class="btn btn-ghost btn-sm" id="repCsv">' + DL_ICON + ' Export CSV</button>'
+      +       '<button class="btn btn-ghost btn-sm" id="repBuilder">🛠 Builder</button>'
+      +       '<button class="btn btn-ghost btn-sm" id="repSchedBtn">⏰ Schedules</button>'
+      +       '<button class="btn btn-primary btn-sm" id="repPrint">' + PRINT_ICON + ' Print Report</button>'
+      +     '</div>'
       +   '</div>'
       + '</div></div>';
 
@@ -985,8 +993,11 @@
     var duesCard = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Dues Aging</h3>'
       + '<span class="muted" style="font-weight:500;font-size:13px">by invoice age</span></div><div class="card-b">'
-      + '<div class="stat-grid" style="margin-bottom:14px">'
-      + buckets.map(function (b) { return statCard(b.label + ' · ' + b.count + ' bill(s)', App.money(b.total), '', '#fef3c7', '#b45309'); }).join('')
+      + '<div class="kpi-grid" style="margin-bottom:16px">'
+      + kpi('t-navy', CLOCK, buckets[0].label, App.money(buckets[0].total), buckets[0].count + ' bill(s)')
+      + kpi('t-amber', ALERT, buckets[1].label, App.money(buckets[1].total), buckets[1].count + ' bill(s)')
+      + kpi('t-purple', ALERT, buckets[2].label, App.money(buckets[2].total), buckets[2].count + ' bill(s)')
+      + kpi('t-red', X_ICON, buckets[3].label, App.money(buckets[3].total), buckets[3].count + ' bill(s)')
       + '</div>'
       + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Invoice</th><th>Patient</th><th>Date</th><th style="text-align:right">Total</th><th style="text-align:right">Paid</th><th style="text-align:right">Due</th></tr></thead><tbody>'
       + duesRowsHtml + '</tbody></table></div>'
@@ -1012,11 +1023,11 @@
     });
     var patCard = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Patient Overview</h3></div><div class="card-b">'
-      + '<div class="stat-grid">'
-      + statCard('Total Patients', allPatients.length, '', '#dbeafe', '#1d4ed8')
-      + statCard('New This Month', mNewCount, '', '#dcfce7', '#15803d')
-      + statCard('New in Period', periodNew, '', '#fef3c7', '#b45309')
-      + statCard('Returning in Period', periodReturning, '', '#ede9fe', '#6d28d9')
+      + '<div class="kpi-grid" style="margin-bottom:16px">'
+      + kpi('t-navy', USERS, 'Total Patients', allPatients.length, 'all registered')
+      + kpi('t-green', USERS, 'New This Month', mNewCount, 'registered this month')
+      + kpi('t-amber', USERS, 'New in Period', periodNew, 'first visit in period')
+      + kpi('t-purple', USERS, 'Returning in Period', periodReturning, 'repeat visits in period')
       + '</div>'
       + '<p class="muted" style="margin:12px 0 0">New = first visit within ' + App.esc(App.d(from)) + ' – ' + App.esc(App.d(to)) + '.</p>'
       + '</div></div>';
@@ -1071,67 +1082,83 @@
     })();
     var repSlotLabs = (rep.type === 'labs') ? labsCardHtml : '';
 
+    /* ---- contextual KPI cards (4 unified cards for the selected report type) ---- */
+    var testsCount = invoices.reduce(function (s, iv) { return s + ((iv.items || []).length); }, 0);
+    var repKpis = '';
+    if (rep.type === 'dues') {
+      repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
+        + kpi('t-red', ALERT, 'Total Due', App.money(due), duesUnpaid.length + ' unpaid bills')
+        + kpi('t-navy', CLOCK, 'Current (0–30d)', App.money(buckets[0].total), buckets[0].count + ' bills')
+        + kpi('t-amber', ALERT, 'Overdue (31–60d)', App.money(buckets[1].total), buckets[1].count + ' bills')
+        + kpi('t-purple', X_ICON, 'Old Dues (60d+)', App.money(buckets[2].total + buckets[3].total), (buckets[2].count + buckets[3].count) + ' bills')
+        + '</div>';
+    } else if (rep.type === 'patients') {
+      repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
+        + kpi('t-navy', USERS, 'Total Patients', allPatients.length, 'all registered')
+        + kpi('t-green', USERS, 'Visited in Period', repPatientCount, 'patients with bills')
+        + kpi('t-amber', USERS, 'New Patients', periodNew, 'first visit in period')
+        + kpi('t-purple', USERS, 'Returning', periodReturning, 'repeat visits in period')
+        + '</div>';
+    } else if (rep.type === 'tests') {
+      var topTest = top5[0] || { name: '—', count: 0 };
+      repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
+        + kpi('t-blue', FLASK, 'Tests Billed', testsCount, invoices.length + ' invoices')
+        + kpi('t-navy', RECEIPT, 'Test Revenue', App.money(billed), 'gross billed')
+        + kpi('t-green', TREND, 'Top Conducted', App.esc(topTest.name || topTest.code), topTest.count + ' tests')
+        + kpi('t-amber', USERS, 'Doctor Referrals', dwRows.length, 'referring doctors')
+        + '</div>';
+    } else {
+      /* all or finance or labs */
+      repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
+        + kpi('t-navy', RECEIPT, 'Total Billed', App.money(billed), invoices.length + ' bills · ' + testsCount + ' tests')
+        + kpi('t-green', CASH, 'Collected', App.money(collected), payments.length + ' payments received')
+        + kpi('t-red', ALERT, 'Total Expenses', App.money(expTotal), expenses.length + ' expense entries')
+        + kpi(net >= 0 ? 't-blue' : 't-amber', TREND, 'Net Collection', App.money(net), net >= 0 ? 'net surplus' : 'net deficit')
+        + '</div>';
+    }
+
     /* report type selector: always visible at the top of the page */
     var typeCardHtml = ''
       + '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-      + '<span style="font-weight:700;margin-right:8px">Report Type:</span>'
+      + '<span style="font-weight:700;margin-right:8px;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:0.05em">Report Type:</span>'
       + ['all', 'tests', 'finance', 'dues', 'patients', 'labs'].map(function (t) {
           var lbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports', labs: 'Lab Comparison' }[t];
           var active = rep.type === t;
-          return '<button type="button" class="btn ' + (active ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-reptype="' + t + '">' + lbl + '</button>';
+          return '<button type="button" class="btn ' + (active ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-reptype="' + t + '" style="font-weight:600">' + lbl + '</button>';
         }).join('')
-      + '<a class="btn btn-sm" id="repFinance" href="#/finance/profit" style="margin-left:auto">Profit &amp; Loss / Cash Closing &rarr;</a>'
+      + '<a class="btn btn-sm btn-ghost" id="repFinance" href="#/finance/profit" style="margin-left:auto;color:var(--brand-d);font-weight:600">Profit &amp; Loss / Cash Closing &rarr;</a>'
       + '</div></div>';
 
-    /* empty state: nothing below the selector until a type is explicitly chosen */
-    var repChosen = !!rep.type;
-    var repEmptyHtml = ''
-      + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
-      + '<div style="text-align:center;padding:44px 16px">'
-      + '<div style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:50%;background:var(--brand-soft,#e7f0fa);color:var(--brand,#1d4ed8);margin-bottom:14px">' + AICONS.list + '</div>'
-      + '<h3 style="margin:0 0 8px">Select a report type</h3>'
-      + '<p class="muted" style="margin:0">Choose a report type above to view reports for the selected period.</p>'
-      + '</div></div></div>';
-
+    var repChosen = true;
     var html = ''
       + '<style>' + ADM_STAT_CSS + '</style>'
       + typeCardHtml
-      + (repChosen ? '' : repSlotTemplates); /* saved report templates are available before a type is picked, too */
-    if (repChosen) {
-      html +=
-        ((showTests || showFinance) ? '<div class="stat-grid">' + repStats + '</div>' : '')
-        + ((showTests || showFinance) ? '' : '')
-        + repSlotSchedules + repSlotBuilder + repSlotTemplates + repSlotLabs
-
-        + filterCard
-
-        + (showPatients ? finCard : '')
-        + (showFinance ? finSumCard : '')
-        + (showDues ? duesCard : '')
-        + (showPatients ? patCard : '')
-
-        + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
-        + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
-        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
-        + twRowsHtml
-        + '</tbody></table></div></div></div>'
-        + '<div class="card"><div class="card-h"><h3 style="margin:0">Doctor-wise Referrals</h3></div><div class="card-b">'
-        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
-        + dwRowsHtml
-        + '</tbody></table></div></div></div></div>' : '')
-
-        + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
-        + '<div class="card"><div class="card-h"><h3 style="margin:0">Revenue by Test Category</h3></div><div class="card-b">'
-        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Category</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
-        + catRowsHtml
-        + '</tbody></table></div></div></div>'
-        + '<div class="card"><div class="card-h"><h3 style="margin:0">Top 5 Tests by Count</h3></div><div class="card-b">'
-        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
-        + top5Html
-        + '</tbody></table></div></div></div></div>' : '');
-    } else {
-      html += repEmptyHtml;
-    }
+      + repKpis
+      + filterCard
+      + cmpCard
+      + repSlotSchedules + repSlotBuilder + repSlotTemplates + repSlotLabs
+      + (showPatients ? finCard : '')
+      + (showFinance ? finSumCard : '')
+      + (showDues ? duesCard : '')
+      + (showPatients ? patCard : '')
+      + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+      + twRowsHtml
+      + '</tbody></table></div></div></div>'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Doctor-wise Referrals</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
+      + dwRowsHtml
+      + '</tbody></table></div></div></div></div>' : '')
+      + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Revenue by Test Category</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Category</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+      + catRowsHtml
+      + '</tbody></table></div></div></div>'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Top 5 Tests by Count</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+      + top5Html
+      + '</tbody></table></div></div></div></div>' : '');
 
     document.getElementById('view').innerHTML = html;
     admCountUp();
