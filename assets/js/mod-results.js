@@ -3714,25 +3714,17 @@
       if (l.slice(0, 10) === today) nToday++;
       if (l.slice(0, 7) === ym) nMonth++;
     });
-    function card(tint, paths, label, val, sub) {
-      return '<div class="kpi ' + tint + '">' +
-        '<div class="kpi-ic"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + paths + '</svg></div>' +
-        '<div class="kpi-lb">' + label + '</div>' +
-        '<div class="kpi-nm">' + val + '</div>' +
-        '<div class="kpi-sb">' + sub + '</div>' +
-        '</div>';
-    }
     var I = {
       file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
       check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>',
       cal: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>',
       wallet: '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/>'
     };
-    return '<div class="kpi-grid">' +
-      card('t-navy', I.file, 'TOTAL REPORTS', App.esc(all.length), 'finished reports') +
-      card('t-green', I.check, 'REPORTED TODAY', App.esc(nToday), 'results completed') +
-      card('t-blue', I.cal, 'REPORTED THIS MONTH', App.esc(nMonth), 'this month') +
-      card('t-amber', I.wallet, 'UNPAID DUES', App.esc(App.money(due)), 'outstanding') +
+    return '<div class="stat-grid">' +
+      statCard(svgIcon(I.file), 'brand', 'TOTAL REPORTS', all.length, 'finished reports') +
+      statCard(svgIcon(I.check), 'green', 'REPORTED TODAY', nToday, 'results completed') +
+      statCard(svgIcon(I.cal), 'blue', 'REPORTED THIS MONTH', nMonth, 'this month') +
+      statCard(svgIcon(I.wallet), 'amber', 'UNPAID DUES', App.money(due), 'outstanding') +
       '</div>';
   }
   function renderOld() {

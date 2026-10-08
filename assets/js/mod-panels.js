@@ -257,18 +257,37 @@
     var rows = list.map(function (p) { var a = App.panelAccount(p); var mb = (DB.all('invoices') || []).filter(function (i) { return i.panelId === p.id && mkOf(i.createdAt) === thisMk; }).reduce(function (s, i) { return s + (+i.total || 0); }, 0); return { p: p, acc: a, month: mb }; });
     var owed = rows.reduce(function (s, r) { return s + Math.max(0, r.acc.balance); }, 0), monthTot = rows.reduce(function (s, r) { return s + r.month; }, 0);
     var shown = rows.filter(function (r) { return !q || (r.p.name + ' ' + (r.p.contact || '') + ' ' + (r.p.phone || '')).toLowerCase().indexOf(q) >= 0; });
+    var overLimit = rows.filter(function (r) { return +r.p.creditLimit > 0 && r.acc.balance > +r.p.creditLimit; }).length;
     var ICONS = {
       users: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
       cash: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
-      scale: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l7-4 7 4"/><path d="M3 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M17 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M8 21h8"/></svg>'
+      scale: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l7-4 7 4"/><path d="M3 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M17 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M8 21h8"/></svg>',
+      alert: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+    };
+    var STAT_TINTS = {
+      brand: { sc: '#0284c7', line: '#aecbe3', soft: '#ebf4f9', circle: '#ddecf5' },
+      navy:  { sc: '#0284c7', line: '#aecbe3', soft: '#ebf4f9', circle: '#ddecf5' },
+      blue:  { sc: '#2563eb', line: '#a9c9ec', soft: '#e7f0fe', circle: '#dde9fb' },
+      amber: { sc: '#d97706', line: '#e9cb96', soft: '#fef4e2', circle: '#fde8c8' },
+      green: { sc: '#16a34a', line: '#9fd8b8', soft: '#e6f7f0', circle: '#d8f2e4' },
+      red:   { sc: '#dc2626', line: '#e6aaaa', soft: '#fdecec', circle: '#fad2d2' }
     };
     function stat(label, val, sub, tint, icon) {
-      return '<div class="kpi t-' + tint + '"><div class="kpi-ic">' + icon + '</div>' +
-        '<div class="kpi-lb">' + label + '</div>' +
-        '<div class="kpi-nm">' + val + '</div>' +
-        '<div class="kpi-sb">' + sub + '</div></div>';
+      var c = STAT_TINTS[tint] || STAT_TINTS.blue;
+      return '<div class="stat" data-tint="' + tint + '" style="--sc:' + c.sc + ';--sc-line:' + c.line + ';--sc-soft:' + c.soft + ';display:flex;flex-direction:column;justify-content:space-between;height:128px;min-height:128px;box-sizing:border-box;position:relative;background:linear-gradient(55deg,#ffffff 52%,' + c.soft + ' 52%);border:1.5px solid ' + c.line + ' !important;border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow:hidden">' +
+        '<div style="position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;background:' + c.circle + ';opacity:0.65;pointer-events:none"></div>' +
+        '<div class="stat-ico" style="position:relative;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:' + c.sc + ';background:linear-gradient(135deg,' + c.soft + ' 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px ' + c.line + ',0 1px 3px rgba(15,30,46,.06);margin-bottom:6px;flex:0 0 auto">' + icon + '</div>' +
+        '<div class="lb" style="position:relative;font-size:10.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;flex:0 0 auto">' + App.esc(label) + '</div>' +
+        '<div class="vl" style="position:relative;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0 0 4px 0;flex:0 0 auto">' + val + '</div>' +
+        '<div class="dl" style="position:relative;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto">' + sub + '</div>' +
+        '</div>';
     }
-    view.innerHTML = '<div class="kpi-grid">' + stat('Clients', String(list.filter(function (p) { return p.active !== false; }).length), 'active', 'navy', ICONS.users) + stat('Billed this month', rs(monthTot), 'on credit', 'green', ICONS.cash) + stat('To collect', rs(owed), 'across all clients', 'amber', ICONS.scale) + '</div>' +
+    view.innerHTML = '<div class="stat-grid">' +
+      stat('Clients', String(list.filter(function (p) { return p.active !== false; }).length), 'active corporate panels', 'brand', ICONS.users) +
+      stat('Billed this month', rs(monthTot), 'on credit', 'green', ICONS.cash) +
+      stat('To collect', rs(owed), 'across all clients', 'amber', ICONS.scale) +
+      stat('Over credit limit', overLimit, overLimit ? 'needs recovery' : 'within limits', 'red', ICONS.alert) +
+      '</div>' +
       '<div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="pnNew">+ Add client</button></div>' +
       '<div class="card"><div class="card-b"><input class="input search" id="pnSearch" placeholder="Search client…" value="' + esc(q) + '" style="max-width:340px;margin-bottom:12px">' +
       (shown.length ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Client</th><th>Rates</th><th style="text-align:right">This month</th><th style="text-align:right">Outstanding</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + shown.map(function (r) {
