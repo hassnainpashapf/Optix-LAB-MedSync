@@ -45,7 +45,7 @@
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
       sub: [{ key: 'all', label: 'All Patients', route: '#/patients' }, { key: 'new', label: 'Add Patient', route: '#/patients/new' }, { key: 'lists', label: 'Edit Patient Form', route: '#/patients/lists', roles: ['admin'] }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
-      sub: [{ key: 'all', label: 'Sample Tracking', route: '#/samples' }, { key: 'stickers', label: 'Tube Stickers (50×25mm)', route: '#/samples/stickers' }] },
+      sub: [{ key: 'all', label: 'Sample Tracking', route: '#/samples' }, { key: 'home', label: 'Home Sampling & Dispatch', route: '#/home-sampling' }, { key: 'stickers', label: 'Tube Stickers (50×25mm)', route: '#/samples/stickers' }] },
     { key: 'stock',     label: 'Stock',      icon: 'box',       route: '#/stock',     color: '#0ea5e9' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', route: '#/results' }, { key: 'ready', label: 'Ready Reports', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', route: '#/results/old' }] },
@@ -118,6 +118,7 @@
     if (seg === 'patient') seg = 'patients';
     if (seg === 'receipts') seg = 'invoices';
     if (seg === 'packages') seg = 'tests';
+    if (seg === 'home-sampling') seg = 'samples';
     if (seg === 'trends') seg = 'reports';
     if (seg === 'signatures') seg = 'settings';
     if (seg === 'online-payments') seg = 'onlinepay';

@@ -1031,5 +1031,820 @@
 
   App.route('#/samples', render);
   App.route('#/samples/stickers', renderStickersDashboard);
+
+  /* ============================================================
+     HOME SAMPLE COLLECTION BOOKING & DISPATCH CENTER
+     Routes: #/home-sampling, #/samples/home
+     ============================================================ */
+
+  var HS_FILTER = { tab: 'all', q: '', date: 'all', riderId: 'all' };
+
+  function renderHomeSamplingDashboard() {
+    var view = document.getElementById('view');
+    if (!view) return;
+
+    var bookings = DB.all('home_sampling') || [];
+    var riders = DB.all('riders') || [];
+    var riderMap = {};
+    riders.forEach(function (r) { riderMap[r.id] = r; });
+
+    var todayStr = App.today();
+    var tomorrowStr = addDays(todayStr, 1);
+
+    /* KPI calculations */
+    var todayBookings = bookings.filter(function (b) { return b.scheduledDate === todayStr; });
+    var dispatchedCount = bookings.filter(function (b) { return b.status === 'dispatched'; }).length;
+    var collectedCount = bookings.filter(function (b) { return b.status === 'collected'; }).length;
+    var receivedCount = bookings.filter(function (b) { return b.status === 'received_in_lab' && (b.scheduledDate === todayStr || (b.receivedAt && b.receivedAt.slice(0, 10) === todayStr)); }).length;
+
+    /* Filter bookings */
+    var filtered = bookings.filter(function (b) {
+      if (HS_FILTER.tab !== 'all' && b.status !== HS_FILTER.tab) return false;
+      if (HS_FILTER.date === 'today' && b.scheduledDate !== todayStr) return false;
+      if (HS_FILTER.date === 'tomorrow' && b.scheduledDate !== tomorrowStr) return false;
+      if (HS_FILTER.riderId !== 'all' && b.riderId !== HS_FILTER.riderId) return false;
+      if (HS_FILTER.q) {
+        var q = HS_FILTER.q.toLowerCase();
+        var inNo = (b.bookingNo || '').toLowerCase().indexOf(q) >= 0;
+        var inPat = (b.patientName || '').toLowerCase().indexOf(q) >= 0;
+        var inPhone = (b.phone || '').toLowerCase().indexOf(q) >= 0;
+        var inAddr = (b.address || '').toLowerCase().indexOf(q) >= 0;
+        var inArea = (b.area || '').toLowerCase().indexOf(q) >= 0;
+        var inTests = (b.tests || '').toLowerCase().indexOf(q) >= 0;
+        if (!inNo && !inPat && !inPhone && !inAddr && !inArea && !inTests) return false;
+      }
+      return true;
+    }).sort(function (a, b) {
+      return (String(b.scheduledDate || '') + (b.timeSlot || '')).localeCompare(String(a.scheduledDate || '') + (a.timeSlot || ''));
+    });
+
+    var STATUS_INFO = {
+      scheduled: { label: 'Scheduled', badge: 'background:#fef3c7;color:#b45309;border:1px solid #fde68a', icon: '📅' },
+      dispatched: { label: 'Dispatched', badge: 'background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd', icon: '🛵' },
+      collected: { label: 'Collected', badge: 'background:#f3e8ff;color:#7e22ce;border:1px solid #d8b4fe', icon: '🩸' },
+      received_in_lab: { label: 'Received in Lab', badge: 'background:#dcfce7;color:#15803d;border:1px solid #86efac', icon: '🔬' },
+      cancelled: { label: 'Cancelled', badge: 'background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5', icon: '❌' }
+    };
+
+    var tabCounts = {
+      all: bookings.length,
+      scheduled: bookings.filter(function (b) { return b.status === 'scheduled'; }).length,
+      dispatched: bookings.filter(function (b) { return b.status === 'dispatched'; }).length,
+      collected: bookings.filter(function (b) { return b.status === 'collected'; }).length,
+      received_in_lab: bookings.filter(function (b) { return b.status === 'received_in_lab'; }).length,
+      cancelled: bookings.filter(function (b) { return b.status === 'cancelled'; }).length
+    };
+
+    var html = ''
+      + '<style>'
+      + '.hs-dash { max-width: 1300px; margin: 0 auto; }'
+      + '.hs-head-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }'
+      + '.hs-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }'
+      + '.hs-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
+      + '.hs-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
+      + '.hs-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
+      + '.hs-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; }'
+      + '.hs-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
+      + '.hs-tab-bar { display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1.5px solid var(--bd); padding-bottom: 12px; margin-bottom: 16px; }'
+      + '.hs-tab-btn { background: transparent; border: 1.5px solid transparent; border-radius: 8px; padding: 6px 14px; font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .15s; }'
+      + '.hs-tab-btn:hover { background: #f1f5f9; color: var(--ink); }'
+      + '.hs-tab-btn.active { background: #131845; color: #fff; border-color: #131845; }'
+      + '.hs-tab-count { background: rgba(0,0,0,.08); border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; }'
+      + '.hs-tab-btn.active .hs-tab-count { background: rgba(255,255,255,.25); color: #fff; }'
+      + '.hs-badge-status { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .03em; display: inline-flex; align-items: center; gap: 4px; }'
+      + '</style>'
+      + '<div class="hs-dash">'
+
+      /* Header */
+      + '<div class="hs-head-bar">'
+      +   '<div>'
+      +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
+      +       '<a href="#/samples" class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px">← Samples</a>'
+      +       '<span style="font-size:12px;color:var(--muted)">/ Laboratory</span>'
+      +     '</div>'
+      +     '<h1 style="margin:0;font-size:23px;font-weight:800;color:var(--ink);letter-spacing:-.01em">🛵 Home Sample Collection Booking &amp; Dispatch Center</h1>'
+      +     '<p class="muted" style="margin:4px 0 0;font-size:13px">Coordinate doorstep specimen collections, assign field phlebotomist riders, track live dispatch status, and manage intake specimen check-ins.</p>'
+      +   '</div>'
+      +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      +     '<button class="btn btn-ghost btn-sm" id="hsRidersBtn">👥 Phlebotomist Riders (' + riders.length + ')</button>'
+      +     '<button class="btn btn-ghost btn-sm" id="hsSeedBtn">⚡ Seed Sample Bookings</button>'
+      +     '<button class="btn btn-primary btn-sm" id="hsBookBtn">+ Book Home Collection</button>'
+      +   '</div>'
+      + '</div>'
+
+      /* 4 KPI Cards */
+      + '<div class="hs-stat-grid">'
+      +   '<div class="hs-kpi-card" style="border-left:4px solid #0284c7">'
+      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Today\'s Pickups</span><span style="font-size:17px">📅</span></div>'
+      +     '<div class="hs-kpi-val">' + todayBookings.length + ' <span style="font-size:14px;color:var(--muted);font-weight:600">scheduled</span></div>'
+      +     '<div class="hs-kpi-sub">' + bookings.length + ' all-time bookings</div>'
+      +   '</div>'
+
+      +   '<div class="hs-kpi-card" style="border-left:4px solid #0ea5e9">'
+      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Currently Dispatched</span><span style="font-size:17px">🛵</span></div>'
+      +     '<div class="hs-kpi-val" style="color:#0284c7">' + dispatchedCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">on field</span></div>'
+      +     '<div class="hs-kpi-sub">Phlebotomists on the road</div>'
+      +   '</div>'
+
+      +   '<div class="hs-kpi-card" style="border-left:4px solid #8b5cf6">'
+      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Samples Collected</span><span style="font-size:17px">🩸</span></div>'
+      +     '<div class="hs-kpi-val" style="color:#6d28d9">' + collectedCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">en route</span></div>'
+      +     '<div class="hs-kpi-sub">Specimens heading to lab</div>'
+      +   '</div>'
+
+      +   '<div class="hs-kpi-card" style="border-left:4px solid #16a34a">'
+      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Checked-in to Lab</span><span style="font-size:17px">🔬</span></div>'
+      +     '<div class="hs-kpi-val" style="color:#15803d">' + receivedCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">intake today</span></div>'
+      +     '<div class="hs-kpi-sub">Received &amp; ready for testing</div>'
+      +   '</div>'
+      + '</div>'
+
+      /* Pipeline Tabs */
+      + '<div class="hs-tab-bar">'
+      +   [
+            { id: 'all', label: 'All Bookings', count: tabCounts.all },
+            { id: 'scheduled', label: '📅 Scheduled', count: tabCounts.scheduled },
+            { id: 'dispatched', label: '🛵 Dispatched', count: tabCounts.dispatched },
+            { id: 'collected', label: '🩸 Collected', count: tabCounts.collected },
+            { id: 'received_in_lab', label: '🔬 Received in Lab', count: tabCounts.received_in_lab },
+            { id: 'cancelled', label: '❌ Cancelled', count: tabCounts.cancelled }
+          ].map(function (tab) {
+            var isAct = HS_FILTER.tab === tab.id;
+            return '<button class="hs-tab-btn' + (isAct ? ' active' : '') + '" data-hs-tab="' + tab.id + '">'
+              + tab.label + ' <span class="hs-tab-count">' + tab.count + '</span>'
+              + '</button>';
+          }).join('')
+      + '</div>'
+
+      /* Filter Toolbar */
+      + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="padding:12px 16px">'
+      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
+      +     '<input class="input search" id="hsSearch" placeholder="Search by patient, phone, address, booking #, tests..." value="' + App.esc(HS_FILTER.q) + '" style="max-width:320px">'
+      +     '<div style="display:flex;gap:8px;align-items:center">'
+      +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">Date:</span>'
+      +       '<select class="select" id="hsDateSelect" style="width:auto;padding:5px 10px;font-size:13px">'
+      +         '<option value="all"' + (HS_FILTER.date === 'all' ? ' selected' : '') + '>All Dates</option>'
+      +         '<option value="today"' + (HS_FILTER.date === 'today' ? ' selected' : '') + '>Today (' + App.d(todayStr) + ')</option>'
+      +         '<option value="tomorrow"' + (HS_FILTER.date === 'tomorrow' ? ' selected' : '') + '>Tomorrow (' + App.d(tomorrowStr) + ')</option>'
+      +       '</select>'
+      +     '</div>'
+      +     '<div style="display:flex;gap:8px;align-items:center">'
+      +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">Phlebotomist:</span>'
+      +       '<select class="select" id="hsRiderSelect" style="width:auto;padding:5px 10px;font-size:13px">'
+      +         '<option value="all">All Riders</option>'
+      +         riders.map(function (r) {
+                  return '<option value="' + App.esc(r.id) + '"' + (HS_FILTER.riderId === r.id ? ' selected' : '') + '>' + App.esc(r.name) + '</option>';
+                }).join('')
+      +       '</select>'
+      +     '</div>'
+      +     '<button class="btn btn-ghost btn-sm" id="hsClearFilter" style="margin-left:auto">Clear Filters</button>'
+      +   '</div>'
+      + '</div></div>';
+
+    if (!filtered.length) {
+      html += '<div class="card"><div class="card-b" style="text-align:center;padding:48px 20px">'
+        + '<div style="font-size:44px;margin-bottom:12px">🛵</div>'
+        + '<h3 style="margin:0 0 6px">No Home Sampling Bookings Found</h3>'
+        + '<p class="muted" style="margin:0 0 18px;max-width:480px;margin-left:auto;margin-right:auto">'
+        + (bookings.length ? 'No bookings match your current search and filter selections.' : 'No doorstep sample collection visits booked yet. Book your first home sampling visit or seed sample demo bookings.')
+        + '</p>'
+        + '<div style="display:flex;gap:10px;justify-content:center">'
+        +   '<button class="btn btn-primary" id="hsEmptyBookBtn">+ Book Home Collection</button>'
+        +   '<button class="btn btn-ghost" id="hsEmptySeedBtn">⚡ Seed Sample Bookings</button>'
+        + '</div>'
+        + '</div></div></div>';
+      view.innerHTML = html;
+      wireHomeSamplingEvents();
+      return;
+    }
+
+    /* Bookings Table */
+    html += '<div class="card" style="margin-bottom:24px"><div class="card-b" style="padding:0">'
+      + '<div class="tbl-wrap"><table class="table" style="font-size:13px"><thead><tr>'
+      +   '<th>Booking &amp; Status</th>'
+      +   '<th>Date &amp; Time Slot</th>'
+      +   '<th>Patient Details</th>'
+      +   '<th>Collection Address</th>'
+      +   '<th>Tests &amp; Specimen</th>'
+      +   '<th>Assigned Phlebotomist</th>'
+      +   '<th style="text-align:right">Total Amount</th>'
+      +   '<th style="text-align:right">Workflow &amp; Actions</th>'
+      + '</tr></thead><tbody>';
+
+    filtered.forEach(function (b) {
+      var st = STATUS_INFO[b.status] || STATUS_INFO.scheduled;
+      var rObj = riderMap[b.riderId] || null;
+      var rName = rObj ? rObj.name : (b.riderName || 'Unassigned');
+      var rPhone = rObj ? rObj.phone : (b.riderPhone || '');
+
+      var mapUrl = b.googleMapsUrl || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent((b.address || '') + ' ' + (b.area || '')));
+
+      /* Dynamic workflow button */
+      var nextActionBtn = '';
+      if (b.status === 'scheduled') {
+        nextActionBtn = '<button class="btn btn-primary btn-sm" data-hs-action="dispatch" data-hs-id="' + App.esc(b.id) + '">🛵 Dispatch Rider</button>';
+      } else if (b.status === 'dispatched') {
+        nextActionBtn = '<button class="btn btn-primary btn-sm" style="background:#7e22ce;border-color:#7e22ce" data-hs-action="collect" data-hs-id="' + App.esc(b.id) + '">🩸 Mark Collected</button>';
+      } else if (b.status === 'collected') {
+        nextActionBtn = '<button class="btn btn-primary btn-sm" style="background:#15803d;border-color:#15803d" data-hs-action="receive" data-hs-id="' + App.esc(b.id) + '">🔬 Check-In Lab</button>';
+      } else if (b.status === 'received_in_lab') {
+        nextActionBtn = '<span class="badge b-ready">✓ In Lab</span>';
+      }
+
+      var waPatientUrl = 'https://wa.me/' + (b.whatsapp || b.phone || '').replace(/[^0-9]/g, '') + '?text=' + encodeURIComponent('Assalam-o-Alaikum ' + b.patientName + '! Your home sample collection booking (' + b.bookingNo + ') is confirmed for ' + App.d(b.scheduledDate) + ' (' + b.timeSlot + '). Rider: ' + rName + ' (' + rPhone + '). Thank you!');
+
+      html += '<tr>'
+        /* Booking & Status */
+        + '<td>'
+        +   '<div class="mono" style="font-weight:800;color:var(--ink)">' + App.esc(b.bookingNo) + '</div>'
+        +   '<span class="hs-badge-status" style="' + st.badge + '">' + st.icon + ' ' + st.label + '</span>'
+        + '</td>'
+
+        /* Date & Slot */
+        + '<td>'
+        +   '<div style="font-weight:700">' + App.esc(App.d(b.scheduledDate)) + '</div>'
+        +   '<div class="muted" style="font-size:12px">' + App.esc(b.timeSlot) + '</div>'
+        + '</td>'
+
+        /* Patient Details */
+        + '<td>'
+        +   '<div style="font-weight:700;color:var(--ink)">' + App.esc(b.patientName) + '</div>'
+        +   '<div style="font-size:12px;color:var(--muted)">'
+        +     '<span>📞 ' + App.esc(b.phone || '—') + '</span>'
+        +     (b.whatsapp || b.phone ? ' <a href="' + waPatientUrl + '" target="_blank" style="text-decoration:none" title="Chat on WhatsApp">💬</a>' : '')
+        +   '</div>'
+        + '</td>'
+
+        /* Address & Area */
+        + '<td style="max-width:240px">'
+        +   '<div style="font-weight:600;font-size:12.5px;color:#334155">' + App.esc(b.address || '—') + '</div>'
+        +   '<div style="font-size:11.5px;color:var(--muted);display:flex;align-items:center;gap:6px">'
+        +     '<span>📍 ' + App.esc(b.area || '') + '</span>'
+        +     '<a href="' + App.esc(mapUrl) + '" target="_blank" style="color:#0284c7;font-weight:600;text-decoration:none">Maps ↗</a>'
+        +   '</div>'
+        + '</td>'
+
+        /* Tests */
+        + '<td style="max-width:220px">'
+        +   '<div style="font-weight:600;font-size:12.5px;color:var(--ink)">' + App.esc(b.tests || 'Diagnostic Tests') + '</div>'
+        +   (b.specialInstructions ? '<div style="font-size:11px;color:#b45309;background:#fef3c7;padding:2px 6px;border-radius:4px;margin-top:3px">⚠️ ' + App.esc(b.specialInstructions) + '</div>' : '')
+        + '</td>'
+
+        /* Rider */
+        + '<td>'
+        +   '<div style="font-weight:700;display:flex;align-items:center;gap:4px">'
+        +     '<span>🛵</span> ' + App.esc(rName)
+        +   '</div>'
+        +   (rPhone ? '<div class="muted" style="font-size:11.5px">' + App.esc(rPhone) + '</div>' : '')
+        + '</td>'
+
+        /* Total Amount */
+        + '<td style="text-align:right">'
+        +   '<div style="font-size:15px;font-weight:800;color:var(--ink)">' + App.money(+b.totalAmount || 0) + '</div>'
+        +   '<div class="muted" style="font-size:11px">' + App.esc(b.paymentStatus === 'paid_online' ? 'Paid Online' : 'Cash on pickup') + '</div>'
+        + '</td>'
+
+        /* Actions */
+        + '<td style="text-align:right;white-space:nowrap">'
+        +   '<div style="display:flex;justify-content:flex-end;gap:5px;align-items:center">'
+        +     nextActionBtn
+        +     '<button class="btn btn-ghost btn-sm" data-hs-slip="' + App.esc(b.id) + '" title="Print Dispatch Order Sheet">🖨️ Slip</button>'
+        +     '<button class="btn btn-ghost btn-sm" data-hs-edit="' + App.esc(b.id) + '">Edit</button>'
+        +     (b.status !== 'cancelled' ? '<button class="btn btn-ghost btn-sm" data-hs-cancel="' + App.esc(b.id) + '" style="color:var(--red)" title="Cancel Booking">✕</button>' : '')
+        +   '</div>'
+        + '</td>'
+
+        + '</tr>';
+    });
+
+    html += '</tbody></table></div></div></div>';
+    html += '</div>'; /* end .hs-dash */
+
+    view.innerHTML = html;
+    wireHomeSamplingEvents();
+
+    function wireHomeSamplingEvents() {
+      /* Tab buttons */
+      view.querySelectorAll('[data-hs-tab]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          HS_FILTER.tab = this.getAttribute('data-hs-tab');
+          renderHomeSamplingDashboard();
+        });
+      });
+
+      /* Search & Filters */
+      var sInp = document.getElementById('hsSearch');
+      if (sInp) {
+        sInp.addEventListener('input', function () {
+          HS_FILTER.q = this.value;
+          renderHomeSamplingDashboard();
+        });
+      }
+
+      var dtSel = document.getElementById('hsDateSelect');
+      if (dtSel) {
+        dtSel.addEventListener('change', function () {
+          HS_FILTER.date = this.value;
+          renderHomeSamplingDashboard();
+        });
+      }
+
+      var rSel = document.getElementById('hsRiderSelect');
+      if (rSel) {
+        rSel.addEventListener('change', function () {
+          HS_FILTER.riderId = this.value;
+          renderHomeSamplingDashboard();
+        });
+      }
+
+      var clrBtn = document.getElementById('hsClearFilter');
+      if (clrBtn) {
+        clrBtn.addEventListener('click', function () {
+          HS_FILTER = { tab: 'all', q: '', date: 'all', riderId: 'all' };
+          renderHomeSamplingDashboard();
+        });
+      }
+
+      /* Buttons */
+      var bookBtn = document.getElementById('hsBookBtn');
+      if (bookBtn) bookBtn.addEventListener('click', function () { openBookHomeSamplingModal(null); });
+      var empBookBtn = document.getElementById('hsEmptyBookBtn');
+      if (empBookBtn) empBookBtn.addEventListener('click', function () { openBookHomeSamplingModal(null); });
+
+      var ridersBtn = document.getElementById('hsRidersBtn');
+      if (ridersBtn) ridersBtn.addEventListener('click', openRidersManagementModal);
+
+      var seedBtn = document.getElementById('hsSeedBtn');
+      if (seedBtn) seedBtn.addEventListener('click', seedHomeSamplingBookings);
+      var empSeedBtn = document.getElementById('hsEmptySeedBtn');
+      if (empSeedBtn) empSeedBtn.addEventListener('click', seedHomeSamplingBookings);
+
+      /* Workflow lifecycle button handlers */
+      view.querySelectorAll('[data-hs-action]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var action = this.getAttribute('data-hs-action');
+          var id = this.getAttribute('data-hs-id');
+          var b = DB.get('home_sampling', id);
+          if (!b) return;
+
+          if (action === 'dispatch') {
+            DB.update('home_sampling', id, { status: 'dispatched', dispatchedAt: new Date().toISOString() });
+            App.toast('Rider dispatched to patient doorstep 🛵');
+            renderHomeSamplingDashboard();
+          } else if (action === 'collect') {
+            DB.update('home_sampling', id, { status: 'collected', collectedAt: new Date().toISOString() });
+            App.toast('Samples marked as collected 🩸');
+            renderHomeSamplingDashboard();
+          } else if (action === 'receive') {
+            DB.update('home_sampling', id, { status: 'received_in_lab', receivedAt: new Date().toISOString() });
+            App.toast('Samples checked into laboratory intake 🔬');
+            renderHomeSamplingDashboard();
+          }
+        });
+      });
+
+      /* Print slip */
+      view.querySelectorAll('[data-hs-slip]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = this.getAttribute('data-hs-slip');
+          var b = DB.get('home_sampling', id);
+          if (b) printDispatchJobSlip(b);
+        });
+      });
+
+      /* Edit */
+      view.querySelectorAll('[data-hs-edit]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = this.getAttribute('data-hs-edit');
+          var b = DB.get('home_sampling', id);
+          if (b) openBookHomeSamplingModal(b);
+        });
+      });
+
+      /* Cancel */
+      view.querySelectorAll('[data-hs-cancel]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = this.getAttribute('data-hs-cancel');
+          var b = DB.get('home_sampling', id);
+          if (!b) return;
+          App.confirm('Cancel Booking', 'Are you sure you want to cancel booking ' + b.bookingNo + '?', function () {
+            DB.update('home_sampling', id, { status: 'cancelled' });
+            App.toast('Booking cancelled.');
+            renderHomeSamplingDashboard();
+          });
+        });
+      });
+    }
+  }
+
+  /* Modal to book or edit a home sample collection visit */
+  function openBookHomeSamplingModal(booking) {
+    var isNew = !booking;
+    booking = booking || {
+      bookingNo: 'HS-' + new Date().getFullYear() + '-' + Math.floor(1000 + Math.random() * 9000),
+      patientId: '',
+      patientName: '',
+      phone: '',
+      whatsapp: '',
+      address: '',
+      area: '',
+      scheduledDate: App.today(),
+      timeSlot: '08:00 AM - 09:30 AM (Fasting)',
+      tests: '',
+      estimatedAmount: 2500,
+      collectionFee: 300,
+      totalAmount: 2800,
+      paymentStatus: 'cash_on_pickup',
+      riderId: '',
+      status: 'scheduled',
+      specialInstructions: ''
+    };
+
+    var allPatients = DB.all('patients') || [];
+    var allRiders = DB.all('riders') || [];
+
+    var SLOTS = [
+      '07:00 AM - 08:30 AM (Fasting)',
+      '08:30 AM - 10:00 AM (Fasting)',
+      '10:00 AM - 11:30 AM',
+      '11:30 AM - 01:00 PM',
+      '02:00 PM - 03:30 PM',
+      '04:00 PM - 05:30 PM',
+      '06:00 PM - 07:30 PM'
+    ];
+
+    var body = ''
+      + '<form id="hsBookForm" style="display:flex;flex-direction:column;gap:14px">'
+      + '<div class="form-grid">'
+      +   '<div><label class="label">Booking Number</label><input class="input mono" id="hsbNo" value="' + App.esc(booking.bookingNo) + '" readonly style="background:#f1f5f9;font-weight:700"></div>'
+      +   '<div><label class="label">Select Existing Patient (Optional)</label><select class="select" id="hsbPatSel">'
+      +     '<option value="">— Or type patient details below —</option>'
+      +     allPatients.map(function (p) {
+              return '<option value="' + App.esc(p.id) + '"' + (booking.patientId === p.id ? ' selected' : '') + '>' + App.esc(p.name) + ' (' + App.esc(p.id) + ' • ' + App.esc(p.phone || '') + ')</option>';
+            }).join('')
+      +   '</select></div>'
+
+      +   '<div><label class="label">Patient Name *</label><input class="input" id="hsbName" value="' + App.esc(booking.patientName) + '" placeholder="e.g. Tariq Mehmood" required></div>'
+      +   '<div><label class="label">Contact Phone *</label><input class="input" id="hsbPhone" value="' + App.esc(booking.phone) + '" placeholder="0300-1234567" required></div>'
+
+      +   '<div style="grid-column:1/-1"><label class="label">Collection Address (Street, House/Flat No, Landmark) *</label><input class="input" id="hsbAddress" value="' + App.esc(booking.address) + '" placeholder="House # 12, Street 4, Sector F-10/2, Islamabad (Near Roundabout)" required></div>'
+
+      +   '<div><label class="label">Area / Sector / City</label><input class="input" id="hsbArea" value="' + App.esc(booking.area || '') + '" placeholder="e.g. F-10 Islamabad"></div>'
+      +   '<div><label class="label">Scheduled Date *</label><input class="input" type="date" id="hsbDate" value="' + App.esc(booking.scheduledDate) + '" required></div>'
+
+      +   '<div><label class="label">Time Slot *</label><select class="select" id="hsbSlot">'
+      +     SLOTS.map(function (s) { return '<option value="' + s + '"' + (booking.timeSlot === s ? ' selected' : '') + '>' + s + '</option>'; }).join('')
+      +   '</select></div>'
+
+      +   '<div><label class="label">Assign Phlebotomist Rider</label><select class="select" id="hsbRider">'
+      +     '<option value="">— Assign Later —</option>'
+      +     allRiders.map(function (r) { return '<option value="' + App.esc(r.id) + '"' + (booking.riderId === r.id ? ' selected' : '') + '>' + App.esc(r.name) + ' (' + App.esc(r.phone) + ')</option>'; }).join('')
+      +   '</select></div>'
+
+      +   '<div style="grid-column:1/-1"><label class="label">Tests to Collect *</label><input class="input" id="hsbTests" value="' + App.esc(booking.tests) + '" placeholder="e.g. CBC, Fasting Blood Sugar, Lipid Profile, Serum Creatinine" required></div>'
+
+      +   '<div><label class="label">Tests Amount (PKR)</label><input class="input" type="number" id="hsbTestAmt" value="' + (+booking.estimatedAmount || 0) + '" min="0"></div>'
+      +   '<div><label class="label">Home Collection Fee (PKR)</label><input class="input" type="number" id="hsbFee" value="' + (+booking.collectionFee || 300) + '" min="0"></div>'
+      +   '<div><label class="label">Total Amount (PKR)</label><input class="input" type="number" id="hsbTotalAmt" value="' + (+booking.totalAmount || 0) + '" min="0" style="font-weight:800;color:#15803d"></div>'
+
+      +   '<div><label class="label">Payment Mode</label><select class="select" id="hsbPayStatus">'
+      +     '<option value="cash_on_pickup"' + (booking.paymentStatus === 'cash_on_pickup' ? ' selected' : '') + '>Cash on pickup</option>'
+      +     '<option value="paid_online"' + (booking.paymentStatus === 'paid_online' ? ' selected' : '') + '>Paid online / Advance</option>'
+      +     '<option value="panel"' + (booking.paymentStatus === 'panel' ? ' selected' : '') + '>Corporate / Panel Account</option>'
+      +   '</select></div>'
+
+      +   '<div style="grid-column:1/-1"><label class="label">Special Instructions for Rider</label><input class="input" id="hsbInstr" value="' + App.esc(booking.specialInstructions || '') + '" placeholder="e.g. Patient is bed-ridden. Call 10 minutes prior to arrival."></div>'
+      + '</div>'
+
+      + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px">'
+      +   '<button type="button" class="btn btn-ghost" id="hsbCancel">Cancel</button>'
+      +   '<button type="submit" class="btn btn-primary">' + (isNew ? 'Book Collection' : 'Save Changes') + '</button>'
+      + '</div>'
+      + '</form>';
+
+    App.modal(isNew ? '🛵 Book Home Sample Collection' : '✏️ Edit Home Sampling Booking', body, {
+      wide: true,
+      onOpen: function (ov, close) {
+        var form = ov.querySelector('#hsBookForm');
+        var patSel = ov.querySelector('#hsbPatSel');
+        var nameInp = ov.querySelector('#hsbName');
+        var phoneInp = ov.querySelector('#hsbPhone');
+        var addrInp = ov.querySelector('#hsbAddress');
+        var testAmtInp = ov.querySelector('#hsbTestAmt');
+        var feeInp = ov.querySelector('#hsbFee');
+        var totalAmtInp = ov.querySelector('#hsbTotalAmt');
+
+        function recalc() {
+          var t = parseFloat(testAmtInp.value) || 0;
+          var f = parseFloat(feeInp.value) || 0;
+          totalAmtInp.value = t + f;
+        }
+        testAmtInp.addEventListener('input', recalc);
+        feeInp.addEventListener('input', recalc);
+
+        patSel.addEventListener('change', function () {
+          var pid = this.value;
+          if (pid) {
+            var p = DB.get('patients', pid);
+            if (p) {
+              nameInp.value = p.name || '';
+              phoneInp.value = p.phone || '';
+              if (p.address && !addrInp.value) addrInp.value = p.address;
+            }
+          }
+        });
+
+        ov.querySelector('#hsbCancel').addEventListener('click', close);
+
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var name = nameInp.value.trim();
+          var phone = phoneInp.value.trim();
+          var addr = addrInp.value.trim();
+          var area = ov.querySelector('#hsbArea').value.trim();
+          var date = ov.querySelector('#hsbDate').value;
+          var slot = ov.querySelector('#hsbSlot').value;
+          var tests = ov.querySelector('#hsbTests').value.trim();
+          var rId = ov.querySelector('#hsbRider').value;
+          var tAmt = parseFloat(testAmtInp.value) || 0;
+          var fee = parseFloat(feeInp.value) || 0;
+          var totAmt = parseFloat(totalAmtInp.value) || (tAmt + fee);
+          var paySt = ov.querySelector('#hsbPayStatus').value;
+          var instr = ov.querySelector('#hsbInstr').value.trim();
+
+          if (!name || !phone || !addr || !tests) {
+            App.toast('Name, phone, address, and tests are required.', 'err');
+            return;
+          }
+
+          var rObj = rId ? DB.get('riders', rId) : null;
+
+          var data = {
+            bookingNo: booking.bookingNo,
+            patientId: patSel.value || '',
+            patientName: name,
+            phone: phone,
+            whatsapp: phone,
+            address: addr,
+            area: area,
+            scheduledDate: date,
+            timeSlot: slot,
+            tests: tests,
+            estimatedAmount: tAmt,
+            collectionFee: fee,
+            totalAmount: totAmt,
+            paymentStatus: paySt,
+            riderId: rId,
+            riderName: rObj ? rObj.name : '',
+            riderPhone: rObj ? rObj.phone : '',
+            specialInstructions: instr,
+            status: booking.status || 'scheduled'
+          };
+
+          if (isNew) {
+            data.createdAt = new Date().toISOString();
+            DB.insert('home_sampling', data);
+            App.toast('Home collection booked successfully 🛵');
+          } else {
+            DB.update('home_sampling', booking.id, data);
+            App.toast('Booking updated.');
+          }
+          close();
+          renderHomeSamplingDashboard();
+        });
+      }
+    });
+  }
+
+  /* Modal to manage phlebotomist riders */
+  function openRidersManagementModal() {
+    var riders = DB.all('riders') || [];
+
+    var body = ''
+      + '<div style="margin-bottom:14px">'
+      +   '<h4 style="margin:0 0 10px;font-size:14px">Active Phlebotomist Field Riders (' + riders.length + ')</h4>'
+      +   '<div class="tbl-wrap" style="max-height:220px;overflow-y:auto;border:1px solid var(--bd);border-radius:8px;margin-bottom:16px">'
+      +     '<table class="table" style="font-size:13px"><thead><tr>'
+      +       '<th>Name</th><th>Phone</th><th>Vehicle</th><th>Assigned Area</th><th>Status</th><th style="text-align:right">Action</th>'
+      +     '</tr></thead><tbody>'
+      +     (riders.length ? riders.map(function (r) {
+              return '<tr>'
+                + '<td><strong>' + App.esc(r.name) + '</strong></td>'
+                + '<td>' + App.esc(r.phone) + '</td>'
+                + '<td>' + App.esc(r.vehicle || 'Bike') + '</td>'
+                + '<td>' + App.esc(r.assignedArea || 'All Areas') + '</td>'
+                + '<td>' + (r.active !== false ? '<span class="badge b-ready">Active</span>' : '<span class="badge b-unpaid">Inactive</span>') + '</td>'
+                + '<td style="text-align:right"><button class="btn btn-ghost btn-sm" data-r-del="' + App.esc(r.id) + '" style="color:var(--red)">Remove</button></td>'
+                + '</tr>';
+            }).join('') : '<tr><td colspan="6" class="muted" style="text-align:center;padding:16px">No riders registered yet. Add one below.</td></tr>')
+      +     '</tbody></table>'
+      +   '</div>'
+
+      +   '<h4 style="margin:0 0 8px;font-size:14px">+ Add New Phlebotomist Rider</h4>'
+      +   '<form id="newRiderForm" style="display:flex;flex-direction:column;gap:10px">'
+      +     '<div class="form-grid">'
+      +       '<div><label class="label">Rider Name *</label><input class="input" id="nrName" placeholder="e.g. Ali Raza" required></div>'
+      +       '<div><label class="label">Phone Number *</label><input class="input" id="nrPhone" placeholder="0312-9876543" required></div>'
+      +       '<div><label class="label">Vehicle / Bike No.</label><input class="input" id="nrVeh" placeholder="e.g. Honda 125 (ICT-LE-4921)"></div>'
+      +       '<div><label class="label">Assigned Sector / Area</label><input class="input" id="nrArea" placeholder="e.g. Sector F & G"></div>'
+      +     '</div>'
+      +     '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:6px">'
+      +       '<button type="button" class="btn btn-ghost" id="nrClose">Close</button>'
+      +       '<button type="submit" class="btn btn-primary">+ Add Rider</button>'
+      +     '</div>'
+      +   '</form>'
+      + '</div>';
+
+    App.modal('👥 Phlebotomist Riders Management', body, {
+      wide: true,
+      onOpen: function (ov, close) {
+        ov.querySelector('#nrClose').addEventListener('click', close);
+
+        ov.querySelectorAll('[data-r-del]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var rid = this.getAttribute('data-r-del');
+            DB.remove('riders', rid);
+            App.toast('Rider removed.');
+            close();
+            openRidersManagementModal();
+            renderHomeSamplingDashboard();
+          });
+        });
+
+        ov.querySelector('#newRiderForm').addEventListener('submit', function (e) {
+          e.preventDefault();
+          var name = ov.querySelector('#nrName').value.trim();
+          var phone = ov.querySelector('#nrPhone').value.trim();
+          var veh = ov.querySelector('#nrVeh').value.trim();
+          var area = ov.querySelector('#nrArea').value.trim();
+
+          if (!name || !phone) { App.toast('Name and phone are required.', 'err'); return; }
+
+          DB.insert('riders', {
+            name: name,
+            phone: phone,
+            vehicle: veh || 'Motorcycle',
+            assignedArea: area || 'All Sectors',
+            active: true,
+            createdAt: new Date().toISOString()
+          });
+
+          App.toast('Phlebotomist rider added.');
+          close();
+          openRidersManagementModal();
+          renderHomeSamplingDashboard();
+        });
+      }
+    });
+  }
+
+  /* Print field phlebotomist job order sheet */
+  function printDispatchJobSlip(booking) {
+    var s = DB.get('settings', 'main') || {};
+
+    var slipHtml = ''
+      + '<div style="max-width:650px;margin:0 auto;font-family:system-ui,sans-serif;color:#131845;padding:12px">'
+      + '<div style="border-bottom:2.5px solid #131845;padding-bottom:10px;margin-bottom:12px;text-align:center">'
+      +   '<div style="font-size:20px;font-weight:900;text-transform:uppercase">' + App.esc(s.labName || 'Optix Medical Sync') + '</div>'
+      +   '<div style="font-size:12px;color:#64748b">' + App.esc(s.address || '') + ' • Helpline: ' + App.esc(s.phone || '') + '</div>'
+      +   '<div style="display:inline-block;background:#131845;color:#fff;font-weight:800;font-size:12px;padding:3px 12px;border-radius:12px;letter-spacing:.05em;margin-top:6px">PHLEBOTOMY FIELD DISPATCH JOB SHEET</div>'
+      + '</div>'
+
+      + '<table class="table" style="margin-bottom:14px"><tbody>'
+      + '<tr><td><strong>Job Order #:</strong> <span class="mono">' + App.esc(booking.bookingNo) + '</span></td><td><strong>Scheduled Slot:</strong> ' + App.esc(App.d(booking.scheduledDate)) + ' (' + App.esc(booking.timeSlot) + ')</td></tr>'
+      + '<tr><td><strong>Patient Name:</strong> ' + App.esc(booking.patientName) + '</td><td><strong>Contact Phone:</strong> ' + App.esc(booking.phone) + '</td></tr>'
+      + '<tr><td colspan="2"><strong>Collection Address:</strong> ' + App.esc(booking.address) + (booking.area ? ' (' + App.esc(booking.area) + ')' : '') + '</td></tr>'
+      + '<tr><td><strong>Assigned Phlebotomist:</strong> ' + App.esc(booking.riderName || 'Staff Rider') + ' (' + App.esc(booking.riderPhone || '') + ')</td><td><strong>Payment Mode:</strong> ' + App.esc(booking.paymentStatus === 'paid_online' ? 'Paid Online' : 'Cash on Pickup') + '</td></tr>'
+      + '</tbody></table>'
+
+      + '<div style="border:1.5px solid #cbd5e1;border-radius:8px;padding:10px 14px;background:#f8fafc;margin-bottom:14px">'
+      +   '<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;margin-bottom:4px">Required Diagnostic Tests &amp; Specimen Tubes to Draw:</div>'
+      +   '<div style="font-size:14px;font-weight:800;color:#131845">' + App.esc(booking.tests) + '</div>'
+      +   (booking.specialInstructions ? '<div style="font-size:12px;color:#b45309;margin-top:4px">⚠️ <strong>Special Instructions:</strong> ' + App.esc(booking.specialInstructions) + '</div>' : '')
+      + '</div>'
+
+      + '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">'
+      +   '<div><span style="font-size:12px;color:#15803d;font-weight:700">Tests Fee: ' + App.money(+booking.estimatedAmount || 0) + ' + Home Visit Fee: ' + App.money(+booking.collectionFee || 0) + '</span></div>'
+      +   '<div style="text-align:right"><span style="font-size:16px;font-weight:900;color:#15803d">Total Cash to Collect: ' + App.money(+booking.totalAmount || 0) + '</span></div>'
+      + '</div>'
+
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:28px">'
+      +   '<div style="border-top:1px solid #333;padding-top:4px;font-size:11.5px;text-align:center">Patient / Attendant Signature</div>'
+      +   '<div style="border-top:1px solid #333;padding-top:4px;font-size:11.5px;text-align:center">Phlebotomist Signature &amp; Collection Time</div>'
+      + '</div>'
+      + '</div>';
+
+    App.print('Phlebotomy Dispatch Slip — ' + booking.bookingNo, slipHtml);
+  }
+
+  /* Seed realistic demo home sampling bookings and riders */
+  function seedHomeSamplingBookings() {
+    var riders = DB.all('riders') || [];
+    if (!riders.length) {
+      DB.insert('riders', { name: 'Ali Raza', phone: '0312-9876543', vehicle: 'Honda 125 (ICT-LE-4921)', assignedArea: 'Sector F & G', active: true });
+      DB.insert('riders', { name: 'Kamran Khan', phone: '0301-5551234', vehicle: 'Honda 70 (ICT-RN-8812)', assignedArea: 'Blue Area & I-8', active: true });
+      DB.insert('riders', { name: 'Zubair Ahmed', phone: '0333-7778901', vehicle: 'Yamaha YBR (ICT-KM-1209)', assignedArea: 'DHA & Bahria Town', active: true });
+      riders = DB.all('riders');
+    }
+
+    var r1 = riders[0] || { id: 'r1', name: 'Ali Raza', phone: '0312-9876543' };
+    var r2 = riders[1] || { id: 'r2', name: 'Kamran Khan', phone: '0301-5551234' };
+
+    var todayStr = App.today();
+
+    var demo = [
+      {
+        bookingNo: 'HS-2026-0101',
+        patientName: 'Haji Muhammad Shafiq',
+        phone: '0300-8521470',
+        whatsapp: '0300-8521470',
+        address: 'House # 48, Street 19, Sector F-8/2, Islamabad',
+        area: 'F-8 Islamabad',
+        scheduledDate: todayStr,
+        timeSlot: '07:30 AM - 08:30 AM (Fasting)',
+        tests: 'Blood Sugar Fasting, HbA1c, Serum Creatinine, Lipid Profile',
+        estimatedAmount: 3750,
+        collectionFee: 300,
+        totalAmount: 4050,
+        paymentStatus: 'cash_on_pickup',
+        riderId: r1.id,
+        riderName: r1.name,
+        riderPhone: r1.phone,
+        status: 'scheduled',
+        specialInstructions: 'Elderly diabetic patient. Strictly fasting. Ring bell twice.'
+      },
+      {
+        bookingNo: 'HS-2026-0102',
+        patientName: 'Mrs. Saima Rehman',
+        phone: '0321-9988776',
+        whatsapp: '0321-9988776',
+        address: 'Flat 4B, Silver Oaks Apartments, Main Expressway, Islamabad',
+        area: 'Expressway Islamabad',
+        scheduledDate: todayStr,
+        timeSlot: '09:00 AM - 10:00 AM (Fasting)',
+        tests: 'Complete Blood Count (CBC), Thyroid Profile (TSH), Serum Calcium',
+        estimatedAmount: 2600,
+        collectionFee: 300,
+        totalAmount: 2900,
+        paymentStatus: 'paid_online',
+        riderId: r2.id,
+        riderName: r2.name,
+        riderPhone: r2.phone,
+        status: 'dispatched',
+        specialInstructions: 'Call upon gate security arrival.'
+      },
+      {
+        bookingNo: 'HS-2026-0103',
+        patientName: 'Tariq Mehmood',
+        phone: '0333-1122334',
+        whatsapp: '0333-1122334',
+        address: 'House 112, Street 6, Sector G-9/4, Islamabad',
+        area: 'G-9 Islamabad',
+        scheduledDate: todayStr,
+        timeSlot: '08:00 AM - 09:00 AM (Fasting)',
+        tests: 'Liver Function Tests (LFT), Renal Function Tests (RFT)',
+        estimatedAmount: 2300,
+        collectionFee: 300,
+        totalAmount: 2600,
+        paymentStatus: 'cash_on_pickup',
+        riderId: r1.id,
+        riderName: r1.name,
+        riderPhone: r1.phone,
+        status: 'collected',
+        specialInstructions: 'Sample drawn. Rider returning to laboratory.'
+      },
+      {
+        bookingNo: 'HS-2026-0104',
+        patientName: 'Dr. Asad Ullah Khan',
+        phone: '0345-6677889',
+        whatsapp: '0345-6677889',
+        address: 'Villa 14, Street 2, Sector I-8/3, Islamabad',
+        area: 'I-8 Islamabad',
+        scheduledDate: todayStr,
+        timeSlot: '07:00 AM - 08:00 AM (Fasting)',
+        tests: 'Executive Full Body Health Profile, Vitamin D',
+        estimatedAmount: 7299,
+        collectionFee: 0,
+        totalAmount: 7299,
+        paymentStatus: 'paid_online',
+        riderId: r2.id,
+        riderName: r2.name,
+        riderPhone: r2.phone,
+        status: 'received_in_lab',
+        specialInstructions: 'VIP customer. Free home collection offered.'
+      }
+    ];
+
+    demo.forEach(function (d) {
+      var exists = DB.all('home_sampling').some(function (b) { return b.bookingNo === d.bookingNo; });
+      if (!exists) DB.insert('home_sampling', Object.assign({ createdAt: new Date().toISOString() }, d));
+    });
+
+    App.toast('Sample home sampling bookings and riders seeded 🛵');
+    renderHomeSamplingDashboard();
+  }
+
+  App.route('#/home-sampling', renderHomeSamplingDashboard);
+  App.route('#/samples/home', renderHomeSamplingDashboard);
 })();
 
