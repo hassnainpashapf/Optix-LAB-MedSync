@@ -52,6 +52,7 @@
     { key: 'outsourced', label: 'Outsourced', icon: 'scan',     route: '#/outsourced', color: '#d946ef' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316' },
     { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues',      color: '#ef4444' },
+    { key: 'discounts', label: 'Discounts',  icon: 'coins',     route: '#/discounts', color: '#f59e0b' },
     { key: 'panels',    label: 'Corporate',  icon: 'users',     route: '#/panels',    color: '#7c3aed' },
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors',   color: '#ec4899' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
@@ -76,6 +77,7 @@
     billing:   ['admin', 'reception'],
     invoices:  ['admin', 'reception'],
     dues:      ['admin', 'reception'],
+    discounts: ['admin', 'reception'],
     panels:    ['admin', 'reception'],
     outsourced: ['admin', 'reception', 'technician'],
     patients:  ['admin', 'reception', 'technician'],
@@ -103,7 +105,7 @@
   }
   /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
      Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
-  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
+  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
     ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Cash & daily closing'], ['reports', 'Reports'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['downloads', 'Downloads']];
   function roleDef(s) {
     s = s || session(); if (!s || s.role !== 'custom') return null;
@@ -628,9 +630,9 @@
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     /* grouped, professional sidebar: section labels, one icon style, active state on the left */
     var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
-      invoices: 'Billing', dues: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
+      invoices: 'Billing', dues: 'Billing', discounts: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
       whatsapp: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'outsourced', 'doctors', 'invoices', 'dues', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
@@ -652,7 +654,7 @@
     var TOP = ['dashboard', 'patients', 'samples', 'results', 'invoices'];
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['tests', 'outsourced', 'stock', 'doctors'] },
-      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'panels', 'expenses', 'finance'] },
+      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'panels', 'expenses', 'finance'] },
       { id: 'ins', label: 'Insights', icon: 'chart', keys: ['reports', 'audit'] },
       { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'email', 'downloads'] },
       { id: 'acc', label: 'Account', icon: 'gear', keys: ['subscription'] } /* one page = shown as the page itself, not a folder */

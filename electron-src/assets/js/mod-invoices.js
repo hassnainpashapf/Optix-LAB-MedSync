@@ -420,7 +420,6 @@
       '</table>' +
       '<div style="text-align:right;font-size:14px;margin-bottom:16px">' +
         '<div>Subtotal: ' + App.money(inv.subtotal) + '</div>' +
-        '<div>Discount: ' + App.money(inv.discount || 0) + '</div>' +
         '<div style="font-size:18px;font-weight:800">Total: ' + App.money(inv.total) + '</div>' +
         (inv.panelId ? '<div style="font-weight:700;color:#334155">Charged to the company account</div>' : '<div>Paid: ' + App.money(inv.paid) + '</div>' +
         '<div style="font-weight:800;color:#dc2626">Due: ' + App.money(inv.due) + '</div>') +
@@ -773,10 +772,65 @@
     });
   }
 
+  function renderDiscounts() {
+    setRefresh(renderDiscounts);
+    var all = DB.all('invoices')
+      .sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); }); // newest first
+    var disc = function (inv) { return +inv.discount || 0; };
+    var isTech = scIsTech();
+    var monthKey = App.today().slice(0, 7);
+    var totalDisc = all.reduce(function (s, inv) { return s + disc(inv); }, 0);
+    var monthDisc = all.filter(function (inv) { return String(inv.createdAt || '').slice(0, 7) === monthKey; })
+      .reduce(function (s, inv) { return s + disc(inv); }, 0);
+    var withDisc = all.filter(function (inv) { return disc(inv) > 0; });
+    var biggest = all.reduce(function (m, inv) { return Math.max(m, disc(inv)); }, 0);
+    var discStats =
+      scCard(SC_ICONS.cash, 'brand', 'Total Discount Given',
+        isTech ? String(withDisc.length) : App.money(totalDisc),
+        isTech ? 'invoices with discount' : withDisc.length + ' discounted invoice(s)') +
+      scCard(SC_ICONS.cal, 'green', 'Discounts This Month',
+        isTech ? String(withDisc.length) : App.money(monthDisc),
+        isTech ? 'invoices with discount' : 'given this month') +
+      scCard(SC_ICONS.doc, 'blue', 'Invoices With Discount', String(withDisc.length), 'have a discount') +
+      scCard(SC_ICONS.cash, 'amber', 'Biggest Discount',
+        isTech ? String(withDisc.length) : App.money(biggest),
+        isTech ? 'invoices with discount' : 'on a single invoice');
+
+    var rows = all.length ? all.map(function (inv) {
+      var p = patientOf(inv);
+      return '<tr>' +
+        '<td><a href="#/invoice/' + App.esc(inv.id) + '" style="font-weight:700;color:var(--brand-d)">' + App.esc(inv.no) + '</a></td>' +
+        '<td>' + App.d(inv.createdAt) + '</td>' +
+        '<td>' + App.esc(p ? p.name : 'Walk-in') +
+          (p && p.phone ? '<div style="font-size:12px;color:var(--muted)">' + App.esc(p.phone) + '</div>' : '') + '</td>' +
+        '<td style="text-align:right">' + App.money(inv.total) + '</td>' +
+        '<td style="text-align:right">' + App.money(disc(inv)) + '</td>' +
+        '<td style="text-align:right;color:var(--green)">' + App.money(inv.paid) + '</td>' +
+        '<td style="text-align:right;font-weight:800;color:var(--red)">' + App.money(inv.due) + '</td>' +
+        '<td>' + App.badge(inv.status) + panelChip(inv) + '</td>' +
+        '<td class="actions"><a class="btn btn-sm btn-ghost" href="#/invoice/' + App.esc(inv.id) + '">View</a> ' +
+        '<button class="btn btn-sm btn-ghost" data-edit="' + App.esc(inv.id) + '">Edit</button></td></tr>';
+    }).join('') : '<tr><td colspan="9">' + App.empty('No invoices yet. Discounts will appear here.') + '</td></tr>';
+
+    document.getElementById('view').innerHTML =
+      SC_STYLE +
+      '<div class="stat-grid">' + discStats + '</div>' +
+      '<div class="card"><div class="card-b"><div class="tbl-wrap"><table class="table"><thead><tr>' +
+        '<th>Invoice No</th><th>Date</th><th>Patient</th><th style="text-align:right">Total</th>' +
+        '<th style="text-align:right">Discount</th><th style="text-align:right">Paid</th>' +
+        '<th style="text-align:right">Due</th><th>Status</th><th>Actions</th>' +
+      '</tr></thead><tbody>' + rows + '</tbody></table></div></div></div>';
+
+    document.getElementById('view').querySelectorAll('[data-edit]').forEach(function (btn) {
+      btn.addEventListener('click', function () { openEditInvoice(btn.getAttribute('data-edit')); });
+    });
+  }
+
   /* ---------- register ---------- */
   /* the barcode drawing lives in the results module; load it ahead so printing never has to wait */
   if (!App.barcodeHtml && App.loadScript) App.loadScript('assets/js/mod-results.js').catch(function () {});
   App.route('#/invoices', renderInvoices);
   App.route('#/invoice/:id', renderInvoiceDetail);
   App.route('#/dues', renderDues);
+  App.route('#/discounts', renderDiscounts);
 })();
