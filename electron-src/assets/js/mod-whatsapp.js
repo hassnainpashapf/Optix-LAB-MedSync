@@ -83,13 +83,7 @@
   }
 
   function tabsHtml(curTab, rdyCount, logCount) {
-    var s = App.session() || {};
-    return '<div class="wc-tabs">' +
-      '<button class="' + (curTab === 'ready' ? 'on' : '') + '" data-tab-nav="ready">📤 Ready to send ' + (rdyCount ? '<b>(' + rdyCount + ')</b>' : '') + '</button>' +
-      '<button class="' + (curTab === 'log' ? 'on' : '') + '" data-tab-nav="log">📋 Message Log ' + (logCount ? '<b>(' + logCount + ')</b>' : '') + '</button>' +
-      '<button class="' + (curTab === 'digest' ? 'on' : '') + '" data-tab-nav="digest">🌙 Owner Night Digest</button>' +
-      (s.role === 'admin' ? '<button class="' + (curTab === 'tpl' ? 'on' : '') + '" data-tab-nav="tpl">⚙️ Templates &amp; Rules</button>' : '') +
-    '</div>';
+    return '';
   }
 
   /* =========================================================================
@@ -603,21 +597,6 @@
     var dateLabel = isNaN(dObj) ? curDate : dObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 
     var h = ''
-      + tabsHtml('digest')
-      + '<div class="wnd-head">'
-      +   '<div>'
-      +     '<h2 style="margin:0;font-size:20px;font-weight:900;display:flex;align-items:center;gap:8px">🌙 Daily Night Digest on Owner\'s WhatsApp</h2>'
-      +     '<div style="font-size:13px;color:var(--muted);margin-top:2px">Automated evening financial closing, collections in-hand, test completion &amp; critical alerts sent directly to lab leadership.</div>'
-      +   '</div>'
-      +   '<div class="wnd-date-wrap">'
-      +     '<button class="btn btn-ghost btn-sm" id="wndDateToday"' + (isToday ? ' style="font-weight:800;color:var(--brand)"' : '') + '>Today</button>'
-      +     '<button class="btn btn-ghost btn-sm" id="wndDateYest">Yesterday</button>'
-      +     '<input type="date" class="input" id="wndDateInput" value="' + esc(curDate) + '" style="padding:5px 10px;font-size:13px;width:145px">'
-      +     '<button class="btn btn-ghost btn-sm" id="wndPrintClosing">🖨️ Print Closing Sheet</button>'
-      +     '<button class="btn btn-primary btn-sm" id="wndSendNow">📲 Send Digest to Owner</button>'
-      +   '</div>'
-      + '</div>'
-
       /* 4 Executive KPI Cards */
       + '<div class="wnd-kpis">'
       +   '<div class="wnd-kpi">'
@@ -642,6 +621,15 @@
       +       (m.criticals.length ? '<span style="color:#b91c1c;font-weight:800">🚨 ' + m.criticals.length + ' Critical</span>' : '<span style="color:#047857">0 Critical</span>')
       +       (m.homeTotal ? ' • 🛵 ' + m.homeCollected + ' Home' : '') + '</div>'
       +   '</div>'
+      + '</div>'
+
+      /* Action & Date Controls below cards */
+      + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">'
+      +   '<button class="btn btn-ghost btn-sm" id="wndDateToday"' + (isToday ? ' style="font-weight:800;color:var(--brand)"' : '') + '>Today</button>'
+      +   '<button class="btn btn-ghost btn-sm" id="wndDateYest">Yesterday</button>'
+      +   '<input type="date" class="input" id="wndDateInput" value="' + esc(curDate) + '" style="padding:5px 10px;font-size:13px;width:145px">'
+      +   '<button class="btn btn-ghost btn-sm" id="wndPrintClosing">🖨️ Print Closing Sheet</button>'
+      +   '<button class="btn btn-primary btn-sm" id="wndSendNow">📲 Send Digest to Owner</button>'
       + '</div>'
 
       /* Split Cockpit: Phone Simulator on Left, Controls & Insights on Right */
