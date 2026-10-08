@@ -40,7 +40,7 @@
   function stBadge(v) { return '<span class="badge ' + ST[v.j.status][0] + '">' + ST[v.j.status][1] + '</span>' + (v.late ? ' <span class="badge b-unpaid">late</span>' : ''); }
 
   /* ---------- dashboard ---------- */
-  var TINTS = { amber:{bg:'#fffbeb',wash:'#fef3c7',ink:'#b45309'}, blue:{bg:'#eff6ff',wash:'#dbeafe',ink:'#1d4ed8'}, red:{bg:'#fef2f2',wash:'#fee2e2',ink:'#b91c1c'}, green:{bg:'#f0fdf4',wash:'#dcfce7',ink:'#15803d'}, purple:{bg:'#faf5ff',wash:'#f3e8ff',ink:'#7e22ce'} };
+  /* stat-card tints now driven by CSS classes (.os-amber etc.) in app.css */
   var ICONS = {
     truck: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>',
     clock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>',
@@ -51,15 +51,12 @@
     scale: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M5 7l7-4 7 4"/><path d="M3 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M17 13l2-6 2 6a3.5 3.5 0 0 1-4 0z"/><path d="M8 21h8"/></svg>'
   };
   function stat(label, val, sub, tint, hot, icon) {
-    var t = TINTS[tint] || TINTS.blue;
-    return '<div class="card" style="margin:0;background:' + t.bg + ';position:relative;overflow:hidden' + (hot ? ';border-color:#fca5a5' : '') + '">' +
-      '<div style="position:absolute;width:110px;height:110px;border-radius:50%;background:' + t.wash + ';opacity:.55;top:-38px;right:-38px"></div>' +
-      '<div class="card-b" style="position:relative">' +
-      '<div style="width:38px;height:38px;border-radius:12px;background:' + t.wash + ';color:' + t.ink + ';display:flex;align-items:center;justify-content:center;margin-bottom:8px">' + icon + '</div>' +
-      '<div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:700">' + label + '</div>' +
-      '<div style="font-size:30px;font-weight:800;margin-top:4px;color:' + (hot ? '#b91c1c' : t.ink) + '">' + val + '</div>' +
-      '<div class="muted" style="font-size:12.5px;margin-top:2px">' + sub + '</div>' +
-      '</div></div>';
+    return '<div class="card os-stat os-' + tint + (hot ? ' hot' : '') + '">' +
+      '<div class="os-ic">' + icon + '</div>' +
+      '<div class="os-lb">' + label + '</div>' +
+      '<div class="os-nm">' + val + '</div>' +
+      '<div class="os-sb">' + sub + '</div>' +
+      '</div>';
   }
   function dashData(all) {
     var mk = mkOf(new Date()), c = { to_send: 0, sent: 0, late: 0, back: 0, cost: 0, margin: 0 }, byLab = {};

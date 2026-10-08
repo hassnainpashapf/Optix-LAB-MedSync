@@ -265,13 +265,19 @@
     };
     function stat(label, val, sub, tint, icon) {
       var t = TINTS[tint] || TINTS.navy;
-      return '<div class="card" style="margin:0;background:' + t.bg + ';position:relative;overflow:hidden">' +
-        '<div style="position:absolute;width:110px;height:110px;border-radius:50%;background:' + t.wash + ';opacity:.55;top:-38px;right:-38px"></div>' +
-        '<div class="card-b" style="position:relative">' +
-        '<div style="width:38px;height:38px;border-radius:12px;background:' + t.wash + ';color:' + t.ink + ';display:flex;align-items:center;justify-content:center;margin-bottom:8px">' + icon + '</div>' +
-        '<div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;font-weight:700">' + label + '</div>' +
-        '<div style="font-size:24px;font-weight:800;margin-top:4px;color:' + t.ink + '">' + val + '</div>' +
-        '<div class="muted" style="font-size:12.5px;margin-top:2px">' + sub + '</div>' +
+      var pics = {
+        navy: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-4h6v4"/><path d="M9 10.5h.01M15 10.5h.01M9 14h.01M15 14h.01"/></svg>',
+        green: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
+        amber: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H5a2 2 0 0 1-2-2 2 2 0 0 1 2-2h13v4"/><path d="M20 7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5"/><circle cx="17.5" cy="13.5" r="1.2" fill="#d97706" stroke="none"/></svg>'
+      };
+      var pic = pics[tint] || icon;
+      return '<div style="margin:0;background:#fff;border:1px solid #e8eaed;border-radius:16px;box-shadow:0 1px 3px rgba(16,24,40,.06);position:relative;overflow:hidden">' +
+        '<div style="position:absolute;top:-40px;right:-40px;width:150px;height:150px;border-radius:30px;background:linear-gradient(135deg,' + t.wash + ',transparent 70%);opacity:.55;transform:rotate(18deg);pointer-events:none"></div>' +
+        '<div style="position:relative;padding:16px">' +
+        '<div style="width:36px;height:36px;border-radius:10px;background:' + t.bg + ';color:' + t.ink + ';display:flex;align-items:center;justify-content:center;margin-bottom:10px">' + pic + '</div>' +
+        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#6b7280">' + label + '</div>' +
+        '<div style="font-size:28px;font-weight:800;color:#111827;margin-top:4px;line-height:1.2">' + val + '</div>' +
+        '<div style="font-size:12.5px;color:#9ca3af;margin-top:2px">' + sub + '</div>' +
         '</div></div>';
     }
     view.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:14px">' + stat('Clients', String(list.filter(function (p) { return p.active !== false; }).length), 'active', 'navy', ICONS.users) + stat('Billed this month', rs(monthTot), 'on credit', 'green', ICONS.cash) + stat('To collect', rs(owed), 'across all clients', 'amber', ICONS.scale) + '</div>' +
