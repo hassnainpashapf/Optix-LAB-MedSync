@@ -259,10 +259,11 @@ async function main() {
   app.use(express.json({ limit: '25mb' }));
   /* CORS (manual, no extra deps): the static frontend and phone QR scanners
      fetch /api/* and /r/* cross-origin */
+  const CORS_ALWAYS = ['https://optix-lab-medsync.pages.dev', 'https://labpos-api.150.230.52.29.sslip.io'];
   app.use((req, res, next) => {
     const origin = req.get('Origin');
     if (CORS_ORIGINS.length) {
-      if (origin && (CORS_ORIGINS.includes(origin) || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin))) { /* + the desktop app's embedded page */ res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); }
+      if (origin && (CORS_ORIGINS.includes(origin) || CORS_ALWAYS.includes(origin) || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin))) { /* + the desktop app's embedded page */ res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); }
     } else res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Superadmin-Key, X-Confirm-Slug, Authorization');
@@ -291,6 +292,8 @@ async function main() {
 
   /* ---- data API (byte-compatible with the local server contract) ---- */
   app.get('/api/health', (req, res) => res.json({ ok: true, version: VERSION, time: new Date().toISOString() }));
+  /* AI chatbot proxy (public: website visitors are anonymous, before the auth gate) */
+  app.use('/api/chat', require('./chat'));
   /* frontend config: tells db.js where the API lives (must precede /:table routes) */
   const sendApiConfig = (req, res) => {
     const base = DESKTOP ? `${req.protocol}://${req.get('host')}` : (PUBLIC_API_URL || `${req.protocol}://${req.get('host')}`);

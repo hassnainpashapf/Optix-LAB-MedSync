@@ -145,6 +145,50 @@
     if (wasCloud) location.reload();
   }
 
+  /* ---------------- Optix Assistant chatbot ----------------
+     The widget module (assets/js/mod-chatbot.js) is injected lazily and only
+     after a session exists; it never loads or shows before login. init() gets
+     the lab context from the session/settings — no API keys anywhere here. */
+  var __chatJsState = null;
+  function chatbotCtx() {
+    var s = session();
+    if (!s) return null;
+    var labId = s.labId || '', labName = 'Optix Medical Sync';
+    try { var L = window.DB.labById(labId); if (L && L.name) labName = L.name; } catch (e) {}
+    if (labName === 'Optix Medical Sync') {
+      try { var st = window.DB.get('settings', 'main'); if (st && st.labName) labName = st.labName; } catch (e2) {}
+    }
+    return { labId: labId, labName: labName };
+  }
+  function ensureChatbot() {
+    var ctx = chatbotCtx();
+    if (!ctx) { chatbotVisibility(); return; } /* signed out: make sure nothing shows */
+    if (__chatJsState) return; /* already injected or loading */
+    __chatJsState = 'loading';
+    var sc = document.createElement('script');
+    sc.src = 'assets/js/mod-chatbot.js?v=132z';
+    sc.async = true;
+    sc.onload = function () {
+      __chatJsState = 'ready';
+      try {
+        if (window.OptixChat && OptixChat.init) {
+          OptixChat.init({ endpoint: 'https://labpos-api.150.230.52.29.sslip.io/api/chat', context: 'app', labName: ctx.labName, labId: ctx.labId });
+        }
+      } catch (e) {}
+      chatbotVisibility();
+    };
+    sc.onerror = function () { __chatJsState = null; /* fail silently; render() retries on the next route change */ };
+    document.head.appendChild(sc);
+  }
+  function chatbotVisibility() {
+    if (!window.OptixChat) return;
+    try {
+      if (!session() || (location.hash || '').indexOf('#/login') === 0) OptixChat.hide();
+      else OptixChat.show();
+    } catch (e) {}
+  }
+  window.addEventListener('hashchange', function () { chatbotVisibility(); });
+
   /* ---------------- helpers ---------------- */
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
@@ -454,6 +498,7 @@
     }
     /* a doctor's login: only the doctor dashboard (the server refuses everything else) */
     if (s && s.role === 'doctor') {
+      ensureChatbot(); chatbotVisibility();
       if (window.App && App.renderDoctorHome) App.renderDoctorHome();
       else App.loadScript('assets/js/mod-portal.js').then(function () { App.renderDoctorHome(); }, function () { toast('Could not load the dashboard', 'err'); });
       return;
@@ -468,6 +513,9 @@
     if (!s && hash !== '#/login' && hash !== '#/signup') { location.hash = '#/login'; return; }
     if (s && (hash === '#/login' || hash === '#/signup' || hash === '' || hash === '#')) { location.hash = '#/dashboard'; return; }
     if (!hash) { location.hash = s ? '#/dashboard' : '#/login'; return; }
+
+    /* Optix Assistant: inject the widget once a session exists; keep it off the login page */
+    ensureChatbot(); chatbotVisibility();
 
     if (hash === '#/login') { if (window.App && App.renderLogin) App.renderLogin(); return; }
     if (hash === '#/signup') { if (window.App && App.renderSignup) App.renderSignup(); return; }
