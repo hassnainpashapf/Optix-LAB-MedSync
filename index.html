@@ -43,7 +43,7 @@ document.addEventListener('keydown', function (e) {
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
    to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
-window.__ASSET_V = '155';
+window.__ASSET_V = '156';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
@@ -86,6 +86,8 @@ window.__LAZY_ROUTES = {
   '/audit': 'assets/js/mod-audit.js',
   '/whatsapp': 'assets/js/mod-whatsapp.js',
   '/whatsapp/log': 'assets/js/mod-whatsapp.js',
+  '/whatsapp/digest': 'assets/js/mod-whatsapp.js',
+  '/digest': 'assets/js/mod-whatsapp.js',
   '/whatsapp/templates': 'assets/js/mod-whatsapp.js',
   '/email': 'assets/js/mod-email.js',
   '/email/log': 'assets/js/mod-email.js',

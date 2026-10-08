@@ -1,15 +1,22 @@
 /* Optix Medical Sync — WhatsApp Center (#/whatsapp, admin + reception)
-   Ready-to-send reports (one click / bulk), message log with retry, editable message templates + sending rules.
-   Sending logic lives in mod-results.js (App.wa); this page only drives it. */
+   Includes:
+   - 📤 Ready-to-send reports (one click / bulk)
+   - 📋 Message log with retry & search
+   - 🌙 Daily Night Digest on Owner's WhatsApp (#/whatsapp/digest & #/digest)
+   - ⚙️ Editable message templates + sending rules (#/whatsapp/templates)
+*/
 (function () {
   'use strict';
   var esc = App.esc;
   var tab = 'ready', sel = {}, logF = { status: '', kind: '', q: '' }, tplDraft = null;
+  var digestDate = '';
+  var digestOpts = { fin: true, exp: true, dues: true, ops: true, crit: true, home: true, docs: true };
 
   var CSS = '' +
     '.wc-cur{display:flex;align-items:baseline;gap:10px;margin-bottom:14px}.wc-cur b{font-size:17px;font-weight:800;color:var(--brand)}.wc-cur span{font-size:13px;color:var(--muted)}' +
     '.wc-tabs{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap}' +
-    '.wc-tabs button{border:1px solid var(--bd);background:#fff;border-radius:99px;padding:8px 18px;font-weight:700;font-size:13.5px;color:var(--ink2);cursor:pointer;font-family:inherit}' +
+    '.wc-tabs button{border:1px solid var(--bd);background:#fff;border-radius:99px;padding:8px 18px;font-weight:700;font-size:13.5px;color:var(--ink2);cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;transition:all .15s}' +
+    '.wc-tabs button:hover{background:#f8fafc;border-color:#cbd5e1}' +
     '.wc-tabs button.on{background:var(--brand);color:#fff;border-color:var(--brand)}.wc-tabs b{margin-left:6px;font-size:12px;opacity:.85}' +
     '.wc-st{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}.wc-st .card{padding:14px 16px}.wc-st .k{font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}.wc-st b{display:block;font-size:24px;font-weight:800;margin-top:4px}' +
     '.wc-chip{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:99px;white-space:nowrap}' +
@@ -20,13 +27,43 @@
     '.wc-ph{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px}.wc-ph button{border:1px dashed #9db0d3;background:#f4f7fc;border-radius:8px;padding:4px 9px;font-size:12px;font-weight:700;color:#1e3a8a;cursor:pointer;font-family:inherit}' +
     '.wc-bub{background:#e7ffdb;border:1px solid #cfe9c3;border-radius:14px 14px 14px 4px;padding:12px 14px;font-size:13.5px;line-height:1.5;white-space:pre-wrap;word-break:break-word;color:#111;box-shadow:0 1px 2px rgba(0,0,0,.08)}' +
     '.wc-rules label.r{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin-bottom:12px;cursor:pointer}.wc-rules input[type=checkbox]{width:18px;height:18px;margin-top:2px;accent-color:var(--green)}' +
-    '@media(max-width:900px){.wc-st{grid-template-columns:1fr 1fr}.wc-tpl{grid-template-columns:1fr}.wc-tests{max-width:none}}';
+    /* Night Digest CSS */
+    '.wnd-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px;background:#fff;padding:14px 18px;border-radius:14px;border:1px solid var(--bd)}' +
+    '.wnd-date-wrap{display:flex;align-items:center;gap:6px}' +
+    '.wnd-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}' +
+    '.wnd-kpi{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.03)}' +
+    '.wnd-kpi .k{font-size:11.5px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}' +
+    '.wnd-kpi b{display:block;font-size:23px;font-weight:900;margin:4px 0 2px}' +
+    '.wnd-kpi .sub{font-size:12px;color:var(--muted)}' +
+    '.wnd-grid{display:grid;grid-template-columns:430px 1fr;gap:20px;align-items:start}' +
+    '.wnd-phone{background:#0b141a;border-radius:36px;padding:12px;box-shadow:0 20px 40px -10px rgba(0,0,0,.35),0 0 0 2px #222d34;width:100%;max-width:430px;margin:0 auto}' +
+    '.wnd-screen{background:#e5ddd5;border-radius:24px;overflow:hidden;display:flex;flex-direction:column;min-height:560px}' +
+    '.wnd-notch{height:22px;background:#0b141a;display:flex;justify-content:center;align-items:center}' +
+    '.wnd-notch-bar{width:60px;height:4px;background:#2a3942;border-radius:99px}' +
+    '.wnd-wa-top{background:#005c4b;color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px}' +
+    '.wnd-wa-avatar{width:36px;height:36px;border-radius:50%;background:#128c7e;display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:14px;flex-shrink:0}' +
+    '.wnd-wa-meta{flex:1;overflow:hidden}' +
+    '.wnd-wa-meta b{display:block;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.wnd-wa-meta span{display:block;font-size:11px;opacity:.85}' +
+    '.wnd-chat{flex:1;padding:12px;overflow-y:auto;max-height:480px;display:flex;flex-direction:column;background:#efeae2}' +
+    '.wnd-bubble{background:#d9fdd3;border-radius:12px 12px 2px 12px;padding:12px 14px;margin-left:auto;max-width:98%;font-size:12px;line-height:1.45;color:#111;box-shadow:0 1px 2px rgba(0,0,0,.15);white-space:pre-wrap;word-break:break-word}' +
+    '.wnd-bubble-time{text-align:right;font-size:10.5px;color:#667781;margin-top:4px;display:flex;align-items:center;justify-content:flex-end;gap:3px}' +
+    '.wnd-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}' +
+    '.wnd-pill{background:#fff;border:1px solid #cbd5e1;border-radius:99px;padding:4px 10px;font-size:11.5px;font-weight:700;color:#475569;cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:all .15s}' +
+    '.wnd-pill.on{background:#047857;color:#fff;border-color:#047857}' +
+    '.wnd-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f1f5f9;font-size:13px}' +
+    '.wnd-row:last-child{border-bottom:none}' +
+    '@media(max-width:1100px){.wnd-grid{grid-template-columns:1fr}.wnd-kpis{grid-template-columns:1fr 1fr}}' +
+    '@media(max-width:900px){.wc-st{grid-template-columns:1fr 1fr}.wc-tpl{grid-template-columns:1fr}.wc-tests{max-width:none}}' +
+    '@media(max-width:600px){.wnd-kpis{grid-template-columns:1fr}}';
+
   function css() { if (document.getElementById('wcCss')) return; var s = document.createElement('style'); s.id = 'wcCss'; s.textContent = CSS; document.head.appendChild(s); }
 
   function ensure(cb) {
     if (App.wa) { cb(); return; }
     App.loadScript('assets/js/mod-results.js').then(function () { if (App.wa) cb(); else App.toast('Could not load WhatsApp module', 'err'); }, function () { App.toast('Could not load WhatsApp module', 'err'); });
   }
+
   function ts(t) { var d = new Date(t); if (isNaN(d)) return ''; return App.d(d) + ' <span class="wc-sub">' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '</span>'; }
   function logs() { try { return DB.all('wa_log').slice().sort(function (a, b) { return a.ts < b.ts ? 1 : (a.ts > b.ts ? -1 : 0); }); } catch (e) { return []; } }
   function sentAt(invId, role, kind) {
@@ -35,7 +72,7 @@
   }
   function readyInvoices() {
     var out = [], seen = {};
-    DB.all('results').forEach(function (r) { if (r.invoiceId && !seen[r.invoiceId]) { seen[r.invoiceId] = 1; } });
+    (DB.all('results') || []).forEach(function (r) { if (r.invoiceId && !seen[r.invoiceId]) { seen[r.invoiceId] = 1; } });
     Object.keys(seen).forEach(function (id) {
       var inv = DB.get('invoices', id);
       if (!inv || !App.wa.allReady(id)) return;
@@ -45,28 +82,734 @@
     return out.slice(0, 300);
   }
 
-  function render() {
-    css();
-    var s = App.session();
-    if (!s || (s.role !== 'admin' && s.role !== 'reception' && !(s.role === 'custom' && App.canPage('whatsapp')))) return '<div class="card"><div class="card-b">' + App.empty('You do not have access to WhatsApp Center.') + '</div></div>';
-    if (!App.wa) { ensure(paint); return '<div class="card"><div class="card-b">' + App.empty('Loading…') + '</div></div>'; }
-    var cfg = App.wa.cfg(), ready = App.wa.ready(cfg), today = App.today();
-    var L = logs(), sentToday = L.filter(function (e) { return e.status === 'sent' && String(e.ts).slice(0, 10) === today; }).length;
-    var failed = L.filter(function (e) { return e.status === 'failed'; }).length;
-    var rdy = readyInvoices(), waiting = rdy.filter(function (i) { return !sentAt(i.id, 'patient', 'report'); }).length;
-    var h = (ready ? '' : '<div class="card" style="margin-bottom:14px;border-color:#f6c6c6;background:#fff6f6"><div class="card-b"><b style="color:#b91c1c">WhatsApp sending is not configured yet.</b> <span class="muted">Link the lab WhatsApp number in Settings → WhatsApp (scan a QR code). Reports can still be printed and shared manually.</span></div></div>') +
-      '<div class="wc-st"><div class="card"><div class="k">Sent today</div><b>' + sentToday + '</b></div><div class="card"><div class="k">Waiting to send</div><b>' + waiting + '</b></div>' +
-      '<div class="card"><div class="k">Failed (all time)</div><b style="color:' + (failed ? '#b91c1c' : 'inherit') + '">' + failed + '</b></div>' +
-      '<div class="card"><div class="k">Auto-send</div><b style="font-size:17px;margin-top:9px">' + (cfg.autoPatient !== false ? 'Patient ✓ ' : '') + (cfg.autoDoctor === true ? 'Doctor ✓' : '') + ((cfg.autoPatient === false && cfg.autoDoctor !== true) ? 'Off' : '') + '</b></div></div>' +
-      /* Ready to send / Message log / Templates & rules are sidebar sub-menu items (#/whatsapp, #/whatsapp/log, #/whatsapp/templates); this labels the open list */
-      '<div class="wc-cur"><b>' + (tab === 'tpl' ? 'Templates &amp; rules' : (tab === 'log' ? 'Message log' : 'Ready to send')) + '</b><span>' + (tab === 'tpl' ? 'Messages and sending rules' : (tab === 'log' ? L.length + ' message' + (L.length === 1 ? '' : 's') : waiting + ' waiting')) + '</span></div>';
-    if (cfg.provider === 'gateway') h = h.replace('<div class="wc-cur">', '<div id="wcQueue" class="card" style="margin-bottom:14px;display:none"><div class="card-b" style="padding:12px 16px"></div></div><div class="wc-cur">');
-    if (tab === 'tpl' && s.role === 'admin') h += tplHtml(cfg);
-    else if (tab === 'log') h += logHtml(L);
-    else h += readyHtml(rdy, ready);
-    setTimeout(wire, 0);
+  function tabsHtml(curTab, rdyCount, logCount) {
+    var s = App.session() || {};
+    return '<div class="wc-tabs">' +
+      '<button class="' + (curTab === 'ready' ? 'on' : '') + '" data-tab-nav="ready">📤 Ready to send ' + (rdyCount ? '<b>(' + rdyCount + ')</b>' : '') + '</button>' +
+      '<button class="' + (curTab === 'log' ? 'on' : '') + '" data-tab-nav="log">📋 Message Log ' + (logCount ? '<b>(' + logCount + ')</b>' : '') + '</button>' +
+      '<button class="' + (curTab === 'digest' ? 'on' : '') + '" data-tab-nav="digest">🌙 Owner Night Digest</button>' +
+      (s.role === 'admin' ? '<button class="' + (curTab === 'tpl' ? 'on' : '') + '" data-tab-nav="tpl">⚙️ Templates &amp; Rules</button>' : '') +
+    '</div>';
+  }
+
+  /* =========================================================================
+     NIGHT DIGEST DATA AGGREGATION & FORMATTER
+     ========================================================================= */
+
+  function getOwnerDigestSettings() {
+    var set = DB.get('settings', 'main') || {};
+    var w = set.whatsapp || {};
+    var ownerObj = w.ownerDigest || {};
+    return {
+      ownerPhone: ownerObj.ownerPhone || w.ownerPhone || w.labNumber || '',
+      ownerName: ownerObj.ownerName || w.ownerName || 'Dr. Tariq Mahmood (Owner)',
+      ownerTime: ownerObj.ownerTime || w.ownerTime || '21:30',
+      ownerAuto: (ownerObj.ownerAuto != null ? !!ownerObj.ownerAuto : !!w.ownerAuto),
+      sections: Object.assign({ fin: true, exp: true, dues: true, ops: true, crit: true, home: true, docs: true }, ownerObj.sections || w.ownerSections || {})
+    };
+  }
+
+  function saveOwnerDigestSettings(data) {
+    var set = DB.get('settings', 'main') || {};
+    var w = Object.assign({}, set.whatsapp || {});
+    w.ownerPhone = data.ownerPhone;
+    w.ownerName = data.ownerName;
+    w.ownerTime = data.ownerTime;
+    w.ownerAuto = data.ownerAuto;
+    w.ownerSections = data.sections;
+    w.ownerDigest = data;
+    set.whatsapp = w;
+    DB.update('settings', 'main', set);
+    App.toast('Owner Night Digest settings saved ✓');
+  }
+
+  function getNightDigestMetrics(date) {
+    date = date || App.today();
+    var set = DB.get('settings', 'main') || {};
+
+    // 1. Invoices
+    var invs = (DB.all('invoices') || []).filter(function (i) {
+      return String(i.createdAt || i.date || '').slice(0, 10) === date;
+    });
+    var invoicesCount = invs.length;
+    var totalBilled = 0, grossBilled = 0, discountsTotal = 0, duesTotal = 0, dueInvoicesCount = 0;
+    invs.forEach(function (i) {
+      var tot = +i.total || 0;
+      var sub = +i.subtotal || tot;
+      var disc = +i.discount || 0;
+      var due = +i.due || 0;
+      totalBilled += tot;
+      grossBilled += sub;
+      discountsTotal += disc;
+      if (due > 0.01) {
+        duesTotal += due;
+        dueInvoicesCount++;
+      }
+    });
+
+    // 2. Payments (Cash & Bank/Online)
+    var pays = (DB.all('payments') || []).filter(function (p) {
+      return String(p.ts || p.createdAt || p.date || '').slice(0, 10) === date;
+    });
+    var cashCollected = 0, onlineCollected = 0, totalCollections = 0;
+    if (pays.length > 0) {
+      pays.forEach(function (p) {
+        var amt = Math.abs(+p.amount || 0);
+        var isRef = (p.type === 'refund') || (+p.amount < 0);
+        var m = String(p.method || 'cash').toLowerCase();
+        var isOnline = (m === 'bank' || m === 'online' || m === 'card' || m === 'easypaisa' || m === 'jazzcash' || m === 'cheque');
+        if (isRef) {
+          if (isOnline) onlineCollected -= amt; else cashCollected -= amt;
+          totalCollections -= amt;
+        } else {
+          if (isOnline) onlineCollected += amt; else cashCollected += amt;
+          totalCollections += amt;
+        }
+      });
+    } else {
+      // Fallback: sum from invoices
+      invs.forEach(function (i) {
+        var p = +i.paid || 0;
+        var m = String(i.paymentMethod || 'cash').toLowerCase();
+        var isOnline = (m === 'bank' || m === 'online' || m === 'card' || m === 'easypaisa' || m === 'jazzcash');
+        if (isOnline) onlineCollected += p; else cashCollected += p;
+        totalCollections += p;
+      });
+    }
+    if (totalCollections < 0) totalCollections = 0;
+    if (cashCollected < 0) cashCollected = 0;
+    if (onlineCollected < 0) onlineCollected = 0;
+
+    // 3. Expenses
+    var exps = (DB.all('expenses') || []).filter(function (e) {
+      return String(e.date || e.ts || e.createdAt || '').slice(0, 10) === date;
+    });
+    var totalExpenses = 0, expByCategory = {};
+    exps.forEach(function (e) {
+      var amt = +e.amount || 0;
+      totalExpenses += amt;
+      var cat = e.category || 'General';
+      expByCategory[cat] = (expByCategory[cat] || 0) + amt;
+    });
+
+    // 4. Net Surplus / Profit
+    var netSurplus = totalCollections - totalExpenses;
+    var profitMargin = totalCollections > 0 ? Math.round((netSurplus / totalCollections) * 100) : 0;
+
+    // 5. Test Operations
+    var allResults = DB.all('results') || [];
+    var dayResults = allResults.filter(function (r) {
+      var rd = String(r.createdAt || r.ts || '').slice(0, 10);
+      if (rd === date) return true;
+      var inv = r.invoiceId ? DB.get('invoices', r.invoiceId) : null;
+      return inv && String(inv.createdAt || inv.date || '').slice(0, 10) === date;
+    });
+    var testsTotal = dayResults.length;
+    var testsReady = dayResults.filter(function (r) { return r.status === 'ready'; }).length;
+    var testsPending = testsTotal - testsReady;
+    var completionRate = testsTotal > 0 ? Math.round((testsReady / testsTotal) * 100) : 100;
+
+    // 6. Critical Value Alerts
+    var criticals = [];
+    dayResults.forEach(function (r) {
+      if (r.critical && r.critical.length > 0) {
+        var inv = r.invoiceId ? DB.get('invoices', r.invoiceId) : null;
+        var pat = inv ? (DB.get('patients', inv.patientId) || {}) : {};
+        var tName = (r.item && r.item.name) || (r.test && r.test.name) || 'Test';
+        r.critical.forEach(function (c) {
+          criticals.push({
+            patientName: pat.name || 'Patient',
+            patientPhone: pat.phone || pat.whatsapp || '',
+            invoiceNo: inv ? (inv.no || inv.id) : '',
+            testName: tName,
+            paramName: c.name || '',
+            value: c.value || '',
+            unit: c.unit || '',
+            dir: c.dir || 'high',
+            ref: c.ref || ''
+          });
+        });
+      }
+    });
+
+    // 7. Home Sampling
+    var homeBookings = (DB.all('home_sampling') || []).filter(function (b) {
+      return String(b.date || b.bookingDate || b.createdAt || '').slice(0, 10) === date;
+    });
+    var homeTotal = homeBookings.length;
+    var homeCollected = homeBookings.filter(function (b) { return b.status === 'collected' || b.status === 'received_in_lab'; }).length;
+    var homeDispatched = homeBookings.filter(function (b) { return b.status === 'dispatched'; }).length;
+
+    // 8. Top Referring Doctors
+    var docMap = {};
+    invs.forEach(function (i) {
+      var dId = i.doctorId || 'self';
+      var dName = 'Self / Walk-in';
+      if (dId && dId !== 'self') {
+        var doc = DB.get('doctors', dId);
+        dName = (doc && doc.name) || i.doctorName || 'Dr. ' + dId;
+      }
+      if (!docMap[dName]) docMap[dName] = { name: dName, patients: 0, revenue: 0 };
+      docMap[dName].patients++;
+      docMap[dName].revenue += (+i.total || 0);
+    });
+    var topDoctors = Object.keys(docMap).map(function (k) { return docMap[k]; });
+    topDoctors.sort(function (a, b) { return b.revenue - a.revenue; });
+
+    return {
+      date: date,
+      labName: set.labName || 'City Clinical Laboratory',
+      labAddress: set.address || '',
+      labPhone: set.phone || '',
+      invoicesCount: invoicesCount,
+      grossBilled: grossBilled,
+      discountsTotal: discountsTotal,
+      totalBilled: totalBilled,
+      duesTotal: duesTotal,
+      dueInvoicesCount: dueInvoicesCount,
+      cashCollected: cashCollected,
+      onlineCollected: onlineCollected,
+      totalCollections: totalCollections,
+      totalExpenses: totalExpenses,
+      expByCategory: expByCategory,
+      netSurplus: netSurplus,
+      profitMargin: profitMargin,
+      testsTotal: testsTotal,
+      testsReady: testsReady,
+      testsPending: testsPending,
+      completionRate: completionRate,
+      criticals: criticals,
+      homeTotal: homeTotal,
+      homeCollected: homeCollected,
+      homeDispatched: homeDispatched,
+      topDoctors: topDoctors.slice(0, 5)
+    };
+  }
+
+  function formatNightDigestMessage(m, opts) {
+    opts = opts || {};
+    var incFin = opts.fin !== false;
+    var incExp = opts.exp !== false;
+    var incDues = opts.dues !== false;
+    var incOps = opts.ops !== false;
+    var incCrit = opts.crit !== false;
+    var incHome = opts.home !== false;
+    var incDocs = opts.docs !== false;
+
+    var dObj = new Date(m.date + 'T12:00:00');
+    var dayStr = isNaN(dObj) ? m.date : dObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    var now = new Date();
+    var timeStr = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+    var lines = [];
+    lines.push('🌙 *DAILY NIGHT DIGEST — LAB CLOSING*');
+    lines.push('🏥 *' + m.labName + '*');
+    lines.push('📅 ' + dayStr + ' (Closing: ' + timeStr + ')');
+    lines.push('━━━━━━━━━━━━━━━━━━━━━');
+
+    if (incFin) {
+      lines.push('💰 *FINANCIAL SUMMARY*');
+      lines.push('• Total Invoices: ' + m.invoicesCount + ' patient' + (m.invoicesCount === 1 ? '' : 's'));
+      lines.push('• Gross Billed: ' + App.money(m.grossBilled));
+      if (m.discountsTotal > 0) {
+        lines.push('• Discounts Granted: ' + App.money(m.discountsTotal));
+      }
+      lines.push('• Net Billed: ' + App.money(m.totalBilled));
+      lines.push('• Cash In-Hand: ' + App.money(m.cashCollected));
+      if (m.onlineCollected > 0) {
+        lines.push('• Online / Bank: ' + App.money(m.onlineCollected));
+      }
+      lines.push('• *Total Collections: ' + App.money(m.totalCollections) + '*');
+    }
+
+    if (incDues && m.duesTotal > 0) {
+      lines.push('• ⚠️ Outstanding Dues: ' + App.money(m.duesTotal) + ' (' + m.dueInvoicesCount + ' invoices)');
+    }
+
+    if (incExp) {
+      lines.push('• Operational Expenses: ' + App.money(m.totalExpenses));
+      var surplusSign = m.netSurplus >= 0 ? '🟢 *NET LAB SURPLUS: ' : '🔴 *NET LAB DEFICIT: ';
+      lines.push('═════════════════════');
+      lines.push(surplusSign + App.money(m.netSurplus) + '* (' + m.profitMargin + '% margin)');
+    }
+
+    if (incOps) {
+      lines.push('━━━━━━━━━━━━━━━━━━━━━');
+      lines.push('🧪 *LAB & CLINICAL WORKFLOW*');
+      lines.push('• Tests Processed: ' + m.testsTotal + ' tests');
+      lines.push('• Reports Finalized: ' + m.testsReady + ' (' + m.completionRate + '%)');
+      if (m.testsPending > 0) {
+        lines.push('• In-Progress / Pending: ' + m.testsPending);
+      }
+    }
+
+    if (incHome && m.homeTotal > 0) {
+      lines.push('• 🛵 Home Collections: ' + m.homeCollected + ' collected / ' + m.homeTotal + ' booked');
+    }
+
+    if (incCrit) {
+      if (m.criticals.length > 0) {
+        lines.push('━━━━━━━━━━━━━━━━━━━━━');
+        lines.push('🚨 *CRITICAL VALUE ALERTS (' + m.criticals.length + ')*');
+        m.criticals.forEach(function (c, idx) {
+          lines.push((idx + 1) + '. ' + c.patientName + ' — ' + c.testName);
+          lines.push('   ' + c.paramName + ': ' + c.value + ' ' + c.unit + ' (' + (c.dir === 'high' ? '↑ HIGH' : '↓ LOW') + ')');
+        });
+      } else {
+        lines.push('• Critical Values: None flagged today ✓');
+      }
+    }
+
+    if (incDocs && m.topDoctors.length > 0) {
+      lines.push('━━━━━━━━━━━━━━━━━━━━━');
+      lines.push('👨‍⚕️ *TOP REFERRING DOCTORS*');
+      m.topDoctors.forEach(function (doc, idx) {
+        lines.push((idx + 1) + '. ' + doc.name + ' — ' + doc.patients + ' pts (' + App.money(doc.revenue) + ')');
+      });
+    }
+
+    lines.push('━━━━━━━━━━━━━━━━━━━━━');
+    lines.push('🔒 *STATUS: CASH & ACCOUNTS RECONCILED*');
+    lines.push('Automated via Optix LAB MedSync ERP');
+
+    return lines.join('\n');
+  }
+
+  function logDigestDispatch(m, phone, method, status, text) {
+    try {
+      DB.insert('wa_digest_log', {
+        date: m.date,
+        sentAt: new Date().toISOString(),
+        ownerPhone: phone,
+        ownerName: (getOwnerDigestSettings().ownerName || 'Owner'),
+        totalBilled: m.totalBilled,
+        collections: m.totalCollections,
+        expenses: m.totalExpenses,
+        surplus: m.netSurplus,
+        invoicesCount: m.invoicesCount,
+        testsCount: m.testsTotal,
+        criticalCount: m.criticals.length,
+        method: method,
+        status: status,
+        text: text
+      });
+      DB.insert('wa_log', {
+        kind: 'digest',
+        to: phone,
+        toName: (getOwnerDigestSettings().ownerName || 'Lab Owner'),
+        toRole: 'owner',
+        status: status === 'dispatched' ? 'sent' : status,
+        error: '',
+        ts: new Date().toISOString()
+      });
+    } catch (e) {}
+  }
+
+  function copyText(txt) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () {
+        App.toast('Digest copied to clipboard! 📋');
+      }, function () {
+        fallbackCopy(txt);
+      });
+    } else {
+      fallbackCopy(txt);
+    }
+  }
+
+  function fallbackCopy(txt) {
+    var ta = document.createElement('textarea');
+    ta.value = txt;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      App.toast('Digest copied to clipboard! 📋');
+    } catch (e) {
+      App.toast('Could not copy automatically', 'err');
+    }
+    document.body.removeChild(ta);
+  }
+
+  function sendDigestToOwner(date, method) {
+    var m = getNightDigestMetrics(date);
+    var oCfg = getOwnerDigestSettings();
+    var phone = oCfg.ownerPhone;
+    if (!phone) {
+      App.toast('Please configure the Owner WhatsApp number first', 'err');
+      var phInput = document.getElementById('wndOwnerPhone');
+      if (phInput) phInput.focus();
+      return;
+    }
+    var normPhone = App.normWa(phone);
+    var text = formatNightDigestMessage(m, digestOpts);
+    var cfg = App.wa ? App.wa.cfg() : {};
+
+    if (method === 'web') {
+      var waUrl = 'https://wa.me/' + normPhone + '?text=' + encodeURIComponent(text);
+      window.open(waUrl, '_blank');
+      logDigestDispatch(m, phone, 'web', 'dispatched', text);
+      App.toast('Opened WhatsApp with tonight\'s digest! 📲');
+      paint();
+      return;
+    }
+
+    if (App.wa && App.wa.ready(cfg)) {
+      App.toast('Sending Night Digest to ' + (oCfg.ownerName || phone) + '…', 'info');
+      App.wa.send(cfg, normPhone, text, function (err, info) {
+        if (err) {
+          App.toast('WhatsApp API error: ' + String(err.message || err).slice(0, 100) + ' — Opening WhatsApp Web as fallback…', 'err');
+          var waUrl = 'https://wa.me/' + normPhone + '?text=' + encodeURIComponent(text);
+          window.open(waUrl, '_blank');
+          logDigestDispatch(m, phone, 'web_fallback', 'dispatched', text);
+        } else {
+          App.toast('🌙 Night Digest delivered to Owner WhatsApp (' + (info && info.queued ? 'queued' : 'sent') + ')! ✓✓');
+          logDigestDispatch(m, phone, 'api', 'sent', text);
+          var set = DB.get('settings', 'main') || {};
+          set.whatsapp = set.whatsapp || {};
+          set.whatsapp.lastDigestDate = m.date;
+          DB.update('settings', 'main', set);
+        }
+        paint();
+      }, { kind: 'digest' });
+    } else {
+      var waUrl = 'https://wa.me/' + normPhone + '?text=' + encodeURIComponent(text);
+      window.open(waUrl, '_blank');
+      logDigestDispatch(m, phone, 'web', 'dispatched', text);
+      App.toast('Opened WhatsApp Web with tonight\'s digest! 📲');
+      paint();
+    }
+  }
+
+  function printNightClosingSheet(m) {
+    var s = DB.get('settings', 'main') || {};
+    var dObj = new Date(m.date + 'T12:00:00');
+    var dayStr = isNaN(dObj) ? m.date : dObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' });
+    var genAt = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+    var html = ''
+      + '<div style="max-width:720px;margin:0 auto;font-family:system-ui,-apple-system,sans-serif;color:#131845;padding:16px">'
+      + '<div style="border-bottom:3px solid #131845;padding-bottom:12px;margin-bottom:14px;text-align:center">'
+      +   '<div style="font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:.02em">' + App.esc(s.labName || 'Optix Medical Sync') + '</div>'
+      +   '<div style="font-size:12px;color:#64748b;margin-top:2px">' + App.esc(s.address || '') + (s.phone ? ' • Phone: ' + App.esc(s.phone) : '') + '</div>'
+      +   '<div style="display:inline-block;background:#131845;color:#fff;font-weight:800;font-size:12.5px;padding:4px 14px;border-radius:12px;letter-spacing:.05em;margin-top:8px">DAILY EVENING CASH CLOSING &amp; EXECUTIVE DIGEST</div>'
+      + '</div>'
+
+      + '<div style="display:flex;justify-content:space-between;margin-bottom:14px;font-size:13px;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #e2e8f0">'
+      +   '<div><strong>Business Date:</strong> ' + App.esc(dayStr) + '</div>'
+      +   '<div><strong>Generated At:</strong> ' + App.esc(genAt) + '</div>'
+      +   '<div><strong>Verified Status:</strong> <span style="color:#047857;font-weight:800">BALANCED ✓</span></div>'
+      + '</div>'
+
+      + '<h4 style="margin:16px 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:#1e3a8a">1. Financial Revenue &amp; Collections</h4>'
+      + '<table class="table" style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:13px">'
+      +   '<tbody>'
+      +     '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:6px 8px">Total Invoices Booked:</td><td style="text-align:right;font-weight:700;padding:6px 8px">' + m.invoicesCount + ' patients</td></tr>'
+      +     '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:6px 8px">Gross Diagnostic Charges:</td><td style="text-align:right;font-weight:700;padding:6px 8px">' + App.money(m.grossBilled) + '</td></tr>'
+      +     '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:6px 8px">Discounts Concessions:</td><td style="text-align:right;font-weight:700;color:#b91c1c;padding:6px 8px">- ' + App.money(m.discountsTotal) + '</td></tr>'
+      +     '<tr style="border-bottom:1px solid #e2e8f0;background:#f1f5f9"><td style="padding:7px 8px;font-weight:800">Net Billed Revenue:</td><td style="text-align:right;font-weight:900;padding:7px 8px">' + App.money(m.totalBilled) + '</td></tr>'
+      +     '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:6px 8px">Cash Received (In-Hand):</td><td style="text-align:right;font-weight:700;color:#047857;padding:6px 8px">' + App.money(m.cashCollected) + '</td></tr>'
+      +     '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:6px 8px">Online / Bank Transfers:</td><td style="text-align:right;font-weight:700;color:#1d4ed8;padding:6px 8px">' + App.money(m.onlineCollected) + '</td></tr>'
+      +     '<tr style="border-bottom:1.5px solid #cbd5e1;background:#e6f7f0"><td style="padding:8px;font-weight:900;color:#047857">TOTAL CASH &amp; BANK COLLECTIONS:</td><td style="text-align:right;font-weight:900;color:#047857;font-size:15px;padding:8px">' + App.money(m.totalCollections) + '</td></tr>'
+      +     '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:6px 8px">Unpaid Receivables (Dues):</td><td style="text-align:right;font-weight:700;color:#b45309;padding:6px 8px">' + App.money(m.duesTotal) + ' (' + m.dueInvoicesCount + ' invoices)</td></tr>'
+      +     '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:6px 8px">Today\'s Lab Operational Expenses:</td><td style="text-align:right;font-weight:700;color:#b91c1c;padding:6px 8px">- ' + App.money(m.totalExpenses) + '</td></tr>'
+      +     '<tr style="border-top:2px solid #131845;background:#eff6ff"><td style="padding:10px 8px;font-weight:900;font-size:14.5px">NET LAB SURPLUS / OPERATING PROFIT:</td><td style="text-align:right;font-weight:900;font-size:16px;color:' + (m.netSurplus >= 0 ? '#047857' : '#b91c1c') + ';padding:10px 8px">' + App.money(m.netSurplus) + ' (' + m.profitMargin + '%)</td></tr>'
+      +   '</tbody>'
+      + '</table>'
+
+      + '<h4 style="margin:16px 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:#1e3a8a">2. Diagnostic Operations &amp; Clinical Summary</h4>'
+      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;text-align:center">'
+      +   '<div style="background:#f8fafc;border:1px solid #e2e8f0;padding:8px;border-radius:8px"><div style="font-size:11px;color:#64748b">Tests Ordered</div><div style="font-size:18px;font-weight:900">' + m.testsTotal + '</div></div>'
+      +   '<div style="background:#f0fdf4;border:1px solid #86efac;padding:8px;border-radius:8px"><div style="font-size:11px;color:#15803d">Reports Ready</div><div style="font-size:18px;font-weight:900;color:#15803d">' + m.testsReady + ' (' + m.completionRate + '%)</div></div>'
+      +   '<div style="background:#fffbeb;border:1px solid #fde68a;padding:8px;border-radius:8px"><div style="font-size:11px;color:#b45309">Pending / In-Lab</div><div style="font-size:18px;font-weight:900;color:#b45309">' + m.testsPending + '</div></div>'
+      +   '<div style="background:#fef2f2;border:1px solid #fecaca;padding:8px;border-radius:8px"><div style="font-size:11px;color:#b91c1c">Critical Alerts</div><div style="font-size:18px;font-weight:900;color:#b91c1c">' + m.criticals.length + '</div></div>'
+      + '</div>'
+
+      + (m.criticals.length ? ''
+      + '<div style="border:1.5px solid #fca5a5;border-radius:8px;background:#fef2f2;padding:10px;margin-bottom:16px">'
+      +   '<div style="font-weight:800;color:#991b1b;font-size:12px;text-transform:uppercase;margin-bottom:6px">🚨 Critical Patient Alerts Summary:</div>'
+      +   m.criticals.map(function (c, i) {
+            return '<div style="font-size:12px;margin-bottom:4px"><strong>' + (i+1) + '. ' + App.esc(c.patientName) + '</strong> (' + App.esc(c.testName) + '): <span style="font-weight:800;color:#b91c1c">' + App.esc(c.paramName) + ' = ' + App.esc(c.value) + ' ' + App.esc(c.unit) + ' (' + (c.dir === 'high' ? '↑ HIGH' : '↓ LOW') + ')</span> normal ' + App.esc(c.ref || '—') + '</div>';
+          }).join('')
+      + '</div>' : '')
+
+      + (m.topDoctors.length ? ''
+      + '<h4 style="margin:16px 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:#1e3a8a">3. Referring Doctors Breakdown</h4>'
+      + '<table class="table" style="width:100%;border-collapse:collapse;margin-bottom:16px;font-size:12.5px">'
+      +   '<thead><tr style="background:#f8fafc;border-bottom:1px solid #cbd5e1"><th style="text-align:left;padding:6px">Doctor / Clinic</th><th style="text-align:center;padding:6px">Patients</th><th style="text-align:right;padding:6px">Revenue Generated</th></tr></thead>'
+      +   '<tbody>'
+      +   m.topDoctors.map(function (d) {
+            return '<tr style="border-bottom:1px solid #e2e8f0"><td style="padding:6px;font-weight:700">' + App.esc(d.name) + '</td><td style="text-align:center;padding:6px">' + d.patients + '</td><td style="text-align:right;font-weight:800;padding:6px">' + App.money(d.revenue) + '</td></tr>';
+          }).join('')
+      +   '</tbody></table>' : '')
+
+      + '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;margin-top:36px">'
+      +   '<div style="border-top:1.5px solid #333;padding-top:4px;font-size:11.5px;text-align:center">Reception / Cashier</div>'
+      +   '<div style="border-top:1.5px solid #333;padding-top:4px;font-size:11.5px;text-align:center">Lab Manager / Quality Incharge</div>'
+      +   '<div style="border-top:1.5px solid #333;padding-top:4px;font-size:11.5px;text-align:center">Managing Director / Owner</div>'
+      + '</div>'
+      + '</div>';
+
+    App.print('Night Closing Summary — ' + m.date, html);
+  }
+
+  /* Periodic background check: auto-send if enabled and evening time reached */
+  function checkEveningAutoDigest() {
+    try {
+      var oCfg = getOwnerDigestSettings();
+      if (!oCfg.ownerAuto || !oCfg.ownerPhone) return;
+      var today = App.today();
+      var set = DB.get('settings', 'main') || {};
+      var w = set.whatsapp || {};
+      if (w.lastDigestDate === today) return;
+
+      var targetTime = oCfg.ownerTime || '21:30';
+      var parts = targetTime.split(':');
+      var targetH = parseInt(parts[0], 10) || 21;
+      var targetM = parseInt(parts[1], 10) || 30;
+
+      var now = new Date();
+      var curH = now.getHours();
+      var curM = now.getMinutes();
+
+      if (curH > targetH || (curH === targetH && curM >= targetM)) {
+        var cfg = App.wa ? App.wa.cfg() : {};
+        if (App.wa && App.wa.ready(cfg)) {
+          sendDigestToOwner(today, 'api');
+        }
+      }
+    } catch (e) {}
+  }
+  setInterval(checkEveningAutoDigest, 60000);
+
+  /* =========================================================================
+     NIGHT DIGEST DASHBOARD HTML
+     ========================================================================= */
+
+  function digestHtml(cfg) {
+    var curDate = digestDate || App.today();
+    var m = getNightDigestMetrics(curDate);
+    var oCfg = getOwnerDigestSettings();
+    var msgText = formatNightDigestMessage(m, digestOpts);
+    var ready = App.wa && App.wa.ready(cfg);
+    var digestLogs = [];
+    try {
+      digestLogs = (DB.all('wa_digest_log') || []).slice().sort(function (a, b) { return a.sentAt < b.sentAt ? 1 : -1; });
+    } catch (e) {}
+    var isToday = (curDate === App.today());
+    var dObj = new Date(curDate + 'T12:00:00');
+    var dateLabel = isNaN(dObj) ? curDate : dObj.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+    var h = ''
+      + tabsHtml('digest')
+      + '<div class="wnd-head">'
+      +   '<div>'
+      +     '<h2 style="margin:0;font-size:20px;font-weight:900;display:flex;align-items:center;gap:8px">🌙 Daily Night Digest on Owner\'s WhatsApp</h2>'
+      +     '<div style="font-size:13px;color:var(--muted);margin-top:2px">Automated evening financial closing, collections in-hand, test completion &amp; critical alerts sent directly to lab leadership.</div>'
+      +   '</div>'
+      +   '<div class="wnd-date-wrap">'
+      +     '<button class="btn btn-ghost btn-sm" id="wndDateToday"' + (isToday ? ' style="font-weight:800;color:var(--brand)"' : '') + '>Today</button>'
+      +     '<button class="btn btn-ghost btn-sm" id="wndDateYest">Yesterday</button>'
+      +     '<input type="date" class="input" id="wndDateInput" value="' + esc(curDate) + '" style="padding:5px 10px;font-size:13px;width:145px">'
+      +     '<button class="btn btn-ghost btn-sm" id="wndPrintClosing">🖨️ Print Closing Sheet</button>'
+      +     '<button class="btn btn-primary btn-sm" id="wndSendNow">📲 Send Digest to Owner</button>'
+      +   '</div>'
+      + '</div>'
+
+      /* 4 Executive KPI Cards */
+      + '<div class="wnd-kpis">'
+      +   '<div class="wnd-kpi">'
+      +     '<div class="k">Today\'s Net Billed</div>'
+      +     '<b style="color:var(--brand)">' + App.money(m.totalBilled) + '</b>'
+      +     '<div class="sub">' + m.invoicesCount + ' Invoices • Disc: ' + App.money(m.discountsTotal) + '</div>'
+      +   '</div>'
+      +   '<div class="wnd-kpi">'
+      +     '<div class="k">Total Collections (In-Hand)</div>'
+      +     '<b style="color:#047857">' + App.money(m.totalCollections) + '</b>'
+      +     '<div class="sub">Cash: ' + App.money(m.cashCollected) + ' • Online: ' + App.money(m.onlineCollected) + (m.duesTotal > 0 ? ' • Dues: ' + App.money(m.duesTotal) : '') + '</div>'
+      +   '</div>'
+      +   '<div class="wnd-kpi">'
+      +     '<div class="k">Net Lab Surplus (Profit)</div>'
+      +     '<b style="color:' + (m.netSurplus >= 0 ? '#047857' : '#b91c1c') + '">' + App.money(m.netSurplus) + '</b>'
+      +     '<div class="sub">Collections - Expenses (' + App.money(m.totalExpenses) + ') • ' + m.profitMargin + '% Margin</div>'
+      +   '</div>'
+      +   '<div class="wnd-kpi">'
+      +     '<div class="k">Diagnostic Ops &amp; Alerts</div>'
+      +     '<b>' + m.testsTotal + ' <span style="font-size:15px;font-weight:600;color:var(--muted)">Tests</span></b>'
+      +     '<div class="sub">' + m.testsReady + ' Ready (' + m.completionRate + '%) • '
+      +       (m.criticals.length ? '<span style="color:#b91c1c;font-weight:800">🚨 ' + m.criticals.length + ' Critical</span>' : '<span style="color:#047857">0 Critical</span>')
+      +       (m.homeTotal ? ' • 🛵 ' + m.homeCollected + ' Home' : '') + '</div>'
+      +   '</div>'
+      + '</div>'
+
+      /* Split Cockpit: Phone Simulator on Left, Controls & Insights on Right */
+      + '<div class="wnd-grid">'
+
+      /* LEFT: Phone Simulator */
+      +   '<div>'
+      +     '<div style="margin-bottom:8px;font-size:13px;font-weight:800;color:var(--ink)">LIVE WHATSAPP PREVIEW (PHONE SIMULATOR)</div>'
+      +     '<div class="wnd-pills">'
+      +       '<span class="wnd-pill' + (digestOpts.fin ? ' on' : '') + '" data-wnd-opt="fin">' + (digestOpts.fin ? '✓ ' : '') + 'Financials</span>'
+      +       '<span class="wnd-pill' + (digestOpts.exp ? ' on' : '') + '" data-wnd-opt="exp">' + (digestOpts.exp ? '✓ ' : '') + 'Expenses</span>'
+      +       '<span class="wnd-pill' + (digestOpts.dues ? ' on' : '') + '" data-wnd-opt="dues">' + (digestOpts.dues ? '✓ ' : '') + 'Dues</span>'
+      +       '<span class="wnd-pill' + (digestOpts.ops ? ' on' : '') + '" data-wnd-opt="ops">' + (digestOpts.ops ? '✓ ' : '') + 'Tests Ops</span>'
+      +       '<span class="wnd-pill' + (digestOpts.crit ? ' on' : '') + '" data-wnd-opt="crit">' + (digestOpts.crit ? '✓ ' : '') + 'Criticals</span>'
+      +       '<span class="wnd-pill' + (digestOpts.home ? ' on' : '') + '" data-wnd-opt="home">' + (digestOpts.home ? '✓ ' : '') + 'Home Sampling</span>'
+      +       '<span class="wnd-pill' + (digestOpts.docs ? ' on' : '') + '" data-wnd-opt="docs">' + (digestOpts.docs ? '✓ ' : '') + 'Top Doctors</span>'
+      +     '</div>'
+
+      +     '<div class="wnd-phone">'
+      +       '<div class="wnd-screen">'
+      +         '<div class="wnd-notch"><div class="wnd-notch-bar"></div></div>'
+      +         '<div class="wnd-wa-top">'
+      +           '<div class="wnd-wa-avatar">OP</div>'
+      +           '<div class="wnd-wa-meta">'
+      +             '<b>' + esc(oCfg.ownerName || 'Dr. Tariq Mahmood (Owner)') + '</b>'
+      +             '<span>' + esc(oCfg.ownerPhone ? oCfg.ownerPhone + ' • ' : '') + 'online</span>'
+      +           '</div>'
+      +           '<div style="display:flex;gap:12px;opacity:.9">'
+      +             '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m22 8-6 4 6 4V8z"/><rect width="14" height="12" x="2" y="6" rx="2" ry="2"/></svg>'
+      +             '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
+      +           '</div>'
+      +         '</div>'
+      +         '<div class="wnd-chat">'
+      +           '<div class="wnd-bubble">'
+      +             esc(msgText)
+      +             '<div class="wnd-bubble-time">'
+      +               '<span>' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '</span>'
+      +               '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#53bdeb" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>'
+      +             '</div>'
+      +           '</div>'
+      +         '</div>'
+      +       '</div>'
+      +     '</div>'
+
+      +     '<div style="margin-top:12px;display:flex;gap:8px;flex-direction:column">'
+      +       '<button class="btn btn-primary" id="wndSendApiBtn"' + (ready ? '' : ' disabled title="Connect WhatsApp gateway in Settings"') + '>📲 Dispatch via WhatsApp Gateway / API</button>'
+      +       '<div style="display:flex;gap:8px">'
+      +         '<button class="btn btn-ghost" id="wndSendWebBtn" style="flex:1">🌐 Open in WhatsApp Web / App</button>'
+      +         '<button class="btn btn-ghost" id="wndCopyBtn" style="flex:1">📋 Copy Message Text</button>'
+      +       '</div>'
+      +     '</div>'
+      +   '</div>'
+
+      /* RIGHT: Configuration, Delivery Status & Details Breakdown */
+      +   '<div>'
+
+      /* Owner Configuration & Schedule */
+      +     '<div class="card" style="margin-bottom:16px">'
+      +       '<div class="card-h"><h3>⚙️ Owner Recipient &amp; Evening Scheduler</h3></div>'
+      +       '<div class="card-b">'
+      +         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'
+      +           '<div>'
+      +             '<label class="label" style="font-weight:700">Owner WhatsApp Mobile Number'
+      +               '<input type="tel" class="input" id="wndOwnerPhone" placeholder="0300 1234567" value="' + esc(oCfg.ownerPhone) + '">'
+      +             '</label>'
+      +           '</div>'
+      +           '<div>'
+      +             '<label class="label" style="font-weight:700">Owner / Director Name'
+      +               '<input type="text" class="input" id="wndOwnerName" placeholder="Dr. Tariq Mahmood (Owner)" value="' + esc(oCfg.ownerName) + '">'
+      +             '</label>'
+      +           '</div>'
+      +         '</div>'
+      +         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;align-items:center">'
+      +           '<div>'
+      +             '<label class="label" style="font-weight:700">Scheduled Night Delivery Time'
+      +               '<input type="time" class="input" id="wndOwnerTime" value="' + esc(oCfg.ownerTime) + '">'
+      +             '</label>'
+      +           '</div>'
+      +           '<div style="padding-top:16px">'
+      +             '<label style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13.5px;cursor:pointer">'
+      +               '<input type="checkbox" id="wndOwnerAuto"' + (oCfg.ownerAuto ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green)">'
+      +               'Enable Night Auto-Dispatch'
+      +             '</label>'
+      +             '<div class="muted" style="font-size:11.5px;margin-left:26px">Automatically triggers at scheduled time if lab is open.</div>'
+      +           '</div>'
+      +         '</div>'
+      +         '<div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--bd);padding-top:12px">'
+      +           '<span class="muted" style="font-size:12.5px">Delivers to WhatsApp numbers in Pakistan (+92) and worldwide.</span>'
+      +           '<button class="btn btn-primary btn-sm" id="wndSaveSettings">Save Preferences</button>'
+      +         '</div>'
+      +       '</div>'
+      +     '</div>'
+
+      /* Financial & Reconciliation Breakdown */
+      +     '<div class="card" style="margin-bottom:16px">'
+      +       '<div class="card-h"><h3>💰 Today\'s Revenue &amp; Collections Breakdown (' + esc(dateLabel) + ')</h3></div>'
+      +       '<div class="card-b" style="padding:12px 18px">'
+      +         '<div class="wnd-row"><span>Gross Billed Tests:</span><b>' + App.money(m.grossBilled) + '</b></div>'
+      +         '<div class="wnd-row"><span>Discounts Concessions:</span><b style="color:#b91c1c">- ' + App.money(m.discountsTotal) + '</b></div>'
+      +         '<div class="wnd-row" style="font-weight:800;background:#f8fafc;padding:7px 8px;border-radius:6px"><span>Net Billed Revenue:</span><b>' + App.money(m.totalBilled) + '</b></div>'
+      +         '<div class="wnd-row"><span>Cash Received (In-Hand):</span><b style="color:#047857">' + App.money(m.cashCollected) + '</b></div>'
+      +         '<div class="wnd-row"><span>Online / Bank Transfer:</span><b style="color:#1d4ed8">' + App.money(m.onlineCollected) + '</b></div>'
+      +         '<div class="wnd-row" style="font-weight:900;background:#e6f7f0;padding:8px;border-radius:6px"><span>TOTAL CASH &amp; BANK INFLOW:</span><b style="color:#047857">' + App.money(m.totalCollections) + '</b></div>'
+      +         '<div class="wnd-row"><span>Outstanding Unpaid Dues:</span><b style="color:#b45309">' + App.money(m.duesTotal) + ' (' + m.dueInvoicesCount + ' invoices)</b></div>'
+      +         '<div class="wnd-row"><span>Operational Lab Expenses:</span><b style="color:#b91c1c">- ' + App.money(m.totalExpenses) + '</b></div>'
+      +         '<div class="wnd-row" style="font-weight:900;background:#eff6ff;padding:9px 8px;border-radius:6px;font-size:14.5px">'
+      +           '<span>NET LAB SURPLUS (PROFIT):</span><b style="color:' + (m.netSurplus >= 0 ? '#047857' : '#b91c1c') + '">' + App.money(m.netSurplus) + ' (' + m.profitMargin + '%)</b>'
+      +         '</div>'
+      +       '</div>'
+      +     '</div>'
+
+      /* Critical Results Alert Card (If any) */
+      +     (m.criticals.length ? ''
+      +     '<div class="card" style="margin-bottom:16px;border-color:#fca5a5;background:#fff5f5">'
+      +       '<div class="card-h" style="border-color:#fed7d7"><h3 style="color:#991b1b">🚨 Critical Value Alerts Today (' + m.criticals.length + ')</h3></div>'
+      +       '<div class="card-b">'
+      +         m.criticals.map(function (c, idx) {
+                  return '<div style="background:#fff;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12.5px">'
+                    + '<b>' + (idx + 1) + '. ' + esc(c.patientName) + '</b> (' + esc(c.testName) + ')'
+                    + '<div style="margin-top:2px;font-size:13px"><b style="color:#b91c1c">' + esc(c.paramName) + ': ' + esc(c.value) + ' ' + esc(c.unit) + ' (' + (c.dir === 'high' ? '↑ HIGH' : '↓ LOW') + ')</b> <span class="muted">(normal ' + esc(c.ref || '—') + ')</span></div>'
+                    + '</div>';
+                }).join('')
+      +       '</div>'
+      +     '</div>' : '')
+
+      /* Top Referring Doctors Card */
+      +     (m.topDoctors.length ? ''
+      +     '<div class="card" style="margin-bottom:16px">'
+      +       '<div class="card-h"><h3>👨‍⚕️ Top Referring Doctors Today</h3></div>'
+      +       '<div class="card-b" style="padding:10px 18px">'
+      +         m.topDoctors.map(function (d, idx) {
+                  return '<div class="wnd-row"><span><b>' + (idx + 1) + '. ' + esc(d.name) + '</b> <span class="muted">(' + d.patients + ' patients)</span></span><b>' + App.money(d.revenue) + '</b></div>';
+                }).join('')
+      +       '</div>'
+      +     '</div>' : '')
+
+      +   '</div>' // End RIGHT
+      + '</div>' // End wnd-grid
+
+      /* Historical Night Digest Dispatch Log */
+      + '<div class="card" style="margin-top:20px">'
+      +   '<div class="card-h"><h3>📜 Night Digest Dispatch History</h3><span class="muted" style="font-size:12.5px">' + digestLogs.length + ' previous digest' + (digestLogs.length === 1 ? '' : 's') + '</span></div>'
+      +   (digestLogs.length ? ''
+      +   '<div class="tbl-wrap"><table class="table"><thead><tr><th>Sent Date &amp; Time</th><th>Recipient</th><th>Billed</th><th>Collections</th><th>Surplus</th><th>Method</th><th>Status</th><th></th></tr></thead><tbody>'
+      +     digestLogs.slice(0, 50).map(function (l) {
+              return '<tr>'
+                + '<td>' + ts(l.sentAt) + '<div class="wc-sub">Date: ' + esc(l.date) + '</div></td>'
+                + '<td><b>' + esc(l.ownerName || 'Owner') + '</b><div class="wc-sub">' + esc(l.ownerPhone || '—') + '</div></td>'
+                + '<td>' + App.money(l.totalBilled) + '</td>'
+                + '<td style="font-weight:700;color:#047857">' + App.money(l.collections) + '</td>'
+                + '<td style="font-weight:800;color:' + (l.surplus >= 0 ? '#047857' : '#b91c1c') + '">' + App.money(l.surplus) + '</td>'
+                + '<td><span class="wc-chip ' + (l.method === 'api' ? 'g' : 'b') + '">' + (l.method === 'api' ? 'WhatsApp API' : 'Direct Link') + '</span></td>'
+                + '<td><span class="wc-chip g">✓ ' + esc(l.status || 'Sent') + '</span></td>'
+                + '<td style="white-space:nowrap">'
+                +   '<button class="btn btn-ghost btn-sm" data-wnd-view="' + esc(l.id) + '">View</button> '
+                +   '<button class="btn btn-ghost btn-sm" data-wnd-resend="' + esc(l.date) + '">Resend</button>'
+                + '</td>'
+                + '</tr>';
+            }).join('')
+      +   '</tbody></table></div>' : '<div class="card-b">' + App.empty('No previous digests dispatched yet.') + '</div>')
+      + '</div>';
+
     return h;
   }
+
+  /* =========================================================================
+     STANDARD WHATSAPP CENTER TABS (READY, LOG, TEMPLATES)
+     ========================================================================= */
 
   function readyHtml(rdy, ready) {
     var n = Object.keys(sel).filter(function (k) { return sel[k]; }).length;
@@ -89,7 +832,7 @@
         }).join('') + '</tbody></table></div>' : '<div class="card-b">' + App.empty('No finished reports yet') + '</div>') + '</div>';
   }
 
-  var KIND = { report: 'Report', due: 'Balance note', critical: 'Critical alert' };
+  var KIND = { report: 'Report', due: 'Balance note', critical: 'Critical alert', digest: 'Night Digest' };
   function logHtml(L) {
     var q = logF.q.toLowerCase();
     var rows = L.filter(function (e) {
@@ -134,8 +877,6 @@
       box('tplPatient', 'Report message — patient', 'Sent when the report is ready.') + box('tplDoctor', 'Report message — doctor', 'Sent to the referring doctor.') + box('tplDue', 'Balance pending message', 'Sent instead of the report while a balance is due (rule above).');
   }
 
-  function paint() { var v = document.getElementById('view'); if (v && /#\/whatsapp/.test(location.hash)) { v.innerHTML = render(); } }
-
   function readDraft() {
     var d = {};
     ['tplPatient', 'tplDoctor', 'tplDue'].forEach(function (k) { var e = document.getElementById('t_' + k); d[k] = e ? e.value : App.wa.tplText(k); });
@@ -148,6 +889,7 @@
       p.textContent = App.wa.render(e.value, v);
     });
   }
+
   function saveRules() {
     var st = DB.get('settings', 'main') || {}, w = Object.assign({}, st.whatsapp || {});
     var d = readDraft();
@@ -158,7 +900,6 @@
   }
   function sendOne(invId, role, cb) { App.wa.manual(invId, role); if (cb) setTimeout(cb, 900); }
 
-  /* the lab's own number sends one message at a time: show what is waiting and whether anything failed */
   var qTimer = null;
   function pollQueue() {
     clearInterval(qTimer);
@@ -175,15 +916,160 @@
     }
     once(); qTimer = setInterval(once, 5000);
   }
+
+  /* =========================================================================
+     MAIN RENDERER
+     ========================================================================= */
+
+  function render() {
+    css();
+    var s = App.session();
+    if (!s || (s.role !== 'admin' && s.role !== 'reception' && !(s.role === 'custom' && App.canPage('whatsapp')))) {
+      return '<div class="card"><div class="card-b">' + App.empty('You do not have access to WhatsApp Center.') + '</div></div>';
+    }
+    if (!App.wa) { ensure(paint); return '<div class="card"><div class="card-b">' + App.empty('Loading…') + '</div></div>'; }
+    var cfg = App.wa.cfg(), ready = App.wa.ready(cfg), today = App.today();
+    var L = logs(), sentToday = L.filter(function (e) { return e.status === 'sent' && String(e.ts).slice(0, 10) === today; }).length;
+    var failed = L.filter(function (e) { return e.status === 'failed'; }).length;
+    var rdy = readyInvoices(), waiting = rdy.filter(function (i) { return !sentAt(i.id, 'patient', 'report'); }).length;
+
+    if (tab === 'digest') {
+      setTimeout(wire, 0);
+      return digestHtml(cfg);
+    }
+
+    var h = (ready ? '' : '<div class="card" style="margin-bottom:14px;border-color:#f6c6c6;background:#fff6f6"><div class="card-b"><b style="color:#b91c1c">WhatsApp sending is not configured yet.</b> <span class="muted">Link the lab WhatsApp number in Settings → WhatsApp (scan a QR code). Reports can still be printed and shared manually.</span></div></div>') +
+      tabsHtml(tab, waiting, L.length) +
+      '<div class="wc-st"><div class="card"><div class="k">Sent today</div><b>' + sentToday + '</b></div><div class="card"><div class="k">Waiting to send</div><b>' + waiting + '</b></div>' +
+      '<div class="card"><div class="k">Failed (all time)</div><b style="color:' + (failed ? '#b91c1c' : 'inherit') + '">' + failed + '</b></div>' +
+      '<div class="card"><div class="k">Auto-send</div><b style="font-size:17px;margin-top:9px">' + (cfg.autoPatient !== false ? 'Patient ✓ ' : '') + (cfg.autoDoctor === true ? 'Doctor ✓' : '') + ((cfg.autoPatient === false && cfg.autoDoctor !== true) ? 'Off' : '') + '</b></div></div>' +
+      '<div class="wc-cur"><b>' + (tab === 'tpl' ? 'Templates &amp; rules' : (tab === 'log' ? 'Message log' : 'Ready to send')) + '</b><span>' + (tab === 'tpl' ? 'Messages and sending rules' : (tab === 'log' ? L.length + ' message' + (L.length === 1 ? '' : 's') : waiting + ' waiting')) + '</span></div>';
+    if (cfg.provider === 'gateway') h = h.replace('<div class="wc-cur">', '<div id="wcQueue" class="card" style="margin-bottom:14px;display:none"><div class="card-b" style="padding:12px 16px"></div></div><div class="wc-cur">');
+    if (tab === 'tpl' && s.role === 'admin') h += tplHtml(cfg);
+    else if (tab === 'log') h += logHtml(L);
+    else h += readyHtml(rdy, ready);
+    setTimeout(wire, 0);
+    return h;
+  }
+
+  function paint() {
+    var v = document.getElementById('view');
+    if (v && (/#\/whatsapp/.test(location.hash) || /#\/digest/.test(location.hash))) {
+      v.innerHTML = render();
+    }
+  }
+
+  /* =========================================================================
+     EVENT WIRING
+     ========================================================================= */
+
   function wire() {
     var v = document.getElementById('view'); if (!v || !App.wa) return;
     if (document.getElementById('wcQueue')) pollQueue();
     function on(id, ev, fn) { var e = document.getElementById(id); if (e) e.addEventListener(ev, fn); }
-    Array.prototype.forEach.call(v.querySelectorAll('[data-tab]'), function (b) { b.addEventListener('click', function () { if (tab === 'tpl') tplDraft = readDraft(); tab = b.getAttribute('data-tab'); paint(); }); });
-    Array.prototype.forEach.call(v.querySelectorAll('[data-send]'), function (b) { b.addEventListener('click', function () { var p = b.getAttribute('data-send').split('|'); sendOne(p[0], p[1], paint); }); });
-    Array.prototype.forEach.call(v.querySelectorAll('[data-retry]'), function (b) { b.addEventListener('click', function () { var p = b.getAttribute('data-retry').split('|'); sendOne(p[0], p[1], function () { setTimeout(paint, 1500); }); }); });
-    Array.prototype.forEach.call(v.querySelectorAll('.wcRow'), function (c) { c.addEventListener('change', function () { sel[c.getAttribute('data-id')] = c.checked; paint(); }); });
-    on('wcAll', 'change', function (e) { Array.prototype.forEach.call(v.querySelectorAll('.wcRow:not(:disabled)'), function (c) { sel[c.getAttribute('data-id')] = e.target.checked; }); paint(); });
+
+    // Tab buttons
+    Array.prototype.forEach.call(v.querySelectorAll('[data-tab-nav]'), function (b) {
+      b.addEventListener('click', function () {
+        var target = b.getAttribute('data-tab-nav');
+        if (target === 'digest') App.nav('#/whatsapp/digest');
+        else if (target === 'log') App.nav('#/whatsapp/log');
+        else if (target === 'tpl') App.nav('#/whatsapp/templates');
+        else App.nav('#/whatsapp');
+      });
+    });
+
+    if (tab === 'digest') {
+      // Date Picker & Quick Selectors
+      on('wndDateInput', 'change', function (e) { digestDate = e.target.value; paint(); });
+      on('wndDateToday', 'click', function () { digestDate = App.today(); paint(); });
+      on('wndDateYest', 'click', function () {
+        var d = new Date(); d.setDate(d.getDate() - 1);
+        digestDate = d.toISOString().slice(0, 10);
+        paint();
+      });
+
+      // Section Toggle Pills
+      Array.prototype.forEach.call(v.querySelectorAll('[data-wnd-opt]'), function (btn) {
+        btn.addEventListener('click', function () {
+          var key = btn.getAttribute('data-wnd-opt');
+          digestOpts[key] = !digestOpts[key];
+          paint();
+        });
+      });
+
+      // Dispatch Actions
+      on('wndSendNow', 'click', function () { sendDigestToOwner(digestDate || App.today()); });
+      on('wndSendApiBtn', 'click', function () { sendDigestToOwner(digestDate || App.today(), 'api'); });
+      on('wndSendWebBtn', 'click', function () { sendDigestToOwner(digestDate || App.today(), 'web'); });
+      on('wndCopyBtn', 'click', function () {
+        var m = getNightDigestMetrics(digestDate || App.today());
+        var txt = formatNightDigestMessage(m, digestOpts);
+        copyText(txt);
+      });
+      on('wndPrintClosing', 'click', function () {
+        var m = getNightDigestMetrics(digestDate || App.today());
+        printNightClosingSheet(m);
+      });
+
+      // Save Owner Settings
+      on('wndSaveSettings', 'click', function () {
+        var phone = document.getElementById('wndOwnerPhone').value.trim();
+        var name = document.getElementById('wndOwnerName').value.trim();
+        var time = document.getElementById('wndOwnerTime').value.trim();
+        var auto = document.getElementById('wndOwnerAuto').checked;
+        saveOwnerDigestSettings({
+          ownerPhone: phone,
+          ownerName: name,
+          ownerTime: time,
+          ownerAuto: auto,
+          sections: digestOpts
+        });
+        paint();
+      });
+
+      // Historical log view & resend
+      Array.prototype.forEach.call(v.querySelectorAll('[data-wnd-resend]'), function (b) {
+        b.addEventListener('click', function () {
+          var d = b.getAttribute('data-wnd-resend');
+          sendDigestToOwner(d);
+        });
+      });
+
+      Array.prototype.forEach.call(v.querySelectorAll('[data-wnd-view]'), function (b) {
+        b.addEventListener('click', function () {
+          var id = b.getAttribute('data-wnd-view');
+          var l = DB.get('wa_digest_log', id);
+          if (!l) return;
+          App.modal('Night Digest Summary (' + (l.date || '') + ')',
+            '<div style="font-family:system-ui;font-size:13px;line-height:1.5;white-space:pre-wrap;background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #cbd5e1;max-height:450px;overflow-y:auto">' +
+            esc(l.text || 'No text stored') + '</div>' +
+            '<div class="modal-actions" style="margin-top:14px">' +
+            '<button class="btn btn-ghost" id="wndCopyModal">Copy</button>' +
+            '<button class="btn btn-primary" id="wndCloseModal">Close</button></div>',
+            { onOpen: function (ov, close) {
+                ov.querySelector('#wndCloseModal').addEventListener('click', close);
+                ov.querySelector('#wndCopyModal').addEventListener('click', function () { copyText(l.text || ''); });
+              }
+            }
+          );
+        });
+      });
+    }
+
+    // Ready Tab Actions
+    Array.prototype.forEach.call(v.querySelectorAll('[data-send]'), function (b) {
+      b.addEventListener('click', function () { var p = b.getAttribute('data-send').split('|'); sendOne(p[0], p[1], paint); });
+    });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-retry]'), function (b) {
+      b.addEventListener('click', function () { var p = b.getAttribute('data-retry').split('|'); sendOne(p[0], p[1], function () { setTimeout(paint, 1500); }); });
+    });
+    Array.prototype.forEach.call(v.querySelectorAll('.wcRow'), function (c) {
+      c.addEventListener('change', function () { sel[c.getAttribute('data-id')] = c.checked; paint(); });
+    });
+    on('wcAll', 'change', function (e) {
+      Array.prototype.forEach.call(v.querySelectorAll('.wcRow:not(:disabled)'), function (c) { sel[c.getAttribute('data-id')] = e.target.checked; }); paint();
+    });
     on('wcSendSel', 'click', function () {
       var ids = Object.keys(sel).filter(function (k) { return sel[k]; }), i = 0;
       sel = {}; App.toast('Sending ' + ids.length + ' report' + (ids.length === 1 ? '' : 's') + '…');
@@ -196,28 +1082,53 @@
       var i = 0; App.toast('Retrying ' + jobs.length + '…');
       (function next() { if (i >= jobs.length) { setTimeout(paint, 1500); return; } App.wa.manual(jobs[i][0], jobs[i][1]); i++; setTimeout(next, 1500); })();
     });
+
+    // Log Filters
     on('lgStatus', 'change', function (e) { logF.status = e.target.value; paint(); });
     on('lgKind', 'change', function (e) { logF.kind = e.target.value; paint(); });
-    on('lgQ', 'input', function (e) { logF.q = e.target.value.trim(); clearTimeout(wire.t); wire.t = setTimeout(function () { paint(); var q = document.getElementById('lgQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 300); });
+    on('lgQ', 'input', function (e) {
+      logF.q = e.target.value.trim(); clearTimeout(wire.t);
+      wire.t = setTimeout(function () { paint(); var q = document.getElementById('lgQ'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }, 300);
+    });
+
+    // Template Tab Actions
     if (tab === 'tpl') {
       ['tplPatient', 'tplDoctor', 'tplDue'].forEach(function (k) { on('t_' + k, 'input', preview); });
       preview();
-      Array.prototype.forEach.call(v.querySelectorAll('[data-ins]'), function (b) { b.addEventListener('click', function () {
-        var p = b.getAttribute('data-ins').split('|'), t = document.getElementById('t_' + p[0]); if (!t) return;
-        var a = t.selectionStart || 0, z = t.selectionEnd || 0; t.value = t.value.slice(0, a) + p[1] + t.value.slice(z); t.focus(); t.setSelectionRange(a + p[1].length, a + p[1].length); preview(); }); });
-      Array.prototype.forEach.call(v.querySelectorAll('[data-reset]'), function (b) { b.addEventListener('click', function () { var k = b.getAttribute('data-reset'); document.getElementById('t_' + k).value = App.wa.tpl[k]; preview(); }); });
+      Array.prototype.forEach.call(v.querySelectorAll('[data-ins]'), function (b) {
+        b.addEventListener('click', function () {
+          var p = b.getAttribute('data-ins').split('|'), t = document.getElementById('t_' + p[0]); if (!t) return;
+          var a = t.selectionStart || 0, z = t.selectionEnd || 0; t.value = t.value.slice(0, a) + p[1] + t.value.slice(z); t.focus(); t.setSelectionRange(a + p[1].length, a + p[1].length); preview();
+        });
+      });
+      Array.prototype.forEach.call(v.querySelectorAll('[data-reset]'), function (b) {
+        b.addEventListener('click', function () { var k = b.getAttribute('data-reset'); document.getElementById('t_' + k).value = App.wa.tpl[k]; preview(); });
+      });
       on('wcSaveRules', 'click', saveRules);
       on('wcTest', 'click', function () {
         var cfg = App.wa.cfg(), to = App.wa.phone(cfg.labNumber);
         if (!App.wa.ready(cfg)) { App.toast('WhatsApp API is not configured', 'err'); return; }
         var d = readDraft(); App.toast('Sending test…', 'info');
-        App.wa.send(cfg, to, '🧪 TEST\n\n' + App.wa.render(d.tplPatient, SAMPLE), function (err) { if (err) App.toast('Test failed: ' + String(err.message || err).slice(0, 100), 'err'); else App.toast('Test message sent to ' + cfg.labNumber); });
+        App.wa.send(cfg, to, '🧪 TEST\n\n' + App.wa.render(d.tplPatient, SAMPLE), function (err) {
+          if (err) App.toast('Test failed: ' + String(err.message || err).slice(0, 100), 'err');
+          else App.toast('Test message sent to ' + cfg.labNumber);
+        });
       });
     }
   }
 
-  function go(t) { if (tab === 'tpl' && document.getElementById('t_tplPatient')) tplDraft = readDraft(); var me = App.session(); if (t === 'tpl' && !(me && me.role === 'admin')) { App.nav('#/whatsapp'); return ''; } tab = t; sel = {}; return render(); }
+  function go(t) {
+    if (tab === 'tpl' && document.getElementById('t_tplPatient')) tplDraft = readDraft();
+    var me = App.session();
+    if (t === 'tpl' && !(me && me.role === 'admin')) { App.nav('#/whatsapp'); return ''; }
+    tab = t;
+    sel = {};
+    return render();
+  }
+
   App.route('/whatsapp', function () { return go('ready'); });
   App.route('/whatsapp/log', function () { return go('log'); });
+  App.route('/whatsapp/digest', function () { return go('digest'); });
+  App.route('/digest', function () { return go('digest'); });
   App.route('/whatsapp/templates', function () { return go('tpl'); });
 })();
