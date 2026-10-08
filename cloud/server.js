@@ -1646,6 +1646,9 @@ async function main() {
   if (!fs.existsSync(RELEASES_DIR)) fs.mkdirSync(RELEASES_DIR, { recursive: true });
   app.use('/releases', express.static(RELEASES_DIR, { dotfiles: 'deny' }));
   console.log('[labpos-cloud] serving installer bundles from', RELEASES_DIR);
+  /* the web app is also served from this server (/app/): a second address that keeps working when Cloudflare Pages cannot be reached from some networks.
+     The files (index.html + assets/) are copied to <releases>/webapp; HTML is never cached so a new release shows up at once. */
+  app.use('/app', express.static(path.join(RELEASES_DIR, 'webapp'), { dotfiles: 'deny', index: 'index.html', setHeaders: (res, f) => { res.setHeader('Cache-Control', /\.html$/.test(f) ? 'no-cache' : 'public, max-age=3600'); } }));
 
   /* ---- landing / optional static frontend ---- */
   if (WWW_ROOT && fs.existsSync(WWW_ROOT)) {
