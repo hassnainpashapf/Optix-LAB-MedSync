@@ -1,0 +1,9 @@
+{
+  "name": "optix-medical-sync-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Static web files (website, web app, superadmin) for Cloudflare Pages. The cloud API lives in cloud/, the desktop app in electron-tools/.",
+  "scripts": {
+    "build": "bash scripts/build-web.sh"
+  }
+}
