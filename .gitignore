@@ -16,3 +16,8 @@ tmp-build/
 ~
 cloud/report-pdfs/
 cloud/*.db
+
+# SMS build: generated Android project + APK binaries (never commit)
+android-app/android/
+*.apk
+*.idsig

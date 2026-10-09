@@ -248,7 +248,7 @@
         footerNote: '',
         currency: 'PKR',
         whatsapp: { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false },
-        sms: { enabled: false, gatewayUrl: '', apiKey: '', simSlot: 0, senderId: '', autoPatient: false, autoDoctor: false, autoCritical: false },
+        sms: { enabled: false, simNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true },
         signatories: [
           { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
           { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: '' },
@@ -830,6 +830,8 @@
       }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
     },
     /* the lab's own linked WhatsApp number (/api/wa/*): status, link (QR), unlink, send. Resolves the JSON; rejects with a message. */
+    /* current Bearer session token (used by the phone's SMS gateway plugin) */
+    sessToken: sessToken,
     waGw: function (method, path, body) {
       if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));
       return window.fetch(API + '/api/wa/' + path, {

@@ -29,43 +29,22 @@
 
 <script>
 /* Shell-level delegation (works regardless of module render timing) */
-try {
-  if (localStorage.getItem('labpos_sidebar_collapsed') === '1' && window.innerWidth > 900) {
-    document.body.classList.add('side-collapsed');
-  }
-} catch (err) {}
 document.addEventListener('click', function (e) {
-  var navBtn = e.target.closest('#navToggle');
-  if (navBtn) {
-    e.preventDefault();
-    if (window.innerWidth <= 900) {
-      document.body.classList.toggle('side-open');
-    } else {
-      var isCollapsed = document.body.classList.toggle('side-collapsed');
-      try { localStorage.setItem('labpos_sidebar_collapsed', isCollapsed ? '1' : '0'); } catch (err) {}
-    }
-    return;
-  }
-  if (e.target.closest('.nav-it:not(.nav-par):not(.nav-fh)') || e.target.closest('.nav-sub-it')) {
-    document.body.classList.remove('side-open');
-  }
+  if (e.target.closest('#navToggle')) document.body.classList.toggle('side-open');
+  else if (e.target.closest('.nav-it:not(.nav-par):not(.nav-fh)') || e.target.closest('.nav-sub-it')) document.body.classList.remove('side-open');
 });
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') document.body.classList.remove('side-open');
-  if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
-    e.preventDefault();
-    var btn = document.getElementById('navToggle');
-    if (btn) btn.click();
-  }
 });
 </script>
 <!-- API base for the web build (Cloudflare Pages copies assets/); the desktop app serves its own /api-config.js -->
 <script src="assets/js/api-config.js"></script>
+<script src="assets/js/sms-gateway.js"></script>
 <script>
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
    to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
-window.__ASSET_V = '191';
+window.__ASSET_V = '187';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
@@ -90,8 +69,8 @@ window.__LAZY_ROUTES = {
   '#/results/old': 'assets/js/mod-results.js',
   '#/samples': 'assets/js/mod-samples.js',
   '#/samples/stickers': 'assets/js/mod-samples.js',
+  '#/samples/home': 'assets/js/mod-samples.js',
   '#/home-sampling': 'assets/js/mod-samples.js',
-  '#/inventory': 'assets/js/mod-stock.js',
   '#/stock': 'assets/js/mod-stock.js',
   '#/expenses': 'assets/js/mod-admin.js',
   '#/reports': 'assets/js/mod-admin.js',

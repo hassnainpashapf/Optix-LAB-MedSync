@@ -1508,16 +1508,23 @@ async function main() {
   }
 
 
-  /* ---- SMS via SIM: server-side outbox, delivered through the SMS gateway app
-     on the lab's phone (see sms-sender.js). Stateless HTTP — runs on cloud and
-     desktop alike, unlike the WhatsApp gateway above. ---- */
+  /* ---- SMS via SIM: server-side outbox. The lab's own Android app (com.optix.labmedsync,
+     on the phone that holds the SIM) polls /api/sms/pending about every minute, sends each
+     message with Android's SmsManager, and reports the result to /api/sms/report.
+     No third-party gateway, no API keys, no tunnels. ---- */
   const smsUser = new Map(); /* per-user rate-limit buckets */
   const smsNorm = (num) => { let d = String(num || '').replace(/\D/g, ''); while (d.indexOf('00') === 0) d = d.slice(2); if (d.charAt(0) === '0') d = '92' + d.slice(1); return d; };
   const smsLabCfg = async (store) => {
-    try { const s = await store.get('settings', 'main') || {}; return Object.assign({ enabled: false, gatewayUrl: '', apiKey: '', simSlot: 0, senderName: '' }, s.sms || {}); }
+    try { const s = await store.get('settings', 'main') || {}; return Object.assign({ enabled: false, simNumber: '' }, s.sms || {}); }
     catch (e) { return {}; }
   };
   const smsRowId = () => 'SMS' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+  /* phone-gateway state (kv row, like wa_log: not a generic table) */
+  const smsGwGet = async (store) => { try { return (await store.get('sms_gw', 'state')) || {}; } catch (e) { return {}; } };
+  const smsGwSet = async (store, p) => {
+    try { const cur = (await store.get('sms_gw', 'state')) || {}; await store.put('sms_gw', Object.assign({}, cur, p, { id: 'state' })); }
+    catch (e) { /* state is best-effort */ }
+  };
 
   /* queue one SMS for delivery through the lab's SIM */
   app.post('/api/sms/queue', needUser, async (req, res) => {
@@ -1581,39 +1588,64 @@ async function main() {
       const rows = await req.store.all('sms_outbox');
       const pending = rows.filter((r) => r && (r.status === 'pending' || r.status === 'sending')).length;
       const failed = rows.filter((r) => r && r.status === 'failed').length;
-      res.json({ ok: true, enabled: !!cfg.enabled, gatewayConfigured: !!(cfg.gatewayUrl && cfg.apiKey), pending, failed, worker: smsSender.status() });
+      const gw = await smsGwGet(req.store);
+      res.json({ ok: true, enabled: !!cfg.enabled, simNumber: cfg.simNumber || '', pending, failed,
+        lastPoll: gw.lastPoll || '', lastSentAt: gw.lastSentAt || '', sentCount: gw.sentCount || 0 });
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
 
-  /* delivery receipts from the gateway app.
-     Configure the webhook URL in the gateway app as <api>/api/sms/delivery with
-     body { labId, id, status, secret } where secret is the lab's gateway API key. */
-  app.post('/api/sms/delivery', async (req, res) => {
+  /* phone poll: the lab's Android app calls this ~every minute with its lab login
+     token. Claims up to 20 pending rows (marked 'sending' so a second device will
+     not double-send; stale claims older than 10 minutes are released). */
+  app.get('/api/sms/pending', needUser, async (req, res) => {
     try {
-      const b = req.body || {};
-      const labId = String(b.labId || 'main');
-      const lab = await saas.getLab(labId);
-      if (!lab) return res.status(404).json({ error: 'unknown lab' });
-      const st = saas.storeFor(lab), cfg = await smsLabCfg(st);
-      if (!cfg.apiKey || String(b.secret || '') !== cfg.apiKey) return res.status(403).json({ error: 'forbidden' });
-      const id = String(b.id || b.gatewayId || '');
-      if (!id) return res.status(400).json({ error: 'missing id' });
-      const rows = await st.all('sms_outbox');
-      const row = rows.find((r) => r && (r.id === id || r.gatewayId === id));
+      const store = req.store, now = Date.now(), out = [];
+      const rows = await store.all('sms_outbox');
+      for (const r of rows) {
+        if (r && r.status === 'sending' && now - new Date(r.claimedAt || 0).getTime() > 10 * 60 * 1000)
+          await store.patch('sms_outbox', r.id, { status: 'pending', claimedAt: '' });
+      }
+      const fresh = (await store.all('sms_outbox')).filter((r) => r && r.status === 'pending').slice(0, 20);
+      const ts = new Date().toISOString();
+      for (const r of fresh) {
+        /* re-read before claiming: a concurrent poll may have claimed it first */
+        const cur = await store.get('sms_outbox', r.id);
+        if (!cur || cur.status !== 'pending') continue;
+        await store.patch('sms_outbox', r.id, { status: 'sending', claimedAt: ts });
+        out.push({ id: r.id, to: r.to, text: r.text });
+      }
+      await smsGwSet(store, { lastPoll: ts });
+      res.json({ ok: true, rows: out });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* phone report: the app POSTs { id, status: sent|delivered|failed, error? }
+     after trying each message. */
+  app.post('/api/sms/report', needUser, async (req, res) => {
+    try {
+      const b = req.body || {}, store = req.store;
+      const row = b.id ? await store.get('sms_outbox', String(b.id)) : null;
       if (!row) return res.status(404).json({ error: 'unknown message' });
-      const status = String(b.status || '').toLowerCase();
-      const patch = {};
-      if (status === 'delivered') { patch.status = 'delivered'; patch.deliveredAt = new Date().toISOString(); }
-      else if (status === 'sent') { if (row.status === 'pending' || row.status === 'sending') { patch.status = 'sent'; patch.sentAt = new Date().toISOString(); } }
-      else if (status === 'failed') { patch.status = 'failed'; patch.error = String(b.error || 'delivery failed').slice(0, 200); }
-      if (Object.keys(patch).length) await st.patch('sms_outbox', row.id, patch);
+      const st = String(b.status || '').toLowerCase(), now = new Date().toISOString(), patch = {};
+      /* idempotent: never move a row backwards out of a terminal state */
+      if (row.status === 'delivered') return res.json({ ok: true });
+      if (st === 'delivered') { patch.status = 'delivered'; patch.deliveredAt = now; }
+      else if (st === 'sent') {
+        if (row.status === 'sent') return res.json({ ok: true }); /* already counted */
+        patch.status = 'sent'; patch.sentAt = now;
+      }
+      else if (st === 'failed') { patch.status = 'failed'; patch.error = String(b.error || 'send failed').slice(0, 200); }
+      else return res.status(400).json({ error: 'bad status' });
+      await store.patch('sms_outbox', row.id, patch);
+      if (st === 'sent' || st === 'delivered') {
+        const gw = await smsGwGet(store);
+        await smsGwSet(store, { lastSentAt: now, sentCount: (gw.sentCount || 0) + 1 });
+      }
       res.json({ ok: true });
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
 
-  /* the sender worker: drains pending rows through the gateway app (see sms-sender.js) */
-  const smsSender = require('./sms-sender').create({ saas, log: (m) => console.log('[labpos-cloud]', m) });
-  smsSender.start();
+
 
 
   /* QR target: a phone-friendly, app-like viewer (sharp pinch-zoom, share/download). Scripts and the desktop

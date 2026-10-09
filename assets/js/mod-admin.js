@@ -2008,7 +2008,7 @@
       { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: '🖋️' },
 
       { id: 'whatsapp', sec: 'AUTOMATION & PORTAL', label: 'WhatsApp Automation', desc: 'Auto-send reports on payment', icon: '💬' },
-      { id: 'sms', sec: 'AUTOMATION & PORTAL', label: 'SMS via SIM', desc: 'Send SMS from your SIM card', icon: '📲' },
+      { id: 'sms', sec: 'AUTOMATION & PORTAL', label: 'SIM Setting', desc: 'Send SMS from your SIM card', icon: '📲' },
       { id: 'sharing', sec: 'AUTOMATION & PORTAL', label: 'Email & Slack', desc: 'Notifications & webhook alerts', icon: '✉️' },
       { id: 'portal', sec: 'AUTOMATION & PORTAL', label: 'Patient Portal', desc: 'Online verification & QR access', icon: '🌐' },
 
@@ -3938,12 +3938,12 @@
 
 
 
-  /* ---- SMS via SIM (server sends through the SMS gateway app on the lab's phone) ---- */
+  /* ---- SIM Setting (server outbox -> the lab's own phone app sends from the SIM) ---- */
   function smsDefaults() {
     return {
-      enabled: false, gatewayUrl: '', apiKey: '', simSlot: 0, senderName: '',
-      autoPatient: false, autoDoctor: false, autoCritical: false,
-      tplPatient: '', tplDoctor: '', tplDue: ''
+      enabled: false, simNumber: '',
+      autoPatient: true, autoDoctor: false, autoCritical: true,
+      tplPatient: '', tplDoctor: '', tplCritical: '', tplDue: ''
     };
   }
   function smsCfg() {
@@ -3954,6 +3954,7 @@
     return {
       tplPatient: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}, {date}) is ready. Tests: {tests}. Please collect it from the lab. Thank you.',
       tplDoctor: '{lab}: Assalam-o-Alaikum {doctor}, the lab report of your patient {patient} (Invoice {invoice}) is ready. Thank you.',
+      tplCritical: '{lab}: URGENT — critical result for {patient} (Invoice {invoice}): {test} = {value}. Please contact the lab immediately.',
       tplDue: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}) is ready. A balance of {due} is pending. Please clear it at the lab. Thank you.'
     };
   }
@@ -3980,10 +3981,6 @@
         + '</label>'
         + '</div>';
     }
-
-    var slotOpts = [0, 1].map(function (i) {
-      return '<option value="' + i + '"' + ((+c.simSlot || 0) === i ? ' selected' : '') + '>SIM ' + (i + 1) + '</option>';
-    }).join('');
 
     function smsLogRow(r) {
       var st = String(r.status || 'pending');
@@ -4021,63 +4018,65 @@
       );
     }
 
-    var html =
-      '<style>'
-      + '.sms-set-wrap{max-width:820px;margin:0}'
-      + '.sms-set-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;background:linear-gradient(135deg,#eff6ff 0%,#e0ecff 100%);border:1.5px solid #bfdbfe;border-radius:14px;margin-bottom:18px}'
-      + '.sms-brand-ico{width:46px;height:46px;border-radius:12px;background:#2563eb;color:#fff;display:grid;place-items:center;font-size:24px;box-shadow:0 4px 14px rgba(37,99,235,.35);flex:none}'
-      + '.sms-set-title{font-size:18px;font-weight:800;color:#1e3a8a;margin:0 0 3px}'
-      + '.sms-set-sub{font-size:13px;color:#1e40af;margin:0}'
-      + '.sms-card{margin-bottom:16px;border-radius:14px;box-shadow:0 1px 4px rgba(15,30,46,.04)}'
-      + '.sms-steps{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--ink);line-height:1.7}'
-      + '.sms-field{margin:10px 0}'
-      + '.sms-field label{display:block;font-size:12.5px;font-weight:700;margin-bottom:4px;color:var(--ink)}'
-      + '.sms-field input,.sms-field select,.sms-field textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;background:#fff;color:var(--ink)}'
-      + '.sms-field textarea{min-height:74px;resize:vertical;font-family:inherit}'
-      + '.sms-hint{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}'
-      + '.sms-log-table{width:100%;border-collapse:collapse;font-size:12.5px}'
-      + '.sms-log-table th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--line);color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px}'
+    /* phone gateway card: only inside the native Android app */
+    var gw = (window.App && App.smsGw && App.smsGw.available()) ? App.smsGw : null;
+    var gwCard;
+    if (gw) {
+      gwCard = '<div class="card sms-card"><div class="card-h"><h3>Phone gateway</h3><span class="muted" style="font-size:12px">this phone sends the SMS</span></div>'
+        + '<div class="card-b">'
+        + rowSwitch('smsGwOn', false, 'SMS Gateway', 'When ON, this phone checks the server every minute and sends queued SMS from your SIM.')
+        + '<div id="smsGwStatus" class="muted" style="font-size:12px;margin-top:6px">Checking gateway status…</div>'
+        + '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" id="smsGwPerm">Allow SMS permission</button></div>'
+        + '<p class="muted" style="font-size:12px;margin:8px 0 0">For reliable sending, set this app\u2019s battery usage to <b>Unrestricted</b> (Android Settings → Apps → Optix Lab → Battery).</p>'
+        + '</div></div>';
+    } else {
+      gwCard = '<div class="card sms-card"><div class="card-b">'
+        + '<p class="muted" style="font-size:13px;margin:0">\U0001F4F2 SMS messages go out from <b>your own mobile phone</b> through the Optix lab app — no extra app or setup needed. Open this page in the app on the phone that holds the SIM and switch the gateway ON there.</p>'
+        + '</div></div>';
+    }
+
+    var html = '<style>'
+      + '.sms-set-wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:14px}'
+      + '.sms-set-head{padding:6px 2px}'
+      + '.sms-set-title{font-size:20px;font-weight:800;margin:0}'
+      + '.sms-set-sub{color:var(--mut);font-size:13px;margin:4px 0 0}'
+      + '.sms-brand-ico{width:44px;height:44px;border-radius:12px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}'
+      + '.sms-card .card-b{display:flex;flex-direction:column;gap:10px}'
+      + '.sms-field label{display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--mut)}'
+      + '.sms-field input,.sms-field textarea,.sms-field select{width:100%;padding:9px 10px;border:1px solid var(--line2);border-radius:8px;font-size:14px;background:var(--bg)}'
+      + '.sms-field textarea{min-height:64px;resize:vertical}'
+      + '.sms-hint{font-size:12px;color:var(--mut)}'
+      + '.sms-log-table{width:100%;border-collapse:collapse;font-size:13px}'
+      + '.sms-log-table th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--mut);padding:8px 10px;border-bottom:1px solid var(--line2)}'
       + '.sms-log-table td{padding:8px 10px;border-bottom:1px solid var(--line2);vertical-align:top}'
       + '</style>'
       + '<div class="sms-set-wrap">'
       + '<div class="sms-set-head">'
-      + '  <div style="display:flex;align-items:center;gap:14px"><div class="sms-brand-ico">📲</div>'
-      + '  <div><h2 class="sms-set-title">SMS via SIM</h2>'
-      + '  <p class="sms-set-sub">Send report alerts as plain SMS from your own SIM card — just like WhatsApp, but over the mobile network.</p></div></div>'
+      + '  <div style="display:flex;align-items:center;gap:14px"><div class="sms-brand-ico">\U0001F4F2</div>'
+      + '  <div><h2 class="sms-set-title">SIM Setting</h2>'
+      + '  <p class="sms-set-sub">Send report alerts as plain SMS from your own SIM card — the Optix app on your phone does the sending.</p></div></div>'
       + '</div>'
 
-      + '<div class="card sms-card"><div class="card-h"><h3>How it works</h3></div><div class="card-b">'
-      + '<ol class="sms-steps">'
-      + '<li>Install the <b>SMS gateway app</b> on the Android phone that holds your SIM.</li>'
-      + '<li>In the gateway app, enable its server / cloud relay and copy the <b>server URL</b> and <b>API key</b>.</li>'
-      + '<li>Paste them below, switch SMS <b>ON</b>, and press <b>Save</b>. The lab server will then send queued SMS through your SIM.</li>'
-      + '</ol></div></div>'
-
-      + '<div class="card sms-card"><div class="card-h"><h3>Gateway connection</h3><span id="smsConnBadge"></span></div><div class="card-b">'
-      + rowSwitch('smsEnabled', !!c.enabled, 'Enable SMS sending', 'When ON, the server delivers queued SMS through the gateway app on your phone.')
-      + '<div class="sms-field"><label>Gateway server URL</label><input id="smsGatewayUrl" placeholder="https://… (from the gateway app)" value="' + App.esc(c.gatewayUrl || '') + '">'
-      + '<div class="sms-hint">The public URL of the SMS gateway app (its cloud relay URL, or http://phone-ip:port on your network).</div></div>'
-      + '<div class="sms-field"><label>API key</label><input id="smsApiKey" type="password" autocomplete="off" placeholder="Paste the API key from the gateway app" value="' + App.esc(c.apiKey || '') + '"></div>'
-      + '<div style="display:flex;gap:12px;flex-wrap:wrap">'
-      + '<div class="sms-field" style="flex:1;min-width:140px"><label>SIM slot</label><select id="smsSimSlot">' + slotOpts + '</select></div>'
-      + '<div class="sms-field" style="flex:2;min-width:180px"><label>Sender name (optional)</label><input id="smsSenderName" placeholder="e.g. Optix Lab" value="' + App.esc(c.senderName || '') + '"></div>'
-      + '</div>'
-      + '<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">'
-      + '<button class="btn btn-ghost" id="smsTestConn">Check connection</button>'
-      + '<button class="btn btn-ghost" id="smsTestSend">Send test SMS</button>'
-      + '</div><div id="smsTestMsg" class="sms-hint" style="margin-top:8px"></div>'
+      + '<div class="card sms-card"><div class="card-h"><h3>SIM Setting</h3><span id="smsConnBadge"></span></div><div class="card-b">'
+      + rowSwitch('smsEnabled', !!c.enabled, 'Enable SMS', 'Queue SMS messages whenever reports are ready or alerts fire — just like WhatsApp.')
+      + '<div class="sms-field"><label>SIM / mobile number</label><input id="smsSimNumber" placeholder="0300-1234567" value="' + App.esc(c.simNumber || '') + '">'
+      + '<div class="sms-hint">The number patients will see the SMS coming from — the SIM in your phone.</div></div>'
+      + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn btn-ghost" id="smsTestSend">Send test SMS</button><span id="smsTestMsg" class="sms-hint"></span></div>'
       + '</div></div>'
 
+      + gwCard
+
       + '<div class="card sms-card"><div class="card-h"><h3>Automatic SMS</h3></div><div class="card-b">'
-      + rowSwitch('smsAutoPatient', !!c.autoPatient, 'Report ready → patient', 'Automatically SMS the patient when their full report is ready (same moment WhatsApp would send).')
-      + rowSwitch('smsAutoDoctor', !!c.autoDoctor, 'Report ready → referring doctor', 'Automatically SMS the referring doctor when the report is ready.')
+      + rowSwitch('smsAutoPatient', !!c.autoPatient, 'Report ready \u2192 patient', 'Automatically SMS the patient when their full report is ready (same moment WhatsApp would send).')
+      + rowSwitch('smsAutoDoctor', !!c.autoDoctor, 'Report ready \u2192 referring doctor', 'Automatically SMS the referring doctor when the report is ready.')
       + rowSwitch('smsAutoCritical', !!c.autoCritical, 'Critical result alerts', 'Immediately SMS the referring doctor and the lab number on critical values.')
       + '</div></div>'
 
       + '<div class="card sms-card"><div class="card-h"><h3>Message templates</h3></div><div class="card-b">'
-      + '<div class="sms-hint" style="margin-bottom:10px">Plain text. Placeholders: {lab} {patient} {doctor} {invoice} {date} {tests} {total} {due}. Leave blank to use the default.</div>'
+      + '<div class="sms-hint" style="margin-bottom:2px">Plain text. Placeholders: {lab} {patient} {doctor} {invoice} {date} {tests} {total} {due}. Leave blank to use the default.</div>'
       + '<div class="sms-field"><label>Report ready — patient</label><textarea id="smsTplPatient" placeholder="' + App.esc(t.tplPatient) + '">' + App.esc(c.tplPatient || '') + '</textarea></div>'
       + '<div class="sms-field"><label>Report ready — doctor</label><textarea id="smsTplDoctor" placeholder="' + App.esc(t.tplDoctor) + '">' + App.esc(c.tplDoctor || '') + '</textarea></div>'
+      + '<div class="sms-field"><label>Critical alert</label><textarea id="smsTplCritical" placeholder="' + App.esc(t.tplCritical) + '">' + App.esc(c.tplCritical || '') + '</textarea></div>'
       + '<div class="sms-field"><label>Balance pending — patient</label><textarea id="smsTplDue" placeholder="' + App.esc(t.tplDue) + '">' + App.esc(c.tplDue || '') + '</textarea></div>'
       + '</div></div>'
 
@@ -4085,7 +4084,7 @@
       + '<div class="card-b" style="overflow-x:auto"><table class="sms-log-table"><thead><tr><th>When</th><th>To</th><th>Type</th><th>Invoice</th><th>Status</th></tr></thead>'
       + '<tbody id="smsLogBody"><tr><td colspan="5" class="muted" style="text-align:center;padding:18px">Loading…</td></tr></tbody></table></div></div>'
 
-      + '<div style="margin:18px 0"><button class="btn btn-primary" id="smsSaveAll" style="padding:10px 26px;font-weight:700">Save SMS settings</button></div>'
+      + '<div style="margin:4px 0 18px"><button class="btn btn-primary" id="smsSaveAll" style="padding:10px 26px;font-weight:700">Save SMS settings</button></div>'
       + '</div>';
 
     document.getElementById('view').innerHTML = html;
@@ -4094,15 +4093,13 @@
     function collect() {
       var st = DB.get('settings', 'main') || {}, sc = Object.assign(smsDefaults(), st.sms || {});
       sc.enabled = !!(g('smsEnabled') && g('smsEnabled').checked);
-      if (g('smsGatewayUrl')) sc.gatewayUrl = g('smsGatewayUrl').value.trim().replace(/\/+$/, '');
-      if (g('smsApiKey')) { var k = g('smsApiKey').value; if (k) sc.apiKey = k; }
-      if (g('smsSimSlot')) sc.simSlot = +g('smsSimSlot').value || 0;
-      if (g('smsSenderName')) sc.senderName = g('smsSenderName').value.trim();
+      if (g('smsSimNumber')) sc.simNumber = g('smsSimNumber').value.trim();
       if (g('smsAutoPatient')) sc.autoPatient = g('smsAutoPatient').checked;
       if (g('smsAutoDoctor')) sc.autoDoctor = g('smsAutoDoctor').checked;
       if (g('smsAutoCritical')) sc.autoCritical = g('smsAutoCritical').checked;
       if (g('smsTplPatient')) sc.tplPatient = g('smsTplPatient').value.trim();
       if (g('smsTplDoctor')) sc.tplDoctor = g('smsTplDoctor').value.trim();
+      if (g('smsTplCritical')) sc.tplCritical = g('smsTplCritical').value.trim();
       if (g('smsTplDue')) sc.tplDue = g('smsTplDue').value.trim();
       return sc;
     }
@@ -4118,7 +4115,13 @@
     if (saveBtn) saveBtn.addEventListener('click', function () { saveSms(true); refreshSmsStatus(); });
     ['smsEnabled', 'smsAutoPatient', 'smsAutoDoctor', 'smsAutoCritical'].forEach(function (id) {
       var el = g(id);
-      if (el) el.addEventListener('change', function () { if (saveSms(false)) App.toast((this.checked ? 'Switched ON' : 'Switched OFF') + ' — saved'); });
+      if (el) el.addEventListener('change', function () { if (saveSms(false)) App.toast((this.checked ? 'Switched ON' : 'Switched OFF') + ' \u2014 saved'); });
+    });
+    var simInput = g('smsSimNumber');
+    if (simInput) simInput.addEventListener('change', function () { saveSms(false); });
+    ['smsTplPatient', 'smsTplDoctor', 'smsTplCritical', 'smsTplDue'].forEach(function (id) {
+      var el = g(id);
+      if (el) el.addEventListener('change', function () { saveSms(false); });
     });
 
     function setBadge(ok, txt) {
@@ -4126,33 +4129,70 @@
       b.innerHTML = '<span class="badge ' + (ok ? 'b-ready' : 'b-pending') + '">' + App.esc(txt) + '</span>';
     }
     function refreshSmsStatus() {
-      setBadge(false, 'CHECKING…');
+      setBadge(false, 'CHECKING\u2026');
       DB.smsApi('GET', 'status', undefined).then(function (j) {
-        if (j && j.ok) setBadge(!!(j.enabled && j.gatewayConfigured), (j.enabled ? (j.gatewayConfigured ? 'CONNECTED' : 'NO GATEWAY URL') : 'DISABLED') + (j.pending ? ' · ' + j.pending + ' QUEUED' : ''));
-        else setBadge(false, 'ERROR');
+        if (j && j.ok) {
+          var bits = [j.enabled ? 'ON' : 'OFF'];
+          if (j.pending) bits.push(j.pending + ' QUEUED');
+          if (j.failed) bits.push(j.failed + ' FAILED');
+          if (j.lastPoll) { try { bits.push('PHONE SEEN ' + App.dt(j.lastPoll)); } catch (e) { /* keep going */ } }
+          setBadge(!!j.enabled, bits.join(' \u00B7 '));
+        } else setBadge(false, 'ERROR');
       }, function () { setBadge(false, 'SERVER UNREACHABLE'); });
     }
     refreshSmsStatus();
-
-    var tcBtn = g('smsTestConn');
-    if (tcBtn) tcBtn.addEventListener('click', function () {
-      saveSms(false); refreshSmsStatus();
-      App.toast('Checking gateway connection…', 'info');
-    });
 
     var tsBtn = g('smsTestSend');
     if (tsBtn) tsBtn.addEventListener('click', function () {
       var b = this; saveSms(false); b.disabled = true;
       var msgEl = g('smsTestMsg'); if (msgEl) msgEl.textContent = 'Queueing test SMS…';
+      var sc = collect();
+      if (!sc.simNumber) { b.disabled = false; if (msgEl) msgEl.textContent = 'Enter your SIM number above first.'; return; }
       var labName = (DB.get('settings', 'main') || {}).labName || 'Optix Medical Sync';
-      DB.smsApi('POST', 'queue', { to: ((DB.get('settings', 'main') || {}).phone || ''), text: labName + ': test SMS from your lab. If you received this, SMS sending works.', kind: 'test' }).then(function (j) {
+      DB.smsApi('POST', 'queue', { to: sc.simNumber, text: labName + ': test SMS from your lab. If you received this on your phone, SMS sending works.', kind: 'test' }).then(function (j) {
         b.disabled = false;
-        if (msgEl) msgEl.textContent = j && j.ok ? 'Test SMS queued (' + (j.id || '') + '). The server will send it through your SIM within a minute.' : 'Could not queue the test SMS.';
+        if (msgEl) msgEl.textContent = j && j.ok ? 'Test SMS queued. Your phone will send it within a minute (gateway must be ON in the app).' : 'Could not queue the test SMS.';
+        loadSmsLog(); refreshSmsStatus();
       }, function (e) {
         b.disabled = false;
         if (msgEl) msgEl.textContent = 'Failed: ' + (e && e.message ? e.message : 'server unreachable');
       });
     });
+
+    /* phone gateway card wiring (native app only) */
+    function paintGwStatus() {
+      var el = g('smsGwStatus'); if (!el || !gw) return;
+      gw.status().then(function (st) {
+        var sw = g('smsGwOn'); if (sw) sw.checked = !!st.enabled;
+        var bits = [st.enabled ? 'Gateway is ON' : 'Gateway is OFF'];
+        if (st.lastPoll) { try { bits.push('last check ' + App.dt(st.lastPoll)); } catch (e) { bits.push('last check ' + String(st.lastPoll)); } }
+        if (st.sentCount) bits.push(st.sentCount + ' sent');
+        if (!st.permission) bits.push('SMS permission not granted');
+        el.textContent = bits.join(' \u00B7 ');
+      }, function () { el.textContent = 'Could not read gateway status.'; });
+    }
+    if (gw) {
+      paintGwStatus();
+      var gwSw = g('smsGwOn');
+      if (gwSw) gwSw.addEventListener('change', function () {
+        var on = gwSw.checked;
+        gw.setEnabled(on).then(function () {
+          App.toast(on ? 'SMS Gateway ON \u2014 this phone will now send queued SMS' : 'SMS Gateway OFF');
+          paintGwStatus();
+        }, function (e) {
+          gwSw.checked = !on;
+          App.toast((e && e.message) || 'Could not change gateway state', 'err');
+        });
+      });
+      var permBtn = g('smsGwPerm');
+      if (permBtn) permBtn.addEventListener('click', function () {
+        gw.requestPermission().then(function (r) {
+          var ok = !!(r && r.granted);
+          App.toast(ok ? 'SMS permission granted' : 'SMS permission was not granted \u2014 the gateway cannot send without it.', ok ? undefined : 'err');
+          paintGwStatus();
+        }, function (e) { App.toast((e && e.message) || 'Permission request failed', 'err'); });
+      });
+    }
 
     loadSmsLog();
     var raBtn = g('smsRetryAll');
@@ -4160,6 +4200,7 @@
       DB.smsApi('POST', 'retry', { all: true }).then(function (j) { App.toast('Re-queued ' + ((j && j.requeued) || 0) + ' message(s)'); loadSmsLog(); }, function (e) { App.toast((e && e.message) || 'Retry failed', 'err'); });
     });
   }
+
   App.openSmsSettingsTab = function () { App.nav('#/settings/sms'); };
 
   /* ---- Dropdown Lists: the admin edits the choices that appear in forms ---- */

@@ -1,0 +1,27 @@
+// @optix/sms-gateway — native Android side of the Optix SMS gateway plugin.
+// Included automatically by `npx cap sync` (standard Capacitor plugin layout).
+apply plugin: 'com.android.library'
+
+android {
+    namespace "com.optix.labmedsync.smsgateway"
+    compileSdkVersion 34
+    defaultConfig {
+        minSdkVersion 24
+        targetSdkVersion 34
+        versionCode 1
+        versionName "1.0.0"
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+ext {
+    capacitorAndroidVersion = project.hasProperty('capacitorAndroidVersion') ? project.getProperty('capacitorAndroidVersion') : '7.4.0'
+}
+
+dependencies {
+    // No third-party deps: HTTP via HttpURLConnection, SMS via android.telephony.SmsManager.
+    api "com.capacitorjs:core:$capacitorAndroidVersion"
+}

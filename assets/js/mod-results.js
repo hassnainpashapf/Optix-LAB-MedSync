@@ -644,7 +644,7 @@
   }
 
 
-  /* ---------- SMS via SIM (server outbox -> SMS gateway app on the lab's phone) ----------
+  /* ---------- SIM Setting (server outbox -> the lab's own phone app sends from the SIM) ----------
      Mirrors the WhatsApp auto/manual flow, but messages are queued server-side
      (POST /api/sms/queue) and delivered by the SMS gateway app through the lab's
      own SIM card. Plain text, no markdown, no long links. */
@@ -652,17 +652,18 @@
   var SMS_TPL = {
     tplPatient: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}, {date}) is ready. Tests: {tests}. Please collect it from the lab. Thank you.',
     tplDoctor: '{lab}: Assalam-o-Alaikum {doctor}, the lab report of your patient {patient} (Invoice {invoice}) is ready. Thank you.',
+    tplCritical: '{lab}: URGENT — critical result for {patient} (Invoice {invoice}): {test} = {value}. Please contact the lab immediately.',
     tplDue: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}) is ready. A balance of {due} is pending. Please clear it at the lab. Thank you.'
   };
 
   function smsCfg() {
     try {
       var s = DB.get('settings', 'main') || {};
-      return Object.assign({ enabled: false, gatewayUrl: '', apiKey: '', simSlot: 0, senderName: '', autoPatient: false, autoDoctor: false, autoCritical: false, tplPatient: '', tplDoctor: '', tplDue: '' }, s.sms || {});
+      return Object.assign({ enabled: false, simNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true, tplPatient: '', tplDoctor: '', tplCritical: '', tplDue: '' }, s.sms || {});
     } catch (e) { return {}; }
   }
-  /* configured = switched on + gateway URL + API key (mirrors waReady) */
-  function smsReady(cfg) { return !!(cfg && cfg.enabled && cfg.gatewayUrl && cfg.apiKey); }
+  /* configured = switched on (the phone itself is the gateway) */
+  function smsReady(cfg) { return !!(cfg && cfg.enabled); }
   function smsTplText(name) { var c = smsCfg(); return (c && c[name] && String(c[name]).replace(/\s/g, '')) ? c[name] : SMS_TPL[name]; }
   function smsRenderTpl(tpl, v) {
     v = v || {};
@@ -678,10 +679,12 @@
     var lines = (crits || []).map(function (c) {
       return (c.name || '') + ': ' + (c.value || '') + ' ' + (c.unit || '') + (c.dir === 'high' ? ' (HIGH)' : ' (LOW)') + ' [normal ' + (c.ref || '-') + ']';
     });
+    var custom = (smsCfg().tplCritical || '').trim();
+    if (custom) return smsRenderTpl(custom, { lab: lab, patient: pat.name || '', invoice: inv.no || inv.id, test: tname || '', value: lines.join(', ') });
     return 'CRITICAL RESULT - ' + lab + '\nPatient: ' + (pat.name || '') + ' (' + (inv.no || inv.id) + ')\nTest: ' + (tname || '') + '\n' + lines.join('\n') + '\nPlease review immediately.';
   }
 
-  /* queue one SMS server-side; the server worker delivers it through the gateway app.
+  /* queue one SMS server-side; the lab's phone app picks it up and sends it from the SIM.
      Returns a promise resolving to { ok, id } or { ok, duplicate:true }. */
   function smsQueueSend(to, text, opts) {
     opts = opts || {};
