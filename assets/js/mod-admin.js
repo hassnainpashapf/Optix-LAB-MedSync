@@ -1964,31 +1964,20 @@
      Tabs: Lab Profile | My Account | Users | Backup | Danger Zone
      ============================================================ */
   var UNIFI_SET_CSS =
-    '.unifi-shell{display:flex;min-height:calc(100vh - 120px);background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px -4px rgba(15,23,42,.06)}' +
-    '.unifi-side{width:280px;flex:none;background:#ffffff;border-right:1px solid #e2e8f0;display:flex;flex-direction:column}' +
-    '.unifi-side-head{padding:16px 14px 12px;border-bottom:1px solid #f1f5f9}' +
-    '.unifi-search-wrap{position:relative;display:flex;align-items:center}' +
-    '.unifi-search-wrap svg{position:absolute;left:10px;width:14px;height:14px;color:#94a3b8;pointer-events:none}' +
-    '.unifi-search-input{width:100%;padding:8px 12px 8px 32px;font-size:12.5px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;color:#1e293b;outline:none;transition:all .15s}' +
-    '.unifi-search-input:focus{background:#fff;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}' +
-    '.unifi-nav{flex:1;overflow-y:auto;padding:8px 8px 24px}' +
-    '.unifi-sec-title{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;padding:12px 10px 4px}' +
-    '.unifi-nav-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;color:#334155;text-decoration:none;margin-bottom:2px;transition:all .15s ease;border:1px solid transparent}' +
-    '.unifi-nav-item:hover{background:#f1f5f9;color:#0f172a}' +
-    '.unifi-nav-item.active{background:#0f172a;color:#ffffff;font-weight:600;box-shadow:0 4px 12px rgba(15,23,42,.15)}' +
-    '.unifi-nav-item.active .unifi-item-sub{color:#94a3b8}' +
-    '.unifi-item-ico{font-size:16px;width:22px;display:flex;align-items:center;justify-content:center;flex:none}' +
-    '.unifi-item-meta{flex:1;min-width:0}' +
-    '.unifi-item-lbl{font-size:13px;font-weight:700;line-height:1.25}' +
-    '.unifi-item-sub{font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}' +
-    '.unifi-danger{color:#ef4444}' +
-    '.unifi-danger:hover{background:#fef2f2;color:#b91c1c}' +
-    '.unifi-danger.active{background:#dc2626;color:#ffffff}' +
-    '.unifi-content{flex:1;min-width:0;background:#ffffff;display:flex;flex-direction:column}' +
-    '.unifi-top-bar{padding:16px 24px;border-bottom:1px solid #e2e8f0;background:#ffffff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}' +
-    '.unifi-top-title{font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:8px}' +
+    '.unifi-shell{background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px -4px rgba(15,23,42,.06);margin-bottom:24px}' +
+    '.unifi-top-bar{padding:18px 24px 14px;border-bottom:1px solid #e2e8f0;background:#ffffff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}' +
+    '.unifi-top-title{font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:8px}' +
     '.unifi-top-desc{font-size:12.5px;color:#64748b;margin:3px 0 0}' +
-    '.unifi-canvas{padding:20px 24px;flex:1;overflow-y:auto}' +
+    '.unifi-tab-strip{display:flex;gap:6px;overflow-x:auto;padding:12px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;scrollbar-width:thin}' +
+    '.unifi-tab-strip::-webkit-scrollbar{height:4px}' +
+    '.unifi-tab-strip::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}' +
+    '.unifi-tab-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;color:#475569;background:#ffffff;border:1px solid #e2e8f0;text-decoration:none;white-space:nowrap;transition:all .15s ease}' +
+    '.unifi-tab-btn:hover{background:#f1f5f9;color:#0f172a;border-color:#cbd5e1}' +
+    '.unifi-tab-btn.active{background:#0f172a;color:#ffffff;border-color:#0f172a;box-shadow:0 2px 8px rgba(15,23,42,.15)}' +
+    '.unifi-tab-btn.unifi-danger{color:#dc2626}' +
+    '.unifi-tab-btn.unifi-danger:hover{background:#fef2f2;border-color:#fca5a5}' +
+    '.unifi-tab-btn.unifi-danger.active{background:#dc2626;color:#ffffff;border-color:#dc2626}' +
+    '.unifi-canvas{padding:24px;flex:1}' +
     '.unifi-panel{background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,23,42,.03);overflow:hidden;transition:border-color .15s}' +
     '.unifi-panel:hover{border-color:#cbd5e1}' +
     '.unifi-panel-header{padding:14px 18px;border-bottom:1px solid #f1f5f9;background:#fafbfc;display:flex;align-items:center;gap:12px}' +
@@ -2003,8 +1992,7 @@
     '.unifi-switch input:checked + .unifi-slider{background-color:#0f172a}' +
     '.unifi-switch input:checked + .unifi-slider:before{transform:translateX(18px)}' +
     '.unifi-toggle-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;margin-bottom:8px;gap:14px}' +
-    '.unifi-save-bar{margin-top:20px;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid #e2e8f0}' +
-    '@media(max-width:960px){.unifi-shell{flex-direction:column}.unifi-side{width:100%;border-right:none;border-bottom:1px solid #e2e8f0}.unifi-top-bar,.unifi-canvas{padding:14px}}';
+    '.unifi-save-bar{margin-top:20px;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid #e2e8f0}';
 
   var settingsTab = 'profile';
 
@@ -2029,85 +2017,45 @@
 
     var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
 
-    var secOrder = ['GENERAL', 'REPORTS & PRINTING', 'AUTOMATION & PORTAL', 'SYSTEM'];
-    var navHtml = '';
-    secOrder.forEach(function (sec) {
-      var secTabs = tabs.filter(function (t) { return t.sec === sec; });
-      if (!secTabs.length) return;
-      navHtml += '<div class="unifi-sec-title">' + App.esc(sec) + '</div>';
-      secTabs.forEach(function (t) {
-        var activeCls = (t.id === cur.id) ? ' active' : '';
-        var dangerCls = t.isDanger ? ' unifi-danger' : '';
-        navHtml +=
-          '<a href="#/settings/' + t.id + '" class="unifi-nav-item' + activeCls + dangerCls + '" data-set-tab="' + t.id + '" data-keywords="' + App.esc((t.label + ' ' + t.desc + ' ' + t.sec).toLowerCase()) + '">' +
-            '<span class="unifi-item-ico">' + t.icon + '</span>' +
-            '<div class="unifi-item-meta">' +
-              '<div class="unifi-item-lbl">' + App.esc(t.label) + '</div>' +
-              '<div class="unifi-item-sub">' + App.esc(t.desc) + '</div>' +
-            '</div>' +
-          '</a>';
-      });
-    });
+    var tabsHtml = tabs.map(function (t) {
+      var isAct = t.id === cur.id;
+      return '<a href="#/settings/' + t.id + '" class="unifi-tab-btn' + (isAct ? ' active' : '') + (t.isDanger ? ' unifi-danger' : '') + '">'
+        + '<span>' + t.icon + '</span>'
+        + '<span>' + App.esc(t.label) + '</span>'
+        + '</a>';
+    }).join('');
 
     var html =
       '<style>' + UNIFI_SET_CSS + '</style>' +
       '<div class="unifi-shell">' +
-        '<!-- UniFi Sidebar -->' +
-        '<aside class="unifi-side">' +
-          '<div class="unifi-side-head">' +
-            '<div class="unifi-search-wrap">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
-              '<input type="text" id="unifi-set-search" class="unifi-search-input" placeholder="Search settings..." autocomplete="off">' +
-            '</div>' +
+        '<!-- Top Header Bar -->' +
+        '<div class="unifi-top-bar">' +
+          '<div>' +
+            '<h2 class="unifi-top-title">' +
+              '<span>' + cur.icon + '</span>' +
+              '<span>' + App.esc(cur.label) + '</span>' +
+            '</h2>' +
+            '<p class="unifi-top-desc">' + App.esc(cur.desc) + '</p>' +
           '</div>' +
-          '<nav class="unifi-nav" id="unifi-set-nav-list">' +
-            navHtml +
-          '</nav>' +
-        '</aside>' +
+          '<div>' +
+            '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#f1f5f9;color:#475569">' +
+              '<span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block"></span> ' + App.esc(cur.sec) +
+            '</span>' +
+          '</div>' +
+        '</div>' +
 
-        '<!-- UniFi Content Canvas -->' +
-        '<main class="unifi-content">' +
-          '<div class="unifi-top-bar">' +
-            '<div>' +
-              '<h2 class="unifi-top-title">' +
-                '<span>' + cur.icon + '</span>' +
-                '<span>' + App.esc(cur.label) + '</span>' +
-              '</h2>' +
-              '<p class="unifi-top-desc">' + App.esc(cur.desc) + '</p>' +
-            '</div>' +
-            '<div>' +
-              '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;background:#f1f5f9;color:#475569">' +
-                '<span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block"></span> ' + App.esc(cur.sec) +
-              '</span>' +
-            '</div>' +
-          '</div>' +
-          '<div class="unifi-canvas">' +
-            '<div id="setBody"></div>' +
-          '</div>' +
-        '</main>' +
+        '<!-- Horizontal Tab Navigation Bar -->' +
+        '<div class="unifi-tab-strip">' +
+          tabsHtml +
+        '</div>' +
+
+        '<!-- Settings Content Canvas -->' +
+        '<div class="unifi-canvas">' +
+          '<div id="setBody"></div>' +
+        '</div>' +
       '</div>';
 
     document.getElementById('view').innerHTML = html;
-
-    var sInput = document.getElementById('unifi-set-search');
-    if (sInput) {
-      sInput.addEventListener('input', function () {
-        var q = sInput.value.trim().toLowerCase();
-        var items = document.querySelectorAll('.unifi-nav-item');
-        var headers = document.querySelectorAll('.unifi-sec-title');
-        items.forEach(function (el) {
-          var kw = el.getAttribute('data-keywords') || '';
-          el.style.display = (!q || kw.indexOf(q) >= 0) ? 'flex' : 'none';
-        });
-        headers.forEach(function (h) {
-          var sec = h.textContent.trim().toLowerCase();
-          var hasVisible = Array.prototype.slice.call(items).some(function (el) {
-            return (el.getAttribute('data-keywords') || '').indexOf(sec) >= 0 && el.style.display !== 'none';
-          });
-          h.style.display = (!q || hasVisible) ? 'block' : 'none';
-        });
-      });
-    }
 
     if (settingsTab === 'profile') renderSetProfile();
     else if (settingsTab === 'payments') renderSetPayments();
