@@ -744,7 +744,7 @@
       (invoiceIds || []).forEach(function (id) { if (id && ids.indexOf(id) < 0) ids.push(id); });
       if (!ids.length) return;
       var cfg = smsCfg();
-      var autoPat = cfg.autoPatient === true;  /* default OFF (unlike WhatsApp) */
+      var autoPat = cfg.autoPatient === true;  /* default ON (patient auto-send is on) */
       var autoDoc = cfg.autoDoctor === true;   /* default OFF */
       if (!autoPat && !autoDoc) return;
       if (!smsReady(cfg)) return;
