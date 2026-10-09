@@ -1102,17 +1102,10 @@
       + '</style>'
       + '<div class="hs-dash">'
 
-      /* Page Header with Actions */
-      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px">'
-      +   '<div>'
-      +     '<h2 style="margin:0;font-size:20px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px">🛵 Home Sampling &amp; Dispatch</h2>'
-      +     '<p class="muted" style="margin:3px 0 0;font-size:12.5px">Doorstep sample collection bookings, phlebotomist tracking &amp; lab intake check-in</p>'
-      +   '</div>'
-      +   '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-      +     '<button class="btn btn-ghost btn-sm" id="hsRidersBtn">👥 Phlebotomist Riders (' + riders.length + ')</button>'
-      +     '<button class="btn btn-ghost btn-sm" id="hsSeedBtn">⚡ Seed Sample Bookings</button>'
-      +     '<button class="btn btn-primary btn-sm" id="hsBookBtn">+ Book Home Collection</button>'
-      +   '</div>'
+      /* Clean Page Header */
+      + '<div style="margin-bottom:18px">'
+      +   '<h2 style="margin:0;font-size:20px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px">🛵 Home Sampling &amp; Dispatch</h2>'
+      +   '<p class="muted" style="margin:3px 0 0;font-size:12.5px">Doorstep sample collection bookings, phlebotomist tracking &amp; lab intake check-in</p>'
       + '</div>'
 
       /* 4 Unified KPI Cards (Standard size, branded gradients & borders) */
@@ -1163,28 +1156,33 @@
           }).join('')
       + '</div>'
 
-      /* Filter Toolbar */
+      /* Search & Filter Toolbar with Action Buttons */
       + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="padding:12px 16px">'
-      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-      +     '<input class="input search" id="hsSearch" placeholder="Search by patient, phone, address, booking #, tests..." value="' + App.esc(HS_FILTER.q) + '" style="max-width:320px">'
-      +     '<div style="display:flex;gap:8px;align-items:center">'
-      +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">Date:</span>'
-      +       '<select class="select" id="hsDateSelect" style="width:auto;padding:5px 10px;font-size:13px">'
+      +   '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
+      +     '<input class="input search" id="hsSearch" placeholder="Search by patient, phone, address, booking #, tests..." value="' + App.esc(HS_FILTER.q) + '" style="max-width:280px;min-width:180px;flex:1 1 200px">'
+      +     '<div style="display:flex;gap:6px;align-items:center">'
+      +       '<span style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase">Date:</span>'
+      +       '<select class="select" id="hsDateSelect" style="width:auto;padding:5px 8px;font-size:12.5px">'
       +         '<option value="all"' + (HS_FILTER.date === 'all' ? ' selected' : '') + '>All Dates</option>'
       +         '<option value="today"' + (HS_FILTER.date === 'today' ? ' selected' : '') + '>Today (' + App.d(todayStr) + ')</option>'
       +         '<option value="tomorrow"' + (HS_FILTER.date === 'tomorrow' ? ' selected' : '') + '>Tomorrow (' + App.d(tomorrowStr) + ')</option>'
       +       '</select>'
       +     '</div>'
-      +     '<div style="display:flex;gap:8px;align-items:center">'
-      +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">Phlebotomist:</span>'
-      +       '<select class="select" id="hsRiderSelect" style="width:auto;padding:5px 10px;font-size:13px">'
+      +     '<div style="display:flex;gap:6px;align-items:center">'
+      +       '<span style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase">Rider:</span>'
+      +       '<select class="select" id="hsRiderSelect" style="width:auto;padding:5px 8px;font-size:12.5px">'
       +         '<option value="all">All Riders</option>'
       +         riders.map(function (r) {
                   return '<option value="' + App.esc(r.id) + '"' + (HS_FILTER.riderId === r.id ? ' selected' : '') + '>' + App.esc(r.name) + '</option>';
                 }).join('')
       +       '</select>'
       +     '</div>'
-      +     '<button class="btn btn-ghost btn-sm" id="hsClearFilter" style="margin-left:auto">Clear Filters</button>'
+      +     (HS_FILTER.q || HS_FILTER.date !== 'all' || HS_FILTER.riderId !== 'all' ? '<button class="btn btn-ghost btn-sm" id="hsClearFilter" style="color:var(--red);padding:5px 8px">✕ Reset</button>' : '')
+      +     '<div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      +       '<button class="btn btn-sm" id="hsRidersBtn" title="Manage Phlebotomist Riders" style="font-weight:600">👥 Phlebotomist Riders (' + riders.length + ')</button>'
+      +       '<button class="btn btn-sm" id="hsSeedBtn" title="Seed Demo Bookings" style="font-weight:600">⚡ Seed Bookings</button>'
+      +       '<button class="btn btn-primary btn-sm" id="hsBookBtn" style="font-weight:700">+ Book Home Collection</button>'
+      +     '</div>'
       +   '</div>'
       + '</div></div>';
 
