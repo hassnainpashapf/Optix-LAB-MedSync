@@ -45,7 +45,7 @@
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
       sub: [{ key: 'new', label: 'Add Patient', route: '#/patients/new' }, { key: 'all', label: 'All Patients', route: '#/patients' }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48' },
-    { key: 'inventory', label: 'Inventory',  icon: 'box',       route: '#/inventory', color: '#0ea5e9' },
+    { key: 'inventory', label: 'Inventory & Stock', icon: 'box', route: '#/inventory', color: '#0ea5e9' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', route: '#/results' }, { key: 'ready', label: 'Ready Reports', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', route: '#/results/old' }] },
     { key: 'tests',     label: 'All Tests Catalog', icon: 'flask', route: '#/tests', color: '#14b8a6' },

@@ -14,7 +14,7 @@
     '.sk-bar .select{flex:0 0 auto;width:auto;max-width:100%}' +
     '.sk-bar .btn{flex:0 0 auto;white-space:nowrap}' +
     '.sk-chip{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:99px;white-space:nowrap;margin:1px 4px 1px 0}' +
-    '.sk-chip.ok{background:#e6f7f0;color:#047857}.sk-chip.low{background:#fff4e0;color:#b45309}.sk-chip.out{background:#fdecec;color:#b91c1c}.sk-chip.exp{background:#fdecec;color:#b91c1c}.sk-chip.soon{background:#fff4e0;color:#b45309}' +
+    '.sk-chip.ok{background:#e6f7f0;color:#047857}.sk-chip.low{background:#fff4e0;color:#b45309}.sk-chip.out{background:#fdecec;color:#b91c1c}.sk-chip.exp{background:#fdecec;color:#b91c1c}.sk-chip.soon{background:#fff4e0;color:#b45309}.sk-chip.trf{background:#e0f2fe;color:#0284c7}' +
     '.sk-alert{border:1px solid #f0d9a0;background:#fff8e6;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13.5px;line-height:1.7}' +
     '.sk-name{font-weight:700;color:var(--ink)}.sk-sub{font-size:12px;color:var(--muted)}.sk-num{font-weight:800;font-size:15px}' +
     '.sk-h{width:100%;border-collapse:collapse}.sk-h th,.sk-h td{padding:8px 10px;border-bottom:1px solid var(--line);font-size:13px;text-align:left}' +
@@ -220,6 +220,7 @@
         '</div>' +
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
           (canEdit() ? '<button class="btn btn-primary" id="skRecvTop" style="display:inline-flex;align-items:center;gap:6px;font-weight:700">' + App.icon('plus', 16) + ' Receive Stock</button>' +
+            '<button class="btn btn-secondary" id="skMoveTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:700;display:inline-flex;align-items:center;gap:6px">🚚 Move / Use Stock</button>' +
             '<button class="btn btn-secondary" id="skAddTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('plus', 16) + ' Add Item</button>' +
             '<button class="btn btn-ghost btn-sm" id="skSeedCatTop" style="background:#f8fafc;border:1px solid #cbd5e1;font-weight:600;display:inline-flex;align-items:center;gap:6px" title="Load comprehensive 30+ medical laboratory reagents, test kits and tubes">⚡ Lab Catalog</button>' : '') +
           '<button class="btn btn-ghost btn-sm" id="skCsvExport" style="background:#f8fafc;border:1px solid #cbd5e1;font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('download', 14) + ' Export CSV</button>' +
@@ -282,6 +283,7 @@
         '</select>' +
         '<select class="select" id="skWarn" title="How early to warn before a lot expires">' + warnOpts(S.warnDays) + '</select>' +
         (canEdit() ? '<button class="btn btn-primary" id="skRecv">+ Receive stock</button>' +
+          '<button class="btn btn-secondary" id="skMove" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px">🚚 Move / Use</button>' +
           '<button class="btn btn-secondary" id="skAdd" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)">+ Add item</button>' : '') +
       '</div></div>';
 
@@ -295,7 +297,7 @@
               '<td><span class="sk-num">' + num(r.onHand) + '</span> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
               '<td class="muted">' + (+it.reorderLevel ? num(it.reorderLevel) : '—') + '</td>' +
               '<td class="muted">' + fdate(r.nearest) + '</td><td>' + statusChips(r) + '</td>' +
-              '<td class="actions" style="text-align:right">' + (canEdit() ? '<button class="btn btn-primary btn-sm" data-recv="' + esc(it.id) + '">Receive</button><button class="btn btn-ghost btn-sm" data-use="' + esc(it.id) + '">Use / waste</button>' : '') +
+              '<td class="actions" style="text-align:right">' + (canEdit() ? '<button class="btn btn-primary btn-sm" data-recv="' + esc(it.id) + '">Receive</button><button class="btn btn-ghost btn-sm" data-use="' + esc(it.id) + '" title="Move to department / use / waste / adjust">Move / Use</button>' : '') +
               '<button class="btn btn-ghost btn-sm" data-hist="' + esc(it.id) + '">History</button>' + (canEdit() ? '<button class="btn btn-ghost btn-sm" data-edit="' + esc(it.id) + '">Edit</button>' : '') + '</td></tr>';
           }).join('') : '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">No stock items match your search.</td></tr>') + '</tbody></table></div></div>';
       }
@@ -313,10 +315,11 @@
           if (F.moveType === 'out' && m.type !== 'out') return false;
           if (F.moveType === 'waste' && m.type !== 'waste') return false;
           if (F.moveType === 'adjust' && m.type !== 'adjust') return false;
+          if (F.moveType === 'transfer' && m.type !== 'transfer') return false;
         }
         if (mq) {
           var it = DB.get('stock_items', m.itemId) || {};
-          var str = (it.name || '') + ' ' + (m.lot || '') + ' ' + (m.note || '') + ' ' + (m.ref || '') + ' ' + (m.by || '');
+          var str = (it.name || '') + ' ' + (m.lot || '') + ' ' + (m.note || '') + ' ' + (m.ref || '') + ' ' + (m.dest || '') + ' ' + (m.by || '');
           if (str.toLowerCase().indexOf(mq) < 0) return false;
         }
         return true;
@@ -326,13 +329,14 @@
         '<input class="input grow" id="skMq" placeholder="Search movement note, lot, reagent, user…" value="' + esc(F.mq || '') + '">' +
         '<select class="select" id="skMoveType">' +
           '<option value="all"' + (F.moveType === 'all' ? ' selected' : '') + '>All movement types</option>' +
+          '<option value="transfer"' + (F.moveType === 'transfer' ? ' selected' : '') + '>Transfers to Department / Machine (−)</option>' +
           '<option value="in"' + (F.moveType === 'in' ? ' selected' : '') + '>Received deliveries (+)</option>' +
           '<option value="out"' + (F.moveType === 'out' ? ' selected' : '') + '>Used for tests / routine (−)</option>' +
           '<option value="waste"' + (F.moveType === 'waste' ? ' selected' : '') + '>Wasted / expired (−)</option>' +
           '<option value="adjust"' + (F.moveType === 'adjust' ? ' selected' : '') + '>Adjustments &amp; counts (±)</option>' +
         '</select>' +
         (canEdit() ? '<button class="btn btn-primary" id="skRecv">+ Receive stock</button>' +
-          '<button class="btn btn-secondary" id="skUseQuick" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600">Use / Waste</button>' : '') +
+          '<button class="btn btn-secondary" id="skUseQuick" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600">🚚 Move / Use</button>' : '') +
       '</div></div>';
 
       h += '<div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Quantity</th><th>Lot &amp; Expiry</th><th>Note / Ref</th><th>Recorded by</th><th style="text-align:right"></th></tr></thead><tbody>' +
@@ -340,9 +344,10 @@
           var it = DB.get('stock_items', m.itemId) || { name: 'Unknown item', unit: '' };
           var t = MT[m.type] || [m.type, 'soon'];
           var qStr = (m.type === 'in' || (m.type === 'adjust' && m.qty >= 0) ? '+' : '−') + num(Math.abs(m.qty));
+          var destLine = m.dest ? '<div style="color:#0284c7;font-weight:700;font-size:12px">↳ To ' + esc(m.dest) + '</div>' : '';
           return '<tr><td><span style="font-weight:600">' + fdate(m.date) + '</span></td>' +
             '<td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc(it.category || '') + '</div></td>' +
-            '<td><span class="sk-chip ' + t[1] + '">' + t[0] + '</span></td>' +
+            '<td><span class="sk-chip ' + t[1] + '">' + t[0] + '</span>' + destLine + '</td>' +
             '<td><b class="sk-num">' + qStr + '</b> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
             '<td class="sk-sub">' + esc([m.lot ? 'Lot: ' + m.lot : '', m.expiry ? 'Exp: ' + fdate(m.expiry) : ''].filter(Boolean).join(' • ') || '—') + '</td>' +
             '<td class="sk-sub">' + esc(m.note || m.ref || '—') + '</td>' +
@@ -392,6 +397,8 @@
     on('skAddTop', 'click', function () { itemForm(null); });
     on('skRecv', 'click', function () { receive(''); });
     on('skRecvTop', 'click', function () { receive(''); });
+    on('skMove', 'click', function () { useForm(''); });
+    on('skMoveTop', 'click', function () { useForm(''); });
     on('skUseQuick', 'click', function () { useForm(''); });
     on('skCsvExport', 'click', function () { exportCsv(F.tab, rows, S); });
     on('skSeedCatTop', 'click', function () {
@@ -498,25 +505,91 @@
   }
 
   function useForm(itemId) {
-    App.modal('Use / waste / correct stock',
-      '<div class="form-grid"><div style="grid-column:1/-1"><label class="label">Item *</label><select class="select" id="ufItem">' + itemOptions(itemId) + '</select></div>' +
-      '<div><label class="label">What happened *</label><select class="select" id="ufType"><option value="out">Used (routine / manual)</option><option value="waste">Wasted / spilled / expired - dispose</option><option value="adjust+">Correction: add (found extra)</option><option value="adjust-">Correction: remove (count is lower)</option></select></div>' +
-      '<div><label class="label">Quantity *</label><input class="input" id="ufQty" type="number" min="0" step="any"></div>' +
-      '<div style="grid-column:1/-1"><label class="label">Note</label><input class="input" id="ufNote" maxlength="80" placeholder="e.g. monthly stock count"></div></div>' +
-      '<div class="actions" style="margin-top:16px"><button class="btn btn-ghost" id="ufCancel">Cancel</button><button class="btn btn-primary" id="ufSave">Save</button></div>',
+    if (!(DB.all('stock_items') || []).length) { App.toast('Add an item first', 'err'); itemForm(null); return; }
+    App.modal('🚚 Move / Transfer / Consume Stock',
+      '<div class="form-grid">' +
+      '<div style="grid-column:1/-1"><label class="label">Item *</label><select class="select" id="ufItem">' + itemOptions(itemId) + '</select>' +
+        '<div id="ufAvailInfo" style="margin-top:6px;font-size:12px;color:var(--muted)"></div></div>' +
+      '<div style="grid-column:1/-1"><label class="label">Movement Action *</label><select class="select" id="ufType">' +
+        '<option value="transfer">🚚 Move / Transfer to Lab Dept / Analyzer / Branch (−)</option>' +
+        '<option value="out">📉 Routine consumption / used in test (−)</option>' +
+        '<option value="waste">🗑️ Wasted / spilled / expired - dispose (−)</option>' +
+        '<option value="adjust+">➕ Correction: Add (found extra) (+)</option>' +
+        '<option value="adjust-">➖ Correction: Remove (count is lower) (−)</option>' +
+      '</select></div>' +
+      '<div id="ufDestGroup" style="grid-column:1/-1"><label class="label">Destination Department / Machine / Branch *</label>' +
+        '<input class="input" id="ufDest" list="labDepts" placeholder="e.g. Hematology Lab, Chemistry Analyzer, Phlebotomy, Satellite Branch">' +
+        '<datalist id="labDepts">' +
+          '<option value="Hematology Lab">' +
+          '<option value="Biochemistry Lab">' +
+          '<option value="Microbiology / Culture">' +
+          '<option value="Serology & Immunology">' +
+          '<option value="Phlebotomy / Collection Desk">' +
+          '<option value="Main Chemistry Analyzer">' +
+          '<option value="Hematology Analyzer (Sysmex/Mindray)">' +
+          '<option value="Satellite Branch 1">' +
+          '<option value="Emergency Room Counter">' +
+        '</datalist>' +
+        '<div class="sk-sub" style="margin-top:4px">Specify which lab section, analyzer bench, or collection branch is receiving this stock.</div>' +
+      '</div>' +
+      '<div><label class="label">Quantity *</label><input class="input" id="ufQty" type="number" min="0" step="any" placeholder="e.g. 10"></div>' +
+      '<div><label class="label">Movement Date</label><input class="input" id="ufDate" type="date"></div>' +
+      '<div style="grid-column:1/-1"><label class="label">Note / Reference</label><input class="input" id="ufNote" maxlength="120" placeholder="e.g. Sent to morning shift bench / monthly adjustment"></div></div>' +
+      '<div class="actions" style="margin-top:16px"><button class="btn btn-ghost" id="ufCancel">Cancel</button><button class="btn btn-primary" id="ufSave">Record Movement</button></div>',
       { onOpen: function (ov, close) {
           var $ = function (id) { return ov.querySelector('#' + id); };
+          $('ufDate').value = new Date().toISOString().slice(0, 10);
+
+          function updateStockInfo() {
+            var itId = $('ufItem').value;
+            var it = DB.get('stock_items', itId);
+            if (!it) { $('ufAvailInfo').innerHTML = ''; return; }
+            var st = App.stockState ? App.stockState() : null;
+            var row = st && st.rows ? st.rows.filter(function(r){ return r.item.id === itId; })[0] : null;
+            var onHand = row ? row.onHand : 0;
+            $('ufAvailInfo').innerHTML = '📦 Current on-hand in main inventory: <b style="color:' + (onHand <= 0 ? '#dc2626' : '#047857') + '">' + num(onHand) + '</b> ' + esc(it.unit || '') + (row && row.low ? ' <span class="sk-chip low">Low Stock</span>' : '');
+          }
+
+          function toggleDest() {
+            var t = $('ufType').value;
+            $('ufDestGroup').style.display = (t === 'transfer') ? 'block' : 'none';
+          }
+
+          $('ufItem').addEventListener('change', updateStockInfo);
+          $('ufType').addEventListener('change', toggleDest);
+          updateStockInfo();
+          toggleDest();
+
           $('ufCancel').addEventListener('click', close);
           $('ufSave').addEventListener('click', function () {
-            var q = +$('ufQty').value; if (!(q > 0)) { App.toast('Enter the quantity', 'err'); return; }
-            var t = $('ufType').value, type = t.indexOf('adjust') === 0 ? 'adjust' : t, qty = t === 'adjust-' ? -q : q;
-            DB.insert('stock_moves', { itemId: $('ufItem').value, type: type, qty: qty, note: $('ufNote').value.trim(), date: new Date().toISOString().slice(0, 10), createdAt: new Date().toISOString(), by: (App.session() || {}).name || '' });
-            close(); App.toast('Saved'); render();
+            var q = +$('ufQty').value; if (!(q > 0)) { App.toast('Enter a valid quantity', 'err'); return; }
+            var itId = $('ufItem').value;
+            var t = $('ufType').value;
+            var isTrf = (t === 'transfer');
+            var dest = isTrf ? $('ufDest').value.trim() : '';
+            var type = (t.indexOf('adjust') === 0) ? 'adjust' : t;
+            var qty = (t === 'adjust-') ? -q : q;
+            var note = $('ufNote').value.trim();
+            var date = $('ufDate').value || new Date().toISOString().slice(0, 10);
+
+            DB.insert('stock_moves', {
+              itemId: itId,
+              type: type,
+              qty: qty,
+              dest: dest,
+              note: note,
+              date: date,
+              createdAt: new Date().toISOString(),
+              by: (App.session() || {}).name || ''
+            });
+            close();
+            App.toast(isTrf ? 'Stock transferred successfully' : 'Stock movement recorded');
+            render();
           });
         } });
   }
 
-  var MT = { in: ['Received', 'ok'], out: ['Used', 'soon'], waste: ['Wasted', 'out'], adjust: ['Correction', 'soon'] };
+  var MT = { in: ['Received', 'ok'], out: ['Used', 'soon'], waste: ['Wasted', 'out'], adjust: ['Correction', 'soon'], transfer: ['Transfer', 'trf'] };
   function history(itemId) {
     var it = DB.get('stock_items', itemId); if (!it) return;
     var mv = (DB.all('stock_moves') || []).filter(function (m) { return m.itemId === itemId; }).sort(function (a, b) { return String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date)); });
@@ -524,7 +597,8 @@
       (mv.length ? '<div style="max-height:56vh;overflow:auto"><table class="sk-h"><thead><tr><th>Date</th><th>What</th><th>Qty</th><th>Lot / expiry</th><th>Note</th>' + (canEdit() ? '<th></th>' : '') + '</tr></thead><tbody>' +
         mv.slice(0, 200).map(function (m) {
           var t = MT[m.type] || [m.type, 'soon'], q = (m.type === 'in' || (m.type === 'adjust' && m.qty >= 0) ? '+' : '−') + num(Math.abs(m.qty));
-          return '<tr><td>' + fdate(m.date) + '</td><td><span class="sk-chip ' + t[1] + '">' + t[0] + '</span></td><td><b>' + q + '</b> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
+          var destLine = m.dest ? '<div style="color:#0284c7;font-weight:700;font-size:11.5px">↳ To ' + esc(m.dest) + '</div>' : '';
+          return '<tr><td>' + fdate(m.date) + '</td><td><span class="sk-chip ' + t[1] + '">' + t[0] + '</span>' + destLine + '</td><td><b>' + q + '</b> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
             '<td class="sk-sub">' + esc([m.lot, m.expiry ? 'exp ' + fdate(m.expiry) : ''].filter(Boolean).join(' · ') || '—') + '</td><td class="sk-sub">' + esc(m.note || m.ref || '') + '</td>' +
             (canEdit() ? '<td><button class="btn btn-ghost btn-sm" data-delmv="' + esc(m.id) + '" title="Delete this entry (undo)">✕</button></td>' : '') + '</tr>';
         }).join('') + '</tbody></table></div>' : App.empty('No movements yet')) +
@@ -541,15 +615,20 @@
         } });
   }
 
-  function routeHandler() {
+  function routeHandler(params) {
     var s = App.session();
     if (!s || (s.role !== 'admin' && s.role !== 'technician' && s.role !== 'reception' && !(s.role === 'custom' && (App.canPage('stock') || App.canPage('inventory'))))) {
       document.getElementById('view').innerHTML = '<div class="card"><div class="card-b">' + App.empty('You do not have access to Inventory.') + '</div></div>';
       return;
     }
+    if (params && params.tab && (params.tab === 'items' || params.tab === 'moves' || params.tab === 'alerts')) {
+      F.tab = params.tab;
+    }
     render();
   }
 
   App.route('#/inventory', routeHandler);
+  App.route('#/inventory/:tab', routeHandler);
   App.route('#/stock', routeHandler);
+  App.route('#/stock/:tab', routeHandler);
 })();
