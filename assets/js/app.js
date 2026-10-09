@@ -43,7 +43,7 @@
   var NAV = [
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
-      sub: [{ key: 'all', label: 'All Patients', route: '#/patients' }, { key: 'new', label: 'Add Patient', route: '#/patients/new' }, { key: 'lists', label: 'Edit Patient Form', route: '#/patients/lists', roles: ['admin'] }] },
+      sub: [{ key: 'all', label: 'All Patients', route: '#/patients' }, { key: 'new', label: 'Add Patient', route: '#/patients/new' }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
       sub: [{ key: 'all', label: 'Sample Tracking', route: '#/samples' }, { key: 'stickers', label: 'Tube Stickers (50×25mm)', route: '#/samples/stickers' }, { key: 'home', label: 'Home Sampling & Dispatch', route: '#/home-sampling' }] },
     { key: 'stock',     label: 'Stock',      icon: 'box',       route: '#/stock',     color: '#0ea5e9' },
