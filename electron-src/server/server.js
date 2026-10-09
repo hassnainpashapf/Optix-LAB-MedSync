@@ -188,8 +188,14 @@ async function main() {
   ];
   /* returns { test, params: bool, ranges: bool } — `test` is the same object when nothing changed */
   function withDefaults(t) {
-    let out = t, params = false, ranges = false;
     if ((!Array.isArray(out.params) || !out.params.length) && DEFAULT_PARAMS[out.code] && !out.isPackage) { out = Object.assign({}, out, { params: DEFAULT_PARAMS[out.code] }); params = true; }
+    if (out.code === 'TYPHI') {
+      let typhiDirty = false, patch = {};
+      if (!/typhoid/i.test(out.name || '')) { patch.name = 'Typhoid (IgG-IgM) / Typhidot'; typhiDirty = true; }
+      if (!Array.isArray(out.aliases) || !out.aliases.length) { patch.aliases = ['Typhoid', 'Typhoid (IgG-IgM)', 'Typhidot', 'Typhoid Rapid', 'Typhi']; typhiDirty = true; }
+      if (Array.isArray(out.params) && out.params.length === 2 && (out.params[0].name === 'IgG' || out.params[0].name === 'IgM')) { patch.params = DEFAULT_PARAMS['TYPHI']; typhiDirty = true; }
+      if (typhiDirty) { out = Object.assign({}, out, patch); params = true; }
+    }
     if (Array.isArray(out.params) && !out.isPackage) {
       let changed = false;
       const np = out.params.map((p) => {

@@ -140,7 +140,8 @@
       .sort(function (a, b) { return String(a.code || a.name || '').localeCompare(String(b.code || b.name || '')); });
     var rows = tests.map(function (t) {
       var nm = (t.code ? t.code + ' — ' : '') + (t.name || 'Test');
-      return '<label class="ptf-trow" data-tname="' + App.esc(nm.toLowerCase()) + '">' +
+      var searchTerms = (nm + (t.aliases ? (' ' + t.aliases.join(' ')) : '')).toLowerCase();
+      return '<label class="ptf-trow" data-tname="' + App.esc(searchTerms) + '">' +
         '<input type="checkbox" class="ptf-tchk" value="' + App.esc(t.id) + '" data-price="' + (+t.price || 0) + '">' +
         '<span class="ptf-tinfo"><strong>' + App.esc(nm) + '</strong>' +
         (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') + '</span>' +

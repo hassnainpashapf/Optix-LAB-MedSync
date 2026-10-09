@@ -170,8 +170,8 @@
       var q = state.q.trim().toLowerCase();
       var list = tests.filter(function (t) {
         if (state.cat !== 'All' && t.category !== state.cat) return false;
-        if (!q) return true;
-        return (t.name || '').toLowerCase().indexOf(q) >= 0 || (t.code || '').toLowerCase().indexOf(q) >= 0;
+        var hay = ((t.name || '') + ' ' + (t.code || '') + ' ' + (t.category || '') + (t.aliases ? (' ' + t.aliases.join(' ')) : '')).toLowerCase();
+        return hay.indexOf(q) >= 0;
       });
       if (!list.length) { box.innerHTML = App.empty('No tests match your search.'); return; }
       box.innerHTML = list.map(function (t) {

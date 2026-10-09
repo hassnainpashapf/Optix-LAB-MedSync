@@ -313,7 +313,7 @@ function drawTestRows(canEdit) {
     if (testFilter.status === 'Active' && !t.active) return false;
     if (testFilter.status === 'Inactive' && t.active) return false;
     if (q) {
-      var h = ((t.code || '') + ' ' + (t.name || '') + ' ' + (t.category || '')).toLowerCase();
+      var h = ((t.code || '') + ' ' + (t.name || '') + ' ' + (t.category || '') + (t.aliases ? (' ' + t.aliases.join(' ')) : '')).toLowerCase();
       if (h.indexOf(q) < 0) return false;
     }
     return true;

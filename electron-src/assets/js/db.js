@@ -353,8 +353,8 @@
       'NS1': [{ name: 'Dengue NS1', unit: '', ref: 'Negative', type: 'text' }],
       'WIDAL': [{ name: 'Result', unit: '', ref: 'Negative', type: 'text' }],
       'TYPHI': [
-        { name: 'IgG', unit: '', ref: 'Negative', type: 'text' },
-        { name: 'IgM', unit: '', ref: 'Negative', type: 'text' }
+        { name: 'Typhoid IgM', unit: '', ref: 'Negative', type: 'text', options: ['Negative', 'Positive', 'Borderline'] },
+        { name: 'Typhoid IgG', unit: '', ref: 'Negative', type: 'text', options: ['Negative', 'Positive'] }
       ],
       'TSH': [{ name: 'TSH', unit: 'µIU/mL', ref: '0.27–4.2', type: 'number' }],
       'TFT': [
@@ -406,7 +406,7 @@
       ['HIV', 'HIV Screening', 'Serology', 900, 'Serum', 'Same day', []],
       ['NS1', 'Dengue NS1 Antigen', 'Serology', 1200, 'Serum', 'Same day', []],
       ['WIDAL', 'Widal Test', 'Serology', 600, 'Serum', 'Same day', []],
-      ['TYPHI', 'Typhidot (IgG/IgM)', 'Serology', 800, 'Serum', 'Same day', []],
+      ['TYPHI', 'Typhoid (IgG-IgM) / Typhidot', 'Serology', 800, 'Serum', 'Same day', []],
       ['TSH', 'Thyroid Stimulating Hormone', 'Hormones', 900, 'Serum', 'Same day', []],
       ['TFT', 'Thyroid Profile (T3/T4/TSH)', 'Hormones', 1800, 'Serum', 'Next day', []],
       ['TESTO', 'Testosterone (Total)', 'Hormones', 1500, 'Serum', 'Next day', []],
@@ -418,7 +418,17 @@
       ['UPT', 'Urine Pregnancy Test', 'Urine', 500, 'Urine', 'Same day', []]
     ];
     T.forEach(function (t) {
-      put('tests', { code: t[0], name: t[1], category: t[2], price: t[3], sampleType: t[4], tat: t[5], active: true, params: TP[t[0]] || t[6] });
+      put('tests', {
+        code: t[0],
+        name: t[1],
+        category: t[2],
+        price: t[3],
+        sampleType: t[4],
+        tat: t[5],
+        active: true,
+        aliases: t[0] === 'TYPHI' ? ['Typhoid', 'Typhoid (IgG-IgM)', 'Typhidot', 'Typhoid Rapid', 'Typhi'] : undefined,
+        params: TP[t[0]] || t[6]
+      });
     });
     var testByCode = {};
     store.tests.forEach(function (t) { testByCode[t.code] = t; });
@@ -613,6 +623,60 @@
         { name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Lab Technologist' }
       ];
       save(store);
+    }
+    /* existing installs: ensure Typhoid (IgG-IgM) / Typhidot test has proper params, name, and search aliases */
+    if (store && Array.isArray(store.tests)) {
+      var _typhiT = null;
+      for (var _ti = 0; _ti < store.tests.length; _ti++) {
+        var _tt = store.tests[_ti];
+        if (_tt.code === 'TYPHI' || _tt.id === 'T-026' || /typhidot/i.test(_tt.name || '') || /typhoid/i.test(_tt.name || '')) {
+          _typhiT = _tt;
+          break;
+        }
+      }
+      var _defTyphiParams = [
+        { name: 'Typhoid IgM', unit: '', ref: 'Negative', type: 'text', options: ['Negative', 'Positive', 'Borderline'] },
+        { name: 'Typhoid IgG', unit: '', ref: 'Negative', type: 'text', options: ['Negative', 'Positive'] }
+      ];
+      if (_typhiT) {
+        var _tDirty = false;
+        if (!_typhiT.params || !_typhiT.params.length) {
+          _typhiT.params = _defTyphiParams;
+          _tDirty = true;
+        } else {
+          var _hasM = _typhiT.params.some(function (p) { return /igm/i.test(p.name); });
+          var _hasG = _typhiT.params.some(function (p) { return /igg/i.test(p.name); });
+          if (!_hasM && !_hasG) {
+            _typhiT.params = _defTyphiParams;
+            _tDirty = true;
+          }
+        }
+        if (!/typhoid/i.test(_typhiT.name || '')) {
+          _typhiT.name = 'Typhoid (IgG-IgM) / Typhidot';
+          _tDirty = true;
+        }
+        if (!_typhiT.aliases || !_typhiT.aliases.length) {
+          _typhiT.aliases = ['Typhoid', 'Typhoid (IgG-IgM)', 'Typhidot', 'Typhoid Rapid', 'Typhi'];
+          _tDirty = true;
+        }
+        if (_tDirty) save(store);
+      } else {
+        if (!store.seq) store.seq = {};
+        store.seq.tests = (store.seq.tests || 0) + 1;
+        store.tests.push({
+          id: 'T-026',
+          code: 'TYPHI',
+          name: 'Typhoid (IgG-IgM) / Typhidot',
+          category: 'Serology',
+          price: 800,
+          sampleType: 'Serum',
+          tat: 'Same day',
+          active: true,
+          aliases: ['Typhoid', 'Typhoid (IgG-IgM)', 'Typhidot', 'Typhoid Rapid', 'Typhi'],
+          params: _defTyphiParams
+        });
+        save(store);
+      }
     }
   }
 

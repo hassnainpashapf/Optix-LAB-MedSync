@@ -651,7 +651,11 @@
         function renderPick() {
           var q = search.value.trim().toLowerCase();
           var tests = DB.all('tests').filter(function (t) { return t.active !== false; })
-            .filter(function (t) { return !q || (t.name + ' ' + t.code).toLowerCase().indexOf(q) >= 0; })
+            .filter(function (t) {
+              if (!q) return true;
+              var h = (t.name + ' ' + (t.code || '') + (t.category ? (' ' + t.category) : '') + (t.aliases ? (' ' + t.aliases.join(' ')) : '')).toLowerCase();
+              return h.indexOf(q) >= 0;
+            })
             .slice(0, 8);
           pick.innerHTML = q ? '<div style="position:absolute;right:0;top:0;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--sh-md);z-index:5;min-width:280px;max-height:260px;overflow:auto">' +
             (tests.length ? tests.map(function (t) {
