@@ -88,74 +88,329 @@
   }
 
   /* ---------- payment collection (shared) ---------- */
-  function recordPayment(invoiceId, amount, method, note) {
+  function recordPayment(invoiceId, amount, method, note, discountAmount, discountNote) {
     var inv = DB.get('invoices', invoiceId);
     if (!inv) return false;
-    amount = r2(amount);
-    if (!(amount > 0)) { App.toast('Enter a valid amount', 'err'); return false; }
-    if (amount > r2(inv.due) + 0.009) { App.toast('Amount cannot exceed due (' + App.money(inv.due) + ')', 'err'); return false; }
-    DB.insert('payments', {
-      invoiceId: invoiceId,
-      amount: amount,
-      method: method || 'Cash',
-      date: new Date().toISOString(),
-      note: note || '',
-      createdBy: sessUser()
-    });
-    var paid = r2(inv.paid + amount);
-    var due = r2(inv.total - paid);
-    DB.update('invoices', invoiceId, { paid: paid, due: due < 0.01 ? 0 : due, status: statusOf(paid, inv.total) });
-    App.toast(App.money(amount) + ' collected for ' + inv.no);
+    amount = r2(amount || 0);
+    discountAmount = r2(discountAmount || 0);
+    if (discountAmount < 0) discountAmount = 0;
+    if (amount < 0) amount = 0;
+
+    if (amount === 0 && discountAmount === 0) {
+      App.toast('Enter an amount received or discount', 'err');
+      return false;
+    }
+
+    var currentDue = r2(inv.due);
+    if (discountAmount > currentDue + 0.009) {
+      App.toast('Discount cannot exceed remaining due (' + App.money(currentDue) + ')', 'err');
+      return false;
+    }
+
+    var dueAfterDisc = r2(currentDue - discountAmount);
+    if (amount > dueAfterDisc + 0.009) {
+      App.toast('Amount cannot exceed remaining payable (' + App.money(dueAfterDisc) + ')', 'err');
+      return false;
+    }
+
+    var subtotal = (inv.subtotal != null && !isNaN(inv.subtotal)) ? r2(inv.subtotal) : r2((inv.total || 0) + (inv.discount || 0));
+    var oldDiscount = r2(inv.discount || 0);
+    var newDiscount = r2(oldDiscount + discountAmount);
+    var newTotal = Math.max(0, r2(subtotal - newDiscount));
+
+    if (amount > 0) {
+      var payNote = note || '';
+      if (discountAmount > 0) {
+        var discTag = 'Concession: ' + App.money(discountAmount) + (discountNote ? ' (' + discountNote + ')' : '');
+        payNote = payNote ? (payNote + ' | ' + discTag) : discTag;
+      }
+      DB.insert('payments', {
+        invoiceId: invoiceId,
+        amount: amount,
+        method: method || 'Cash',
+        date: new Date().toISOString(),
+        note: payNote,
+        createdBy: sessUser()
+      });
+    }
+
+    var newPaid = r2(paymentsOf(invoiceId).reduce(function (a, x) { return a + (+x.amount || 0); }, 0));
+    var newDue = Math.max(0, r2(newTotal - newPaid));
+    var newStatus = statusOf(newPaid, newTotal);
+
+    var invUpdates = {
+      subtotal: subtotal,
+      discount: newDiscount,
+      total: newTotal,
+      paid: newPaid,
+      due: newDue < 0.01 ? 0 : newDue,
+      status: newStatus
+    };
+    if (discountAmount > 0 && discountNote) {
+      invUpdates.discountReason = discountNote;
+    }
+    DB.update('invoices', invoiceId, invUpdates);
+
+    if (amount > 0 && discountAmount > 0) {
+      App.toast(App.money(amount) + ' collected & ' + App.money(discountAmount) + ' concession applied for ' + inv.no);
+    } else if (amount > 0) {
+      App.toast(App.money(amount) + ' collected for ' + inv.no);
+    } else {
+      App.toast('Concession of ' + App.money(discountAmount) + ' applied to ' + inv.no);
+    }
+
     /* a finished report that was waiting for this payment goes out on WhatsApp now */
     try {
-      if (due < 0.01) {
+      if (newDue < 0.01) {
         if (App.waOnPaid) App.waOnPaid(invoiceId);
-        else if (App.session && DB.all('results').some(function (r) { return r.invoiceId === invoiceId; })) App.loadScript('assets/js/mod-results.js').then(function () { if (App.waOnPaid) App.waOnPaid(invoiceId); }, function () {});
+        else if (App.session && DB.all('results').some(function (r) { return r.invoiceId === invoiceId; })) {
+          App.loadScript('assets/js/mod-results.js').then(function () {
+            if (App.waOnPaid) App.waOnPaid(invoiceId);
+          }, function () {});
+        }
       }
     } catch (e) {}
     return true;
   }
 
-  function openPaymentModal(invoiceId) {
+  function openPaymentModal(invoiceId, focusDiscount) {
     var inv = DB.get('invoices', invoiceId);
     if (!inv) { App.toast('Invoice not found', 'err'); return; }
     if (r2(inv.due) <= 0) { App.toast('No due remaining on ' + inv.no, 'err'); return; }
     var p = patientOf(inv);
+    var existingSubtotal = (inv.subtotal != null && !isNaN(inv.subtotal)) ? r2(inv.subtotal) : r2((inv.total || 0) + (inv.discount || 0));
+    var existingDiscount = r2(inv.discount || 0);
+    var initialDue = r2(inv.due);
+
     var body =
-      '<div class="form-grid">' +
-        '<div><label class="label">Invoice</label><div style="font-weight:700">' + App.esc(inv.no) + '</div>' +
-        '<div style="color:var(--muted);font-size:13px">' + App.esc(p ? p.name : 'Walk-in') + '</div></div>' +
-        '<div><label class="label">Total Due</label><div style="font-weight:800;font-size:18px;color:var(--red)">' + App.money(inv.due) + '</div></div>' +
-        '<div><label class="label">Amount Received *</label>' +
-        '<input id="pm-amount" class="input" type="number" min="1" step="any" value="' + inv.due + '"></div>' +
-        '<div><label class="label">Payment Method</label>' +
-        '<select id="pm-method" class="select">' + App.optionsHtml('paymentMethod', 'Cash') + '</select></div>' +
-        '<div style="grid-column:1/-1"><label class="label">Note (optional)</label>' +
-        '<input id="pm-note" class="input" placeholder="e.g. partial payment, jazzcash ref..."></div>' +
+      '<div style="margin-bottom:14px;padding:10px 14px;background:var(--subtle);border:1px solid var(--line);border-radius:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">' +
+        '<div>' +
+          '<div style="font-weight:800;font-size:15px;color:var(--brand-d)">Invoice ' + App.esc(inv.no) + '</div>' +
+          '<div style="color:var(--ink);font-weight:600;font-size:13px">' + App.esc(p ? p.name : 'Walk-in') + (p && p.phone ? ' &bull; ' + App.esc(p.phone) : '') + '</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700">Remaining Due</div>' +
+          '<div id="pm-cur-due-badge" style="font-weight:900;font-size:20px;color:var(--red)">' + App.money(initialDue) + '</div>' +
+        '</div>' +
       '</div>' +
+
+      '<!-- Discount / Concession Section -->' +
+      '<div style="border:1.5px solid #fde68a;background:#fffdf5;border-radius:10px;padding:12px 14px;margin-bottom:14px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:6px">' +
+          '<label class="label" style="margin:0;font-weight:700;color:#92400e;display:inline-flex;align-items:center;gap:5px">' +
+            '🏷️ Discount / Concession' +
+            (existingDiscount > 0 ? '<span style="font-size:11px;font-weight:500;color:var(--muted);margin-left:4px">(Prev: ' + App.money(existingDiscount) + ')</span>' : '') +
+          '</label>' +
+          '<div style="display:inline-flex;border:1px solid #d1d5db;border-radius:6px;overflow:hidden;background:#fff">' +
+            '<button type="button" id="pm-mode-rs" class="btn btn-xs" style="padding:2px 10px;font-size:11px;font-weight:700;border:none;border-radius:0;background:var(--brand);color:#fff">Rs (PKR)</button>' +
+            '<button type="button" id="pm-mode-pct" class="btn btn-xs btn-ghost" style="padding:2px 10px;font-size:11px;font-weight:700;border:none;border-radius:0;color:var(--muted)">% (Pct)</button>' +
+          '</div>' +
+        '</div>' +
+
+        '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">' +
+          '<div style="position:relative;flex:1">' +
+            '<input id="pm-disc" class="input" type="number" min="0" max="' + initialDue + '" step="any" placeholder="0" style="padding-right:32px;font-weight:700;font-size:15px">' +
+            '<span id="pm-mode-unit" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;color:var(--muted);pointer-events:none;font-weight:700">Rs</span>' +
+          '</div>' +
+          '<button type="button" id="pm-waive-btn" class="btn btn-sm btn-ghost" style="color:#b45309;background:#fef3c7;border:1px solid #fde68a;font-weight:700;white-space:nowrap" title="Waive 100% of the remaining due">Waive Full Due</button>' +
+        '</div>' +
+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px">' +
+          '<span style="font-size:11px;color:var(--muted);font-weight:600">Quick:</span>' +
+          '<button type="button" class="btn btn-xs btn-ghost pm-chip" data-pct="5" style="border-radius:12px;padding:2px 8px;font-size:11px">5%</button>' +
+          '<button type="button" class="btn btn-xs btn-ghost pm-chip" data-pct="10" style="border-radius:12px;padding:2px 8px;font-size:11px">10%</button>' +
+          '<button type="button" class="btn btn-xs btn-ghost pm-chip" data-pct="15" style="border-radius:12px;padding:2px 8px;font-size:11px">15%</button>' +
+          '<button type="button" class="btn btn-xs btn-ghost pm-chip" data-pct="20" style="border-radius:12px;padding:2px 8px;font-size:11px">20%</button>' +
+          '<button type="button" class="btn btn-xs btn-ghost pm-chip" data-pct="25" style="border-radius:12px;padding:2px 8px;font-size:11px">25%</button>' +
+          '<button type="button" class="btn btn-xs btn-ghost pm-chip" data-pct="50" style="border-radius:12px;padding:2px 8px;font-size:11px">50%</button>' +
+          '<button type="button" id="pm-disc-clear" class="btn btn-xs btn-ghost" style="border-radius:12px;padding:2px 8px;font-size:11px;color:var(--red)" title="Reset discount">✕ Reset</button>' +
+        '</div>' +
+
+        '<input id="pm-disc-note" class="input" style="font-size:12px;padding:6px 10px" placeholder="Concession note / reason (e.g. Doctor recommendation, relative, needy...)">' +
+
+        '<div id="pm-summary-bar" style="margin-top:10px;padding:8px 12px;background:#fff;border:1px dashed #f59e0b;border-radius:8px;font-size:12.5px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">' +
+          '<span>Due: <strong style="color:var(--ink)">' + App.money(initialDue) + '</strong></span>' +
+          '<span style="color:#b45309">Discount: <strong id="pm-sum-disc">- Rs 0</strong></span>' +
+          '<span>Net Payable: <strong id="pm-sum-net" style="color:var(--brand-d);font-size:14px">' + App.money(initialDue) + '</strong></span>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Payment Collection Section -->' +
+      '<div class="form-grid">' +
+        '<div>' +
+          '<label class="label">Amount Received (Cash / Bank) *</label>' +
+          '<input id="pm-amount" class="input" type="number" min="0" step="any" value="' + initialDue + '" style="font-weight:700;font-size:15px">' +
+        '</div>' +
+        '<div>' +
+          '<label class="label">Payment Method</label>' +
+          '<select id="pm-method" class="select">' + App.optionsHtml('paymentMethod', 'Cash') + '</select>' +
+        '</div>' +
+        '<div style="grid-column:1/-1">' +
+          '<label class="label">Payment Note (optional)</label>' +
+          '<input id="pm-note" class="input" placeholder="e.g. counter payment, TID / receipt ref...">' +
+        '</div>' +
+      '</div>' +
+
       '<div class="actions" style="margin-top:18px">' +
         '<button class="btn btn-ghost" id="pm-cancel">Cancel</button>' +
         '<button class="btn btn-primary" id="pm-save">Mark as Paid</button>' +
       '</div>';
-    var close = App.modal('Collect Payment', body, {
+
+    var close = App.modal('Collect Payment & Concession', body, {
       onOpen: function (root, close) {
-        var amtEl = root.querySelector('#pm-amount');
+        var discInput = root.querySelector('#pm-disc');
+        var amtInput = root.querySelector('#pm-amount');
         var saveBtn = root.querySelector('#pm-save');
-        function syncLabel() {
-          var v = parseFloat(amtEl.value);
-          saveBtn.textContent = (v >= r2(inv.due) - 0.009) ? 'Mark as Paid' : 'Collect Payment';
+        var sumDiscEl = root.querySelector('#pm-sum-disc');
+        var sumNetEl = root.querySelector('#pm-sum-net');
+        var modeBtnRs = root.querySelector('#pm-mode-rs');
+        var modeBtnPct = root.querySelector('#pm-mode-pct');
+        var modeUnit = root.querySelector('#pm-mode-unit');
+
+        var mode = 'rs'; // 'rs' or 'pct'
+        var userEditedAmount = false;
+
+        function getEffectiveDiscount() {
+          var raw = parseFloat(discInput.value) || 0;
+          if (raw < 0) raw = 0;
+          var discRs = 0;
+          if (mode === 'pct') {
+            discRs = r2(initialDue * (Math.min(100, raw) / 100));
+          } else {
+            discRs = r2(Math.min(initialDue, raw));
+          }
+          return discRs;
         }
-        amtEl.addEventListener('input', syncLabel);
-        syncLabel();
+
+        function syncUI() {
+          var discRs = getEffectiveDiscount();
+          var netDue = Math.max(0, r2(initialDue - discRs));
+          sumDiscEl.textContent = '- ' + App.money(discRs);
+          sumNetEl.textContent = App.money(netDue);
+
+          if (!userEditedAmount) {
+            amtInput.value = netDue > 0 ? netDue : 0;
+          }
+
+          var amtVal = parseFloat(amtInput.value) || 0;
+          if (amtVal < 0) amtVal = 0;
+
+          if (netDue <= 0.009) {
+            if (amtVal <= 0.009) {
+              saveBtn.textContent = 'Waive Due & Mark as Paid';
+            } else {
+              saveBtn.textContent = 'Mark as Paid';
+            }
+          } else if (amtVal >= netDue - 0.009) {
+            saveBtn.textContent = 'Mark as Paid';
+          } else if (amtVal > 0) {
+            saveBtn.textContent = 'Collect ' + App.money(amtVal) + ' (Partial)';
+          } else if (discRs > 0) {
+            saveBtn.textContent = 'Apply ' + App.money(discRs) + ' Discount';
+          } else {
+            saveBtn.textContent = 'Collect Payment';
+          }
+        }
+
+        function setMode(newMode) {
+          if (mode === newMode) return;
+          var curDiscRs = getEffectiveDiscount();
+          mode = newMode;
+          if (mode === 'rs') {
+            modeBtnRs.style.background = 'var(--brand)';
+            modeBtnRs.style.color = '#fff';
+            modeBtnPct.style.background = 'transparent';
+            modeBtnPct.style.color = 'var(--muted)';
+            modeUnit.textContent = 'Rs';
+            discInput.value = curDiscRs > 0 ? curDiscRs : '';
+            discInput.max = String(initialDue);
+          } else {
+            modeBtnPct.style.background = 'var(--brand)';
+            modeBtnPct.style.color = '#fff';
+            modeBtnRs.style.background = 'transparent';
+            modeBtnRs.style.color = 'var(--muted)';
+            modeUnit.textContent = '%';
+            var pctVal = initialDue > 0 ? r2((curDiscRs / initialDue) * 100) : 0;
+            discInput.value = pctVal > 0 ? pctVal : '';
+            discInput.max = '100';
+          }
+          syncUI();
+        }
+
+        modeBtnRs.addEventListener('click', function () { setMode('rs'); });
+        modeBtnPct.addEventListener('click', function () { setMode('pct'); });
+
+        discInput.addEventListener('input', function () {
+          userEditedAmount = false;
+          syncUI();
+        });
+
+        amtInput.addEventListener('input', function () {
+          userEditedAmount = true;
+          syncUI();
+        });
+
+        root.querySelectorAll('.pm-chip').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var pct = parseFloat(btn.getAttribute('data-pct')) || 0;
+            if (mode === 'pct') {
+              discInput.value = pct;
+            } else {
+              discInput.value = r2(initialDue * (pct / 100));
+            }
+            userEditedAmount = false;
+            syncUI();
+          });
+        });
+
+        root.querySelector('#pm-waive-btn').addEventListener('click', function () {
+          if (mode === 'pct') {
+            discInput.value = 100;
+          } else {
+            discInput.value = initialDue;
+          }
+          userEditedAmount = false;
+          syncUI();
+        });
+
+        root.querySelector('#pm-disc-clear').addEventListener('click', function () {
+          discInput.value = '';
+          userEditedAmount = false;
+          syncUI();
+        });
+
         root.querySelector('#pm-cancel').addEventListener('click', close);
+
         saveBtn.addEventListener('click', function () {
-          var amount = parseFloat(amtEl.value);
+          var discRs = getEffectiveDiscount();
+          var rawAmt = parseFloat(amtInput.value);
+          var amount = isNaN(rawAmt) ? 0 : Math.max(0, rawAmt);
           var method = root.querySelector('#pm-method').value;
           var note = root.querySelector('#pm-note').value.trim();
-          var cur = DB.get('invoices', invoiceId); // re-read in case of double clicks
+          var discNote = root.querySelector('#pm-disc-note').value.trim();
+
+          var cur = DB.get('invoices', invoiceId);
           if (!cur || r2(cur.due) <= 0) { close(); refresh(); return; }
-          if (recordPayment(invoiceId, amount, method, note)) { close(); refresh(); }
+
+          if (discRs <= 0 && amount <= 0) {
+            App.toast('Enter an amount received or discount', 'err');
+            return;
+          }
+
+          if (recordPayment(invoiceId, amount, method, note, discRs, discNote)) {
+            close();
+            refresh();
+          }
         });
+
+        syncUI();
+
+        if (focusDiscount) {
+          setTimeout(function () {
+            discInput.focus();
+            discInput.select();
+          }, 150);
+        }
       }
     });
   }
@@ -528,6 +783,7 @@
       '</table>' +
       '<div style="text-align:right;font-size:14px;margin-bottom:16px">' +
         '<div>Subtotal: ' + App.money(inv.subtotal) + '</div>' +
+        (inv.discount ? '<div style="color:#b45309">Discount: -' + App.money(inv.discount) + '</div>' : '') +
         '<div style="font-size:18px;font-weight:800">Total: ' + App.money(inv.total) + '</div>' +
         (inv.panelId ? '<div style="font-weight:700;color:#334155">Charged to the company account</div>' : '<div>Paid: ' + App.money(inv.paid) + '</div>' +
         '<div style="font-weight:800;color:#dc2626">Due: ' + App.money(inv.due) + '</div>') +
@@ -890,7 +1146,7 @@
         '<button class="btn btn-ghost" id="iv-print">' + SC_ICONS.printer + ' Print Invoice</button>' +
         '<button class="btn btn-ghost" id="iv-edit">Edit</button>' +
         '<button class="btn btn-ghost" id="iv-wa">WhatsApp</button>' +
-        (r2(inv.due) > 0 ? '<button class="btn btn-primary" id="iv-collect">Collect Payment</button>' : '') +
+        (r2(inv.due) > 0 ? '<button class="btn btn-ghost" id="iv-discount" style="color:#b45309;background:#fffbeb;border:1.5px solid #fde68a;font-weight:700">🏷️ Discount</button><button class="btn btn-primary" id="iv-collect">Collect Payment</button>' : '') +
         '<button class="btn btn-danger" id="iv-del">Delete</button>' +
       '</div>' +
 
@@ -933,7 +1189,7 @@
         '<div class="card-b" style="display:flex;justify-content:flex-end">' +
           '<div style="min-width:260px;font-size:14px">' +
             '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Subtotal</span><span>' + App.money(inv.subtotal) + '</span></div>' +
-            '<div style="display:flex;justify-content:space-between;padding:4px 0"><span>Discount</span><span>' + App.money(inv.discount || 0) + '</span></div>' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0"><span>Discount</span><span>' + App.money(inv.discount || 0) + (r2(inv.due) > 0 ? ' <button class="btn btn-xs btn-ghost" id="iv-quick-disc" style="padding:1px 8px;font-size:11px;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:4px;cursor:pointer;margin-left:6px;font-weight:600">+ Concession</button>' : '') + '</span></div>' +
             '<div style="display:flex;justify-content:space-between;padding:8px 0;font-size:18px;font-weight:800;border-top:1px solid var(--line);margin-top:4px"><span>Total</span><span>' + App.money(inv.total) + '</span></div>' +
             '<div style="display:flex;justify-content:space-between;padding:4px 0;color:var(--green)"><span>Paid</span><span>' + App.money(inv.paid) + '</span></div>' +
             '<div style="display:flex;justify-content:space-between;padding:4px 0;font-weight:800;color:' + (inv.due > 0 ? 'var(--red)' : 'var(--muted)') + '"><span>Due</span><span>' + App.money(inv.due) + '</span></div>' +
@@ -969,6 +1225,10 @@
     document.getElementById('iv-wa').addEventListener('click', function () { shareInvoiceWhatsApp(inv.id); });
     var cBtn = document.getElementById('iv-collect');
     if (cBtn) cBtn.addEventListener('click', function () { openPaymentModal(inv.id); });
+    var dBtn = document.getElementById('iv-discount');
+    if (dBtn) dBtn.addEventListener('click', function () { openPaymentModal(inv.id, true); });
+    var qdBtn = document.getElementById('iv-quick-disc');
+    if (qdBtn) qdBtn.addEventListener('click', function () { openPaymentModal(inv.id, true); });
     var opBtn = document.getElementById('iv-onlinepay');
     if (opBtn) opBtn.addEventListener('click', function () { openOnlinePayModal(inv.id); });
     document.getElementById('iv-del').addEventListener('click', function () { deleteInvoice(inv.id); });
