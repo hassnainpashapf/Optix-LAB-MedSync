@@ -440,6 +440,17 @@
         }, { kind: 'critical' });
         sent.push(t.name);
       });
+      /* SMS critical alerts (plain SMS via the lab's SIM) — same targets, queued server-side */
+      try {
+        var scfg = smsCfg();
+        if (smsReady(scfg) && scfg.autoCritical) {
+          var smsMsg = smsCriticalMessage(inv, pat, it.crits, testName(it.row));
+          targets.forEach(function (t) {
+            smsQueueSend(t.to, smsMsg, { kind: 'critical', invoiceId: inv.id, invoiceNo: inv.no || inv.id, toName: t.name, toRole: t.role }).then(
+              function () {}, function () { App.toast('Critical SMS failed for ' + t.name, 'err'); });
+          });
+        }
+      } catch (e) {}
     });
     var body = items.map(function (it) {
       var inv = it.row.invoice, pat = it.row.patient || patOf(inv.patientId);
@@ -615,7 +626,7 @@
   function waAutoSendReady(invoiceIds) {
     try {
       var _ids = (invoiceIds || []).filter(function (id, i, a) { return id && a.indexOf(id) === i; });
-      portalAutoPrepare(_ids); slackAutoReady(_ids); emailAutoReady(_ids);
+      portalAutoPrepare(_ids); slackAutoReady(_ids); emailAutoReady(_ids); smsAutoReady(_ids);
     } catch (e) {}
     try {
       var ids = [];
@@ -631,6 +642,181 @@
       });
     } catch (e) {}
   }
+
+
+  /* ---------- SMS via SIM (server outbox -> SMS gateway app on the lab's phone) ----------
+     Mirrors the WhatsApp auto/manual flow, but messages are queued server-side
+     (POST /api/sms/queue) and delivered by the SMS gateway app through the lab's
+     own SIM card. Plain text, no markdown, no long links. */
+
+  var SMS_TPL = {
+    tplPatient: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}, {date}) is ready. Tests: {tests}. Please collect it from the lab. Thank you.',
+    tplDoctor: '{lab}: Assalam-o-Alaikum {doctor}, the lab report of your patient {patient} (Invoice {invoice}) is ready. Thank you.',
+    tplDue: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}) is ready. A balance of {due} is pending. Please clear it at the lab. Thank you.'
+  };
+
+  function smsCfg() {
+    try {
+      var s = DB.get('settings', 'main') || {};
+      return Object.assign({ enabled: false, gatewayUrl: '', apiKey: '', simSlot: 0, senderName: '', autoPatient: false, autoDoctor: false, autoCritical: false, tplPatient: '', tplDoctor: '', tplDue: '' }, s.sms || {});
+    } catch (e) { return {}; }
+  }
+  /* configured = switched on + gateway URL + API key (mirrors waReady) */
+  function smsReady(cfg) { return !!(cfg && cfg.enabled && cfg.gatewayUrl && cfg.apiKey); }
+  function smsTplText(name) { var c = smsCfg(); return (c && c[name] && String(c[name]).replace(/\s/g, '')) ? c[name] : SMS_TPL[name]; }
+  function smsRenderTpl(tpl, v) {
+    v = v || {};
+    var vars = { lab: v.lab || 'Lab', patient: v.patient || '', doctor: v.doctor || '', invoice: v.invoice || '', date: v.date || '', tests: v.tests || '', total: v.total || '', due: v.due || '' };
+    var out = String(tpl).replace(/\{(\w+)\}/g, function (m, k) { return Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m; });
+    return out.replace(/\n{3,}/g, '\n\n').replace(/^\s+|\s+$/g, '');
+  }
+  function smsPatientMessage(inv, pat, testNames) { return smsRenderTpl(smsTplText('tplPatient'), waVars(inv, pat, null, testNames, '')); }
+  function smsDoctorMessage(inv, doc, pat, testNames) { return smsRenderTpl(smsTplText('tplDoctor'), waVars(inv, pat, doc, testNames, '')); }
+  function smsDueMessage(inv, pat, testNames) { return smsRenderTpl(smsTplText('tplDue'), waVars(inv, pat, null, testNames, '')); }
+  function smsCriticalMessage(inv, pat, crits, tname) {
+    var s = DB.get('settings', 'main') || {}, lab = s.labName || 'Lab';
+    var lines = (crits || []).map(function (c) {
+      return (c.name || '') + ': ' + (c.value || '') + ' ' + (c.unit || '') + (c.dir === 'high' ? ' (HIGH)' : ' (LOW)') + ' [normal ' + (c.ref || '-') + ']';
+    });
+    return 'CRITICAL RESULT - ' + lab + '\nPatient: ' + (pat.name || '') + ' (' + (inv.no || inv.id) + ')\nTest: ' + (tname || '') + '\n' + lines.join('\n') + '\nPlease review immediately.';
+  }
+
+  /* queue one SMS server-side; the server worker delivers it through the gateway app.
+     Returns a promise resolving to { ok, id } or { ok, duplicate:true }. */
+  function smsQueueSend(to, text, opts) {
+    opts = opts || {};
+    if (!smsReady(smsCfg())) return Promise.reject(new Error('SMS is not configured'));
+    to = waPhone(to); /* same PK normalization as WhatsApp: 0300… -> 92300… */
+    if (!to) return Promise.reject(new Error('No phone number'));
+    text = String(text || '').trim();
+    if (!text) return Promise.reject(new Error('Message is empty'));
+    return DB.smsApi('POST', 'queue', {
+      to: to, text: text.slice(0, 1000),
+      kind: opts.kind || 'report',
+      invoiceId: opts.invoiceId || null, invoiceNo: opts.invoiceNo || '',
+      toName: opts.toName || '', toRole: opts.toRole || 'patient'
+    });
+  }
+
+  /* auto-send for one invoice once its WHOLE report is ready — same due-rule
+     policy as WhatsApp ('note' default: balance reminder now, report on payment). */
+  function smsTryAutoSendOne(invoiceId, cfg, autoPat, autoDoc) {
+    var inv = invOf(invoiceId);
+    if (!inv || !waAllReady(invoiceId)) return;
+    var testNames = waTestNames(invoiceId);
+    if (!testNames.length) return;
+    var pat = patOf(inv.patientId);
+    var owes = (+inv.due || 0) > 0.009;
+    var rule = (waCfg().dueRule) || 'note';
+    function sendIt(kind, toRole, to, name, text) {
+      smsQueueSend(to, text, { kind: kind, invoiceId: invoiceId, invoiceNo: inv.no || inv.id, toName: name, toRole: toRole }).then(
+        function (j) { if (!(j && j.duplicate)) App.toast('SMS queued for ' + (name || toRole)); },
+        function () { App.toast('SMS queue failed for ' + (name || toRole), 'err'); }
+      );
+    }
+    if (owes && rule !== 'send') {
+      if (rule === 'note' && autoPat) {
+        var to = waPhone(pat.whatsapp || pat.phone);
+        if (to) sendIt('due', 'patient', to, pat.name || '', smsDueMessage(inv, pat, testNames));
+      }
+      return; /* the report SMS goes out when the balance is paid (via waOnPaid -> smsAutoReady) */
+    }
+    if (autoPat) {
+      var tp = waPhone(pat.whatsapp || pat.phone);
+      if (tp) sendIt('report', 'patient', tp, pat.name || '', smsPatientMessage(inv, pat, testNames));
+    }
+    if (autoDoc && inv.doctorId) {
+      var doc = DB.get('doctors', inv.doctorId);
+      if (doc) {
+        var td = waPhone(doc.whatsapp || doc.phone);
+        if (td) sendIt('report', 'doctor', td, doc.name || '', smsDoctorMessage(inv, doc, pat, testNames));
+      }
+    }
+  }
+
+  /* Trigger: called from waAutoSendReady alongside the other channels. */
+  function smsAutoReady(invoiceIds) {
+    try {
+      var ids = [];
+      (invoiceIds || []).forEach(function (id) { if (id && ids.indexOf(id) < 0) ids.push(id); });
+      if (!ids.length) return;
+      var cfg = smsCfg();
+      var autoPat = cfg.autoPatient === true;  /* default OFF (unlike WhatsApp) */
+      var autoDoc = cfg.autoDoctor === true;   /* default OFF */
+      if (!autoPat && !autoDoc) return;
+      if (!smsReady(cfg)) return;
+      ids.forEach(function (invoiceId) { try { smsTryAutoSendOne(invoiceId, cfg, autoPat, autoDoc); } catch (e) {} });
+    } catch (e) {}
+  }
+
+  function smsGoSettings() {
+    App.nav('#/settings');
+    setTimeout(function () { if (App.openSmsSettingsTab) App.openSmsSettingsTab(); }, 80);
+  }
+
+  /* Manual send of a finalized report to the patient or the referring doctor. */
+  function smsManualSend(invoiceId, toRole) {
+    var inv = invOf(invoiceId);
+    if (!inv) { App.toast('Invoice not found', 'err'); return; }
+    var cfg = smsCfg();
+    if (!smsReady(cfg)) {
+      App.toast('SMS is not configured', 'err');
+      App.confirm('SMS sending is not set up yet. Open Settings to configure it now?').then(function (ok) {
+        if (ok) smsGoSettings();
+      });
+      return;
+    }
+    var pat = patOf(inv.patientId);
+    var doc = toRole === 'doctor' ? (inv.doctorId ? DB.get('doctors', inv.doctorId) : null) : null;
+    if (toRole === 'doctor' && !doc) { App.toast('No referring doctor on this invoice', 'err'); return; }
+    var target = toRole === 'doctor' ? doc : pat;
+    var to = waPhone(target.whatsapp || target.phone); /* dedicated number first, else phone */
+    if (!to) { App.toast(toRole === 'doctor' ? 'No phone number on file for the doctor' : 'No phone number on patient record', 'err'); return; }
+    var rows = joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; });
+    var testNames = [];
+    rows.forEach(function (r) {
+      var nm = (r.item && r.item.name) || (r.test && r.test.name) || '';
+      if (nm && testNames.indexOf(nm) < 0) testNames.push(nm);
+    });
+    var msg = toRole === 'doctor' ? smsDoctorMessage(inv, doc, pat, testNames) : smsPatientMessage(inv, pat, testNames);
+    var whoName = toRole === 'doctor' ? (doc.name || 'doctor') : (pat.name || 'patient');
+    App.toast('Queueing SMS for ' + whoName + '…', 'info');
+    smsQueueSend(to, msg, { kind: 'report', invoiceId: invoiceId, invoiceNo: inv.no || inv.id, toName: whoName, toRole: toRole }).then(
+      function (j) {
+        App.toast(j && j.duplicate ? 'SMS already queued for ' + whoName : 'SMS queued for ' + whoName + ' — sending via your SIM');
+        smsRefreshHistory(invoiceId);
+      },
+      function (e) { App.toast('SMS queue failed: ' + String((e && e.message) || e).slice(0, 120), 'err'); }
+    );
+  }
+
+  /* compact "SMS queued/sent" history for one invoice, shown under the WhatsApp history */
+  function smsHistoryHtml(rows) {
+    rows = (rows || []).slice(0, 4);
+    if (!rows.length) return '';
+    var body = rows.map(function (e) {
+      var who = e.toRole === 'doctor' ? (e.toName || 'doctor') : 'patient';
+      var mark = (e.status === 'sent' || e.status === 'delivered') ? '✓' : (e.status === 'failed' ? '✗' : '…');
+      var verb = (e.status === 'sent' || e.status === 'delivered') ? 'SMS sent to' : (e.status === 'failed' ? 'SMS failed to' : 'SMS queued for');
+      return '<div style="padding:2px 0">' + mark + ' ' + verb + ' ' + App.esc(who) +
+        ' <span class="muted">' + App.esc(waHistTs(e.ts)) + '</span></div>';
+    }).join('');
+    return '<div style="font-size:12.5px;color:var(--ink,#1f2937);background:#eff6ff;' +
+      'border:1px solid #bfdbfe;border-radius:10px;padding:8px 12px;margin-bottom:4px">📲 ' + body + '</div>';
+  }
+  function smsRefreshHistory(invoiceId) {
+    var box = document.getElementById('rvSmsHist');
+    if (!box) return;
+    DB.smsApi('GET', 'log?invoiceId=' + encodeURIComponent(invoiceId), undefined).then(
+      function (j) { if (document.body.contains(box)) box.innerHTML = smsHistoryHtml((j && j.rows) || []); },
+      function () {}
+    );
+  }
+
+  /* shared with Settings (mod-admin.js) */
+  App.sms = { cfg: smsCfg, ready: smsReady, queue: smsQueueSend, manual: smsManualSend, autoReady: smsAutoReady,
+    tpl: SMS_TPL, tplText: smsTplText, render: smsRenderTpl,
+    patientMsg: smsPatientMessage, doctorMsg: smsDoctorMessage, dueMsg: smsDueMessage };
 
   /* shareReportWhatsApp: superseded by waManualSend() (strict API send with
      wa_log recording). Kept as a thin alias for any external callers. */
@@ -2999,11 +3185,14 @@
         previewQr(reportHtml(d), invoiceId) +
       '</div>' +
       '<div id="rvWaHist" style="margin-top:12px">' + waHistoryHtml(invoiceId) + '</div>' +
+      '<div id="rvSmsHist" style="margin-top:6px"></div>' +
       '<div id="rvAuto" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>' +
       '<div class="actions" style="margin-top:12px;flex-wrap:wrap;justify-content:flex-end;gap:8px">' +
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
         '<button class="btn btn-ghost" id="rvWaPatient">' + WA_ICON + ' Send to Patient (WhatsApp)</button>' +
         docWaBtn +
+        '<button class="btn btn-ghost" id="rvSmsPatient">📲 Send SMS to Patient</button>' +
+        (d.doc ? '<button class="btn btn-ghost" id="rvSmsDoctor">📲 Send SMS to Doctor</button>' : '') +
         '<span id="rvShare" style="display:contents"></span>' +
         '<button class="btn btn-primary" id="rvPrint">' + PRINT_ICON + ' Print Report <span style="opacity:.7;font-weight:500;font-size:11px;margin-left:4px">Ctrl+P</span></button>' +
       '</div>',
@@ -3042,6 +3231,10 @@
           document.getElementById('rvWaPatient').addEventListener('click', function () { waManualSend(invoiceId, 'patient'); });
           var wdoc = document.getElementById('rvWaDoctor');
           if (wdoc && !wdoc.disabled) wdoc.addEventListener('click', function () { waManualSend(invoiceId, 'doctor'); });
+          document.getElementById('rvSmsPatient').addEventListener('click', function () { smsManualSend(invoiceId, 'patient'); });
+          var sdoc = document.getElementById('rvSmsDoctor');
+          if (sdoc) sdoc.addEventListener('click', function () { smsManualSend(invoiceId, 'doctor'); });
+          smsRefreshHistory(invoiceId);
         }
       });
   }

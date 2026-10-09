@@ -562,25 +562,7 @@
     /* ---- report templates (worker 8): saved {type,from,to,preset} presets ---- */
     var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This month', lastMonth: 'Last month', custom: 'Custom range' };
     var REP_TYPE_LBL = { tests: 'Tests', finance: 'Finance', dues: 'Dues', patients: 'Patients', labs: 'Labs' };
-    function repTplList() {
-      var list = [];
-      try { list = DB.all('report_templates') || []; } catch (e) { list = []; }
-      var seeded = false;
-      try { seeded = localStorage.getItem('labpos_rep_tpl_seeded') === '1'; } catch (e) {}
-      if (!list.length && !seeded) {
-        var defaults = [
-          { name: 'Monthly Financial Executive Summary', type: 'finance', preset: 'thisMonth', createdAt: new Date().toISOString() },
-          { name: 'Daily Conducted Tests Audit', type: 'tests', preset: 'today', createdAt: new Date().toISOString() },
-          { name: 'Outstanding Dues Recovery Report', type: 'dues', preset: 'last30', createdAt: new Date().toISOString() },
-          { name: 'Weekly Patient Footfall & Registration', type: 'patients', preset: 'last7', createdAt: new Date().toISOString() },
-          { name: 'Doctor Referral & Commission Activity', type: 'tests', preset: 'thisMonth', createdAt: new Date().toISOString() }
-        ];
-        defaults.forEach(function (d) { try { DB.insert('report_templates', d); } catch (e) {} });
-        try { localStorage.setItem('labpos_rep_tpl_seeded', '1'); } catch (e) {}
-        try { list = DB.all('report_templates') || defaults; } catch (e) { list = defaults; }
-      }
-      return list;
-    }
+    function repTplList() { return DB.all('report_templates') || []; }
     function repTplDesc(t) {
       var tl = REP_TYPE_LBL[t.type] || 'All';
       var pl = REP_PRESET_LBL[t.preset] || ((t.from && t.to) ? App.d(t.from) + ' to ' + App.d(t.to) : 'Custom range');
@@ -607,15 +589,10 @@
       var t = repTplList().filter(function (x) { return String(x.id) === String(id); })[0];
       if (!t) { App.toast('Template not found.', 'err'); return; }
       rep.type = t.type || 'tests';
-      if (t.preset && t.preset !== 'custom') {
-        setPreset(t.preset);
-      } else {
-        rep.from = t.from || rep.from;
-        rep.to = t.to || rep.to;
-        rep.preset = t.preset || 'custom';
-        renderReports();
-      }
-      App.toast('Applied template: ' + t.name);
+      rep.from = t.from || rep.from;
+      rep.to = t.to || rep.to;
+      rep.preset = t.preset || 'custom';
+      renderReports();
     }
     function repTplDel() {
       var id = repTplSelId();
@@ -1987,31 +1964,20 @@
      Tabs: Lab Profile | My Account | Users | Backup | Danger Zone
      ============================================================ */
   var UNIFI_SET_CSS =
-    '.unifi-shell{display:flex;min-height:calc(100vh - 120px);background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px -4px rgba(15,23,42,.06);margin-bottom:24px}' +
-    '.unifi-side{width:280px;flex:none;background:#ffffff;border-right:1px solid #e2e8f0;display:flex;flex-direction:column}' +
-    '.unifi-side-head{padding:16px 14px 12px;border-bottom:1px solid #f1f5f9}' +
-    '.unifi-search-wrap{position:relative;display:flex;align-items:center}' +
-    '.unifi-search-wrap svg{position:absolute;left:10px;width:14px;height:14px;color:#94a3b8;pointer-events:none}' +
-    '.unifi-search-input{width:100%;padding:8px 12px 8px 32px;font-size:12.5px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;color:#1e293b;outline:none;transition:all .15s}' +
-    '.unifi-search-input:focus{background:#fff;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}' +
-    '.unifi-nav{flex:1;overflow-y:auto;padding:8px 8px 24px}' +
-    '.unifi-sec-title{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;padding:12px 10px 4px}' +
-    '.unifi-nav-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;color:#334155;text-decoration:none;margin-bottom:2px;transition:all .15s ease;border:1px solid transparent}' +
-    '.unifi-nav-item:hover{background:#f1f5f9;color:#0f172a}' +
-    '.unifi-nav-item.active{background:#0f172a;color:#ffffff;font-weight:600;box-shadow:0 4px 12px rgba(15,23,42,.15)}' +
-    '.unifi-nav-item.active .unifi-item-sub{color:#94a3b8}' +
-    '.unifi-item-ico{font-size:16px;width:22px;display:flex;align-items:center;justify-content:center;flex:none}' +
-    '.unifi-item-meta{flex:1;min-width:0}' +
-    '.unifi-item-lbl{font-size:13px;font-weight:700;line-height:1.25}' +
-    '.unifi-item-sub{font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}' +
-    '.unifi-danger{color:#ef4444}' +
-    '.unifi-danger:hover{background:#fef2f2;color:#b91c1c}' +
-    '.unifi-danger.active{background:#dc2626;color:#ffffff}' +
-    '.unifi-content{flex:1;min-width:0;background:#ffffff;display:flex;flex-direction:column}' +
-    '.unifi-top-bar{padding:16px 24px;border-bottom:1px solid #e2e8f0;background:#ffffff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}' +
-    '.unifi-top-title{font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:8px}' +
+    '.unifi-shell{background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px -4px rgba(15,23,42,.06);margin-bottom:24px}' +
+    '.unifi-top-bar{padding:18px 24px 14px;border-bottom:1px solid #e2e8f0;background:#ffffff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}' +
+    '.unifi-top-title{font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:8px}' +
     '.unifi-top-desc{font-size:12.5px;color:#64748b;margin:3px 0 0}' +
-    '.unifi-canvas{padding:20px 24px;flex:1;overflow-y:auto}' +
+    '.unifi-tab-strip{display:flex;gap:6px;overflow-x:auto;padding:12px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;scrollbar-width:thin}' +
+    '.unifi-tab-strip::-webkit-scrollbar{height:4px}' +
+    '.unifi-tab-strip::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}' +
+    '.unifi-tab-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;color:#475569;background:#ffffff;border:1px solid #e2e8f0;text-decoration:none;white-space:nowrap;transition:all .15s ease}' +
+    '.unifi-tab-btn:hover{background:#f1f5f9;color:#0f172a;border-color:#cbd5e1}' +
+    '.unifi-tab-btn.active{background:#0f172a;color:#ffffff;border-color:#0f172a;box-shadow:0 2px 8px rgba(15,23,42,.15)}' +
+    '.unifi-tab-btn.unifi-danger{color:#dc2626}' +
+    '.unifi-tab-btn.unifi-danger:hover{background:#fef2f2;border-color:#fca5a5}' +
+    '.unifi-tab-btn.unifi-danger.active{background:#dc2626;color:#ffffff;border-color:#dc2626}' +
+    '.unifi-canvas{padding:24px;flex:1}' +
     '.unifi-panel{background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,23,42,.03);overflow:hidden;transition:border-color .15s}' +
     '.unifi-panel:hover{border-color:#cbd5e1}' +
     '.unifi-panel-header{padding:14px 18px;border-bottom:1px solid #f1f5f9;background:#fafbfc;display:flex;align-items:center;gap:12px}' +
@@ -2026,8 +1992,7 @@
     '.unifi-switch input:checked + .unifi-slider{background-color:#0f172a}' +
     '.unifi-switch input:checked + .unifi-slider:before{transform:translateX(18px)}' +
     '.unifi-toggle-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;margin-bottom:8px;gap:14px}' +
-    '.unifi-save-bar{margin-top:20px;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid #e2e8f0}' +
-    '@media(max-width:960px){.unifi-shell{flex-direction:column}.unifi-side{width:100%;border-right:none;border-bottom:1px solid #e2e8f0}.unifi-top-bar,.unifi-canvas{padding:14px}}';
+    '.unifi-save-bar{margin-top:20px;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid #e2e8f0}';
 
   var settingsTab = 'profile';
 
@@ -2043,6 +2008,7 @@
       { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: '🖋️' },
 
       { id: 'whatsapp', sec: 'AUTOMATION & PORTAL', label: 'WhatsApp Automation', desc: 'Auto-send reports on payment', icon: '💬' },
+      { id: 'sms', sec: 'AUTOMATION & PORTAL', label: 'SMS via SIM', desc: 'Send SMS from your SIM card', icon: '📲' },
       { id: 'sharing', sec: 'AUTOMATION & PORTAL', label: 'Email & Slack', desc: 'Notifications & webhook alerts', icon: '✉️' },
       { id: 'portal', sec: 'AUTOMATION & PORTAL', label: 'Patient Portal', desc: 'Online verification & QR access', icon: '🌐' },
 
@@ -2052,85 +2018,45 @@
 
     var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
 
-    var secOrder = ['GENERAL', 'REPORTS & PRINTING', 'AUTOMATION & PORTAL', 'SYSTEM'];
-    var navHtml = '';
-    secOrder.forEach(function (sec) {
-      var secTabs = tabs.filter(function (t) { return t.sec === sec; });
-      if (!secTabs.length) return;
-      navHtml += '<div class="unifi-sec-title">' + App.esc(sec) + '</div>';
-      secTabs.forEach(function (t) {
-        var activeCls = (t.id === cur.id) ? ' active' : '';
-        var dangerCls = t.isDanger ? ' unifi-danger' : '';
-        navHtml +=
-          '<a href="#/settings/' + t.id + '" class="unifi-nav-item' + activeCls + dangerCls + '" data-set-tab="' + t.id + '" data-keywords="' + App.esc((t.label + ' ' + t.desc + ' ' + t.sec).toLowerCase()) + '">' +
-            '<span class="unifi-item-ico">' + t.icon + '</span>' +
-            '<div class="unifi-item-meta">' +
-              '<div class="unifi-item-lbl">' + App.esc(t.label) + '</div>' +
-              '<div class="unifi-item-sub">' + App.esc(t.desc) + '</div>' +
-            '</div>' +
-          '</a>';
-      });
-    });
+    var tabsHtml = tabs.map(function (t) {
+      var isAct = t.id === cur.id;
+      return '<a href="#/settings/' + t.id + '" class="unifi-tab-btn' + (isAct ? ' active' : '') + (t.isDanger ? ' unifi-danger' : '') + '">'
+        + '<span>' + t.icon + '</span>'
+        + '<span>' + App.esc(t.label) + '</span>'
+        + '</a>';
+    }).join('');
 
     var html =
       '<style>' + UNIFI_SET_CSS + '</style>' +
       '<div class="unifi-shell">' +
-        '<!-- UniFi Sidebar -->' +
-        '<aside class="unifi-side">' +
-          '<div class="unifi-side-head">' +
-            '<div class="unifi-search-wrap">' +
-              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
-              '<input type="text" id="unifi-set-search" class="unifi-search-input" placeholder="Search settings..." autocomplete="off">' +
-            '</div>' +
+        '<!-- Top Header Bar -->' +
+        '<div class="unifi-top-bar">' +
+          '<div>' +
+            '<h2 class="unifi-top-title">' +
+              '<span>' + cur.icon + '</span>' +
+              '<span>' + App.esc(cur.label) + '</span>' +
+            '</h2>' +
+            '<p class="unifi-top-desc">' + App.esc(cur.desc) + '</p>' +
           '</div>' +
-          '<nav class="unifi-nav" id="unifi-set-nav-list">' +
-            navHtml +
-          '</nav>' +
-        '</aside>' +
+          '<div>' +
+            '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#f1f5f9;color:#475569">' +
+              '<span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block"></span> ' + App.esc(cur.sec) +
+            '</span>' +
+          '</div>' +
+        '</div>' +
 
-        '<!-- UniFi Content Canvas -->' +
-        '<main class="unifi-content">' +
-          '<div class="unifi-top-bar">' +
-            '<div>' +
-              '<h2 class="unifi-top-title">' +
-                '<span>' + cur.icon + '</span>' +
-                '<span>' + App.esc(cur.label) + '</span>' +
-              '</h2>' +
-              '<p class="unifi-top-desc">' + App.esc(cur.desc) + '</p>' +
-            '</div>' +
-            '<div>' +
-              '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;background:#f1f5f9;color:#475569">' +
-                '<span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block"></span> ' + App.esc(cur.sec) +
-              '</span>' +
-            '</div>' +
-          '</div>' +
-          '<div class="unifi-canvas">' +
-            '<div id="setBody"></div>' +
-          '</div>' +
-        '</main>' +
+        '<!-- Horizontal Tab Navigation Bar -->' +
+        '<div class="unifi-tab-strip">' +
+          tabsHtml +
+        '</div>' +
+
+        '<!-- Settings Content Canvas -->' +
+        '<div class="unifi-canvas">' +
+          '<div id="setBody"></div>' +
+        '</div>' +
       '</div>';
 
     document.getElementById('view').innerHTML = html;
-
-    var sInput = document.getElementById('unifi-set-search');
-    if (sInput) {
-      sInput.addEventListener('input', function () {
-        var q = sInput.value.trim().toLowerCase();
-        var items = document.querySelectorAll('.unifi-nav-item');
-        var headers = document.querySelectorAll('.unifi-sec-title');
-        items.forEach(function (el) {
-          var kw = el.getAttribute('data-keywords') || '';
-          el.style.display = (!q || kw.indexOf(q) >= 0) ? 'flex' : 'none';
-        });
-        headers.forEach(function (h) {
-          var sec = h.textContent.trim().toLowerCase();
-          var hasVisible = Array.prototype.slice.call(items).some(function (el) {
-            return (el.getAttribute('data-keywords') || '').indexOf(sec) >= 0 && el.style.display !== 'none';
-          });
-          h.style.display = (!q || hasVisible) ? 'block' : 'none';
-        });
-      });
-    }
 
     if (settingsTab === 'profile') renderSetProfile();
     else if (settingsTab === 'payments') renderSetPayments();
@@ -2138,6 +2064,7 @@
     else if (settingsTab === 'templates') renderSetTemplates();
     else if (settingsTab === 'signatures') renderSetSignatures();
     else if (settingsTab === 'whatsapp') renderSetWhatsapp();
+    else if (settingsTab === 'sms') renderSetSms();
     else if (settingsTab === 'sharing') renderSetSharing();
     else if (settingsTab === 'portal') renderSetPortal();
     else if (settingsTab === 'users') renderSetUsers();
@@ -4010,6 +3937,231 @@
   }
 
 
+
+  /* ---- SMS via SIM (server sends through the SMS gateway app on the lab's phone) ---- */
+  function smsDefaults() {
+    return {
+      enabled: false, gatewayUrl: '', apiKey: '', simSlot: 0, senderName: '',
+      autoPatient: false, autoDoctor: false, autoCritical: false,
+      tplPatient: '', tplDoctor: '', tplDue: ''
+    };
+  }
+  function smsCfg() {
+    try { var s = DB.get('settings', 'main') || {}; return Object.assign(smsDefaults(), s.sms || {}); }
+    catch (e) { return smsDefaults(); }
+  }
+  function smsTplDefaults() {
+    return {
+      tplPatient: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}, {date}) is ready. Tests: {tests}. Please collect it from the lab. Thank you.',
+      tplDoctor: '{lab}: Assalam-o-Alaikum {doctor}, the lab report of your patient {patient} (Invoice {invoice}) is ready. Thank you.',
+      tplDue: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}) is ready. A balance of {due} is pending. Please clear it at the lab. Thank you.'
+    };
+  }
+  function smsTplText(kind) {
+    var c = smsCfg(), t = smsTplDefaults();
+    var custom = (c[kind] || '').trim();
+    return custom || t[kind] || '';
+  }
+
+  function renderSetSms() {
+    var s = DB.get('settings', 'main') || {};
+    var c = Object.assign(smsDefaults(), s.sms || {});
+    var t = smsTplDefaults();
+
+    function rowSwitch(id, checked, title, desc) {
+      return '<div class="wa-row-item">'
+        + '<div class="wa-row-content">'
+        + '  <div class="wa-row-title"><span>' + title + '</span></div>'
+        + '  <p class="wa-row-desc">' + desc + '</p>'
+        + '</div>'
+        + '<label class="wa-switch" title="Toggle ' + App.esc(title) + '">'
+        + '  <input type="checkbox" id="' + id + '"' + (checked ? ' checked' : '') + '>'
+        + '  <span class="wa-slider"></span>'
+        + '</label>'
+        + '</div>';
+    }
+
+    var slotOpts = [0, 1].map(function (i) {
+      return '<option value="' + i + '"' + ((+c.simSlot || 0) === i ? ' selected' : '') + '>SIM ' + (i + 1) + '</option>';
+    }).join('');
+
+    function smsLogRow(r) {
+      var st = String(r.status || 'pending');
+      var badge = st === 'sent' || st === 'delivered'
+        ? '<span class="badge b-ready">' + App.esc(st.toUpperCase()) + '</span>'
+        : st === 'failed'
+          ? '<span class="badge b-pending" style="background:#fee2e2;color:#b91c1c;border-color:#fca5a5">' + App.esc(st.toUpperCase()) + '</span>'
+          : '<span class="badge b-pending">' + App.esc(st.toUpperCase()) + '</span>';
+      var retry = (st === 'failed') ? ' <button class="btn btn-sm btn-ghost" data-sms-retry="' + App.esc(r.id) + '">Retry</button>' : '';
+      var when = ''; try { when = App.dt(r.ts); } catch (e) { when = String(r.ts || ''); }
+      return '<tr><td style="white-space:nowrap">' + App.esc(when) + '</td>' +
+        '<td>' + App.esc(r.to || '') + '<div class="muted" style="font-size:11px">' + App.esc(r.toName || '') + '</div></td>' +
+        '<td>' + App.esc(r.kind || '') + '</td>' +
+        '<td>' + App.esc(r.invoiceNo || r.invoiceId || '') + '</td>' +
+        '<td>' + badge + (r.error ? '<div class="muted" style="font-size:11px;max-width:220px">' + App.esc(String(r.error).slice(0, 120)) + '</div>' : '') + retry + '</td></tr>';
+    }
+    function paintSmsLog(rows) {
+      var tb = document.getElementById('smsLogBody'); if (!tb) return;
+      tb.innerHTML = (rows && rows.length)
+        ? rows.map(smsLogRow).join('')
+        : '<tr><td colspan="5" class="muted" style="text-align:center;padding:18px">No SMS sent yet.</td></tr>';
+      tb.querySelectorAll('[data-sms-retry]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-sms-retry');
+          DB.smsApi('POST', 'retry', { id: id }).then(function () { App.toast('Re-queued'); loadSmsLog(); }, function (e) { App.toast((e && e.message) || 'Retry failed', 'err'); });
+        });
+      });
+    }
+    function loadSmsLog() {
+      var tb = document.getElementById('smsLogBody'); if (!tb) return;
+      tb.innerHTML = '<tr><td colspan="5" class="muted" style="text-align:center;padding:18px">Loading…</td></tr>';
+      DB.smsApi('GET', 'log?limit=100', undefined).then(
+        function (j) { paintSmsLog((j && j.rows) || []); },
+        function () { paintSmsLog([]); }
+      );
+    }
+
+    var html =
+      '<style>'
+      + '.sms-set-wrap{max-width:820px;margin:0}'
+      + '.sms-set-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;background:linear-gradient(135deg,#eff6ff 0%,#e0ecff 100%);border:1.5px solid #bfdbfe;border-radius:14px;margin-bottom:18px}'
+      + '.sms-brand-ico{width:46px;height:46px;border-radius:12px;background:#2563eb;color:#fff;display:grid;place-items:center;font-size:24px;box-shadow:0 4px 14px rgba(37,99,235,.35);flex:none}'
+      + '.sms-set-title{font-size:18px;font-weight:800;color:#1e3a8a;margin:0 0 3px}'
+      + '.sms-set-sub{font-size:13px;color:#1e40af;margin:0}'
+      + '.sms-card{margin-bottom:16px;border-radius:14px;box-shadow:0 1px 4px rgba(15,30,46,.04)}'
+      + '.sms-steps{margin:8px 0 0;padding-left:20px;font-size:13px;color:var(--ink);line-height:1.7}'
+      + '.sms-field{margin:10px 0}'
+      + '.sms-field label{display:block;font-size:12.5px;font-weight:700;margin-bottom:4px;color:var(--ink)}'
+      + '.sms-field input,.sms-field select,.sms-field textarea{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;background:#fff;color:var(--ink)}'
+      + '.sms-field textarea{min-height:74px;resize:vertical;font-family:inherit}'
+      + '.sms-hint{font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5}'
+      + '.sms-log-table{width:100%;border-collapse:collapse;font-size:12.5px}'
+      + '.sms-log-table th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--line);color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px}'
+      + '.sms-log-table td{padding:8px 10px;border-bottom:1px solid var(--line2);vertical-align:top}'
+      + '</style>'
+      + '<div class="sms-set-wrap">'
+      + '<div class="sms-set-head">'
+      + '  <div style="display:flex;align-items:center;gap:14px"><div class="sms-brand-ico">📲</div>'
+      + '  <div><h2 class="sms-set-title">SMS via SIM</h2>'
+      + '  <p class="sms-set-sub">Send report alerts as plain SMS from your own SIM card — just like WhatsApp, but over the mobile network.</p></div></div>'
+      + '</div>'
+
+      + '<div class="card sms-card"><div class="card-h"><h3>How it works</h3></div><div class="card-b">'
+      + '<ol class="sms-steps">'
+      + '<li>Install the <b>SMS gateway app</b> on the Android phone that holds your SIM.</li>'
+      + '<li>In the gateway app, enable its server / cloud relay and copy the <b>server URL</b> and <b>API key</b>.</li>'
+      + '<li>Paste them below, switch SMS <b>ON</b>, and press <b>Save</b>. The lab server will then send queued SMS through your SIM.</li>'
+      + '</ol></div></div>'
+
+      + '<div class="card sms-card"><div class="card-h"><h3>Gateway connection</h3><span id="smsConnBadge"></span></div><div class="card-b">'
+      + rowSwitch('smsEnabled', !!c.enabled, 'Enable SMS sending', 'When ON, the server delivers queued SMS through the gateway app on your phone.')
+      + '<div class="sms-field"><label>Gateway server URL</label><input id="smsGatewayUrl" placeholder="https://… (from the gateway app)" value="' + App.esc(c.gatewayUrl || '') + '">'
+      + '<div class="sms-hint">The public URL of the SMS gateway app (its cloud relay URL, or http://phone-ip:port on your network).</div></div>'
+      + '<div class="sms-field"><label>API key</label><input id="smsApiKey" type="password" autocomplete="off" placeholder="Paste the API key from the gateway app" value="' + App.esc(c.apiKey || '') + '"></div>'
+      + '<div style="display:flex;gap:12px;flex-wrap:wrap">'
+      + '<div class="sms-field" style="flex:1;min-width:140px"><label>SIM slot</label><select id="smsSimSlot">' + slotOpts + '</select></div>'
+      + '<div class="sms-field" style="flex:2;min-width:180px"><label>Sender name (optional)</label><input id="smsSenderName" placeholder="e.g. Optix Lab" value="' + App.esc(c.senderName || '') + '"></div>'
+      + '</div>'
+      + '<div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">'
+      + '<button class="btn btn-ghost" id="smsTestConn">Check connection</button>'
+      + '<button class="btn btn-ghost" id="smsTestSend">Send test SMS</button>'
+      + '</div><div id="smsTestMsg" class="sms-hint" style="margin-top:8px"></div>'
+      + '</div></div>'
+
+      + '<div class="card sms-card"><div class="card-h"><h3>Automatic SMS</h3></div><div class="card-b">'
+      + rowSwitch('smsAutoPatient', !!c.autoPatient, 'Report ready → patient', 'Automatically SMS the patient when their full report is ready (same moment WhatsApp would send).')
+      + rowSwitch('smsAutoDoctor', !!c.autoDoctor, 'Report ready → referring doctor', 'Automatically SMS the referring doctor when the report is ready.')
+      + rowSwitch('smsAutoCritical', !!c.autoCritical, 'Critical result alerts', 'Immediately SMS the referring doctor and the lab number on critical values.')
+      + '</div></div>'
+
+      + '<div class="card sms-card"><div class="card-h"><h3>Message templates</h3></div><div class="card-b">'
+      + '<div class="sms-hint" style="margin-bottom:10px">Plain text. Placeholders: {lab} {patient} {doctor} {invoice} {date} {tests} {total} {due}. Leave blank to use the default.</div>'
+      + '<div class="sms-field"><label>Report ready — patient</label><textarea id="smsTplPatient" placeholder="' + App.esc(t.tplPatient) + '">' + App.esc(c.tplPatient || '') + '</textarea></div>'
+      + '<div class="sms-field"><label>Report ready — doctor</label><textarea id="smsTplDoctor" placeholder="' + App.esc(t.tplDoctor) + '">' + App.esc(c.tplDoctor || '') + '</textarea></div>'
+      + '<div class="sms-field"><label>Balance pending — patient</label><textarea id="smsTplDue" placeholder="' + App.esc(t.tplDue) + '">' + App.esc(c.tplDue || '') + '</textarea></div>'
+      + '</div></div>'
+
+      + '<div class="card sms-card"><div class="card-h"><h3>SMS log</h3><button class="btn btn-sm btn-ghost" id="smsRetryAll">Retry all failed</button></div>'
+      + '<div class="card-b" style="overflow-x:auto"><table class="sms-log-table"><thead><tr><th>When</th><th>To</th><th>Type</th><th>Invoice</th><th>Status</th></tr></thead>'
+      + '<tbody id="smsLogBody"><tr><td colspan="5" class="muted" style="text-align:center;padding:18px">Loading…</td></tr></tbody></table></div></div>'
+
+      + '<div style="margin:18px 0"><button class="btn btn-primary" id="smsSaveAll" style="padding:10px 26px;font-weight:700">Save SMS settings</button></div>'
+      + '</div>';
+
+    document.getElementById('view').innerHTML = html;
+
+    function g(id) { return document.getElementById(id); }
+    function collect() {
+      var st = DB.get('settings', 'main') || {}, sc = Object.assign(smsDefaults(), st.sms || {});
+      sc.enabled = !!(g('smsEnabled') && g('smsEnabled').checked);
+      if (g('smsGatewayUrl')) sc.gatewayUrl = g('smsGatewayUrl').value.trim().replace(/\/+$/, '');
+      if (g('smsApiKey')) { var k = g('smsApiKey').value; if (k) sc.apiKey = k; }
+      if (g('smsSimSlot')) sc.simSlot = +g('smsSimSlot').value || 0;
+      if (g('smsSenderName')) sc.senderName = g('smsSenderName').value.trim();
+      if (g('smsAutoPatient')) sc.autoPatient = g('smsAutoPatient').checked;
+      if (g('smsAutoDoctor')) sc.autoDoctor = g('smsAutoDoctor').checked;
+      if (g('smsAutoCritical')) sc.autoCritical = g('smsAutoCritical').checked;
+      if (g('smsTplPatient')) sc.tplPatient = g('smsTplPatient').value.trim();
+      if (g('smsTplDoctor')) sc.tplDoctor = g('smsTplDoctor').value.trim();
+      if (g('smsTplDue')) sc.tplDue = g('smsTplDue').value.trim();
+      return sc;
+    }
+    function saveSms(notify) {
+      var st = DB.get('settings', 'main') || {};
+      st.sms = collect();
+      DB.update('settings', 'main', st);
+      if (notify !== false) App.toast('SMS settings saved');
+      return true;
+    }
+
+    var saveBtn = g('smsSaveAll');
+    if (saveBtn) saveBtn.addEventListener('click', function () { saveSms(true); refreshSmsStatus(); });
+    ['smsEnabled', 'smsAutoPatient', 'smsAutoDoctor', 'smsAutoCritical'].forEach(function (id) {
+      var el = g(id);
+      if (el) el.addEventListener('change', function () { if (saveSms(false)) App.toast((this.checked ? 'Switched ON' : 'Switched OFF') + ' — saved'); });
+    });
+
+    function setBadge(ok, txt) {
+      var b = g('smsConnBadge'); if (!b) return;
+      b.innerHTML = '<span class="badge ' + (ok ? 'b-ready' : 'b-pending') + '">' + App.esc(txt) + '</span>';
+    }
+    function refreshSmsStatus() {
+      setBadge(false, 'CHECKING…');
+      DB.smsApi('GET', 'status', undefined).then(function (j) {
+        if (j && j.ok) setBadge(!!(j.enabled && j.gatewayConfigured), (j.enabled ? (j.gatewayConfigured ? 'CONNECTED' : 'NO GATEWAY URL') : 'DISABLED') + (j.pending ? ' · ' + j.pending + ' QUEUED' : ''));
+        else setBadge(false, 'ERROR');
+      }, function () { setBadge(false, 'SERVER UNREACHABLE'); });
+    }
+    refreshSmsStatus();
+
+    var tcBtn = g('smsTestConn');
+    if (tcBtn) tcBtn.addEventListener('click', function () {
+      saveSms(false); refreshSmsStatus();
+      App.toast('Checking gateway connection…', 'info');
+    });
+
+    var tsBtn = g('smsTestSend');
+    if (tsBtn) tsBtn.addEventListener('click', function () {
+      var b = this; saveSms(false); b.disabled = true;
+      var msgEl = g('smsTestMsg'); if (msgEl) msgEl.textContent = 'Queueing test SMS…';
+      var labName = (DB.get('settings', 'main') || {}).labName || 'Optix Medical Sync';
+      DB.smsApi('POST', 'queue', { to: ((DB.get('settings', 'main') || {}).phone || ''), text: labName + ': test SMS from your lab. If you received this, SMS sending works.', kind: 'test' }).then(function (j) {
+        b.disabled = false;
+        if (msgEl) msgEl.textContent = j && j.ok ? 'Test SMS queued (' + (j.id || '') + '). The server will send it through your SIM within a minute.' : 'Could not queue the test SMS.';
+      }, function (e) {
+        b.disabled = false;
+        if (msgEl) msgEl.textContent = 'Failed: ' + (e && e.message ? e.message : 'server unreachable');
+      });
+    });
+
+    loadSmsLog();
+    var raBtn = g('smsRetryAll');
+    if (raBtn) raBtn.addEventListener('click', function () {
+      DB.smsApi('POST', 'retry', { all: true }).then(function (j) { App.toast('Re-queued ' + ((j && j.requeued) || 0) + ' message(s)'); loadSmsLog(); }, function (e) { App.toast((e && e.message) || 'Retry failed', 'err'); });
+    });
+  }
+  App.openSmsSettingsTab = function () { App.nav('#/settings/sms'); };
+
   /* ---- Dropdown Lists: the admin edits the choices that appear in forms ---- */
   function renderSetLists() {
     var st = DB.get('settings', 'main') || {}, work = {};
@@ -4645,7 +4797,7 @@
     });
   }
 
-  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
+  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'whatsapp', 'sms', 'sharing', 'portal', 'users', 'backup', 'danger'];
   App.route('#/patients/lists', function () { App.nav('#/patients'); });
   App.route('#/settings/lists', function () { App.nav('#/patients'); });
   App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });

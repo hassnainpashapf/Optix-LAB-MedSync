@@ -434,7 +434,7 @@ async function main() {
 
   /* ---- audit trail: who created / changed / deleted what, and when. Written server-side only (clients cannot POST to
      /api/audit); passwords, logos and other binary fields are never stored. Kept 365 days per lab. ---- */
-  const AUDIT_SKIP = ['audit', 'wa_log', 'report_schedules', 'samples'];
+  const AUDIT_SKIP = ['audit', 'wa_log', 'sms_outbox', 'report_schedules', 'samples'];
   const AUDIT_HIDE = /^(password|logo|photo|signature|stamp|image|img|dataUri|token)$/i;
   const auditVal = (k, v) => {
     if (AUDIT_HIDE.test(k)) return '•••';
@@ -533,11 +533,12 @@ async function main() {
       const write = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
       const WR = { patients: ['patients', 'invoices'], invoices: ['invoices', 'dues', 'patients', 'finance'], payments: ['invoices', 'dues', 'patients', 'finance'], results: ['results', 'invoices'], samples: ['samples', 'results', 'invoices', 'patients'],
         tests: ['tests'], doctors: ['doctors'], expenses: ['expenses', 'finance'], closings: ['finance'], stock_items: ['stock', 'results'], stock_moves: ['stock', 'results'], panels: ['panels'], ref_labs: ['outsourced'], outsourced: ['outsourced', 'results', 'invoices', 'patients'],
-        wa_log: ['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], email_log: ['email', 'results', 'invoices', 'doctors'], report_templates: ['results', 'reports'], report_schedules: ['results', 'reports'] };
+        wa_log: ['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], sms_outbox: ['sms', 'whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], email_log: ['email', 'results', 'invoices', 'doctors'], report_templates: ['results', 'reports'], report_schedules: ['results', 'reports'] };
       let deny = false;
       const tm = /^\/([a-z_]+)(\/|$)/.exec(req.path);
       if (write && tm && req.path.indexOf('/auth/') !== 0 && WR[tm[1]] !== undefined) deny = !any(WR[tm[1]]);
       else if (write && /^\/(wa\/send|wa\/send-doc)/.test(req.path)) deny = !any(['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors']);
+      else if (write && /^\/(sms\/(queue|retry))/.test(req.path)) deny = !any(['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors']);
       else if (write && /^\/share\/(email|slack)/.test(req.path)) deny = !any(['email', 'results', 'invoices', 'doctors']);
       if (deny) return res.status(403).json({ error: 'Your role does not allow this. Ask the lab admin.', code: 'ROLE_DENIED' });
     }
@@ -1505,6 +1506,115 @@ async function main() {
     /* bring back every lab that had linked a number before this restart */
     setTimeout(async () => { try { const ids = []; for (const l of (await saas.loadLabs(true)).values()) ids.push(l.id); await waGw.boot(ids); } catch (e) { /* the gateway is optional */ } }, 5000);
   }
+
+
+  /* ---- SMS via SIM: server-side outbox, delivered through the SMS gateway app
+     on the lab's phone (see sms-sender.js). Stateless HTTP — runs on cloud and
+     desktop alike, unlike the WhatsApp gateway above. ---- */
+  const smsUser = new Map(); /* per-user rate-limit buckets */
+  const smsNorm = (num) => { let d = String(num || '').replace(/\D/g, ''); while (d.indexOf('00') === 0) d = d.slice(2); if (d.charAt(0) === '0') d = '92' + d.slice(1); return d; };
+  const smsLabCfg = async (store) => {
+    try { const s = await store.get('settings', 'main') || {}; return Object.assign({ enabled: false, gatewayUrl: '', apiKey: '', simSlot: 0, senderName: '' }, s.sms || {}); }
+    catch (e) { return {}; }
+  };
+  const smsRowId = () => 'SMS' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+
+  /* queue one SMS for delivery through the lab's SIM */
+  app.post('/api/sms/queue', needUser, async (req, res) => {
+    try {
+      if (bump(smsUser, req.user.id, 60000).n > 30) return res.status(429).json({ error: 'Too many SMS queued in a minute. Please wait a moment.' });
+      const b = req.body || {};
+      const to = smsNorm(b.to);
+      if (!to || to.length < 10) return res.status(400).json({ error: 'The phone number does not look right' });
+      const text = String(b.text || '').trim();
+      if (!text || text.length > 1000) return res.status(400).json({ error: 'The message is empty or too long' });
+      const kind = ['report', 'due', 'critical', 'test'].indexOf(b.kind) >= 0 ? b.kind : 'report';
+      const toRole = b.toRole === 'doctor' ? 'doctor' : 'patient';
+      const store = req.store;
+      /* idempotency: never queue the same report/due SMS twice for an invoice */
+      if ((kind === 'report' || kind === 'due') && b.invoiceId) {
+        const dup = (await store.all('sms_outbox')).some((r) => r && r.kind === kind && String(r.invoiceId) === String(b.invoiceId) && r.toRole === toRole &&
+          ['pending', 'sending', 'sent', 'delivered'].indexOf(r.status) >= 0);
+        if (dup) return res.json({ ok: true, duplicate: true });
+      }
+      const row = { id: smsRowId(), to, text, kind, invoiceId: b.invoiceId || null, invoiceNo: String(b.invoiceNo || ''),
+        toName: String(b.toName || ''), toRole, status: 'pending', attempts: 0, error: '',
+        ts: new Date().toISOString(), sentAt: '', deliveredAt: '', gatewayId: '' };
+      await store.put('sms_outbox', row);
+      res.json({ ok: true, id: row.id });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* re-queue failed messages (one id, or all=true) */
+  app.post('/api/sms/retry', needUser, async (req, res) => {
+    try {
+      const b = req.body || {}, store = req.store;
+      let n = 0;
+      if (b.id) {
+        const r = await store.get('sms_outbox', String(b.id));
+        if (r && r.status === 'failed') { await store.patch('sms_outbox', r.id, { status: 'pending', attempts: 0, error: '' }); n = 1; }
+      } else if (b.all) {
+        const rows = await store.all('sms_outbox');
+        for (const r of rows) if (r && r.status === 'failed') { await store.patch('sms_outbox', r.id, { status: 'pending', attempts: 0, error: '' }); n++; }
+      }
+      res.json({ ok: true, requeued: n });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* recent outbox rows for the SMS log UIs */
+  app.get('/api/sms/log', needUser, async (req, res) => {
+    try {
+      const q = req.query || {};
+      let rows = await req.store.all('sms_outbox');
+      if (q.invoiceId) rows = rows.filter((r) => String(r.invoiceId) === String(q.invoiceId));
+      if (q.status) rows = rows.filter((r) => r.status === q.status);
+      rows.sort((a, b) => (a.ts < b.ts ? 1 : (a.ts > b.ts ? -1 : 0)));
+      const lim = Math.max(1, Math.min(+q.limit || 200, 1000));
+      res.json({ ok: true, rows: rows.slice(0, lim) });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* gateway + queue health for the settings page */
+  app.get('/api/sms/status', needUser, async (req, res) => {
+    try {
+      const cfg = await smsLabCfg(req.store);
+      const rows = await req.store.all('sms_outbox');
+      const pending = rows.filter((r) => r && (r.status === 'pending' || r.status === 'sending')).length;
+      const failed = rows.filter((r) => r && r.status === 'failed').length;
+      res.json({ ok: true, enabled: !!cfg.enabled, gatewayConfigured: !!(cfg.gatewayUrl && cfg.apiKey), pending, failed, worker: smsSender.status() });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* delivery receipts from the gateway app.
+     Configure the webhook URL in the gateway app as <api>/api/sms/delivery with
+     body { labId, id, status, secret } where secret is the lab's gateway API key. */
+  app.post('/api/sms/delivery', async (req, res) => {
+    try {
+      const b = req.body || {};
+      const labId = String(b.labId || 'main');
+      const lab = await saas.getLab(labId);
+      if (!lab) return res.status(404).json({ error: 'unknown lab' });
+      const st = saas.storeFor(lab), cfg = await smsLabCfg(st);
+      if (!cfg.apiKey || String(b.secret || '') !== cfg.apiKey) return res.status(403).json({ error: 'forbidden' });
+      const id = String(b.id || b.gatewayId || '');
+      if (!id) return res.status(400).json({ error: 'missing id' });
+      const rows = await st.all('sms_outbox');
+      const row = rows.find((r) => r && (r.id === id || r.gatewayId === id));
+      if (!row) return res.status(404).json({ error: 'unknown message' });
+      const status = String(b.status || '').toLowerCase();
+      const patch = {};
+      if (status === 'delivered') { patch.status = 'delivered'; patch.deliveredAt = new Date().toISOString(); }
+      else if (status === 'sent') { if (row.status === 'pending' || row.status === 'sending') { patch.status = 'sent'; patch.sentAt = new Date().toISOString(); } }
+      else if (status === 'failed') { patch.status = 'failed'; patch.error = String(b.error || 'delivery failed').slice(0, 200); }
+      if (Object.keys(patch).length) await st.patch('sms_outbox', row.id, patch);
+      res.json({ ok: true });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* the sender worker: drains pending rows through the gateway app (see sms-sender.js) */
+  const smsSender = require('./sms-sender').create({ saas, log: (m) => console.log('[labpos-cloud]', m) });
+  smsSender.start();
+
 
   /* QR target: a phone-friendly, app-like viewer (sharp pinch-zoom, share/download). Scripts and the desktop
      updater ask for the raw PDF with ?raw=1 or without an HTML Accept header. */
