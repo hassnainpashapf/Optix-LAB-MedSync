@@ -92,8 +92,8 @@ vm.runInContext(html.match(/window\.__LAZY_ROUTES = \{[\s\S]*?\n\};/)[0], contex
 assert.equal(context.__LAZY_ROUTES['#/invoices/pending'], 'assets/js/mod-invoices.js');
 assert.equal(context.__LAZY_ROUTES['#/invoices'], 'assets/js/mod-invoices.js');
 const appSource = fs.readFileSync(path.join(root, 'assets/js/app.js'), 'utf8');
-assert.match(appSource, /label: 'Pending Invoices', route: '#\/invoices\/pending'/);
-assert.match(appSource, /label: 'POS Slips', route: '#\/receipts'/);
+assert.match(appSource, /label: 'Pending Invoices'[^}]*route: '#\/invoices\/pending'/);
+assert.match(appSource, /label: 'POS Slips'[^}]*route: '#\/receipts'/);
 const field = id => document.getElementById(id);
 function change(id, value, event = 'change') { field(id).value = value; field(id).fire(event); }
 function rows() { return field('pi-rows').innerHTML; }
