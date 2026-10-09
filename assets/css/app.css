@@ -1309,7 +1309,10 @@ td .smp-chip{display:flex;width:fit-content;margin:5px 0 0}
 .nav-grp.open>.nav-par .nav-chev{transform:rotate(180deg)}
 .nav-sub{display:none;margin:0 0 4px 22px;padding-left:12px;border-left:2px solid var(--line)}
 .nav-grp.open>.nav-sub{display:block}
-.nav-sub-it{display:block;padding:7px 10px;margin:1px 0;border-radius:8px;color:var(--ink2);font-weight:600;font-size:13px;text-decoration:none;transition:background .15s,color .15s}
+.nav-sub-it{display:flex;align-items:center;gap:7px;padding:7px 10px;margin:1px 0;border-radius:8px;color:var(--ink2);font-weight:600;font-size:13px;text-decoration:none;transition:background .15s,color .15s}
+.nav-sub-ic{display:inline-flex;align-items:center;justify-content:center;flex:0 0 16px;width:16px;height:16px;color:inherit}
+.nav-sub-ic svg{display:block;width:16px;height:16px}
+.nav-sub-lb{min-width:0;overflow-wrap:break-word}
 .nav-sub-it:hover{background:#f1f5f9}
 .nav-sub-it.on{background:var(--brand-soft);color:var(--brand-d);font-weight:700}
 .nav-sub-it.danger{color:var(--red)}.nav-sub-it.danger.on{background:var(--red-soft);color:var(--red)}

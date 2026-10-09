@@ -45,20 +45,20 @@
   var NAV = [
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
-      sub: [{ key: 'new', label: 'Add Patient', route: '#/patients/new' }, { key: 'all', label: 'All Patients', route: '#/patients' }] },
+      sub: [{ key: 'new', label: 'Add Patient', icon: 'plus', route: '#/patients/new' }, { key: 'all', label: 'All Patients', icon: 'users', route: '#/patients' }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
-      sub: [{ key: 'tracking', label: 'Tracking', route: '#/samples' }, { key: 'stickers', label: 'Stickers', route: '#/samples/stickers' }, { key: 'home', label: 'Home Sampling', route: '#/samples/home' }] },
+      sub: [{ key: 'tracking', label: 'Tracking', icon: 'tube', route: '#/samples' }, { key: 'stickers', label: 'Stickers', icon: 'scan', route: '#/samples/stickers' }, { key: 'home', label: 'Home Sampling', icon: 'steth', route: '#/samples/home' }] },
     { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9' },
     { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock', color: '#0ea5e9',
-      sub: [{ label: 'Movements', route: '#/stock' }, { label: 'Pending Stock', route: '#/stock/pending' }, { label: 'Purchase Orders', route: '#/stock/purchase-orders' }, { label: 'Add Stock', route: '#/stock/add' }] },
+      sub: [{ label: 'Movements', icon: 'box', route: '#/stock' }, { label: 'Pending Stock', icon: 'clipboard', route: '#/stock/pending' }, { label: 'Purchase Orders', icon: 'receipt', route: '#/stock/purchase-orders' }, { label: 'Add Stock', icon: 'plus', route: '#/stock/add' }] },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
-      sub: [{ key: 'pending', label: 'Pending Entry', route: '#/results' }, { key: 'ready', label: 'Ready Reports', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', route: '#/results/old' }] },
+      sub: [{ key: 'pending', label: 'Pending Entry', icon: 'clipboard', route: '#/results' }, { key: 'ready', label: 'Ready Reports', icon: 'check', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', icon: 'file', route: '#/results/old' }] },
     { key: 'tests',     label: 'All Tests Catalog', icon: 'flask', route: '#/tests', color: '#14b8a6',
-      sub: [{ key: 'regular', label: 'Regular Tests', route: '#/tests/regular' }, { key: 'generic', label: 'Generic Tests', route: '#/tests/generic' }] },
+      sub: [{ key: 'regular', label: 'Regular Tests', icon: 'flask', route: '#/tests/regular' }, { key: 'generic', label: 'Generic Tests', icon: 'tube', route: '#/tests/generic' }] },
     { key: 'packages',  label: 'Health Packages & Deals', icon: 'box', route: '#/packages', color: '#06b6d4' },
     { key: 'outsourced', label: 'Outsourced', icon: 'scan',     route: '#/outsourced', color: '#d946ef' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316',
-      sub: [{ key: 'all', label: 'All', route: '#/invoices' }, { key: 'pending', label: 'Pending', route: '#/invoices/pending' }, { key: 'thermal', label: 'POS Slips', route: '#/receipts' }] },
+      sub: [{ key: 'all', label: 'All', icon: 'file', route: '#/invoices' }, { key: 'pending', label: 'Pending', icon: 'wallet', route: '#/invoices/pending' }, { key: 'thermal', label: 'POS Slips', icon: 'printer', route: '#/receipts' }] },
     { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues',      color: '#ef4444' },
     { key: 'discounts', label: 'Discounts',  icon: 'coins',     route: '#/discounts', color: '#f59e0b' },
     { key: 'onlinepay', label: 'Online Payments', icon: 'card', route: '#/online-payments', color: '#10b981' },
@@ -69,34 +69,34 @@
     { key: 'profit',    label: 'Profit & Loss', icon: 'chart',  route: '#/finance/profit', color: '#10b981', roles: ['admin'] },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports/tests',   color: '#6366f1',
       sub: [
-        { key: 'tests',    label: 'Test Reports',     route: '#/reports/tests' },
-        { key: 'trends',   label: 'Patient Trends & Delta', route: '#/reports/trends' },
-        { key: 'finance',  label: 'Finance Reports',  route: '#/reports/finance' },
-        { key: 'dues',     label: 'Dues Aging',       route: '#/reports/dues' },
-        { key: 'patients', label: 'Patient Reports',  route: '#/reports/patients' },
-        { key: 'labs',     label: 'Lab Comparison',   route: '#/reports/labs' }
+        { key: 'tests',    label: 'Test Reports', icon: 'flask', route: '#/reports/tests' },
+        { key: 'trends',   label: 'Patient Trends & Delta', icon: 'chart', route: '#/reports/trends' },
+        { key: 'finance',  label: 'Finance Reports', icon: 'finance', route: '#/reports/finance' },
+        { key: 'dues',     label: 'Dues Aging', icon: 'wallet', route: '#/reports/dues' },
+        { key: 'patients', label: 'Patient Reports', icon: 'users', route: '#/reports/patients' },
+        { key: 'labs',     label: 'Lab Comparison', icon: 'chart', route: '#/reports/labs' }
       ] },
     { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads', color: '#06b6d4' },
     { key: 'branches', label: 'Branches', icon: 'grid', route: '#/branches', color: '#2563eb', roles: ['admin'] },
     { key: 'email',     label: 'Email',      icon: 'mail',      route: '#/email',     color: '#0ea5e9', cloudOnly: true,
-      sub: [{ key: 'ready', label: 'Ready to send', route: '#/email' }, { key: 'log', label: 'Email log', route: '#/email/log' }, { key: 'tpl', label: 'Templates & rules', route: '#/email/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', route: '#/email/settings', roles: ['admin'] }] },
+      sub: [{ key: 'ready', label: 'Ready to send', icon: 'mail', route: '#/email' }, { key: 'log', label: 'Email log', icon: 'file', route: '#/email/log' }, { key: 'tpl', label: 'Templates & rules', icon: 'clipboard', route: '#/email/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', icon: 'gear', route: '#/email/settings', roles: ['admin'] }] },
     { key: 'whatsapp',  label: 'WhatsApp',   icon: 'chat',      route: '#/whatsapp',  color: '#22c55e',
-      sub: [{ key: 'ready', label: 'Ready to send', route: '#/whatsapp' }, { key: 'log', label: 'Message log', route: '#/whatsapp/log' }, { key: 'digest', label: '🌙 Owner Night Digest', route: '#/whatsapp/digest' }, { key: 'tpl', label: 'Templates & rules', route: '#/whatsapp/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', route: '#/whatsapp/settings', roles: ['admin'] }] },
+      sub: [{ key: 'ready', label: 'Ready to send', icon: 'chat', route: '#/whatsapp' }, { key: 'log', label: 'Message log', icon: 'file', route: '#/whatsapp/log' }, { key: 'digest', label: '🌙 Owner Night Digest', icon: 'chart', route: '#/whatsapp/digest' }, { key: 'tpl', label: 'Templates & rules', icon: 'clipboard', route: '#/whatsapp/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', icon: 'gear', route: '#/whatsapp/settings', roles: ['admin'] }] },
     { key: 'sms',       label: 'SIM Setting', icon: 'phone',     route: '#/sms',       color: '#8b5cf6',
-      sub: [{ key: 'settings', label: 'SIM Setting', route: '#/sms' }, { key: 'log', label: 'SMS log', route: '#/sms/log' }] },
+      sub: [{ key: 'settings', label: 'SIM Setting', icon: 'phone', route: '#/sms' }, { key: 'log', label: 'SMS log', icon: 'file', route: '#/sms/log' }] },
     { key: 'audit',     label: 'Audit Log',  icon: 'shield',    route: '#/audit',     color: '#0ea5e9' },
     { key: 'subscription', label: 'Subscription', icon: 'card',  route: '#/subscription', color: '#f59e0b', saas: true },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b',
       sub: [
-        { key: 'profile', label: 'Lab Profile', route: '#/settings' },
-        { key: 'payments', label: 'Online Payments', route: '#/settings/payments' },
-        { key: 'account', label: 'My Account', route: '#/settings/account' },
-        { key: 'users', label: 'Users & Roles', route: '#/settings/users' },
-        { key: 'templates', label: 'Report Templates', route: '#/settings/templates' },
-        { key: 'signatures', label: 'Digital Signatures', route: '#/settings/signatures' },
-        { key: 'portal', label: 'Patient Portal', route: '#/settings/portal' },
-        { key: 'backup', label: 'Backup', route: '#/settings/backup' },
-        { key: 'danger', label: 'Danger Zone', route: '#/settings/danger', danger: true }
+        { key: 'profile', label: 'Lab Profile', icon: 'flask', route: '#/settings' },
+        { key: 'payments', label: 'Online Payments', icon: 'card', route: '#/settings/payments' },
+        { key: 'account', label: 'My Account', icon: 'users', route: '#/settings/account' },
+        { key: 'users', label: 'Users & Roles', icon: 'shield', route: '#/settings/users' },
+        { key: 'templates', label: 'Report Templates', icon: 'file', route: '#/settings/templates' },
+        { key: 'signatures', label: 'Digital Signatures', icon: 'check', route: '#/settings/signatures' },
+        { key: 'portal', label: 'Patient Portal', icon: 'lock', route: '#/settings/portal' },
+        { key: 'backup', label: 'Backup', icon: 'download', route: '#/settings/backup' },
+        { key: 'danger', label: 'Danger Zone', icon: 'alert', route: '#/settings/danger', danger: true }
       ] },
     { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
   ];
@@ -754,7 +754,7 @@
           '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span>' +
           '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
-          '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '">' + x.label + '</a>'; }).join('') + '</div></div>';
+          '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '"><span class="nav-sub-ic">' + icon(x.icon || n.icon || 'grid', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
       }
       return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
         '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span></a>';
