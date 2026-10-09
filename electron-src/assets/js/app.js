@@ -79,10 +79,19 @@
     { key: 'audit',     label: 'Audit Log',  icon: 'shield',    route: '#/audit',     color: '#0ea5e9' },
     { key: 'subscription', label: 'Subscription', icon: 'card',  route: '#/subscription', color: '#f59e0b', saas: true },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b',
-      sub: [{ key: 'profile', label: 'Edit Report Form', route: '#/settings' }, { key: 'account', label: 'My Account', route: '#/settings/account' }, { key: 'templates', label: 'Report Templates', route: '#/settings/templates' },
+      sub: [
+        { key: 'profile', label: 'Lab Profile', route: '#/settings' },
+        { key: 'payments', label: 'Online Payments', route: '#/settings/payments' },
+        { key: 'account', label: 'My Account', route: '#/settings/account' },
+        { key: 'users', label: 'Users & Roles', route: '#/settings/users' },
+        { key: 'templates', label: 'Report Templates', route: '#/settings/templates' },
         { key: 'signatures', label: 'Digital Signatures', route: '#/settings/signatures' },
-        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' }, { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' }, { key: 'portal', label: 'Patient portal', route: '#/settings/portal' }, { key: 'users', label: 'Users & Roles', route: '#/settings/users' }, { key: 'backup', label: 'Backup', route: '#/settings/backup' },
-        { key: 'danger', label: 'Danger Zone', route: '#/settings/danger', danger: true }] },
+        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' },
+        { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' },
+        { key: 'portal', label: 'Patient Portal', route: '#/settings/portal' },
+        { key: 'backup', label: 'Backup', route: '#/settings/backup' },
+        { key: 'danger', label: 'Danger Zone', route: '#/settings/danger', danger: true }
+      ] },
     { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
   ];
   var PERMS = {

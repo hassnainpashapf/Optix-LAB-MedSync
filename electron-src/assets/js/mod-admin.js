@@ -1964,31 +1964,154 @@
      SETTINGS  (#/settings) — admin only
      Tabs: Lab Profile | My Account | Users | Backup | Danger Zone
      ============================================================ */
+  var UNIFI_SET_CSS =
+    '.unifi-shell{display:flex;min-height:calc(100vh - 120px);background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px -4px rgba(15,23,42,.06)}' +
+    '.unifi-side{width:280px;flex:none;background:#ffffff;border-right:1px solid #e2e8f0;display:flex;flex-direction:column}' +
+    '.unifi-side-head{padding:16px 14px 12px;border-bottom:1px solid #f1f5f9}' +
+    '.unifi-search-wrap{position:relative;display:flex;align-items:center}' +
+    '.unifi-search-wrap svg{position:absolute;left:10px;width:14px;height:14px;color:#94a3b8;pointer-events:none}' +
+    '.unifi-search-input{width:100%;padding:8px 12px 8px 32px;font-size:12.5px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;color:#1e293b;outline:none;transition:all .15s}' +
+    '.unifi-search-input:focus{background:#fff;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.12)}' +
+    '.unifi-nav{flex:1;overflow-y:auto;padding:8px 8px 24px}' +
+    '.unifi-sec-title{font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;padding:12px 10px 4px}' +
+    '.unifi-nav-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;color:#334155;text-decoration:none;margin-bottom:2px;transition:all .15s ease;border:1px solid transparent}' +
+    '.unifi-nav-item:hover{background:#f1f5f9;color:#0f172a}' +
+    '.unifi-nav-item.active{background:#0f172a;color:#ffffff;font-weight:600;box-shadow:0 4px 12px rgba(15,23,42,.15)}' +
+    '.unifi-nav-item.active .unifi-item-sub{color:#94a3b8}' +
+    '.unifi-item-ico{font-size:16px;width:22px;display:flex;align-items:center;justify-content:center;flex:none}' +
+    '.unifi-item-meta{flex:1;min-width:0}' +
+    '.unifi-item-lbl{font-size:13px;font-weight:700;line-height:1.25}' +
+    '.unifi-item-sub{font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}' +
+    '.unifi-danger{color:#ef4444}' +
+    '.unifi-danger:hover{background:#fef2f2;color:#b91c1c}' +
+    '.unifi-danger.active{background:#dc2626;color:#ffffff}' +
+    '.unifi-content{flex:1;min-width:0;background:#ffffff;display:flex;flex-direction:column}' +
+    '.unifi-top-bar{padding:16px 24px;border-bottom:1px solid #e2e8f0;background:#ffffff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}' +
+    '.unifi-top-title{font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:8px}' +
+    '.unifi-top-desc{font-size:12.5px;color:#64748b;margin:3px 0 0}' +
+    '.unifi-canvas{padding:20px 24px;flex:1;overflow-y:auto}' +
+    '.unifi-panel{background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,23,42,.03);overflow:hidden;transition:border-color .15s}' +
+    '.unifi-panel:hover{border-color:#cbd5e1}' +
+    '.unifi-panel-header{padding:14px 18px;border-bottom:1px solid #f1f5f9;background:#fafbfc;display:flex;align-items:center;gap:12px}' +
+    '.unifi-panel-icon{font-size:18px;width:32px;height:32px;border-radius:8px;background:#ffffff;border:1px solid #e2e8f0;display:grid;place-items:center;flex:none;box-shadow:0 1px 2px rgba(0,0,0,.04)}' +
+    '.unifi-panel-title{font-size:14.5px;font-weight:800;color:#0f172a;margin:0}' +
+    '.unifi-panel-desc{font-size:12px;color:#64748b;margin:2px 0 0}' +
+    '.unifi-panel-body{padding:18px}' +
+    '.unifi-switch{position:relative;display:inline-block;width:42px;height:24px;flex:none}' +
+    '.unifi-switch input{opacity:0;width:0;height:0}' +
+    '.unifi-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#cbd5e1;transition:.2s;border-radius:24px}' +
+    '.unifi-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.2s;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)}' +
+    '.unifi-switch input:checked + .unifi-slider{background-color:#0f172a}' +
+    '.unifi-switch input:checked + .unifi-slider:before{transform:translateX(18px)}' +
+    '.unifi-toggle-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;margin-bottom:8px;gap:14px}' +
+    '.unifi-save-bar{margin-top:20px;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid #e2e8f0}' +
+    '@media(max-width:960px){.unifi-shell{flex-direction:column}.unifi-side{width:100%;border-right:none;border-bottom:1px solid #e2e8f0}.unifi-top-bar,.unifi-canvas{padding:14px}}';
+
   var settingsTab = 'profile';
 
   function renderSettings() {
     if (role() !== 'admin') return denied();
     var tabs = [
-      { id: 'profile', label: 'Edit Report Form' },
-      { id: 'account', label: 'My Account' },
-      { id: 'templates', label: 'Report Templates' },
-      { id: 'signatures', label: 'Digital Signatures' },
-      { id: 'whatsapp', label: 'WhatsApp' },
-      { id: 'sharing', label: 'Email & Slack' },
-      { id: 'portal', label: 'Patient portal' },
-      { id: 'users', label: 'Users & Roles' },
-      { id: 'backup', label: 'Backup' },
-      { id: 'danger', label: 'Danger Zone' }
+      { id: 'profile', sec: 'GENERAL', label: 'Lab Profile', desc: 'Identity, logo, contact & branches', icon: '🏢' },
+      { id: 'payments', sec: 'GENERAL', label: 'Online Payments', desc: 'JazzCash, Easypaisa, Bank & Raast', icon: '💳' },
+      { id: 'account', sec: 'GENERAL', label: 'My Account', desc: 'Admin credentials & password', icon: '👤' },
+      { id: 'users', sec: 'GENERAL', label: 'Users & Roles', desc: 'Staff accounts & permissions', icon: '👥' },
+
+      { id: 'templates', sec: 'REPORTS & PRINTING', label: 'Report Templates', desc: 'Presets, normal ranges & tests', icon: '📄' },
+      { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: '🖋️' },
+
+      { id: 'whatsapp', sec: 'AUTOMATION & PORTAL', label: 'WhatsApp Automation', desc: 'Auto-send reports on payment', icon: '💬' },
+      { id: 'sharing', sec: 'AUTOMATION & PORTAL', label: 'Email & Slack', desc: 'Notifications & webhook alerts', icon: '✉️' },
+      { id: 'portal', sec: 'AUTOMATION & PORTAL', label: 'Patient Portal', desc: 'Online verification & QR access', icon: '🌐' },
+
+      { id: 'backup', sec: 'SYSTEM', label: 'Backup & Cloud Sync', desc: 'Automated backups & export', icon: '💾' },
+      { id: 'danger', sec: 'SYSTEM', label: 'Danger Zone', desc: 'Factory reset & data purge', icon: '⚠️', isDanger: true }
     ];
-    /* the sections are sidebar sub-menu items now (#/settings, #/settings/account, …); the card only labels the open one */
+
     var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
-    var html = ''
-      + '<div class="card"><div class="card-b">'
-      + '<div style="margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:12px"><b style="font-size:17px;color:' + (cur.id === 'danger' ? 'var(--red)' : 'var(--brand)') + '">' + cur.label + '</b></div>'
-      + '<div id="setBody"></div>'
-      + '</div></div>';
+
+    var secOrder = ['GENERAL', 'REPORTS & PRINTING', 'AUTOMATION & PORTAL', 'SYSTEM'];
+    var navHtml = '';
+    secOrder.forEach(function (sec) {
+      var secTabs = tabs.filter(function (t) { return t.sec === sec; });
+      if (!secTabs.length) return;
+      navHtml += '<div class="unifi-sec-title">' + App.esc(sec) + '</div>';
+      secTabs.forEach(function (t) {
+        var activeCls = (t.id === cur.id) ? ' active' : '';
+        var dangerCls = t.isDanger ? ' unifi-danger' : '';
+        navHtml +=
+          '<a href="#/settings/' + t.id + '" class="unifi-nav-item' + activeCls + dangerCls + '" data-set-tab="' + t.id + '" data-keywords="' + App.esc((t.label + ' ' + t.desc + ' ' + t.sec).toLowerCase()) + '">' +
+            '<span class="unifi-item-ico">' + t.icon + '</span>' +
+            '<div class="unifi-item-meta">' +
+              '<div class="unifi-item-lbl">' + App.esc(t.label) + '</div>' +
+              '<div class="unifi-item-sub">' + App.esc(t.desc) + '</div>' +
+            '</div>' +
+          '</a>';
+      });
+    });
+
+    var html =
+      '<style>' + UNIFI_SET_CSS + '</style>' +
+      '<div class="unifi-shell">' +
+        '<!-- UniFi Sidebar -->' +
+        '<aside class="unifi-side">' +
+          '<div class="unifi-side-head">' +
+            '<div class="unifi-search-wrap">' +
+              '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>' +
+              '<input type="text" id="unifi-set-search" class="unifi-search-input" placeholder="Search settings..." autocomplete="off">' +
+            '</div>' +
+          '</div>' +
+          '<nav class="unifi-nav" id="unifi-set-nav-list">' +
+            navHtml +
+          '</nav>' +
+        '</aside>' +
+
+        '<!-- UniFi Content Canvas -->' +
+        '<main class="unifi-content">' +
+          '<div class="unifi-top-bar">' +
+            '<div>' +
+              '<h2 class="unifi-top-title">' +
+                '<span>' + cur.icon + '</span>' +
+                '<span>' + App.esc(cur.label) + '</span>' +
+              '</h2>' +
+              '<p class="unifi-top-desc">' + App.esc(cur.desc) + '</p>' +
+            '</div>' +
+            '<div>' +
+              '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:700;background:#f1f5f9;color:#475569">' +
+                '<span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block"></span> ' + App.esc(cur.sec) +
+              '</span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="unifi-canvas">' +
+            '<div id="setBody"></div>' +
+          '</div>' +
+        '</main>' +
+      '</div>';
+
     document.getElementById('view').innerHTML = html;
+
+    var sInput = document.getElementById('unifi-set-search');
+    if (sInput) {
+      sInput.addEventListener('input', function () {
+        var q = sInput.value.trim().toLowerCase();
+        var items = document.querySelectorAll('.unifi-nav-item');
+        var headers = document.querySelectorAll('.unifi-sec-title');
+        items.forEach(function (el) {
+          var kw = el.getAttribute('data-keywords') || '';
+          el.style.display = (!q || kw.indexOf(q) >= 0) ? 'flex' : 'none';
+        });
+        headers.forEach(function (h) {
+          var sec = h.textContent.trim().toLowerCase();
+          var hasVisible = Array.prototype.slice.call(items).some(function (el) {
+            return (el.getAttribute('data-keywords') || '').indexOf(sec) >= 0 && el.style.display !== 'none';
+          });
+          h.style.display = (!q || hasVisible) ? 'block' : 'none';
+        });
+      });
+    }
+
     if (settingsTab === 'profile') renderSetProfile();
+    else if (settingsTab === 'payments') renderSetPayments();
     else if (settingsTab === 'account') renderSetAccount();
     else if (settingsTab === 'templates') renderSetTemplates();
     else if (settingsTab === 'signatures') renderSetSignatures();
@@ -2037,91 +2160,210 @@
       '@media(max-width:1100px){.sp-layout{grid-template-columns:1fr}.sp-preview{position:static}}' +
       '</style>' +
       '<div class="sp-layout">' +
-      '<div class="sp-form"><div class="form-grid">'
-      + '<div><label class="label">Lab Name *</label><input class="input" id="spName" value="' + App.esc(s.labName || '') + '"></div>'
-      + '<div><label class="label">Tagline</label><input class="input" id="spTag" value="' + App.esc(s.tagline || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Address</label><input class="input" id="spAddr" value="' + App.esc(s.address || '') + '"></div>'
-      + '<div><label class="label">Phone</label><input class="input" id="spPhone" value="' + App.esc(s.phone || '') + '"></div>'
-      + '<div><label class="label">Email</label><input class="input" id="spEmail" value="' + App.esc(s.email || '') + '"></div>'
-      + '<div><label class="label">Invoice Prefix *</label><input class="input" id="spPref" value="' + App.esc(s.invoicePrefix || 'INV') + '" style="max-width:140px"></div>'
-      + '<div><label class="label">Font</label><select class="select" id="spFont">'
-      + '<option value="inter"' + ((!s.font || s.font === 'inter') ? ' selected' : '') + '>Inter (Default)</option>'
-      + '<option value="jakarta"' + (s.font === 'jakarta' ? ' selected' : '') + '>Plus Jakarta Sans</option>'
-      + '<option value="roboto"' + (s.font === 'roboto' ? ' selected' : '') + '>Roboto</option>'
-      + '<option value="poppins"' + (s.font === 'poppins' ? ' selected' : '') + '>Poppins</option>'
-      + '<option value="opensans"' + (s.font === 'opensans' ? ' selected' : '') + '>Open Sans</option>'
-      + '<option value="lato"' + (s.font === 'lato' ? ' selected' : '') + '>Lato</option>'
-      + '<option value="montserrat"' + (s.font === 'montserrat' ? ' selected' : '') + '>Montserrat</option>'
-      + '</select></div>'
-      + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Sample Tracking</div></div>'
-      + '<div style="grid-column:1/-1"><label class="check" for="spReqSmp" style="align-items:flex-start"><input type="checkbox" id="spReqSmp"' + (s.requireSampleCollected ? ' checked' : '') + ' style="margin-top:2px">'
-      + '<span>Require sample to be collected before result entry<span class="muted" style="display:block;font-weight:500;font-size:12px;margin-top:2px">When ON, results cannot be entered for a test whose sample tube is still &ldquo;To collect&rdquo; or was rejected (Samples page). Default OFF &mdash; the Lab Results page only shows a warning.</span></span></label></div>'
-      + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Report Appearance</div></div>'
-      + '<div><label class="label">Report Title</label><input class="input" id="spReportTitle" placeholder="e.g. LABORATORY REPORT" value="' + App.esc(s.reportTitle || '') + '"></div>'
-      + '<div><label class="label">Accent Color</label><input type="color" id="spAccent" value="' + App.esc(s.accent || '#1b1b6e') + '" style="width:56px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer"></div>'
-      + '<div><label class="label">Lab Name Color</label><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-      + '<input type="color" id="spNameColor" value="' + App.esc(s.labNameColor || '#000000') + '" data-touched="' + (s.labNameColor ? '1' : '') + '" style="width:56px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer">'
-      + ['#000000', '#131845', '#1d4ed8', '#047857', '#9f1239', '#b45309'].map(function (c) { return '<button type="button" class="spNameSw" data-c="' + c + '" title="' + c + '" style="width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #cbd5e1;background:' + c + ';cursor:pointer;padding:0"></button>'; }).join('')
-      + '<button type="button" class="btn btn-ghost btn-sm" id="spNameReset">Reset</button></div>'
-      + '<div class="muted" style="font-size:12px;margin-top:4px">Colour of the lab name at the top of reports and receipts. Default: black.</div></div>'
-      + '<div><label class="label">Report Font Size</label><select class="select" id="spFontSize">'
-      + '<option value="small"' + (s.reportFontSize === 'small' ? ' selected' : '') + '>Small</option>'
-      + '<option value="medium"' + ((!s.reportFontSize || s.reportFontSize === 'medium') ? ' selected' : '') + '>Medium</option>'
-      + '<option value="large"' + (s.reportFontSize === 'large' ? ' selected' : '') + '>Large</option>'
-      + '</select></div>'
-      + '<div><label class="label" for="spShowQr">Show QR Code</label><input type="checkbox" id="spShowQr"' + (s.showQr === false ? '' : ' checked') + ' style="width:20px;height:20px;accent-color:var(--brand)"></div>'
-      + '<div><label class="label" for="spShowTagline">Show Tagline</label><input type="checkbox" id="spShowTagline"' + (s.showTagline === false ? '' : ' checked') + ' style="width:20px;height:20px;accent-color:var(--brand)"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Report / Receipt Footer Note</label><input class="input" id="spFoot" value="' + App.esc(s.footerNote || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Lab Logo</label>'
-      + '<div style="display:flex;align-items:center;gap:14px">'
-      + '<img id="spLogoPrev" src="' + App.esc(s.logo || '') + '" alt="Lab logo" style="width:64px;height:64px;border-radius:12px;object-fit:cover;border:1px solid #e3ecf7;background:#f4f7fc;flex:none"' + (s.logo ? '' : ' hidden') + '>'
-      + '<div><input type="file" id="spLogo" accept="image/*">'
-      + '<div class="muted" style="font-size:12px;margin-top:6px">Shown on the login page, sidebar and print headers.</div></div>'
-      + '<button class="btn btn-ghost" type="button" id="spLogoRm"' + (s.logo ? '' : ' hidden') + '>Remove</button>'
-      + '</div></div>'
-      + '<div><label class="label">Website</label><input class="input" id="spWeb" placeholder="www.example.com" value="' + App.esc(s.website || '') + '"></div>'
-      + '<div><label class="label">Call Center Phone</label><input class="input" id="spCall" value="' + App.esc(s.callCenter || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Head Office</label><input class="input" id="spHead" placeholder="Head Office address" value="' + App.esc(s.headOffice || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Main Lab</label><input class="input" id="spMainLab" placeholder="Main Lab address" value="' + App.esc(s.mainLab || '') + '"></div>'
-      + '<div><label class="label">Main Lab Phone</label><input class="input" id="spMainPhone" value="' + App.esc(s.mainLabPhone || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Verification Note</label><textarea class="input" id="spVerNote" rows="2" maxlength="500">' + App.esc(s.verNote || 'Electronically verified report. No signatures necessary.') + '</textarea></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Signatory Doctors <span class="muted" style="font-weight:400">(shown on lab reports)</span></label>'
-      + '<div id="spSigList"></div>'
-      + '<button class="btn btn-ghost" type="button" id="spSigAdd" style="margin-top:8px">+ Add Signatory</button></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Header text <span class="muted" style="font-weight:400">(shown under the lab name on every report — type anything, e.g. address, phone, timings)</span></label>'
-      + '<textarea class="input" id="spHeadText" rows="3" maxlength="600" placeholder="Type the text you want in the report header">' + App.esc(s.headerText || '') + '</textarea></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Footer text <span class="muted" style="font-weight:400">(shown at the bottom of every report — e.g. thanks note, branch address, complaint number)</span></label>'
-      + '<textarea class="input" id="spFootText" rows="3" maxlength="600" placeholder="Type the text you want in the report footer">' + App.esc(s.footerText || '') + '</textarea></div>'
-      + '<details style="grid-column:1/-1"><summary style="cursor:pointer;font-weight:700;color:var(--muted)">Advanced: edit the full header / footer as HTML (most labs do not need this)</summary><div class="form-grid" style="margin-top:10px">'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(this is your current header — edit anything you want; <code>{{logo}}</code> <code>{{qr}}</code> <code>{{lab_barcode}}</code> <code>{{lab_no}}</code> (INV #) <code>{{case_number_barcode}}</code> <code>{{case_number}}</code> (P #) are filled in for every report)</span></label>'
-      + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spHeadSample">Load Sample</button>'
-      + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Reset to automatic</button></div>'
-      + '<textarea class="input" id="spHeadHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic header">' + App.esc(s.headerHtml || '') + '</textarea></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(this is your current footer — edit anything you want)</span></label>'
-      + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spFootSample">Load Sample</button>'
-      + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Reset to automatic</button></div>'
-      + '<textarea class="input" id="spFootHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea></div>'
-      + '</div></details>'
-      + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Online Payments</div></div>'
-      + '<div style="grid-column:1/-1"><label class="check" for="opEnabled" style="align-items:flex-start"><input type="checkbox" id="opEnabled"' + (s.opEnabled ? ' checked' : '') + ' style="margin-top:2px;width:20px;height:20px;accent-color:var(--brand)">'
-      + '<span>Enable online payments<span class="muted" style="display:block;font-weight:500;font-size:12px;margin-top:2px">When ON, patients are shown the payment options below and can share their transaction ID after paying.</span></span></label></div>'
-      + '<div><label class="label">JazzCash number</label><input class="input" id="opJazzcashNo" placeholder="e.g. 0300-1234567" value="' + App.esc(s.opJazzcashNo || '') + '"></div>'
-      + '<div><label class="label">JazzCash account title</label><input class="input" id="opJazzcashTitle" value="' + App.esc(s.opJazzcashTitle || '') + '"></div>'
-      + '<div><label class="label">Easypaisa number</label><input class="input" id="opEasypaisaNo" placeholder="e.g. 0300-1234567" value="' + App.esc(s.opEasypaisaNo || '') + '"></div>'
-      + '<div><label class="label">Easypaisa account title</label><input class="input" id="opEasypaisaTitle" value="' + App.esc(s.opEasypaisaTitle || '') + '"></div>'
-      + '<div><label class="label">Bank name</label><input class="input" id="opBankName" value="' + App.esc(s.opBankName || '') + '"></div>'
-      + '<div><label class="label">IBAN</label><input class="input" id="opIban" placeholder="PK36XXXX0000000000000000" value="' + App.esc(s.opIban || '') + '"></div>'
-      + '<div><label class="label">Raast ID</label><input class="input" id="opRaastId" value="' + App.esc(s.opRaastId || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Instructions shown to patients</label><textarea class="input" id="opInstructions" rows="2" maxlength="500" placeholder="Send payment and share the TID">' + App.esc(s.opInstructions || '') + '</textarea></div>'
-      + '</div>'
-      + '<div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" id="spSave">Save Profile</button>' +
-        '<button class="btn btn-ghost" id="spPreviewBtn">👁 Preview Report</button></div>'
-      + '</div>'
-      + '<div class="sp-preview">'
-      + '<div class="sp-preview-head"><h3>Print Preview</h3><span class="muted" style="font-size:12px">Live — updates as you type</span></div>'
-      + '<div class="sp-preview-doc" id="spPreviewDoc"><div class="muted" style="padding:40px 20px;text-align:center">Loading preview…</div></div>'
-      + '</div>'
-      + '</div>';
+      '<div class="sp-form">' +
+
+      '<!-- Panel 1: Identity & Branding -->' +
+      '<div class="unifi-panel">' +
+        '<div class="unifi-panel-header">' +
+          '<div class="unifi-panel-icon">🏢</div>' +
+          '<div>' +
+            '<h3 class="unifi-panel-title">Identity &amp; Branding</h3>' +
+            '<p class="unifi-panel-desc">Primary laboratory name, tagline, branding logo and invoice prefix.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="unifi-panel-body">' +
+          '<div class="form-grid">' +
+            '<div><label class="label">Lab Name *</label><input class="input" id="spName" value="' + App.esc(s.labName || '') + '"></div>' +
+            '<div><label class="label">Tagline</label><input class="input" id="spTag" value="' + App.esc(s.tagline || '') + '"></div>' +
+            '<div><label class="label">Invoice Prefix *</label><input class="input" id="spPref" value="' + App.esc(s.invoicePrefix || 'INV') + '" style="max-width:140px"></div>' +
+            '<div><label class="label">Website</label><input class="input" id="spWeb" placeholder="www.example.com" value="' + App.esc(s.website || '') + '"></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Laboratory Logo</label>' +
+              '<div style="display:flex;align-items:center;gap:14px;background:#f8fafc;padding:12px;border:1px dashed #cbd5e1;border-radius:10px">' +
+                '<img id="spLogoPrev" src="' + App.esc(s.logo || '') + '" alt="Lab logo" style="width:60px;height:60px;border-radius:10px;object-fit:cover;border:1px solid #cbd5e1;background:#fff;flex:none"' + (s.logo ? '' : ' hidden') + '>' +
+                '<div style="flex:1"><input type="file" id="spLogo" accept="image/*">' +
+                  '<div class="muted" style="font-size:12px;margin-top:4px">Shown on login page, sidebar, POS receipts and test report headers.</div></div>' +
+                '<button class="btn btn-ghost btn-sm" type="button" id="spLogoRm" style="color:var(--red)"' + (s.logo ? '' : ' hidden') + '>Remove</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Panel 2: Contact Information & Branches -->' +
+      '<div class="unifi-panel">' +
+        '<div class="unifi-panel-header">' +
+          '<div class="unifi-panel-icon">📍</div>' +
+          '<div>' +
+            '<h3 class="unifi-panel-title">Contact &amp; Branch Locations</h3>' +
+            '<p class="unifi-panel-desc">Addresses, phone numbers, call center and main lab branch info.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="unifi-panel-body">' +
+          '<div class="form-grid">' +
+            '<div style="grid-column:1/-1"><label class="label">Primary Address</label><input class="input" id="spAddr" value="' + App.esc(s.address || '') + '"></div>' +
+            '<div><label class="label">Primary Phone</label><input class="input" id="spPhone" value="' + App.esc(s.phone || '') + '"></div>' +
+            '<div><label class="label">Official Email</label><input class="input" id="spEmail" value="' + App.esc(s.email || '') + '"></div>' +
+            '<div><label class="label">Call Center Phone (24/7)</label><input class="input" id="spCall" value="' + App.esc(s.callCenter || '') + '"></div>' +
+            '<div><label class="label">Main Lab Phone</label><input class="input" id="spMainPhone" value="' + App.esc(s.mainLabPhone || '') + '"></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Main Lab Branch Address</label><input class="input" id="spMainLab" placeholder="Main Lab address" value="' + App.esc(s.mainLab || '') + '"></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Head Office Address</label><input class="input" id="spHead" placeholder="Head Office address" value="' + App.esc(s.headOffice || '') + '"></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Panel 3: Report Appearance & Typography -->' +
+      '<div class="unifi-panel">' +
+        '<div class="unifi-panel-header">' +
+          '<div class="unifi-panel-icon">🎨</div>' +
+          '<div>' +
+            '<h3 class="unifi-panel-title">Report Appearance &amp; Typography</h3>' +
+            '<p class="unifi-panel-desc">Fonts, accent colors, titles, and layout options for patient reports.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="unifi-panel-body">' +
+          '<div class="form-grid">' +
+            '<div><label class="label">Report Title</label><input class="input" id="spReportTitle" placeholder="e.g. LABORATORY REPORT" value="' + App.esc(s.reportTitle || '') + '"></div>' +
+            '<div><label class="label">Font Family</label><select class="select" id="spFont">' +
+              '<option value="inter"' + ((!s.font || s.font === 'inter') ? ' selected' : '') + '>Inter (Default)</option>' +
+              '<option value="jakarta"' + (s.font === 'jakarta' ? ' selected' : '') + '>Plus Jakarta Sans</option>' +
+              '<option value="roboto"' + (s.font === 'roboto' ? ' selected' : '') + '>Roboto</option>' +
+              '<option value="poppins"' + (s.font === 'poppins' ? ' selected' : '') + '>Poppins</option>' +
+              '<option value="opensans"' + (s.font === 'opensans' ? ' selected' : '') + '>Open Sans</option>' +
+              '<option value="lato"' + (s.font === 'lato' ? ' selected' : '') + '>Lato</option>' +
+              '<option value="montserrat"' + (s.font === 'montserrat' ? ' selected' : '') + '>Montserrat</option>' +
+            '</select></div>' +
+            '<div><label class="label">Report Font Size</label><select class="select" id="spFontSize">' +
+              '<option value="small"' + (s.reportFontSize === 'small' ? ' selected' : '') + '>Small</option>' +
+              '<option value="medium"' + ((!s.reportFontSize || s.reportFontSize === 'medium') ? ' selected' : '') + '>Medium</option>' +
+              '<option value="large"' + (s.reportFontSize === 'large' ? ' selected' : '') + '>Large</option>' +
+            '</select></div>' +
+            '<div><label class="label">Accent Theme Color</label><div style="display:flex;align-items:center;gap:8px">' +
+              '<input type="color" id="spAccent" value="' + App.esc(s.accent || '#1b1b6e') + '" style="width:52px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer">' +
+              '<span class="muted" style="font-size:12px">Table headers &amp; branding</span></div></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Lab Name Color</label><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+              '<input type="color" id="spNameColor" value="' + App.esc(s.labNameColor || '#000000') + '" data-touched="' + (s.labNameColor ? '1' : '') + '" style="width:52px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer">' +
+              ['#000000', '#131845', '#1d4ed8', '#047857', '#9f1239', '#b45309'].map(function (c) { return '<button type="button" class="spNameSw" data-c="' + c + '" title="' + c + '" style="width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #cbd5e1;background:' + c + ';cursor:pointer;padding:0"></button>'; }).join('') +
+              '<button type="button" class="btn btn-ghost btn-sm" id="spNameReset">Reset</button></div>' +
+              '<div class="muted" style="font-size:12px;margin-top:4px">Colour of the lab name at the top of reports and receipts. Default: black.</div></div>' +
+          '</div>' +
+
+          '<div style="margin-top:16px">' +
+            '<div class="unifi-toggle-row">' +
+              '<div><div style="font-weight:700;font-size:13.5px">Show QR Code on Reports</div>' +
+                '<div class="muted" style="font-size:12px">Print QR code for digital result verification.</div></div>' +
+              '<label class="unifi-switch"><input type="checkbox" id="spShowQr"' + (s.showQr === false ? '' : ' checked') + '><span class="unifi-slider"></span></label>' +
+            '</div>' +
+            '<div class="unifi-toggle-row">' +
+              '<div><div style="font-weight:700;font-size:13.5px">Show Tagline in Header</div>' +
+                '<div class="muted" style="font-size:12px">Display lab tagline underneath the main laboratory title.</div></div>' +
+              '<label class="unifi-switch"><input type="checkbox" id="spShowTagline"' + (s.showTagline === false ? '' : ' checked') + '><span class="unifi-slider"></span></label>' +
+            '</div>' +
+            '<div class="unifi-toggle-row">' +
+              '<div><div style="font-weight:700;font-size:13.5px">Require Sample Collection Before Result Entry</div>' +
+                '<div class="muted" style="font-size:12px">Results cannot be entered if specimen tube is not yet marked collected or was rejected.</div></div>' +
+              '<label class="unifi-switch"><input type="checkbox" id="spReqSmp"' + (s.requireSampleCollected ? ' checked' : '') + '><span class="unifi-slider"></span></label>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Panel 4: Report Notices & Disclaimers -->' +
+      '<div class="unifi-panel">' +
+        '<div class="unifi-panel-header">' +
+          '<div class="unifi-panel-icon">📝</div>' +
+          '<div>' +
+            '<h3 class="unifi-panel-title">Report Notices &amp; Verification Clause</h3>' +
+            '<p class="unifi-panel-desc">Custom header lines, footer notices, and electronic verification note.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="unifi-panel-body">' +
+          '<div class="form-grid">' +
+            '<div style="grid-column:1/-1"><label class="label">Header Sub-text <span class="muted" style="font-weight:400">(shown under lab name on every report)</span></label>' +
+              '<textarea class="input" id="spHeadText" rows="2" maxlength="600" placeholder="Type text shown under lab name...">' + App.esc(s.headerText || '') + '</textarea></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Footer Notice <span class="muted" style="font-weight:400">(shown at bottom of every report)</span></label>' +
+              '<textarea class="input" id="spFootText" rows="2" maxlength="600" placeholder="e.g. Please consult your physician with clinical findings...">' + App.esc(s.footerText || '') + '</textarea></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Verification Note</label>' +
+              '<textarea class="input" id="spVerNote" rows="2" maxlength="500">' + App.esc(s.verNote || 'Electronically verified report. No signatures necessary.') + '</textarea></div>' +
+            '<div style="grid-column:1/-1"><label class="label">POS Slip / Receipt Footer Note</label>' +
+              '<input class="input" id="spFoot" value="' + App.esc(s.footerNote || '') + '" placeholder="Printed at the bottom of 80mm slips"></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Panel 5: Signatory Doctors -->' +
+      '<div class="unifi-panel">' +
+        '<div class="unifi-panel-header">' +
+          '<div class="unifi-panel-icon">👨‍⚕️</div>' +
+          '<div>' +
+            '<h3 class="unifi-panel-title">Signatory Doctors &amp; Consultants</h3>' +
+            '<p class="unifi-panel-desc">Consultant pathologists and lab technologists printed in report footers.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="unifi-panel-body">' +
+          '<div id="spSigList"></div>' +
+          '<button class="btn btn-ghost btn-sm" type="button" id="spSigAdd" style="margin-top:10px">+ Add Signatory Doctor</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Panel 6: Advanced Custom HTML Templates -->' +
+      '<div class="unifi-panel">' +
+        '<details>' +
+          '<summary style="padding:14px 18px;cursor:pointer;font-weight:700;color:var(--brand-d);display:flex;align-items:center;gap:8px">' +
+            '<span>⚙️ Advanced: Custom Report Header &amp; Footer HTML</span>' +
+            '<span class="muted" style="font-size:12px;font-weight:400">(Optional — edit raw print HTML)</span>' +
+          '</summary>' +
+          '<div class="unifi-panel-body" style="border-top:1px solid #f1f5f9">' +
+            '<div class="form-grid">' +
+              '<div style="grid-column:1/-1">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+                  '<label class="label" style="margin:0">Custom Header HTML <code>{{logo}} {{qr}} {{lab_no}}</code></label>' +
+                  '<div style="display:flex;gap:6px">' +
+                    '<button type="button" class="btn btn-ghost btn-xs" id="spHeadSample">Load Sample</button>' +
+                    '<button type="button" class="btn btn-ghost btn-xs" id="spHeadClear">Reset</button>' +
+                  '</div>' +
+                '</div>' +
+                '<textarea class="input" id="spHeadHtml" rows="7" spellcheck="false" style="font-family:monospace;font-size:12px" placeholder="Leave empty for automatic header">' + App.esc(s.headerHtml || '') + '</textarea>' +
+              '</div>' +
+              '<div style="grid-column:1/-1">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+                  '<label class="label" style="margin:0">Custom Footer HTML</label>' +
+                  '<div style="display:flex;gap:6px">' +
+                    '<button type="button" class="btn btn-ghost btn-xs" id="spFootSample">Load Sample</button>' +
+                    '<button type="button" class="btn btn-ghost btn-xs" id="spFootClear">Reset</button>' +
+                  '</div>' +
+                '</div>' +
+                '<textarea class="input" id="spFootHtml" rows="7" spellcheck="false" style="font-family:monospace;font-size:12px" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</details>' +
+      '</div>' +
+
+      '<!-- Panel 7: Quick Shortcut to Online Payments -->' +
+      '<div class="unifi-panel" style="background:#f0fdf4;border-color:#bbf7d0">' +
+        '<div class="unifi-panel-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">' +
+          '<div style="display:flex;align-items:center;gap:12px">' +
+            '<span style="font-size:24px">💳</span>' +
+            '<div>' +
+              '<div style="font-weight:700;color:#166534">Online Payments &amp; Raast QR</div>' +
+              '<div style="font-size:12.5px;color:#15803d">Manage JazzCash, Easypaisa, Bank accounts and patient QR instructions.</div>' +
+            '</div>' +
+          '</div>' +
+          '<a href="#/settings/payments" class="btn btn-sm btn-primary" style="background:#16a34a;border:none">Configure Payments &rarr;</a>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="unifi-save-bar">' +
+        '<button class="btn btn-primary" id="spSave" style="padding:10px 24px;font-weight:700">Save Lab Profile</button>' +
+        '<button class="btn btn-ghost" id="spPreviewBtn">👁 Full Page Preview</button>' +
+      '</div>' +
+      '</div>' +
+
+      '<div class="sp-preview">' +
+        '<div class="sp-preview-head"><h3>Live Print Preview</h3><span class="muted" style="font-size:12px">Updates in real time</span></div>' +
+        '<div class="sp-preview-doc" id="spPreviewDoc"><div class="muted" style="padding:40px 20px;text-align:center">Loading preview…</div></div>' +
+      '</div>' +
+      '</div>';
     document.getElementById('setBody').innerHTML = html;
     /* lab logo upload: downscale to max 256px PNG, keep in memory until Save */
     var _logoData = s.logo || '';
@@ -2338,15 +2580,15 @@
         reportFontSize: document.getElementById('spFontSize').value,
         headerHtml: (document.getElementById('spHeadHtml').value === _tplHead ? '' : document.getElementById('spHeadHtml').value.trim()),
         footerHtml: (document.getElementById('spFootHtml').value === _tplFoot ? '' : document.getElementById('spFootHtml').value.trim()),
-        opEnabled: document.getElementById('opEnabled').checked,
-        opJazzcashNo: document.getElementById('opJazzcashNo').value.trim(),
-        opJazzcashTitle: document.getElementById('opJazzcashTitle').value.trim(),
-        opEasypaisaNo: document.getElementById('opEasypaisaNo').value.trim(),
-        opEasypaisaTitle: document.getElementById('opEasypaisaTitle').value.trim(),
-        opBankName: document.getElementById('opBankName').value.trim(),
-        opIban: document.getElementById('opIban').value.trim(),
-        opRaastId: document.getElementById('opRaastId').value.trim(),
-        opInstructions: document.getElementById('opInstructions').value.trim()
+        opEnabled: document.getElementById('opEnabled') ? document.getElementById('opEnabled').checked : !!(DB.get('settings', 'main') || {}).opEnabled,
+        opJazzcashNo: document.getElementById('opJazzcashNo') ? document.getElementById('opJazzcashNo').value.trim() : ((DB.get('settings', 'main') || {}).opJazzcashNo || ''),
+        opJazzcashTitle: document.getElementById('opJazzcashTitle') ? document.getElementById('opJazzcashTitle').value.trim() : ((DB.get('settings', 'main') || {}).opJazzcashTitle || ''),
+        opEasypaisaNo: document.getElementById('opEasypaisaNo') ? document.getElementById('opEasypaisaNo').value.trim() : ((DB.get('settings', 'main') || {}).opEasypaisaNo || ''),
+        opEasypaisaTitle: document.getElementById('opEasypaisaTitle') ? document.getElementById('opEasypaisaTitle').value.trim() : ((DB.get('settings', 'main') || {}).opEasypaisaTitle || ''),
+        opBankName: document.getElementById('opBankName') ? document.getElementById('opBankName').value.trim() : ((DB.get('settings', 'main') || {}).opBankName || ''),
+        opIban: document.getElementById('opIban') ? document.getElementById('opIban').value.trim() : ((DB.get('settings', 'main') || {}).opIban || ''),
+        opRaastId: document.getElementById('opRaastId') ? document.getElementById('opRaastId').value.trim() : ((DB.get('settings', 'main') || {}).opRaastId || ''),
+        opInstructions: document.getElementById('opInstructions') ? document.getElementById('opInstructions').value.trim() : ((DB.get('settings', 'main') || {}).opInstructions || '')
       });
       App.toast('Report form saved.');
       if (App.renderShell) App.renderShell();
@@ -2425,6 +2667,108 @@
     }
     // logo changes also refresh the preview
     _paintPreview();
+  }
+
+  /* ---- Online Payments & Banking (UniFi OS) ---- */
+  function renderSetPayments() {
+    var s = DB.get('settings', 'main') || {};
+    var html =
+      '<div class="unifi-card-group" style="max-width:820px">' +
+        '<!-- Panel 1: Online Payments Activation -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">⚡</div>' +
+            '<div>' +
+              '<h3 class="unifi-panel-title">Online Payment Collection</h3>' +
+              '<p class="unifi-panel-desc">Enable digital payment methods and account details on patient invoices.</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<div class="unifi-toggle-row">' +
+              '<div>' +
+                '<div style="font-weight:700;font-size:14px">Accept Online Payments (JazzCash, Easypaisa, Raast)</div>' +
+                '<div class="muted" style="font-size:12px">When enabled, invoices with remaining due show payment instructions and TID verification.</div>' +
+              '</div>' +
+              '<label class="unifi-switch">' +
+                '<input type="checkbox" id="pay-opEnabled"' + (s.opEnabled ? ' checked' : '') + '>' +
+                '<span class="unifi-slider"></span>' +
+              '</label>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<!-- Panel 2: Mobile Wallets -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">📱</div>' +
+            '<div>' +
+              '<h3 class="unifi-panel-title">Mobile Wallets (JazzCash &amp; Easypaisa)</h3>' +
+              '<p class="unifi-panel-desc">Account numbers and verified titles shown to patients.</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<div class="form-grid">' +
+              '<div><label class="label">JazzCash Mobile Number</label><input class="input" id="pay-opJazzcashNo" placeholder="e.g. 0300-1234567" value="' + App.esc(s.opJazzcashNo || '') + '"></div>' +
+              '<div><label class="label">JazzCash Account Title</label><input class="input" id="pay-opJazzcashTitle" placeholder="e.g. Optix Diagnostics" value="' + App.esc(s.opJazzcashTitle || '') + '"></div>' +
+              '<div><label class="label">Easypaisa Mobile Number</label><input class="input" id="pay-opEasypaisaNo" placeholder="e.g. 0345-1234567" value="' + App.esc(s.opEasypaisaNo || '') + '"></div>' +
+              '<div><label class="label">Easypaisa Account Title</label><input class="input" id="pay-opEasypaisaTitle" placeholder="e.g. Optix Diagnostics" value="' + App.esc(s.opEasypaisaTitle || '') + '"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<!-- Panel 3: Bank Transfer & Raast -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">🏦</div>' +
+            '<div>' +
+              '<h3 class="unifi-panel-title">Direct Bank Transfer &amp; Raast ID</h3>' +
+              '<p class="unifi-panel-desc">Bank account IBAN and Raast ID for instant settlements.</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<div class="form-grid">' +
+              '<div><label class="label">Bank Name</label><input class="input" id="pay-opBankName" placeholder="e.g. Meezan Bank, HBL..." value="' + App.esc(s.opBankName || '') + '"></div>' +
+              '<div><label class="label">IBAN / Account Number</label><input class="input mono" id="pay-opIban" placeholder="PK36XXXX0000000000000000" value="' + App.esc(s.opIban || '') + '"></div>' +
+              '<div style="grid-column:1/-1"><label class="label">Raast ID / Registered Mobile Number</label><input class="input" id="pay-opRaastId" placeholder="e.g. 03001234567 or email" value="' + App.esc(s.opRaastId || '') + '"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<!-- Panel 4: Patient Payment Instructions -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">📋</div>' +
+            '<div>' +
+              '<h3 class="unifi-panel-title">Instructions Displayed to Patients</h3>' +
+              '<p class="unifi-panel-desc">Notice shown on invoices, receipts and WhatsApp payment requests.</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<textarea class="input" id="pay-opInstructions" rows="3" maxlength="500" placeholder="Please send payment to any account above and share the Transaction ID (TID) to confirm.">' + App.esc(s.opInstructions || '') + '</textarea>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="unifi-save-bar">' +
+          '<button class="btn btn-primary btn-lg" id="pay-save-btn" style="padding:10px 24px;font-weight:700">Save Payment Settings</button>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById('setBody').innerHTML = html;
+
+    document.getElementById('pay-save-btn').addEventListener('click', function () {
+      DB.update('settings', 'main', {
+        opEnabled: document.getElementById('pay-opEnabled').checked,
+        opJazzcashNo: document.getElementById('pay-opJazzcashNo').value.trim(),
+        opJazzcashTitle: document.getElementById('pay-opJazzcashTitle').value.trim(),
+        opEasypaisaNo: document.getElementById('pay-opEasypaisaNo').value.trim(),
+        opEasypaisaTitle: document.getElementById('pay-opEasypaisaTitle').value.trim(),
+        opBankName: document.getElementById('pay-opBankName').value.trim(),
+        opIban: document.getElementById('pay-opIban').value.trim(),
+        opRaastId: document.getElementById('pay-opRaastId').value.trim(),
+        opInstructions: document.getElementById('pay-opInstructions').value.trim()
+      });
+      App.toast('Payment settings saved.');
+    });
   }
 
   /* ---- My Account — change own details, photo, username, password ---- */
@@ -4279,7 +4623,7 @@
     });
   }
 
-  var SET_TABS = ['profile', 'account', 'templates', 'signatures', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
+  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
   /* Dropdown Lists live under Patients now (#/patients/lists); the old Settings address still works */
   App.route('#/patients/lists', function () {
     if (role() !== 'admin') return denied();
