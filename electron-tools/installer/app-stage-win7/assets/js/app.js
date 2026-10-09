@@ -33,6 +33,7 @@
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
     tube: '<path d="M8 2h8"/><path d="M9 2v16.5a3 3 0 0 0 6 0V2"/><path d="M9 11h6"/>',
     scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M11 8v8M15 8v8M18 8v8"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     finance: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/>',
     phone: '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/>'
   };
@@ -48,13 +49,14 @@
       sub: [{ key: 'new', label: 'Add Patient', icon: 'plus', route: '#/patients/new' }, { key: 'all', label: 'All Patients', icon: 'users', route: '#/patients' }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
       sub: [{ key: 'tracking', label: 'Tracking', icon: 'tube', route: '#/samples' }, { key: 'stickers', label: 'Stickers', icon: 'scan', route: '#/samples/stickers' }, { key: 'home', label: 'Home Sampling', icon: 'steth', route: '#/samples/home' }] },
-    { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9' },
+    { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9',
+      sub: [{ key: 'catalog', label: 'Catalog', icon: 'box', route: '#/inventory' }, { key: 'add', label: 'Add Item', icon: 'plus', route: '#/inventory/add' }, { key: 'lowout', label: 'Low / Out of Stock', icon: 'alert', route: '#/stock/pending' }, { key: 'expiring', label: 'Expiring Soon', icon: 'clock', route: '#/stock/alerts' }] },
     { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock', color: '#0ea5e9',
       sub: [{ label: 'Movements', icon: 'box', route: '#/stock' }, { label: 'Pending Stock', icon: 'clipboard', route: '#/stock/pending' }, { label: 'Purchase Orders', icon: 'receipt', route: '#/stock/purchase-orders' }, { label: 'Add Stock', icon: 'plus', route: '#/stock/add' }] },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', icon: 'clipboard', route: '#/results' }, { key: 'ready', label: 'Ready Reports', icon: 'check', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', icon: 'file', route: '#/results/old' }] },
     { key: 'tests',     label: 'All Tests Catalog', icon: 'flask', route: '#/tests', color: '#14b8a6',
-      sub: [{ key: 'regular', label: 'Regular Tests', icon: 'flask', route: '#/tests/regular' }, { key: 'generic', label: 'Generic Tests', icon: 'tube', route: '#/tests/generic' }] },
+      sub: [{ key: 'all', label: 'All Tests', icon: 'flask', route: '#/tests' }, { key: 'regular', label: 'Regular Tests', icon: 'flask', route: '#/tests/regular' }, { key: 'generic', label: 'Generic Tests', icon: 'tube', route: '#/tests/generic' }] },
     { key: 'packages',  label: 'Health Packages & Deals', icon: 'box', route: '#/packages', color: '#06b6d4' },
     { key: 'outsourced', label: 'Outsourced', icon: 'scan',     route: '#/outsourced', color: '#d946ef' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316',
@@ -751,12 +753,12 @@
       if (n.sub && subs.length >= 2) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
         var open = n.key === activeKey;
         return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
-          '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+          '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-label="' + esc(n.label) + '" title="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span>' +
           '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
-          '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '"><span class="nav-sub-ic">' + icon(x.icon || n.icon || 'grid', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
+          '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '" title="' + esc(x.label) + '"><span class="nav-sub-ic">' + icon(x.icon || n.icon || 'grid', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
       }
-      return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
+      return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-label="' + esc(n.label) + '" title="' + esc(n.label) + '">' +
         '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span></a>';
     }
     /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
@@ -780,8 +782,8 @@
       if (!inside.length) return;
       if (inside.length === 1) { items += itemHtml(byKey[inside[0]]); return; } /* a folder with one page is just that page */
       var holds = inside.indexOf(activeKey) >= 0, open = holds || !!savedOpen[f.id];
-      items += '<div class="nav-fold' + (open ? ' open' : '') + (holds ? ' has-active' : '') + '" data-fold="' + f.id + '">' +
-        '<button type="button" class="nav-it nav-fh" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="nav-ic">' + icon(f.icon, 20) + '</span><span class="nav-lb">' + f.label + '</span>' +
+        items += '<div class="nav-fold' + (open ? ' open' : '') + (holds ? ' has-active' : '') + '" data-fold="' + f.id + '">' +
+        '<button type="button" class="nav-it nav-fh" aria-label="' + esc(f.label) + '" title="' + esc(f.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="nav-ic">' + icon(f.icon, 20) + '</span><span class="nav-lb">' + f.label + '</span>' +
         '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
         '<div class="nav-fb">' + inside.map(function (k) { return itemHtml(byKey[k]); }).join('') + '</div></div>';
     });
@@ -823,7 +825,8 @@
         '<a class="btn btn-sm tb-qab tb-classic" href="#/finance">' + icon('finance', 14) + '<span class="tb-qa-t">Close Day</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>';
     var _curHash = (location.hash || '').split('?')[0];
-    var _pageTitle = _curHash === '#/packages' ? 'Health Packages & Screening Deals Center' :
+    var _pageTitle = _curHash === '#/patients/new' ? 'Add Patient' :
+                     _curHash === '#/packages' ? 'Health Packages & Screening Deals Center' :
                      _curHash === '#/invoices/pending' ? 'Pending Invoices' :
                      _curHash === '#/samples/stickers' ? 'Tube Stickers (50×25mm)' :
                      (_curHash === '#/reports/trends' || _curHash === '#/trends') ? 'Patient Trends & Delta' :
@@ -926,7 +929,7 @@
     var h = (location.hash || '').split('?')[0], subs = document.querySelectorAll('.nav-sub-it');
     for (var j = 0; j < subs.length; j++) {
       var dh = subs[j].getAttribute('data-href');
-      var on = (dh === h) || (dh === '#/samples/home' && h === '#/home-sampling') || (dh === '#/reports/tests' && (h === '#/reports' || h === '#/reports/all'));
+      var on = (dh === h) || (dh === '#/samples/home' && h === '#/home-sampling') || (dh === '#/reports/tests' && (h === '#/reports' || h === '#/reports/all')) || (dh === '#/stock/pending' && (h === '#/inventory/low-out' || h === '#/inventory/pending')) || (dh === '#/stock/alerts' && (h === '#/inventory/expiring' || h === '#/inventory/alerts'));
       subs[j].classList.toggle('on', on);
     }
     /* folders: the one holding the current page opens (the others keep whatever the user chose) */

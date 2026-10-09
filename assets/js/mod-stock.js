@@ -287,8 +287,7 @@
         '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
           (canEdit() ? '<button class="btn btn-primary" id="skRecvTop" style="display:inline-flex;align-items:center;gap:6px;font-weight:700">' + App.icon('plus', 16) + ' Receive Stock</button>' +
             '<button class="btn btn-secondary" id="skMoveTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:700;display:inline-flex;align-items:center;gap:6px">🚚 Move / Use Stock</button>' +
-            '<button class="btn btn-secondary" id="skAddTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('plus', 16) + ' Add Item</button>' +
-            '<button class="btn btn-ghost btn-sm" id="skSeedCatTop" style="background:#f8fafc;border:1px solid #cbd5e1;font-weight:600;display:inline-flex;align-items:center;gap:6px" title="Add common lab items to the catalog without recording deliveries">⚡ Lab Catalog</button>' : '') +
+            '<button class="btn btn-secondary" id="skAddTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('plus', 16) + ' Add Item</button>' : '') +
           '<button class="btn btn-ghost btn-sm" id="skCsvExport" style="background:#f8fafc;border:1px solid #cbd5e1;font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('download', 14) + ' Export CSV</button>' +
         '</div>' +
       '</div>' +
@@ -692,14 +691,14 @@
     var isStock = location.hash.indexOf('#/stock') === 0;
     var tab = params && params.tab;
     F.tab = tab === 'orders' || tab === 'pending' || tab === 'alerts' || tab === 'moves' || tab === 'items' ? tab : (isStock ? 'moves' : 'items');
-    if (tab === 'add') F.tab = 'moves';
+    if (tab === 'add') F.tab = 'items';
     F.poId = '';
     if (isStock && canEditOrders()) {
       try { ensurePurchaseOrder(new Date()); }
       catch (e) { App.toast('Could not generate this month’s purchase order. Revisit Stock to retry.', 'err'); }
     }
     render();
-    if (tab === 'add' && canEdit()) receive('');
+    if (tab === 'add' && canEdit()) itemForm(null);
   }
 
   App.route('#/inventory', routeHandler);

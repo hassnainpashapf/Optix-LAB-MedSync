@@ -50,7 +50,8 @@
     list: _svgA('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'),
     cash: _svgA('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'),
     trend: _svgA('<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>'),
-    flask: _svgA('<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/>')
+    flask: _svgA('<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/>'),
+    alert: _svgA('<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')
   };
   function admStat(icon, tint, label, value, sub, raw, isMoney, vlStyle, fullTint) {
     var countAttrs = (typeof raw === 'number' && isFinite(raw))
@@ -560,7 +561,7 @@
       } });
     }
     /* ---- report templates (worker 8): saved {type,from,to,preset} presets ---- */
-    var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This month', lastMonth: 'Last month', custom: 'Custom range' };
+    var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This Month', lastMonth: 'Last Month', custom: 'Custom Range' };
     var REP_TYPE_LBL = { tests: 'Tests', finance: 'Finance', dues: 'Dues', patients: 'Patients', labs: 'Labs' };
     function repTplList() { return DB.all('report_templates') || []; }
     function repTplDesc(t) {
@@ -857,35 +858,22 @@
         + '<div><div class="stat-num">' + val + '</div><div class="stat-lbl">' + label + '</div></div></div>';
     }
 
-    function presetBtn(p, label) {
-      return '<button class="btn ' + (rep.preset === p ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-preset="' + p + '" style="font-weight:600">'
-        + label + '</button>';
-    }
+    var presetOptions = Object.keys(REP_PRESET_LBL).map(function (p) {
+      return '<option value="' + p + '"' + (rep.preset === p ? ' selected' : '') + '>' + REP_PRESET_LBL[p] + '</option>';
+    }).join('');
     var filterCard = ''
-      + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
-      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-      +     '<div style="display:flex;gap:8px;align-items:center">'
-      +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Dates:</span>'
-      +       '<input class="input" type="date" id="repFrom" value="' + App.esc(from) + '" style="width:auto;padding:6px 10px;font-size:13px">'
-      +       '<span style="color:var(--muted);font-weight:700">–</span>'
-      +       '<input class="input" type="date" id="repTo" value="' + App.esc(to) + '" style="width:auto;padding:6px 10px;font-size:13px">'
+      + '<div class="card rep-control-card"><div class="card-b rep-control-row">'
+      +     '<div class="rep-control-group rep-dates">'
+      +       '<label class="rep-control-field" for="repPreset">Period<select class="select" id="repPreset">' + presetOptions + '</select></label>'
+      +       '<label class="rep-control-field" for="repFrom">From<input class="input" type="date" id="repFrom" value="' + App.esc(from) + '"></label>'
+      +       '<label class="rep-control-field" for="repTo">To<input class="input" type="date" id="repTo" value="' + App.esc(to) + '"></label>'
       +     '</div>'
-      +     '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
-      +       presetBtn('today', 'Today')
-      +       presetBtn('yesterday', 'Yesterday')
-      +       presetBtn('last7', 'Last 7 days')
-      +       presetBtn('last30', 'Last 30 days')
-      +       presetBtn('thisMonth', 'This Month')
-      +       presetBtn('lastMonth', 'Last Month')
-      +       (rep.preset === 'custom' ? '<span class="muted" style="font-size:12px;font-weight:600">Custom range</span>' : '')
-      +     '</div>'
-      +     '<div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;align-items:center">'
+      +     '<div class="rep-control-group rep-actions">'
       +       '<button class="btn btn-ghost btn-sm" id="repCsv">' + DL_ICON + ' Export CSV</button>'
       +       '<button class="btn btn-ghost btn-sm" id="repBuilder">🛠 Builder</button>'
       +       '<button class="btn btn-ghost btn-sm" id="repSchedBtn">⏰ Schedules</button>'
       +       '<button class="btn btn-primary btn-sm" id="repPrint">' + PRINT_ICON + ' Print Report</button>'
       +     '</div>'
-      +   '</div>'
       + '</div></div>';
 
     /* ---- Finalized Patient Reports archive ----
@@ -1058,14 +1046,16 @@
       var opts = '<option value="">-- select template --</option>' + tpls.map(function (t) {
         return '<option value="' + App.esc(String(t.id)) + '">' + App.esc(t.name) + ' — ' + App.esc(repTplDesc(t)) + '</option>';
       }).join('');
-      return '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-        + '<span style="font-weight:700;margin-right:8px">Report Templates:</span>'
-        + '<select class="input" id="repTplSel" style="max-width:320px">' + opts + '</select>'
+      return '<div class="card rep-control-card"><div class="card-b rep-control-row">'
+        + '<label class="rep-control-title" for="repTplSel">Report Templates:</label>'
+        + '<div class="rep-control-group rep-template-apply">'
+        + '<select class="select" id="repTplSel">' + opts + '</select>'
         + '<button type="button" class="btn btn-sm btn-primary" id="tplApply">Apply</button>'
         + '<button type="button" class="btn btn-sm btn-ghost" id="tplDel">Delete</button>'
-        + '<input class="input" id="repTplName" placeholder="Template name…" style="max-width:220px">'
+        + '</div><div class="rep-control-group rep-template-save">'
+        + '<input class="input" id="repTplName" aria-label="Template name" placeholder="Template name…">'
         + '<button type="button" class="btn btn-sm btn-ghost" id="tplSave">💾 Save current</button>'
-        + '</div></div>';
+        + '</div></div></div>';
     })();
     var repSlotLabs = (rep.type === 'labs') ? labsCardHtml : '';
 
@@ -1192,8 +1182,10 @@
     var tplApp = document.getElementById('tplApply'); if (tplApp) tplApp.addEventListener('click', repTplApply);
     var tplDl = document.getElementById('tplDel'); if (tplDl) tplDl.addEventListener('click', repTplDel);
     var tplSv = document.getElementById('tplSave'); if (tplSv) tplSv.addEventListener('click', repTplSave);
-    document.querySelectorAll('[data-preset]').forEach(function (b) {
-      b.addEventListener('click', function () { setPreset(b.getAttribute('data-preset')); });
+    var rfPreset = document.getElementById('repPreset');
+    if (rfPreset) rfPreset.addEventListener('change', function (e) {
+      setPreset(e.target.value);
+      document.getElementById('repPreset').focus();
     });
     var rBld = document.getElementById('repBuilder'); if (rBld) rBld.addEventListener('click', function () { openBuilder(); });
     document.getElementById('repCsv').addEventListener('click', function () {
@@ -2016,39 +2008,9 @@
 
     var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
 
-    var tabsHtml = tabs.map(function (t) {
-      var isAct = t.id === cur.id;
-      return '<a href="#/settings/' + t.id + '" class="unifi-tab-btn' + (isAct ? ' active' : '') + (t.isDanger ? ' unifi-danger' : '') + '">'
-        + App.icon(t.icon, 16)
-        + '<span>' + App.esc(t.label) + '</span>'
-        + '</a>';
-    }).join('');
-
     var html =
       '<style>' + UNIFI_SET_CSS + '</style>' +
       '<div class="unifi-shell">' +
-        '<!-- Top Header Bar -->' +
-        '<div class="unifi-top-bar">' +
-          '<div>' +
-            '<h2 class="unifi-top-title">' +
-              App.icon(cur.icon, 20) +
-              '<span>' + App.esc(cur.label) + '</span>' +
-            '</h2>' +
-            '<p class="unifi-top-desc">' + App.esc(cur.desc) + '</p>' +
-          '</div>' +
-          '<div>' +
-            '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#f1f5f9;color:#475569">' +
-              '<span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block"></span> ' + App.esc(cur.sec) +
-            '</span>' +
-          '</div>' +
-        '</div>' +
-
-        '<!-- Horizontal Tab Navigation Bar -->' +
-        '<div class="unifi-tab-strip">' +
-          tabsHtml +
-        '</div>' +
-
-        '<!-- Settings Content Canvas -->' +
         '<div class="unifi-canvas">' +
           '<div id="setBody"></div>' +
         '</div>' +
@@ -3618,6 +3580,7 @@
       document.getElementById('branchStats').innerHTML =
         admStat(AICONS.list, 'blue', 'Total Branches', branches.length, 'registered locations', branches.length, false) +
         admStat(AICONS.flask, 'green', 'Active Branches', localUsed, 'currently operating', localUsed, false) +
+        admStat(AICONS.alert, 'red', 'Inactive Branches', branches.length - localUsed, 'not currently operating', branches.length - localUsed, false) +
         admStat(AICONS.cal, 'amber', 'Available Slots', max === Infinity ? 'Unlimited' : Math.max(0, max - used), usageText, null, false);
       var html = '<div class="toolbar" style="margin-bottom:12px;align-items:center">'
         + '<div><h2 style="margin:0;font-size:20px">Manage Branches</h2><div class="muted" style="font-size:12.5px;margin-top:2px">' + App.esc(usageText) + '</div></div>'

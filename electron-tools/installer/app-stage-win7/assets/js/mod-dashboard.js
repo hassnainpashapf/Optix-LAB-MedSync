@@ -330,23 +330,10 @@
 
     quickCss + quickAccess +
 
-    critCard() + stockCard() + chartsHtml +
+    critCard() + chartsHtml +
     '<div class="db-grid">' + patCard + pendCard + '</div>' +
     '</div>';
     } /* end buildDashboard */
-
-    /* low / expiring stock: one line with a link, only when something needs attention */
-    function stockCard() {
-      try {
-        var me = App.session(); if (!me || (me.role !== 'admin' && me.role !== 'technician' && !(me.role === 'custom' && (App.canPage('stock') || App.canPage('inventory')))) || !App.stockState) return '';
-        var S = App.stockState(); if (!S.alerts) return '';
-        var bits = [];
-        if (S.out) bits.push('<b>' + S.out + '</b> out of stock'); if (S.low) bits.push('<b>' + S.low + '</b> running low');
-        if (S.expired) bits.push('<b>' + S.expired + '</b> expired'); if (S.soon) bits.push('<b>' + S.soon + '</b> expiring within ' + S.warnDays + ' days');
-        return '<a href="#/inventory" style="display:flex;align-items:center;gap:12px;background:#fff8e6;border:1px solid #f0d9a0;border-radius:14px;padding:12px 16px;margin-bottom:16px;color:#7a4b00;text-decoration:none">' +
-          '<span style="font-size:20px">📦</span><span style="flex:1"><b>Stock needs attention:</b> ' + bits.join(' · ') + '</span><span style="font-weight:800">Open Inventory &amp; Stock →</span></a>';
-      } catch (e) { return ''; }
-    }
 
     /* Critical results nobody has acknowledged yet (set when a result far outside the normal range is saved) */
     function critCard() {

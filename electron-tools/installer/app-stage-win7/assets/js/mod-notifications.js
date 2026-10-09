@@ -10,22 +10,21 @@
     if (mute) { mute.textContent = N.muted() ? 'Unmute alert sound' : 'Mute alert sound'; mute.setAttribute('aria-pressed', String(N.muted())); }
     if (state.error) { host.innerHTML = A.empty('Could not read alerts. Refresh to retry.'); return; }
     if (!state.items.length) { host.innerHTML = A.empty('All caught up. No actionable alerts for your role.'); return; }
-    host.innerHTML = '<p class="muted">' + state.items.length + ' actionable alert(s). Urgent alerts appear first.</p>' + state.items.map(function (a) {
+    host.innerHTML = '<p class="muted" style="font-size:12px">' + state.items.length + ' messages · urgent items appear first</p><div class="notif-feed">' + state.items.map(function (a) {
       var urgent = a.severity === 'critical' || a.severity === 'high';
-      return '<article style="padding:14px 0;border-bottom:1px solid var(--line)">' +
-        '<span class="badge ' + (urgent ? 'b-unpaid' : 'b-pending') + '">' + A.esc(a.severity === 'normal' ? 'Attention' : a.severity.toUpperCase()) + '</span> ' +
-        '<span class="muted">' + A.esc(a.category) + '</span><h3 style="margin:8px 0">' + A.esc(a.title) + '</h3>' +
-        '<p style="overflow-wrap:anywhere">' + A.esc(a.detail) + '</p>' +
-        '<a class="btn btn-sm btn-secondary" href="' + A.esc(a.href) + '">Review ' + A.esc(a.category.toLowerCase()) + '</a>' +
+      return '<article class="notif-msg ' + (urgent ? 'is-urgent' : '') + '">' +
+        '<div class="notif-msg-meta"><b>' + A.esc(a.category) + '</b><span class="badge ' + (urgent ? 'b-unpaid' : 'b-pending') + '">' + A.esc(a.severity === 'normal' ? 'Attention' : a.severity.toUpperCase()) + '</span></div>' +
+        '<h3>' + A.esc(a.title) + '</h3><p>' + A.esc(a.detail) + '</p>' +
+        '<a class="btn btn-sm btn-secondary" href="' + A.esc(a.href) + '">Open ' + A.esc(a.category.toLowerCase()) + '</a>' +
         (a.category === 'Results' ? ' <button class="btn btn-sm btn-danger" data-notification-ack="' + A.esc(a.id.slice(9)) + '">Acknowledge after informing doctor</button>' : '') + '</article>';
-    }).join('');
+    }).join('') + '</div>';
   }
   A.paintNotifications = paint;
   A.route('#/notifications', function () {
     var view = document.getElementById('view');
     if (!N || !N.allowed('notifications')) { view.innerHTML = A.empty('You do not have access to notifications.'); return; }
     view.innerHTML = '<div class="card"><div class="card-b"><h2>Notifications</h2>' +
-      '<p class="muted">Live alerts from your current lab. Sound plays only for new critical or high-priority alerts after you interact with the app.</p>' +
+      '<p class="muted">Messages from your lab, with alert sounds retained for new critical or high-priority items.</p>' +
       '<div class="actions"><button class="btn btn-secondary" id="notificationRefresh">Refresh</button> ' +
       '<button class="btn btn-ghost" id="notificationMute" aria-pressed="false">Mute alert sound</button></div>' +
       '<div id="notificationList"></div></div></div>';

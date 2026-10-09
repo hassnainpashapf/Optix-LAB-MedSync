@@ -7,6 +7,7 @@
   var esc = App.esc;
   var F = { q: '', show: 'all', tab: 'items', moveType: 'all', mq: '' };
   var addOpenedFor = ''; // avoid reopening the receive dialog on each render
+  var itemOpenedFor = ''; // avoid reopening the add-item dialog on each route render
   var selectedOrderId = '';
   var UNITS = ['tests', 'kit', 'vial', 'bottle', 'box', 'pack', 'pcs', 'ml', 'L', 'g'];
 
@@ -639,12 +640,16 @@
     }
     var path = location.hash.split('?')[0];
     var segment = path.split('/')[2] || '';
-    F.tab = path.indexOf('#/stock') === 0 ? (segment === 'purchase-orders' ? 'purchase-orders' : segment === 'pending' ? 'pending' : segment === 'alerts' ? 'alerts' : segment === 'items' ? 'items' : 'moves') : (segment === 'moves' ? 'moves' : segment === 'alerts' ? 'alerts' : 'items');
+    F.tab = path.indexOf('#/stock') === 0 ? (segment === 'purchase-orders' ? 'purchase-orders' : segment === 'pending' ? 'pending' : segment === 'alerts' ? 'alerts' : segment === 'items' ? 'items' : 'moves') : (segment === 'moves' ? 'moves' : (segment === 'alerts' || segment === 'expiring') ? 'alerts' : (segment === 'pending' || segment === 'low-out') ? 'pending' : 'items');
     render();
     if (path === '#/stock/add' && canEdit() && addOpenedFor !== path) {
       addOpenedFor = path;
       receive('');
     } else if (path !== '#/stock/add') addOpenedFor = '';
+    if (path === '#/inventory/add' && canEdit() && itemOpenedFor !== path) {
+      itemOpenedFor = path;
+      itemForm(null);
+    } else if (path !== '#/inventory/add') itemOpenedFor = '';
   }
 
   App.route('#/inventory', routeHandler);

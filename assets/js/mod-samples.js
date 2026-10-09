@@ -260,6 +260,7 @@
   }
   function showResult(kind, title, lines) {
     var r = document.getElementById('smpResult'); if (!r) return;
+    r.hidden = false;
     r.className = 'smp-result r-' + kind;
     r.innerHTML = '<span class="smp-res-ic">' + App.icon(kind === 'err' ? 'alert' : (kind === 'info' ? 'file' : 'check'), 22) + '</span>' +
       '<div class="smp-res-tx"><b>' + title + '</b>' + (lines || []).map(function (l) { return '<span>' + l + '</span>'; }).join('') + '</div>';
@@ -447,7 +448,7 @@
     '.smp-scan-in{flex:1;min-width:0}' +
     '.smp-scan-in .input{font-size:18px;font-weight:700;letter-spacing:.02em;padding:11px 14px;font-family:"Courier New",ui-monospace,monospace}' +
     '.smp-scan-in .input::placeholder{font-family:var(--font);font-weight:500;letter-spacing:0;font-size:15px}' +
-    '.smp-result{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:11px 14px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);color:var(--muted);font-size:13.5px}' +
+     '.smp-result{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:11px 14px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);color:var(--muted);font-size:13.5px}.smp-result[hidden]{display:none}' +
     '.smp-result.r-ok{background:var(--green-soft);border-color:#bfe8d6;color:var(--ink)}.smp-result.r-ok .smp-res-ic{color:var(--green)}' +
     '.smp-result.r-err{background:var(--red-soft);border-color:#f6c6c6;color:var(--ink)}.smp-result.r-err .smp-res-ic{color:var(--red)}' +
     '.smp-result.r-info{background:var(--blue-soft);border-color:#c5d6fb;color:var(--ink)}.smp-result.r-info .smp-res-ic{color:var(--blue)}' +
@@ -537,8 +538,7 @@
           '<button class="btn btn-primary" id="smpGo" title="Apply scan">' + App.icon('check', 16) + '<span>Go</span></button>' +
           '<button class="btn" id="smpCam" hidden title="Scan with the device camera">' + App.icon('scan', 16) + '<span>Camera</span></button>' +
         '</div>' +
-        '<div class="smp-result" id="smpResult"><div class="smp-hint"><span>Each scan moves the tube one step:</span>' +
-          '<b>To collect</b><i>&rarr;</i><b>Collected</b><i>&rarr;</i><b>In lab</b><i>&rarr;</i><b>Processing</b><i>&rarr;</i><b>Done</b></div></div>' +
+         '<div class="smp-result" id="smpResult" hidden aria-live="polite"></div>' +
       '</div>' +
       '<div class="card"><div class="card-b">' +
         '<div class="smp-filters">' +

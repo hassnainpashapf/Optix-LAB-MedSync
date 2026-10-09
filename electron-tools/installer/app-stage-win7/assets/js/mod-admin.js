@@ -857,35 +857,21 @@
         + '<div><div class="stat-num">' + val + '</div><div class="stat-lbl">' + label + '</div></div></div>';
     }
 
-    function presetBtn(p, label) {
-      return '<button class="btn ' + (rep.preset === p ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-preset="' + p + '" style="font-weight:600">'
-        + label + '</button>';
-    }
     var filterCard = ''
-      + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
-      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-      +     '<div style="display:flex;gap:8px;align-items:center">'
-      +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Dates:</span>'
-      +       '<input class="input" type="date" id="repFrom" value="' + App.esc(from) + '" style="width:auto;padding:6px 10px;font-size:13px">'
-      +       '<span style="color:var(--muted);font-weight:700">–</span>'
-      +       '<input class="input" type="date" id="repTo" value="' + App.esc(to) + '" style="width:auto;padding:6px 10px;font-size:13px">'
+      + '<div class="card" id="repFilters"><div class="card-b">'
+      +     '<div class="rep-date-controls">'
+      +       '<label class="rep-control-label" for="repPreset">Dates:</label>'
+      +       '<select class="select" id="repPreset">' + schedOpts(REP_PRESET_LBL, rep.preset) + '</select>'
+      +       '<input class="input" type="date" id="repFrom" aria-label="From date" value="' + App.esc(from) + '">'
+      +       '<span class="rep-date-separator" aria-hidden="true">–</span>'
+      +       '<input class="input" type="date" id="repTo" aria-label="To date" value="' + App.esc(to) + '">'
       +     '</div>'
-      +     '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
-      +       presetBtn('today', 'Today')
-      +       presetBtn('yesterday', 'Yesterday')
-      +       presetBtn('last7', 'Last 7 days')
-      +       presetBtn('last30', 'Last 30 days')
-      +       presetBtn('thisMonth', 'This Month')
-      +       presetBtn('lastMonth', 'Last Month')
-      +       (rep.preset === 'custom' ? '<span class="muted" style="font-size:12px;font-weight:600">Custom range</span>' : '')
-      +     '</div>'
-      +     '<div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;align-items:center">'
+      +     '<div class="rep-actions">'
       +       '<button class="btn btn-ghost btn-sm" id="repCsv">' + DL_ICON + ' Export CSV</button>'
       +       '<button class="btn btn-ghost btn-sm" id="repBuilder">🛠 Builder</button>'
       +       '<button class="btn btn-ghost btn-sm" id="repSchedBtn">⏰ Schedules</button>'
       +       '<button class="btn btn-primary btn-sm" id="repPrint">' + PRINT_ICON + ' Print Report</button>'
       +     '</div>'
-      +   '</div>'
       + '</div></div>';
 
     /* ---- Finalized Patient Reports archive ----
@@ -1058,14 +1044,16 @@
       var opts = '<option value="">-- select template --</option>' + tpls.map(function (t) {
         return '<option value="' + App.esc(String(t.id)) + '">' + App.esc(t.name) + ' — ' + App.esc(repTplDesc(t)) + '</option>';
       }).join('');
-      return '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-        + '<span style="font-weight:700;margin-right:8px">Report Templates:</span>'
-        + '<select class="input" id="repTplSel" style="max-width:320px">' + opts + '</select>'
+      return '<div class="card" id="repTemplates"><div class="card-b">'
+        + '<label class="rep-control-label" for="repTplSel">Report Templates:</label>'
+        + '<div class="rep-template-apply">'
+        + '<select class="select" id="repTplSel">' + opts + '</select>'
         + '<button type="button" class="btn btn-sm btn-primary" id="tplApply">Apply</button>'
         + '<button type="button" class="btn btn-sm btn-ghost" id="tplDel">Delete</button>'
-        + '<input class="input" id="repTplName" placeholder="Template name…" style="max-width:220px">'
+        + '</div><div class="rep-template-save">'
+        + '<input class="input" id="repTplName" aria-label="Template name" placeholder="Template name…">'
         + '<button type="button" class="btn btn-sm btn-ghost" id="tplSave">💾 Save current</button>'
-        + '</div></div>';
+        + '</div></div></div>';
     })();
     var repSlotLabs = (rep.type === 'labs') ? labsCardHtml : '';
 
@@ -1191,9 +1179,7 @@
     var tplApp = document.getElementById('tplApply'); if (tplApp) tplApp.addEventListener('click', repTplApply);
     var tplDl = document.getElementById('tplDel'); if (tplDl) tplDl.addEventListener('click', repTplDel);
     var tplSv = document.getElementById('tplSave'); if (tplSv) tplSv.addEventListener('click', repTplSave);
-    document.querySelectorAll('[data-preset]').forEach(function (b) {
-      b.addEventListener('click', function () { setPreset(b.getAttribute('data-preset')); });
-    });
+    var rfPreset = document.getElementById('repPreset'); if (rfPreset) rfPreset.addEventListener('change', function (e) { setPreset(e.target.value); });
     var rBld = document.getElementById('repBuilder'); if (rBld) rBld.addEventListener('click', function () { openBuilder(); });
     document.getElementById('repCsv').addEventListener('click', function () {
       try {
@@ -1940,25 +1926,9 @@
 
   function renderSettings() {
     if (role() !== 'admin') return denied();
-    var tabs = [
-      { id: 'profile', label: 'Edit Report Form', icon: 'flask' },
-      { id: 'account', label: 'My Account', icon: 'users' },
-      { id: 'templates', label: 'Report Templates', icon: 'file' },
-      { id: 'signatures', label: 'Digital Signatures', icon: 'check' },
-      { id: 'whatsapp', label: 'WhatsApp', icon: 'chat' },
-      { id: 'sharing', label: 'Email & Slack', icon: 'mail' },
-      { id: 'portal', label: 'Patient portal', icon: 'lock' },
-      { id: 'users', label: 'Users & Roles', icon: 'shield' },
-      { id: 'backup', label: 'Backup', icon: 'download' },
-      { id: 'danger', label: 'Danger Zone', icon: 'alert' }
-    ];
-    /* the sections are sidebar sub-menu items now (#/settings, #/settings/account, …); the card only labels the open one */
-    var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
-    var html = ''
-      + '<div class="card"><div class="card-b">'
-      + '<div style="margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:12px"><b style="display:inline-flex;align-items:center;gap:8px;font-size:17px;color:' + (cur.id === 'danger' ? 'var(--red)' : 'var(--brand)') + '">' + App.icon(cur.icon, 20) + '<span>' + cur.label + '</span></b></div>'
-      + '<div id="setBody"></div>'
-      + '</div></div>';
+    /* Settings sections are represented by the sidebar and topbar; keep the
+       content card focused on the active form instead of repeating the title. */
+    var html = '<div class="card"><div class="card-b"><div id="setBody"></div></div></div>';
     document.getElementById('view').innerHTML = html;
     if (settingsTab === 'profile') renderSetProfile();
     else if (settingsTab === 'account') renderSetAccount();

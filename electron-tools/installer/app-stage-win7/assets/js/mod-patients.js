@@ -767,9 +767,7 @@
   /* ---------- #/patients/new : dedicated full-page add form ---------- */
   function renderAddPage() {
     if (!canEdit()) { App.toast('Not allowed.', 'err'); App.nav('#/patients'); return; }
-    var html =
-      '<div class="page-head"><div><a class="back-link" href="#/patients">← All Patients</a><h1>Add Patient</h1></div></div>' +
-      '<div class="card"><div class="card-b">' + formHTML({}) + '</div></div>';
+    var html = '<div class="card"><div class="card-b">' + formHTML({}) + '</div></div>';
     paint(html, function () {
       bindForm(function () { App.nav('#/patients'); }, null, function (np) {
         if (np && np.id) App.nav('#/patient/' + np.id);

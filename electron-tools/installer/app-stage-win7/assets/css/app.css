@@ -166,6 +166,31 @@ h1 svg, h2 svg, h3 svg, h4 svg, h5 svg, h6 svg{width:1.15em;height:1.15em;max-wi
 .card-b{padding:20px}
 .card-b.flush{padding:0}
 
+/* Reports filter/template toolbars only; other cards retain their spacing. */
+#repFilters,#repTemplates{margin-bottom:12px}
+#repFilters>.card-b,#repTemplates>.card-b{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding:10px 12px}
+#repFilters .rep-date-controls,#repFilters .rep-actions,#repTemplates .rep-template-apply,#repTemplates .rep-template-save{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-width:0;max-width:100%}
+#repFilters .rep-control-label,#repTemplates .rep-control-label{font-size:12px;font-weight:700;white-space:nowrap}
+#repFilters .rep-control-label,#repFilters .rep-date-separator{color:var(--muted)}
+#repFilters .rep-actions{margin-left:auto}
+#repFilters .input,#repFilters .select,#repTemplates .input,#repTemplates .select{height:34px;min-width:0;max-width:100%;padding:6px 10px;font-size:13px}
+#repFilters .select{width:148px;padding-right:30px}
+#repFilters .input{width:142px}
+#repFilters .btn,#repTemplates .btn{min-height:34px;flex-shrink:0}
+#repTemplates .rep-template-apply{flex:1 1 340px}
+#repTemplates .rep-template-save{flex:1 1 280px}
+#repTemplates .select{flex:1 1 180px;width:180px;padding-right:30px}
+#repTemplates .input{flex:1 1 140px;width:140px}
+@media(max-width:640px){
+  #repFilters .rep-date-controls{flex:1 1 100%}
+  #repFilters .rep-control-label{flex:0 0 100%}
+  #repFilters .select{width:100%;flex:1 1 100%}
+  #repFilters .input{flex:1 1 110px;width:110px}
+  #repFilters .rep-actions{margin-left:0}
+  #repTemplates .rep-control-label{flex:0 0 100%}
+  #repTemplates .rep-template-apply,#repTemplates .rep-template-save{flex-basis:100%}
+}
+
 
 /* ============ Tables ============ */
 .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -1405,6 +1430,48 @@ nav.nav{padding:2px 10px 8px}
 .nav-fold.open>.nav-fb{display:block}
 .nav-fb .nav-it{padding-top:8px;padding-bottom:8px}
 
+/* Desktop collapse keeps a usable icon rail. Labels and child navigation stay
+   available through native titles, keyboard focus, and hover/focus fly-outs. */
+@media (min-width:901px){
+  .nav-toggle{display:inline-flex;align-items:center;justify-content:center}
+  .sidebar{overflow:visible;transition:width .2s ease}
+  body.side-collapsed .sidebar{width:72px !important;margin-left:0 !important;min-width:72px !important;max-width:72px !important;opacity:1 !important;visibility:visible !important;pointer-events:auto !important;overflow:visible}
+  body.side-collapsed .brand{justify-content:center;padding:14px 8px}
+  body.side-collapsed .brand-tx,
+  body.side-collapsed .side-close,
+  body.side-collapsed .nav > .nav-it > .nav-lb,
+  body.side-collapsed .nav > .nav-grp > .nav-par > .nav-lb,
+  body.side-collapsed .nav > .nav-fold > .nav-fh > .nav-lb,
+  body.side-collapsed .nav > .nav-grp > .nav-par > .nav-chev,
+  body.side-collapsed .nav > .nav-fold > .nav-fh > .nav-chev{display:none !important}
+  body.side-collapsed nav.nav{padding:4px 8px 8px;overflow:visible}
+  body.side-collapsed .nav > .nav-it,
+  body.side-collapsed .nav > .nav-grp > .nav-par,
+  body.side-collapsed .nav > .nav-fold > .nav-fh{width:54px;justify-content:center;padding:0;margin:0 auto}
+  body.side-collapsed .nav > .nav-grp,
+  body.side-collapsed .nav > .nav-fold{position:relative}
+  body.side-collapsed .nav > .nav-grp > .nav-sub,
+  body.side-collapsed .nav > .nav-fold > .nav-fb{
+    display:none !important;position:absolute;left:62px;top:0;width:236px;max-height:calc(100vh - 24px);overflow:auto;
+    margin:0;padding:8px;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--sh-md);z-index:90
+  }
+  body.side-collapsed .nav > .nav-grp:hover > .nav-sub,
+  body.side-collapsed .nav > .nav-grp:focus-within > .nav-sub,
+  body.side-collapsed .nav > .nav-grp.open > .nav-sub,
+  body.side-collapsed .nav > .nav-fold:hover > .nav-fb,
+  body.side-collapsed .nav > .nav-fold:focus-within > .nav-fb,
+  body.side-collapsed .nav > .nav-fold.open > .nav-fb{display:block !important}
+  body.side-collapsed .nav > .nav-fold > .nav-fb .nav-it{width:100%;justify-content:flex-start;padding:0 10px}
+  body.side-collapsed .nav > .nav-fold > .nav-fb .nav-it .nav-lb{display:block}
+  body.side-collapsed .nav > .nav-fold > .nav-fb .nav-grp > .nav-par{width:100%;justify-content:flex-start;padding:0 10px}
+  body.side-collapsed .nav > .nav-fold > .nav-fb .nav-grp > .nav-par .nav-lb{display:block}
+  body.side-collapsed .nav > .nav-fold > .nav-fb .nav-grp > .nav-par .nav-chev{display:block}
+  body.side-collapsed .side-foot{padding:8px;align-items:center}
+  body.side-collapsed .sf-user{justify-content:center}
+  body.side-collapsed .sf-tx,.side-collapsed .sf-plan{display:none !important}
+  body.side-collapsed .sf-out{margin-left:0}
+}
+
 /* ================= Samples page cards (S3/16) ================= */
 
 
@@ -1431,6 +1498,15 @@ nav.nav{padding:2px 10px 8px}
 .kpi.hot{border-color:#e6aaaa !important}
 .kpi.hot .kpi-nm{color:#b91c1c}
 .kpi.warn{border-color:#e9cb96 !important}
+
+/* Compact Slack-like notification feed; source alerts and audio controls stay intact. */
+.notif-feed{display:flex;flex-direction:column;gap:8px}
+.notif-msg{padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:#fff;box-shadow:0 1px 3px rgba(15,30,46,.04)}
+.notif-msg.is-urgent{border-left:3px solid var(--red);background:#fffafa}
+.notif-msg-meta{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:11px;margin-bottom:3px}
+.notif-msg-meta b{font-weight:800;color:var(--ink2);margin-right:auto}
+.notif-msg h3{font-size:13.5px;margin:0 0 3px;font-weight:750}
+.notif-msg p{font-size:12.5px;margin:0 0 8px;overflow-wrap:anywhere;color:var(--ink2)}
 
 /* ============ Optix Assistant chatbot widget (.oxc-*) ============ */
 .oxc-fab{position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;

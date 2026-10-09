@@ -51,14 +51,16 @@
       sub: [{ key: 'tracking', label: 'Sample Tracking & Phlebotomy', icon: 'tube', route: '#/samples' },
         { key: 'stickers', label: 'Tube Stickers (50×25mm)', icon: 'scan', route: '#/samples/stickers' },
         { key: 'home', label: 'Home Sampling & Dispatch', icon: 'box', route: '#/samples/home' }] },
-    { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9' },
+    { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9',
+      sub: [{ key: 'catalog', label: 'Item Catalog', icon: 'box', route: '#/inventory' }, { key: 'add', label: 'Add Item', icon: 'plus', route: '#/inventory/add' },
+        { key: 'pending', label: 'Low / Out of Stock', icon: 'alert', route: '#/inventory/pending' }, { key: 'alerts', label: 'Expiring / Expired', icon: 'alert', route: '#/inventory/alerts' }] },
     { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock', color: '#0ea5e9',
       sub: [{ key: 'moves', label: 'Movement History', icon: 'clipboard', route: '#/stock' }, { key: 'add', label: 'Add Stock', icon: 'plus', route: '#/stock/add' },
-        { key: 'pending', label: 'Pending Stock', icon: 'box', route: '#/stock/pending' }, { key: 'orders', label: 'Purchase Orders', icon: 'receipt', route: '#/stock/orders' }, { key: 'alerts', label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' }] },
+        { key: 'pending', label: 'Pending Stock', icon: 'box', route: '#/stock/pending' }, { key: 'orders', label: 'Purchase Orders', route: '#/stock/orders', icon: 'receipt' }, { key: 'alerts', label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' }] },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', icon: 'clipboard', route: '#/results' }, { key: 'ready', label: 'Ready Reports', icon: 'check', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', icon: 'file', route: '#/results/old' }] },
     { key: 'tests',     label: 'All Tests Catalog', icon: 'flask', route: '#/tests', color: '#14b8a6',
-      sub: [{ key: 'regular', label: 'Regular Tests', icon: 'flask', route: '#/tests/regular' }, { key: 'generic', label: 'Generic Tests', icon: 'tube', route: '#/tests/generic' }] },
+      sub: [{ key: 'all', label: 'All Tests', icon: 'flask', route: '#/tests' }, { key: 'regular', label: 'Regular Tests', icon: 'flask', route: '#/tests/regular' }, { key: 'generic', label: 'Generic Tests', icon: 'tube', route: '#/tests/generic' }] },
     { key: 'packages',  label: 'Health Packages & Deals', icon: 'box', route: '#/packages', color: '#06b6d4' },
     { key: 'outsourced', label: 'Outsourced', icon: 'scan',     route: '#/outsourced', color: '#d946ef' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316',
@@ -747,12 +749,12 @@
       if (n.sub && subs.length >= 2) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
         var open = n.key === activeKey;
         return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
-          '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+           '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" data-route="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span>' +
           '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
-          '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '"><span class="nav-sub-ic">' + icon(x.icon || (x.danger ? 'alert' : n.icon) || 'file', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
+           '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" title="' + esc(x.label) + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '"><span class="nav-sub-ic">' + icon(x.icon || (x.danger ? 'alert' : n.icon) || 'file', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
       }
-      return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
+       return '<a href="' + n.route + '" title="' + esc(n.label) + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
         '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span></a>';
     }
     /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
@@ -777,7 +779,7 @@
       if (inside.length === 1) { items += itemHtml(byKey[inside[0]]); return; } /* a folder with one page is just that page */
       var holds = inside.indexOf(activeKey) >= 0, open = holds || !!savedOpen[f.id];
       items += '<div class="nav-fold' + (open ? ' open' : '') + (holds ? ' has-active' : '') + '" data-fold="' + f.id + '">' +
-        '<button type="button" class="nav-it nav-fh" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="nav-ic">' + icon(f.icon, 20) + '</span><span class="nav-lb">' + f.label + '</span>' +
+         '<button type="button" class="nav-it nav-fh" data-route="' + (byKey[inside[0]] ? byKey[inside[0]].route : '#/dashboard') + '" title="' + esc(f.label) + '" aria-label="' + esc(f.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="nav-ic">' + icon(f.icon, 20) + '</span><span class="nav-lb">' + f.label + '</span>' +
         '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
         '<div class="nav-fb">' + inside.map(function (k) { return itemHtml(byKey[k]); }).join('') + '</div></div>';
     });
@@ -813,8 +815,13 @@
         '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses">' + icon('wallet', 14) + '<span class="tb-qa-t">Add Expense</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/finance">' + icon('finance', 14) + '<span class="tb-qa-t">Close Day</span></a>';
     var _curHash = (location.hash || '').split('?')[0];
-    var _pageTitle = (_curHash === '#/tests' || _curHash === '#/tests/regular') ? 'Regular Tests' :
-                     _curHash === '#/tests/generic' ? 'Generic Tests' :
+     var _pageTitle = _curHash === '#/tests' ? 'All Tests' :
+                      _curHash === '#/tests/regular' ? 'Regular Tests' :
+                      _curHash === '#/tests/generic' ? 'Generic Tests' :
+                      _curHash === '#/inventory/add' ? 'Add Item' :
+                      _curHash === '#/inventory/pending' ? 'Low / Out of Stock' :
+                      _curHash === '#/inventory/alerts' ? 'Expiring / Expired' :
+                      _curHash === '#/patients/new' ? 'Add Patient' :
                      _curHash === '#/packages' ? 'Packages' :
                      _curHash === '#/notifications' ? 'Notifications' :
                      _curHash === '#/invoices/pending' ? 'Pending Invoices' :
@@ -958,6 +965,10 @@
     var h = e.target && e.target.closest ? e.target.closest('.nav-fh') : null;
     if (!h) return;
     var f = h.closest('.nav-fold'); if (!f) return;
+    if (document.body.classList.contains('side-collapsed') && !window.matchMedia('(max-width:900px)').matches) {
+      if (h.getAttribute('data-route')) location.hash = h.getAttribute('data-route');
+      return;
+    }
     var open = f.classList.toggle('open'); h.setAttribute('aria-expanded', open ? 'true' : 'false');
     try { var m = JSON.parse(localStorage.getItem('labpos_navfolders') || '{}') || {}; m[f.getAttribute('data-fold')] = open; localStorage.setItem('labpos_navfolders', JSON.stringify(m)); } catch (x) {}
   });
@@ -966,6 +977,10 @@
     var b = e.target && e.target.closest ? e.target.closest('.nav-par') : null;
     if (!b) return;
     var g = b.closest('.nav-grp'); if (!g) return;
+    if (document.body.classList.contains('side-collapsed') && !window.matchMedia('(max-width:900px)').matches) {
+      if (b.getAttribute('data-route')) location.hash = b.getAttribute('data-route');
+      return;
+    }
     var open = g.classList.toggle('open');
     b.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (open) { /* opening one group closes the others */

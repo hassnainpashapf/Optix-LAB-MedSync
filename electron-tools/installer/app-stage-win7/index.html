@@ -19,10 +19,6 @@
 .topbar { box-shadow:none }
 .kpi { box-shadow:0 1px 4px rgba(15,23,42,.05) }
 .kpi:hover { transform:none;box-shadow:0 2px 8px rgba(15,23,42,.08) }
-/* Desktop navigation is persistent by default; the header button collapses it. */
-@media (min-width:901px) {
-  body.side-collapsed .sidebar { display:none }
-}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,8 +43,7 @@ document.addEventListener('click', function (e) {
     document.body.classList.toggle(mobile ? 'side-open' : 'side-collapsed');
     var button = document.getElementById('navToggle');
     if (button) button.setAttribute('aria-expanded', String(mobile ? document.body.classList.contains('side-open') : !document.body.classList.contains('side-collapsed')));
-  }
-  else if (e.target.closest('.nav-it:not(.nav-par):not(.nav-fh)') || e.target.closest('.nav-sub-it')) document.body.classList.remove('side-open');
+  } else if (e.target.closest('.nav-it:not(.nav-par):not(.nav-fh)') || e.target.closest('.nav-sub-it')) document.body.classList.remove('side-open');
 });
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') document.body.classList.remove('side-open');

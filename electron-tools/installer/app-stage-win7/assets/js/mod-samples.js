@@ -260,6 +260,7 @@
   }
   function showResult(kind, title, lines) {
     var r = document.getElementById('smpResult'); if (!r) return;
+    r.hidden = false;
     r.className = 'smp-result r-' + kind;
     r.innerHTML = '<span class="smp-res-ic">' + App.icon(kind === 'err' ? 'alert' : (kind === 'info' ? 'file' : 'check'), 22) + '</span>' +
       '<div class="smp-res-tx"><b>' + title + '</b>' + (lines || []).map(function (l) { return '<span>' + l + '</span>'; }).join('') + '</div>';
@@ -454,8 +455,6 @@
     '.smp-res-ic{flex:none;display:grid;place-items:center;padding-top:1px}' +
     '.smp-res-tx{display:flex;flex-direction:column;gap:2px;min-width:0}.smp-res-tx b{font-size:15px;font-weight:800}.smp-res-tx span{font-size:13px;color:var(--ink2);word-break:break-word}' +
     '.smp-res-tx code{font-family:"Courier New",monospace;font-weight:700}' +
-    '.smp-hint{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-size:12.5px}.smp-hint i{font-style:normal;color:var(--faint)}' +
-    '.smp-hint b{font-weight:700;color:var(--ink2);background:#fff;border:1px solid var(--line);border-radius:999px;padding:2px 10px}' +
     '.smp-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}' +
     '.smp-filters .input.smp-q{flex:1 1 260px;min-width:0;padding:8px 12px;font-size:13px}' +
     '.smp-filters .select,.smp-filters input[type=date]{width:auto;flex:0 0 auto;padding:8px 10px;font-size:13px}' +
@@ -537,8 +536,7 @@
           '<button class="btn btn-primary" id="smpGo" title="Apply scan">' + App.icon('check', 16) + '<span>Go</span></button>' +
           '<button class="btn" id="smpCam" hidden title="Scan with the device camera">' + App.icon('scan', 16) + '<span>Camera</span></button>' +
         '</div>' +
-        '<div class="smp-result" id="smpResult"><div class="smp-hint"><span>Each scan moves the tube one step:</span>' +
-          '<b>To collect</b><i>&rarr;</i><b>Collected</b><i>&rarr;</i><b>In lab</b><i>&rarr;</i><b>Processing</b><i>&rarr;</i><b>Done</b></div></div>' +
+        '<div class="smp-result" id="smpResult" hidden></div>' +
       '</div>' +
       '<div class="card"><div class="card-b">' +
         '<div class="smp-filters">' +

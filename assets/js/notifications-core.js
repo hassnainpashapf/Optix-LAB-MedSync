@@ -23,7 +23,7 @@
       var test = DB.get('tests', r.testId) || {};
       add({ id: 'critical:' + r.id, severity: 'critical', title: 'Critical lab result',
         detail: 'Result ' + r.id + ' · ' + (test.name || r.testId || 'Lab test') + ' · ' + r.critical.map(function (c) { return c.name + ': ' + c.value + (c.unit ? ' ' + c.unit : ''); }).join('; '),
-        href: allowed('dashboard') ? '#/dashboard' : '#/results/ready', action: allowed('dashboard') ? 'Review & acknowledge' : 'Review results',
+        href: allowed('dashboard') ? '#/dashboard' : '#/results/ready', action: allowed('dashboard') ? 'Review & acknowledge' : 'Review results', timestamp: r.reportedAt || r.createdAt || '',
         signature: 'critical:' + r.id + ':' + (r.reportedAt || '') + ':' + JSON.stringify(r.critical) });
     });
     if (p.stock && App.stockState) (App.stockState().rows || []).forEach(function (r) {
@@ -33,13 +33,13 @@
       if (r.expired) bits.push('Expired stock');
       if (r.soon) bits.push('Expiring soon');
       add({ id: 'stock:' + r.item.id, severity: r.out || r.expired ? 'high' : 'warning', title: r.item.name || 'Stock item',
-        detail: bits.join(' · '), href: '#/stock/alerts', action: 'Review stock',
+        detail: bits.join(' · '), href: '#/stock/alerts', action: 'Review stock', timestamp: r.item.updatedAt || r.item.createdAt || '',
         signature: 'stock:' + r.item.id + ':' + !!r.out + ':' + !!r.expired });
     });
     if (p.payments) (DB.all('onlinepay_claims') || []).forEach(function (c) {
       if (!c.id || c.status !== 'pending') return;
       add({ id: 'payment:' + c.id, severity: 'warning', title: 'Payment claim awaiting verification',
-        detail: 'Claim ' + c.id + ' · ' + App.money(c.amount), href: '#/online-payments', action: 'Review payment', signature: 'payment:' + c.id });
+        detail: 'Claim ' + c.id + ' · ' + App.money(c.amount), href: '#/online-payments', action: 'Review payment', timestamp: c.createdAt || c.updatedAt || c.date || '', signature: 'payment:' + c.id });
     });
     var rank = { critical: 0, high: 1, warning: 2 };
     return out.sort(function (a, b) { return rank[a.severity] - rank[b.severity] || a.id.localeCompare(b.id); });

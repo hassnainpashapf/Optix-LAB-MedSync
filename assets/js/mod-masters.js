@@ -30,9 +30,9 @@ function lastModal() {
 function monthKey(d) { d = new Date(d); return d.getFullYear() * 12 + d.getMonth(); }
 function currentMonthKey() { return monthKey(new Date()); }
 
-function categories() {
+function categories(source) {
   var s = {};
-  DB.all('tests').forEach(function (t) { if (t.category) s[t.category] = 1; });
+  (source || DB.all('tests')).forEach(function (t) { if (t.category) s[t.category] = 1; });
   return Object.keys(s).sort();
 }
 
@@ -113,6 +113,7 @@ function doctorInvoiceCount(id) {
 
 /* filter state (module-level so it survives re-render) */
 var testFilter = { q: '', cat: 'All', status: 'All' };
+var testCatalogMode = 'all';
 var docFilter = { q: '' };
 
 /* ============================================================
@@ -125,10 +126,13 @@ function renderTests() {
   if (r !== 'admin' && r !== 'reception' && r !== 'technician' && !cust) { deny(); return; }
   var canEdit = (r === 'admin' || cust);
 
-  var cats = categories();
+  var hash = (location.hash || '').split('?')[0];
+  testCatalogMode = hash === '#/tests/regular' ? 'regular' : 'all';
   var allT = DB.all('tests');
+  var displayT = testCatalogMode === 'regular' ? allT.filter(function (t) { return t.type !== 'generic' && !t.templateKey; }) : allT;
+  var cats = categories(displayT);
   /* filter by selected category for stat cards */
-  var fT = testFilter.cat === 'All' ? allT : allT.filter(function (t) { return t.category === testFilter.cat; });
+  var fT = testFilter.cat === 'All' ? displayT : displayT.filter(function (t) { return t.category === testFilter.cat; });
   var nActive = fT.filter(function (t) { return t.active !== false; }).length;
   var nPkg = fT.filter(function (t) { return t.isPackage; }).length;
   var catLbl = testFilter.cat === 'All' ? 'in catalog' : 'in ' + testFilter.cat;
@@ -166,7 +170,7 @@ function renderTests() {
   }).join(' ');
 
   view().innerHTML =
-    '<p class="muted">Saved lab tests and prices, including imported generic tests. Common reusable templates are available under Generic Tests.</p>' +
+   '<p class="muted">' + (testCatalogMode === 'all' ? 'All Tests combines saved lab tests (including imported generic tests) with reusable generic templates shown below.' : 'Regular Tests shows saved tests used for routine booking. Reusable definitions are available under Generic Tests.') + '</p>' +
     statCards +
     '<div class="card"><div class="card-b">' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">' +
@@ -182,11 +186,12 @@ function renderTests() {
         (canEdit ? '<button type="button" class="btn btn-primary" id="t-add" style="margin-left:auto">+ Add Test</button>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="t-chips">' + chips + '</div>' +
-      '<div class="tbl-wrap"><table class="table"><thead><tr>' +
+       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Code</th><th>Test Name</th><th>Category</th><th>Sample</th><th>TAT</th>' +
         '<th style="text-align:right">Price</th><th>Status</th><th style="text-align:right">Actions</th>' +
       '</tr></thead><tbody id="t-rows"></tbody></table></div>' +
-    '</div></div>';
+       '</div></div>' +
+       (testCatalogMode === 'all' ? '<div class="card"><div class="card-h"><div><h3>Generic test templates</h3><div class="muted" style="font-size:12px;margin-top:2px">Reusable definitions that can be imported into the saved catalog</div></div><a class="btn btn-ghost btn-sm" href="#/tests/generic">Open Generic Tests</a></div><div class="card-b"><div class="muted">' + genericTemplates().length + ' templates · ' + genericTemplates().filter(function (t) { return !!t.test; }).length + ' already saved as catalog tests · ' + genericTemplates().filter(function (t) { return !t.test; }).length + ' available to add</div></div></div>' : '');
 
   var qEl = document.getElementById('t-q');
   qEl.addEventListener('input', function () { testFilter.q = qEl.value; drawTestRows(canEdit); });
@@ -304,6 +309,7 @@ function drawTestRows(canEdit) {
   var rows = DB.all('tests').slice().sort(function (a, b) {
     return String(a.code || '').localeCompare(String(b.code || ''));
   }).filter(function (t) {
+    if (testCatalogMode === 'regular' && (t.type === 'generic' || t.templateKey)) return false;
     if (testFilter.cat !== 'All' && t.category !== testFilter.cat) return false;
     if (testFilter.status === 'Active' && t.active === false) return false;
     if (testFilter.status === 'Inactive' && t.active !== false) return false;
@@ -619,6 +625,7 @@ function renderGenericTests() {
 function _bulkFilteredTests() {
   var q = (testFilter.q || '').trim().toLowerCase();
   return DB.all('tests').filter(function (t) {
+    if (testCatalogMode === 'regular' && (t.type === 'generic' || t.templateKey)) return false;
     if (testFilter.cat !== 'All' && t.category !== testFilter.cat) return false;
     if (testFilter.status === 'Active' && !t.active) return false;
     if (testFilter.status === 'Inactive' && t.active) return false;

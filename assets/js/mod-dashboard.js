@@ -330,7 +330,7 @@
 
     quickCss + quickAccess +
 
-    critCard() + stockCard() + chartsHtml +
+     critCard() + chartsHtml +
     '<div class="db-grid">' + patCard + pendCard + '</div>' +
     '</div>';
     } /* end buildDashboard */
