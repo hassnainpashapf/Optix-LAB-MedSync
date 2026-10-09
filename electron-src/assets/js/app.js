@@ -771,15 +771,23 @@
     /* quick actions — role-aware; technicians get read-only shortcuts */
     var isTech = (s.role === 'technician');
     var tbQa = s.role === 'custom'
-      ? [['patients', '#/patients/new', 'users', 'Add Patient'], ['results', '#/results', 'clipboard', 'Lab Results'], ['expenses', '#/expenses', 'wallet', 'Add Expense'], ['finance', '#/finance', 'finance', 'Close Day']]
-        .filter(function (q) { return can(q[0], 'custom'); }).slice(0, 3).map(function (q) { return '<a class="btn btn-sm tb-qab tb-classic" href="' + q[1] + '">' + icon(q[2], 14) + '<span class="tb-qa-t">' + q[3] + '</span></a>'; }).join('')
+      ? [['patients', '#/patients/new', 'users', 'Add Patient'], ['packages', '#/packages', 'box', 'Health Packages'], ['results', '#/results', 'clipboard', 'Lab Results'], ['expenses', '#/expenses', 'wallet', 'Add Expense'], ['finance', '#/finance', 'finance', 'Close Day']]
+        .filter(function (q) { return can(q[0], 'custom') || (q[0] === 'packages' && can('tests', 'custom')); }).slice(0, 4).map(function (q) { return '<a class="btn btn-sm tb-qab tb-classic" href="' + q[1] + '">' + icon(q[2], 14) + '<span class="tb-qa-t">' + q[3] + '</span></a>'; }).join('')
       : isTech
       ? '<a class="btn btn-sm tb-qab tb-classic" href="#/results">' + icon('clipboard', 14) + '<span class="tb-qa-t">Lab Results</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/tests">' + icon('flask', 14) + '<span class="tb-qa-t">View Tests</span></a>'
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/tests">' + icon('flask', 14) + '<span class="tb-qa-t">View Tests</span></a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/packages" title="Health Packages &amp; Screening Deals Center"><span style="font-size:14px">🎁</span><span class="tb-qa-t">Health Packages</span></a>'
       : '<a class="btn btn-sm tb-qab tb-classic" href="#/patients/new">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/packages" title="Health Packages &amp; Screening Deals Center"><span style="font-size:14px">🎁</span><span class="tb-qa-t">Health Packages</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses">' + icon('wallet', 14) + '<span class="tb-qa-t">Add Expense</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/finance">' + icon('finance', 14) + '<span class="tb-qa-t">Close Day</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>';
+    var _curHash = (location.hash || '').split('?')[0];
+    var _pageTitle = _curHash === '#/packages' ? 'Health Packages & Screening Deals Center' :
+                     _curHash === '#/samples/stickers' ? 'Tube Stickers (50×25mm)' :
+                     _curHash === '#/home-sampling' ? 'Home Sampling & Dispatch' :
+                     (_curHash === '#/reports/trends' || _curHash === '#/trends') ? 'Patient Trends & Delta' :
+                     (navItem ? navItem.label : '');
     document.getElementById('topbar').innerHTML =
       '<style>' +
       '.tb-acct{position:relative;flex:none}' +
@@ -812,7 +820,7 @@
       '</style>' +
       '<button class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Menu">' + icon('menu', 18) + '</button>' +
       (activeKey === 'dashboard' ? '<div class="tb-greet"><b>' + esc(_greet + _greetName) + '</b><span>' + esc(_longDate) + '</span></div>' : '') +
-      '<h1 class="page-title"' + (activeKey === 'dashboard' ? ' hidden' : '') + '>' + esc(navItem ? navItem.label : '') + '</h1>' +
+      '<h1 class="page-title"' + (activeKey === 'dashboard' ? ' hidden' : '') + '>' + esc(_pageTitle) + '</h1>' +
       '<div class="top-right"><div class="tb-qa">' + tbQa + '</div></div>' +
       '<div class="tb-acct">' +
       '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + _avatarInner + '</button>' +

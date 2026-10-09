@@ -144,6 +144,12 @@ function renderTests() {
   }).join(' ');
 
   view().innerHTML =
+    '<div class="test-head-bar" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">' +
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+        '<a class="btn btn-sm btn-primary" href="#/tests" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🔬 All Tests Catalog</a>' +
+        '<a class="btn btn-sm btn-ghost" href="#/packages" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🎁 Health Packages &amp; Screening Deals Center</a>' +
+      '</div>' +
+    '</div>' +
     '<div class="stat-grid">' + statCards + '</div>' +
     '<div class="card"><div class="card-b">' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">' +
@@ -1149,15 +1155,11 @@ function renderPackages() {
     + '</style>'
     + '<div class="pkg-dash">'
 
-    /* Header */
-    + '<div class="pkg-head-bar">'
-    +   '<div>'
-    +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-    +       '<a href="#/tests" class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px">← Tests Catalog</a>'
-    +       '<span style="font-size:12px;color:var(--muted)">/ Laboratory</span>'
-    +     '</div>'
-    +     '<h1 style="margin:0;font-size:23px;font-weight:800;color:var(--ink);letter-spacing:-.01em">🎁 Health Packages &amp; Screening Deals Center</h1>'
-    +     '<p class="muted" style="margin:4px 0 0;font-size:13px">Create promotional test bundles, configure discounted full-body screening panels, and generate 1-click bills &amp; counter flyers.</p>'
+    /* Top Header Navigation Tabs & Actions */
+    + '<div class="pkg-head-bar" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">'
+    +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+    +     '<a class="btn btn-sm btn-ghost" href="#/tests" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🔬 All Tests Catalog</a>'
+    +     '<a class="btn btn-sm btn-primary" href="#/packages" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🎁 Health Packages &amp; Screening Deals Center</a>'
     +   '</div>'
     +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
     +     '<button class="btn btn-ghost btn-sm" id="pkgSeedBtn">⚡ Quick Seed Premier Deals</button>'
@@ -1165,30 +1167,34 @@ function renderPackages() {
     +   '</div>'
     + '</div>'
 
-    /* 4 Stat KPI Cards */
-    + '<div class="pkg-stat-grid">'
-    +   '<div class="pkg-kpi-card" style="border-left:4px solid #0ea5e9">'
-    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Active Health Packages</span><span style="font-size:17px">🎁</span></div>'
-    +     '<div class="pkg-kpi-val">' + activePkgs.length + ' <span style="font-size:14px;color:var(--muted);font-weight:600">deals</span></div>'
-    +     '<div class="pkg-kpi-sub">' + pkgs.length + ' total packages configured</div>'
+    /* 4 Unified KPI Stat Cards (.kpi-grid + .kpi) */
+    + '<div class="kpi-grid" style="margin-bottom:18px">'
+    +   '<div class="kpi t-navy">'
+    +     '<div class="kpi-ic" style="font-size:16px">🎁</div>'
+    +     '<div class="kpi-lb">ACTIVE HEALTH PACKAGES</div>'
+    +     '<div class="kpi-nm">' + activePkgs.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">deals</span></div>'
+    +     '<div class="kpi-sb">' + pkgs.length + ' total packages configured</div>'
     +   '</div>'
 
-    +   '<div class="pkg-kpi-card" style="border-left:4px solid #10b981">'
-    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Diagnostic Tests Covered</span><span style="font-size:17px">🔬</span></div>'
-    +     '<div class="pkg-kpi-val">' + coveredCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">tests</span></div>'
-    +     '<div class="pkg-kpi-sub">Included across active bundles</div>'
+    +   '<div class="kpi t-green">'
+    +     '<div class="kpi-ic">' + App.icon('flask', 18) + '</div>'
+    +     '<div class="kpi-lb">DIAGNOSTIC TESTS COVERED</div>'
+    +     '<div class="kpi-nm">' + coveredCount + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">tests</span></div>'
+    +     '<div class="kpi-sb">Included across active bundles</div>'
     +   '</div>'
 
-    +   '<div class="pkg-kpi-card" style="border-left:4px solid #f59e0b">'
-    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Average Patient Savings</span><span style="font-size:17px">🏷️</span></div>'
-    +     '<div class="pkg-kpi-val" style="color:#b45309">~' + avgSavingsPct + '% <span style="font-size:14px;color:var(--muted);font-weight:600">OFF</span></div>'
-    +     '<div class="pkg-kpi-sub">Bundle discount vs individual tests</div>'
+    +   '<div class="kpi t-amber">'
+    +     '<div class="kpi-ic">' + App.icon('coins', 18) + '</div>'
+    +     '<div class="kpi-lb">AVERAGE PATIENT SAVINGS</div>'
+    +     '<div class="kpi-nm" style="color:var(--amber,#b45309)">~' + avgSavingsPct + '% <span style="font-size:14px;font-weight:600;color:var(--muted)">OFF</span></div>'
+    +     '<div class="kpi-sb">Bundle discount vs individual tests</div>'
     +   '</div>'
 
-    +   '<div class="pkg-kpi-card" style="border-left:4px solid #8b5cf6">'
-    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Package Billings</span><span style="font-size:17px">🧾</span></div>'
-    +     '<div class="pkg-kpi-val">' + pkgBilledCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">orders</span></div>'
-    +     '<div class="pkg-kpi-sub">Total times booked in patient invoices</div>'
+    +   '<div class="kpi t-purple">'
+    +     '<div class="kpi-ic">' + App.icon('file', 18) + '</div>'
+    +     '<div class="kpi-lb">PACKAGE BILLINGS</div>'
+    +     '<div class="kpi-nm">' + pkgBilledCount + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">orders</span></div>'
+    +     '<div class="kpi-sb">Total times booked in patient invoices</div>'
     +   '</div>'
     + '</div>'
 
