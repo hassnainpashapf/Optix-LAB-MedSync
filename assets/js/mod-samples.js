@@ -1092,13 +1092,6 @@
     var html = ''
       + '<style>'
       + '.hs-dash { max-width: 1300px; margin: 0 auto; }'
-      + '.hs-head-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }'
-      + '.hs-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }'
-      + '.hs-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
-      + '.hs-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
-      + '.hs-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
-      + '.hs-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; }'
-      + '.hs-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
       + '.hs-tab-bar { display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1.5px solid var(--bd); padding-bottom: 12px; margin-bottom: 16px; }'
       + '.hs-tab-btn { background: transparent; border: 1.5px solid transparent; border-radius: 8px; padding: 6px 14px; font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .15s; }'
       + '.hs-tab-btn:hover { background: #f1f5f9; color: var(--ink); }'
@@ -1109,38 +1102,48 @@
       + '</style>'
       + '<div class="hs-dash">'
 
-      /* 4 KPI Cards */
-      + '<div class="hs-stat-grid">'
-      +   '<div class="hs-kpi-card" style="border-left:4px solid #0284c7">'
-      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Today\'s Pickups</span><span style="font-size:17px">📅</span></div>'
-      +     '<div class="hs-kpi-val">' + todayBookings.length + ' <span style="font-size:14px;color:var(--muted);font-weight:600">scheduled</span></div>'
-      +     '<div class="hs-kpi-sub">' + bookings.length + ' all-time bookings</div>'
+      /* Page Header with Actions */
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px">'
+      +   '<div>'
+      +     '<h2 style="margin:0;font-size:20px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px">🛵 Home Sampling &amp; Dispatch</h2>'
+      +     '<p class="muted" style="margin:3px 0 0;font-size:12.5px">Doorstep sample collection bookings, phlebotomist tracking &amp; lab intake check-in</p>'
       +   '</div>'
-
-      +   '<div class="hs-kpi-card" style="border-left:4px solid #0ea5e9">'
-      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Currently Dispatched</span><span style="font-size:17px">🛵</span></div>'
-      +     '<div class="hs-kpi-val" style="color:#0284c7">' + dispatchedCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">on field</span></div>'
-      +     '<div class="hs-kpi-sub">Phlebotomists on the road</div>'
-      +   '</div>'
-
-      +   '<div class="hs-kpi-card" style="border-left:4px solid #8b5cf6">'
-      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Samples Collected</span><span style="font-size:17px">🩸</span></div>'
-      +     '<div class="hs-kpi-val" style="color:#6d28d9">' + collectedCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">en route</span></div>'
-      +     '<div class="hs-kpi-sub">Specimens heading to lab</div>'
-      +   '</div>'
-
-      +   '<div class="hs-kpi-card" style="border-left:4px solid #16a34a">'
-      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Checked-in to Lab</span><span style="font-size:17px">🔬</span></div>'
-      +     '<div class="hs-kpi-val" style="color:#15803d">' + receivedCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">intake today</span></div>'
-      +     '<div class="hs-kpi-sub">Received &amp; ready for testing</div>'
+      +   '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +     '<button class="btn btn-ghost btn-sm" id="hsRidersBtn">👥 Phlebotomist Riders (' + riders.length + ')</button>'
+      +     '<button class="btn btn-ghost btn-sm" id="hsSeedBtn">⚡ Seed Sample Bookings</button>'
+      +     '<button class="btn btn-primary btn-sm" id="hsBookBtn">+ Book Home Collection</button>'
       +   '</div>'
       + '</div>'
 
-      /* Action Buttons Below Cards */
-      + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:16px">'
-      +   '<button class="btn btn-ghost btn-sm" id="hsRidersBtn">👥 Phlebotomist Riders (' + riders.length + ')</button>'
-      +   '<button class="btn btn-ghost btn-sm" id="hsSeedBtn">⚡ Seed Sample Bookings</button>'
-      +   '<button class="btn btn-primary btn-sm" id="hsBookBtn">+ Book Home Collection</button>'
+      /* 4 Unified KPI Cards (Standard size, branded gradients & borders) */
+      + '<div class="kpi-grid" style="margin-bottom:18px">'
+      +   '<div class="kpi t-navy" style="cursor:pointer" data-hs-filter-date="today" title="Filter Today\'s Pickups">'
+      +     '<div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>'
+      +     '<div class="kpi-lb">TODAY\'S PICKUPS</div>'
+      +     '<div class="kpi-nm">' + todayBookings.length + '</div>'
+      +     '<div class="kpi-sb">' + bookings.length + ' all-time bookings</div>'
+      +   '</div>'
+
+      +   '<div class="kpi t-blue" style="cursor:pointer" data-hs-filter-status="dispatched" title="Filter Dispatched">'
+      +     '<div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg></div>'
+      +     '<div class="kpi-lb">CURRENTLY DISPATCHED</div>'
+      +     '<div class="kpi-nm">' + dispatchedCount + '</div>'
+      +     '<div class="kpi-sb">phlebotomists on the road</div>'
+      +   '</div>'
+
+      +   '<div class="kpi t-purple" style="cursor:pointer" data-hs-filter-status="collected" title="Filter Collected">'
+      +     '<div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6.3L4.6 18.1a1.5 1.5 0 0 0 1.3 2.2h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.3V3"/></svg></div>'
+      +     '<div class="kpi-lb">SAMPLES COLLECTED</div>'
+      +     '<div class="kpi-nm">' + collectedCount + '</div>'
+      +     '<div class="kpi-sb">specimens en route to lab</div>'
+      +   '</div>'
+
+      +   '<div class="kpi t-green" style="cursor:pointer" data-hs-filter-status="received_in_lab" title="Filter Received in Lab">'
+      +     '<div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></div>'
+      +     '<div class="kpi-lb">CHECKED-IN TO LAB</div>'
+      +     '<div class="kpi-nm">' + receivedCount + '</div>'
+      +     '<div class="kpi-sb">received &amp; ready for testing</div>'
+      +   '</div>'
       + '</div>'
 
       /* Pipeline Tabs */
@@ -1348,6 +1351,20 @@
           renderHomeSamplingDashboard();
         });
       }
+
+      /* KPI card quick filters */
+      view.querySelectorAll('[data-hs-filter-status]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          HS_FILTER.tab = this.getAttribute('data-hs-filter-status');
+          renderHomeSamplingDashboard();
+        });
+      });
+      view.querySelectorAll('[data-hs-filter-date]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          HS_FILTER.date = this.getAttribute('data-hs-filter-date');
+          renderHomeSamplingDashboard();
+        });
+      });
 
       /* Buttons */
       var bookBtn = document.getElementById('hsBookBtn');
