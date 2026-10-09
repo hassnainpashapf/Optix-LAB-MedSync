@@ -165,7 +165,14 @@ function renderTests() {
       '" data-cat="' + App.esc(c) + '">' + App.esc(c) + '</button>';
   }).join(' ');
 
+  var testTabs =
+    '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px">' +
+      '<a href="#/tests" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' + App.icon('flask', 15) + ' All Tests Catalog</a>' +
+      '<a href="#/packages" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('box', 15) + ' Health Packages &amp; Deals</a>' +
+    '</div>';
+
   view().innerHTML =
+    testTabs +
     statCards +
     '<div class="card"><div class="card-b">' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">' +
@@ -882,9 +889,11 @@ function renderDoctors() {
     '<style>' + DOC_STAT_CSS + '</style>' +
     '<div class="stat-grid">' + docStats + '</div>' +
     '<div class="card"><div class="card-b">' +
-      '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px"><input id="d-q" class="input search" placeholder="Search name, clinic, phone..." value="' + App.esc(docFilter.q) + '" style="max-width:280px">' +
-      '<button type="button" class="btn btn-ghost" id="d-stmt" style="margin-left:auto">Monthly statements</button>' +
-      '<button type="button" class="btn btn-primary" id="d-add">+ Add Doctor</button></div>' +
+      '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap"><input id="d-q" class="input search" placeholder="Search name, clinic, phone..." value="' + App.esc(docFilter.q) + '" style="max-width:280px">' +
+      '<div style="margin-left:auto;display:flex;gap:8px;align-items:center">' +
+        '<button type="button" class="btn btn-secondary" id="d-stmt" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)">' + App.icon('file', 15) + ' Monthly Statements</button>' +
+        '<button type="button" class="btn btn-primary" id="d-add">+ Add Doctor</button>' +
+      '</div></div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Doctor</th><th>Clinic</th><th>Phone</th><th style="text-align:right">Commission %</th>' +
         '<th style="text-align:right">Referred (this month)</th><th style="text-align:right">Commission Due (month)</th>' +
@@ -1167,6 +1176,10 @@ function renderPackages() {
     + '.pkg-price-bar { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 12px 14px; margin: 14px 0 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }'
     + '</style>'
     + '<div class="pkg-dash">'
+    + '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px">'
+    +   '<a href="#/tests" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('flask', 15) + ' All Tests Catalog</a>'
+    +   '<a href="#/packages" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' + App.icon('box', 15) + ' Health Packages &amp; Deals</a>'
+    + '</div>'
 
     /* 4 Unified KPI Stat Cards (.kpi-grid + .kpi) */
     + '<div class="kpi-grid" style="margin-bottom:18px">'

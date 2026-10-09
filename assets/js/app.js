@@ -46,11 +46,10 @@
       sub: [{ key: 'new', label: 'Add Patient', route: '#/patients/new' }, { key: 'all', label: 'All Patients', route: '#/patients' }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
       sub: [{ key: 'all', label: 'Sample Tracking', route: '#/samples' }, { key: 'stickers', label: 'Tube Stickers (50×25mm)', route: '#/samples/stickers' }, { key: 'home', label: 'Home Sampling & Dispatch', route: '#/home-sampling' }] },
-    { key: 'stock',     label: 'Stock',      icon: 'box',       route: '#/stock',     color: '#0ea5e9' },
+    { key: 'inventory', label: 'Inventory',  icon: 'box',       route: '#/inventory', color: '#0ea5e9' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', route: '#/results' }, { key: 'ready', label: 'Ready Reports', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', route: '#/results/old' }] },
-    { key: 'tests',     label: 'Tests',      icon: 'flask',     route: '#/tests',     color: '#14b8a6',
-      sub: [{ key: 'all', label: 'All Tests Catalog', route: '#/tests' }, { key: 'packages', label: 'Health Packages & Deals', route: '#/packages' }] },
+    { key: 'tests',     label: 'Tests & Packages', icon: 'flask', route: '#/tests', color: '#14b8a6' },
     { key: 'outsourced', label: 'Outsourced', icon: 'scan',     route: '#/outsourced', color: '#d946ef' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316',
       sub: [{ key: 'all', label: 'All Invoices', route: '#/invoices' }, { key: 'thermal', label: 'POS Thermal Slips (80/58mm)', route: '#/receipts' }] },
@@ -60,8 +59,7 @@
     { key: 'panels',    label: 'Corporate',  icon: 'users',     route: '#/panels',    color: '#7c3aed' },
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors',   color: '#ec4899' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
-    { key: 'finance',   label: 'Cash & Profit', icon: 'finance', route: '#/finance', color: '#0ea5a4',
-      sub: [{ key: 'closing', label: 'Daily Cash Closing', route: '#/finance' }, { key: 'profit', label: 'Profit & Loss', route: '#/finance/profit', roles: ['admin'] }] },
+    { key: 'finance',   label: 'Cash & Profit', icon: 'finance', route: '#/finance', color: '#0ea5a4' },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports/tests',   color: '#6366f1',
       sub: [
         { key: 'tests',    label: 'Test Reports',     route: '#/reports/tests' },
@@ -109,6 +107,7 @@
     doctors:   ['admin', 'reception'],
     samples:   ['admin', 'reception', 'technician'],
     stock:     ['admin', 'technician'],
+    inventory: ['admin', 'technician'],
     email:     ['admin', 'reception'],
     results:   ['admin', 'technician'],
     expenses:  ['admin', 'reception'],
@@ -132,12 +131,13 @@
     if (seg === 'signatures') seg = 'settings';
     if (seg === 'online-payments') seg = 'onlinepay';
     if (seg === 'digest') seg = 'whatsapp';
+    if (seg === 'stock') seg = 'inventory';
     return seg || 'dashboard';
   }
   /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
      Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
   var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['onlinepay', 'Online Payments'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
-    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Cash & daily closing'], ['reports', 'Reports'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['downloads', 'Downloads']];
+    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Cash & daily closing'], ['reports', 'Reports'], ['inventory', 'Inventory & Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['downloads', 'Downloads']];
   function roleDef(s) {
     s = s || session(); if (!s || s.role !== 'custom') return null;
     var set = null; try { set = DB.get('settings', 'main'); } catch (e) {}
@@ -709,10 +709,10 @@
     try { st = window.DB.get('settings', 'main') || {}; } catch (e) {}
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     /* grouped, professional sidebar: section labels, one icon style, active state on the left */
-    var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
+    var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', inventory: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
       invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
       whatsapp: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'patients', 'samples', 'stock', 'results', 'tests', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
@@ -733,7 +733,7 @@
        A new page only needs its key added to a folder below (a key that is in no folder simply shows at the bottom). */
     var TOP = ['dashboard', 'patients', 'samples', 'results', 'invoices', 'reports'];
     var FOLDERS = [
-      { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['tests', 'outsourced', 'stock', 'doctors'] },
+      { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['tests', 'outsourced', 'inventory', 'doctors'] },
       { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance'] },
       { id: 'ins', label: 'Insights', icon: 'shield', keys: ['audit'] },
       { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'email', 'downloads'] },

@@ -598,26 +598,30 @@
 
     var h = ''
       /* 4 Executive KPI Cards */
-      + '<div class="wnd-kpis">'
-      +   '<div class="wnd-kpi">'
-      +     '<div class="k">Today\'s Net Billed</div>'
-      +     '<b style="color:var(--brand)">' + App.money(m.totalBilled) + '</b>'
-      +     '<div class="sub">' + m.invoicesCount + ' Invoices • Disc: ' + App.money(m.discountsTotal) + '</div>'
+      + '<div class="kpi-grid" style="margin-bottom:18px">'
+      +   '<div class="kpi t-navy" style="border-left:4px solid #0284c7 !important">'
+      +     '<div class="kpi-ic">' + App.icon('file', 18) + '</div>'
+      +     '<div class="kpi-lb">TODAY\'S NET BILLED</div>'
+      +     '<div class="kpi-nm" style="color:#0284c7">' + App.money(m.totalBilled) + '</div>'
+      +     '<div class="kpi-sb">' + m.invoicesCount + ' Invoices • Disc: ' + App.money(m.discountsTotal) + '</div>'
       +   '</div>'
-      +   '<div class="wnd-kpi">'
-      +     '<div class="k">Total Collections (In-Hand)</div>'
-      +     '<b style="color:#047857">' + App.money(m.totalCollections) + '</b>'
-      +     '<div class="sub">Cash: ' + App.money(m.cashCollected) + ' • Online: ' + App.money(m.onlineCollected) + (m.duesTotal > 0 ? ' • Dues: ' + App.money(m.duesTotal) : '') + '</div>'
+      +   '<div class="kpi t-green" style="border-left:4px solid #16a34a !important">'
+      +     '<div class="kpi-ic">' + App.icon('wallet', 18) + '</div>'
+      +     '<div class="kpi-lb">TOTAL COLLECTIONS (IN-HAND)</div>'
+      +     '<div class="kpi-nm" style="color:#16a34a">' + App.money(m.totalCollections) + '</div>'
+      +     '<div class="kpi-sb">Cash: ' + App.money(m.cashCollected) + ' • Online: ' + App.money(m.onlineCollected) + (m.duesTotal > 0 ? ' • Dues: ' + App.money(m.duesTotal) : '') + '</div>'
       +   '</div>'
-      +   '<div class="wnd-kpi">'
-      +     '<div class="k">Net Lab Surplus (Profit)</div>'
-      +     '<b style="color:' + (m.netSurplus >= 0 ? '#047857' : '#b91c1c') + '">' + App.money(m.netSurplus) + '</b>'
-      +     '<div class="sub">Collections - Expenses (' + App.money(m.totalExpenses) + ') • ' + m.profitMargin + '% Margin</div>'
+      +   '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">'
+      +     '<div class="kpi-ic">' + App.icon('chart', 18) + '</div>'
+      +     '<div class="kpi-lb">NET LAB SURPLUS (PROFIT)</div>'
+      +     '<div class="kpi-nm" style="color:#d97706">' + App.money(m.netSurplus) + '</div>'
+      +     '<div class="kpi-sb">Collections - Expenses (' + App.money(m.totalExpenses) + ') • ' + m.profitMargin + '% Margin</div>'
       +   '</div>'
-      +   '<div class="wnd-kpi">'
-      +     '<div class="k">Diagnostic Ops &amp; Alerts</div>'
-      +     '<b>' + m.testsTotal + ' <span style="font-size:15px;font-weight:600;color:var(--muted)">Tests</span></b>'
-      +     '<div class="sub">' + m.testsReady + ' Ready (' + m.completionRate + '%) • '
+      +   '<div class="kpi t-purple" style="border-left:4px solid #7c3aed !important">'
+      +     '<div class="kpi-ic">' + App.icon('flask', 18) + '</div>'
+      +     '<div class="kpi-lb">DIAGNOSTIC OPS &amp; ALERTS</div>'
+      +     '<div class="kpi-nm" style="color:#7c3aed">' + m.testsTotal + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">Tests</span></div>'
+      +     '<div class="kpi-sb">' + m.testsReady + ' Ready (' + m.completionRate + '%) • '
       +       (m.criticals.length ? '<span style="color:#b91c1c;font-weight:800">🚨 ' + m.criticals.length + ' Critical</span>' : '<span style="color:#047857">0 Critical</span>')
       +       (m.homeTotal ? ' • 🛵 ' + m.homeCollected + ' Home' : '') + '</div>'
       +   '</div>'
@@ -927,10 +931,32 @@
     }
 
     var h = (ready ? '' : '<div class="card" style="margin-bottom:14px;border-color:#f6c6c6;background:#fff6f6"><div class="card-b"><b style="color:#b91c1c">WhatsApp sending is not configured yet.</b> <span class="muted">Link the lab WhatsApp number in Settings → WhatsApp (scan a QR code). Reports can still be printed and shared manually.</span></div></div>') +
-      tabsHtml(tab, waiting, L.length) +
-      '<div class="wc-st"><div class="card"><div class="k">Sent today</div><b>' + sentToday + '</b></div><div class="card"><div class="k">Waiting to send</div><b>' + waiting + '</b></div>' +
-      '<div class="card"><div class="k">Failed (all time)</div><b style="color:' + (failed ? '#b91c1c' : 'inherit') + '">' + failed + '</b></div>' +
-      '<div class="card"><div class="k">Auto-send</div><b style="font-size:17px;margin-top:9px">' + (cfg.autoPatient !== false ? 'Patient ✓ ' : '') + (cfg.autoDoctor === true ? 'Doctor ✓' : '') + ((cfg.autoPatient === false && cfg.autoDoctor !== true) ? 'Off' : '') + '</b></div></div>' +
+      '<div class="kpi-grid" style="margin-bottom:18px">' +
+        '<div class="kpi t-green" style="border-left:4px solid #16a34a !important">' +
+          '<div class="kpi-ic">' + App.icon('check', 18) + '</div>' +
+          '<div class="kpi-lb">SENT TODAY</div>' +
+          '<div class="kpi-nm" style="color:#16a34a">' + sentToday + '</div>' +
+          '<div class="kpi-sb">Delivered via WhatsApp</div>' +
+        '</div>' +
+        '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">' +
+          '<div class="kpi-ic">' + App.icon('clock', 18) + '</div>' +
+          '<div class="kpi-lb">WAITING TO SEND</div>' +
+          '<div class="kpi-nm" style="color:#d97706">' + waiting + '</div>' +
+          '<div class="kpi-sb">Ready reports queued</div>' +
+        '</div>' +
+        '<div class="kpi t-red" style="border-left:4px solid #dc2626 !important">' +
+          '<div class="kpi-ic">' + App.icon('alert', 18) + '</div>' +
+          '<div class="kpi-lb">FAILED (ALL TIME)</div>' +
+          '<div class="kpi-nm" style="color:' + (failed ? '#dc2626' : 'var(--muted)') + '">' + failed + '</div>' +
+          '<div class="kpi-sb">Delivery failures</div>' +
+        '</div>' +
+        '<div class="kpi t-blue" style="border-left:4px solid #2563eb !important">' +
+          '<div class="kpi-ic">' + App.icon('chat', 18) + '</div>' +
+          '<div class="kpi-lb">AUTO-SEND</div>' +
+          '<div class="kpi-nm" style="color:#2563eb;font-size:18px">' + (cfg.autoPatient !== false ? 'Patient ✓ ' : '') + (cfg.autoDoctor === true ? 'Doctor ✓' : '') + ((cfg.autoPatient === false && cfg.autoDoctor !== true) ? 'Off' : '') + '</div>' +
+          '<div class="kpi-sb">Auto dispatch rules</div>' +
+        '</div>' +
+      '</div>' +
       '<div class="wc-cur"><b>' + (tab === 'tpl' ? 'Templates &amp; rules' : (tab === 'log' ? 'Message log' : 'Ready to send')) + '</b><span>' + (tab === 'tpl' ? 'Messages and sending rules' : (tab === 'log' ? L.length + ' message' + (L.length === 1 ? '' : 's') : waiting + ' waiting')) + '</span></div>';
     if (cfg.provider === 'gateway') h = h.replace('<div class="wc-cur">', '<div id="wcQueue" class="card" style="margin-bottom:14px;display:none"><div class="card-b" style="padding:12px 16px"></div></div><div class="wc-cur">');
     if (tab === 'tpl' && s.role === 'admin') h += tplHtml(cfg);

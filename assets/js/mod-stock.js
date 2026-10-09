@@ -1,10 +1,11 @@
-/* Optix Medical Sync — Stock (#/stock): reagents, kits and consumables.
-   Receive stock (lot + expiry), it is used up automatically when a test result is saved (Tests -> edit -> "Stock used per test"),
-   record waste / corrections, and get alerts for low stock, expiring and expired lots. All numbers come from the movement log (App.stockState). */
+/* Optix Medical Sync — Inventory & Stock Dashboard (#/inventory, #/stock):
+   Track clinical lab reagents, test kits, vacutainers, consumables & diagnostic supplies.
+   Receive stock (lot + expiry), automatic consumption when test results are saved,
+   record waste / corrections, and comprehensive reorder & expiry alerts. */
 (function () {
   'use strict';
   var esc = App.esc;
-  var F = { q: '', show: 'all' };
+  var F = { q: '', show: 'all', tab: 'items', moveType: 'all', mq: '' };
   var UNITS = ['tests', 'kit', 'vial', 'bottle', 'box', 'pack', 'pcs', 'ml', 'L', 'g'];
 
   var CSS = '' +
@@ -22,7 +23,7 @@
 
   function num(n) { n = Math.round((+n || 0) * 100) / 100; return String(n); }
   function fdate(d) { return d ? App.d(d) : '—'; }
-  function canEdit() { var s = App.session(); return !!s && (s.role === 'admin' || s.role === 'technician' || (s.role === 'custom' && App.canPage('stock'))); }
+  function canEdit() { var s = App.session(); return !!s && (s.role === 'admin' || s.role === 'technician' || (s.role === 'custom' && (App.canPage('stock') || App.canPage('inventory')))); }
 
   function statusChips(r) {
     var h = '';
@@ -59,93 +60,359 @@
         } });
   }
 
-  var STAT_TINTS = {
-    brand: { sc: '#0284c7', line: '#aecbe3', soft: '#ebf4f9', circle: '#ddecf5' },
-    navy:  { sc: '#0284c7', line: '#aecbe3', soft: '#ebf4f9', circle: '#ddecf5' },
-    blue:  { sc: '#2563eb', line: '#a9c9ec', soft: '#e7f0fe', circle: '#dde9fb' },
-    amber: { sc: '#d97706', line: '#e9cb96', soft: '#fef4e2', circle: '#fde8c8' },
-    green: { sc: '#16a34a', line: '#9fd8b8', soft: '#e6f7f0', circle: '#d8f2e4' },
-    red:   { sc: '#dc2626', line: '#e6aaaa', soft: '#fdecec', circle: '#fad2d2' }
-  };
+  var LAB_COMMON_ITEMS = [
+    { name: 'CBC 3-Part Reagent Pack (Diluent, Lyse, Cleaner)', unit: 'tests', category: 'Hematology & Analyzers', vendor: 'Sysmex / Mindray', reorderLevel: 250 },
+    { name: 'CBC Probe Cleaner Solution', unit: 'bottle', category: 'Hematology & Analyzers', vendor: 'Sysmex / Mindray', reorderLevel: 2 },
+    { name: 'Blood Glucose GOD-POD Reagent Kit (500ml)', unit: 'tests', category: 'Clinical Chemistry', vendor: 'Spinreact / Diasys', reorderLevel: 300 },
+    { name: 'LFT Reagent Kit (ALT, AST, ALP, Total Bilirubin)', unit: 'tests', category: 'Clinical Chemistry', vendor: 'Linear Chemicals', reorderLevel: 150 },
+    { name: 'RFT Reagent Kit (Urea & Creatinine)', unit: 'tests', category: 'Clinical Chemistry', vendor: 'Spinreact / Biosystems', reorderLevel: 150 },
+    { name: 'Lipid Profile Reagents (Cholesterol, Triglycerides, HDL)', unit: 'tests', category: 'Clinical Chemistry', vendor: 'Human Diagnostics', reorderLevel: 100 },
+    { name: 'Electrolytes Reagent Pack (Na+, K+, Cl-)', unit: 'tests', category: 'Clinical Chemistry', vendor: 'Roche / Cornley', reorderLevel: 100 },
+    { name: 'EDTA K3 Blood Collection Tubes 3ml (Lavender)', unit: 'pcs', category: 'Phlebotomy & Tubes', vendor: 'BD Vacutainer', reorderLevel: 200 },
+    { name: 'Serum Clot Activator & Gel Tubes 4ml (Yellow)', unit: 'pcs', category: 'Phlebotomy & Tubes', vendor: 'BD Vacutainer', reorderLevel: 200 },
+    { name: 'Sodium Citrate 3.2% Tubes 2.7ml (Light Blue)', unit: 'pcs', category: 'Phlebotomy & Tubes', vendor: 'BD Vacutainer', reorderLevel: 100 },
+    { name: 'Fluoride Oxalate Sugar Tubes 2ml (Grey)', unit: 'pcs', category: 'Phlebotomy & Tubes', vendor: 'BD Vacutainer', reorderLevel: 100 },
+    { name: 'Disposable Syringes with Needle 5ml', unit: 'pcs', category: 'Phlebotomy & Tubes', vendor: 'BD / Shifa', reorderLevel: 300 },
+    { name: 'Disposable Syringes with Needle 3ml', unit: 'pcs', category: 'Phlebotomy & Tubes', vendor: 'BD / Shifa', reorderLevel: 300 },
+    { name: 'BD Vacutainer Needles 21G / 22G', unit: 'box', category: 'Phlebotomy & Tubes', vendor: 'BD', reorderLevel: 5 },
+    { name: 'Alcohol Prep Pads (Box of 100)', unit: 'box', category: 'Phlebotomy & Tubes', vendor: 'BD / Webcol', reorderLevel: 5 },
+    { name: 'Urine 10-Parameter Reagent Strips (100 Strips)', unit: 'pack', category: 'Urinalysis', vendor: 'Siemens / Acon', reorderLevel: 2 },
+    { name: 'Urine Specimen Collection Containers 60ml Sterile', unit: 'pcs', category: 'Consumables & Plasticware', vendor: 'LabChem', reorderLevel: 200 },
+    { name: 'Pregnancy Rapid Test Strips (hCG)', unit: 'tests', category: 'Rapid Test Devices', vendor: 'Acon / InTec', reorderLevel: 50 },
+    { name: 'Typhidot IgM/IgG Rapid ICT Cassettes', unit: 'tests', category: 'Rapid Test Devices', vendor: 'SD Biosensor', reorderLevel: 50 },
+    { name: 'Dengue NS1 Antigen & IgG/IgM Combo Devices', unit: 'tests', category: 'Rapid Test Devices', vendor: 'SD Biosensor', reorderLevel: 50 },
+    { name: 'HBsAg Rapid Screening Devices (Hepatitis B)', unit: 'tests', category: 'Serology & Rapid Devices', vendor: 'Acon Biotech', reorderLevel: 50 },
+    { name: 'HCV Antibody Rapid Screening Devices (Hepatitis C)', unit: 'tests', category: 'Serology & Rapid Devices', vendor: 'Acon Biotech', reorderLevel: 50 },
+    { name: 'HIV 1/2 Triline Rapid Test Cassettes', unit: 'tests', category: 'Serology & Rapid Devices', vendor: 'Abbott / Alere', reorderLevel: 30 },
+    { name: 'VDRL / Syphilis Rapid Test Device', unit: 'tests', category: 'Serology & Rapid Devices', vendor: 'CTK Biotech', reorderLevel: 30 },
+    { name: 'Microscope Glass Slides 7101 (Box of 50)', unit: 'box', category: 'Consumables & Plasticware', vendor: 'Sail Brand', reorderLevel: 10 },
+    { name: 'Microscope Cover Slips 22×22mm (Pack of 100)', unit: 'box', category: 'Consumables & Plasticware', vendor: 'Sail Brand', reorderLevel: 10 },
+    { name: 'Leishman Stain Solution (500ml)', unit: 'bottle', category: 'Stains & Chemicals', vendor: 'BDH / Merck', reorderLevel: 2 },
+    { name: 'Microscopic Immersion Oil Type A (50ml)', unit: 'bottle', category: 'Stains & Chemicals', vendor: 'Cargille / Merck', reorderLevel: 1 },
+    { name: 'Nitrile Powder-Free Examination Gloves (Medium)', unit: 'box', category: 'PPE & Safety', vendor: 'Supermax / Ansell', reorderLevel: 10 },
+    { name: 'Yellow Micropipette Tips 200 µL (Pack of 500)', unit: 'pack', category: 'Consumables & Plasticware', vendor: 'Gilson / Eppendorf', reorderLevel: 5 },
+    { name: 'Blue Micropipette Tips 1000 µL (Pack of 500)', unit: 'pack', category: 'Consumables & Plasticware', vendor: 'Gilson / Eppendorf', reorderLevel: 5 },
+    { name: 'Thermal Receipt Rolls 80mm × 80m (Box of 50)', unit: 'pcs', category: 'Counter & Stationery', vendor: 'Standard POS Paper', reorderLevel: 20 },
+    { name: 'Thermal Barcode Tube Stickers 50×25mm (Roll of 1000)', unit: 'pcs', category: 'Counter & Stationery', vendor: 'Zebra / Citizen', reorderLevel: 10 }
+  ];
 
-  function statCard(icon, tint, label, value, sub) {
-    var c = STAT_TINTS[tint] || STAT_TINTS.blue;
-    return '<div class="stat" data-tint="' + tint + '" style="--sc:' + c.sc + ';--sc-line:' + c.line + ';--sc-soft:' + c.soft + ';display:flex;flex-direction:column;justify-content:space-between;height:128px;min-height:128px;box-sizing:border-box;position:relative;background:linear-gradient(55deg,#ffffff 52%,' + c.soft + ' 52%);border:1.5px solid ' + c.line + ' !important;border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow:hidden">' +
-      '<div style="position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;background:' + c.circle + ';opacity:0.65;pointer-events:none"></div>' +
-      '<div class="stat-ico" style="position:relative;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:' + c.sc + ';background:linear-gradient(135deg,' + c.soft + ' 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px ' + c.line + ',0 1px 3px rgba(15,30,46,.06);margin-bottom:6px;flex:0 0 auto">' + icon + '</div>' +
-      '<div class="lb" style="position:relative;font-size:10.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;flex:0 0 auto">' + App.esc(label) + '</div>' +
-      '<div class="vl" style="position:relative;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0 0 4px 0;flex:0 0 auto">' + value + '</div>' +
-      '<div class="dl" style="position:relative;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto">' + sub + '</div>' +
-      '</div>';
+  function seedStockCatalog(force) {
+    var existing = DB.all('stock_items') || [];
+    if (existing.length && !force) return 0;
+    var count = 0;
+    LAB_COMMON_ITEMS.forEach(function (preset) {
+      var dup = existing.some(function (x) { return String(x.name).toLowerCase() === preset.name.toLowerCase(); });
+      if (!dup) {
+        var id = DB.insert('stock_items', {
+          name: preset.name,
+          unit: preset.unit,
+          category: preset.category,
+          vendor: preset.vendor,
+          reorderLevel: preset.reorderLevel,
+          active: true
+        });
+        DB.insert('stock_moves', {
+          itemId: id,
+          type: 'in',
+          qty: Math.max(10, preset.reorderLevel * 2),
+          lot: 'LOT-' + Math.floor(10000 + Math.random() * 90000),
+          expiry: new Date(Date.now() + 180 * 86400000).toISOString().slice(0, 10),
+          note: 'Initial catalog stock balance',
+          date: new Date().toISOString().slice(0, 10),
+          createdAt: new Date().toISOString(),
+          by: (App.session() || {}).name || 'System'
+        });
+        count++;
+      }
+    });
+    return count;
+  }
+
+  function exportCsv(tab, rows, S) {
+    var csv = '';
+    if (tab === 'moves') {
+      var moves = (DB.all('stock_moves') || []).slice().sort(function (a, b) {
+        return String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date));
+      });
+      csv = 'Date,Item,Type,Quantity,Unit,Lot,Expiry,Note,Logged By\r\n';
+      moves.forEach(function (m) {
+        var it = DB.get('stock_items', m.itemId) || {};
+        var row = [
+          m.date || '',
+          '"' + (it.name || '').replace(/"/g, '""') + '"',
+          m.type || '',
+          m.qty || 0,
+          it.unit || '',
+          m.lot || '',
+          m.expiry || '',
+          '"' + (m.note || m.ref || '').replace(/"/g, '""') + '"',
+          '"' + (m.by || '').replace(/"/g, '""') + '"'
+        ];
+        csv += row.join(',') + '\r\n';
+      });
+    } else {
+      csv = 'Item Name,Category,Supplier,Unit,On Hand,Reorder Level,Nearest Expiry,Status\r\n';
+      (rows || []).forEach(function (r) {
+        var it = r.item || {};
+        var status = r.out ? 'Out of stock' : (r.low ? 'Low stock' : 'OK');
+        if (r.expired) status += ' (Expired: ' + r.expiredQty + ')';
+        if (r.soon) status += ' (Expiring soon: ' + r.soonQty + ')';
+        var row = [
+          '"' + (it.name || '').replace(/"/g, '""') + '"',
+          '"' + (it.category || '').replace(/"/g, '""') + '"',
+          '"' + (it.vendor || '').replace(/"/g, '""') + '"',
+          it.unit || '',
+          r.onHand || 0,
+          it.reorderLevel || 0,
+          r.nearest || '',
+          '"' + status.replace(/"/g, '""') + '"'
+        ];
+        csv += row.join(',') + '\r\n';
+      });
+    }
+    var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = (tab === 'moves' ? 'inventory-moves-' : 'inventory-stock-') + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   function render() {
     css();
     var v = document.getElementById('view'); if (!v) return;
-    var S = App.stockState(), q = F.q.toLowerCase();
+    var S = App.stockState();
+    var seededFlag = false;
+    try { seededFlag = localStorage.getItem('labpos_stock_catalog_seeded') === '1'; } catch (e) {}
+    if ((!S.rows.length || !(DB.all('stock_items') || []).length) && !seededFlag) {
+      seedStockCatalog(false);
+      try { localStorage.setItem('labpos_stock_catalog_seeded', '1'); } catch (e) {}
+      S = App.stockState();
+    }
+    var q = F.q.toLowerCase();
     var rows = S.rows.filter(function (r) {
       if (q && (r.item.name + ' ' + (r.item.category || '') + ' ' + (r.item.vendor || '')).toLowerCase().indexOf(q) < 0) return false;
       if (F.show === 'alerts') return r.out || r.low || r.expired || r.soon;
+      if (F.show === 'low') return r.low;
+      if (F.show === 'out') return r.out;
+      if (F.show === 'exp') return r.expired || r.soon;
       return true;
     }).sort(function (a, b) {
       var sa = (a.out || a.expired ? 0 : (a.low || a.soon ? 1 : 2)), sb = (b.out || b.expired ? 0 : (b.low || b.soon ? 1 : 2));
       return sa - sb || String(a.item.name).localeCompare(String(b.item.name));
     });
     var al = S.rows.filter(function (r) { return r.out || r.low || r.expired || r.soon; });
-    var I_BOX = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4L7.5 4.21"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>';
-    var I_WARN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
-    var I_CAL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
-    var I_EXP = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
 
-    var h = '<div class="stat-grid">' +
-      statCard(I_BOX, 'brand', 'Items', S.rows.length, 'tracked in stock') +
-      statCard(I_WARN, 'amber', 'Low / out of stock', (S.low + S.out), 'need restocking') +
-      statCard(I_CAL, 'blue', 'Expiring in ' + S.warnDays + ' days', S.soon, 'lots expiring soon') +
-      statCard(I_EXP, 'red', 'Expired', S.expired, 'lots past expiry') +
+    var curTab = F.tab || 'items';
+
+    var h = '' +
+      /* Dashboard Header */
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">' +
+        '<div>' +
+          '<h2 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);display:flex;align-items:center;gap:10px">' +
+            '<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:#e0f2fe;color:#0284c7">' + App.icon('box', 22) + '</span>' +
+            'Inventory &amp; Stock Dashboard' +
+          '</h2>' +
+          '<div style="font-size:12.5px;color:var(--muted);margin-top:2px">Clinical laboratory reagents, test kits, vacutainers, consumables &amp; automated consumption tracking</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
+          (canEdit() ? '<button class="btn btn-primary" id="skRecvTop" style="display:inline-flex;align-items:center;gap:6px;font-weight:700">' + App.icon('plus', 16) + ' Receive Stock</button>' +
+            '<button class="btn btn-secondary" id="skAddTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('plus', 16) + ' Add Item</button>' +
+            '<button class="btn btn-ghost btn-sm" id="skSeedCatTop" style="background:#f8fafc;border:1px solid #cbd5e1;font-weight:600;display:inline-flex;align-items:center;gap:6px" title="Load comprehensive 30+ medical laboratory reagents, test kits and tubes">⚡ Lab Catalog</button>' : '') +
+          '<button class="btn btn-ghost btn-sm" id="skCsvExport" style="background:#f8fafc;border:1px solid #cbd5e1;font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('download', 14) + ' Export CSV</button>' +
+        '</div>' +
+      '</div>' +
+
+      /* 4 Standardized Unified KPI Stat Cards (.kpi-grid + .kpi) */
+      '<div class="kpi-grid" style="margin-bottom:18px">' +
+        '<div class="kpi t-navy" style="border-left:4px solid #0284c7 !important">' +
+          '<div class="kpi-ic">' + App.icon('box', 18) + '</div>' +
+          '<div class="kpi-lb">TOTAL INVENTORY ITEMS</div>' +
+          '<div class="kpi-nm" style="color:#0284c7">' + S.rows.length + '</div>' +
+          '<div class="kpi-sb">Tracked in lab catalog</div>' +
+        '</div>' +
+        '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">' +
+          '<div class="kpi-ic">' + App.icon('alert', 18) + '</div>' +
+          '<div class="kpi-lb">LOW / OUT OF STOCK</div>' +
+          '<div class="kpi-nm" style="color:#d97706">' + (S.low + S.out) + '</div>' +
+          '<div class="kpi-sb">' + S.out + ' out of stock • ' + S.low + ' low balance</div>' +
+        '</div>' +
+        '<div class="kpi t-purple" style="border-left:4px solid #7c3aed !important">' +
+          '<div class="kpi-ic">' + App.icon('clock', 18) + '</div>' +
+          '<div class="kpi-lb">EXPIRING IN ' + S.warnDays + ' DAYS</div>' +
+          '<div class="kpi-nm" style="color:#7c3aed">' + S.soon + '</div>' +
+          '<div class="kpi-sb">Reagent lots near expiry</div>' +
+        '</div>' +
+        '<div class="kpi t-red" style="border-left:4px solid #dc2626 !important">' +
+          '<div class="kpi-ic">' + App.icon('x', 18) + '</div>' +
+          '<div class="kpi-lb">EXPIRED LOTS</div>' +
+          '<div class="kpi-nm" style="color:' + (S.expired > 0 ? '#dc2626' : 'var(--muted)') + '">' + S.expired + '</div>' +
+          '<div class="kpi-sb">Requires disposal / waste log</div>' +
+        '</div>' +
+      '</div>' +
+
+      /* Top Horizontal View Tabs */
+      '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px;flex-wrap:wrap">' +
+        '<button class="btn btn-sm ' + (curTab === 'items' ? 'btn-primary' : 'btn-secondary') + '" id="tabItems" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;' + (curTab !== 'items' ? 'background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)' : '') + '">' + App.icon('box', 15) + ' Inventory Stock &amp; Items</button>' +
+        '<button class="btn btn-sm ' + (curTab === 'moves' ? 'btn-primary' : 'btn-secondary') + '" id="tabMoves" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;' + (curTab !== 'moves' ? 'background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)' : '') + '">' + App.icon('tube', 15) + ' Movement Log &amp; History</button>' +
+        '<button class="btn btn-sm ' + (curTab === 'alerts' ? 'btn-primary' : 'btn-secondary') + '" id="tabAlerts" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;' + (curTab !== 'alerts' ? 'background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)' : '') + '">' + App.icon('alert', 15) + ' Reorder &amp; Expiry Alerts ' + (al.length ? '<span style="background:#dc2626;color:#fff;border-radius:10px;padding:1px 6px;font-size:11px">' + al.length + '</span>' : '') + '</button>' +
       '</div>';
-    if (al.length) {
-      h += '<div class="sk-alert"><b>Needs attention</b><br>' + al.slice(0, 8).map(function (r) {
-        var bits = []; if (r.out) bits.push('out of stock'); else if (r.low) bits.push('only ' + num(r.onHand) + ' ' + esc(r.item.unit || '') + ' left (reorder at ' + num(r.item.reorderLevel) + ')');
-        if (r.expired) bits.push(num(r.expiredQty) + ' expired'); if (r.soon) bits.push(num(r.soonQty) + ' expiring by ' + fdate(r.nearest));
-        return '• <b>' + esc(r.item.name) + '</b> — ' + bits.join(', ');
-      }).join('<br>') + (al.length > 8 ? '<br>…and ' + (al.length - 8) + ' more' : '') + '</div>';
+
+    /* Tab 1: Inventory Stock Items */
+    if (curTab === 'items') {
+      if (al.length) {
+        h += '<div class="sk-alert"><b>⚠️ Stock alerts needing immediate attention:</b><br>' + al.slice(0, 6).map(function (r) {
+          var bits = []; if (r.out) bits.push('<span style="color:#b91c1c;font-weight:800">out of stock</span>'); else if (r.low) bits.push('only ' + num(r.onHand) + ' ' + esc(r.item.unit || '') + ' left (reorder at ' + num(r.item.reorderLevel) + ')');
+          if (r.expired) bits.push('<span style="color:#b91c1c">' + num(r.expiredQty) + ' expired</span>'); if (r.soon) bits.push(num(r.soonQty) + ' expiring by ' + fdate(r.nearest));
+          return '• <b>' + esc(r.item.name) + '</b> — ' + bits.join(', ');
+        }).join('<br>') + (al.length > 6 ? '<br>…and <b>' + (al.length - 6) + ' more</b> in Alerts tab' : '') + '</div>';
+      }
+
+      h += '<div class="card" style="margin-bottom:16px"><div class="sk-bar">' +
+        '<input class="input grow" id="skQ" placeholder="Search item, category, vendor…" value="' + esc(F.q) + '">' +
+        '<select class="select" id="skShow">' +
+          '<option value="all"' + (F.show === 'all' ? ' selected' : '') + '>All items</option>' +
+          '<option value="alerts"' + (F.show === 'alerts' ? ' selected' : '') + '>Only items needing attention</option>' +
+          '<option value="low"' + (F.show === 'low' ? ' selected' : '') + '>Low stock only</option>' +
+          '<option value="out"' + (F.show === 'out' ? ' selected' : '') + '>Out of stock only</option>' +
+          '<option value="exp"' + (F.show === 'exp' ? ' selected' : '') + '>Expiring or expired</option>' +
+        '</select>' +
+        '<select class="select" id="skWarn" title="How early to warn before a lot expires">' + warnOpts(S.warnDays) + '</select>' +
+        (canEdit() ? '<button class="btn btn-primary" id="skRecv">+ Receive stock</button>' +
+          '<button class="btn btn-secondary" id="skAdd" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)">+ Add item</button>' : '') +
+      '</div></div>';
+
+      if (!S.rows.length) {
+        h += '<div class="card"><div class="card-b">' + App.empty('No stock items yet. Click "+ Add item" or "⚡ Lab Catalog" to seed common clinical supplies, then click "+ Receive stock" to add stock batches.') + '</div></div>';
+      } else {
+        h += '<div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>On hand</th><th>Reorder at</th><th>Nearest expiry</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody>' +
+          (rows.length ? rows.map(function (r) {
+            var it = r.item;
+            return '<tr><td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc([it.category, it.vendor].filter(Boolean).join(' · ')) + '</div></td>' +
+              '<td><span class="sk-num">' + num(r.onHand) + '</span> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
+              '<td class="muted">' + (+it.reorderLevel ? num(it.reorderLevel) : '—') + '</td>' +
+              '<td class="muted">' + fdate(r.nearest) + '</td><td>' + statusChips(r) + '</td>' +
+              '<td class="actions" style="text-align:right">' + (canEdit() ? '<button class="btn btn-primary btn-sm" data-recv="' + esc(it.id) + '">Receive</button><button class="btn btn-ghost btn-sm" data-use="' + esc(it.id) + '">Use / waste</button>' : '') +
+              '<button class="btn btn-ghost btn-sm" data-hist="' + esc(it.id) + '">History</button>' + (canEdit() ? '<button class="btn btn-ghost btn-sm" data-edit="' + esc(it.id) + '">Edit</button>' : '') + '</td></tr>';
+          }).join('') : '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">No stock items match your search.</td></tr>') + '</tbody></table></div></div>';
+      }
     }
-    h += '<div class="card" style="margin-bottom:16px"><div class="sk-bar">' +
-      '<input class="input grow" id="skQ" placeholder="Search item, category, vendor…" value="' + esc(F.q) + '">' +
-      '<select class="select" id="skShow"><option value="all"' + (F.show === 'all' ? ' selected' : '') + '>All items</option><option value="alerts"' + (F.show === 'alerts' ? ' selected' : '') + '>Only items needing attention</option></select>' +
-      '<select class="select" id="skWarn" title="How early to warn before a lot expires">' + warnOpts(S.warnDays) + '</select>' +
-      (canEdit() ? '<button class="btn btn-primary" id="skRecv">+ Receive stock</button><button class="btn btn-ghost" id="skAdd">+ Add item</button>' : '') + '</div></div>';
-    if (!S.rows.length) {
-      h += '<div class="card"><div class="card-b">' + App.empty('No stock items yet. Click "Add item" for each reagent or consumable you buy (for example "CBC reagent kit"), then "Receive stock" when a delivery arrives.') + '</div></div>';
-    } else {
-      h += '<div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>On hand</th><th>Reorder at</th><th>Nearest expiry</th><th>Status</th><th></th></tr></thead><tbody>' +
-        (rows.length ? rows.map(function (r) {
+
+    /* Tab 2: Movement Log & History */
+    else if (curTab === 'moves') {
+      var moves = (DB.all('stock_moves') || []).slice().sort(function (a, b) {
+        return String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date));
+      });
+      var mq = (F.mq || '').toLowerCase();
+      var filteredMoves = moves.filter(function (m) {
+        if (F.moveType !== 'all') {
+          if (F.moveType === 'in' && m.type !== 'in') return false;
+          if (F.moveType === 'out' && m.type !== 'out') return false;
+          if (F.moveType === 'waste' && m.type !== 'waste') return false;
+          if (F.moveType === 'adjust' && m.type !== 'adjust') return false;
+        }
+        if (mq) {
+          var it = DB.get('stock_items', m.itemId) || {};
+          var str = (it.name || '') + ' ' + (m.lot || '') + ' ' + (m.note || '') + ' ' + (m.ref || '') + ' ' + (m.by || '');
+          if (str.toLowerCase().indexOf(mq) < 0) return false;
+        }
+        return true;
+      });
+
+      h += '<div class="card" style="margin-bottom:16px"><div class="sk-bar">' +
+        '<input class="input grow" id="skMq" placeholder="Search movement note, lot, reagent, user…" value="' + esc(F.mq || '') + '">' +
+        '<select class="select" id="skMoveType">' +
+          '<option value="all"' + (F.moveType === 'all' ? ' selected' : '') + '>All movement types</option>' +
+          '<option value="in"' + (F.moveType === 'in' ? ' selected' : '') + '>Received deliveries (+)</option>' +
+          '<option value="out"' + (F.moveType === 'out' ? ' selected' : '') + '>Used for tests / routine (−)</option>' +
+          '<option value="waste"' + (F.moveType === 'waste' ? ' selected' : '') + '>Wasted / expired (−)</option>' +
+          '<option value="adjust"' + (F.moveType === 'adjust' ? ' selected' : '') + '>Adjustments &amp; counts (±)</option>' +
+        '</select>' +
+        (canEdit() ? '<button class="btn btn-primary" id="skRecv">+ Receive stock</button>' +
+          '<button class="btn btn-secondary" id="skUseQuick" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600">Use / Waste</button>' : '') +
+      '</div></div>';
+
+      h += '<div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Quantity</th><th>Lot &amp; Expiry</th><th>Note / Ref</th><th>Recorded by</th><th style="text-align:right"></th></tr></thead><tbody>' +
+        (filteredMoves.length ? filteredMoves.slice(0, 300).map(function (m) {
+          var it = DB.get('stock_items', m.itemId) || { name: 'Unknown item', unit: '' };
+          var t = MT[m.type] || [m.type, 'soon'];
+          var qStr = (m.type === 'in' || (m.type === 'adjust' && m.qty >= 0) ? '+' : '−') + num(Math.abs(m.qty));
+          return '<tr><td><span style="font-weight:600">' + fdate(m.date) + '</span></td>' +
+            '<td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc(it.category || '') + '</div></td>' +
+            '<td><span class="sk-chip ' + t[1] + '">' + t[0] + '</span></td>' +
+            '<td><b class="sk-num">' + qStr + '</b> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
+            '<td class="sk-sub">' + esc([m.lot ? 'Lot: ' + m.lot : '', m.expiry ? 'Exp: ' + fdate(m.expiry) : ''].filter(Boolean).join(' • ') || '—') + '</td>' +
+            '<td class="sk-sub">' + esc(m.note || m.ref || '—') + '</td>' +
+            '<td class="sk-sub">' + esc(m.by || '—') + '</td>' +
+            '<td class="actions" style="text-align:right">' + (canEdit() ? '<button class="btn btn-ghost btn-sm" data-delmv="' + esc(m.id) + '" title="Delete this entry (undo)">✕</button>' : '') + '</td></tr>';
+        }).join('') : '<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">No stock movements found.</td></tr>') +
+      '</tbody></table></div></div>';
+    }
+
+    /* Tab 3: Reorder & Expiry Alerts */
+    else if (curTab === 'alerts') {
+      h += '<div class="card"><div class="card-h"><h3 style="margin:0">🚨 Items Requiring Action (Low Stock, Expirations &amp; Out of Stock)</h3></div>' +
+        '<div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>On hand</th><th>Reorder level</th><th>Nearest expiry</th><th>Alert status</th><th style="text-align:right">Actions</th></tr></thead><tbody>' +
+        (al.length ? al.map(function (r) {
           var it = r.item;
           return '<tr><td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc([it.category, it.vendor].filter(Boolean).join(' · ')) + '</div></td>' +
-            '<td><span class="sk-num">' + num(r.onHand) + '</span> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
+            '<td><span class="sk-num" style="color:' + (r.out ? '#dc2626' : (r.low ? '#d97706' : 'inherit')) + '">' + num(r.onHand) + '</span> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
             '<td class="muted">' + (+it.reorderLevel ? num(it.reorderLevel) : '—') + '</td>' +
-            '<td class="muted">' + fdate(r.nearest) + '</td><td>' + statusChips(r) + '</td>' +
-            '<td class="actions">' + (canEdit() ? '<button class="btn btn-primary btn-sm" data-recv="' + esc(it.id) + '">Receive</button><button class="btn btn-ghost btn-sm" data-use="' + esc(it.id) + '">Use / waste</button>' : '') +
-            '<button class="btn btn-ghost btn-sm" data-hist="' + esc(it.id) + '">History</button>' + (canEdit() ? '<button class="btn btn-ghost btn-sm" data-edit="' + esc(it.id) + '">Edit</button>' : '') + '</td></tr>';
-        }).join('') : '<tr><td colspan="6" class="muted" style="text-align:center;padding:24px">Nothing matches.</td></tr>') + '</tbody></table></div></div>';
+            '<td class="muted" style="color:' + (r.expired ? '#dc2626' : (r.soon ? '#d97706' : 'inherit')) + '">' + fdate(r.nearest) + '</td>' +
+            '<td>' + statusChips(r) + '</td>' +
+            '<td class="actions" style="text-align:right">' + (canEdit() ? '<button class="btn btn-primary btn-sm" data-recv="' + esc(it.id) + '">Receive Stock</button>' : '') +
+            '<button class="btn btn-ghost btn-sm" data-hist="' + esc(it.id) + '">History</button></td></tr>';
+        }).join('') : '<tr><td colspan="6" style="text-align:center;padding:24px;color:#16a34a;font-weight:700">✓ All stock levels are healthy! No low stock or expired lots detected.</td></tr>') +
+      '</tbody></table></div></div>';
     }
+
     v.innerHTML = h;
-    wire(v);
+    wire(v, rows, S);
   }
 
-  function wire(v) {
+  function wire(v, rows, S) {
     function on(id, ev, fn) { var e = document.getElementById(id); if (e) e.addEventListener(ev, fn); }
     on('skQ', 'input', function (e) { F.q = e.target.value.trim(); var p = e.target.selectionStart; render(); var n = document.getElementById('skQ'); if (n) { n.focus(); try { n.setSelectionRange(p, p); } catch (x) {} } });
     on('skShow', 'change', function (e) { F.show = e.target.value; render(); });
+    on('skMq', 'input', function (e) { F.mq = e.target.value.trim(); var p = e.target.selectionStart; render(); var n = document.getElementById('skMq'); if (n) { n.focus(); try { n.setSelectionRange(p, p); } catch (x) {} } });
+    on('skMoveType', 'change', function (e) { F.moveType = e.target.value; render(); });
     on('skWarn', 'change', function (e) {
-      var v = e.target.value;
-      if (v === 'custom') { warnCustom(S.warnDays); return; }
-      try { DB.update('settings', 'main', { stockExpiryDays: +v }); } catch (x) {} render();
+      var val = e.target.value;
+      if (val === 'custom') { warnCustom(S.warnDays); return; }
+      try { DB.update('settings', 'main', { stockExpiryDays: +val }); } catch (x) {} render();
     });
+    on('tabItems', 'click', function () { F.tab = 'items'; render(); });
+    on('tabMoves', 'click', function () { F.tab = 'moves'; render(); });
+    on('tabAlerts', 'click', function () { F.tab = 'alerts'; render(); });
+
     on('skAdd', 'click', function () { itemForm(null); });
+    on('skAddTop', 'click', function () { itemForm(null); });
     on('skRecv', 'click', function () { receive(''); });
+    on('skRecvTop', 'click', function () { receive(''); });
+    on('skUseQuick', 'click', function () { useForm(''); });
+    on('skCsvExport', 'click', function () { exportCsv(F.tab, rows, S); });
+    on('skSeedCatTop', 'click', function () {
+      var n = seedStockCatalog(true);
+      App.toast('Loaded ' + n + ' clinical lab items & reagents into stock catalog.');
+      render();
+    });
+
     function each(attr, fn) { Array.prototype.forEach.call(v.querySelectorAll('[' + attr + ']'), function (b) { b.addEventListener('click', function () { fn(b.getAttribute(attr)); }); }); }
-    each('data-recv', receive); each('data-use', useForm); each('data-hist', history); each('data-edit', function (id) { itemForm(DB.get('stock_items', id)); });
+    each('data-recv', receive);
+    each('data-use', useForm);
+    each('data-hist', history);
+    each('data-edit', function (id) { itemForm(DB.get('stock_items', id)); });
+    each('data-delmv', function (mId) {
+      App.confirm('Delete this stock entry? The on-hand number will be recalculated.').then(function (ok) {
+        if (!ok) return;
+        DB.remove('stock_moves', mId);
+        App.toast('Stock move removed');
+        render();
+      });
+    });
   }
 
   function itemOptions(sel) {
@@ -155,8 +422,17 @@
 
   function itemForm(it) {
     var isNew = !it; it = it || { name: '', unit: 'tests', category: '', vendor: '', reorderLevel: '' };
-    App.modal(isNew ? 'Add stock item' : 'Edit stock item',
+    var quickPresetHtml = isNew ?
+      ('<div style="grid-column:1/-1;margin-bottom:6px;background:#f8fafc;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px">' +
+        '<label class="label" style="font-size:11.5px;color:var(--brand-d);font-weight:800;margin-bottom:4px;display:block">⚡ Quick Select Standard Lab Item / Reagent:</label>' +
+        '<select class="select" id="siPresetPick" style="width:100%;font-size:13px;background:#fff">' +
+          '<option value="">-- Choose common lab item to auto-fill --</option>' +
+          LAB_COMMON_ITEMS.map(function (c, idx) { return '<option value="' + idx + '">' + esc(c.name) + ' (' + esc(c.category) + ' · ' + esc(c.unit) + ')</option>'; }).join('') +
+        '</select>' +
+      '</div>') : '';
+    App.modal(isNew ? 'Add inventory item' : 'Edit inventory item',
       '<div class="form-grid">' +
+      quickPresetHtml +
       '<div style="grid-column:1/-1"><label class="label">Item name *</label><input class="input" id="siName" maxlength="80" placeholder="e.g. CBC reagent kit" value="' + esc(it.name) + '"></div>' +
       '<div><label class="label">Unit *</label><input class="input" id="siUnit" list="siUnits" maxlength="12" value="' + esc(it.unit || '') + '"><datalist id="siUnits">' + UNITS.map(function (u) { return '<option value="' + u + '">'; }).join('') + '</datalist>' +
       '<div class="sk-sub" style="margin-top:3px">For a kit that runs 500 tests, use "tests" and receive 500.</div></div>' +
@@ -167,6 +443,20 @@
       '<button class="btn btn-ghost" id="siCancel">Cancel</button><button class="btn btn-primary" id="siSave">Save</button></div>',
       { onOpen: function (ov, close) {
           var $ = function (id) { return ov.querySelector('#' + id); };
+          var pr = $('siPresetPick');
+          if (pr) {
+            pr.addEventListener('change', function () {
+              var idx = pr.value;
+              if (idx !== '' && LAB_COMMON_ITEMS[idx]) {
+                var itemObj = LAB_COMMON_ITEMS[idx];
+                $('siName').value = itemObj.name;
+                $('siUnit').value = itemObj.unit;
+                $('siCat').value = itemObj.category;
+                $('siVen').value = itemObj.vendor;
+                $('siRe').value = itemObj.reorderLevel;
+              }
+            });
+          }
           $('siCancel').addEventListener('click', close);
           $('siSave').addEventListener('click', function () {
             var name = $('siName').value.trim(), unit = $('siUnit').value.trim();
@@ -175,7 +465,7 @@
             if (dup) { App.toast('An item with this name already exists', 'err'); return; }
             var data = { name: name, unit: unit, category: $('siCat').value.trim(), vendor: $('siVen').value.trim(), reorderLevel: Math.max(0, +$('siRe').value || 0), active: true };
             if (isNew) DB.insert('stock_items', data); else DB.update('stock_items', it.id, data);
-            close(); App.toast(isNew ? 'Item added. Now use "Receive stock" for the first delivery.' : 'Item updated.'); render();
+            close(); App.toast(isNew ? 'Item added. Now click "Receive stock" to record the first delivery.' : 'Item updated.'); render();
           });
           var d = $('siDel'); if (d) d.addEventListener('click', function () {
             App.confirm('Remove "' + it.name + '" from stock? Its history stays in the records, but it will no longer be tracked.').then(function (ok) {
@@ -188,7 +478,7 @@
 
   function receive(itemId) {
     if (!(DB.all('stock_items') || []).length) { App.toast('Add an item first', 'err'); itemForm(null); return; }
-    App.modal('Receive stock',
+    App.modal('Receive stock (Delivery)',
       '<div class="form-grid"><div style="grid-column:1/-1"><label class="label">Item *</label><select class="select" id="rcItem">' + itemOptions(itemId) + '</select></div>' +
       '<div><label class="label">Quantity received *</label><input class="input" id="rcQty" type="number" min="0" step="any" placeholder="e.g. 500"></div>' +
       '<div><label class="label">Expiry date</label><input class="input" id="rcExp" type="date"></div>' +
@@ -202,7 +492,7 @@
             var q = +$('rcQty').value; if (!(q > 0)) { App.toast('Enter the quantity received', 'err'); return; }
             var exp = $('rcExp').value; if (exp && exp < new Date().toISOString().slice(0, 10)) { if (!window.confirm('This expiry date is in the past. Add it anyway?')) return; }
             DB.insert('stock_moves', { itemId: $('rcItem').value, type: 'in', qty: q, lot: $('rcLot').value.trim(), expiry: exp, note: $('rcNote').value.trim(), date: new Date().toISOString().slice(0, 10), createdAt: new Date().toISOString(), by: (App.session() || {}).name || '' });
-            close(); App.toast('Stock received'); render();
+            close(); App.toast('Stock received successfully'); render();
           });
         } });
   }
@@ -210,7 +500,7 @@
   function useForm(itemId) {
     App.modal('Use / waste / correct stock',
       '<div class="form-grid"><div style="grid-column:1/-1"><label class="label">Item *</label><select class="select" id="ufItem">' + itemOptions(itemId) + '</select></div>' +
-      '<div><label class="label">What happened *</label><select class="select" id="ufType"><option value="out">Used (not through a test)</option><option value="waste">Wasted / spilled / expired - throw away</option><option value="adjust+">Correction: add (found extra)</option><option value="adjust-">Correction: remove (count is lower)</option></select></div>' +
+      '<div><label class="label">What happened *</label><select class="select" id="ufType"><option value="out">Used (routine / manual)</option><option value="waste">Wasted / spilled / expired - dispose</option><option value="adjust+">Correction: add (found extra)</option><option value="adjust-">Correction: remove (count is lower)</option></select></div>' +
       '<div><label class="label">Quantity *</label><input class="input" id="ufQty" type="number" min="0" step="any"></div>' +
       '<div style="grid-column:1/-1"><label class="label">Note</label><input class="input" id="ufNote" maxlength="80" placeholder="e.g. monthly stock count"></div></div>' +
       '<div class="actions" style="margin-top:16px"><button class="btn btn-ghost" id="ufCancel">Cancel</button><button class="btn btn-primary" id="ufSave">Save</button></div>',
@@ -251,9 +541,15 @@
         } });
   }
 
-  App.route('#/stock', function () {
+  function routeHandler() {
     var s = App.session();
-    if (!s || (s.role !== 'admin' && s.role !== 'technician' && s.role !== 'reception' && !(s.role === 'custom' && App.canPage('stock')))) { document.getElementById('view').innerHTML = '<div class="card"><div class="card-b">' + App.empty('You do not have access to Stock.') + '</div></div>'; return; }
+    if (!s || (s.role !== 'admin' && s.role !== 'technician' && s.role !== 'reception' && !(s.role === 'custom' && (App.canPage('stock') || App.canPage('inventory'))))) {
+      document.getElementById('view').innerHTML = '<div class="card"><div class="card-b">' + App.empty('You do not have access to Inventory.') + '</div></div>';
+      return;
+    }
     render();
-  });
+  }
+
+  App.route('#/inventory', routeHandler);
+  App.route('#/stock', routeHandler);
 })();
