@@ -2011,13 +2011,9 @@
     );
   }
 
-  /* ---------- worker 2/4: patient info grid ----------
-     Reference layout: 2 columns; each row is "Label : value" with the
-     colon separator; labels BOLD black (#000). Reg. Date comes from
-     inv.createdAt (registration time), formatted "11-Jul-25 3:33:30 pm".
-     Thin black rule below the grid. */
-  /* the patient / registration block printed at the top of every report (HTML print + PDF use this one list):
-     reference layout, all rows always present; empty father / address print ".", empty blood group prints "Unknown" */
+  /* Patient identity above visit details. HTML/print and PDF share the
+     same sections, row order and full-width location rows. All fields stay
+     present; existing data sources and missing-value placeholders are retained. */
   function reportHeaderRows(d) {
     var inv = d.inv || {}, pat = d.pat || {}, s = d.s || {};
     function t(v, fb) { var x = (v === undefined || v === null) ? '' : String(v).trim(); return x ? x : (fb || ''); }
@@ -2029,79 +2025,47 @@
     var ageStr = t(pat.age), genderStr = t(pat.gender), ageSex = ageStr ? ageStr + ' Yr(s)' : '';
     if (genderStr) ageSex = ageSex ? ageSex + ' / ' + genderStr : genderStr;
     return {
-      left: [
-        ['Patient Name', t(pat.name)],
-        ['Father / Husband Name', t(pat.father || pat.fatherName, '.')],
-        ['Age / Sex', ageSex],
-        ['Blood Group', t(pat.blood, 'Unknown')],
-        ['Phone', t(pat.phone || pat.whatsapp)],
-        ['Address', t(pat.address, '.')]
+      patient: [
+        [
+          ['Patient Name', t(pat.name)],
+          ['Father / Husband Name', t(pat.father || pat.fatherName, '.')]
+        ], [
+          ['Age / Sex', ageSex],
+          ['Blood Group', t(pat.blood, 'Unknown')]
+        ], [
+          ['Phone', t(pat.phone || pat.whatsapp)],
+          ['Address', t(pat.address, '.')]
+        ]
       ],
-      right: [
-        ['Registration Date', dts(inv.createdAt)],
-        ['Reporting Date', dts(d.maxReported)],
-        ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address))],
-        ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address))],
-        ['Reference', t(inv.reference, t(s.reference, 'Standard'))],
-        ['Consultant', t((d.doc && d.doc.name), 'SELF')]
+      visit: [
+        [
+          ['Registration Date', dts(inv.createdAt)],
+          ['Reporting Date', dts(d.maxReported)]
+        ], [
+          ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address))]
+        ], [
+          ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address))]
+        ], [
+          ['Reference', t(inv.reference, t(s.reference, 'Standard'))],
+          ['Consultant', t((d.doc && d.doc.name), 'SELF')]
+        ]
       ]
     };
   }
   function patientGridHtml(d) {
-    var inv = d.inv || {};
-    var pat = d.pat || {};
-    var s = d.s || {};
-    var em = '\u2014';
-
-    function val(v) {
-      if (v === undefined || v === null) return em;
-      var str = String(v).trim();
-      return str ? App.esc(str) : em;
+    var hr = reportHeaderRows(d);
+    function section(name, rows) {
+      return '<div class="rpt-info-' + name + '" style="width:100%;margin:0 auto;text-align:left">' + rows.map(function (cells) {
+        return '<div style="display:grid;grid-template-columns:repeat(' + cells.length + ',minmax(0,1fr));gap:20px;break-inside:avoid;page-break-inside:avoid">' + cells.map(function (cell) {
+          return '<div style="display:grid;grid-template-columns:140px 8px minmax(0,1fr);min-width:0;margin:2px 0;align-items:start">' +
+            '<span style="font-weight:bold;overflow-wrap:anywhere">' + App.esc(cell[0]) + '</span><span>:</span>' +
+            '<span style="min-width:0;overflow-wrap:anywhere;white-space:pre-wrap">' + (cell[1] === '' ? '&nbsp;' : App.esc(cell[1])) + '</span></div>';
+        }).join('') + '</div>';
+      }).join('') + '</div>';
     }
-    function pad(n) { return (n < 10 ? '0' : '') + n; }
-    function validDate(t) {
-      if (!t) return null;
-      var dt = new Date(t);
-      return isNaN(dt.getTime()) ? null : dt;
-    }
-    function fmtDate(t) {
-      var dt = validDate(t);
-      if (!dt) return null;
-      return pad(dt.getDate()) + '-' + pad(dt.getMonth() + 1) + '-' + dt.getFullYear();
-    }
-    function fmtTime(t) {
-      var dt = validDate(t);
-      if (!dt) return null;
-      return pad(dt.getHours()) + ':' + pad(dt.getMinutes()) + ':' + pad(dt.getSeconds());
-    }
-    function fmtDateTime(t) {
-      var ds = fmtDate(t), ts = fmtTime(t);
-      if (!ds || !ts) return em;
-      return App.esc(ds + ' ' + ts);
-    }
-    function row(label, value) {
-      return '<div style="display:flex;margin:1px 0;color:#000">' +
-        '<span style="display:inline-block;min-width:140px;font-weight:bold;color:#000">' + label + '</span>' +
-        '<span style="color:#000">:</span>' +
-        '<span style="color:#000;margin-left:6px">' + value + '</span>' +
-        '</div>';
-    }
-
-    var hr = reportHeaderRows(d), left = hr.left.map(function (r) { return [r[0], r[1] === '' ? em : App.esc(r[1])]; }), right = hr.right.map(function (r) { return [r[0], r[1] === '' ? em : App.esc(r[1])]; });
-    /* every row is always printed (as in the reference); a missing value shows the reference's placeholder, or stays blank */
-    left = left.map(function (r) { return [r[0], r[1] === em ? '&nbsp;' : r[1]]; });
-    right = right.map(function (r) { return [r[0], r[1] === em ? '&nbsp;' : r[1]]; });
-
-    var i, html = '<div style="display:flex;color:#000;font-size:12px">';
-    html += '<div style="flex:1;padding-right:10px">';
-    for (i = 0; i < left.length; i++) { html += row(left[i][0], left[i][1]); }
-    html += '</div>';
-    html += '<div style="flex:1;padding-left:10px">';
-    for (i = 0; i < right.length; i++) { html += row(right[i][0], right[i][1]); }
-    html += '</div>';
-    html += '</div>';
-    html += '<hr style="border:none;border-top:1px solid #000;margin:6px 0 4px">';
-    return html;
+    var rule = '<hr style="width:100%;border:none;border-top:1px solid #000;margin:8px 0">';
+    return '<div class="rpt-info" style="color:#000;font-size:12px;line-height:1.45;padding-top:8px">' +
+      section('patient', hr.patient) + rule + section('visit', hr.visit) + rule + '</div>';
   }
 
   /* ---------- worker 11/20: abnormal value highlighting ----------
@@ -3348,7 +3312,7 @@
     var W = 210, M = 12, CW = W - 2 * M;
     var y = M;
 
-    var inHdr = false;
+    var inHdr = false, repeatPatientGrid = true, letterheadBottom = M;
     var PH = 297, FM = M;                                   // A4 height, bottom margin
     var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
     var fVerLines = doc.splitTextToSize(fVerNote, CW);
@@ -3431,18 +3395,18 @@
     var maxBodyY = PH - FM - fH - 3;
     function need(h) {
       if (y + h > maxBodyY) {
-        if (!inHdr && typeof drawFooter === 'function') {
-          drawFooter();
-        }
+        drawFooter();
         doc.addPage();
         y = M;
-        if (!inHdr && typeof drawHeader === 'function') {
-          inHdr = true;
-          drawHeader();
-          inHdr = false;
-        }
+        // An unusually long patient/location field can span pages. Continue
+        // it under the letterhead, without recursively restarting the grid.
+        var wasInHdr = inHdr;
+        if (wasInHdr) repeatPatientGrid = false;
+        inHdr = true;
+        drawHeader(wasInHdr || !repeatPatientGrid);
+        inHdr = wasInHdr;
       }
-    } /* every page starts with the letterhead + patient block */
+    } /* Normal result pages repeat the letterhead and patient/visit block. */
     function txt(t, x, yy, opts) {
       // jsPDF renders a string[] as multiple lines; keep that working
       // (patient grid / wrapped footer lines pass splitTextToSize arrays).
@@ -3476,12 +3440,13 @@
     var qrS = 26;                                  // QR size (mm)
     var headH = showQr ? qrS : 23;                 // header block height
 
-    function drawHeader() {
+    function drawHeader(skipPatient) {
       if (pre && pre.hdr) {   /* custom header from Lab Profile, drawn as a picture (same as the printout) */
         var chH = CW * pre.hdr.ratio;
         addImg(pre.hdr.url, M, y, CW, chH);
         y += chH + 3;
-        drawPatientGrid();
+        letterheadBottom = y;
+        if (!skipPatient) drawPatientGrid();
         return;
       }
       // --- left: logo (~18mm) + lab name + subtitle ---
@@ -3535,58 +3500,58 @@
       doc.line(M, y, W - M, y);
       y += 5;
 
-      drawPatientGrid();
+      letterheadBottom = y;
+      if (!skipPatient) drawPatientGrid();
     }
     function drawPatientGrid() {
-      /* ----- patient info: 2-column grid (ref: Chughtai report) ----- */
-      (function () {
-        var pat = d.pat || {}, inv = d.inv || {}, s = d.s || {};
-        var docName = d.doc ? d.doc.name : '';
-
-        // Reference label set + order. Registration Location = lab head office,
-        // Destination Location = main lab (same mapping as reportHtml).
-        var hr = reportHeaderRows(d), left = hr.left, right = hr.right;
-
-        var COL_W   = CW / 2;            // 93 mm per column
-        var VAL_OFF = 44;               // label -> value offset (matches reference)
-        var WRAP_W  = COL_W - VAL_OFF - 2; // value wrap width (~47 mm)
-        var LH      = 4.6;              // line height
-        var ROW_PAD = 2.4;              // breathing room between rows
-
-        doc.setFontSize(9);
-        var rows = Math.max(left.length, right.length);
-        for (var i = 0; i < rows; i++) {
-          var lLines = left[i]  ? doc.splitTextToSize(String(left[i][1] || ' '),  WRAP_W) : [''];
-          var rLines = right[i] ? doc.splitTextToSize(String(right[i][1] || ' '), WRAP_W) : [''];
-          var rh = Math.max(lLines.length, rLines.length) * LH + ROW_PAD;
-          need(rh);
-
-          if (left[i]) {
-            doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
-            txt(left[i][0] + ':', M, y);
+      var hr = reportHeaderRows(d), GAP = 6, VAL_OFF = 44, LH = 4.6, ROW_PAD = 1.4;
+      function section(rows) {
+        rows.forEach(function (cells) {
+          var colW = (CW - GAP * (cells.length - 1)) / cells.length;
+          doc.setFontSize(9);
+          var wrapped = cells.map(function (cell) {
+            doc.setFont('helvetica', 'bold');
+            var labels = doc.splitTextToSize(cell[0] + ':', VAL_OFF - 2);
             doc.setFont('helvetica', 'normal');
-            txt(lLines, M + VAL_OFF, y);
+            return { labels: labels, values: doc.splitTextToSize(cell[1] || ' ', colW - VAL_OFF) };
+          });
+          var count = wrapped.reduce(function (n, cell) { return Math.max(n, cell.labels.length, cell.values.length); }, 1);
+          var rh = count * LH + ROW_PAD;
+          // Keep a wrapped row together when it can fit on a fresh page;
+          // exceptionally long values are drawn line-by-line across pages.
+          if (rh <= maxBodyY - letterheadBottom) need(rh);
+          for (var li = 0; li < count; li++) {
+            need(LH + ROW_PAD);
+            doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+            wrapped.forEach(function (cell, ci) {
+              var x = M + ci * (colW + GAP);
+              doc.setFont('helvetica', 'bold');
+              if (li < cell.labels.length) txt(cell.labels[li], x, y + 3.4);
+              doc.setFont('helvetica', 'normal');
+              if (li < cell.values.length) txt(cell.values[li], x + VAL_OFF, y + 3.4);
+            });
+            y += LH;
           }
-          if (right[i]) {
-            var rx = M + COL_W;
-            doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 20, 20);
-            txt(right[i][0] + ':', rx, y);
-            doc.setFont('helvetica', 'normal');
-            txt(rLines, rx + VAL_OFF, y);
-          }
-          y += rh;
-        }
-
-        /* thin divider rule below the grid (ref: light-grey full-width rule) */
-        y += 1.5;
-        need(4);
-        doc.setDrawColor(160, 160, 160);
-        doc.setLineWidth(0.3);
+          y += ROW_PAD;
+        });
+      }
+      function divider() {
+        need(6);
+        y += 1;
+        doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
         doc.line(M, y, W - M, y);
         y += 5;
-      })();
+      }
+      section(hr.patient);
+      divider();
+      section(hr.visit);
+      divider();
+      // Reserve room for the result title and table on continuation pages.
+      if (y > maxBodyY - 40) repeatPatientGrid = false;
     }
+    inHdr = true;
     drawHeader();
+    inHdr = false;
 
     /* ----- test tables: section title + RESULT box, grey bar, rows ----- */
     (function () {
