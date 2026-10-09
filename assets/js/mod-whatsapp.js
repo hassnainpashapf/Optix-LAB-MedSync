@@ -917,6 +917,7 @@
     if (!s || (s.role !== 'admin' && s.role !== 'reception' && !(s.role === 'custom' && App.canPage('whatsapp')))) {
       return '<div class="card"><div class="card-b">' + App.empty('You do not have access to WhatsApp Center.') + '</div></div>';
     }
+    if (tab === 'settings') { if (s.role === 'admin') renderSetWhatsapp(); return ''; } /* no App.wa dependency — render immediately */
     if (!App.wa) { ensure(paint); return '<div class="card"><div class="card-b">' + App.empty('Loading…') + '</div></div>'; }
     var cfg = App.wa.cfg(), ready = App.wa.ready(cfg), today = App.today();
     var L = logs(), sentToday = L.filter(function (e) { return e.status === 'sent' && String(e.ts).slice(0, 10) === today; }).length;
@@ -927,7 +928,6 @@
       setTimeout(wire, 0);
       return digestHtml(cfg);
     }
-    if (tab === 'settings') { if (s.role === 'admin') renderSetWhatsapp(); return ''; }
 
     var h = (ready ? '' : '<div class="card" style="margin-bottom:14px;border-color:#f6c6c6;background:#fff6f6"><div class="card-b"><b style="color:#b91c1c">WhatsApp sending is not configured yet.</b> <span class="muted">Link the lab WhatsApp number in Tools → WhatsApp → Settings (scan a QR code). Reports can still be printed and shared manually.</span></div></div>') +
       '<div class="kpi-grid" style="margin-bottom:18px">' +
@@ -1141,7 +1141,6 @@
   }
 
   /* ---- WhatsApp Settings (moved from Settings > WhatsApp Automation) ---- */
-  /* ---- WhatsApp API (admin only) ---- */
   function waDefaults() {
     return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true, autoReceipt: false, autoDueReminder: false, dueReminderDay: 1, autoOwnerSummary: false, ownerSummaryHour: 21, ownerNumber: '', autoFeedback: false, googleReviewUrl: '', autoRetest: false };
   }

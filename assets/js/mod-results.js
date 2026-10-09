@@ -102,8 +102,7 @@
   }
 
   function waGoSettings() {
-    App.nav('#/settings');
-    setTimeout(function () { if (App.openWaSettingsTab) App.openWaSettingsTab(); }, 80);
+    App.nav('#/whatsapp/settings');
   }
 
   /* Manual send of a finalized report to the patient or the referring doctor.

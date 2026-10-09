@@ -39,6 +39,7 @@
     css();
     var s = App.session();
     if (!s || (s.role !== 'admin' && s.role !== 'reception' && !(s.role === 'custom' && App.canPage('email')))) return '<div class="card"><div class="card-b">' + App.empty('You do not have access to the Email Center.') + '</div></div>';
+    if (tab === 'settings') { if (s.role === 'admin') renderSetSharing(); return ''; } /* no App.mail/srv dependency — render immediately */
     if (!App.mail) { ensure(paint); return '<div class="card"><div class="card-b">' + App.empty('Loading…') + '</div></div>'; }
     if (!srv) { App.mail.status(true).then(function (j) { srv = j; paint(); }); return '<div class="card"><div class="card-b">' + App.empty('Loading…') + '</div></div>'; }
     var st = DB.get('settings', 'main') || {}, today = App.today(), L = logs();
@@ -73,7 +74,6 @@
         '</div>' +
       '</div>' +
       '<div class="ec-cur"><b>' + (tab === 'tpl' ? 'Templates &amp; rules' : (tab === 'log' ? 'Email log' : 'Ready to send')) + '</b><span>' + (tab === 'tpl' ? 'Sending rules and the email your patients receive' : (tab === 'log' ? L.length + ' email' + (L.length === 1 ? '' : 's') : waiting + ' waiting')) + '</span></div>';
-    if (tab === 'settings') { if (s.role === 'admin') renderSetSharing(); return ''; }
     if (tab === 'tpl' && s.role === 'admin') h += tplHtml(st);
     else if (tab === 'log') h += logHtml(L);
     else h += readyHtml(rdy, on);
@@ -186,7 +186,6 @@
 
   function go(t) { var me = App.session(); if ((t === 'tpl' || t === 'settings') && !(me && me.role === 'admin')) { App.nav('#/email'); return ''; } tab = t; sel = {}; srv = null; return render(); }
   /* ---- Email & Slack settings (moved from Settings > Email & Slack) ---- */
-  /* ---- Email & Slack: how finished reports leave the lab besides WhatsApp ---- */
   function renderSetSharing() {
     var s = DB.get('settings', 'main') || {}, box = document.getElementById('view');
     var cloud = !!(DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop);
