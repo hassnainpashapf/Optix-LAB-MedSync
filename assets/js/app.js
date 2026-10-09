@@ -752,9 +752,9 @@
            '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" data-route="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span>' +
           '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
-           '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" title="' + esc(x.label) + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '"><span class="nav-sub-ic">' + icon(x.icon || (x.danger ? 'alert' : n.icon) || 'file', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
+           '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" title="' + esc(x.label) + '" aria-label="' + esc(x.label) + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '"><span class="nav-sub-ic">' + icon(x.icon || (x.danger ? 'alert' : n.icon) || 'file', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
       }
-       return '<a href="' + n.route + '" title="' + esc(n.label) + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
+       return '<a href="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
         '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span></a>';
     }
     /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
@@ -965,10 +965,6 @@
     var h = e.target && e.target.closest ? e.target.closest('.nav-fh') : null;
     if (!h) return;
     var f = h.closest('.nav-fold'); if (!f) return;
-    if (document.body.classList.contains('side-collapsed') && !window.matchMedia('(max-width:900px)').matches) {
-      if (h.getAttribute('data-route')) location.hash = h.getAttribute('data-route');
-      return;
-    }
     var open = f.classList.toggle('open'); h.setAttribute('aria-expanded', open ? 'true' : 'false');
     try { var m = JSON.parse(localStorage.getItem('labpos_navfolders') || '{}') || {}; m[f.getAttribute('data-fold')] = open; localStorage.setItem('labpos_navfolders', JSON.stringify(m)); } catch (x) {}
   });
@@ -977,10 +973,6 @@
     var b = e.target && e.target.closest ? e.target.closest('.nav-par') : null;
     if (!b) return;
     var g = b.closest('.nav-grp'); if (!g) return;
-    if (document.body.classList.contains('side-collapsed') && !window.matchMedia('(max-width:900px)').matches) {
-      if (b.getAttribute('data-route')) location.hash = b.getAttribute('data-route');
-      return;
-    }
     var open = g.classList.toggle('open');
     b.setAttribute('aria-expanded', open ? 'true' : 'false');
     if (open) { /* opening one group closes the others */

@@ -150,10 +150,10 @@
         statCard(ICONS.users, 'brand', 'Total Patients', String(patients.length), monthPatients + ' new this month', patients.length, false);
     }
 
-    // ---- quick-access cards — 6 shortcuts ----
+    // ---- quick-access cards ----
     var quickCss =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 6 : 7) + ',1fr);gap:12px;margin-bottom:14px;align-items:stretch}' +
+    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 7 : 8) + ',1fr);gap:12px;margin-bottom:14px;align-items:stretch}' +
     '.dbq-card{display:flex;flex-direction:column;height:100%;transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
     '.dbq-card .card-b{padding:10px 12px!important;flex:1;display:flex;align-items:center;gap:12px;box-sizing:border-box}' +
     '.dbq-card b{font-size:13px!important}.dbq-card small{font-size:11px!important}' +
@@ -166,6 +166,11 @@
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
           '<span style="width:44px;height:44px;border-radius:12px;background:#22c55e1a;color:#22c55e;display:grid;place-items:center;flex:none">' + App.icon('users', 22) + '</span>' +
           '<span><b style="font-size:15px;color:var(--ink)">Patients</b><br><small style="color:var(--muted)">Manage patient records</small></span>' +
+        '</div></a>' +
+      '<a href="#/samples/home" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#06b6d41a;color:#0891b2;display:grid;place-items:center;flex:none">' + App.icon('box', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Home Sampling &amp; Dispatch</b><br><small style="color:var(--muted)">Book and track home collections</small></span>' +
         '</div></a>' +
       '<a href="#/results" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +

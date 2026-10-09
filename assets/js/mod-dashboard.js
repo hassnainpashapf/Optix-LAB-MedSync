@@ -150,10 +150,10 @@
         statCard(ICONS.users, 'brand', 'Total Patients', String(patients.length), monthPatients + ' new this month', patients.length, false);
     }
 
-    // ---- quick-access cards — 6 shortcuts ----
+    // ---- quick-access cards ----
     var quickCss =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 6 : 7) + ',1fr);gap:12px;margin-bottom:14px;align-items:stretch}' +
+    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 7 : 8) + ',1fr);gap:12px;margin-bottom:14px;align-items:stretch}' +
     '.dbq-card{display:flex;flex-direction:column;height:100%;transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
     '.dbq-card .card-b{padding:10px 12px!important;flex:1;display:flex;align-items:center;gap:12px;box-sizing:border-box}' +
     '.dbq-card b{font-size:13px!important}.dbq-card small{font-size:11px!important}' +
@@ -166,6 +166,11 @@
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
           '<span style="width:44px;height:44px;border-radius:12px;background:#22c55e1a;color:#22c55e;display:grid;place-items:center;flex:none">' + App.icon('users', 22) + '</span>' +
           '<span><b style="font-size:15px;color:var(--ink)">Patients</b><br><small style="color:var(--muted)">Manage patient records</small></span>' +
+        '</div></a>' +
+      '<a href="#/samples/home" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#06b6d41a;color:#0891b2;display:grid;place-items:center;flex:none">' + App.icon('box', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Home Sampling &amp; Dispatch</b><br><small style="color:var(--muted)">Book and track home collections</small></span>' +
         '</div></a>' +
       '<a href="#/results" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
@@ -334,19 +339,6 @@
     '<div class="db-grid">' + patCard + pendCard + '</div>' +
     '</div>';
     } /* end buildDashboard */
-
-    /* low / expiring stock: one line with a link, only when something needs attention */
-    function stockCard() {
-      try {
-        var me = App.session(); if (!me || (me.role !== 'admin' && me.role !== 'technician' && !(me.role === 'custom' && (App.canPage('stock') || App.canPage('inventory')))) || !App.stockState) return '';
-        var S = App.stockState(); if (!S.alerts) return '';
-        var bits = [];
-        if (S.out) bits.push('<b>' + S.out + '</b> out of stock'); if (S.low) bits.push('<b>' + S.low + '</b> running low');
-        if (S.expired) bits.push('<b>' + S.expired + '</b> expired'); if (S.soon) bits.push('<b>' + S.soon + '</b> expiring within ' + S.warnDays + ' days');
-        return '<a href="#/inventory" style="display:flex;align-items:center;gap:12px;background:#fff8e6;border:1px solid #f0d9a0;border-radius:14px;padding:12px 16px;margin-bottom:16px;color:#7a4b00;text-decoration:none">' +
-          '<span style="font-size:20px">📦</span><span style="flex:1"><b>Stock needs attention:</b> ' + bits.join(' · ') + '</span><span style="font-weight:800">Open Inventory &amp; Stock →</span></a>';
-      } catch (e) { return ''; }
-    }
 
     /* Critical results nobody has acknowledged yet (set when a result far outside the normal range is saved) */
     function critCard() {
