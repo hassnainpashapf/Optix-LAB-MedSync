@@ -464,7 +464,8 @@
     try { if (typeof qrcode !== 'undefined') { var q = qrcode(0, 'M'); q.addData(qrText); q.make(); qr = q.createDataURL(4, 4); } } catch (e) { qr = ''; }
     var line = 'font-weight:700;letter-spacing:1px;font-size:11px;margin-top:3px;line-height:1.2;white-space:nowrap;font-family:Arial,sans-serif';
     return '<div style="display:flex;align-items:flex-start;gap:12px;color:#000"><div style="text-align:left">' +
-      '<div>' + (bc ? bc(vn.labCode, '100%', '15px').replace('margin:0 auto', 'margin:0') : '') + '<div style="' + line + '">' + App.esc(vn.labText) + '</div></div></div>' +
+      '<div>' + (bc ? bc(vn.labCode, '100%', '15px').replace('margin:0 auto', 'margin:0') : '') + '<div style="' + line + '">' + App.esc(vn.labText) + '</div></div>' +
+      '<div style="margin-top:7px">' + (bc ? bc(vn.caseCode, '100%', '15px').replace('margin:0 auto', 'margin:0') : '') + '<div style="' + line + '">' + App.esc(String(vn.caseText || '').replace(/^P\s*#\s*/i, '')) + '</div></div></div>' +
       (qr ? '<img src="' + qr + '" style="width:72px;height:72px" alt="QR">' : '') + '</div>';
   }
 
