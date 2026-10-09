@@ -261,10 +261,9 @@
     return '<span class="' + (d < 0 ? 'fn-neg' : 'fn-pos') + '">' + (d < 0 ? 'Short ' : 'Over ') + money(Math.abs(d)) + '</span>';
   }
   function tabsHtml(active) {
-    return ''; /* the two pages are now sub-menu items under "Cash & Profit" in the sidebar */
-    return '<div class="tabs fn-tabs">' +
-      '<a class="tab' + (active === 'closing' ? ' on' : '') + '" href="#/finance" data-fntab="closing">Daily Cash Closing</a>' +
-      (canProfit() ? '<a class="tab' + (active === 'profit' ? ' on' : '') + '" href="#/finance/profit" data-fntab="profit">Profit &amp; Loss</a>' : '') +
+    return '<div class="tabs fn-tabs" style="margin-bottom:18px">' +
+      '<a class="tab' + (active === 'closing' ? ' on' : '') + '" href="#/finance" data-fntab="closing">📅 Close Day (Daily Cash)</a>' +
+      (canProfit() ? '<a class="tab' + (active === 'profit' ? ' on' : '') + '" href="#/finance/profit" data-fntab="profit">📈 Profit &amp; Loss Statement</a>' : '') +
       '</div>';
   }
 
@@ -1127,5 +1126,7 @@
     renderClosing();
   }
   App.route('#/finance', function () { show('closing'); });
+  App.route('#/close-day', function () { show('closing'); });
   App.route('#/finance/:tab', function (p) { show(p && p.tab === 'profit' ? 'profit' : 'closing'); });
+  App.route('#/profit', function () { show('profit'); });
 })();

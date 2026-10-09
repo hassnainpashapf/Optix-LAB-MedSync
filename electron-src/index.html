@@ -44,7 +44,7 @@ document.addEventListener('keydown', function (e) {
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
    to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
-window.__ASSET_V = '194';
+window.__ASSET_V = '195';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
@@ -83,6 +83,8 @@ window.__LAZY_ROUTES = {
   '#/trends': 'assets/js/mod-admin.js',
   '#/finance': 'assets/js/mod-finance.js',
   '#/finance/:tab': 'assets/js/mod-finance.js',
+  '#/close-day': 'assets/js/mod-finance.js',
+  '#/profit': 'assets/js/mod-finance.js',
   '#/settings': 'assets/js/mod-admin.js',
   '#/settings/:tab': 'assets/js/mod-admin.js',
   '#/signatures': 'assets/js/mod-admin.js',
@@ -92,11 +94,15 @@ window.__LAZY_ROUTES = {
   '/whatsapp': 'assets/js/mod-whatsapp.js',
   '/whatsapp/log': 'assets/js/mod-whatsapp.js',
   '/whatsapp/digest': 'assets/js/mod-whatsapp.js',
+  '/sms': 'assets/js/mod-sms.js',
+  '/sms/log': 'assets/js/mod-sms.js',
   '/digest': 'assets/js/mod-whatsapp.js',
   '/whatsapp/templates': 'assets/js/mod-whatsapp.js',
+  '/whatsapp/settings': 'assets/js/mod-whatsapp.js',
   '/email': 'assets/js/mod-email.js',
   '/email/log': 'assets/js/mod-email.js',
   '/email/templates': 'assets/js/mod-email.js',
+  '/email/settings': 'assets/js/mod-email.js',
   '/profile': 'assets/js/mod-profile.js'
 };
 </script>

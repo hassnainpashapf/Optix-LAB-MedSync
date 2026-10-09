@@ -32,7 +32,8 @@
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
     tube: '<path d="M8 2h8"/><path d="M9 2v16.5a3 3 0 0 0 6 0V2"/><path d="M9 11h6"/>',
     scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M11 8v8M15 8v8M18 8v8"/>',
-    finance: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/>'
+    finance: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/>',
+    phone: '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/>'
   };
   function icon(name, size) {
     size = size || 18;
@@ -59,7 +60,8 @@
     { key: 'panels',    label: 'Corporate',  icon: 'users',     route: '#/panels',    color: '#7c3aed' },
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors',   color: '#ec4899' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
-    { key: 'finance',   label: 'Cash & Profit', icon: 'finance', route: '#/finance', color: '#0ea5a4' },
+    { key: 'finance',   label: 'Close Day',  icon: 'finance',   route: '#/finance',   color: '#0ea5a4' },
+    { key: 'profit',    label: 'Profit & Loss', icon: 'chart',  route: '#/finance/profit', color: '#10b981', roles: ['admin'] },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports/tests',   color: '#6366f1',
       sub: [
         { key: 'tests',    label: 'Test Reports',     route: '#/reports/tests' },
@@ -71,9 +73,11 @@
       ] },
     { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads', color: '#06b6d4' },
     { key: 'email',     label: 'Email',      icon: 'mail',      route: '#/email',     color: '#0ea5e9', cloudOnly: true,
-      sub: [{ key: 'ready', label: 'Ready to send', route: '#/email' }, { key: 'log', label: 'Email log', route: '#/email/log' }, { key: 'tpl', label: 'Templates & rules', route: '#/email/templates', roles: ['admin'] }] },
+      sub: [{ key: 'ready', label: 'Ready to send', route: '#/email' }, { key: 'log', label: 'Email log', route: '#/email/log' }, { key: 'tpl', label: 'Templates & rules', route: '#/email/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', route: '#/email/settings', roles: ['admin'] }] },
     { key: 'whatsapp',  label: 'WhatsApp',   icon: 'chat',      route: '#/whatsapp',  color: '#22c55e',
-      sub: [{ key: 'ready', label: 'Ready to send', route: '#/whatsapp' }, { key: 'log', label: 'Message log', route: '#/whatsapp/log' }, { key: 'digest', label: '🌙 Owner Night Digest', route: '#/whatsapp/digest' }, { key: 'tpl', label: 'Templates & rules', route: '#/whatsapp/templates', roles: ['admin'] }] },
+      sub: [{ key: 'ready', label: 'Ready to send', route: '#/whatsapp' }, { key: 'log', label: 'Message log', route: '#/whatsapp/log' }, { key: 'digest', label: '🌙 Owner Night Digest', route: '#/whatsapp/digest' }, { key: 'tpl', label: 'Templates & rules', route: '#/whatsapp/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', route: '#/whatsapp/settings', roles: ['admin'] }] },
+    { key: 'sms',       label: 'SIM Setting', icon: 'phone',     route: '#/sms',       color: '#8b5cf6',
+      sub: [{ key: 'settings', label: 'SIM Setting', route: '#/sms' }, { key: 'log', label: 'SMS log', route: '#/sms/log' }] },
     { key: 'audit',     label: 'Audit Log',  icon: 'shield',    route: '#/audit',     color: '#0ea5e9' },
     { key: 'subscription', label: 'Subscription', icon: 'card',  route: '#/subscription', color: '#f59e0b', saas: true },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b',
@@ -82,10 +86,9 @@
         { key: 'payments', label: 'Online Payments', route: '#/settings/payments' },
         { key: 'account', label: 'My Account', route: '#/settings/account' },
         { key: 'users', label: 'Users & Roles', route: '#/settings/users' },
+        { key: 'branches', label: 'Branches', route: '#/settings/branches' },
         { key: 'templates', label: 'Report Templates', route: '#/settings/templates' },
         { key: 'signatures', label: 'Digital Signatures', route: '#/settings/signatures' },
-        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' },
-        { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' },
         { key: 'portal', label: 'Patient Portal', route: '#/settings/portal' },
         { key: 'backup', label: 'Backup', route: '#/settings/backup' },
         { key: 'danger', label: 'Danger Zone', route: '#/settings/danger', danger: true }
@@ -113,16 +116,20 @@
     results:   ['admin', 'technician'],
     expenses:  ['admin', 'reception'],
     finance:   ['admin', 'reception'],
+    profit:    ['admin'],
     reports:   ['admin'],
     downloads:  ['admin', 'reception', 'technician'],
     whatsapp:  ['admin', 'reception'],
+    sms:       ['admin', 'reception'],
     audit:     ['admin'],
     subscription: ['admin'],
     settings:  ['admin'],
     profile:   ['admin', 'reception', 'technician']
   };
   function routeKey(path) {
-    var seg = (path || '').replace(/^#\//, '').split('?')[0].split('/')[0];
+    var p = (path || '').replace(/^#\//, '').split('?')[0];
+    if (p === 'finance/profit' || p === 'profit') return 'profit';
+    var seg = p.split('/')[0];
     if (seg === 'invoice') seg = 'invoices';
     if (seg === 'patient') seg = 'patients';
     if (seg === 'receipts') seg = 'invoices';
@@ -132,12 +139,13 @@
     if (seg === 'online-payments') seg = 'onlinepay';
     if (seg === 'digest') seg = 'whatsapp';
     if (seg === 'stock') seg = 'inventory';
+    if (seg === 'close-day') seg = 'finance';
     return seg || 'dashboard';
   }
   /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
      Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
   var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests Catalog'], ['packages', 'Health Packages & Deals'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['onlinepay', 'Online Payments'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
-    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Cash & daily closing'], ['reports', 'Reports'], ['inventory', 'Inventory & Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['downloads', 'Downloads']];
+    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Close Day (Cash Closing)'], ['profit', 'Profit & Loss Statement'], ['reports', 'Reports'], ['inventory', 'Inventory & Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['sms', 'SIM Setting'], ['downloads', 'Downloads']];
   function roleDef(s) {
     s = s || session(); if (!s || s.role !== 'custom') return null;
     var set = null; try { set = DB.get('settings', 'main'); } catch (e) {}
@@ -510,6 +518,12 @@
   function render() {
     var hash = location.hash || '';
     var s = session();
+    /* multi-branch: fetch the lab's feature map once per session, before any nav renders.
+       Fail-open and never awaited: a dead server must not block login or the first render. */
+    if (s && window.App && App.loadLabFeatures && App.__lfLab !== s.labId) {
+      App.__lfLab = s.labId;
+      try { App.loadLabFeatures(); } catch (e) {}
+    }
 
     /* tenant guard: the session's lab must exist and be active; load its store */
     var _isCloud = false;
@@ -554,8 +568,9 @@
 
     /* permission guard */
     var key = routeKey(hash);
-    if (!can(key, s.role)) {
-      toast('You do not have access to this section', 'err');
+    var flagOff = !(!App.featureOn || App.featureOn(key));
+    if (!can(key, s.role) || flagOff) {
+      toast(flagOff ? 'This feature is not enabled for your lab' : 'You do not have access to this section', 'err');
       if (hash !== '#/dashboard') location.hash = '#/dashboard';
       return;
     }
@@ -710,10 +725,10 @@
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     /* grouped, professional sidebar: section labels, one icon style, active state on the left */
     var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', inventory: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', packages: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
-      invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
-      whatsapp: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'email', 'downloads', 'subscription', 'settings'];
-    var visible = NAV.filter(function (n) { return n.key !== 'profile' && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
+      invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', profit: 'Billing', reports: 'Insights', audit: 'Insights',
+      whatsapp: 'Tools', sms: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
+    var ORDER = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'reports', 'audit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
+    var visible = NAV.filter(function (n) { return n.key !== 'profile' && (!App.featureOn || App.featureOn(n.key)) && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
     function itemHtml(n) {
@@ -734,9 +749,9 @@
     var TOP = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'invoices', 'reports'];
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['outsourced', 'doctors'] },
-      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance'] },
+      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit'] },
       { id: 'ins', label: 'Insights', icon: 'shield', keys: ['audit'] },
-      { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'email', 'downloads'] },
+      { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'sms', 'email', 'downloads'] },
       { id: 'acc', label: 'Account', icon: 'gear', keys: ['subscription'] } /* one page = shown as the page itself, not a folder */
     ];
     var BOTTOM = ['settings']; /* always at the very bottom, outside any folder */
@@ -1010,6 +1025,24 @@
     sub: function () { return subInfo; },
     saasOn: saasOn
   };
+
+  /* ---------------- multi-branch: per-lab feature map (fail-open: absent = enabled) ---------------- */
+  App.labFeatures = null;
+  App.featureOn = function (key) {
+    var f = App.labFeatures;
+    if (!f || !f.features) return true;
+    if (key === 'profit') return f.features.profit !== false && f.features.finance !== false;
+    return f.features[key] !== false;
+  };
+  App.loadLabFeatures = function () {
+    if (!window.LABPOS_API || !window.DB || !DB.sessToken || !DB.sessToken()) return Promise.resolve(null);
+    return window.fetch(window.LABPOS_API + '/api/lab/features', { cache: 'no-store', headers: { 'Authorization': 'Bearer ' + DB.sessToken() } })
+      .then(function (r) { return r.ok ? r.json().catch(function () { return null; }) : null; })
+      .then(function (j) { App.labFeatures = j || null; return App.labFeatures; })
+      .catch(function () { App.labFeatures = null; return null; });
+  };
+  /* the Branches tab calls this to re-fetch usage counts (maxBranches / branchesUsed) */
+  App.refreshLabFeatures = App.loadLabFeatures;
 
   window.addEventListener('hashchange', render);
   /* phones: label every table cell with its column title so the card layout (app.css) can show it */

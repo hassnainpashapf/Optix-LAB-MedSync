@@ -60,7 +60,8 @@
     { key: 'panels',    label: 'Corporate',  icon: 'users',     route: '#/panels',    color: '#7c3aed' },
     { key: 'doctors',   label: 'Doctors',    icon: 'steth',     route: '#/doctors',   color: '#ec4899' },
     { key: 'expenses',  label: 'Expenses',   icon: 'coins',     route: '#/expenses',  color: '#f59e0b' },
-    { key: 'finance',   label: 'Cash & Profit', icon: 'finance', route: '#/finance', color: '#0ea5a4' },
+    { key: 'finance',   label: 'Close Day',  icon: 'finance',   route: '#/finance',   color: '#0ea5a4' },
+    { key: 'profit',    label: 'Profit & Loss', icon: 'chart',  route: '#/finance/profit', color: '#10b981', roles: ['admin'] },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports/tests',   color: '#6366f1',
       sub: [
         { key: 'tests',    label: 'Test Reports',     route: '#/reports/tests' },
@@ -115,6 +116,7 @@
     results:   ['admin', 'technician'],
     expenses:  ['admin', 'reception'],
     finance:   ['admin', 'reception'],
+    profit:    ['admin'],
     reports:   ['admin'],
     downloads:  ['admin', 'reception', 'technician'],
     whatsapp:  ['admin', 'reception'],
@@ -125,7 +127,9 @@
     profile:   ['admin', 'reception', 'technician']
   };
   function routeKey(path) {
-    var seg = (path || '').replace(/^#\//, '').split('?')[0].split('/')[0];
+    var p = (path || '').replace(/^#\//, '').split('?')[0];
+    if (p === 'finance/profit' || p === 'profit') return 'profit';
+    var seg = p.split('/')[0];
     if (seg === 'invoice') seg = 'invoices';
     if (seg === 'patient') seg = 'patients';
     if (seg === 'receipts') seg = 'invoices';
@@ -135,12 +139,13 @@
     if (seg === 'online-payments') seg = 'onlinepay';
     if (seg === 'digest') seg = 'whatsapp';
     if (seg === 'stock') seg = 'inventory';
+    if (seg === 'close-day') seg = 'finance';
     return seg || 'dashboard';
   }
   /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
      Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
   var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests Catalog'], ['packages', 'Health Packages & Deals'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['onlinepay', 'Online Payments'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
-    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Cash & daily closing'], ['reports', 'Reports'], ['inventory', 'Inventory & Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['sms', 'SIM Setting'], ['downloads', 'Downloads']];
+    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Close Day (Cash Closing)'], ['profit', 'Profit & Loss Statement'], ['reports', 'Reports'], ['inventory', 'Inventory & Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['sms', 'SIM Setting'], ['downloads', 'Downloads']];
   function roleDef(s) {
     s = s || session(); if (!s || s.role !== 'custom') return null;
     var set = null; try { set = DB.get('settings', 'main'); } catch (e) {}
@@ -720,9 +725,9 @@
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     /* grouped, professional sidebar: section labels, one icon style, active state on the left */
     var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', inventory: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', packages: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
-      invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', reports: 'Insights', audit: 'Insights',
+      invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', profit: 'Billing', reports: 'Insights', audit: 'Insights',
       whatsapp: 'Tools', sms: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'reports', 'audit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'reports', 'audit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && (!App.featureOn || App.featureOn(n.key)) && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
@@ -744,7 +749,7 @@
     var TOP = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'invoices', 'reports'];
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['outsourced', 'doctors'] },
-      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance'] },
+      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit'] },
       { id: 'ins', label: 'Insights', icon: 'shield', keys: ['audit'] },
       { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'sms', 'email', 'downloads'] },
       { id: 'acc', label: 'Account', icon: 'gear', keys: ['subscription'] } /* one page = shown as the page itself, not a folder */
@@ -1023,7 +1028,12 @@
 
   /* ---------------- multi-branch: per-lab feature map (fail-open: absent = enabled) ---------------- */
   App.labFeatures = null;
-  App.featureOn = function (key) { var f = App.labFeatures; if (!f || !f.features) return true; return f.features[key] !== false; };
+  App.featureOn = function (key) {
+    var f = App.labFeatures;
+    if (!f || !f.features) return true;
+    if (key === 'profit') return f.features.profit !== false && f.features.finance !== false;
+    return f.features[key] !== false;
+  };
   App.loadLabFeatures = function () {
     if (!window.LABPOS_API || !window.DB || !DB.sessToken || !DB.sessToken()) return Promise.resolve(null);
     return window.fetch(window.LABPOS_API + '/api/lab/features', { cache: 'no-store', headers: { 'Authorization': 'Bearer ' + DB.sessToken() } })

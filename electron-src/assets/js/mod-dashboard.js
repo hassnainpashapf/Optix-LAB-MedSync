@@ -190,7 +190,7 @@
       (isTech ? '' : '<a href="#/finance" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
           '<span style="width:44px;height:44px;border-radius:12px;background:#0ea5a41a;color:#0ea5a4;display:grid;place-items:center;flex:none">' + App.icon('finance', 22) + '</span>' +
-          '<span><b style="font-size:15px;color:var(--ink)">Cash &amp; Profit</b><br><small style="color:var(--muted)">Day closing &amp; P&amp;L</small></span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Close Day</b><br><small style="color:var(--muted)">Daily cash register closing</small></span>' +
         '</div></a>') +
       '<a href="#/settings" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
