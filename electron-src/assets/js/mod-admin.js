@@ -562,7 +562,25 @@
     /* ---- report templates (worker 8): saved {type,from,to,preset} presets ---- */
     var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This month', lastMonth: 'Last month', custom: 'Custom range' };
     var REP_TYPE_LBL = { tests: 'Tests', finance: 'Finance', dues: 'Dues', patients: 'Patients', labs: 'Labs' };
-    function repTplList() { return DB.all('report_templates') || []; }
+    function repTplList() {
+      var list = [];
+      try { list = DB.all('report_templates') || []; } catch (e) { list = []; }
+      var seeded = false;
+      try { seeded = localStorage.getItem('labpos_rep_tpl_seeded') === '1'; } catch (e) {}
+      if (!list.length && !seeded) {
+        var defaults = [
+          { name: 'Monthly Financial Executive Summary', type: 'finance', preset: 'thisMonth', createdAt: new Date().toISOString() },
+          { name: 'Daily Conducted Tests Audit', type: 'tests', preset: 'today', createdAt: new Date().toISOString() },
+          { name: 'Outstanding Dues Recovery Report', type: 'dues', preset: 'last30', createdAt: new Date().toISOString() },
+          { name: 'Weekly Patient Footfall & Registration', type: 'patients', preset: 'last7', createdAt: new Date().toISOString() },
+          { name: 'Doctor Referral & Commission Activity', type: 'tests', preset: 'thisMonth', createdAt: new Date().toISOString() }
+        ];
+        defaults.forEach(function (d) { try { DB.insert('report_templates', d); } catch (e) {} });
+        try { localStorage.setItem('labpos_rep_tpl_seeded', '1'); } catch (e) {}
+        try { list = DB.all('report_templates') || defaults; } catch (e) { list = defaults; }
+      }
+      return list;
+    }
     function repTplDesc(t) {
       var tl = REP_TYPE_LBL[t.type] || 'All';
       var pl = REP_PRESET_LBL[t.preset] || ((t.from && t.to) ? App.d(t.from) + ' to ' + App.d(t.to) : 'Custom range');
@@ -589,10 +607,15 @@
       var t = repTplList().filter(function (x) { return String(x.id) === String(id); })[0];
       if (!t) { App.toast('Template not found.', 'err'); return; }
       rep.type = t.type || 'tests';
-      rep.from = t.from || rep.from;
-      rep.to = t.to || rep.to;
-      rep.preset = t.preset || 'custom';
-      renderReports();
+      if (t.preset && t.preset !== 'custom') {
+        setPreset(t.preset);
+      } else {
+        rep.from = t.from || rep.from;
+        rep.to = t.to || rep.to;
+        rep.preset = t.preset || 'custom';
+        renderReports();
+      }
+      App.toast('Applied template: ' + t.name);
     }
     function repTplDel() {
       var id = repTplSelId();

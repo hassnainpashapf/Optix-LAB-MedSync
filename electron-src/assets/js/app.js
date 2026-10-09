@@ -43,7 +43,7 @@
   var NAV = [
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
-      sub: [{ key: 'all', label: 'All Patients', route: '#/patients' }, { key: 'new', label: 'Add Patient', route: '#/patients/new' }] },
+      sub: [{ key: 'new', label: 'Add Patient', route: '#/patients/new' }, { key: 'all', label: 'All Patients', route: '#/patients' }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
       sub: [{ key: 'all', label: 'Sample Tracking', route: '#/samples' }, { key: 'stickers', label: 'Tube Stickers (50×25mm)', route: '#/samples/stickers' }, { key: 'home', label: 'Home Sampling & Dispatch', route: '#/home-sampling' }] },
     { key: 'stock',     label: 'Stock',      icon: 'box',       route: '#/stock',     color: '#0ea5e9' },
@@ -828,7 +828,7 @@
       '@media (max-width:900px){.tb-qa .tb-qa-t{display:none}}' +
       '@media (max-width:640px){.tb-qa{display:none}}' +
       '</style>' +
-      '<button class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Menu">' + icon('menu', 18) + '</button>' +
+      '<button class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Toggle navigation sidebar" title="Toggle navigation sidebar (Ctrl+B)">' + icon('menu', 18) + '</button>' +
       (activeKey === 'dashboard' ? '<div class="tb-greet"><b>' + esc(_greet + _greetName) + '</b><span>' + esc(_longDate) + '</span></div>' : '') +
       '<h1 class="page-title"' + (activeKey === 'dashboard' ? ' hidden' : '') + '>' + esc(_pageTitle) + '</h1>' +
       '<div class="top-right"><div class="tb-qa">' + tbQa + '</div></div>' +

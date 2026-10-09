@@ -1168,12 +1168,6 @@ function renderPackages() {
     + '</style>'
     + '<div class="pkg-dash">'
 
-    /* Top Header Actions */
-    + '<div class="pkg-head-bar" style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
-    +   '<button class="btn btn-ghost btn-sm" id="pkgSeedBtn">⚡ Quick Seed Premier Deals</button>'
-    +   '<button class="btn btn-primary btn-sm" id="pkgAddBtn">+ Create Health Package</button>'
-    + '</div>'
-
     /* 4 Unified KPI Stat Cards (.kpi-grid + .kpi) */
     + '<div class="kpi-grid" style="margin-bottom:18px">'
     +   '<div class="kpi t-navy" style="cursor:pointer;border-left:4px solid #0284c7 !important" id="kpiPkgAll" title="Click to view all packages">'
@@ -1208,7 +1202,7 @@ function renderPackages() {
     /* Filter Toolbar */
     + '<div class="card" style="margin-bottom:20px"><div class="card-b" style="padding:12px 16px">'
     +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-    +     '<input class="input search" id="pkgSearch" placeholder="Search package name, code, or included test..." value="' + App.esc(pkgFilter.q) + '" style="max-width:320px">'
+    +     '<input class="input search" id="pkgSearch" placeholder="Search package name, code, or included test..." value="' + App.esc(pkgFilter.q) + '" style="max-width:300px;flex:1 1 220px">'
     +     '<div style="display:flex;gap:8px;align-items:center">'
     +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">Category:</span>'
     +       '<select class="select" id="pkgCatSelect" style="width:auto;padding:5px 10px;font-size:13px">'
@@ -1226,7 +1220,11 @@ function renderPackages() {
     +         '<option value="inactive"' + (pkgFilter.status === 'inactive' ? ' selected' : '') + '>Inactive Only</option>'
     +       '</select>'
     +     '</div>'
-    +     '<button class="btn btn-ghost btn-sm" id="pkgResetFilter" style="margin-left:auto">Clear Filters</button>'
+    +     '<div style="display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap">'
+    +       '<button class="btn btn-ghost btn-sm" id="pkgResetFilter">Clear Filters</button>'
+    +       '<button class="btn btn-ghost btn-sm" id="pkgSeedBtn">⚡ Quick Seed Premier Deals</button>'
+    +       '<button class="btn btn-primary btn-sm" id="pkgAddBtn">+ Create Health Package</button>'
+    +     '</div>'
     +   '</div>'
     + '</div></div>';
 

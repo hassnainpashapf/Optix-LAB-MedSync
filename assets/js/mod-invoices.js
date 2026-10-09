@@ -1550,16 +1550,6 @@
         '.rcp-toolbar .select{width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px}' +
         '.rcp-toolbar input[type="date"]{width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px}' +
         '</style>' +
-        '<div class="rcp-head">' +
-        '<div>' +
-          '<h2 style="display:flex;align-items:center;gap:8px">' + SC_ICONS.printer + ' POS Thermal Slip &amp; Counter Center</h2>' +
-          '<p style="color:var(--muted);font-size:13px;margin:2px 0 0">Dedicated 80mm &amp; 58mm Thermal Counter Slips, Patient Tokens, and Direct Thermal Printing for Reception Desks</p>' +
-        '</div>' +
-        '<div style="display:flex;gap:8px;align-items:center">' +
-          '<button class="btn btn-primary" id="rcpPrintAllToday">' + SC_ICONS.printer + ' Print All Today\'s Slips</button>' +
-          '<a class="btn btn-ghost" href="#/invoices">All Invoices</a>' +
-        '</div>' +
-        '</div>' +
         kpiHtml +
         '<div class="rcp-layout">' +
           '<div class="card"><div class="card-b">' +
@@ -1580,6 +1570,10 @@
                 '<option value="80"' + (RCP.width === 80 ? ' selected' : '') + '>80mm POS Width</option>' +
                 '<option value="58"' + (RCP.width === 58 ? ' selected' : '') + '>58mm Mini Width</option>' +
               '</select>' +
+              '<div style="margin-left:auto;display:flex;gap:8px;align-items:center">' +
+                '<button class="btn btn-primary btn-sm" id="rcpPrintAllToday">' + SC_ICONS.printer + ' Print Today\'s Slips</button>' +
+                '<a class="btn btn-ghost btn-sm" href="#/invoices">All Invoices</a>' +
+              '</div>' +
             '</div>' +
             '<div class="tbl-wrap"><table class="table smp-table"><thead><tr>' +
               '<th>Token</th><th>Invoice</th><th>Patient &amp; Phone</th><th style="text-align:center">Tests</th><th style="text-align:right">Total</th><th>Due</th><th style="text-align:right">Print Slip</th>' +
