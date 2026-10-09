@@ -1,4 +1,4 @@
-/* Optix LAB MedSync — DB layer (localStorage). Exposes window.DB. See SPEC.md for schema.
+/* Optix Medical Sync — DB layer (localStorage). Exposes window.DB. See SPEC.md for schema.
    MULTI-TENANT: each lab gets its own isolated store under 'labpos_db_' + labId.
    The registry 'labpos_labs_v1' lists all labs. Switch stores with DB.useLab(labId). */
 (function () {
@@ -39,7 +39,7 @@
     if (reg) return reg;
     var legacy = null;
     try { legacy = localStorage.getItem(LEGACY_KEY); } catch (e) {}
-    var labName = 'Optix LAB MedSync';
+    var labName = 'Optix Medical Sync';
     if (legacy) {
       try {
         var s = JSON.parse(legacy);
@@ -65,6 +65,9 @@
   function sessToken() {
     try { var s = JSON.parse(localStorage.getItem(SESS_KEY) || 'null'); return (s && s.token) || ''; } catch (e) { return ''; }
   }
+  function sessRole() {
+    try { var s = JSON.parse(localStorage.getItem(SESS_KEY) || 'null'); return (s && s.role) || ''; } catch (e) { return ''; }
+  }
   function authHeaders(extra) {
     var h = extra || {};
     var t = sessToken();
@@ -73,16 +76,27 @@
   }
   function clearSession() { try { localStorage.removeItem(SESS_KEY); } catch (e) {} }
   function fireAuthError() { try { if (window.DB && typeof window.DB.onAuthError === 'function') window.DB.onAuthError(); } catch (e) {} }
-  function fireWriteError(msg) { try { if (window.DB && typeof window.DB.onWriteError === 'function') window.DB.onWriteError(msg); } catch (e) {} }
+  function fireWriteError(msg, code) { try { if (window.DB && typeof window.DB.onWriteError === 'function') window.DB.onWriteError(msg, code); } catch (e) {} }
+  var unreachable = false; /* the configured server did not answer (slow / offline): keep the session, offer Retry */
   function loadDump() {
-    return window.fetch(API + '/api/dump', { cache: 'no-store', headers: authHeaders() }).then(function (r) {
+    var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    var to = ctl ? setTimeout(function () { ctl.abort(); }, 60000) : null;
+    return window.fetch(API + '/api/dump', { cache: 'no-store', headers: authHeaders(), signal: ctl ? ctl.signal : undefined }).then(function (r) {
+      if (to) clearTimeout(to);
       if (r.status === 401) { var e = new Error('auth'); e.auth = true; throw e; }
+      if (r.status === 403) { /* suspended lab: say so instead of looking like a network problem */
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          var e2 = new Error((j && j.error) || 'This lab account is suspended. Please contact support.'); e2.auth = true; e2.suspended = (j && j.code === 'SUSPENDED');
+          try { window.__loginNote = e2.message; } catch (x) {}
+          throw e2;
+        });
+      }
       if (!r.ok) throw new Error('dump failed');
       return r.json();
     }).then(function (dump) {
       if (!dump || !dump.settings || !dump.seq) throw new Error('bad dump');
       return dump;
-    });
+    }, function (e) { if (to) clearTimeout(to); throw e; });
   }
   function apiWrite(method, table, id, body) {
     if (!remote || !API) return;
@@ -103,7 +117,8 @@
           return;
         }
         return r.json().catch(function () { return {}; }).then(function (j) {
-          fireWriteError((j && j.error) || ('Server rejected the change (' + r.status + ')'));
+          fireWriteError((j && j.error) || ('Server rejected the change (' + r.status + ')'), j && j.code);
+          if (r.status === 402 && window.DB) setTimeout(function () { window.DB.refresh(); }, 300); /* subscription expired / plan limit: drop the unsaved local change */
         });
       }).catch(function () {
         inflight--;
@@ -136,7 +151,8 @@
             if (r.ok) return;
             if (r.status === 401) { fireAuthError(); return; }
             return r.json().catch(function () { return {}; }).then(function (j) {
-              fireWriteError((j && j.error) || ('Server rejected the import (' + r.status + ')'));
+              fireWriteError((j && j.error) || ('Server rejected the import (' + r.status + ')'), j && j.code);
+              if (r.status === 402 && window.DB) setTimeout(function () { window.DB.refresh(); }, 300);
             });
           }).catch(function () { inflight--; fireWriteError('Could not reach the server — the import was NOT saved.'); });
         })(rows.slice(i, i + 400));
@@ -155,9 +171,19 @@
     results:  { prefix: 'R',  digits: 4 },
     report_templates: { prefix: 'TPL', digits: 3 },
     report_schedules: { prefix: 'SCH', digits: 3 },
-    wa_log: { prefix: 'WAL', digits: 4 }
+    wa_log: { prefix: 'WAL', digits: 4 },
+    samples: { prefix: 'S', digits: 5 },
+    closings: { prefix: 'CL', digits: 4 },
+    stock_items: { prefix: 'SI', digits: 3 },
+    stock_moves: { prefix: 'SM', digits: 5 },
+    email_log: { prefix: 'EL', digits: 5 },
+    panels: { prefix: 'PN', digits: 3 },
+    ref_labs: { prefix: 'RL', digits: 3 },
+    outsourced: { prefix: 'OS', digits: 5 },
+    onlinepay_claims: { prefix: 'OPC', digits: 4 },
+    branches: { prefix: 'BR', digits: 4 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced', 'onlinepay_claims', 'branches'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -210,10 +236,10 @@
   function seedStore(opts) {
     opts = opts || {};
     var store = {
-      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0 },
+      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0, samples: 0 },
       settings: {
         id: 'main',
-        labName: opts.labName || 'Optix LAB MedSync',
+        labName: opts.labName || 'Optix Medical Sync',
         tagline: 'Accurate • Fast • Trusted',
         address: 'Main Road, Gulberg, Lahore',
         phone: '0300-1234567',
@@ -231,7 +257,7 @@
       },
       users: [], patients: [], tests: [], doctors: [],
       invoices: [], payments: [], expenses: [], results: [],
-      wa_log: []
+      wa_log: [], samples: [], stock_items: [], stock_moves: [], email_log: [], panels: [], ref_labs: [], outsourced: [], onlinepay_claims: [], branches: []
     };
 
     function put(table, obj) {
@@ -260,18 +286,18 @@
     /* Default report templates — per-test fields used by result entry, print and PDF */
     var TP = {
       'CBC': [
-        { name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5', type: 'number' },
-        { name: 'TLC', unit: '/µL', ref: '4,000–11,000', type: 'number' },
-        { name: 'Neutrophils', unit: '%', ref: '40–70', type: 'number' },
-        { name: 'Lymphocytes', unit: '%', ref: '20–40', type: 'number' },
-        { name: 'Monocytes', unit: '%', ref: '2–8', type: 'number' },
-        { name: 'Eosinophils', unit: '%', ref: '1–6', type: 'number' },
-        { name: 'Platelets', unit: 'x10^9/l', ref: '150 – 400', type: 'number' },
-        { name: 'PCV', unit: '%', ref: '40–50', type: 'number' },
-        { name: 'MCV', unit: 'fL', ref: '80–100', type: 'number' },
-        { name: 'MCH', unit: 'pg', ref: '27–32', type: 'number' },
-        { name: 'MCHC', unit: 'g/dL', ref: '32–36', type: 'number' },
-        { name: 'ESR', unit: 'mm/hr', ref: '0–20', type: 'number' }
+        { name: 'Hb', unit: 'g/dl', ref: '11.5 - 16', refMale: '13.0 - 17.0', refFemale: '12.0 - 15.0', type: 'number' },
+        { name: 'Total RBC', unit: 'x10^12/l', ref: '4 - 6', refMale: '4.5 - 5.5', refFemale: '3.8 - 4.8', type: 'number' },
+        { name: 'HCT', unit: '%', ref: '36 - 46', refMale: '40 - 50', refFemale: '36 - 46', type: 'number' },
+        { name: 'MCV', unit: 'fl', ref: '75 - 95', type: 'number' },
+        { name: 'MCH', unit: 'pg', ref: '26 - 32', type: 'number' },
+        { name: 'MCHC', unit: 'g/dl', ref: '30 - 35', type: 'number' },
+        { name: 'Platelet Count', unit: 'x10^9/l', ref: '150 - 400', type: 'number' },
+        { name: 'WBC Count (TLC)', unit: 'x10^9/l', ref: '4 - 11', type: 'number' },
+        { name: 'Neutrophils', unit: '%', ref: '40 - 75', type: 'number' },
+        { name: 'Lymphocytes', unit: '%', ref: '20 - 50', type: 'number' },
+        { name: 'Monocytes', unit: '%', ref: '02 - 10', type: 'number' },
+        { name: 'Eosinophils', unit: '%', ref: '01 - 06', type: 'number' }
       ],
       'HB': [{ name: 'Hemoglobin', unit: 'g/dL', ref: '13.5–17.5', type: 'number' }],
       'ESR': [{ name: 'ESR', unit: 'mm/hr', ref: '0–20', type: 'number' }],
@@ -430,7 +456,7 @@
     ];
     /* ready result values for param-based tests (older invoices) */
     var READY_VALS = {
-      'CBC': { 'Hemoglobin': '14.2', 'TLC': '7,600', 'Platelets': '248', 'ESR': '14' },
+      'CBC': { 'Hb': '14.2', 'Total RBC': '4.8', 'HCT': '42', 'MCV': '88', 'MCH': '29', 'MCHC': '33', 'Platelet Count': '248', 'WBC Count (TLC)': '7.6', 'Neutrophils': '60', 'Lymphocytes': '30', 'Monocytes': '6', 'Eosinophils': '3' },
       'HBA1C': { 'HbA1c': '6.8' },
       'LIPID': { 'Total Cholesterol': '198', 'Triglycerides': '142', 'HDL': '52', 'LDL': '118' },
       'ESR': { 'Result': '18 mm/hr' },
@@ -504,7 +530,7 @@
   function applyMigrations() {
     /* rebrand: existing installs seeded with the old default name */
     if (store && store.settings && (store.settings.labName === 'City Blood Lab' || store.settings.labName === 'Optxic LAB')) {
-      store.settings.labName = 'Optix LAB MedSync'; save(store);
+      store.settings.labName = 'Optix Medical Sync'; save(store);
     }
     /* existing installs lack the WhatsApp config object */
     if (store && store.settings && !store.settings.whatsapp) {
@@ -524,6 +550,65 @@
       store.wa_log = [];
       if (!store.seq) store.seq = {};
       if (store.seq.wa_log == null) store.seq.wa_log = 0;
+      save(store);
+    }
+    /* existing installs lack the sample-tracking table */
+    if (store && !Array.isArray(store.samples)) {
+      store.samples = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.samples == null) store.seq.samples = 0;
+      save(store);
+    }
+    /* existing installs lack the panel (corporate client) table */
+    if (store && !Array.isArray(store.panels)) {
+      store.panels = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.panels == null) store.seq.panels = 0;
+      save(store);
+    }
+    /* existing installs lack the outsourced-test tables */
+    if (store && (!Array.isArray(store.ref_labs) || !Array.isArray(store.outsourced))) {
+      if (!Array.isArray(store.ref_labs)) store.ref_labs = [];
+      if (!Array.isArray(store.outsourced)) store.outsourced = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.ref_labs == null) store.seq.ref_labs = 0;
+      if (store.seq.outsourced == null) store.seq.outsourced = 0;
+      save(store);
+    }
+    /* existing installs lack the email log */
+    if (store && !Array.isArray(store.email_log)) {
+      store.email_log = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.email_log == null) store.seq.email_log = 0;
+      save(store);
+    }
+    /* existing installs lack branch records */
+    if (store && !Array.isArray(store.branches)) {
+      store.branches = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.branches == null) store.seq.branches = 0;
+      save(store);
+    }
+    if (store && !Array.isArray(store.onlinepay_claims)) {
+      store.onlinepay_claims = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.onlinepay_claims == null) store.seq.onlinepay_claims = 0;
+      save(store);
+    }
+    /* existing installs lack the stock tables */
+    if (store && (!Array.isArray(store.stock_items) || !Array.isArray(store.stock_moves))) {
+      if (!Array.isArray(store.stock_items)) store.stock_items = [];
+      if (!Array.isArray(store.stock_moves)) store.stock_moves = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.stock_items == null) store.seq.stock_items = 0;
+      if (store.seq.stock_moves == null) store.seq.stock_moves = 0;
+      save(store);
+    }
+    /* existing installs lack the daily cash-closing table */
+    if (store && !Array.isArray(store.closings)) {
+      store.closings = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.closings == null) store.seq.closings = 0;
       save(store);
     }
     /* existing installs lack default signatory doctors — seed from reference */
@@ -607,15 +692,37 @@
       var base = null;
       try { base = window.LABPOS_API || null; } catch (e) {}
       if (!base || !window.fetch) return Promise.resolve(false);
-      API = base;
+      API = base; unreachable = false;
+      /* when no user is signed in, skip the heavy authenticated dump and load public info directly so login renders instantly */
+      if (!sessToken()) {
+        cloud = true; remote = false;
+        var ctl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var to = ctl ? setTimeout(function () { ctl.abort(); }, 3500) : null;
+        return window.fetch(API + '/api/public-info', { signal: ctl ? ctl.signal : undefined }).then(function (r) {
+          if (to) clearTimeout(to);
+          return r.ok ? r.json() : null;
+        }).then(function (info) {
+          if (info && info.labName) {
+            store.settings.labName = info.labName;
+            if (info.tagline) store.settings.tagline = info.tagline;
+            if (info.logo) store.settings.logo = info.logo;
+          }
+          return true;
+        }).catch(function () {
+          if (to) clearTimeout(to);
+          return true;
+        });
+      }
+      /* a doctor's login only ever sees the doctor dashboard: it must not (and cannot) download the lab's data */
+      if (sessRole() === 'doctor') { cloud = true; remote = false; return Promise.resolve(true); }
       return loadDump().then(function (dump) {
-        store = dump; remote = true;
-        if (sessToken()) cloud = true; /* valid token = token-auth cloud API; no token = open desktop server */
+        store = dump; remote = true; cloud = true;
         return true;
       }).catch(function (err) {
+        cloud = true; remote = false;
         if (err && err.auth) {
           /* token-auth cloud API: no valid session -> login page, data loads after sign-in */
-          cloud = true; remote = false; clearSession();
+          clearSession();
           return window.fetch(API + '/api/public-info').then(function (r) { return r.ok ? r.json() : null; }).then(function (info) {
             if (info && info.labName) {
               store.settings.labName = info.labName;
@@ -625,35 +732,85 @@
             return true;
           }).catch(function () { return true; });
         }
-        /* server configured but unreachable (offline / VPS down): do NOT fall back to the local demo store.
-           Show the login page; sign-in then reports 'cannot reach the server' and works once it is back. */
-        cloud = true; remote = false; clearSession();
+        /* server configured but slow / unreachable: never fall back to the local demo store and NEVER drop a valid session
+           just because the network is slow — the app shows "Retry" (or the login page when nobody is signed in). */
+        unreachable = true;
         return true;
       });
     },
+    isUnreachable: function () { return unreachable; },
     isRemote: function () { return remote; },
     isCloud: function () { return cloud; },
     /* Server-side login (cloud mode). Resolves {user, token}; rejects with a user-facing message. */
-    cloudLogin: function (username, password) {
+    cloudLogin: function (username, password, lab) {
       return window.fetch(API + '/api/auth/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username, password: password })
+        body: JSON.stringify({ username: username, password: password, lab: lab || '' })
       }).then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
           if (!r.ok) throw new Error(j.error || 'Login failed (' + r.status + ')');
           return j;
         });
       }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); }).then(function (j) {
-        try { localStorage.setItem(SESS_KEY, JSON.stringify({ token: j.token })); } catch (e) {}
+        try { localStorage.setItem(SESS_KEY, JSON.stringify({ token: j.token, role: j.user && j.user.role })); } catch (e) {}
+        if (j.user && j.user.role === 'doctor') { cloud = true; remote = false; return j; }
         return loadDump().then(function (dump) { store = dump; remote = true; return j; });
       });
+    },
+    /* SaaS endpoints (/api/saas/*): signup, plans, my subscription, payment requests. Resolves the JSON; rejects with a message. */
+    saas: function (method, path, body) {
+      if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));
+      return window.fetch(API + '/api/saas/' + path, {
+        method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: body === undefined ? undefined : JSON.stringify(body)
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 401 && sessToken()) fireAuthError();
+          if (!r.ok) { var e = new Error(j.error || ('Request failed (' + r.status + ')')); e.code = j.code; e.status = r.status; throw e; }
+          return j;
+        });
+      }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
+    },
+    /* the lab's own linked WhatsApp number (/api/wa/*): status, link (QR), unlink, send. Resolves the JSON; rejects with a message. */
+    waGw: function (method, path, body) {
+      if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));
+      return window.fetch(API + '/api/wa/' + path, {
+        method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: body === undefined ? undefined : JSON.stringify(body)
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 401 && sessToken()) fireAuthError();
+          if (!r.ok) { var e = new Error(j.error || ('Request failed (' + r.status + ')')); e.status = r.status; throw e; }
+          return j;
+        });
+      }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
+    },
+    /* report sharing (/api/share/*): email + Slack. Resolves the JSON; rejects with a message. */
+    share: function (method, path, body) {
+      if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));
+      return window.fetch(API + '/api/share/' + path, {
+        method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: body === undefined ? undefined : JSON.stringify(body)
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 401 && sessToken()) fireAuthError();
+          if (!r.ok) { var e = new Error(j.error || ('Request failed (' + r.status + ')')); e.status = r.status; throw e; }
+          return j;
+        });
+      }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
+    },
+    /* use the session returned by signup (same as a login) */
+    adoptSession: function (j) {
+      try { localStorage.setItem(SESS_KEY, JSON.stringify({ token: j.token })); } catch (e) {}
+      return loadDump().then(function (dump) { store = dump; remote = true; cloud = true; return j; });
     },
     changePassword: function (current, next) {
       return window.fetch(API + '/api/auth/change-password', {
         method: 'POST', headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ current: current, next: next })
       }).then(function (r) {
-        return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) throw new Error(j.error || 'Could not change password'); return true; });
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (!r.ok) throw new Error(j.error || 'Could not change password');
+          if (j.token) { try { var s = JSON.parse(localStorage.getItem(SESS_KEY) || '{}'); s.token = j.token; localStorage.setItem(SESS_KEY, JSON.stringify(s)); } catch (e) {} } /* new token for this session */
+          return true;
+        });
       });
     },
     /* Pull fresh server data (other PCs' work). Skipped while our own writes are in flight. */
@@ -679,6 +836,20 @@
         if (rows[i].id === id) return copy(rows[i]);
       }
       return null;
+    },
+
+    /* like insert, but with an id the caller chose (e.g. the invoice that carries its patient's number). Returns null when that id is already taken. */
+    insertAs: function (table, id, obj) {
+      if (table === 'settings' || ARRAY_TABLES.indexOf(table) < 0 || !id) return null;
+      var rows = (store[table] = store[table] || []);
+      for (var i = 0; i < rows.length; i++) { if (rows[i].id === id) return null; }
+      var row = copy(obj) || {};
+      row.id = id;
+      if (table === 'invoices' && !row.no) row.no = row.id;
+      rows.push(row);
+      persist();
+      apiWrite('POST', table, null, row);
+      return copy(row);
     },
 
     insert: function (table, obj) {
@@ -782,7 +953,7 @@
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
         expenses: tables.expenses, results: tables.results,
         report_templates: tables.report_templates, report_schedules: tables.report_schedules,
-        wa_log: tables.wa_log
+        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || [], email_log: tables.email_log || [], panels: tables.panels || [], ref_labs: tables.ref_labs || [], outsourced: tables.outsourced || [], onlinepay_claims: tables.onlinepay_claims || [], branches: tables.branches || []
       };
       normalizeSeq(store);
       persist();

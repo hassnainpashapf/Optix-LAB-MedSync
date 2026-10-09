@@ -122,7 +122,7 @@ var docFilter = { q: '' };
 function renderTests() {
   var r = sessionRole();
   var cust = (r === 'custom' && App.canPage('tests'));
-  if (r !== 'admin' && r !== 'technician' && !cust) { deny(); return; }
+  if (r !== 'admin' && r !== 'reception' && r !== 'technician' && !cust) { deny(); return; }
   var canEdit = (r === 'admin' || cust);
 
   var cats = categories();
@@ -165,14 +165,8 @@ function renderTests() {
       '" data-cat="' + App.esc(c) + '">' + App.esc(c) + '</button>';
   }).join(' ');
 
-  var testTabs =
-    '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px">' +
-      '<a href="#/tests" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' + App.icon('flask', 15) + ' All Tests Catalog</a>' +
-      '<a href="#/packages" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('box', 15) + ' Health Packages &amp; Deals</a>' +
-    '</div>';
-
   view().innerHTML =
-    testTabs +
+    '<p class="muted">Saved lab tests and prices, including imported generic tests. Common reusable templates are available under Generic Tests.</p>' +
     statCards +
     '<div class="card"><div class="card-b">' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">' +
@@ -311,8 +305,8 @@ function drawTestRows(canEdit) {
     return String(a.code || '').localeCompare(String(b.code || ''));
   }).filter(function (t) {
     if (testFilter.cat !== 'All' && t.category !== testFilter.cat) return false;
-    if (testFilter.status === 'Active' && !t.active) return false;
-    if (testFilter.status === 'Inactive' && t.active) return false;
+    if (testFilter.status === 'Active' && t.active === false) return false;
+    if (testFilter.status === 'Inactive' && t.active !== false) return false;
     if (q) {
       var h = ((t.code || '') + ' ' + (t.name || '') + ' ' + (t.category || '') + (t.aliases ? (' ' + t.aliases.join(' ')) : '')).toLowerCase();
       if (h.indexOf(q) < 0) return false;
@@ -337,21 +331,23 @@ function drawTestRows(canEdit) {
     htmlParts.push('<tr class="dept-head"><td colspan="8" style="background:' + (isUncat ? '#fef3c7' : 'var(--brand-soft)') + ';font-weight:800;padding:10px 12px;color:' + (isUncat ? '#92400e' : 'var(--brand)') + ';border-left:4px solid ' + (isUncat ? '#f59e0b' : 'var(--brand)') + '">' +
       '📁 ' + App.esc(cat) + ' <span class="muted" style="font-weight:400">(' + groups[cat].length + ' test' + (groups[cat].length === 1 ? '' : 's') + ')</span></td></tr>');
     groups[cat].forEach(function (t) {
-      var status = t.active
+      var status = t.active !== false
         ? '<span class="badge b-ready">Active</span>'
         : '<span class="badge b-unpaid">Inactive</span>';
-      var acts = canEdit
+      var canBook = App.canPage('patients') && App.canPage('billing');
+      var acts = (canEdit || canBook)
         ? '<div class="actions">' +
-          '<button type="button" class="btn btn-primary btn-sm" data-book="' + App.esc(t.id) + '">Book</button>' +
+          (canBook ? '<button type="button" class="btn btn-primary btn-sm" data-book="' + App.esc(t.id) + '"' + (t.active === false ? ' disabled' : '') + '>Book</button>' : '') +
+          (canEdit ?
           '<button type="button" class="btn btn-ghost btn-sm" data-edit="' + App.esc(t.id) + '">Edit</button>' +
           '<button type="button" class="btn btn-ghost btn-sm" data-toggle="' + App.esc(t.id) + '">' +
-            (t.active ? 'Deactivate' : 'Activate') + '</button>' +
-          '<button type="button" class="btn btn-ghost btn-sm" data-del="' + App.esc(t.id) + '" title="Delete">✕</button>' +
+            (t.active !== false ? 'Deactivate' : 'Activate') + '</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-del="' + App.esc(t.id) + '" title="Delete">✕</button>' : '') +
           '</div>'
         : '<span class="muted">—</span>';
       htmlParts.push('<tr>' +
         '<td><strong>' + App.esc(t.code || '') + '</strong></td>' +
-        '<td>' + App.esc(t.name || '') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
+        '<td>' + App.esc(t.name || '') + (t.type === 'generic' ? ' <span class="badge b-ready">Generic</span>' : '') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
           (t.isPackage && t.includes ? '<div style="font-size:11.5px;color:var(--muted)">' + t.includes.length + ' tests included</div>' : '') +
           '<div style="margin-top:4px"><span class="badge" style="background:var(--brand-soft);color:var(--brand);font-size:11px">📁 ' + App.esc(t.category || 'Uncategorized') + '</span></div></td>' +
         '<td>' + App.esc(t.category || '') + '</td>' +
@@ -365,14 +361,12 @@ function drawTestRows(canEdit) {
   });
   tb.innerHTML = htmlParts.join('');
 
-  if (!canEdit) return;
   tb.querySelectorAll('[data-book]').forEach(function (b) {
     b.addEventListener('click', function () {
-      sessionStorage.setItem('labpos_pretest', b.getAttribute('data-book'));
-      App.nav('#/patients');
-      App.toast('Select a patient, then use “+ New Bill” to order this test', 'info');
+      bookCatalogTest(b.getAttribute('data-book'));
     });
   });
+  if (!canEdit) return;
   tb.querySelectorAll('[data-edit]').forEach(function (b) {
     b.addEventListener('click', function () {
       var t = DB.get('tests', b.getAttribute('data-edit'));
@@ -383,8 +377,8 @@ function drawTestRows(canEdit) {
     b.addEventListener('click', function () {
       var t = DB.get('tests', b.getAttribute('data-toggle'));
       if (!t) return;
-      DB.update('tests', t.id, { active: !t.active });
-      App.toast(t.active ? 'Test deactivated.' : 'Test activated.');
+      DB.update('tests', t.id, { active: t.active === false });
+      App.toast(t.active !== false ? 'Test deactivated.' : 'Test activated.');
       renderTests();
     });
   });
@@ -540,6 +534,87 @@ var TEST_TEMPLATES = {
   ]
 };
 
+/* Templates never enter invoices directly. A matching saved test keeps its
+   identity, prices, report parameters and existing type unchanged. */
+var TEMPLATE_CODES = {
+  'CBC': 'CBC', 'Lipid Profile': 'LIPID', 'Liver Function (LFT)': 'LFT',
+  'Kidney Function (RFT)': 'RFT', 'Thyroid Profile': 'TFT', 'HbA1c': 'HBA1C',
+  'Urine Complete Examination': 'URE', 'Hepatitis B (HBsAg)': 'HBSAG',
+  'Hepatitis C (Anti-HCV)': 'AHCV', 'HIV (Anti-HIV)': 'HIV',
+  'Widal Test': 'WIDAL', 'Vitamin D': 'VITD', 'Vitamin B12': 'B12', 'Coagulation (PT/INR)': 'PTINR'
+};
+function catalogIdentity(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function templateCode(key) { return TEMPLATE_CODES[key] || ('GEN-' + key.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/-$/, '')); }
+function templateTest(key) {
+  var name = catalogIdentity(key), code = catalogIdentity(templateCode(key));
+  return DB.all('tests').filter(function (t) {
+    return t.templateKey === key || catalogIdentity(t.name) === name || catalogIdentity(t.code) === code;
+  })[0] || null;
+}
+function genericTemplates() {
+  return Object.keys(TEST_TEMPLATES).map(function (key) {
+    return { key: key, name: key, code: templateCode(key), parameterCount: TEST_TEMPLATES[key].length, test: templateTest(key) };
+  });
+}
+/* Patient picker loads this module on demand, sharing the exact template source. */
+App.testCatalog = { templates: genericTemplates };
+
+function bookCatalogTest(id) {
+  var t = DB.get('tests', id);
+  if (!t || t.active === false) { App.toast('This test is unavailable for booking.', 'err'); return; }
+  if (!App.canPage('patients') || !App.canPage('billing')) { App.toast('You do not have permission to book tests.', 'err'); return; }
+  sessionStorage.setItem('labpos_pretest', t.id);
+  App.nav('#/patients');
+  App.toast('Select a patient, then use “+ New Bill” to order this test', 'info');
+}
+function refreshTestCatalog() {
+  if ((location.hash || '').split('?')[0] === '#/tests/generic') renderGenericTests();
+  else renderTests();
+}
+function importGenericTemplate(key) {
+  if (sessionRole() !== 'admin') { App.toast('Only an administrator can import templates.', 'err'); return; }
+  if (!Object.prototype.hasOwnProperty.call(TEST_TEMPLATES, key)) return;
+  if (templateTest(key)) { App.toast('This template already has a saved test. Use the existing test.', 'info'); renderGenericTests(); return; }
+  testModal({ name: key, code: templateCode(key), category: '', price: '',
+    sampleType: key === 'Urine Complete Examination' ? 'Urine' : 'Blood',
+    tat: 'Same day', active: true, type: 'generic', templateKey: key,
+    params: JSON.parse(JSON.stringify(TEST_TEMPLATES[key])) });
+}
+var genericQuery = '';
+function renderGenericTests() {
+  if (!App.canPage('tests')) { deny(); return; }
+  var templates = genericTemplates(), admin = sessionRole() === 'admin';
+  var saved = templates.filter(function (t) { return !!t.test; }).length;
+  view().innerHTML =
+    '<p class="muted">Reusable common test templates. Import a template and set its price to create a real lab test before booking. Existing matching tests are reused without changing their prices or reports.</p>' +
+    '<div class="stat-grid" style="margin-bottom:18px">' +
+      tStat(TICONS.flask, 'blue', 'Templates', templates.length, 'Common report definitions') +
+      tStat(TICONS.check, 'green', 'Already in catalog', saved, 'Saved lab tests') +
+      tStat(TICONS.box, 'amber', 'Not imported', templates.length - saved, 'Unavailable for booking') +
+    '</div><div class="card"><div class="card-b">' +
+      '<label class="label" for="gt-q">Find a template</label><input id="gt-q" class="input search" placeholder="Search templates…" value="' + App.esc(genericQuery) + '">' +
+      '<div class="tbl-wrap"><table class="table"><thead><tr><th>Template</th><th>Parameters</th><th>Availability</th><th>Price</th><th>Actions</th></tr></thead><tbody id="gt-rows"></tbody></table></div></div></div>';
+  function draw() {
+    var q = genericQuery.trim().toLowerCase(), rows = genericTemplates().filter(function (t) { return t.name.toLowerCase().indexOf(q) !== -1; });
+    document.getElementById('gt-rows').innerHTML = rows.map(function (tpl) {
+      var t = tpl.test, status = t ? ((t.active === false ? 'Inactive' : 'Available') + ' · ' + (t.type === 'generic' ? 'Generic' : 'Regular') + ' test') : 'Not imported — unavailable';
+      var actions = t ? ((t.active !== false && App.canPage('patients') && App.canPage('billing') ? '<button type="button" class="btn btn-primary btn-sm" data-gbook="' + App.esc(t.id) + '">Book</button> ' : '') +
+        (admin ? '<button type="button" class="btn btn-ghost btn-sm" data-gedit="' + App.esc(t.id) + '">Edit saved test</button>' : '')) :
+        (admin ? '<button type="button" class="btn btn-primary btn-sm" data-gimport="' + App.esc(tpl.key) + '">Add to catalog</button>' : '<span class="muted">Ask an administrator to import</span>');
+      return '<tr><td><strong>' + App.esc(tpl.name) + '</strong>' + (t ? '<div class="muted">' + App.esc(t.code + ' — ' + t.name) + '</div>' : '') +
+        '</td><td>' + tpl.parameterCount + '</td><td>' + App.esc(status) + '</td><td>' + (t ? App.money(+t.price || 0) : '—') + '</td><td>' + actions + '</td></tr>';
+    }).join('') || '<tr><td colspan="5">' + App.empty('No templates found.') + '</td></tr>';
+  }
+  document.getElementById('gt-q').addEventListener('input', function (e) { genericQuery = e.target.value; draw(); });
+  document.getElementById('gt-rows').addEventListener('click', function (e) {
+    var btn = e.target.closest('button'); if (!btn) return;
+    if (btn.hasAttribute('data-gimport')) importGenericTemplate(btn.getAttribute('data-gimport'));
+    if (btn.hasAttribute('data-gbook')) bookCatalogTest(btn.getAttribute('data-gbook'));
+    if (admin && btn.hasAttribute('data-gedit')) { var t = DB.get('tests', btn.getAttribute('data-gedit')); if (t) testModal(t); }
+  });
+  draw();
+}
+
 /* ---------- bulk price update ---------- */
 function _bulkFilteredTests() {
   var q = (testFilter.q || '').trim().toLowerCase();
@@ -685,7 +760,7 @@ function bulkPriceModal() {
 }
 
 function testModal(t) {
-  var isNew = !t;
+  var isNew = !t || !t.id;
   t = t || { code: '', name: '', category: '', price: '', sampleType: 'Blood', tat: 'Same day', active: true, params: [] };
   var cats = categories();
   var sampleOpts = App.optionsHtml('sampleType', t.sampleType || '');
@@ -792,6 +867,10 @@ function testModal(t) {
 
     m.querySelector('#tm-form').addEventListener('submit', function (e) {
       e.preventDefault();
+      if (isNew && t.templateKey) {
+        if (sessionRole() !== 'admin') { App.toast('Only an administrator can import templates.', 'err'); return; }
+        if (templateTest(t.templateKey)) { App.toast('A matching test already exists; no duplicate was added.', 'err'); return; }
+      }
       var code = m.querySelector('#tm-code').value.trim();
       var name = m.querySelector('#tm-name').value.trim();
       var category = m.querySelector('#tm-cat').value.trim();
@@ -802,6 +881,9 @@ function testModal(t) {
         return x.id !== t.id && String(x.code || '').toLowerCase() === code.toLowerCase();
       });
       if (dup) { App.toast('A test with this code already exists.', 'err'); return; }
+      if (isNew && t.templateKey && DB.all('tests').some(function (x) { return catalogIdentity(x.name) === catalogIdentity(name) || catalogIdentity(x.code) === catalogIdentity(code); })) {
+        App.toast('A test with this name or code already exists; use that saved test.', 'err'); return;
+      }
       if (m.querySelector('#tm-out').checked && !m.querySelector('#tm-reflab').value) { App.toast('Choose the reference lab for an outsourced test (add one in Outsourced → Reference labs first).', 'err'); return; }
       var params = [];
       rowsBox.querySelectorAll('.tm-prow').forEach(function (row) {
@@ -822,6 +904,7 @@ function testModal(t) {
       Array.prototype.forEach.call(m.querySelectorAll('.tm-crow'), function (r) { var q = +r.querySelector('.tm-cq').value, id = r.querySelector('.tm-ci').value; if (id && q > 0) consumes.push({ itemId: id, qty: q }); });
       var data = {
         code: code, name: name, category: category, price: price, consumes: consumes,
+        type: t.type === 'generic' ? 'generic' : 'regular',
         sampleType: m.querySelector('#tm-sample').value,
         tat: m.querySelector('#tm-tat').value.trim() || 'Same day',
         retestDays: Math.max(0, parseInt(m.querySelector('#tm-retest').value, 10) || 0),
@@ -835,11 +918,12 @@ function testModal(t) {
         isPackage: isPkgEl.checked,
         includes: isPkgEl.checked ? Object.keys(picked).filter(function (id) { return picked[id]; }) : []
       };
+      if (t.templateKey) data.templateKey = t.templateKey;
       if (data.isPackage && !data.includes.length) { App.toast('Select at least one test for the package.', 'err'); return; }
       if (isNew) { DB.insert('tests', data); App.toast('Test added.'); }
       else { DB.update('tests', t.id, data); App.toast('Test updated.'); }
       close();
-      renderTests();
+      refreshTestCatalog();
     });
   }});
 }
@@ -1176,10 +1260,6 @@ function renderPackages() {
     + '.pkg-price-bar { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 12px 14px; margin: 14px 0 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }'
     + '</style>'
     + '<div class="pkg-dash">'
-    + '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px">'
-    +   '<a href="#/tests" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('flask', 15) + ' All Tests Catalog</a>'
-    +   '<a href="#/packages" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' + App.icon('box', 15) + ' Health Packages &amp; Deals</a>'
-    + '</div>'
 
     /* 4 Unified KPI Stat Cards (.kpi-grid + .kpi) */
     + '<div class="kpi-grid" style="margin-bottom:18px">'
@@ -1921,6 +2001,8 @@ function seedPremierPackages() {
 /* ---------- register routes ---------- */
 
 App.route('/tests', renderTests);
+App.route('/tests/regular', renderTests);
+App.route('/tests/generic', renderGenericTests);
 App.route('/doctors', renderDoctors);
 App.route('/packages', renderPackages);
 App.route('#/packages', renderPackages);

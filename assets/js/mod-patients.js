@@ -129,7 +129,9 @@
     '.ptf-trow:last-child{border-bottom:none}' +
     '.ptf-trow:hover{background:#f4f9fd}' +
     '.ptf-tchk{width:16px;height:16px;accent-color:var(--brand);flex:none;cursor:pointer}' +
-    '.ptf-tinfo{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+    '.ptf-tinfo{flex:1;min-width:0;overflow-wrap:anywhere}' +
+    '.ptf-trefs{display:block;margin-top:4px;font-size:12px;color:var(--muted);font-weight:400;white-space:normal}' +
+    '.ptf-tref{display:block;margin-top:2px}' +
     '.ptf-tprice{font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}' +
     '.ptf-tsum{font-size:12px;color:var(--muted);font-weight:600;margin-top:6px}' +
     '.ptf-opt{font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;font-size:10px}' +
@@ -141,17 +143,49 @@
     var rows = tests.map(function (t) {
       var nm = (t.code ? t.code + ' — ' : '') + (t.name || 'Test');
       var searchTerms = (nm + (t.aliases ? (' ' + t.aliases.join(' ')) : '')).toLowerCase();
-      return '<label class="ptf-trow" data-tname="' + App.esc(searchTerms) + '">' +
+      var type = t.type === 'generic' ? 'generic' : 'regular';
+      return '<label class="ptf-trow" data-ttype="' + type + '" data-tname="' + App.esc(searchTerms) + '"' + (type === 'generic' ? ' style="display:none"' : '') + '>' +
         '<input type="checkbox" class="ptf-tchk" value="' + App.esc(t.id) + '" data-price="' + (+t.price || 0) + '">' +
         '<span class="ptf-tinfo"><strong>' + App.esc(nm) + '</strong>' +
-        (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') + '</span>' +
+        (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
+        '<span class="ptf-trefs" data-ref-test="' + App.esc(t.id) + '"></span></span>' +
         '<span class="ptf-tprice">' + App.money(+t.price || 0) + '</span></label>';
     }).join('');
     return PTF_TSTYLE +
-      '<div class="form-row"><label class="label" for="ptf-tsearch">Order Tests <span class="ptf-opt">(optional — sent to Lab Results)</span></label>' +
+      '<div class="form-row"><label class="label" for="ptf-ttype">Test type</label>' +
+      '<select class="select" id="ptf-ttype"><option value="regular">Regular Tests</option><option value="generic">Generic Tests</option></select>' +
+      '<div class="muted" style="font-size:12px;margin:6px 0">Selections from both types are kept when you switch. Generic templates must be imported as real lab tests before ordering.</div>' +
+      '<label class="label" for="ptf-tsearch">Order Tests <span class="ptf-opt">(optional — sent to Lab Results)</span></label>' +
       '<input class="input" id="ptf-tsearch" placeholder="Search tests…" autocomplete="off">' +
-      '<div class="ptf-tlist" id="ptf-tlist">' + (rows || '<div class="ptf-tempty">No active tests found.</div>') + '</div>' +
+      '<div class="muted" style="font-size:12px;margin-top:6px">Normal ranges below follow age and gender (child ranges take priority under 13). These are reference ranges, not patient results.</div>' +
+      '<div class="ptf-tlist" id="ptf-tlist">' + rows + '</div>' +
+      '<div class="ptf-tempty" id="ptf-tempty" hidden>No active tests match this type and search.</div>' +
+      '<div class="muted" id="ptf-tcatalog" style="font-size:12px;margin-top:6px" role="status"></div>' +
       '<div class="ptf-tsum" id="ptf-tsum">0 selected • Rs 0</div></div>';
+  }
+  /* Results are lazy-loaded. Match mod-results refFor until its shared helper is available. */
+  function patientTestRef(param, patient) {
+    if (App.refFor) return App.refFor(param, patient);
+    if (!param) return '';
+    var age = parseFloat(patient && patient.age), gender = String((patient && patient.gender) || '').toLowerCase().charAt(0);
+    if (!isNaN(age) && age < 13 && param.refChild) return param.refChild;
+    if (gender === 'm' && param.refMale) return param.refMale;
+    if (gender === 'f' && param.refFemale) return param.refFemale;
+    return param.ref || '';
+  }
+  function testReferenceHTML(test, patient) {
+    var tests = test.isPackage && test.includes && test.includes.length ? test.includes.map(function (id) { return DB.get('tests', id); }) : [test];
+    return tests.map(function (t) {
+      if (!t) return '<span class="ptf-tref">Included test unavailable.</span>';
+      var title = test.isPackage ? App.esc(t.name || t.code || 'Test') + ' — ' : '';
+      var params = Array.isArray(t.params) ? t.params : [];
+      if (!params.length) return '<span class="ptf-tref">' + title + 'No reference ranges configured.</span>';
+      return params.map(function (param) {
+        var ref = patientTestRef(param, patient);
+        return '<span class="ptf-tref">' + title + App.esc(param.name || 'Parameter') + ': Normal range ' +
+          App.esc(ref || 'not configured') + (ref && param.unit ? ' ' + App.esc(param.unit) : '') + '</span>';
+      }).join('');
+    }).join('');
   }
   /* corporate / panel client: the patient's bills go to the client's account at the client's prices */
   function panelFieldHTML(p) {
@@ -283,26 +317,80 @@
     var tSearch = document.getElementById('ptf-tsearch');
     var tList = document.getElementById('ptf-tlist');
     var tSum = document.getElementById('ptf-tsum');
+    var tType = document.getElementById('ptf-ttype');
+    var templateLoad = null, templatesDrawn = false;
+    function paintTestReferences() {
+      if (!tList) return;
+      var patient = { age: document.getElementById('ptf-age').value, gender: document.getElementById('ptf-gender').value };
+      var refs = tList.querySelectorAll('[data-ref-test]');
+      for (var i = 0; i < refs.length; i++) {
+        var test = DB.get('tests', refs[i].getAttribute('data-ref-test'));
+        refs[i].innerHTML = test ? testReferenceHTML(test, patient) : 'Test unavailable.';
+      }
+    }
     function paintTSum() {
       if (!tList || !tSum) return;
-      var n = 0, amt = 0;
+      var n = 0, amt = 0, names = [];
       var chks = tList.querySelectorAll('.ptf-tchk:checked');
       var pnSel = document.getElementById('ptf-panel'), pn = pnSel && pnSel.value ? DB.get('panels', pnSel.value) : null;
-      for (var i = 0; i < chks.length; i++) { n++; amt += pn ? App.panelPrice(pn, DB.get('tests', chks[i].value)) : (+chks[i].getAttribute('data-price') || 0); }
-      tSum.textContent = n + ' selected • ' + App.money(amt) + (pn ? ' (' + pn.name + ' rates, billed to their account)' : '');
+      for (var i = 0; i < chks.length; i++) {
+        var test = DB.get('tests', chks[i].value); if (!test) continue;
+        n++; names.push(test.name); amt += pn ? App.panelPrice(pn, test) : (+test.price || 0);
+      }
+      tSum.textContent = n + ' selected across both types • ' + App.money(amt) + (pn ? ' (' + pn.name + ' rates, billed to their account)' : '') + (names.length ? ' — ' + names.join(', ') : '');
+      paintTestReferences();
+    }
+    function filterTests() {
+      var q = tSearch.value.trim().toLowerCase(), type = tType.value, visible = 0;
+      var rows = tList.querySelectorAll('.ptf-trow');
+      for (var i = 0; i < rows.length; i++) {
+        var show = rows[i].getAttribute('data-ttype') === type && (!q || (rows[i].getAttribute('data-tname') || '').indexOf(q) >= 0);
+        rows[i].style.display = show ? '' : 'none';
+        if (show) visible++;
+      }
+      document.getElementById('ptf-tempty').hidden = !!visible;
+      document.getElementById('ptf-tcatalog').hidden = type !== 'generic';
+      paintTestReferences();
+    }
+    function showTemplateAvailability() {
+      if (templatesDrawn) return;
+      var status = document.getElementById('ptf-tcatalog');
+      if (!App.testCatalog) {
+        if (templateLoad) return;
+        status.textContent = 'Loading common template availability…';
+        templateLoad = App.loadScript('assets/js/mod-masters.js');
+        templateLoad.then(function () {
+          templateLoad = null;
+          if (document.getElementById('ptf-tlist') !== tList) return;
+          if (!App.testCatalog) throw new Error('Templates unavailable');
+          showTemplateAvailability(); filterTests();
+        }).catch(function () {
+          templateLoad = null;
+          if (document.getElementById('ptf-tlist') === tList) status.textContent = 'Template availability could not be loaded. Saved tests remain selectable; switch test type to retry.';
+        });
+        return;
+      }
+      var html = App.testCatalog.templates().map(function (tpl) {
+        var t = tpl.test;
+        if (t && t.type === 'generic' && t.active !== false) return '';
+        var message = t ? (t.active === false ? 'Saved test is inactive — ask an administrator to activate it.' : 'Already saved as a Regular test: ' + t.name + '. Choose Regular Tests to order it.') :
+          'Not imported — unavailable. Ask an administrator to use All Tests Catalog → Generic Tests → Add to catalog.';
+        return '<div class="ptf-trow" data-ttype="generic" data-tname="' + App.esc(tpl.name.toLowerCase()) + '"><span><strong>' + App.esc(tpl.name) + '</strong><br><span class="muted">' + App.esc(message) + '</span></span></div>';
+      }).join('');
+      tList.insertAdjacentHTML('beforeend', html);
+      templatesDrawn = true;
+      status.textContent = 'Only saved, active tests have a selection checkbox. Templates alone cannot be ordered.';
     }
     if (tSearch && tList) {
-      tSearch.addEventListener('input', function () {
-        var q = tSearch.value.trim().toLowerCase();
-        var rows = tList.querySelectorAll('.ptf-trow');
-        for (var i = 0; i < rows.length; i++) {
-          var nm = rows[i].getAttribute('data-tname') || '';
-          rows[i].style.display = (!q || nm.indexOf(q) >= 0) ? '' : 'none';
-        }
-      });
+      tSearch.addEventListener('input', filterTests);
+      tType.addEventListener('change', function () { if (tType.value === 'generic') showTemplateAvailability(); filterTests(); });
       tList.addEventListener('change', paintTSum);
+      document.getElementById('ptf-gender').addEventListener('change', paintTestReferences);
+      document.getElementById('ptf-age').addEventListener('input', paintTestReferences);
+      document.getElementById('ptf-age').addEventListener('change', paintTestReferences);
       var pnSel0 = document.getElementById('ptf-panel'); if (pnSel0) pnSel0.addEventListener('change', paintTSum);
       paintTSum();
+      filterTests();
     }
     form.addEventListener('submit', function (ev) {
       ev.preventDefault();
@@ -328,6 +416,13 @@
       if (!gender) { setErr('ptf-e-gender', 'Please select gender.'); ok = false; }
       if (num && !/^[+\d][\d\s\-()]{5,19}$/.test(num)) { setErr('ptf-e-whatsapp', 'Enter a valid mobile number.'); ok = false; }
       if (!ok) return;
+      if (tList) {
+        var selected = tList.querySelectorAll('.ptf-tchk:checked');
+        for (var si = 0; si < selected.length; si++) {
+          var savedTest = DB.get('tests', selected[si].value);
+          if (!savedTest || savedTest.active === false) { App.toast('A selected test is no longer available. Deselect it before saving.', 'err'); return; }
+        }
+      }
       var data = { name: name, age: age, gender: gender, address: address,
         father: father, dob: dob,
         blood: blood, doctorId: doctorId, notes: notes };

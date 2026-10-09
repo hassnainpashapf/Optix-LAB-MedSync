@@ -3,15 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Optix LAB MedSync</title>
+<title>Optix Medical Sync</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23131845'/%3E%3Cpath d='M13 7h6v7l4 9.2c.6 1.4-.4 2.8-1.9 2.8H10.9c-1.5 0-2.5-1.4-1.9-2.8L13 14V7z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cpath d='M11 20h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="manifest" href="assets/manifest.webmanifest">
 <meta name="theme-color" content="#131845">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="MedSync">
+<meta name="apple-mobile-web-app-title" content="Optix">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/css/app.css?v=7a828df">
+<link rel="stylesheet" href="assets/css/app.css?v=144">
+<style>
+/* Quiet shared shell: keep navigation and page titles, omit duplicate taglines. */
+.sidebar .brand-tx small, .tb-greet span { display:none }
+.sidebar .brand-mark { box-shadow:none }
+.topbar { box-shadow:none }
+.kpi { box-shadow:0 1px 4px rgba(15,23,42,.05) }
+.kpi:hover { transform:none;box-shadow:0 2px 8px rgba(15,23,42,.08) }
+/* Desktop navigation is persistent by default; the header button collapses it. */
+@media (min-width:901px) {
+  body.side-collapsed .sidebar { display:none }
+}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -30,8 +42,13 @@
 <script>
 /* Shell-level delegation (works regardless of module render timing) */
 document.addEventListener('click', function (e) {
-  if (e.target.closest('#navToggle')) document.body.classList.toggle('side-open');
-  else if (e.target.closest('.nav-it')) document.body.classList.remove('side-open');
+  if (e.target.closest('#navToggle')) {
+    var mobile = window.matchMedia('(max-width:900px)').matches;
+    document.body.classList.toggle(mobile ? 'side-open' : 'side-collapsed');
+    var button = document.getElementById('navToggle');
+    if (button) button.setAttribute('aria-expanded', String(mobile ? document.body.classList.contains('side-open') : !document.body.classList.contains('side-collapsed')));
+  }
+  else if (e.target.closest('.nav-it:not(.nav-par):not(.nav-fh)') || e.target.closest('.nav-sub-it')) document.body.classList.remove('side-open');
 });
 document.addEventListener('keydown', function (e) {
   if (e.key === 'Escape') document.body.classList.remove('side-open');
@@ -39,36 +56,83 @@ document.addEventListener('keydown', function (e) {
 </script>
 <!-- API base for the web build (Cloudflare Pages copies assets/); the desktop app serves its own /api-config.js -->
 <script src="assets/js/api-config.js"></script>
+<script src="assets/js/sms-gateway.js"></script>
 <script>
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
    to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
-window.__ASSET_V = '7a828df';
+window.__ASSET_V = '195';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
   '#/billing/:patientId': 'assets/js/mod-billing.js',
   '#/invoices': 'assets/js/mod-invoices.js',
+  '#/invoices/pending': 'assets/js/mod-invoices.js',
   '#/invoice/:id': 'assets/js/mod-invoices.js',
+  '#/receipts': 'assets/js/mod-invoices.js',
   '#/dues': 'assets/js/mod-invoices.js',
+  '#/online-payments': 'assets/js/mod-online-payments.js',
+  '#/panels': 'assets/js/mod-panels.js',
+  '#/outsourced': 'assets/js/mod-outsourced.js',
   '/patients': 'assets/js/mod-patients.js',
   '/patients/new': 'assets/js/mod-patients.js',
+  '#/patients/lists': 'assets/js/mod-admin.js',
+  '#/settings/lists': 'assets/js/mod-admin.js',
   '/patient/:id': 'assets/js/mod-patients.js',
   '/tests': 'assets/js/mod-masters.js',
+  '#/tests': 'assets/js/mod-masters.js',
+  '#/tests/regular': 'assets/js/mod-masters.js',
+  '#/tests/generic': 'assets/js/mod-masters.js',
+  '#/packages': 'assets/js/mod-masters.js',
   '/doctors': 'assets/js/mod-masters.js',
   '#/results': 'assets/js/mod-results.js',
+  '#/results/ready': 'assets/js/mod-results.js',
+  '#/results/old': 'assets/js/mod-results.js',
+  '#/samples': 'assets/js/mod-samples.js',
+  '#/samples/stickers': 'assets/js/mod-samples.js',
+  '#/samples/home': 'assets/js/mod-samples.js',
+  '#/home-sampling': 'assets/js/mod-samples.js',
+  '#/inventory': 'assets/js/mod-stock.js',
+  '#/inventory/:tab': 'assets/js/mod-stock.js',
+  '#/stock': 'assets/js/mod-stock.js',
+  '#/stock/:tab': 'assets/js/mod-stock.js',
   '#/expenses': 'assets/js/mod-admin.js',
   '#/reports': 'assets/js/mod-admin.js',
+  '#/reports/:type': 'assets/js/mod-admin.js',
+  '#/reports/trends': 'assets/js/mod-admin.js',
+  '#/trends': 'assets/js/mod-admin.js',
+  '#/finance': 'assets/js/mod-finance.js',
+  '#/finance/:tab': 'assets/js/mod-finance.js',
+  '#/close-day': 'assets/js/mod-finance.js',
+  '#/profit': 'assets/js/mod-finance.js',
   '#/settings': 'assets/js/mod-admin.js',
+  '#/branches': 'assets/js/mod-branches.js',
+  '#/settings/:tab': 'assets/js/mod-admin.js',
+  '#/signatures': 'assets/js/mod-admin.js',
   '/downloads': 'assets/js/mod-downloads.js',
+  '/subscription': 'assets/js/mod-subscription.js',
+  '/audit': 'assets/js/mod-audit.js',
+  '/whatsapp': 'assets/js/mod-whatsapp.js',
+  '/whatsapp/log': 'assets/js/mod-whatsapp.js',
+  '/whatsapp/digest': 'assets/js/mod-whatsapp.js',
+  '/sms': 'assets/js/mod-sms.js',
+  '/sms/log': 'assets/js/mod-sms.js',
+  '/digest': 'assets/js/mod-whatsapp.js',
+  '/whatsapp/templates': 'assets/js/mod-whatsapp.js',
+  '/whatsapp/settings': 'assets/js/mod-whatsapp.js',
+  '/email': 'assets/js/mod-email.js',
+  '/email/log': 'assets/js/mod-email.js',
+  '/email/templates': 'assets/js/mod-email.js',
+  '/email/settings': 'assets/js/mod-email.js',
   '/profile': 'assets/js/mod-profile.js'
 };
 </script>
-<script src="assets/js/qrcode.min.js?v=7a828df"></script>
-<script src="assets/js/db.js?v=7a828df"></script>
-<script src="assets/js/test-catalog-5000.js?v=7a828df"></script>
-<script src="assets/js/graph-config.js?v=7a828df"></script>
-<script src="assets/js/app.js?v=7a828df"></script>
-<script src="assets/js/mod-dashboard.js?v=7a828df"></script>
+<script src="assets/js/qrcode.min.js?v=144"></script>
+<script src="assets/js/db.js?v=144"></script>
+<script src="assets/js/graph-config.js?v=144"></script>
+<script src="assets/js/app.js?v=144"></script>
+<script src="assets/js/mod-auth.js?v=144"></script>
+<script src="assets/js/samples-core.js?v=144"></script>
+<script src="assets/js/mod-dashboard.js?v=144"></script>
 </body>
 </html>

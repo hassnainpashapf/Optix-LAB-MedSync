@@ -1,5 +1,5 @@
 /* ============================================================
-   Optix LAB MedSync — New Bill POS  (route: #/billing/:patientId, opened from Patient Profile)
+   Optix Medical Sync — New Bill POS  (route: #/billing/:patientId, opened from Patient Profile)
    Three-column point-of-sale: patient | test picker + cart | bill summary
    ============================================================ */
 (function () {
@@ -28,17 +28,17 @@
   /* ---------- dashboard-style stat cards: shared compact CSS now in app.css ---------- */
   var SC_STYLE = '';
   var SC_ICONS = {
-    doc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
-    cash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
-    cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
-    trend: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
-    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
-    clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>'
+    doc: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>',
+    cash: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/></svg>',
+    cal: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+    trend: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>',
+    users: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="10" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+    clock: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;max-width:20px;max-height:20px;flex-shrink:0"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>'
   };
   function scIsTech() {
     try {
       var s = (typeof App.session === 'function') ? App.session() : App.session;
-      return !!(s && s.role === 'technician');
+      return !!(s && (s.role === 'technician' || (App.hideMoney && App.hideMoney())));
     } catch (e) { return false; }
   }
   function scCard(icon, tint, label, value, sub, full) {
@@ -55,10 +55,19 @@
     var fixedPatient = patientId ? DB.get('patients', patientId) : null;
     if (!fixedPatient) { App.toast('Patient not found.', 'err'); App.nav('#/patients'); return; }
     var view = document.getElementById('view');
+    var initCart = [];
+    try {
+      var rawPre = sessionStorage.getItem('labpos_precart');
+      if (rawPre) {
+        initCart = JSON.parse(rawPre) || [];
+        sessionStorage.removeItem('labpos_precart');
+      }
+    } catch (ePre) { initCart = []; }
     var state = {
       patient: fixedPatient,
-      cart: [],            // [{testId, code, name, price}]
+      cart: Array.isArray(initCart) ? initCart : [],            // [{testId, code, name, price, isPackage, includes}]
       doctorId: '',
+      panelId: (fixedPatient.panelId && DB.get('panels', fixedPatient.panelId) && DB.get('panels', fixedPatient.panelId).active !== false) ? fixedPatient.panelId : '',   /* corporate client: bill goes to their account */
       discType: 'rs',      // 'rs' | 'pct'
       discVal: 0,
       method: 'Cash',
@@ -82,14 +91,21 @@
         for (var pi = 0; pi < tests.length; pi++) { if (tests[pi].id === preId) { preT = tests[pi]; break; } }
         if (!preT) preT = DB.get('tests', preId);
         if (preT && preT.active !== false && !state.cart.some(function (l) { return l.testId === preT.id; })) {
-          state.cart.push({ testId: preT.id, code: preT.code, name: preT.name, price: preT.price, isPackage: !!preT.isPackage, includes: preT.isPackage ? (preT.includes || []) : null });
+          state.cart.push({ testId: preT.id, code: preT.code, name: preT.name, price: linePrice(preT), isPackage: !!preT.isPackage, includes: preT.isPackage ? (preT.includes || []) : null });
         }
       }
     } catch (e) {}
 
+    /* ---------- corporate client pricing ---------- */
+    var panels = (DB.all('panels') || []).filter(function (x) { return x.active !== false || x.id === state.panelId; });
+    function curPanel() { return state.panelId ? DB.get('panels', state.panelId) : null; }
+    function linePrice(t) { var pn = curPanel(); return pn ? App.panelPrice(pn, t) : (+t.price || 0); }
+    function repriceCart() { state.cart.forEach(function (l) { var t = DB.get('tests', l.testId); if (t) l.price = linePrice(t); }); }
+
     /* ---------- totals ---------- */
     function totals() {
       var sub = state.cart.reduce(function (a, l) { return a + num(l.price); }, 0);
+      if (curPanel()) return { sub: sub, discAmt: 0, total: sub, tendered: sub, paid: sub, due: 0, change: 0, panel: true };
       var d = num(state.discVal);
       var discAmt = 0;
       if (state.discType === 'pct') { d = Math.min(Math.max(d, 0), 100); discAmt = sub * d / 100; }
@@ -165,7 +181,7 @@
           (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
           '<span>' + App.esc(t.code || '') + ' • ' + App.esc(t.category || '') +
           (t.isPackage && t.includes ? ' • ' + t.includes.length + ' tests' : '') + '</span></div>' +
-          '<div class="bl-test-right"><strong>' + App.money(t.price) + '</strong>' +
+          '<div class="bl-test-right"><strong>' + App.money(linePrice(t)) + '</strong>' +
           (inCart
             ? '<span class="badge b-ready">Added</span>'
             : '<button class="btn btn-primary btn-sm" data-add="' + App.esc(t.id) + '">Add</button>') +
@@ -176,7 +192,7 @@
           var t = DB.get('tests', b.getAttribute('data-add'));
           if (!t) return;
           if (state.cart.some(function (l) { return l.testId === t.id; })) { App.toast('Test already in bill', 'err'); return; }
-          state.cart.push({ testId: t.id, code: t.code, name: t.name, price: t.price, isPackage: !!t.isPackage, includes: t.isPackage ? (t.includes || []) : null });
+          state.cart.push({ testId: t.id, code: t.code, name: t.name, price: linePrice(t), isPackage: !!t.isPackage, includes: t.isPackage ? (t.includes || []) : null });
           paintTests();
           paintCart();
           paintTotals();
@@ -209,12 +225,23 @@
 
     /* ---------- save ---------- */
     function saveBill() {
+      if (App.limitHit && App.limitHit('invoices')) return;
       if (!state.patient) { App.toast('Select a patient first', 'err'); return; }
       if (!state.cart.length) { App.toast('Add at least one test', 'err'); return; }
       var t = totals();
       if (t.tendered < 0) { App.toast('Tendered amount cannot be negative', 'err'); return; }
       var status = t.due <= 0 ? 'paid' : (t.paid > 0 ? 'partial' : 'unpaid');
-      var inv = DB.insert('invoices', {
+      var pn = curPanel();
+      if (pn && +pn.creditLimit > 0 && App.panelAccount(pn).balance + t.total > +pn.creditLimit + 0.009) {
+        if (!window.confirm(pn.name + ' would go over its credit limit of ' + App.money(pn.creditLimit) + ' (it already owes ' + App.money(Math.max(0, App.panelAccount(pn).balance)) + '). Save this bill anyway?')) return;
+      }
+      var billAt = App.fromLocalInput((document.getElementById('blRegDate') || {}).value), vn = App.nextVisitNos(billAt);
+      var invData = {
+        labNo: vn.labNo, caseNo: vn.caseNo,
+        panelId: pn ? pn.id : null,
+        reference: (document.getElementById('blRef') || {}).value || '',
+        regLocation: (document.getElementById('blRegLoc') || {}).value ? document.getElementById('blRegLoc').value.trim() : '',
+        destLocation: (document.getElementById('blDestLoc') || {}).value ? document.getElementById('blDestLoc').value.trim() : '',
         patientId: state.patient.id,
         doctorId: state.doctorId || null,
         items: state.cart.map(function (l) { return { testId: l.testId, code: l.code, name: l.name, price: l.price, isPackage: !!l.isPackage, includes: l.includes || null }; }),
@@ -224,11 +251,13 @@
         paid: t.paid,
         due: t.due,
         status: status,
-        createdAt: new Date().toISOString(),
+        createdAt: billAt,
         createdBy: currentUser()
-      });
+      };
+      var inv = DB.insert('invoices', invData);
       DB.update('invoices', inv.id, { no: inv.id });
-      if (t.paid > 0) {
+      try { App.outsourceSync(inv.id, true); } catch (e) { if (window.console) console.error(e); }
+      if (t.paid > 0 && !pn) {
         DB.insert('payments', {
           invoiceId: inv.id,
           amount: t.paid,
@@ -252,7 +281,16 @@
           });
         });
       });
-      App.toast('Invoice ' + inv.id + ' saved' + (t.due > 0 ? ' • Due ' + App.money(t.due) : ''));
+      /* one sample row per tube (barcode labels are printed from #/samples or the invoice page) */
+      var smpN = 0;
+      try { if (window.Samples) smpN = Samples.createForInvoice(inv).length; } catch (e) { if (window.console) console.error(e); }
+      App.toast('Invoice ' + inv.id + ' saved' + (t.due > 0 ? ' • Due ' + App.money(t.due) : '') + (smpN ? ' • ' + smpN + ' sample' + (smpN === 1 ? '' : 's') + ' to collect' : ''));
+      try {
+        var sMain = DB.get('settings', 'main') || {};
+        if (sMain.autoPrintThermalSlip && App.printThermalSlip) {
+          setTimeout(function () { App.printThermalSlip(inv.id, 80); }, 300);
+        }
+      } catch (e) {}
       App.nav('#/invoice/' + inv.id);
     }
 
@@ -365,13 +403,19 @@
       '<div class="bl-panel bl-col-summary"><div class="bl-panel-h"><span class="bl-panel-t"><span class="bl-step">3</span>Bill Summary</span></div><div class="bl-panel-b">' +
         '<div class="bl-sec" style="margin-top:0"><label class="label">Selected tests</label>' +
         '<div id="blCart" style="max-height:210px;overflow:auto"></div></div>' +
-        '<div class="bl-sec"><label class="label">Referral doctor (optional)</label>' +
+        '<div class="bl-sec"><label class="label" for="blRegDate">Registration date &amp; time</label><input class="input" id="blRegDate" type="datetime-local" value="' + App.toLocalInput() + '">' +
+        '<div class="muted" style="font-size:11.5px;margin-top:3px">Filled in automatically. Change it if needed.</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><div><label class="label" for="blRegLoc">Registration location</label><input class="input" id="blRegLoc" list="blRegLoc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().regLocation) + '">' + App.datalistHtml('blRegLoc-dl', 'regLocation', App.visitDefaults().regLocation) + '</div>' +
+        '<div><label class="label" for="blDestLoc">Destination location</label><input class="input" id="blDestLoc" list="blDestLoc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '">' + App.datalistHtml('blDestLoc-dl', 'destLocation', App.visitDefaults().destLocation) + '</div></div>' +
+        '<div style="margin-top:8px"><label class="label" for="blRef">Reference <span class="muted" style="font-weight:400">(shown on the report)</span></label><select class="select" id="blRef">' + App.optionsHtml('reference', App.listOptions('reference')[0] || '') + '</select></div></div>' +
+        (panels.length ? '<div class="bl-sec"><label class="label">Bill to</label><select class="select" id="blPanel"><option value="">Patient pays (normal)</option>' + panels.map(function (x) { return '<option value="' + App.esc(x.id) + '"' + (x.id === state.panelId ? ' selected' : '') + '>' + App.esc(x.name) + ' (company account)</option>'; }).join('') + '</select><div class="muted" id="blPanelNote" style="font-size:12.5px;margin-top:5px"></div></div>' : '') +
+        '<div class="bl-sec"><label class="label">Consultant (optional)</label>' +
         '<select class="select" id="blDoctor"><option value="">Walk-in (no referral)</option>' +
           doctors.map(function (d) {
             return '<option value="' + App.esc(d.id) + '">' + App.esc(d.name) + ' — ' + App.esc(d.commissionPct || 0) + '%</option>';
           }).join('') + '</select></div>' +
-        '<div class="bl-sec"><label class="label">Discount</label>' +
-        '<div class="bl-disc-wrap"><div class="bl-seg" style="width:130px;flex:none">' +
+        '<div class="bl-sec" id="blDiscSec"><label class="label">Discount</label>' +
+        '<div class="bl-disc-wrap"><div class="bl-seg" style="width:131px;flex:none">' +
           '<button id="blDiscRs" class="on">Rs</button><button id="blDiscPct">%</button></div>' +
           '<input class="input" id="blDiscVal" type="number" min="0" value="0"></div></div>' +
         '<div class="bl-sec">' +
@@ -379,9 +423,9 @@
           '<div class="bl-row"><span>Discount</span><strong id="blDisc" style="color:var(--ink)">− Rs 0</strong></div>' +
           '<div class="bl-total"><span>Total</span><strong id="blTotal">Rs 0</strong></div>' +
         '</div>' +
-        '<div class="bl-sec"><label class="label">Payment method</label>' +
-        '<div class="bl-seg" id="blMethod"><button data-m="Cash" class="on">Cash</button><button data-m="Bank">Bank</button><button data-m="Card">Card</button></div></div>' +
-        '<div class="bl-sec"><label class="label">Amount tendered</label>' +
+        '<div class="bl-sec" id="blMethSec"><label class="label">Payment method</label>' +
+        '<div class="bl-seg" id="blMethod" style="flex-wrap:wrap">' + App.listOptions('paymentMethod').map(function (m, i) { return '<button data-m="' + App.esc(m) + '"' + (i === 0 ? ' class="on"' : '') + '>' + App.esc(m) + '</button>'; }).join('') + '</div></div>' +
+        '<div class="bl-sec" id="blTendSec"><label class="label">Amount tendered</label>' +
         '<input class="input" id="blTendered" type="number" min="0" placeholder="0"></div>' +
         '<div class="bl-row" id="blChangeRow" style="margin-top:6px"></div>' +
         '<button class="btn btn-primary bl-save" id="blSave">' + PRINT_ICON + ' Save &amp; Print</button>' +
@@ -405,6 +449,20 @@
       state.doctorId = this.value;
     });
 
+    /* "Bill to": a corporate client takes over pricing and payment (no discount / tendered amount; the bill goes to their account) */
+    function applyPanelUi() {
+      var pn = curPanel(), on = !!pn, $ = function (id) { return document.getElementById(id); };
+      ['blDiscSec', 'blMethSec', 'blTendSec'].forEach(function (id) { if ($(id)) $(id).style.display = on ? 'none' : ''; });
+      if (on) { state.discVal = 0; if ($('blDiscVal')) $('blDiscVal').value = '0'; }
+      var note = $('blPanelNote');
+      if (note) {
+        if (!on) note.textContent = '';
+        else { var a = App.panelAccount(pn); note.innerHTML = 'Prices of <b>' + App.esc(pn.name) + '</b> are used. Nothing is collected from the patient; the bill is added to the company account (now owes ' + App.money(Math.max(0, a.balance)) + (+pn.creditLimit > 0 ? ', limit ' + App.money(pn.creditLimit) : '') + ').'; }
+      }
+      repriceCart(); paintTests(); paintCart(); paintTotals();
+    }
+    if (document.getElementById('blPanel')) document.getElementById('blPanel').addEventListener('change', function () { state.panelId = this.value; applyPanelUi(); });
+
     var dr = document.getElementById('blDiscRs'), dp = document.getElementById('blDiscPct');
     dr.addEventListener('click', function () { state.discType = 'rs'; dr.classList.add('on'); dp.classList.remove('on'); paintTotals(); });
     dp.addEventListener('click', function () { state.discType = 'pct'; dp.classList.add('on'); dr.classList.remove('on'); paintTotals(); });
@@ -427,6 +485,7 @@
     });
 
     document.getElementById('blSave').addEventListener('click', saveBill);
+    if (state.panelId) applyPanelUi();
 
     document.getElementById('blClear').addEventListener('click', function () {
       state.cart = []; state.doctorId = ''; state.discType = 'rs'; state.discVal = 0;

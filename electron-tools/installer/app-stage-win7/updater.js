@@ -76,12 +76,34 @@ function normChangelog(c) {
   return c || '';
 }
 
-function currentVersion() {
+/* The installed app (app.asar) is read-only, so frontend updates are written to an OVERLAY folder in userData:
+     <userData>/frontend/v-<version>/{index.html,assets}   +   <userData>/frontend/current.json = { version }
+   The embedded server serves the overlay when it is newer than the bundled UI, else the bundled files. */
+function overlayDir() { return path.join(userDataDir(), 'frontend'); }
+function overlayPointer() { return readJson(path.join(overlayDir(), 'current.json')); }
+function overlayPath(version) { return path.join(overlayDir(), 'v-' + version); }
+function overlayValid(version) {
+  return !!version && BUNDLE_MUST_HAVE.every((f) => fs.existsSync(path.join(overlayPath(version), f)));
+}
+function bundledVersion() {
   const v = readJson(path.join(appRoot(), 'version.json'));
   if (v && v.version) return String(v.version);
   const p = readJson(path.join(appRoot(), 'package.json'));
   if (p && p.version) return String(p.version);
   return '1.0.0';
+}
+/* folder the local server should serve the web UI from */
+function frontendRoot() {
+  const ptr = overlayPointer();
+  if (ptr && ptr.version && cmpVer(ptr.version, bundledVersion()) > 0 && overlayValid(String(ptr.version))) {
+    return overlayPath(String(ptr.version));
+  }
+  return appRoot();
+}
+function currentVersion() {
+  const ptr = overlayPointer();
+  if (ptr && ptr.version && cmpVer(ptr.version, bundledVersion()) > 0 && overlayValid(String(ptr.version))) return String(ptr.version);
+  return bundledVersion();
 }
 
 function getConfig() {
@@ -251,40 +273,18 @@ function markHealthy() {
   }
 }
 
-function backupCurrent(cur) {
-  ensureDirs();
-  for (const name of fs.readdirSync(updatesDir())) {
-    if (name.startsWith('backup-')) fs.rmSync(path.join(updatesDir(), name), { recursive: true, force: true });
-  }
-  const dir = path.join(updatesDir(), 'backup-' + cur);
-  fs.mkdirSync(dir, { recursive: true });
-  for (const entry of UPDATABLE) {
-    const src = path.join(appRoot(), entry);
-    if (fs.existsSync(src)) fs.cpSync(src, path.join(dir, entry), { recursive: true });
-  }
-  log('backed up v' + cur + ' frontend to ' + dir);
-}
+function backupCurrent(cur) { /* nothing to copy: rollback just switches the overlay pointer back (see rollback) */ }
 
 function rollback() {
   const h = readHealth();
-  const prev = h && h.prevVersion;
-  if (!prev) { log('rollback: no previous version recorded'); return false; }
-  const backupDir = path.join(updatesDir(), 'backup-' + prev);
-  if (!fs.existsSync(backupDir)) {
-    log('rollback: backup missing at ' + backupDir);
-    writeHealth(Object.assign({}, h, { rollbackFailed: true }));
-    return false;
-  }
   try {
-    for (const entry of UPDATABLE) {
-      const src = path.join(backupDir, entry);
-      if (!fs.existsSync(src)) continue;
-      const dst = path.join(appRoot(), entry);
-      fs.rmSync(dst, { recursive: true, force: true });
-      fs.cpSync(src, dst, { recursive: true });
+    if (h && h.prevVersion && h.prevVersion !== h.version && overlayValid(String(h.prevVersion))) {
+      writeJson(path.join(overlayDir(), 'current.json'), { version: String(h.prevVersion) });
+      log('rolled back to overlay v' + h.prevVersion);
+    } else {
+      fs.rmSync(path.join(overlayDir(), 'current.json'), { force: true }); /* back to the UI bundled in the installer */
+      log('rolled back to the bundled UI v' + bundledVersion());
     }
-    writeJson(path.join(appRoot(), 'version.json'), { version: prev });
-    log('rolled back to v' + prev);
     return true;
   } catch (e) {
     log('rollback error: ' + e.message);
@@ -320,17 +320,22 @@ function applyPendingUpdate() {
   }
 
   try {
-    backupCurrent(cur);
+    const dst = overlayPath(staged.version);
+    fs.rmSync(dst, { recursive: true, force: true });
+    fs.mkdirSync(dst, { recursive: true });
     for (const entry of UPDATABLE) {
       const src = path.join(staged.dir, 'staged', entry);
       if (!fs.existsSync(src)) { log('staged bundle missing ' + entry + ' — skipping it'); continue; }
-      const dst = path.join(appRoot(), entry);
-      fs.rmSync(dst, { recursive: true, force: true });
-      fs.cpSync(src, dst, { recursive: true });
+      fs.cpSync(src, path.join(dst, entry), { recursive: true });
     }
-    writeJson(path.join(appRoot(), 'version.json'), { version: staged.version });
+    if (!overlayValid(staged.version)) throw new Error('staged files incomplete');
+    writeJson(path.join(overlayDir(), 'current.json'), { version: staged.version });
     writeHealth({ version: staged.version, prevVersion: cur, booted: false, at: new Date().toISOString() });
     fs.rmSync(staged.dir, { recursive: true, force: true });
+    /* keep only the active and the previous overlay */
+    for (const n of fs.readdirSync(overlayDir())) {
+      if (n.startsWith('v-') && n !== 'v-' + staged.version && n !== 'v-' + cur) fs.rmSync(path.join(overlayDir(), n), { recursive: true, force: true });
+    }
     log('update v' + staged.version + ' applied (was v' + cur + ') — health will be verified on boot');
     return { applied: staged.version, previous: cur };
   } catch (e) {
@@ -427,6 +432,7 @@ function wireWindow(win) {
 
 module.exports = {
   applyPendingUpdate,
+  frontendRoot,
   checkForUpdates,
   startUpdateChecks,
   wireWindow,

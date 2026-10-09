@@ -1497,3 +1497,20 @@ background:#fef3c7;border-bottom:1px solid #fcd34d;flex:0 0 auto}
 .oxc-panel{left:0;right:0;bottom:0;width:100%;max-width:100%;height:78vh;max-height:78vh;
 border-radius:18px 18px 0 0}
 .oxc-fab{right:16px;bottom:16px}}
+
+/* Shared shell: restrained surfaces and consistent form/action hierarchy. */
+body:not(.auth) .topbar{background:#fff;border-bottom:1px solid #e3e8ef;box-shadow:none}
+body:not(.auth) .page-title{font-size:18px;font-weight:700;letter-spacing:-.015em;color:#17233a}
+body:not(.auth) .nav-toggle{border:1px solid #d8e0eb;box-shadow:none}
+body:not(.auth) .nav-toggle:focus-visible,
+body:not(.auth) .nav-it:focus-visible,
+body:not(.auth) .nav-sub-it:focus-visible{outline:2px solid #3666a3;outline-offset:2px}
+body:not(.auth) .card{border:1px solid #e1e7ef;border-radius:10px;box-shadow:0 1px 4px rgba(20,35,58,.04)}
+body:not(.auth) .btn{box-shadow:none}
+body:not(.auth) input:focus-visible,
+body:not(.auth) select:focus-visible,
+body:not(.auth) textarea:focus-visible{outline:2px solid #829cc5;outline-offset:1px}
+@media (max-width:900px){
+  body:not(.auth) .side-close{display:grid}
+  body:not(.auth) .nav-it{min-height:40px}
+}

@@ -1,5 +1,5 @@
 /* ============================================================
-   Optix LAB MedSync — Admin module (Agent 10)
+   Optix Medical Sync — Admin module (Agent 10)
    Routes: #/expenses, #/reports, #/settings
    Depends on: window.DB, window.App (per SPEC.md)
    ============================================================ */
@@ -34,7 +34,7 @@
   }
   function inRange(day, from, to) { return day >= from && day <= to; }
 
-  var EXP_CATS = ['Rent', 'Salaries', 'Reagents', 'Utilities', 'Other'];
+  function expCats() { return App.listOptions('expenseCategory'); }
 
   /* dashboard-style premium stat cards — markup + CSS copied from the
      dashboard statCard() pattern (stat-grid > stat > stat-ico + lb/vl/dl),
@@ -97,7 +97,7 @@
   }
 
   function renderExpenses() {
-    if (role() !== 'admin' && role() !== 'reception') return denied();
+    if (role() !== 'admin' && role() !== 'reception' && !(role() === 'custom' && App.canPage('expenses'))) return denied();
     expInitFilter();
 
     var all = DB.all('expenses').slice().sort(function (a, b) {
@@ -196,10 +196,11 @@
     var body = '<div class="form-grid">'
       + '<div><label class="label">Title *</label><input class="input" id="exfTitle" value="' + App.esc(exp.title) + '" placeholder="e.g. CBC reagent kit"></div>'
       + '<div><label class="label">Category *</label><select class="select" id="exfCat">'
-      + EXP_CATS.map(function (c) { return '<option value="' + c + '"' + (exp.category === c ? ' selected' : '') + '>' + c + '</option>'; }).join('')
+      + App.optionsHtml('expenseCategory', exp.category)
       + '</select></div>'
       + '<div><label class="label">Amount (Rs) *</label><input class="input" id="exfAmt" type="number" min="1" step="any" value="' + App.esc(exp.amount) + '" placeholder="0"></div>'
       + '<div><label class="label">Date *</label><input class="input" id="exfDate" type="date" value="' + App.esc(toDay(exp.date) || App.today()) + '"></div>'
+      + '<div><label class="label">Paid from</label><select class="select" id="exfMethod"><option value="Cash"' + (!exp.method || exp.method === 'Cash' ? ' selected' : '') + '>Cash (drawer)</option><option value="Bank"' + (exp.method === 'Bank' ? ' selected' : '') + '>Bank / online</option></select></div>'
       + '<div style="grid-column:1/-1"><label class="label">Note</label><input class="input" id="exfNote" value="' + App.esc(exp.note || '') + '" placeholder="Optional note"></div>'
       + '</div>'
       + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">'
@@ -218,7 +219,7 @@
           if (!title) return App.toast('Title is required.', 'err');
           if (!(amt > 0)) return App.toast('Enter a valid amount.', 'err');
           if (!date) return App.toast('Date is required.', 'err');
-          var data = { title: title, category: cat, amount: amt, date: date, note: note, createdBy: userName() };
+          var data = { title: title, category: cat, amount: amt, date: date, note: note, method: document.getElementById('exfMethod').value, createdBy: userName() };
           if (isEdit) { DB.update('expenses', exp.id, data); App.toast('Expense updated.'); }
           else { DB.insert('expenses', data); App.toast('Expense added.'); }
           close();
@@ -233,15 +234,14 @@
   /* ============================================================
      REPORTS  (#/reports) — admin only
      ============================================================ */
-  var rep = { from: null, to: null, type: null, preset: 'thisMonth' };
+  var rep = { from: null, to: null, type: 'tests', preset: 'thisMonth' };
   function repInit() {
     if (!rep.from) {
       var t = App.today();
       rep.from = t.slice(0, 8) + '01'; // first of month
       rep.to = t;
     }
-    /* NOTE: rep.type intentionally NOT defaulted — the Reports page shows an
-       empty state until the user explicitly picks a report type. */
+    if (!rep.type || rep.type === 'all') rep.type = 'tests';
     if (!rep.preset) rep.preset = 'thisMonth';
   }
   function setPreset(p) {
@@ -263,7 +263,7 @@
   }
 
   function renderReports() {
-    if (role() !== 'admin') return denied();
+    if (role() !== 'admin' && !(role() === 'custom' && App.canPage('reports'))) return denied();
     repInit();
     var from = rep.from, to = rep.to;
 
@@ -293,11 +293,11 @@
     var pInvCount = pInv.length;
 
     /* ---- report type visibility flags ---- */
-    var showAll = rep.type === 'all';
-    var showTests = showAll || rep.type === 'tests';
-    var showFinance = showAll || rep.type === 'finance';
-    var showDues = showAll || rep.type === 'dues';
-    var showPatients = showAll || rep.type === 'patients';
+    var showTests = rep.type === 'tests';
+    var showFinance = rep.type === 'finance';
+    var showDues = rep.type === 'dues';
+    var showPatients = rep.type === 'patients';
+    var showLabs = rep.type === 'labs';
 
     /* ---- this-month snapshot row (real data) ---- */
     var mFrom = App.today().slice(0, 8) + '01', mTo = App.today();
@@ -310,13 +310,16 @@
     var mExpT = mExpenses.reduce(function (s, e) { return s + (+e.amount || 0); }, 0);
     var mNet = mColl - mExpT;
     var mTests = mInvoices.reduce(function (s, iv) { return s + ((iv.items || []).length); }, 0);
-    var repStats = '';
-    if (showTests || showFinance) {
-      repStats =
-      admStat(AICONS.cash, 'green', 'Month Collection', App.money(mColl), 'collected in ' + mShort, mColl, true, null, true) +
-      admStat(AICONS.receipt, 'red', 'Month Expenses', App.money(mExpT), mExpenses.length + ' entries in ' + mShort, mExpT, true, null, true) +
-      admStat(AICONS.trend, 'brand', 'Net (This Month)', App.money(mNet), mNet >= 0 ? 'surplus so far' : 'deficit so far', mNet, true, null, true) +
-      admStat(AICONS.flask, 'blue', 'Tests Billed', mTests, mInvoices.length + ' bills in ' + mShort, mTests, false, null, true);
+    var CASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg>';
+    var RECEIPT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>';
+    var TREND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>';
+    var FLASK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v6L4.5 18a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 8V2"/><path d="M8.5 2h7"/><path d="M7 15h10"/></svg>';
+    var USERS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+    var ALERT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+    var CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+    var X_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>';
+    function kpi(cls, icon, label, num, sub) {
+      return '<div class="kpi ' + cls + '"><div class="kpi-ic">' + icon + '</div><div class="kpi-lb">' + label + '</div><div class="kpi-nm">' + num + '</div><div class="kpi-sb">' + sub + '</div></div>';
     }
 
     var methods = { Cash: 0, Bank: 0, Card: 0, Other: 0 };
@@ -356,6 +359,7 @@
 
     // doctor-wise
     var dw = {};
+    var tByIdRep = App.testsById();
     invoices.forEach(function (iv) {
       if (!iv.doctorId) return;
       var doc = DB.get('doctors', iv.doctorId);
@@ -363,18 +367,20 @@
       if (!dw[iv.doctorId]) dw[iv.doctorId] = { name: nm, referrals: 0, billed: 0, pct: doc ? (+doc.commissionPct || 0) : 0 };
       dw[iv.doctorId].referrals++;
       dw[iv.doctorId].billed += (+iv.total || 0);
+      dw[iv.doctorId].comm = (dw[iv.doctorId].comm || 0) + (doc ? App.commissionOf(iv, doc, tByIdRep) : 0);
+      if (doc && (doc.commissionRules || []).length && dw[iv.doctorId].billed > 0) dw[iv.doctorId].pct = Math.round(dw[iv.doctorId].comm / dw[iv.doctorId].billed * 1000) / 10;
     });
     var dwRows = Object.keys(dw).map(function (k) { return dw[k]; })
       .sort(function (a, b) { return b.billed - a.billed; });
 
     /* ---- report sections shared by CSV export + print ---- */
-    var repTypeLbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports', labs: 'Lab Comparison' }[rep.type] || rep.type;
+    var repTypeLbl = { tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports', labs: 'Lab Comparison' }[rep.type] || rep.type;
     var repSecs = {
-      finance: rep.type === 'all' || rep.type === 'finance',
-      tests: rep.type === 'all' || rep.type === 'tests',
-      doctors: rep.type === 'all' || rep.type === 'tests',
-      dues: rep.type === 'all' || rep.type === 'dues',
-      patients: rep.type === 'all' || rep.type === 'patients'
+      finance: rep.type === 'finance',
+      tests: rep.type === 'tests',
+      doctors: rep.type === 'tests',
+      dues: rep.type === 'dues',
+      patients: rep.type === 'patients'
     };
     function csvEsc(v) {
       var s = (v === null || v === undefined) ? '' : String(v);
@@ -555,7 +561,7 @@
     }
     /* ---- report templates (worker 8): saved {type,from,to,preset} presets ---- */
     var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This month', lastMonth: 'Last month', custom: 'Custom range' };
-    var REP_TYPE_LBL = { all: 'All', tests: 'Tests', finance: 'Finance', dues: 'Dues', patients: 'Patients', labs: 'Labs' };
+    var REP_TYPE_LBL = { tests: 'Tests', finance: 'Finance', dues: 'Dues', patients: 'Patients', labs: 'Labs' };
     function repTplList() { return DB.all('report_templates') || []; }
     function repTplDesc(t) {
       var tl = REP_TYPE_LBL[t.type] || 'All';
@@ -582,7 +588,7 @@
       if (!id) { App.toast('Select a template first.', 'err'); return; }
       var t = repTplList().filter(function (x) { return String(x.id) === String(id); })[0];
       if (!t) { App.toast('Template not found.', 'err'); return; }
-      rep.type = t.type || 'all';
+      rep.type = t.type || 'tests';
       rep.from = t.from || rep.from;
       rep.to = t.to || rep.to;
       rep.preset = t.preset || 'custom';
@@ -677,7 +683,7 @@
        (report_schedules), this UI, and manual "Run now", which opens the
        user's email client with the report pre-composed via mailto:. */
     var SCHED_PRESETS = { today: 'Today', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This Month', lastMonth: 'Last Month' };
-    var SCHED_TYPES = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports' };
+    var SCHED_TYPES = { tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports' };
     var SCHED_FREQ = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
     var SCHED_EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -852,27 +858,33 @@
     }
 
     function presetBtn(p, label) {
-      return '<button class="btn ' + (rep.preset === p ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-preset="' + p + '">'
+      return '<button class="btn ' + (rep.preset === p ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-preset="' + p + '" style="font-weight:600">'
         + label + '</button>';
     }
     var filterCard = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
-      +   '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">'
-      +     '<div><label class="label">From</label><input class="input" type="date" id="repFrom" value="' + App.esc(from) + '"></div>'
-      +     '<div><label class="label">To</label><input class="input" type="date" id="repTo" value="' + App.esc(to) + '"></div>'
-      +     '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
+      +     '<div style="display:flex;gap:8px;align-items:center">'
+      +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Dates:</span>'
+      +       '<input class="input" type="date" id="repFrom" value="' + App.esc(from) + '" style="width:auto;padding:6px 10px;font-size:13px">'
+      +       '<span style="color:var(--muted);font-weight:700">–</span>'
+      +       '<input class="input" type="date" id="repTo" value="' + App.esc(to) + '" style="width:auto;padding:6px 10px;font-size:13px">'
+      +     '</div>'
+      +     '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
       +       presetBtn('today', 'Today')
       +       presetBtn('yesterday', 'Yesterday')
       +       presetBtn('last7', 'Last 7 days')
       +       presetBtn('last30', 'Last 30 days')
       +       presetBtn('thisMonth', 'This Month')
       +       presetBtn('lastMonth', 'Last Month')
-      +       (rep.preset === 'custom' ? '<span class="muted" style="font-size:12px">Custom range</span>' : '')
+      +       (rep.preset === 'custom' ? '<span class="muted" style="font-size:12px;font-weight:600">Custom range</span>' : '')
       +     '</div>'
-      +     '<button class="btn btn-ghost" id="repCsv" style="margin-left:auto">' + DL_ICON + ' Export CSV</button>'
-      +     '<button class="btn btn-ghost" id="repBuilder">🛠 Builder</button>'
-      +     '<button class="btn btn-ghost" id="repSchedBtn">⏰ Schedules</button>'
-      +     '<button class="btn btn-ghost" id="repPrint">' + PRINT_ICON + ' Print Report</button>'
+      +     '<div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;align-items:center">'
+      +       '<button class="btn btn-ghost btn-sm" id="repCsv">' + DL_ICON + ' Export CSV</button>'
+      +       '<button class="btn btn-ghost btn-sm" id="repBuilder">🛠 Builder</button>'
+      +       '<button class="btn btn-ghost btn-sm" id="repSchedBtn">⏰ Schedules</button>'
+      +       '<button class="btn btn-primary btn-sm" id="repPrint">' + PRINT_ICON + ' Print Report</button>'
+      +     '</div>'
       +   '</div>'
       + '</div></div>';
 
@@ -928,14 +940,7 @@
         + label + ' <span>' + arrow + ' ' + c.txt + '</span></span>';
     }
 
-    var cmpCard = ''
-      + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
-      + '<span class="muted" style="font-size:13px;font-weight:600;white-space:nowrap">vs previous period (' + App.esc(pFrom) + ' – ' + App.esc(pTo) + ')</span>'
-      + cmpBadge('Billed', billed, pBilled, false)
-      + cmpBadge('Collected', collected, pCollected, false)
-      + cmpBadge('Expenses', expTotal, pExpTotal, true)
-      + cmpBadge('Net', net, pNet, false)
-      + '</div></div>';
+    var cmpCard = '';
 
     /* ---- on-screen Finance Summary card (same rows as the print handler) ---- */
     var finSumCard = ''
@@ -981,9 +986,6 @@
     var duesCard = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Dues Aging</h3>'
       + '<span class="muted" style="font-weight:500;font-size:13px">by invoice age</span></div><div class="card-b">'
-      + '<div class="stat-grid" style="margin-bottom:14px">'
-      + buckets.map(function (b) { return statCard(b.label + ' · ' + b.count + ' bill(s)', App.money(b.total), '', '#fef3c7', '#b45309'); }).join('')
-      + '</div>'
       + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Invoice</th><th>Patient</th><th>Date</th><th style="text-align:right">Total</th><th style="text-align:right">Paid</th><th style="text-align:right">Due</th></tr></thead><tbody>'
       + duesRowsHtml + '</tbody></table></div>'
       + '</div></div>';
@@ -1008,11 +1010,11 @@
     });
     var patCard = ''
       + '<div class="card" style="margin-bottom:18px"><div class="card-h"><h3 style="margin:0">Patient Overview</h3></div><div class="card-b">'
-      + '<div class="stat-grid">'
-      + statCard('Total Patients', allPatients.length, '', '#dbeafe', '#1d4ed8')
-      + statCard('New This Month', mNewCount, '', '#dcfce7', '#15803d')
-      + statCard('New in Period', periodNew, '', '#fef3c7', '#b45309')
-      + statCard('Returning in Period', periodReturning, '', '#ede9fe', '#6d28d9')
+      + '<div class="kpi-grid" style="margin-bottom:16px">'
+      + kpi('t-navy', USERS, 'Total Patients', allPatients.length, 'all registered')
+      + kpi('t-green', USERS, 'New This Month', mNewCount, 'registered this month')
+      + kpi('t-amber', USERS, 'New in Period', periodNew, 'first visit in period')
+      + kpi('t-purple', USERS, 'Returning in Period', periodReturning, 'repeat visits in period')
       + '</div>'
       + '<p class="muted" style="margin:12px 0 0">New = first visit within ' + App.esc(App.d(from)) + ' – ' + App.esc(App.d(to)) + '.</p>'
       + '</div></div>';
@@ -1028,7 +1030,7 @@
     var dwRowsHtml = !dwRows.length
       ? '<tr><td colspan="4">' + App.empty('No doctor referrals in this period.') + '</td></tr>'
       : dwRows.map(function (r) {
-          var comm = Math.round(r.billed * r.pct / 100);
+          var comm = Math.round(r.comm || 0);
           return '<tr><td><strong>' + App.esc(r.name) + '</strong> <span class="muted">(' + r.pct + '%)</span></td>'
             + '<td style="text-align:right">' + r.referrals + '</td>'
             + '<td style="text-align:right">' + App.money(r.billed) + '</td>'
@@ -1067,74 +1069,91 @@
     })();
     var repSlotLabs = (rep.type === 'labs') ? labsCardHtml : '';
 
-    /* report type selector: always visible at the top of the page */
-    var typeCardHtml = ''
-      + '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-      + '<span style="font-weight:700;margin-right:8px">Report Type:</span>'
-      + ['all', 'tests', 'finance', 'dues', 'patients', 'labs'].map(function (t) {
-          var lbl = { all: 'All Reports', tests: 'Test Reports', finance: 'Finance', dues: 'Dues', patients: 'Patient Reports', labs: 'Lab Comparison' }[t];
-          var active = rep.type === t;
-          return '<button type="button" class="btn ' + (active ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-reptype="' + t + '">' + lbl + '</button>';
-        }).join('')
+    /* ---- contextual KPI cards (4 unified cards for the selected report type) ---- */
+    var testsCount = invoices.reduce(function (s, iv) { return s + ((iv.items || []).length); }, 0);
+    var repKpis = '';
+    if (rep.type === 'dues') {
+      repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
+        + kpi('t-red', ALERT, 'Total Due', App.money(due), duesUnpaid.length + ' unpaid bills')
+        + kpi('t-navy', CLOCK, 'Current (0–30d)', App.money(buckets[0].total), buckets[0].count + ' bills')
+        + kpi('t-amber', ALERT, 'Overdue (31–60d)', App.money(buckets[1].total), buckets[1].count + ' bills')
+        + kpi('t-purple', X_ICON, 'Old Dues (60d+)', App.money(buckets[2].total + buckets[3].total), (buckets[2].count + buckets[3].count) + ' bills')
+        + '</div>';
+    } else if (rep.type === 'patients') {
+      repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
+        + kpi('t-navy', USERS, 'Total Patients', allPatients.length, 'all registered')
+        + kpi('t-green', USERS, 'Visited in Period', repPatientCount, 'patients with bills')
+        + kpi('t-amber', USERS, 'New Patients', periodNew, 'first visit in period')
+        + kpi('t-purple', USERS, 'Returning', periodReturning, 'repeat visits in period')
+        + '</div>';
+    } else if (rep.type === 'tests') {
+      var topTest = top5[0] || { name: '—', count: 0 };
+      repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
+        + kpi('t-blue', FLASK, 'Tests Billed', testsCount, invoices.length + ' invoices')
+        + kpi('t-navy', RECEIPT, 'Test Revenue', App.money(billed), 'gross billed')
+        + kpi('t-green', TREND, 'Top Conducted', App.esc(topTest.name || topTest.code), topTest.count + ' tests')
+        + kpi('t-amber', USERS, 'Doctor Referrals', dwRows.length, 'referring doctors')
+        + '</div>';
+    } else if (rep.type === 'labs') {
+      var totalLabsCount = labCmpRows.length;
+      var totalLabBills = labCmpRows.reduce(function (s, r) { return s + r.bills; }, 0);
+      var totalLabBilled = labCmpRows.reduce(function (s, r) { return s + r.billed; }, 0);
+      var totalLabColl = labCmpRows.reduce(function (s, r) { return s + r.collected; }, 0);
+      var topLab = labCmpRows.slice().sort(function (a, b) { return b.net - a.net; })[0];
+      repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
+        + kpi('t-navy', USERS, 'Total Branches', totalLabsCount, 'registered labs')
+        + kpi('t-blue', RECEIPT, 'Combined Bills', totalLabBills, App.money(totalLabBilled) + ' billed')
+        + kpi('t-green', CASH, 'Total Collected', App.money(totalLabColl), 'across all labs')
+        + kpi('t-amber', TREND, 'Top Branch', App.esc(topLab ? topLab.name : '—'), topLab ? (App.money(topLab.net) + ' net') : 'no data')
+        + '</div>';
+    } else {
+      /* all or finance */
+      repKpis = '<div class="kpi-grid" style="margin-bottom:18px">'
+        + kpi('t-navy', RECEIPT, 'Total Billed', App.money(billed), invoices.length + ' bills · ' + testsCount + ' tests')
+        + kpi('t-green', CASH, 'Collected', App.money(collected), payments.length + ' payments received')
+        + kpi('t-red', ALERT, 'Total Expenses', App.money(expTotal), expenses.length + ' expense entries')
+        + kpi(net >= 0 ? 't-blue' : 't-amber', TREND, 'Net Collection', App.money(net), net >= 0 ? 'net surplus' : 'net deficit')
+        + '</div>';
+    }
+
+    var finCallout = ''
+      + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">'
+      + '<span style="font-size:13.5px;color:var(--muted)">Need detailed shift-wise cash balance or annual income statement?</span>'
+      + '<div style="display:flex;gap:10px"><a href="#/finance" class="btn btn-ghost btn-sm" style="font-weight:600">Daily Cash Closing &rarr;</a><a href="#/finance/profit" class="btn btn-primary btn-sm" style="font-weight:600">Profit &amp; Loss Statement &rarr;</a></div>'
       + '</div></div>';
 
-    /* empty state: nothing below the selector until a type is explicitly chosen */
-    var repChosen = !!rep.type;
-    var repEmptyHtml = ''
-      + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
-      + '<div style="text-align:center;padding:44px 16px">'
-      + '<div style="display:inline-flex;align-items:center;justify-content:center;width:72px;height:72px;border-radius:50%;background:var(--brand-soft,#e7f0fa);color:var(--brand,#1d4ed8);margin-bottom:14px">' + AICONS.list + '</div>'
-      + '<h3 style="margin:0 0 8px">Select a report type</h3>'
-      + '<p class="muted" style="margin:0">Choose a report type above to view reports for the selected period.</p>'
-      + '</div></div></div>';
-
+    var repChosen = true;
     var html = ''
       + '<style>' + ADM_STAT_CSS + '</style>'
-      + typeCardHtml
-      + (repChosen ? '' : repSlotTemplates); /* saved report templates are available before a type is picked, too */
-    if (repChosen) {
-      html +=
-        ((showTests || showFinance) ? '<div class="stat-grid">' + repStats + '</div>' : '')
-        + ((showTests || showFinance) ? '' : '')
-        + repSlotSchedules + repSlotBuilder + repSlotTemplates + repSlotLabs
-
-        + filterCard
-
-        + (showPatients ? finCard : '')
-        + (showFinance ? finSumCard : '')
-        + (showDues ? duesCard : '')
-        + (showPatients ? patCard : '')
-
-        + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
-        + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
-        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
-        + twRowsHtml
-        + '</tbody></table></div></div></div>'
-        + '<div class="card"><div class="card-h"><h3 style="margin:0">Doctor-wise Referrals</h3></div><div class="card-b">'
-        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
-        + dwRowsHtml
-        + '</tbody></table></div></div></div></div>' : '')
-
-        + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
-        + '<div class="card"><div class="card-h"><h3 style="margin:0">Revenue by Test Category</h3></div><div class="card-b">'
-        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Category</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
-        + catRowsHtml
-        + '</tbody></table></div></div></div>'
-        + '<div class="card"><div class="card-h"><h3 style="margin:0">Top 5 Tests by Count</h3></div><div class="card-b">'
-        + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
-        + top5Html
-        + '</tbody></table></div></div></div></div>' : '');
-    } else {
-      html += repEmptyHtml;
-    }
+      + repKpis
+      + filterCard
+      + (showFinance ? cmpCard : '')
+      + repSlotSchedules + repSlotBuilder + (showFinance ? repSlotTemplates : '')
+      + (showFinance ? (finSumCard + finCallout) : '')
+      + (showDues ? duesCard : '')
+      + (showPatients ? finCard : '')
+      + (showLabs ? labsCardHtml : '')
+      + (showTests ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Test-wise Performance</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+      + twRowsHtml
+      + '</tbody></table></div></div></div>'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Doctor-wise Referrals</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
+      + dwRowsHtml
+      + '</tbody></table></div></div></div></div>'
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Revenue by Test Category</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Category</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+      + catRowsHtml
+      + '</tbody></table></div></div></div>'
+      + '<div class="card"><div class="card-h"><h3 style="margin:0">Top 5 Tests by Count</h3></div><div class="card-b">'
+      + '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th style="text-align:right">Count</th><th style="text-align:right">Revenue</th></tr></thead><tbody>'
+      + top5Html
+      + '</tbody></table></div></div></div></div>' : '');
 
     document.getElementById('view').innerHTML = html;
     admCountUp();
-
-    /* report type selector: rendered in both the empty and chosen states */
-    document.querySelectorAll('[data-reptype]').forEach(function (b) {
-      b.addEventListener('click', function () { rep.type = b.getAttribute('data-reptype'); renderReports(); });
-    });
 
     /* multi-lab comparison: own CSV export button inside the labs card */
     var labCmpBtn = document.getElementById('labCmpCsv');
@@ -1166,22 +1185,22 @@
 
     /* the controls below only exist after a report type is explicitly chosen */
     if (repChosen) {
-    document.getElementById('repFrom').addEventListener('change', function (e) { rep.from = e.target.value; rep.preset = 'custom'; renderReports(); });
-    document.getElementById('repTo').addEventListener('change', function (e) { rep.to = e.target.value; rep.preset = 'custom'; renderReports(); });
+    var rfFrom = document.getElementById('repFrom'); if (rfFrom) rfFrom.addEventListener('change', function (e) { rep.from = e.target.value; rep.preset = 'custom'; renderReports(); });
+    var rfTo = document.getElementById('repTo'); if (rfTo) rfTo.addEventListener('change', function (e) { rep.to = e.target.value; rep.preset = 'custom'; renderReports(); });
     /* report templates (worker 8) */
-    document.getElementById('tplApply').addEventListener('click', repTplApply);
-    document.getElementById('tplDel').addEventListener('click', repTplDel);
-    document.getElementById('tplSave').addEventListener('click', repTplSave);
+    var tplApp = document.getElementById('tplApply'); if (tplApp) tplApp.addEventListener('click', repTplApply);
+    var tplDl = document.getElementById('tplDel'); if (tplDl) tplDl.addEventListener('click', repTplDel);
+    var tplSv = document.getElementById('tplSave'); if (tplSv) tplSv.addEventListener('click', repTplSave);
     document.querySelectorAll('[data-preset]').forEach(function (b) {
       b.addEventListener('click', function () { setPreset(b.getAttribute('data-preset')); });
     });
-    document.getElementById('repBuilder').addEventListener('click', function () { openBuilder(); });
+    var rBld = document.getElementById('repBuilder'); if (rBld) rBld.addEventListener('click', function () { openBuilder(); });
     document.getElementById('repCsv').addEventListener('click', function () {
       try {
         var L = [];
         function sec(t) { L.push(t); }
         function row(a) { L.push(a.map(csvEsc).join(',')); }
-        sec('Optix LAB MedSync');
+        sec('Optix Medical Sync');
         row(['Report Type', repTypeLbl]);
         row(['Period', App.d(from) + ' to ' + App.d(to)]);
         L.push('');
@@ -1205,7 +1224,7 @@
         if (repSecs.doctors) {
           sec('Doctor-wise Referrals');
           row(['Doctor', 'Referrals', 'Billed', 'Commission']);
-          dwRows.forEach(function (r) { row([r.name, r.referrals, r.billed, Math.round(r.billed * r.pct / 100)]); });
+          dwRows.forEach(function (r) { row([r.name, r.referrals, r.billed, Math.round(r.comm || 0)]); });
           L.push('');
         }
         if (repSecs.dues) {
@@ -1259,7 +1278,7 @@
       }
       if (repSecs.doctors) {
         ph += '<h3>Doctor-wise</h3><table class="table"><thead><tr><th>Doctor</th><th style="text-align:right">Referrals</th><th style="text-align:right">Billed</th><th style="text-align:right">Commission</th></tr></thead><tbody>'
-        + dwRows.map(function (r) { return '<tr><td>' + App.esc(r.name) + '</td><td style="text-align:right">' + r.referrals + '</td><td style="text-align:right">' + App.money(r.billed) + '</td><td style="text-align:right">' + App.money(Math.round(r.billed * r.pct / 100)) + '</td></tr>'; }).join('')
+        + dwRows.map(function (r) { return '<tr><td>' + App.esc(r.name) + '</td><td style="text-align:right">' + r.referrals + '</td><td style="text-align:right">' + App.money(r.billed) + '</td><td style="text-align:right">' + App.money(Math.round(r.comm || 0)) + '</td></tr>'; }).join('')
         + '</tbody></table>';
       }
       if (repSecs.dues) {
@@ -1282,7 +1301,636 @@
     } /* end if (repChosen) */
   }
 
-  App.route('#/reports', renderReports);
+  App.route('#/reports', function () { location.replace('#/reports/tests'); });
+  App.route('#/reports/:tab', function (p) {
+    var valid = ['tests', 'finance', 'dues', 'patients', 'labs'];
+    var tab = (p && p.tab) ? p.tab.toLowerCase() : 'tests';
+    if (tab === 'trends') { renderPatientTrendsDashboard(); return; }
+    if (tab === 'all') { location.replace('#/reports/tests'); return; }
+    rep.type = valid.indexOf(tab) >= 0 ? tab : 'tests';
+    renderReports();
+  });
+  App.route('#/reports/trends', function () { renderPatientTrendsDashboard(); });
+  App.route('#/trends', function () { renderPatientTrendsDashboard(); });
+
+  /* ============================================================
+     PATIENT HISTORICAL TREND & DELTA ANALYSIS CENTER
+     Route: #/reports/trends or #/trends
+     ============================================================ */
+  var trendsState = {
+    patientId: null,
+    paramIndex: 0,
+    visitLimit: 'all',
+    searchQ: '',
+    sortDesc: false
+  };
+
+  function buildTrendSvg(m, pts) {
+    var W = 1000, H = 340, L = 60, R = 50, T = 30, B = 50, n = pts.length;
+    var b = App.refBounds ? App.refBounds(m.ref) : null;
+    var vals = pts.map(function (q) { return q.v; });
+    var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+    if (b) {
+      if (b.lo != null) { mn = Math.min(mn, b.lo); mx = Math.max(mx, b.lo); }
+      if (b.hi != null) { mn = Math.min(mn, b.hi); mx = Math.max(mx, b.hi); }
+    }
+    var span = (mx - mn) || Math.abs(mx) || 1;
+    mn -= span * 0.15;
+    mx += span * 0.15;
+    if (mn < 0 && Math.min.apply(null, vals) >= 0 && (!b || b.lo == null || b.lo >= 0)) mn = 0;
+
+    var X = function (i) { return n === 1 ? (L + (W - L - R) / 2) : L + (W - L - R) * i / (n - 1); };
+    var Y = function (v) { return T + (H - T - B) * (1 - (v - mn) / (mx - mn)); };
+    var f = function (v) { return Math.abs(v) >= 100 ? String(Math.round(v)) : String(Math.round(v * 100) / 100); };
+
+    var g = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block;overflow:visible" role="img" aria-label="' + App.esc(m.name) + ' historical trend graph">';
+
+    /* Horizontal grid lines and value ticks */
+    for (var k = 0; k <= 4; k++) {
+      var gv = mn + (mx - mn) * k / 4;
+      var gy = Y(gv);
+      g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + gy + '" y2="' + gy + '" stroke="#e2e8f0" stroke-width="1"/>';
+      g += '<text x="' + (L - 10) + '" y="' + (gy + 4) + '" text-anchor="end" font-size="11" font-weight="600" fill="#64748b">' + f(gv) + '</text>';
+    }
+
+    /* Normal reference range band */
+    if (b) {
+      var yTop = b.hi != null ? Y(b.hi) : T;
+      var yBot = b.lo != null ? Y(b.lo) : (H - B);
+      var bandHeight = Math.max(2, yBot - yTop);
+      g += '<rect x="' + L + '" y="' + yTop + '" width="' + (W - L - R) + '" height="' + bandHeight + '" fill="#16a34a" opacity="0.10"/>';
+      if (b.hi != null) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yTop + '" y2="' + yTop + '" stroke="#16a34a" stroke-dasharray="4 4" stroke-width="1.5" opacity="0.75"/>';
+      if (b.lo != null) g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yBot + '" y2="' + yBot + '" stroke="#16a34a" stroke-dasharray="4 4" stroke-width="1.5" opacity="0.75"/>';
+      g += '<text x="' + (W - R - 6) + '" y="' + (yTop + 14) + '" text-anchor="end" font-size="11" font-weight="700" fill="#15803d">Normal Ref Band: ' + App.esc(m.ref) + ' ' + App.esc(m.unit) + '</text>';
+    }
+
+    /* Trend line connection */
+    if (n > 1) {
+      var ptsStr = pts.map(function (q, i) { return X(i) + ',' + Y(q.v); }).join(' ');
+      g += '<polyline fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" points="' + ptsStr + '"/>';
+    }
+
+    /* Data points */
+    var COL_SEV = { ok: '#16a34a', mild: '#d97706', moderate: '#ea580c', critical: '#dc2626' };
+    pts.forEach(function (q, i) {
+      var col = COL_SEV[q.sev || 'ok'] || '#16a34a';
+      var x = X(i);
+      var y = Y(q.v);
+      var isHigh = y > T + 32;
+
+      g += '<g style="cursor:pointer">';
+      g += '<title>' + App.esc(m.name + ': ' + q.raw + ' ' + m.unit + ' | Visit: ' + App.d(q.t) + ' (' + q.inv + ')') + '</title>';
+      /* Point circle */
+      g += '<circle cx="' + x + '" cy="' + y + '" r="7" fill="#ffffff" stroke="' + col + '" stroke-width="3.5"/>';
+      /* Value callout pill */
+      var valY = isHigh ? (y - 14) : (y + 22);
+      g += '<rect x="' + (x - 26) + '" y="' + (valY - 11) + '" width="52" height="16" rx="4" fill="#ffffff" stroke="' + col + '" stroke-width="1" opacity="0.95"/>';
+      g += '<text x="' + x + '" y="' + (valY + 1) + '" text-anchor="middle" font-size="11" font-weight="800" fill="' + col + '">' + App.esc(f(q.v)) + '</text>';
+      /* X-axis labels */
+      g += '<text x="' + x + '" y="' + (H - 26) + '" text-anchor="middle" font-size="11" font-weight="600" fill="#334155">' + App.esc(App.d(q.t)) + '</text>';
+      g += '<text x="' + x + '" y="' + (H - 12) + '" text-anchor="middle" font-size="10" font-weight="500" fill="#64748b">' + App.esc(q.inv) + '</text>';
+      g += '</g>';
+    });
+
+    g += '</svg>';
+    return g;
+  }
+
+  function renderPatientTrendsDashboard() {
+    if (role() !== 'admin' && !(role() === 'custom' && App.canPage('reports'))) return denied();
+
+    /* Ensure results module is loaded */
+    if (!App.trendSeries || !App.refFor || !App.refBounds) {
+      var viewLoading = document.getElementById('view');
+      if (viewLoading) viewLoading.innerHTML = '<div class="card"><div class="card-b">' + App.empty('Loading Patient Historical Trends Engine…') + '</div></div>';
+      App.loadScript('assets/js/mod-results.js').then(function () {
+        renderPatientTrendsDashboard();
+      }, function () {
+        App.toast('Could not load test results module', 'err');
+      });
+      return;
+    }
+
+    var allPatients = DB.all('patients') || [];
+    var allInvoices = DB.all('invoices') || [];
+    var allResults = DB.all('results') || [];
+    var readyResults = allResults.filter(function (r) { return r.status === 'ready' && r.values; });
+
+    var invById = {};
+    allInvoices.forEach(function (i) { invById[i.id] = i; });
+
+    var patResultsMap = {};
+    readyResults.forEach(function (r) {
+      var inv = invById[r.invoiceId];
+      if (inv && inv.patientId) {
+        patResultsMap[inv.patientId] = (patResultsMap[inv.patientId] || 0) + 1;
+      }
+    });
+
+    /* Patients with test results sorted by number of test records descending */
+    var patsWithResults = allPatients.filter(function (p) { return (patResultsMap[p.id] || 0) > 0; });
+    patsWithResults.sort(function (a, b) {
+      return (patResultsMap[b.id] || 0) - (patResultsMap[a.id] || 0);
+    });
+
+    /* Parse query string from URL */
+    var hashQ = (location.hash || '').split('?')[1] || '';
+    var qObj = {};
+    hashQ.split('&').forEach(function (pair) {
+      var s = pair.split('=');
+      if (s[0]) qObj[decodeURIComponent(s[0])] = decodeURIComponent(s[1] || '');
+    });
+
+    if (qObj.patientId || qObj.id) {
+      trendsState.patientId = qObj.patientId || qObj.id;
+    }
+
+    /* Selected patient selection fallback */
+    var curPat = trendsState.patientId ? DB.get('patients', trendsState.patientId) : null;
+    if (!curPat && patsWithResults.length) {
+      curPat = patsWithResults[0];
+      trendsState.patientId = curPat.id;
+    } else if (!curPat && allPatients.length) {
+      curPat = allPatients[0];
+      trendsState.patientId = curPat.id;
+    }
+
+    if (!curPat) {
+      var emptyHtml = '<div class="page-head"><div><h1>📈 Patient Historical Trend &amp; Delta Analysis Center</h1>'
+        + '<p class="muted">Track multi-visit biometric trajectories, evaluate delta variations, and monitor patient health recovery over time.</p></div></div>'
+        + '<div class="card"><div class="card-b">' + App.empty('No patients registered in the system yet. Register patients and enter lab results to see trend charts.') + '</div></div>';
+      document.getElementById('view').innerHTML = emptyHtml;
+      return;
+    }
+
+    /* Retrieve trend series for current patient */
+    var series = curPat ? App.trendSeries(curPat) : [];
+    if (qObj.param && series.length) {
+      var foundIdx = -1;
+      series.forEach(function (s, i) {
+        if (s.name.toLowerCase() === qObj.param.toLowerCase()) foundIdx = i;
+      });
+      if (foundIdx >= 0) trendsState.paramIndex = foundIdx;
+    }
+    if (trendsState.paramIndex >= series.length) {
+      trendsState.paramIndex = 0;
+    }
+
+    var selSeries = series[trendsState.paramIndex] || null;
+    var pts = selSeries ? selSeries.pts.slice() : [];
+
+    /* Apply visit limit filter if needed */
+    if (trendsState.visitLimit === 'last3') pts = pts.slice(-3);
+    else if (trendsState.visitLimit === 'last5') pts = pts.slice(-5);
+    else if (trendsState.visitLimit === 'last10') pts = pts.slice(-10);
+
+    /* Compute delta check metrics */
+    var basePt = pts.length ? pts[0] : null;
+    var latestPt = pts.length ? pts[pts.length - 1] : null;
+    var prevPt = pts.length > 1 ? pts[pts.length - 2] : null;
+
+    var prevDelta = (prevPt && latestPt) ? (latestPt.v - prevPt.v) : 0;
+    var prevDeltaPct = (prevPt && prevPt.v !== 0) ? ((prevDelta / Math.abs(prevPt.v)) * 100) : 0;
+
+    var baseDelta = (basePt && latestPt) ? (latestPt.v - basePt.v) : 0;
+    var baseDeltaPct = (basePt && basePt.v !== 0) ? ((baseDelta / Math.abs(basePt.v)) * 100) : 0;
+
+    /* Clinical direction assessment */
+    var dirNote = 'Baseline Recording';
+    var dirColor = '#16a34a';
+    if (selSeries && basePt && latestPt) {
+      var dLatest = App.outDist ? App.outDist(selSeries, latestPt.v) : 0;
+      var dBase = App.outDist ? App.outDist(selSeries, basePt.v) : 0;
+      if (dLatest === 0) {
+        if (dBase > 0) { dirNote = 'Normalized: Successfully returned to normal range'; dirColor = '#16a34a'; }
+        else { dirNote = 'Healthy: Value consistently within normal limits'; dirColor = '#16a34a'; }
+      } else if (dLatest < dBase) {
+        dirNote = 'Improving: Moving closer to normal reference band'; dirColor = '#059669';
+      } else if (dLatest > dBase) {
+        dirNote = 'Alert: Deviation from normal reference range expanded'; dirColor = '#dc2626';
+      } else {
+        dirNote = 'Deviation: Persistently outside reference bounds'; dirColor = '#d97706';
+      }
+    }
+
+    var patInvs = allInvoices.filter(function (i) { return i.patientId === curPat.id; });
+    var patReadyCount = patResultsMap[curPat.id] || 0;
+
+    var COL_SEV = { ok: '#16a34a', mild: '#d97706', moderate: '#ea580c', critical: '#dc2626' };
+    var latestSevCol = latestPt ? (COL_SEV[latestPt.sev || 'ok'] || '#16a34a') : '#16a34a';
+    var latestSevBadge = latestPt ? (latestPt.sev
+      ? '<span class="badge" style="background:' + latestSevCol + '18;color:' + latestSevCol + ';font-weight:800;border:1px solid ' + latestSevCol + '44">' + (latestPt.dir === 'high' ? '↑ HIGH' : '↓ LOW') + (latestPt.sev === 'critical' ? ' · CRITICAL' : '') + '</span>'
+      : '<span class="badge" style="background:#16a34a18;color:#16a34a;font-weight:700;border:1px solid #16a34a44">Normal</span>') : '—';
+
+    /* Build HTML */
+    var html = ''
+      + '<style>'
+      + '.pt-trend-dash { max-width: 1300px; margin: 0 auto; }'
+      + '.pt-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; }'
+      + '.pt-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
+      + '.pt-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
+      + '.pt-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
+      + '.pt-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; font-variant-numeric: tabular-nums; }'
+      + '.pt-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
+      + '.pt-pat-banner { display: flex; align-items: center; gap: 16px; background: #fff; border: 1.5px solid var(--bd); border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
+      + '.pt-avatar-circle { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; display: grid; place-items: center; font-size: 19px; font-weight: 800; flex: 0 0 50px; }'
+      + '.pt-param-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }'
+      + '.pt-param-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 12px; padding: 14px 16px; transition: border-color .15s, box-shadow .15s; }'
+      + '.pt-param-card:hover { border-color: #3b82f6; box-shadow: 0 3px 10px rgba(59,130,246,.08); }'
+      + '@media print { .sidebar, .topbar, .pt-head-bar .btn, .pt-filter-box, .no-print { display: none !important; } .main { padding: 0 !important; } }'
+      + '</style>'
+      + '<div class="pt-trend-dash">';
+
+    /* 4 KPI Stat Cards */
+    var baselineValText = basePt ? (basePt.raw + ' ' + (selSeries ? selSeries.unit : '')) : '—';
+    var latestValText = latestPt ? (latestPt.raw + ' ' + (selSeries ? selSeries.unit : '')) : '—';
+    var deltaSign = baseDelta > 0 ? '▲ +' : (baseDelta < 0 ? '▼ ' : '');
+    var deltaValText = (basePt && latestPt && selSeries)
+      ? (deltaSign + (Math.round(Math.abs(baseDelta) * 100) / 100) + ' ' + selSeries.unit + ' (' + (baseDeltaPct >= 0 ? '+' : '') + (Math.round(baseDeltaPct * 10) / 10) + '%)')
+      : '—';
+
+    /* 1. 4 KPI Stat Cards directly at top */
+    html += '<div class="pt-card-grid">'
+      + '<div class="pt-kpi-card" style="border-left:4px solid #3b82f6">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Historical Readings</span><span style="font-size:16px">📊</span></div>'
+      +   '<div class="pt-kpi-val">' + pts.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">readings</span></div>'
+      +   '<div class="pt-kpi-sub">' + (pts.length > 1 ? 'From ' + App.d(basePt.t) + ' to ' + App.d(latestPt.t) : (pts.length ? '1 visit recorded' : '0 readings recorded')) + '</div>'
+      + '</div>'
+      + '<div class="pt-kpi-card" style="border-left:4px solid #8b5cf6">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Baseline (Initial) Reading</span><span style="font-size:16px">🏷️</span></div>'
+      +   '<div class="pt-kpi-val">' + App.esc(baselineValText) + '</div>'
+      +   '<div class="pt-kpi-sub">' + (basePt ? App.d(basePt.t) + ' (' + App.esc(basePt.inv) + ')' : '—') + '</div>'
+      + '</div>'
+      + '<div class="pt-kpi-card" style="border-left:4px solid ' + latestSevCol + '">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Latest (Current) Reading</span>' + latestSevBadge + '</div>'
+      +   '<div class="pt-kpi-val" style="color:' + latestSevCol + '">' + App.esc(latestValText) + '</div>'
+      +   '<div class="pt-kpi-sub">' + (latestPt ? 'Tested on ' + App.d(latestPt.t) + ' (' + App.esc(latestPt.inv) + ')' : '—') + '</div>'
+      + '</div>'
+      + '<div class="pt-kpi-card" style="border-left:4px solid ' + dirColor + '">'
+      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Net Delta from Baseline</span><span style="font-size:16px">📈</span></div>'
+      +   '<div class="pt-kpi-val" style="color:' + dirColor + ';font-size:18px">' + App.esc(deltaValText) + '</div>'
+      +   '<div class="pt-kpi-sub" style="color:' + dirColor + ';font-weight:600">' + App.esc(dirNote) + '</div>'
+      + '</div>'
+      + '</div>'
+
+      /* 2. Action buttons row below cards */
+      + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap" class="no-print">'
+      +   '<button class="btn btn-ghost btn-sm" id="ptRefreshBtn">🔄 Refresh</button>'
+      +   '<button class="btn btn-ghost btn-sm" id="ptCsvBtn">📥 Export CSV</button>'
+      +   '<button class="btn btn-primary btn-sm" id="ptPrintBtn">' + PRINT_ICON + ' Print Trend Report</button>'
+      + '</div>'
+
+      /* 3. Patient & Parameter Selector Controls (Below cards) */
+      + '<div class="card pt-filter-box" style="margin-bottom:18px"><div class="card-b" style="padding:14px 16px">'
+      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
+      +     '<div style="flex:1;min-width:260px">'
+      +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Select Patient</label>'
+      +       '<select class="select" id="ptPatSelect" style="font-weight:600;width:100%">'
+      +         allPatients.map(function (p) {
+                  var rCount = patResultsMap[p.id] || 0;
+                  var isSel = curPat && curPat.id === p.id;
+                  return '<option value="' + App.esc(p.id) + '"' + (isSel ? ' selected' : '') + '>'
+                    + App.esc(p.name) + ' (' + App.esc(p.id) + ')' + (rCount ? ' — ' + rCount + ' report(s)' : ' — no reports')
+                    + '</option>';
+                }).join('')
+      +       '</select>'
+      +     '</div>'
+      +     '<div style="flex:1;min-width:240px">'
+      +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Biometric Parameter</label>'
+      +       '<select class="select" id="ptParamSelect" style="font-weight:600;width:100%"' + (!series.length ? ' disabled' : '') + '>'
+      +         (series.length ? series.map(function (m, i) {
+                  var isSel = trendsState.paramIndex === i;
+                  return '<option value="' + i + '"' + (isSel ? ' selected' : '') + '>'
+                    + App.esc(m.name) + ' (' + m.pts.length + ' visit' + (m.pts.length > 1 ? 's' : '') + ')' + (m.ref ? ' [ref: ' + App.esc(m.ref) + ']' : '')
+                    + '</option>';
+                }).join('') : '<option value="">No numeric parameters reported</option>')
+      +       '</select>'
+      +     '</div>'
+      +     '<div style="min-width:160px">'
+      +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Visits Range</label>'
+      +       '<select class="select" id="ptRangeSelect" style="font-weight:600">'
+      +         '<option value="all"' + (trendsState.visitLimit === 'all' ? ' selected' : '') + '>All Historical Visits</option>'
+      +         '<option value="last3"' + (trendsState.visitLimit === 'last3' ? ' selected' : '') + '>Last 3 Visits</option>'
+      +         '<option value="last5"' + (trendsState.visitLimit === 'last5' ? ' selected' : '') + '>Last 5 Visits</option>'
+      +         '<option value="last10"' + (trendsState.visitLimit === 'last10' ? ' selected' : '') + '>Last 10 Visits</option>'
+      +       '</select>'
+      +     '</div>'
+      +   '</div>'
+      + '</div></div>'
+
+      /* 4. Patient Demographics & Profile Summary Banner (Below cards) */
+      + '<div class="pt-pat-banner">'
+      +   '<div class="pt-avatar-circle">' + App.esc((curPat.name || 'P').charAt(0).toUpperCase()) + '</div>'
+      +   '<div style="flex:1;min-width:220px">'
+      +     '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      +       '<h3 style="margin:0;font-size:17px;font-weight:800;color:var(--ink)">' + App.esc(curPat.name) + '</h3>'
+      +       '<span class="badge b-id mono">' + App.esc(curPat.id) + '</span>'
+      +       (curPat.gender ? '<span class="badge" style="background:#e0e7ff;color:#3730a3;font-weight:600">' + App.esc(curPat.gender) + '</span>' : '')
+      +       (curPat.age ? '<span class="badge" style="background:#f1f5f9;color:#334155;font-weight:600">' + App.esc(curPat.age) + ' yrs</span>' : '')
+      +     '</div>'
+      +     '<div style="display:flex;gap:12px;margin-top:5px;font-size:12px;color:var(--muted);flex-wrap:wrap">'
+      +       '<span>📞 ' + App.esc(curPat.phone || 'No phone') + '</span>'
+      +       '<span>🗓 Registered ' + App.esc(App.d(curPat.createdAt)) + '</span>'
+      +       '<span>🧾 ' + patInvs.length + ' Total Visits</span>'
+      +       '<span>🔬 ' + patReadyCount + ' Finalized Lab Reports</span>'
+      +     '</div>'
+      +   '</div>'
+      +   '<div style="display:flex;gap:8px">'
+      +     '<a href="#/patient/' + App.esc(curPat.id) + '" class="btn btn-ghost btn-sm">👤 Patient Profile &rarr;</a>'
+      +     '<a href="#/billing/' + App.esc(curPat.id) + '" class="btn btn-primary btn-sm">+ New Bill</a>'
+      +   '</div>'
+      + '</div>';
+
+    if (!series.length) {
+      html += '<div class="card"><div class="card-b" style="text-align:center;padding:40px 20px">'
+        + '<div style="font-size:42px;margin-bottom:12px">🧪</div>'
+        + '<h3 style="margin:0 0 6px">No Numeric Lab Test Results Found</h3>'
+        + '<p class="muted" style="margin:0 0 16px;max-width:500px;margin-left:auto;margin-right:auto">'
+        + 'Patient <b>' + App.esc(curPat.name) + '</b> does not have finalized numeric test results yet. '
+        + 'When tests like Blood Sugar, CBC, Creatinine, Lipid Profile, or Electrolytes are finalized with numeric values in Lab Results, their multi-visit historical trend graphs and delta analyses will display here.'
+        + '</p>'
+        + '<div style="display:flex;justify-content:center;gap:10px">'
+        + '<a href="#/results" class="btn btn-primary">Go to Lab Results &rarr;</a>'
+        + '<a href="#/billing/' + App.esc(curPat.id) + '" class="btn btn-ghost">+ New Bill for Patient</a>'
+        + '</div>'
+        + '</div></div></div></div>';
+      document.getElementById('view').innerHTML = html;
+      wireTrendsEvents();
+      return;
+    }
+
+    /* Visual Trend SVG Graph Card */
+    html += '<div class="card" style="margin-bottom:20px">'
+      + '<div class="card-h" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'
+      +   '<div>'
+      +     '<h3 style="margin:0;font-size:16px">' + App.esc(selSeries.name) + ' — Historical Trajectory Graph</h3>'
+      +     '<span class="muted" style="font-size:12px">Reference Range: <b>' + App.esc(selSeries.ref || 'Not specified') + ' ' + App.esc(selSeries.unit) + '</b></span>'
+      +   '</div>'
+      +   '<div style="display:flex;align-items:center;gap:12px;font-size:12px;color:var(--muted);flex-wrap:wrap">'
+      +     '<span><span style="color:#16a34a">●</span> Normal</span>'
+      +     '<span><span style="color:#d97706">●</span> Mild/Moderate</span>'
+      +     '<span><span style="color:#dc2626">●</span> Critical Alert</span>'
+      +     '<span><span style="display:inline-block;width:12px;height:10px;background:#16a34a22;border:1px dashed #16a34a;vertical-align:middle"></span> Normal Band</span>'
+      +   '</div>'
+      + '</div>'
+      + '<div class="card-b" style="padding:16px 20px">'
+      +   (pts.length === 1 ? '<p class="muted" style="margin:0 0 10px;font-size:12.5px">📌 Only 1 reading recorded so far. Continuous connection curves connect automatically across upcoming visits.</p>' : '')
+      +   buildTrendSvg(selSeries, pts)
+      + '</div></div>';
+
+    /* Delta Analysis & Clinical Velocity Table Card */
+    var deltaRowsHtml = pts.map(function (q, idx) {
+      var prev = idx > 0 ? pts[idx - 1] : null;
+      var d = prev ? (q.v - prev.v) : null;
+      var dTxt = '';
+      if (d == null) {
+        dTxt = '<span class="muted">— (Baseline)</span>';
+      } else if (d === 0) {
+        dTxt = '<span class="muted">No change (0.0)</span>';
+      } else {
+        var pct = (prev && prev.v !== 0) ? ((d / Math.abs(prev.v)) * 100) : 0;
+        var da = App.outDist ? App.outDist(selSeries, prev.v) : 0;
+        var db = App.outDist ? App.outDist(selSeries, q.v) : 0;
+        var col = (da === 0 && db === 0) ? '#64748b' : (db < da ? '#16a34a' : '#dc2626');
+        dTxt = '<span style="color:' + col + ';font-weight:700">' + (d > 0 ? '▲ +' : '▼ ') + (Math.round(Math.abs(d) * 100) / 100) + ' ' + App.esc(selSeries.unit) + ' (' + (pct >= 0 ? '+' : '') + (Math.round(pct * 10) / 10) + '%)</span>';
+      }
+
+      /* Cumulative delta from baseline */
+      var cD = idx > 0 ? (q.v - basePt.v) : 0;
+      var cPct = (idx > 0 && basePt.v !== 0) ? ((cD / Math.abs(basePt.v)) * 100) : 0;
+      var cTxt = idx === 0 ? '<span class="muted">Baseline Visit</span>'
+        : '<span style="font-weight:600;color:' + (cD > 0 ? '#b45309' : (cD < 0 ? '#1d4ed8' : '#64748b')) + '">'
+          + (cD > 0 ? '▲ +' : (cD < 0 ? '▼ ' : '')) + (Math.round(Math.abs(cD) * 100) / 100) + ' (' + (cPct >= 0 ? '+' : '') + (Math.round(cPct * 10) / 10) + '%)</span>';
+
+      /* Velocity & status flags */
+      var sevCol = COL_SEV[q.sev || 'ok'] || '#16a34a';
+      var statusBadge = q.sev
+        ? '<span class="badge" style="background:' + sevCol + '18;color:' + sevCol + ';font-weight:800;border:1px solid ' + sevCol + '44">' + (q.dir === 'high' ? '↑ HIGH' : '↓ LOW') + (q.sev === 'critical' ? ' · CRITICAL' : '') + '</span>'
+        : '<span class="badge" style="background:#16a34a18;color:#16a34a;font-weight:700;border:1px solid #16a34a44">Normal</span>';
+
+      var velFlag = '';
+      if (idx === 0) velFlag = '<span class="muted">Initial Baseline</span>';
+      else {
+        var absPct = Math.abs(pct);
+        if (absPct <= 10) velFlag = '<span class="badge" style="background:#f1f5f9;color:#475569">Normal Fluctuation (≤10%)</span>';
+        else if (absPct <= 25) velFlag = '<span class="badge" style="background:#fef3c7;color:#b45309">Moderate Shift (10-25%)</span>';
+        else if (absPct <= 40) velFlag = '<span class="badge" style="background:#ffedd5;color:#c2410c">Significant Delta (>25%)</span>';
+        else velFlag = '<span class="badge" style="background:#fee2e2;color:#b91c1c;font-weight:800">Critical Shift (>40%)</span>';
+      }
+
+      return '<tr>'
+        + '<td style="font-weight:700;color:var(--muted)">#' + (idx + 1) + '</td>'
+        + '<td><b>' + App.esc(App.d(q.t)) + '</b></td>'
+        + '<td><a href="#/invoice/' + App.esc(q.invId || q.inv) + '" class="mono" style="font-weight:600;text-decoration:none">' + App.esc(q.inv) + '</a></td>'
+        + '<td><span style="font-size:14px;font-weight:800;color:' + sevCol + '">' + App.esc(q.raw) + '</span> <span class="muted">' + App.esc(selSeries.unit) + '</span></td>'
+        + '<td><span class="muted">' + App.esc(selSeries.ref || '—') + '</span></td>'
+        + '<td>' + statusBadge + '</td>'
+        + '<td>' + dTxt + '</td>'
+        + '<td>' + cTxt + '</td>'
+        + '<td>' + velFlag + '</td>'
+        + '<td style="text-align:right"><button class="btn btn-ghost btn-sm" data-pt-inv="' + App.esc(q.invId || q.inv) + '">View Report</button></td>'
+        + '</tr>';
+    }).reverse().join('');
+
+    html += '<div class="card" style="margin-bottom:20px">'
+      + '<div class="card-h"><h3 style="margin:0">Delta Check &amp; Clinical Progress Log</h3>'
+      + '<span class="muted" style="font-size:12.5px">' + pts.length + ' chronologically recorded readings</span></div>'
+      + '<div class="card-b" style="padding:0">'
+      +   '<div class="tbl-wrap"><table class="table"><thead><tr>'
+      +     '<th>#</th><th>Visit Date</th><th>Invoice No</th><th>Result Value</th><th>Reference Range</th>'
+      +     '<th>Clinical Status</th><th>Delta (vs Prior)</th><th>Cumulative Δ</th><th>Velocity / Variance</th><th style="text-align:right">Action</th>'
+      +   '</tr></thead><tbody>' + deltaRowsHtml + '</tbody></table></div>'
+      + '</div></div>';
+
+    /* Multi-Parameter Health Overview Grid (Other parameters tested for this patient) */
+    html += '<div class="card" style="margin-bottom:24px">'
+      + '<div class="card-h"><h3 style="margin:0">Multi-Parameter Clinical Overview (' + series.length + ' Monitored Tests)</h3>'
+      + '<span class="muted" style="font-size:12.5px">Quick biometric summary across all tests finalized for ' + App.esc(curPat.name) + '</span></div>'
+      + '<div class="card-b">'
+      +   '<div class="pt-param-grid">'
+      +     series.map(function (m, i) {
+              var isCurrent = trendsState.paramIndex === i;
+              var mPts = m.pts;
+              var mBase = mPts[0];
+              var mLatest = mPts[mPts.length - 1];
+              var mDelta = (mBase && mLatest) ? (mLatest.v - mBase.v) : 0;
+              var mDeltaPct = (mBase && mBase.v !== 0) ? ((mDelta / Math.abs(mBase.v)) * 100) : 0;
+              var mSev = mLatest ? (COL_SEV[mLatest.sev || 'ok'] || '#16a34a') : '#16a34a';
+
+              return '<div class="pt-param-card"' + (isCurrent ? ' style="border-color:#3b82f6;background:#f8faff"' : '') + '>'
+                + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'
+                +   '<strong style="font-size:14px;color:var(--ink)">' + App.esc(m.name) + '</strong>'
+                +   (isCurrent ? '<span class="badge b-ready">Active</span>' : '<span class="badge b-pending">' + mPts.length + ' visits</span>')
+                + '</div>'
+                + '<div class="muted" style="font-size:11.5px;margin-bottom:8px">Normal: ' + App.esc(m.ref || '—') + ' ' + App.esc(m.unit) + '</div>'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-bottom:10px">'
+                +   '<div><div class="muted" style="font-size:10px;text-transform:uppercase">Baseline</div><div style="font-size:13px;font-weight:700">' + App.esc(mBase ? mBase.raw : '—') + '</div></div>'
+                +   '<div style="font-size:14px;color:var(--muted)">→</div>'
+                +   '<div><div class="muted" style="font-size:10px;text-transform:uppercase">Latest</div><div style="font-size:14px;font-weight:800;color:' + mSev + '">' + App.esc(mLatest ? mLatest.raw : '—') + '</div></div>'
+                +   '<div><div class="muted" style="font-size:10px;text-transform:uppercase">Delta</div><div style="font-size:12px;font-weight:800;color:' + (mDelta > 0 ? '#b45309' : (mDelta < 0 ? '#1d4ed8' : '#64748b')) + '">' + (mDelta > 0 ? '▲ +' : (mDelta < 0 ? '▼ ' : '')) + (Math.round(Math.abs(mDeltaPct) * 10) / 10) + '%</div></div>'
+                + '</div>'
+                + '<button class="btn ' + (isCurrent ? 'btn-ghost' : 'btn-primary') + ' btn-sm" style="width:100%" data-pt-focus-param="' + i + '">'
+                +   (isCurrent ? 'Viewing in Main Graph ✓' : 'Focus This Parameter ↗')
+                + '</button>'
+                + '</div>';
+            }).join('')
+      +   '</div>'
+      + '</div></div>';
+
+    html += '</div>'; /* end .pt-trend-dash */
+
+    document.getElementById('view').innerHTML = html;
+    wireTrendsEvents();
+
+    function wireTrendsEvents() {
+      /* Patient select change */
+      var patSel = document.getElementById('ptPatSelect');
+      if (patSel) {
+        patSel.addEventListener('change', function () {
+          trendsState.patientId = this.value;
+          trendsState.paramIndex = 0;
+          location.hash = '#/reports/trends?patientId=' + encodeURIComponent(this.value);
+        });
+      }
+
+      /* Parameter select change */
+      var paramSel = document.getElementById('ptParamSelect');
+      if (paramSel) {
+        paramSel.addEventListener('change', function () {
+          trendsState.paramIndex = +this.value;
+          renderPatientTrendsDashboard();
+        });
+      }
+
+      /* Range select change */
+      var rangeSel = document.getElementById('ptRangeSelect');
+      if (rangeSel) {
+        rangeSel.addEventListener('change', function () {
+          trendsState.visitLimit = this.value;
+          renderPatientTrendsDashboard();
+        });
+      }
+
+      /* Refresh button */
+      var refBtn = document.getElementById('ptRefreshBtn');
+      if (refBtn) {
+        refBtn.addEventListener('click', function () {
+          renderPatientTrendsDashboard();
+          App.toast('Patient trends data refreshed.');
+        });
+      }
+
+      /* Focus parameter card buttons */
+      document.querySelectorAll('[data-pt-focus-param]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          trendsState.paramIndex = +this.getAttribute('data-pt-focus-param');
+          renderPatientTrendsDashboard();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      });
+
+      /* View report button */
+      document.querySelectorAll('[data-pt-inv]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var invId = this.getAttribute('data-pt-inv');
+          if (App.viewLabReport) App.viewLabReport(invId);
+          else App.loadScript('assets/js/mod-results.js').then(function () { App.viewLabReport(invId); });
+        });
+      });
+
+      /* CSV Export */
+      var csvBtn = document.getElementById('ptCsvBtn');
+      if (csvBtn) {
+        csvBtn.addEventListener('click', function () {
+          if (!selSeries || !pts.length) { App.toast('No trend data to export', 'err'); return; }
+          var csvLines = ['Visit_Number,Date,Invoice,Parameter,Value,Unit,Reference_Range,Status,Delta_Prior,Delta_Pct,Cumulative_Delta'];
+          pts.forEach(function (q, idx) {
+            var prev = idx > 0 ? pts[idx - 1] : null;
+            var d = prev ? (q.v - prev.v) : 0;
+            var dPct = (prev && prev.v !== 0) ? ((d / Math.abs(prev.v)) * 100) : 0;
+            var cD = idx > 0 ? (q.v - basePt.v) : 0;
+            csvLines.push([
+              idx + 1,
+              csvEsc(App.d(q.t)),
+              csvEsc(q.inv),
+              csvEsc(selSeries.name),
+              q.v,
+              csvEsc(selSeries.unit),
+              csvEsc(selSeries.ref),
+              csvEsc(q.sev ? (q.dir + '_' + q.sev) : 'normal'),
+              d,
+              Math.round(dPct * 10) / 10,
+              cD
+            ].join(','));
+          });
+          var blob = new Blob([csvLines.join('\n')], { type: 'text/csv;charset=utf-8;' });
+          var link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = 'trend_' + (curPat.name || 'patient').replace(/[^a-zA-Z0-9]/g, '_') + '_' + (selSeries.name || 'test').replace(/[^a-zA-Z0-9]/g, '_') + '.csv';
+          link.click();
+          App.toast('Historical trend CSV exported.');
+        });
+      }
+
+      /* Print Trend Summary */
+      var printBtn = document.getElementById('ptPrintBtn');
+      if (printBtn) {
+        printBtn.addEventListener('click', function () {
+          if (!selSeries || !pts.length) { App.toast('No data to print', 'err'); return; }
+          var mainSet = DB.get('settings', 'main') || {};
+
+          var printHtml = '<div style="margin-bottom:14px;border-bottom:2px solid #131845;padding-bottom:10px">'
+            + '<div style="text-align:center;font-size:18px;font-weight:800;letter-spacing:.04em;color:#131845;margin-bottom:4px">PATIENT HISTORICAL TREND &amp; DELTA ANALYSIS REPORT</div>'
+            + '<div style="text-align:center;font-size:12px;color:#64748b">Biometric Trajectory &amp; Multi-Visit Comparison Analysis</div>'
+            + '</div>'
+
+            /* Patient demographics table */
+            + '<table class="table" style="margin-bottom:14px"><tbody>'
+            + '<tr><td><strong>Patient Name:</strong> ' + App.esc(curPat.name) + '</td><td><strong>MR # / Patient ID:</strong> ' + App.esc(curPat.id) + '</td><td><strong>Age / Gender:</strong> ' + App.esc(curPat.age ? curPat.age + 'y' : '—') + ' / ' + App.esc(curPat.gender || '—') + '</td></tr>'
+            + '<tr><td><strong>Contact:</strong> ' + App.esc(curPat.phone || '—') + '</td><td><strong>Evaluated Parameter:</strong> <b>' + App.esc(selSeries.name) + '</b></td><td><strong>Normal Reference:</strong> ' + App.esc(selSeries.ref || '—') + ' ' + App.esc(selSeries.unit) + '</td></tr>'
+            + '<tr><td><strong>Baseline Reading:</strong> ' + App.esc(baselineValText) + '</td><td><strong>Latest Reading:</strong> ' + App.esc(latestValText) + '</td><td><strong>Net Trajectory:</strong> ' + App.esc(deltaValText) + '</td></tr>'
+            + '</tbody></table>'
+
+            /* SVG Chart */
+            + '<div style="margin:16px 0;border:1px solid #cbd5e1;border-radius:8px;padding:12px;background:#ffffff">'
+            + buildTrendSvg(selSeries, pts)
+            + '</div>'
+
+            /* Delta Table */
+            + '<h4 style="margin:14px 0 8px">Visit-by-Visit Clinical Comparison</h4>'
+            + '<table class="table" style="margin-bottom:18px"><thead><tr>'
+            + '<th>#</th><th>Date</th><th>Invoice</th><th>Result Value</th><th>Reference Range</th><th>Status</th><th>Change vs Prior</th><th>Cumulative Δ</th>'
+            + '</tr></thead><tbody>'
+            + pts.map(function (q, idx) {
+                var prev = idx > 0 ? pts[idx - 1] : null;
+                var d = prev ? (q.v - prev.v) : null;
+                var dStr = (d == null) ? '—' : ((d > 0 ? '+' : '') + (Math.round(d * 100) / 100) + ' ' + selSeries.unit);
+                var cD = idx > 0 ? (q.v - basePt.v) : 0;
+                var cStr = idx === 0 ? 'Baseline' : ((cD > 0 ? '+' : '') + (Math.round(cD * 100) / 100) + ' ' + selSeries.unit);
+                return '<tr>'
+                  + '<td>' + (idx + 1) + '</td>'
+                  + '<td>' + App.esc(App.d(q.t)) + '</td>'
+                  + '<td>' + App.esc(q.inv) + '</td>'
+                  + '<td><strong>' + App.esc(q.raw) + '</strong> ' + App.esc(selSeries.unit) + '</td>'
+                  + '<td>' + App.esc(selSeries.ref || '—') + '</td>'
+                  + '<td>' + (q.sev ? (q.dir + ' (' + q.sev + ')') : 'Normal') + '</td>'
+                  + '<td>' + App.esc(dStr) + '</td>'
+                  + '<td>' + App.esc(cStr) + '</td>'
+                  + '</tr>';
+              }).join('')
+            + '</tbody></table>'
+
+            /* Doctor signatures & stamp footer */
+            + '<div style="margin-top:30px;display:flex;justify-content:space-between;align-items:flex-end">'
+            +   '<div><div style="font-size:11px;color:#64748b">Generated by Optix Medical Sync</div><div style="font-size:11px;color:#64748b">Report Date: ' + App.dt(new Date()) + '</div></div>'
+            +   '<div style="text-align:center;min-width:180px;border-top:1px solid #333;padding-top:6px;font-size:12px;font-weight:700">Verified by Pathologist</div>'
+            + '</div>';
+
+          App.print('Patient Historical Trend Report — ' + curPat.name, printHtml);
+        });
+      }
+    }
+  }
 
   /* ============================================================
      SETTINGS  (#/settings) — admin only
@@ -1293,39 +1941,41 @@
   function renderSettings() {
     if (role() !== 'admin') return denied();
     var tabs = [
-      { id: 'profile', label: 'Lab Profile' },
+      { id: 'profile', label: 'Edit Report Form' },
       { id: 'account', label: 'My Account' },
       { id: 'templates', label: 'Report Templates' },
+      { id: 'signatures', label: 'Digital Signatures' },
       { id: 'whatsapp', label: 'WhatsApp' },
-      { id: 'users', label: 'Users' },
+      { id: 'sharing', label: 'Email & Slack' },
+      { id: 'portal', label: 'Patient portal' },
+      { id: 'users', label: 'Users & Roles' },
       { id: 'backup', label: 'Backup' },
       { id: 'danger', label: 'Danger Zone' }
     ];
+    /* the sections are sidebar sub-menu items now (#/settings, #/settings/account, …); the card only labels the open one */
+    var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
     var html = ''
       + '<div class="card"><div class="card-b">'
-      + '<div style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:14px">'
-      + tabs.map(function (t) {
-          return '<button class="btn btn-sm ' + (settingsTab === t.id ? 'btn-primary' : 'btn-ghost') + '" data-stab="' + t.id + '"'
-            + (t.id === 'danger' && settingsTab !== 'danger' ? ' style="color:var(--red)"' : '') + '>' + t.label + '</button>';
-        }).join('')
-      + '</div><div id="setBody"></div>'
+      + '<div style="margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:12px"><b style="font-size:17px;color:' + (cur.id === 'danger' ? 'var(--red)' : 'var(--brand)') + '">' + cur.label + '</b></div>'
+      + '<div id="setBody"></div>'
       + '</div></div>';
     document.getElementById('view').innerHTML = html;
-    document.querySelectorAll('[data-stab]').forEach(function (b) {
-      b.addEventListener('click', function () { settingsTab = b.getAttribute('data-stab'); renderSettings(); });
-    });
     if (settingsTab === 'profile') renderSetProfile();
     else if (settingsTab === 'account') renderSetAccount();
     else if (settingsTab === 'templates') renderSetTemplates();
+    else if (settingsTab === 'signatures') renderSetSignatures();
     else if (settingsTab === 'whatsapp') renderSetWhatsapp();
+    else if (settingsTab === 'sharing') renderSetSharing();
+    else if (settingsTab === 'portal') renderSetPortal();
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
+    try { checkAutoCloudBackup(); } catch (e) {}
   }
 
   /* deep-link into the WhatsApp settings tab (used by report-view send buttons
      when the WhatsApp API is not configured yet) */
-  App.openWaSettingsTab = function () { settingsTab = 'whatsapp'; renderSettings(); };
+  App.openWaSettingsTab = function () { App.nav('#/settings/whatsapp'); };
 
   /* ---- Lab Profile ---- */
   function renderSetProfile() {
@@ -1375,9 +2025,17 @@
       + '<option value="lato"' + (s.font === 'lato' ? ' selected' : '') + '>Lato</option>'
       + '<option value="montserrat"' + (s.font === 'montserrat' ? ' selected' : '') + '>Montserrat</option>'
       + '</select></div>'
+      + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Sample Tracking</div></div>'
+      + '<div style="grid-column:1/-1"><label class="check" for="spReqSmp" style="align-items:flex-start"><input type="checkbox" id="spReqSmp"' + (s.requireSampleCollected ? ' checked' : '') + ' style="margin-top:2px">'
+      + '<span>Require sample to be collected before result entry<span class="muted" style="display:block;font-weight:500;font-size:12px;margin-top:2px">When ON, results cannot be entered for a test whose sample tube is still &ldquo;To collect&rdquo; or was rejected (Samples page). Default OFF &mdash; the Lab Results page only shows a warning.</span></span></label></div>'
       + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Report Appearance</div></div>'
       + '<div><label class="label">Report Title</label><input class="input" id="spReportTitle" placeholder="e.g. LABORATORY REPORT" value="' + App.esc(s.reportTitle || '') + '"></div>'
       + '<div><label class="label">Accent Color</label><input type="color" id="spAccent" value="' + App.esc(s.accent || '#1b1b6e') + '" style="width:56px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer"></div>'
+      + '<div><label class="label">Lab Name Color</label><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
+      + '<input type="color" id="spNameColor" value="' + App.esc(s.labNameColor || '#000000') + '" data-touched="' + (s.labNameColor ? '1' : '') + '" style="width:56px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer">'
+      + ['#000000', '#131845', '#1d4ed8', '#047857', '#9f1239', '#b45309'].map(function (c) { return '<button type="button" class="spNameSw" data-c="' + c + '" title="' + c + '" style="width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #cbd5e1;background:' + c + ';cursor:pointer;padding:0"></button>'; }).join('')
+      + '<button type="button" class="btn btn-ghost btn-sm" id="spNameReset">Reset</button></div>'
+      + '<div class="muted" style="font-size:12px;margin-top:4px">Colour of the lab name at the top of reports and receipts. Default: black.</div></div>'
       + '<div><label class="label">Report Font Size</label><select class="select" id="spFontSize">'
       + '<option value="small"' + (s.reportFontSize === 'small' ? ' selected' : '') + '>Small</option>'
       + '<option value="medium"' + ((!s.reportFontSize || s.reportFontSize === 'medium') ? ' selected' : '') + '>Medium</option>'
@@ -1402,14 +2060,31 @@
       + '<div style="grid-column:1/-1"><label class="label">Signatory Doctors <span class="muted" style="font-weight:400">(shown on lab reports)</span></label>'
       + '<div id="spSigList"></div>'
       + '<button class="btn btn-ghost" type="button" id="spSigAdd" style="margin-top:8px">+ Add Signatory</button></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(advanced — only if you need full control; leave empty to use the automatic header above)</span></label>'
+      + '<div style="grid-column:1/-1"><label class="label">Header text <span class="muted" style="font-weight:400">(shown under the lab name on every report — type anything, e.g. address, phone, timings)</span></label>'
+      + '<textarea class="input" id="spHeadText" rows="3" maxlength="600" placeholder="Type the text you want in the report header">' + App.esc(s.headerText || '') + '</textarea></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Footer text <span class="muted" style="font-weight:400">(shown at the bottom of every report — e.g. thanks note, branch address, complaint number)</span></label>'
+      + '<textarea class="input" id="spFootText" rows="3" maxlength="600" placeholder="Type the text you want in the report footer">' + App.esc(s.footerText || '') + '</textarea></div>'
+      + '<details style="grid-column:1/-1"><summary style="cursor:pointer;font-weight:700;color:var(--muted)">Advanced: edit the full header / footer as HTML (most labs do not need this)</summary><div class="form-grid" style="margin-top:10px">'
+      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(this is your current header — edit anything you want; <code>{{logo}}</code> <code>{{qr}}</code> <code>{{lab_barcode}}</code> <code>{{lab_no}}</code> (INV #) <code>{{case_number_barcode}}</code> <code>{{case_number}}</code> (P #) are filled in for every report)</span></label>'
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spHeadSample">Load Sample</button>'
-      + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Clear</button></div>'
-      + '<textarea class="input" id="spHeadHtml" rows="3" placeholder="Leave empty for automatic header">' + App.esc(s.headerHtml || '') + '</textarea></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(advanced — only if you need full control; leave empty to use the automatic footer above)</span></label>'
+      + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Reset to automatic</button></div>'
+      + '<textarea class="input" id="spHeadHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic header">' + App.esc(s.headerHtml || '') + '</textarea></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(this is your current footer — edit anything you want)</span></label>'
       + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spFootSample">Load Sample</button>'
-      + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Clear</button></div>'
-      + '<textarea class="input" id="spFootHtml" rows="3" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea></div>'
+      + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Reset to automatic</button></div>'
+      + '<textarea class="input" id="spFootHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea></div>'
+      + '</div></details>'
+      + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Online Payments</div></div>'
+      + '<div style="grid-column:1/-1"><label class="check" for="opEnabled" style="align-items:flex-start"><input type="checkbox" id="opEnabled"' + (s.opEnabled ? ' checked' : '') + ' style="margin-top:2px;width:20px;height:20px;accent-color:var(--brand)">'
+      + '<span>Enable online payments<span class="muted" style="display:block;font-weight:500;font-size:12px;margin-top:2px">When ON, patients are shown the payment options below and can share their transaction ID after paying.</span></span></label></div>'
+      + '<div><label class="label">JazzCash number</label><input class="input" id="opJazzcashNo" placeholder="e.g. 0300-1234567" value="' + App.esc(s.opJazzcashNo || '') + '"></div>'
+      + '<div><label class="label">JazzCash account title</label><input class="input" id="opJazzcashTitle" value="' + App.esc(s.opJazzcashTitle || '') + '"></div>'
+      + '<div><label class="label">Easypaisa number</label><input class="input" id="opEasypaisaNo" placeholder="e.g. 0300-1234567" value="' + App.esc(s.opEasypaisaNo || '') + '"></div>'
+      + '<div><label class="label">Easypaisa account title</label><input class="input" id="opEasypaisaTitle" value="' + App.esc(s.opEasypaisaTitle || '') + '"></div>'
+      + '<div><label class="label">Bank name</label><input class="input" id="opBankName" value="' + App.esc(s.opBankName || '') + '"></div>'
+      + '<div><label class="label">IBAN</label><input class="input" id="opIban" placeholder="PK36XXXX0000000000000000" value="' + App.esc(s.opIban || '') + '"></div>'
+      + '<div><label class="label">Raast ID</label><input class="input" id="opRaastId" value="' + App.esc(s.opRaastId || '') + '"></div>'
+      + '<div style="grid-column:1/-1"><label class="label">Instructions shown to patients</label><textarea class="input" id="opInstructions" rows="2" maxlength="500" placeholder="Send payment and share the TID">' + App.esc(s.opInstructions || '') + '</textarea></div>'
       + '</div>'
       + '<div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" id="spSave">Save Profile</button>' +
         '<button class="btn btn-ghost" id="spPreviewBtn">👁 Preview Report</button></div>'
@@ -1527,6 +2202,7 @@
     var headClearBtn = document.getElementById('spHeadClear');
     if (headClearBtn) headClearBtn.addEventListener('click', function () {
       document.getElementById('spHeadHtml').value = '';
+      _fillTpl(true);
       if (typeof _schedulePreview === 'function') _schedulePreview();
     });
     var footSampleBtn = document.getElementById('spFootSample');
@@ -1537,8 +2213,32 @@
     var footClearBtn = document.getElementById('spFootClear');
     if (footClearBtn) footClearBtn.addEventListener('click', function () {
       document.getElementById('spFootHtml').value = '';
+      _fillTpl(true);
       if (typeof _schedulePreview === 'function') _schedulePreview();
     });
+    /* pre-fill the Custom Header / Footer boxes with the current automatic ones, so they can be edited in place.
+       While a box still holds the untouched automatic text it is saved as "empty" (= keep following the profile fields). */
+    var _tplHead = '', _tplFoot = '';
+    function _fillTpl(force) {
+      var run = function () {
+        var base = _collectPreviewSettings(); base.headerHtml = ''; base.footerHtml = '';
+        var h = document.getElementById('spHeadHtml'), f = document.getElementById('spFootHtml');
+        if (!h || !f || !App.reportHeaderTemplate) return;
+        var nh = App.reportHeaderTemplate(base), nf = App.reportFooterTemplate(base);
+        if (force || !h.value.trim() || h.value === _tplHead) { h.value = nh; _tplHead = nh; }
+        if (force || !f.value.trim() || f.value === _tplFoot) { f.value = nf; _tplFoot = nf; }
+      };
+      if (App.reportHeaderTemplate) run(); else App.loadScript('assets/js/mod-results.js').then(run, function () {});
+    }
+    window.__spAutoTpl = function () { return { head: _tplHead, foot: _tplFoot }; };
+    _fillTpl(false);
+    (function () { /* lab-name colour: colour picker, quick swatches, reset to default black */
+      var ci = document.getElementById('spNameColor'); if (!ci) return;
+      function touch(v) { ci.value = v; ci.setAttribute('data-touched', '1'); if (typeof _schedulePreview === 'function') _schedulePreview(); }
+      ci.addEventListener('input', function () { touch(ci.value); });
+      Array.prototype.forEach.call(document.querySelectorAll('.spNameSw'), function (b) { b.addEventListener('click', function () { touch(b.getAttribute('data-c')); }); });
+      document.getElementById('spNameReset').addEventListener('click', function () { ci.value = '#000000'; ci.removeAttribute('data-touched'); if (typeof _schedulePreview === 'function') _schedulePreview(); });
+    })();
     document.getElementById('spPreviewBtn').addEventListener('click', function () {
       var ps = _collectPreviewSettings();
       App.loadScript('assets/js/mod-results.js').then(function () {
@@ -1573,7 +2273,7 @@
         App.modal('Report Preview — Full Page', fullHtml, { wide: true, onOpen: function (ov) {
           var pb = ov.querySelector('#spPrevPrint');
           if (pb) pb.addEventListener('click', function () {
-            App.print('Sample Lab Report Preview', html, { noHeader: true });
+            App.print('Lab Report Preview', html, { noHeader: true });
           });
         }});
       });
@@ -1590,6 +2290,8 @@
         email: document.getElementById('spEmail').value.trim(),
         invoicePrefix: pref,
         footerNote: document.getElementById('spFoot').value.trim(),
+        headerText: document.getElementById('spHeadText').value.trim(),
+        footerText: document.getElementById('spFootText').value.trim(),
         logo: _logoData,
         website: document.getElementById('spWeb').value.trim(),
         headOffice: document.getElementById('spHead').value.trim(),
@@ -1601,13 +2303,24 @@
         font: document.getElementById('spFont').value,
         reportTitle: document.getElementById('spReportTitle').value.trim(),
         accent: document.getElementById('spAccent').value,
+        labNameColor: (document.getElementById('spNameColor').getAttribute('data-touched') ? document.getElementById('spNameColor').value : ''),
         showQr: document.getElementById('spShowQr').checked,
         showTagline: document.getElementById('spShowTagline').checked,
+        requireSampleCollected: document.getElementById('spReqSmp').checked,
         reportFontSize: document.getElementById('spFontSize').value,
-        headerHtml: document.getElementById('spHeadHtml').value.trim(),
-        footerHtml: document.getElementById('spFootHtml').value.trim()
+        headerHtml: (document.getElementById('spHeadHtml').value === _tplHead ? '' : document.getElementById('spHeadHtml').value.trim()),
+        footerHtml: (document.getElementById('spFootHtml').value === _tplFoot ? '' : document.getElementById('spFootHtml').value.trim()),
+        opEnabled: document.getElementById('opEnabled').checked,
+        opJazzcashNo: document.getElementById('opJazzcashNo').value.trim(),
+        opJazzcashTitle: document.getElementById('opJazzcashTitle').value.trim(),
+        opEasypaisaNo: document.getElementById('opEasypaisaNo').value.trim(),
+        opEasypaisaTitle: document.getElementById('opEasypaisaTitle').value.trim(),
+        opBankName: document.getElementById('opBankName').value.trim(),
+        opIban: document.getElementById('opIban').value.trim(),
+        opRaastId: document.getElementById('opRaastId').value.trim(),
+        opInstructions: document.getElementById('opInstructions').value.trim()
       });
-      App.toast('Lab profile saved.');
+      App.toast('Report form saved.');
       if (App.renderShell) App.renderShell();
       if (App.applyFont) App.applyFont();
     });
@@ -1629,14 +2342,15 @@
       }
       return {
         labName: gv('spName'), tagline: gv('spTag'), address: gv('spAddr'),
-        phone: gv('spPhone'), email: gv('spEmail'), footerNote: gv('spFoot'),
+        phone: gv('spPhone'), email: gv('spEmail'), footerNote: gv('spFoot'), headerText: gv('spHeadText'), footerText: gv('spFootText'),
         logo: _logoData, website: gv('spWeb'), headOffice: gv('spHead'),
         mainLab: gv('spMainLab'), callCenter: gv('spCall'), mainLabPhone: gv('spMainPhone'),
         verNote: gv('spVerNote'), signatories: sigs, font: gv('spFont'),
         reportTitle: gv('spReportTitle'), accent: gv('spAccent'),
+        labNameColor: (function () { var e = document.getElementById('spNameColor'); return e && e.getAttribute('data-touched') ? e.value : ''; })(),
         showQr: gc('spShowQr'), showTagline: gc('spShowTagline'),
         reportFontSize: gv('spFontSize'),
-        headerHtml: gv('spHeadHtml'), footerHtml: gv('spFootHtml')
+        headerHtml: (gv('spHeadHtml') === _tplHead ? '' : gv('spHeadHtml')), footerHtml: (gv('spFootHtml') === _tplFoot ? '' : gv('spFootHtml'))
       };
     }
     function _paintPreview() {
@@ -1646,6 +2360,8 @@
         try {
           var ps = _collectPreviewSettings();
           var html = App.sampleReportPreview(ps);
+          /* show a sample QR in the live preview too (it was an empty image box) */
+          if (ps.showQr !== false && App.qrDataUrlFor) { try { var qs = App.qrDataUrlFor('https://optix-lab-medsync.pages.dev/sample-report'); if (qs) html = html.split('data-qr="1"').join('data-qr="1" src="' + qs + '"'); } catch (e) {} }
           // apply the selected font to the preview
           var ff = "'Inter',sans-serif";
           try {
@@ -1669,6 +2385,7 @@
       });
     }
     function _schedulePreview() {
+      try { _fillTpl(false); } catch (e) {}
       if (_pvTimer) clearTimeout(_pvTimer);
       _pvTimer = setTimeout(_paintPreview, 350);
     }
@@ -1682,43 +2399,146 @@
     _paintPreview();
   }
 
-  /* ---- My Account — change own username / password ---- */
+  /* ---- My Account — change own details, photo, username, password ---- */
   function renderSetAccount() {
     var me = sess();
     var u = me ? DB.get('users', me.userId) : null;
     if (!u) { document.getElementById('setBody').innerHTML = App.empty('Account not found. Please log in again.'); return; }
-    var html = '<div class="form-grid" style="max-width:560px">'
-      + '<div><label class="label">Full Name</label><input class="input" id="maName" value="' + App.esc(u.name || '') + '"></div>'
-      + '<div><label class="label">Username *</label><input class="input" id="maUser" value="' + App.esc(u.username || '') + '"></div>'
-      + '<div><label class="label">New Password</label><input class="input" id="maPass" type="password" placeholder="min 4 characters"></div>'
-      + '<div><label class="label">Confirm New Password</label><input class="input" id="maPass2" type="password" placeholder="repeat new password"></div>'
+
+    var photoVal = u.photo || '';
+    var roleLbl = (u.role === 'admin' ? 'Administrator' : (u.role === 'technician' ? 'Lab Technician' : 'Staff Member'));
+
+    function renderAvatar() {
+      var av = document.getElementById('maPhotoPreview');
+      if (!av) return;
+      if (photoVal) {
+        av.innerHTML = '<img src="' + photoVal + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%" alt="Avatar">';
+      } else {
+        av.innerHTML = '<span>' + App.esc((u.name || u.username || 'U').charAt(0).toUpperCase()) + '</span>';
+      }
+    }
+
+    var html = '<div style="max-width:680px">'
+      + '<style>'
+      + '.ma-card{background:var(--card,#fff);border:1px solid var(--line);border-radius:12px;padding:20px;margin-bottom:18px}'
+      + '.ma-title{font-size:14px;font-weight:700;color:var(--ink);text-transform:uppercase;letter-spacing:.05em;margin:0 0 14px}'
+      + '.ma-photo-row{display:flex;align-items:center;gap:18px;margin-bottom:18px;flex-wrap:wrap}'
+      + '.ma-photo{width:84px;height:84px;border-radius:50%;background:var(--brand-grad,linear-gradient(135deg,#0284c7,#1e3a8a));color:#fff;display:grid;place-items:center;font-size:30px;font-weight:800;overflow:hidden;flex:none;box-shadow:0 4px 14px rgba(19,24,69,.25);border:2px solid #fff}'
+      + '.ma-photo img{width:100%;height:100%;object-fit:cover;display:block}'
+      + '.ma-role-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:rgba(2,132,199,.12);color:#0284c7;margin-left:8px}'
+      + '</style>'
+      + '<div class="ma-card">'
+      + '<div class="ma-title">Profile Picture &amp; Personal Info</div>'
+      + '<div class="ma-photo-row">'
+      + '  <div class="ma-photo" id="maPhotoPreview"></div>'
+      + '  <div>'
+      + '    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">'
+      + '      <button type="button" class="btn btn-sm btn-ghost" id="maUploadBtn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Upload Photo</button>'
+      + '      <button type="button" class="btn btn-sm btn-ghost" id="maRemoveBtn" style="color:var(--red)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Remove</button>'
+      + '      <input type="file" id="maFile" accept="image/*" hidden>'
+      + '    </div>'
+      + '    <div class="muted" style="font-size:12px">JPG, PNG or WebP. Auto-compressed to profile size.</div>'
+      + '  </div>'
       + '</div>'
-      + '<p class="muted" style="font-size:12.5px;margin-top:10px">Leave the password fields blank to keep your current password.</p>'
-      + '<div style="margin-top:14px"><button class="btn btn-primary" id="maSave">Save Changes</button></div>';
+      + '<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px">'
+      + '  <div><label class="label">Full Name *</label><input class="input" id="maName" value="' + App.esc(u.name || '') + '" placeholder="e.g. Dr. Sarah Khan"></div>'
+      + '  <div><label class="label">Username *</label><input class="input" id="maUser" value="' + App.esc(u.username || '') + '" placeholder="username"></div>'
+      + '  <div><label class="label">Email Address</label><input class="input" id="maEmail" type="email" value="' + App.esc(u.email || '') + '" placeholder="user@lab.com"></div>'
+      + '  <div><label class="label">Phone Number</label><input class="input" id="maPhone" type="tel" value="' + App.esc(u.phone || '') + '" placeholder="03xx-xxxxxxx"></div>'
+      + '  <div style="grid-column:1/-1"><label class="label">Address / Location</label><input class="input" id="maAddress" value="' + App.esc(u.address || '') + '" placeholder="Street address, City"></div>'
+      + '  <div style="grid-column:1/-1;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);margin-top:2px">'
+      + '    <span>Account Role:</span><span class="ma-role-badge">' + App.esc(roleLbl) + '</span>'
+      + '    <span style="margin-left:auto;font-size:12px">User ID: ' + App.esc(u.id) + '</span>'
+      + '  </div>'
+      + '</div>'
+      + '</div>'
+      + '<div class="ma-card">'
+      + '<div class="ma-title">Security &amp; Password</div>'
+      + '<div class="form-grid" style="grid-template-columns:1fr 1fr;gap:14px">'
+      + '  <div><label class="label">New Password</label><input class="input" id="maPass" type="password" placeholder="min 4 characters"></div>'
+      + '  <div><label class="label">Confirm New Password</label><input class="input" id="maPass2" type="password" placeholder="repeat new password"></div>'
+      + '</div>'
+      + '<p class="muted" style="font-size:12px;margin:8px 0 0">Leave password fields blank if you do not want to change your current password.</p>'
+      + '</div>'
+      + '<div style="margin-top:16px"><button class="btn btn-primary" id="maSave" style="min-width:140px">Save Changes</button></div>'
+      + '</div>';
+
     document.getElementById('setBody').innerHTML = html;
+    renderAvatar();
+
+    var fi = document.getElementById('maFile');
+    var ub = document.getElementById('maUploadBtn');
+    var rb = document.getElementById('maRemoveBtn');
+    if (ub && fi) ub.addEventListener('click', function () { fi.click(); });
+    if (fi) {
+      fi.addEventListener('change', function () {
+        var file = fi.files && fi.files[0];
+        if (!file) return;
+        if (!/^image\//.test(file.type)) { App.toast('Please select an image file', 'err'); return; }
+        var reader = new FileReader();
+        reader.onload = function () {
+          var img = new Image();
+          img.onload = function () {
+            var w = img.width, h = img.height;
+            var scale = Math.min(1, 192 / Math.max(w, h));
+            var cw = Math.max(1, Math.round(w * scale)), ch = Math.max(1, Math.round(h * scale));
+            var cv = document.createElement('canvas');
+            cv.width = cw; cv.height = ch;
+            cv.getContext('2d').drawImage(img, 0, 0, cw, ch);
+            photoVal = cv.toDataURL('image/jpeg', 0.85);
+            renderAvatar();
+          };
+          img.onerror = function () { App.toast('Could not process this image', 'err'); };
+          img.src = reader.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+    if (rb) {
+      rb.addEventListener('click', function () {
+        photoVal = '';
+        renderAvatar();
+      });
+    }
+
     document.getElementById('maSave').addEventListener('click', function () {
       var name = document.getElementById('maName').value.trim();
       var username = document.getElementById('maUser').value.trim();
+      var email = document.getElementById('maEmail').value.trim();
+      var phone = document.getElementById('maPhone').value.trim();
+      var address = document.getElementById('maAddress').value.trim();
       var p1 = document.getElementById('maPass').value;
       var p2 = document.getElementById('maPass2').value;
-      if (username.length < 3) return App.toast('Username must be at least 3 characters.', 'err');
+
+      if (!username || username.length < 3) return App.toast('Username must be at least 3 characters.', 'err');
       var clash = DB.all('users').some(function (x) {
         return x.id !== u.id && String(x.username || '').toLowerCase() === username.toLowerCase();
       });
       if (clash) return App.toast('That username is already taken.', 'err');
-      var patch = { username: username, name: name || u.name };
+
+      var patch = {
+        username: username,
+        name: name || u.name || username,
+        email: email,
+        phone: phone,
+        address: address,
+        photo: photoVal
+      };
+
       if (p1 || p2) {
         if (p1.length < 4) return App.toast('New password must be at least 4 characters.', 'err');
         if (p1 !== p2) return App.toast('Passwords do not match.', 'err');
         patch.password = p1;
       }
+
       DB.update('users', u.id, patch);
       try {
         var s = sess() || {};
         s.name = patch.name;
+        s.photo = patch.photo;
         localStorage.setItem('labpos_session', JSON.stringify(s));
       } catch (e) {}
-      App.toast('Account updated.');
+      App.toast('Account updated successfully!');
       if (App.renderShell) App.renderShell();
       renderSettings();
     });
@@ -1761,13 +2581,18 @@
     function fieldRow(p) {
       p = p || {};
       var isNum = p.type === 'number';
-      return '<div class="rt-frow" style="display:grid;grid-template-columns:1fr 90px 1fr 110px 36px;gap:8px;margin-bottom:8px">'
+      return '<div class="rt-frow" style="display:grid;grid-template-columns:1fr 110px 1fr 110px 36px;gap:8px;margin-bottom:8px">'
         + '<input class="input rt-fn" placeholder="Field label (e.g. Hemoglobin)" value="' + App.esc(p.name || '') + '">'
-        + '<input class="input rt-fu" placeholder="Unit" value="' + App.esc(p.unit || '') + '">'
-        + '<input class="input rt-fr" placeholder="Reference range" value="' + App.esc(p.ref || '') + '">'
+        + App.unitSelect('rt-fu', p.unit)
+        + '<div style="display:flex;gap:4px"><input class="input rt-fr" style="min-width:0" placeholder="Reference range" value="' + App.esc(p.ref || '') + '">' + App.refPresetSelect() + '</div>'
         + '<select class="input rt-ft"><option value="text"' + (isNum ? '' : ' selected') + '>Text</option>'
         + '<option value="number"' + (isNum ? ' selected' : '') + '>Number</option></select>'
-        + '<button type="button" class="btn btn-ghost btn-sm rt-frm" title="Remove">✕</button></div>';
+        + '<button type="button" class="btn btn-ghost btn-sm rt-frm" title="Remove">✕</button>'
+        + '<div style="grid-column:1/-1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:-2px">'
+        +   '<input class="input rt-xm" placeholder="Male range (optional)" value="' + App.esc(p.refMale || '') + '">'
+        +   '<input class="input rt-xf" placeholder="Female range (optional)" value="' + App.esc(p.refFemale || '') + '">'
+        +   '<input class="input rt-xc" placeholder="Child &lt; 13 yrs (optional)" value="' + App.esc(p.refChild || '') + '">'
+        + '</div></div>';
     }
     function wireRemovals() {
       box.querySelectorAll('.rt-frm').forEach(function (b) {
@@ -1780,11 +2605,13 @@
       box.querySelectorAll('.rt-frow').forEach(function (row) {
         var n = row.querySelector('.rt-fn').value.trim();
         if (!n) return;
-        out.push({
+        var o = {
           name: n,
           unit: row.querySelector('.rt-fu').value.trim(),
           ref: row.querySelector('.rt-fr').value.trim()
-        });
+        };
+        [['.rt-xm', 'refMale'], ['.rt-xf', 'refFemale'], ['.rt-xc', 'refChild']].forEach(function (x) { var v = row.querySelector(x[0]).value.trim(); if (v) o[x[1]] = v; });
+        out.push(o);
       });
       return out;
     }
@@ -1839,12 +2666,14 @@
       box.querySelectorAll('.rt-frow').forEach(function (row) {
         var n = row.querySelector('.rt-fn').value.trim();
         if (!n) return;
-        params.push({
+        var po = {
           name: n,
           unit: row.querySelector('.rt-fu').value.trim(),
           ref: row.querySelector('.rt-fr').value.trim(),
           type: row.querySelector('.rt-ft').value === 'number' ? 'number' : 'text'
-        });
+        };
+        [['.rt-xm', 'refMale'], ['.rt-xf', 'refFemale'], ['.rt-xc', 'refChild']].forEach(function (x) { var v = row.querySelector(x[0]).value.trim(); if (v) po[x[1]] = v; });
+        params.push(po);
       });
       DB.update('tests', tid, { params: params });
       App.toast('Report template saved — ' + params.length + ' field(s).');
@@ -1864,51 +2693,988 @@
 
   /* ---- WhatsApp API (admin only) ---- */
   function waDefaults() {
-    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false };
+    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true, autoReceipt: false, autoDueReminder: false, dueReminderDay: 1, autoOwnerSummary: false, ownerSummaryHour: 21, ownerNumber: '', autoFeedback: false, googleReviewUrl: '', autoRetest: false };
   }
+  /* ---- Link the lab's own WhatsApp number with a QR code (the server then sends from it) ---- */
+  function wireGateway() {
+    var box = document.getElementById('waGwBox'); if (!box) return;
+    if (!(DB.isCloud && DB.isCloud()) || (window.labposDesktop && window.labposDesktop.isDesktop)) { box.remove(); return; }
+    var timer = null, last = '';
+    function setCfg(patch) { var st = DB.get('settings', 'main') || {}, ww = Object.assign(waDefaults(), st.whatsapp || {}); Object.assign(ww, patch); st.whatsapp = ww; DB.update('settings', 'main', st); }
+    function qrImg(str) { try { var q = qrcode(0, 'L'); q.addData(str); q.make(); return q.createDataURL(5, 4); } catch (e) { return ''; } }
+    function draw(st) {
+      var sig = JSON.stringify([st.state, st.qr, st.number, st.err]); if (sig === last) return; last = sig;
+      var w = (DB.get('settings', 'main') || {}).whatsapp || {};
+      var head = '<div class="card wa-card" style="margin-bottom:16px"><div class="card-h"><h3>Connect your WhatsApp number</h3><span class="badge ' + (st.state === 'open' ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.state === 'open' ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">';
+      var body = '';
+      if (st.enabled === false) body = '<p class="muted" style="margin:0">Linking a WhatsApp number is not available on this server.</p>';
+      else if (st.state === 'open') {
+        body = '<p style="margin-top:0">Connected: <b>+' + App.esc(st.number) + '</b>. These messages are now sent from this number:</p>' +
+          '<ul style="margin:0 0 12px;padding-left:18px;line-height:1.75;font-size:13.5px"><li><b>Report ready</b> to the patient (and, if switched on below, the referring doctor)</li><li><b>Balance pending</b> note to the patient</li><li><b>Critical result</b> alert to the referring doctor and your lab number</li><li><b>Sign-in code and link</b> when a patient or doctor opens the reports portal</li><li><b>Doctor statements</b>, when you press Send on WhatsApp</li></ul>' +
+          '<div style="margin:0 0 12px"><label class="label" for="gwGap">Sending speed (protects your number from being blocked)</label><select class="select" id="gwGap" style="max-width:380px">' +
+          [[30, 'One message every 30 seconds'], [60, 'One message every minute (recommended)'], [120, 'One message every 2 minutes'], [300, 'One message every 5 minutes']].map(function (o) { return '<option value="' + o[0] + '"' + ((+w.gapSeconds || 60) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
+          '<div class="muted" style="font-size:12.5px;margin-top:5px">When many reports are sent together they wait in a line and leave one by one. <b>Sign-in codes and critical alerts are never delayed.</b></div></div>' +
+          '<p class="muted" style="margin:0 0 12px;font-size:13px">You can change the wording in <b>WhatsApp → Templates &amp; rules</b>. Messages go only to people with a phone number saved in your records.</p>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="gwTest">Send a test message to this number</button><button class="btn btn-ghost" id="gwOff" style="margin-left:auto;color:#b91c1c">Disconnect</button></div><p class="muted" id="gwMsg" style="margin:10px 0 0;font-size:13px"></p>';
+      } else if (st.state === 'qr' && st.qr) {
+        body = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start"><img alt="QR" style="width:230px;height:230px;border:1px solid var(--line);border-radius:12px;padding:6px;background:#fff" src="' + qrImg(st.qr) + '">' +
+          '<ol style="margin:0;padding-left:18px;line-height:1.9;font-size:14px;flex:1;min-width:210px"><li>Open <b>WhatsApp</b> on the lab\'s phone</li><li>Tap <b>Settings → Linked devices</b></li><li>Tap <b>Link a device</b> and scan this code</li></ol></div><p class="muted" style="margin:10px 0 0;font-size:13px">Waiting for the scan… the code refreshes by itself.</p>';
+      } else if (st.state === 'connecting') {
+        body = '<p class="muted" style="margin:0">Connecting to WhatsApp…</p>';
+      } else {
+        body = '<p class="muted" style="margin-top:0">Link <b>your lab\'s own WhatsApp number</b> by scanning a QR code, just like WhatsApp Web. After that, report links and sign-in codes go out from your number automatically. No paid API needed.</p>' +
+          '<div style="background:#fff8e6;border:1px solid #f0d9a0;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.55;margin-bottom:12px"><b>Please note:</b> this works like WhatsApp Web, it is not the official WhatsApp Business API. Use a <b>separate number kept for the lab</b>, message only your own patients, and avoid bulk or promotional messages, otherwise WhatsApp can block the number.</div>' +
+          (st.err ? '<p style="color:#b45309;margin:0 0 10px;font-size:13.5px">' + App.esc(st.err) + '</p>' : '') + '<button class="btn btn-primary" id="gwOn">Link my WhatsApp number</button>';
+      }
+      box.innerHTML = head + body + '</div></div>';
+      var on = document.getElementById('gwOn'); if (on) on.addEventListener('click', function () { on.disabled = true; last = ''; DB.waGw('POST', 'connect', {}).then(function (s) { draw(s); poll(); }, function (e) { on.disabled = false; App.toast(e.message, 'err'); }); });
+      var gp = document.getElementById('gwGap'); if (gp) gp.addEventListener('change', function () { setCfg({ gapSeconds: +gp.value }); App.toast('Sending speed saved: one message every ' + (+gp.value >= 60 ? (gp.value / 60) + ' min' : gp.value + ' seconds')); });
+      var test = document.getElementById('gwTest'); if (test) test.addEventListener('click', function () { test.disabled = true; DB.waGw('POST', 'send', { to: st.number, text: '*' + ((DB.get('settings', 'main') || {}).labName || 'Your lab') + '*\n\nThis is a test message. Your WhatsApp number is linked and ready to send reports.' }).then(function () { document.getElementById('gwMsg').textContent = 'Sent! Check WhatsApp (it may appear in "Message yourself").'; test.disabled = false; }, function (e) { document.getElementById('gwMsg').textContent = e.message; document.getElementById('gwMsg').style.color = '#b91c1c'; test.disabled = false; }); });
+      var off = document.getElementById('gwOff'); if (off) off.addEventListener('click', function () { App.confirm('Disconnect this WhatsApp number? Reports will stop going out on WhatsApp until you link a number again.').then(function (ok) { if (!ok) return; DB.waGw('POST', 'disconnect', {}).then(function () { setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' }); last = ''; draw({ enabled: true, state: 'idle', qr: '', number: '', err: '' }); }, function (e) { App.toast(e.message, 'err'); }); }); });
+    }
+    function poll() {
+      clearInterval(timer);
+      timer = setInterval(function () {
+        if (!document.getElementById('waGwBox')) { clearInterval(timer); return; }
+        DB.waGw('GET', 'status').then(function (st) {
+          var w = (DB.get('settings', 'main') || {}).whatsapp || {};
+          if (st.state === 'open' && (w.provider !== 'gateway' || w.gatewayNumber !== st.number)) { setCfg({ provider: 'gateway', gatewayNumber: st.number, labNumber: w.labNumber || st.number }); App.toast('WhatsApp number linked'); }
+          draw(st); if (st.state === 'open' || st.state === 'idle' || st.state === 'loggedout') clearInterval(timer);
+        }, function () {});
+      }, 2000);
+    }
+    DB.waGw('GET', 'status').then(function (st) {
+      var w = (DB.get('settings', 'main') || {}).whatsapp || {};
+      if (st.state === 'open' && (w.provider !== 'gateway' || w.gatewayNumber !== st.number)) setCfg({ provider: 'gateway', gatewayNumber: st.number, labNumber: w.labNumber || st.number });
+      if (st.state === 'loggedout' && w.provider === 'gateway') setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' });
+      draw(st); if (st.state === 'qr' || st.state === 'connecting') poll();
+    }, function (e) { box.innerHTML = ''; });
+  }
+
+  /* ==========================================================================
+     DEDICATED DASHBOARD: PATHOLOGIST & RADIOLOGIST DIGITAL SIGNATURES (#/settings/signatures)
+     Doctor Signatures, Official Stamps, Department Verification, Report Integration
+     ========================================================================== */
+  function renderSetSignatures() {
+    var box = document.getElementById('setBody');
+    if (!box) return;
+    var s = DB.get('settings', 'main') || {};
+
+    var DEFAULT_SIGS = [
+      { id: 'sig-1', name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist', regNo: 'PMC 45210-P', dept: 'Histopathology', active: true, sigImg: '', stampImg: '' },
+      { id: 'sig-2', name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: 'Consultant Hematologist', regNo: 'PMC 51890-P', dept: 'Hematology', active: true, sigImg: '', stampImg: '' },
+      { id: 'sig-3', name: 'ABDAL INAM UL HAQ KHANZADA', qual: 'M.Phil (Microbiology)', title: 'Lab Technologist', regNo: 'MLT 1284', dept: 'Microbiology', active: true, sigImg: '', stampImg: '' },
+      { id: 'sig-4', name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Senior Lab Technologist', regNo: 'MLT 0922', dept: 'Biochemistry', active: true, sigImg: '', stampImg: '' }
+    ];
+
+    var list = (Array.isArray(s.signatories) && s.signatories.length)
+      ? JSON.parse(JSON.stringify(s.signatories))
+      : JSON.parse(JSON.stringify(DEFAULT_SIGS));
+
+    list.forEach(function (d, i) {
+      if (!d.id) d.id = 'sig-' + (i + 1);
+      if (d.active === undefined) d.active = true;
+    });
+
+    var enableSignatures = s.enableSignatures !== false;
+    var showStamps = s.showStamps !== false;
+    var verNote = s.verNote || s.verificationNote ||
+      'Electronically verified report. No signatures necessary. Sample brought to the main lab. Lab reports should be interpreted by a physician in correlation with clinical and radiologic findings.';
+
+    var CSS =
+      '.dsig-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;flex-wrap:wrap}' +
+      '.dsig-head h2{margin:0 0 4px;font-size:20px;font-weight:800;color:var(--brand-d);display:flex;align-items:center;gap:8px}' +
+      '.dsig-head p{margin:0;font-size:13px;color:var(--muted)}' +
+      '.dsig-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:16px;margin:16px 0}' +
+      '.dsig-card{background:#fff;border:1px solid var(--bd);border-radius:14px;padding:16px;box-shadow:var(--sh-sm);display:flex;flex-direction:column;gap:12px;transition:box-shadow .2s}' +
+      '.dsig-card:hover{box-shadow:var(--sh-md)}' +
+      '.dsig-card.is-off{opacity:.65;background:#f8fafc}' +
+      '.dsig-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}' +
+      '.dsig-card-title{font-weight:800;font-size:14.5px;color:var(--brand-d)}' +
+      '.dsig-card-sub{font-size:12px;color:var(--ink2);margin-top:2px}' +
+      '.dsig-preview-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:4px 0}' +
+      '.dsig-box{border:1px dashed #cbd5e1;border-radius:8px;padding:8px;min-height:68px;background:#f8fafc;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative}' +
+      '.dsig-box img{max-height:48px;max-width:100%;object-fit:contain}' +
+      '.dsig-box-label{font-size:10px;font-weight:800;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}' +
+      '.dsig-card-acts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:auto;padding-top:10px;border-top:1px solid var(--line)}' +
+      '.dsig-cfg-card{background:#f8fafc;border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px}' +
+      '.dsig-prev-box{background:#fff;border:1px solid var(--bd);border-radius:12px;padding:18px;margin-top:20px;box-shadow:var(--sh-sm)}';
+
+    function saveAll(msg) {
+      DB.update('settings', 'main', {
+        signatories: list,
+        enableSignatures: enableSignatures,
+        showStamps: showStamps,
+        verNote: verNote
+      });
+      App.toast(msg || 'Signatures & Doctor settings saved.', 'ok');
+      draw();
+    }
+
+    function openDoctorModal(editIdx) {
+      var isEdit = editIdx !== null && editIdx !== undefined;
+      var d = isEdit ? list[editIdx] : { name: '', qual: '', title: 'Consultant Pathologist', dept: 'General', regNo: '', active: true, sigImg: '', stampImg: '' };
+
+      var body =
+        '<div class="form-grid">' +
+          '<div style="grid-column:1/-1"><label class="label">Doctor / Verifier Full Name *</label>' +
+          '<input class="input" id="dfName" placeholder="e.g. DR. AAFRINISH AMANAT" value="' + App.esc(d.name || '') + '"></div>' +
+          '<div><label class="label">Qualifications *</label>' +
+          '<input class="input" id="dfQual" placeholder="e.g. MBBS, M.Phil, FCPS" value="' + App.esc(d.qual || '') + '"></div>' +
+          '<div><label class="label">Designation / Title</label>' +
+          '<input class="input" id="dfTitle" placeholder="e.g. Consultant Pathologist" value="' + App.esc(d.title || '') + '"></div>' +
+          '<div><label class="label">Specialty / Department</label>' +
+          '<select class="select" id="dfDept">' +
+            ['General', 'Hematology', 'Histopathology', 'Chemical Pathology', 'Microbiology', 'Radiology', 'Molecular Biology'].map(function (dp) {
+              return '<option value="' + dp + '"' + ((d.dept === dp) ? ' selected' : '') + '>' + dp + '</option>';
+            }).join('') +
+          '</select></div>' +
+          '<div><label class="label">PMDC / License Reg No.</label>' +
+          '<input class="input" id="dfReg" placeholder="e.g. PMDC 45210-P" value="' + App.esc(d.regNo || '') + '"></div>' +
+          '<div style="grid-column:1/-1"><label class="check"><input type="checkbox" id="dfActive"' + (d.active !== false ? ' checked' : '') + '> <span>Active (Include in printed test reports)</span></label></div>' +
+        '</div>' +
+        '<div class="actions" style="margin-top:18px">' +
+          '<button class="btn btn-ghost" id="dfCancel">Cancel</button>' +
+          '<button class="btn btn-primary" id="dfSave">' + (isEdit ? 'Update Doctor' : 'Add Doctor') + '</button>' +
+        '</div>';
+
+      App.modal(isEdit ? 'Edit Verifying Doctor' : 'Add Verifying Doctor', body, {
+        onOpen: function (root, close) {
+          root.querySelector('#dfCancel').addEventListener('click', close);
+          root.querySelector('#dfSave').addEventListener('click', function () {
+            var nm = root.querySelector('#dfName').value.trim();
+            if (!nm) { App.toast('Doctor name is required', 'err'); return; }
+            d.name = nm;
+            d.qual = root.querySelector('#dfQual').value.trim();
+            d.title = root.querySelector('#dfTitle').value.trim();
+            d.dept = root.querySelector('#dfDept').value;
+            d.regNo = root.querySelector('#dfReg').value.trim();
+            d.active = root.querySelector('#dfActive').checked;
+            if (!isEdit) {
+              d.id = 'sig-' + (list.length + 1);
+              list.push(d);
+            }
+            close();
+            saveAll('Doctor ' + d.name + ' saved.');
+          });
+        }
+      });
+    }
+
+    function openSigPadModal(idx) {
+      var d = list[idx];
+      if (!d) return;
+
+      var body =
+        '<div style="display:flex;gap:8px;border-bottom:1px solid var(--line);margin-bottom:14px;padding-bottom:8px" id="spTabNav">' +
+          '<button class="btn btn-sm btn-primary" id="spTabDraw">✏️ Draw Signature</button>' +
+          '<button class="btn btn-sm btn-ghost" id="spTabUpload">📁 Upload Image</button>' +
+          '<button class="btn btn-sm btn-ghost" id="spTabCallig">✍️ Calligraphy Font</button>' +
+        '</div>' +
+        '<div id="spPanelDraw">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:12.5px">' +
+            '<div>Ink: <button class="btn btn-sm btn-ghost sp-ink on" data-col="#1d4ed8" style="color:#1d4ed8;font-weight:700">● Blue</button> <button class="btn btn-sm btn-ghost sp-ink" data-col="#0f172a" style="color:#0f172a;font-weight:700">● Black</button></div>' +
+            '<button class="btn btn-sm btn-ghost" id="spClear">Clear Canvas</button>' +
+          '</div>' +
+          '<canvas id="dsCanvas" width="460" height="150" style="border:2px dashed #94a3b8;border-radius:10px;background:#fff;cursor:crosshair;touch-action:none;display:block;width:100%"></canvas>' +
+          '<p class="muted" style="font-size:11.5px;margin:6px 0 0">Sign smoothly using your mouse, trackpad, or touchscreen.</p>' +
+        '</div>' +
+        '<div id="spPanelUpload" hidden>' +
+          '<label class="label">Select signature image (PNG / JPG)</label>' +
+          '<input type="file" id="spFile" accept="image/*" class="input" style="padding:6px">' +
+          '<div id="spUploadPrev" style="margin-top:12px;min-height:90px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;display:flex;align-items:center;justify-content:center">' +
+            '<span class="muted" style="font-size:12.5px">Image preview will appear here</span>' +
+          '</div>' +
+          '<label class="check" style="margin-top:10px;font-size:12.5px"><input type="checkbox" id="spMakeTrans" checked> Remove white background (Transparentize ink)</label>' +
+        '</div>' +
+        '<div id="spPanelCallig" hidden>' +
+          '<label class="label">Preview calligraphy signature for ' + App.esc(d.name) + '</label>' +
+          '<div id="spCalligPrev" style="margin-top:8px;background:#fff;border:1px dashed #cbd5e1;border-radius:8px;padding:24px;text-align:center;font-family:\'Brush Script MT\',cursive;font-size:36px;color:#1e40af;letter-spacing:1px;box-shadow:inset 0 0 10px rgba(0,0,0,.02)">' +
+            App.esc(d.name) +
+          '</div>' +
+        '</div>' +
+        '<div class="actions" style="margin-top:18px">' +
+          '<button class="btn btn-ghost" id="spModalCancel">Cancel</button>' +
+          '<button class="btn btn-primary" id="spModalSave">Apply & Save Signature</button>' +
+        '</div>';
+
+      App.modal('Digital Signature for ' + d.name, body, {
+        onOpen: function (root, close) {
+          var mode = 'draw';
+          var inkColor = '#1d4ed8';
+          var canvas = root.querySelector('#dsCanvas');
+          var ctx = canvas ? canvas.getContext('2d') : null;
+          var drawing = false;
+          var uploadedDataUrl = '';
+
+          var pnlDraw = root.querySelector('#spPanelDraw');
+          var pnlUpload = root.querySelector('#spPanelUpload');
+          var pnlCallig = root.querySelector('#spPanelCallig');
+
+          var btnDraw = root.querySelector('#spTabDraw');
+          var btnUpload = root.querySelector('#spTabUpload');
+          var btnCallig = root.querySelector('#spTabCallig');
+
+          function switchTab(t) {
+            mode = t;
+            btnDraw.className = 'btn btn-sm ' + (t === 'draw' ? 'btn-primary' : 'btn-ghost');
+            btnUpload.className = 'btn btn-sm ' + (t === 'upload' ? 'btn-primary' : 'btn-ghost');
+            btnCallig.className = 'btn btn-sm ' + (t === 'callig' ? 'btn-primary' : 'btn-ghost');
+            pnlDraw.hidden = t !== 'draw';
+            pnlUpload.hidden = t !== 'upload';
+            pnlCallig.hidden = t !== 'callig';
+          }
+
+          btnDraw.addEventListener('click', function () { switchTab('draw'); });
+          btnUpload.addEventListener('click', function () { switchTab('upload'); });
+          btnCallig.addEventListener('click', function () { switchTab('callig'); });
+
+          // Ink buttons
+          root.querySelectorAll('.sp-ink').forEach(function (b) {
+            b.addEventListener('click', function () {
+              root.querySelectorAll('.sp-ink').forEach(function (x) { x.classList.remove('on'); });
+              b.classList.add('on');
+              inkColor = b.getAttribute('data-col');
+            });
+          });
+
+          // Canvas drawing logic
+          function getPos(e) {
+            var rect = canvas.getBoundingClientRect();
+            var scaleX = canvas.width / rect.width;
+            var scaleY = canvas.height / rect.height;
+            var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+          }
+          function startDraw(e) {
+            e.preventDefault();
+            drawing = true;
+            var pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+            ctx.strokeStyle = inkColor;
+            ctx.lineWidth = 2.8;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+          }
+          function moveDraw(e) {
+            if (!drawing) return;
+            e.preventDefault();
+            var pos = getPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+          }
+          function endDraw(e) {
+            if (!drawing) return;
+            e.preventDefault();
+            drawing = false;
+          }
+
+          if (canvas) {
+            canvas.addEventListener('mousedown', startDraw);
+            canvas.addEventListener('mousemove', moveDraw);
+            window.addEventListener('mouseup', endDraw);
+            canvas.addEventListener('touchstart', startDraw, { passive: false });
+            canvas.addEventListener('touchmove', moveDraw, { passive: false });
+            window.addEventListener('touchend', endDraw, { passive: false });
+          }
+
+          root.querySelector('#spClear').addEventListener('click', function () {
+            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+          });
+
+          // File upload logic
+          var fileInp = root.querySelector('#spFile');
+          var upPrev = root.querySelector('#spUploadPrev');
+          fileInp.addEventListener('change', function () {
+            var file = this.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function (evt) {
+              uploadedDataUrl = evt.target.result;
+              upPrev.innerHTML = '<img src="' + uploadedDataUrl + '" style="max-height:80px;max-width:240px;object-fit:contain">';
+            };
+            reader.readAsDataURL(file);
+          });
+
+          root.querySelector('#spModalCancel').addEventListener('click', close);
+          root.querySelector('#spModalSave').addEventListener('click', function () {
+            var finalImg = '';
+            if (mode === 'draw') {
+              if (canvas) finalImg = canvas.toDataURL('image/png');
+            } else if (mode === 'upload') {
+              if (!uploadedDataUrl) { App.toast('Please select a signature image first', 'err'); return; }
+              var makeTrans = root.querySelector('#spMakeTrans').checked;
+              if (makeTrans) {
+                // remove white background
+                var img = new Image();
+                img.onload = function () {
+                  var off = document.createElement('canvas');
+                  off.width = img.width;
+                  off.height = img.height;
+                  var octx = off.getContext('2d');
+                  octx.drawImage(img, 0, 0);
+                  var imgData = octx.getImageData(0, 0, off.width, off.height);
+                  var data = imgData.data;
+                  for (var i = 0; i < data.length; i += 4) {
+                    var r = data[i], g = data[i+1], b = data[i+2];
+                    if (r > 215 && g > 215 && b > 215) {
+                      data[i+3] = 0;
+                    }
+                  }
+                  octx.putImageData(imgData, 0, 0);
+                  d.sigImg = off.toDataURL('image/png');
+                  close();
+                  saveAll('Signature saved for ' + d.name);
+                };
+                img.src = uploadedDataUrl;
+                return;
+              } else {
+                finalImg = uploadedDataUrl;
+              }
+            } else if (mode === 'callig') {
+              var cCanvas = document.createElement('canvas');
+              cCanvas.width = 460;
+              cCanvas.height = 120;
+              var cCtx = cCanvas.getContext('2d');
+              cCtx.clearRect(0, 0, cCanvas.width, cCanvas.height);
+              cCtx.font = 'italic 42px "Brush Script MT", cursive, sans-serif';
+              cCtx.fillStyle = '#1d4ed8';
+              cCtx.textAlign = 'center';
+              cCtx.fillText(d.name, cCanvas.width / 2, 70);
+              // underline flourish
+              cCtx.beginPath();
+              cCtx.moveTo(cCanvas.width / 2 - 120, 85);
+              cCtx.bezierCurveTo(cCanvas.width / 2 - 40, 95, cCanvas.width / 2 + 60, 75, cCanvas.width / 2 + 130, 90);
+              cCtx.strokeStyle = '#1d4ed8';
+              cCtx.lineWidth = 2.5;
+              cCtx.stroke();
+              finalImg = cCanvas.toDataURL('image/png');
+            }
+
+            if (finalImg) {
+              d.sigImg = finalImg;
+              close();
+              saveAll('Signature saved for ' + d.name);
+            }
+          });
+        }
+      });
+    }
+
+    function openStampModal(idx) {
+      var d = list[idx];
+      if (!d) return;
+
+      var body =
+        '<div>' +
+          '<label class="label">Select Official Stamp Seal image (PNG / JPG)</label>' +
+          '<input type="file" id="stFile" accept="image/*" class="input" style="padding:6px">' +
+          '<div id="stPrev" style="margin-top:14px;min-height:100px;background:#f8fafc;border:2px dashed #cbd5e1;border-radius:10px;display:flex;align-items:center;justify-content:center">' +
+            (d.stampImg
+              ? '<img src="' + d.stampImg + '" style="max-height:85px;max-width:140px;object-fit:contain">'
+              : '<span class="muted" style="font-size:12.5px">No stamp uploaded yet</span>') +
+          '</div>' +
+          '<p class="muted" style="font-size:12px;margin:8px 0 0">Recommended: Official round or rectangular lab verification stamp on transparent background.</p>' +
+        '</div>' +
+        '<div class="actions" style="margin-top:18px">' +
+          '<button class="btn btn-ghost" id="stCancel">Cancel</button>' +
+          (d.stampImg ? '<button class="btn btn-danger" id="stRemove">Remove Stamp</button>' : '') +
+          '<button class="btn btn-primary" id="stSave">Save Stamp</button>' +
+        '</div>';
+
+      App.modal('Official Stamp for ' + d.name, body, {
+        onOpen: function (root, close) {
+          var stampData = d.stampImg || '';
+          var finp = root.querySelector('#stFile');
+          var prv = root.querySelector('#stPrev');
+          finp.addEventListener('change', function () {
+            var file = this.files[0];
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function (e) {
+              stampData = e.target.result;
+              prv.innerHTML = '<img src="' + stampData + '" style="max-height:85px;max-width:140px;object-fit:contain">';
+            };
+            reader.readAsDataURL(file);
+          });
+          root.querySelector('#stCancel').addEventListener('click', close);
+          var rmBtn = root.querySelector('#stRemove');
+          if (rmBtn) {
+            rmBtn.addEventListener('click', function () {
+              d.stampImg = '';
+              close();
+              saveAll('Stamp removed for ' + d.name);
+            });
+          }
+          root.querySelector('#stSave').addEventListener('click', function () {
+            if (!stampData) { App.toast('Please select a stamp image', 'err'); return; }
+            d.stampImg = stampData;
+            close();
+            saveAll('Stamp saved for ' + d.name);
+          });
+        }
+      });
+    }
+
+    function draw() {
+      var sigCount = list.filter(function (d) { return !!(d.sigImg || d.signature); }).length;
+      var stampCount = list.filter(function (d) { return !!d.stampImg; }).length;
+
+      var kpiHtml =
+        '<div class="kpi-grid" style="margin-bottom:16px">' +
+          '<div class="kpi t-navy"><div class="kpi-ic">' + App.icon('users', 20) + '</div><div class="kpi-lb">VERIFYING DOCTORS</div><div class="kpi-nm">' + list.length + '</div><div class="kpi-sb">pathologists &amp; team</div></div>' +
+          '<div class="kpi t-blue"><div class="kpi-ic">' + App.icon('edit', 20) + '</div><div class="kpi-lb">DIGITAL SIGNATURES</div><div class="kpi-nm">' + sigCount + ' / ' + list.length + '</div><div class="kpi-sb">e-signatures ready</div></div>' +
+          '<div class="kpi t-amber"><div class="kpi-ic">' + App.icon('shield', 20) + '</div><div class="kpi-lb">OFFICIAL STAMPS</div><div class="kpi-nm">' + stampCount + ' / ' + list.length + '</div><div class="kpi-sb">clinic seals uploaded</div></div>' +
+          '<div class="kpi t-green"><div class="kpi-ic">' + App.icon('check', 20) + '</div><div class="kpi-lb">REPORT INTEGRATION</div><div class="kpi-nm">' + (enableSignatures ? 'ACTIVE' : 'OFF') + '</div><div class="kpi-sb">auto-embed on PDFs</div></div>' +
+        '</div>';
+
+      var cardsHtml = list.map(function (d, i) {
+        var hasSig = !!(d.sigImg || d.signature);
+        var hasStamp = !!d.stampImg;
+        return '<div class="dsig-card ' + (d.active ? '' : 'is-off') + '">' +
+          '<div class="dsig-card-top">' +
+            '<div>' +
+              '<div class="dsig-card-title">' + App.esc(d.name) + '</div>' +
+              '<div class="dsig-card-sub"><b>' + App.esc(d.qual || '—') + '</b></div>' +
+              '<div style="font-size:11.5px;color:var(--muted);margin-top:2px">' +
+                App.esc(d.title || '') + (d.regNo ? ' &middot; ' + App.esc(d.regNo) : '') +
+              '</div>' +
+            '</div>' +
+            '<span class="badge ' + (d.active ? 'b-ready' : 'b-pending') + '">' + (d.active ? 'Active' : 'Hidden') + '</span>' +
+          '</div>' +
+          '<div class="dsig-preview-row">' +
+            '<div class="dsig-box">' +
+              '<div class="dsig-box-label">Digital Signature</div>' +
+              (hasSig
+                ? '<img src="' + (d.sigImg || d.signature) + '" alt="Signature">'
+                : '<span style="font-size:11.5px;color:var(--muted)">No signature</span>') +
+            '</div>' +
+            '<div class="dsig-box">' +
+              '<div class="dsig-box-label">Official Stamp</div>' +
+              (hasStamp
+                ? '<img src="' + d.stampImg + '" alt="Stamp">'
+                : '<span style="font-size:11.5px;color:var(--muted)">No stamp</span>') +
+            '</div>' +
+          '</div>' +
+          '<div class="dsig-card-acts">' +
+            '<button class="btn btn-sm btn-primary dsig-btn-sig" data-i="' + i + '">' + App.icon('edit', 13) + (hasSig ? ' Change Sig' : ' + Add Sig') + '</button>' +
+            '<button class="btn btn-sm btn-ghost dsig-btn-stamp" data-i="' + i + '">' + (hasStamp ? 'Change Stamp' : '+ Stamp') + '</button>' +
+            '<button class="btn btn-sm btn-ghost dsig-btn-edit" data-i="' + i + '">Edit</button>' +
+            (i > 0 ? '<button class="btn btn-sm btn-ghost dsig-btn-up" data-i="' + i + '" title="Move left/up">&uarr;</button>' : '') +
+            (i < list.length - 1 ? '<button class="btn btn-sm btn-ghost dsig-btn-dn" data-i="' + i + '" title="Move right/down">&darr;</button>' : '') +
+            '<button class="btn btn-sm btn-danger dsig-btn-del" data-i="' + i + '" title="Remove doctor" style="margin-left:auto">&times;</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      var dummyReport = {
+        s: {
+          signatories: list,
+          enableSignatures: enableSignatures,
+          showStamps: showStamps,
+          verNote: verNote,
+          address: s.address || '154-A-HBFC Opposite Jinnah Hospital, Lahore',
+          phone: s.phone || '0322-8441899',
+          website: s.website || 'www.optixlab.com'
+        }
+      };
+
+      box.innerHTML =
+        '<style>' + CSS + '</style>' +
+        '<div class="dsig-head">' +
+          '<div>' +
+            '<h2>' + App.icon('edit', 22) + ' Pathologist &amp; Radiologist Digital Signatures</h2>' +
+            '<p>Manage doctors, consultants, digital e-signatures, official verification stamps, and report inclusion.</p>' +
+          '</div>' +
+          '<div style="display:flex;gap:8px">' +
+            '<button class="btn btn-primary" id="dsigAddDoctor">' + App.icon('plus', 14) + ' Add Verifying Doctor</button>' +
+          '</div>' +
+        '</div>' +
+        kpiHtml +
+        '<div class="dsig-cfg-card">' +
+          '<div style="font-weight:800;font-size:14.5px;color:var(--brand-d);margin-bottom:10px">Global Report Signature Controls</div>' +
+          '<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;margin-bottom:12px">' +
+            '<label class="check" style="font-weight:700">' +
+              '<input type="checkbox" id="dsigEnable"' + (enableSignatures ? ' checked' : '') + '> ' +
+              '<span>Enable Electronic Signatures on Lab Reports &amp; PDFs</span>' +
+            '</label>' +
+            '<label class="check" style="font-weight:700">' +
+              '<input type="checkbox" id="dsigShowStamps"' + (showStamps ? ' checked' : '') + '> ' +
+              '<span>Show Official Doctor Stamps / Seals on Reports</span>' +
+            '</label>' +
+          '</div>' +
+          '<label class="label" style="margin-top:8px">Report Verification Statement (Printed above doctors)</label>' +
+          '<textarea class="input" id="dsigVerNote" rows="2" style="font-size:13px">' + App.esc(verNote) + '</textarea>' +
+          '<div style="margin-top:12px;display:flex;justify-content:flex-end">' +
+            '<button class="btn btn-primary" id="dsigSaveGlobal">Save Signature Settings</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="dsig-grid">' + cardsHtml + '</div>' +
+        '<div class="dsig-prev-box">' +
+          '<div style="font-weight:800;font-size:14px;color:var(--brand-d);margin-bottom:10px;display:flex;align-items:center;gap:6px">' +
+            App.icon('file', 16) + ' Live Report Footer Preview (What Patients See on Report)' +
+          '</div>' +
+          '<div style="background:#fff;border:1px solid #000;border-radius:4px;padding:16px 20px">' +
+            (window.reportFooterHtml ? reportFooterHtml(dummyReport) : '<p class="muted">Report footer preview</p>') +
+          '</div>' +
+        '</div>';
+
+      // Attach handlers
+      document.getElementById('dsigAddDoctor').addEventListener('click', function () { openDoctorModal(null); });
+
+      document.getElementById('dsigSaveGlobal').addEventListener('click', function () {
+        enableSignatures = document.getElementById('dsigEnable').checked;
+        showStamps = document.getElementById('dsigShowStamps').checked;
+        verNote = document.getElementById('dsigVerNote').value.trim();
+        saveAll('Global signature settings saved.');
+      });
+
+      box.querySelectorAll('.dsig-btn-sig').forEach(function (btn) {
+        btn.addEventListener('click', function () { openSigPadModal(parseInt(btn.getAttribute('data-i'), 10)); });
+      });
+
+      box.querySelectorAll('.dsig-btn-stamp').forEach(function (btn) {
+        btn.addEventListener('click', function () { openStampModal(parseInt(btn.getAttribute('data-i'), 10)); });
+      });
+
+      box.querySelectorAll('.dsig-btn-edit').forEach(function (btn) {
+        btn.addEventListener('click', function () { openDoctorModal(parseInt(btn.getAttribute('data-i'), 10)); });
+      });
+
+      box.querySelectorAll('.dsig-btn-up').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var i = parseInt(btn.getAttribute('data-i'), 10);
+          if (i > 0) {
+            var temp = list[i - 1];
+            list[i - 1] = list[i];
+            list[i] = temp;
+            saveAll('Order updated.');
+          }
+        });
+      });
+
+      box.querySelectorAll('.dsig-btn-dn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var i = parseInt(btn.getAttribute('data-i'), 10);
+          if (i < list.length - 1) {
+            var temp = list[i + 1];
+            list[i + 1] = list[i];
+            list[i] = temp;
+            saveAll('Order updated.');
+          }
+        });
+      });
+
+      box.querySelectorAll('.dsig-btn-del').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var i = parseInt(btn.getAttribute('data-i'), 10);
+          var docName = list[i].name;
+          App.confirm('Remove doctor ' + docName + ' from signatories?').then(function (ok) {
+            if (!ok) return;
+            list.splice(i, 1);
+            saveAll('Doctor ' + docName + ' removed.');
+          });
+        });
+      });
+    }
+
+    draw();
+  }
+
   /* ---- WhatsApp: admin only sees/edits their lab number; API hidden ---- */
+  /* ---- Patient & doctor portal: switch, link / QR to share, and "prepare old reports" ---- */
+  function renderSetPortal() {
+    var s = DB.get('settings', 'main') || {}, box = document.getElementById('setBody');
+    var cloud = !!(DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop);
+    if (!cloud) { box.innerHTML = '<p class="muted">The patient portal works for cloud labs (web / Android). Open your lab in the browser to set it up.</p>'; return; }
+    box.innerHTML = '<p class="muted">Loading…</p>';
+    DB.saas('GET', 'me').then(function (me) {
+      var slug = me.lab.slug, link = location.href.split('#')[0].replace(/index\.html$/, '') + '#/portal/' + slug;
+      var w = s.whatsapp || {}, waOn = !!(w.token && (w.provider === 'custom' ? w.baseUrl : w.instanceId));
+      var ready = 0, withPdf = 0;
+      try { DB.all('invoices').forEach(function (i) { var rs = DB.all('results').filter(function (r) { return r.invoiceId === i.id; }); if (rs.length && rs.every(function (r) { return r.status === 'ready'; })) { ready++; if (i.reportPdfKey) withPdf++; } }); } catch (e) {}
+      box.innerHTML =
+        '<div class="card" style="max-width:720px"><div class="card-h"><h3>Patient &amp; doctor portal</h3><span class="badge ' + (s.portalOn ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (s.portalOn ? 'ON' : 'OFF') + '</span></div><div class="card-b">' +
+        '<p class="muted" style="margin-top:0">Patients open one link, type their mobile number, get a <b>6-digit code</b> and see <b>all their reports</b>. Doctors who are on your Doctors list see the reports of the patients they referred and their monthly commission. Nobody else can see anything.</p>' +
+        '<label class="check" style="display:flex;gap:8px;align-items:center;font-weight:700"><input type="checkbox" id="ptOn"' + (s.portalOn ? ' checked' : '') + '> Switch the portal ON</label>' +
+        '<div id="ptBody" style="margin-top:14px;' + (s.portalOn ? '' : 'opacity:.55') + '">' +
+        '<label class="label">Link to share (put it on invoices, WhatsApp, or print the QR)</label><div style="display:flex;gap:8px"><input class="input" id="ptLink" readonly value="' + App.esc(link) + '"><button class="btn" id="ptCopy">Copy</button></div>' +
+        '<div id="ptQr" style="margin:12px 0"></div>' +
+        '<div style="background:#f6f8fd;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.6"><b>How the code is sent:</b> ' + (waOn ? 'on <b>WhatsApp</b>, from your lab\'s WhatsApp number (the one set up in Settings → WhatsApp).' : '<span style="color:#b45309">your WhatsApp is not set up yet, so codes go <b>by email</b> to people who have an email address on file. Set up Settings → WhatsApp for the best experience.</span>') +
+        '<br>Make sure patients\' and doctors\' <b>phone numbers</b> are saved correctly; that is how they are recognised.</div>' +
+        '<div style="margin-top:16px"><b>Reports ready for the portal:</b> ' + withPdf + ' of ' + ready + ' finished reports<div class="muted" style="font-size:12.5px;margin:4px 0 8px">New reports are prepared automatically. Use the button for the older ones.</div>' +
+        '<button class="btn btn-primary" id="ptPrep"' + (ready > withPdf ? '' : ' disabled') + '>Prepare ' + (ready - withPdf) + ' older report' + (ready - withPdf === 1 ? '' : 's') + '</button> <span class="muted" id="ptProg" style="font-size:13px"></span></div></div></div></div>';
+      if (App.qrDataUrlFor) { try { var q = App.qrDataUrlFor(link); if (q) document.getElementById('ptQr').innerHTML = '<img src="' + q + '" alt="QR" style="width:150px;height:150px;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff">'; } catch (e) {} }
+      else App.loadScript('assets/js/mod-results.js').then(function () { try { var q2 = App.qrDataUrlFor && App.qrDataUrlFor(link); var el = document.getElementById('ptQr'); if (q2 && el) el.innerHTML = '<img src="' + q2 + '" alt="QR" style="width:150px;height:150px;border:1px solid var(--line);border-radius:10px;padding:6px;background:#fff">'; } catch (e) {} });
+      document.getElementById('ptOn').addEventListener('change', function (e) { DB.update('settings', 'main', { portalOn: e.target.checked }); App.toast(e.target.checked ? 'Portal is ON' : 'Portal is OFF'); renderSetPortal(); });
+      document.getElementById('ptCopy').addEventListener('click', function () { var i = document.getElementById('ptLink'); i.select(); try { document.execCommand('copy'); App.toast('Link copied'); } catch (e) { App.toast('Select the link and copy it', 'err'); } });
+      var pb = document.getElementById('ptPrep'); if (pb) pb.addEventListener('click', function () {
+        pb.disabled = true;
+        var go = function () { App.preparePortalReports(function (d, t) { document.getElementById('ptProg').textContent = 'Preparing ' + d + ' of ' + t + '…'; }).then(function (n) { App.toast(n + ' report' + (n === 1 ? '' : 's') + ' prepared'); renderSetPortal(); }, function (e) { pb.disabled = false; App.toast((e && e.message) || 'Could not prepare', 'err'); }); };
+        if (App.preparePortalReports) go(); else App.loadScript('assets/js/mod-results.js').then(go, function () { pb.disabled = false; App.toast('Could not load', 'err'); });
+      });
+    }, function (e) { box.innerHTML = '<p style="color:#b91c1c">' + App.esc(e.message) + '</p>'; });
+  }
+
+  /* ---- Email & Slack: how finished reports leave the lab besides WhatsApp ---- */
+  function renderSetSharing() {
+    var s = DB.get('settings', 'main') || {}, box = document.getElementById('setBody');
+    var cloud = !!(DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop);
+    if (!cloud) { box.innerHTML = '<p class="muted">Email and Slack sharing work in the web / Android app (cloud). Open your lab in the browser to use them.</p>'; return; }
+    box.innerHTML = '<p class="muted">Loading…</p>';
+    DB.share('GET', 'status').then(function (st) {
+      var tail = st.slackTail ? '…' + App.esc(st.slackTail) : '';
+      box.innerHTML =
+        '<div class="card" style="max-width:720px"><div class="card-h"><h3>Email reports</h3><span class="badge ' + (st.email ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.email ? 'ON' : 'NOT SET UP') + '</span></div><div class="card-b">' +
+        (st.email
+          ? '<p class="muted" style="margin-top:0">Open any report and press <b>Email Patient</b> or <b>Email Doctor</b>. The PDF is attached, with a link to open it on a phone. Mail shows your lab\'s name as the sender' + (s.email ? ' and replies go to <b>' + App.esc(s.email) + '</b>' : '') + '. Limit: <b>' + st.perDay + ' report emails per day</b> for your lab.</p>' +
+            (s.email ? '' : '<p style="color:#b45309;font-size:13px">Tip: add your lab\'s <b>Email</b> in Edit Report Form, so patients can reply to you.</p>')
+          : '<p class="muted" style="margin-top:0">Email sending is not set up on this server yet. The system owner can set it up in the superadmin console (Email sender).</p>') +
+        (st.email ? '<div style="margin:12px 0 4px;display:grid;gap:8px"><label class="check" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="emAutoPat"' + (s.emailAuto ? ' checked' : '') + '> Email every report to the <b>patient</b> automatically when it is ready</label>' +
+          '<label class="check" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="emAutoDoc"' + (s.emailAutoDoctor ? ' checked' : '') + '> Also email it to the <b>referring doctor</b></label>' +
+          '<span class="muted" style="font-size:12.5px">Only patients / doctors who have an email address on file get it. A report with an unpaid balance waits until it is paid (same rule as WhatsApp).</span></div>' : '') +
+        '<p class="muted" style="font-size:12.5px;margin-bottom:0">Patient and doctor email addresses are saved on their records (Patients, Doctors).</p></div></div>' +
+        '<div class="card" style="max-width:720px;margin-top:14px"><div class="card-h"><h3>Slack</h3><span class="badge ' + (st.slack ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.slack ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">' +
+        '<p class="muted" style="margin-top:0">Post a message with the report link to a Slack channel (for your team or a doctor group). Only the patient name, invoice number, test names and the report link are sent.</p>' +
+        '<ol class="muted" style="margin:0 0 12px 18px;padding:0;line-height:1.8;font-size:13px"><li>Open <b>api.slack.com/apps</b> → <b>Create New App</b> → From scratch → pick your workspace.</li><li><b>Incoming Webhooks</b> → turn it <b>On</b> → <b>Add New Webhook to Workspace</b> → choose the channel.</li><li>Copy the <b>Webhook URL</b> (starts with <code>https://hooks.slack.com/services/</code>) and paste it here.</li></ol>' +
+        '<label class="label" for="skUrl">Webhook URL</label><input class="input" id="skUrl" autocomplete="off" placeholder="' + (st.slack ? 'saved (' + tail + ') — paste a new one to replace it' : 'https://hooks.slack.com/services/…') + '">' +
+        '<label class="check" style="margin-top:12px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="skAuto"' + (st.slackAuto ? ' checked' : '') + '> Post to Slack automatically when a report becomes ready</label>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-primary" id="skSave">Save</button>' +
+        (st.slack ? '<button class="btn" id="skTest">Send test message</button><button class="btn btn-ghost" id="skClear" style="margin-left:auto">Remove</button>' : '') + '</div>' +
+        '<p class="muted" id="skMsg" style="margin:10px 0 0;font-size:13px"></p></div></div>';
+      var ea = document.getElementById('emAutoPat'), ed = document.getElementById('emAutoDoc');
+      if (ea) ea.addEventListener('change', function () { DB.update('settings', 'main', { emailAuto: ea.checked }); App.toast(ea.checked ? 'Automatic email to patients is ON' : 'Automatic email to patients is OFF'); });
+      if (ed) ed.addEventListener('change', function () { DB.update('settings', 'main', { emailAutoDoctor: ed.checked }); App.toast(ed.checked ? 'Automatic email to doctors is ON' : 'Automatic email to doctors is OFF'); });
+      var msg = function (t, bad) { var e = document.getElementById('skMsg'); if (e) { e.textContent = t; e.style.color = bad ? '#b91c1c' : '#047857'; } };
+      document.getElementById('skSave').addEventListener('click', function () {
+        var url = document.getElementById('skUrl').value.trim(), auto = document.getElementById('skAuto').checked;
+        if (!url && !st.slack) { msg('Paste the Slack webhook URL first.', true); return; }
+        DB.share('PUT', 'slack', { webhook: url || undefined, auto: auto }).then(function () { if (App.shareStatus) App.shareStatus(true); App.toast('Slack settings saved.'); renderSetSharing(); }, function (e) { msg(e.message, true); });
+      });
+      var t = document.getElementById('skTest'); if (t) t.addEventListener('click', function () {
+        t.disabled = true; msg('Sending…');
+        DB.share('POST', 'slack/test', {}).then(function () { t.disabled = false; msg('Sent! Check your Slack channel.'); }, function (e) { t.disabled = false; msg(e.message, true); });
+      });
+      var c = document.getElementById('skClear'); if (c) c.addEventListener('click', function () {
+        App.confirm('Disconnect Slack?').then(function (ok) { if (!ok) return; DB.share('PUT', 'slack', { clear: true }).then(function () { if (App.shareStatus) App.shareStatus(true); renderSetSharing(); }, function (e) { msg(e.message, true); }); });
+      });
+    }, function (e) { box.innerHTML = '<p style="color:#b91c1c">' + App.esc(e.message) + '</p>'; });
+  }
+
   function renderSetWhatsapp() {
     var s = DB.get('settings', 'main') || {};
     var w = Object.assign(waDefaults(), s.whatsapp || {});
-    var autoPat = w.autoPatient !== false;  /* default ON */
-    var autoDoc = w.autoDoctor === true;    /* default OFF */
+    var autoPat = w.autoPatient !== false;   /* default ON */
+    var autoDoc = w.autoDoctor === true;     /* default OFF */
+    var autoCrit = w.autoCritical !== false; /* default ON */
+
+    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    var hours = [18, 19, 20, 21, 22, 23].map(function (h) {
+      return '<option value="' + h + '"' + ((+w.ownerSummaryHour || 21) === h ? ' selected' : '') + '>' + (h - 12) + ':00 PM</option>';
+    }).join('');
+
+    function rowSwitch(id, checked, title, desc, badge, extra) {
+      return '<div class="wa-row-item">'
+        + '<div class="wa-row-content">'
+        + '  <div class="wa-row-title">'
+        + '    <span>' + title + '</span>'
+        +      (badge ? (' ' + badge) : '')
+        + '  </div>'
+        + '  <p class="wa-row-desc">' + desc + '</p>'
+        +    (extra ? ('<div class="wa-sub-box">' + extra + '</div>') : '')
+        + '</div>'
+        + '<label class="wa-switch" title="Toggle ' + App.esc(title) + '">'
+        + '  <input type="checkbox" id="' + id + '"' + (checked ? ' checked' : '') + '>'
+        + '  <span class="wa-slider"></span>'
+        + '</label>'
+        + '</div>';
+    }
+
     var html =
-      '<div class="card" style="max-width:640px"><div class="card-h"><h3>Lab WhatsApp Number</h3></div>' +
-      '<div class="card-b">' +
-      '<p class="muted" style="font-size:13px;margin-top:0">This is your lab\'s WhatsApp number — used when sharing reports with patients.</p>' +
-      '<div style="display:flex;gap:10px">' +
-      '<input class="input" id="waLabNum" placeholder="e.g. 0300-1234567" value="' + App.esc(w.labNumber || '') + '" style="flex:1">' +
-      '<button class="btn btn-primary" id="waLabNumSave">Save</button>' +
-      '</div></div></div>' +
-      '<div class="card" style="max-width:640px;margin-top:14px"><div class="card-h"><h3>Auto-send Reports</h3></div>' +
-      '<div class="card-b">' +
-      '<p class="muted" style="font-size:13px;margin-top:0">Automatically send the report on WhatsApp (via your UltraMsg number) when an invoice becomes ready. ' +
-      'A history of every auto-send is kept in the WhatsApp log.</p>' +
-      '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;margin-bottom:10px">' +
-      '<input type="checkbox" id="waAutoPatient"' + (autoPat ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green)"> ' +
-      'Auto-send report to <strong>patient</strong> on ready</label>' +
-      '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px">' +
-      '<input type="checkbox" id="waAutoDoctor"' + (autoDoc ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:var(--green)"> ' +
-      'Auto-send report to <strong>referring doctor</strong> on ready</label>' +
-      '</div></div>';
+      '<style>'
+      + '.wa-set-wrap{max-width:820px;margin:0}'
+      + '.wa-set-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;background:linear-gradient(135deg,#f0fdf4 0%,#e6f7ec 100%);border:1.5px solid #bbf7d0;border-radius:14px;margin-bottom:18px}'
+      + '.wa-set-head-left{display:flex;align-items:center;gap:14px}'
+      + '.wa-brand-ico{width:46px;height:46px;border-radius:12px;background:#25D366;color:#fff;display:grid;place-items:center;box-shadow:0 4px 14px rgba(37,211,102,.35);flex:none}'
+      + '.wa-set-title{font-size:18px;font-weight:800;color:#14532d;margin:0 0 3px}'
+      + '.wa-set-sub{font-size:13px;color:#166534;margin:0}'
+      + '.wa-card{margin-bottom:16px;border-radius:14px;box-shadow:0 1px 4px rgba(15,30,46,.04)}'
+      + '.wa-card .card-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px}'
+      + '.wa-card-title-group{display:flex;align-items:center;gap:9px}'
+      + '.wa-card-ic{font-size:16px}'
+      + '.wa-row-item{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--line2)}'
+      + '.wa-row-item:first-of-type{border-top:none;padding-top:2px}'
+      + '.wa-row-content{flex:1;min-width:0}'
+      + '.wa-row-title{font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;margin-bottom:2px}'
+      + '.wa-row-desc{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}'
+      + '.wa-sub-box{margin-top:10px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px}'
+      + '.wa-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer;margin-top:2px}'
+      + '.wa-switch input{opacity:0;width:0;height:0;position:absolute}'
+      + '.wa-slider{position:absolute;inset:0;background-color:#cbd5e1;border-radius:99px;transition:.2s ease}'
+      + '.wa-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:#fff;border-radius:50%;transition:.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.25)}'
+      + '.wa-switch input:checked + .wa-slider{background-color:#16a34a}'
+      + '.wa-switch input:checked + .wa-slider:before{transform:translateX(20px)}'
+      + '.wa-badge-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700}'
+      + '.wa-badge-alert{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}'
+      + '.wa-badge-green{background:#dcfce7;color:#15803d;border:1px solid #86efac}'
+      + '.wa-action-bar{display:flex;align-items:center;gap:14px;margin-top:20px;padding:16px 20px;background:#f8fafc;border:1px solid var(--line);border-radius:14px;flex-wrap:wrap}'
+      + '@media(max-width:640px){.wa-set-head{flex-direction:column;align-items:flex-start}.wa-row-item{flex-direction:column-reverse;align-items:flex-end;gap:8px}}'
+      + '</style>'
+      + '<div class="wa-set-wrap">'
+      + '<div class="wa-set-head">'
+      + '  <div class="wa-set-head-left">'
+      + '    <div class="wa-brand-ico">'
+      + '      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 0 1 2.4 5.83c0 4.54-3.7 8.24-8.24 8.24-1.44 0-2.86-.38-4.12-1.1l-.3-.17-3.12.82.83-3.04-.19-.31a8.16 8.16 0 0 1-1.25-4.44c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.87.85-.87 2.08s.89 2.41 1.01 2.58c.13.17 1.76 2.68 4.26 3.76.6.26 1.06.41 1.42.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3"/></svg>'
+      + '    </div>'
+      + '    <div>'
+      + '      <h2 class="wa-set-title">WhatsApp Automation &amp; Alerts</h2>'
+      + '      <p class="wa-set-sub">Deliver reports, billing receipts, dues reminders and critical clinical alerts automatically.</p>'
+      + '    </div>'
+      + '  </div>'
+      + '  <div>'
+      + '    <a href="#/whatsapp" class="btn btn-sm btn-ghost" style="font-weight:700">Open WhatsApp Center &rarr;</a>'
+      + '  </div>'
+      + '</div>'
+      + '<div id="waGwBox"></div>'
+      + '<div class="card wa-card">'
+      + '  <div class="card-h">'
+      + '    <div class="wa-card-title-group"><span class="wa-card-ic">📱</span><h3 style="margin:0">Lab WhatsApp Number</h3></div>'
+      + '    <span class="badge ' + (w.labNumber ? 'b-ready' : 'b-pending') + '">' + (w.labNumber ? 'NUMBER SET' : 'NOT SET') + '</span>'
+      + '  </div>'
+      + '  <div class="card-b">'
+      + '    <p class="muted" style="font-size:13px;margin:0 0 10px">This number represents your lab on WhatsApp — printed on bills and invoices, and used as the sender contact.</p>'
+      + '    <div style="display:flex;gap:10px;align-items:center;max-width:440px">'
+      + '      <input class="input" id="waLabNum" placeholder="e.g. 0300-1234567 or 923001234567" value="' + App.esc(w.labNumber || '') + '" style="font-size:14px;font-weight:600">'
+      + '      <button class="btn btn-primary" id="waLabNumSave" type="button" style="flex:none">Save</button>'
+      + '    </div>'
+      + '  </div>'
+      + '</div>'
+      + '<div class="card wa-card">'
+      + '  <div class="card-h">'
+      + '    <div class="wa-card-title-group"><span class="wa-card-ic">👤</span><h3 style="margin:0">Patient Automated Messages</h3></div>'
+      + '    <span class="muted" style="font-size:12.5px">Sent to patient\'s mobile number</span>'
+      + '  </div>'
+      + '  <div class="card-b">'
+      +     rowSwitch('waAutoPatient', autoPat, 'Auto-send Report when Ready', 'Automatically send the PDF report download link to the patient on WhatsApp as soon as all test results are ready and finalized.', '<span class="wa-badge-pill wa-badge-green">Instant</span>')
+      +     rowSwitch('waAutoReceipt', w.autoReceipt === true, 'Billing Receipt on Registration', 'A few minutes after an invoice is created, send the patient an instant digital receipt with invoice no., total billed, amount paid, and balance.')
+      +     rowSwitch('waAutoDue', w.autoDueReminder === true, 'Weekly Outstanding Balance Reminder', 'Send a polite weekly balance reminder with the remaining amount to patients who have unpaid dues (sent at most 4 times per invoice).', '',
+              '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><label class="label" for="waDueDay" style="margin:0">Send weekly on:</label><select class="select" id="waDueDay" style="max-width:180px">' + days.map(function (d, i) { return '<option value="' + i + '"' + ((+w.dueReminderDay === i) ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></div>')
+      + '  </div>'
+      + '</div>'
+      + '<div class="card wa-card">'
+      + '  <div class="card-h">'
+      + '    <div class="wa-card-title-group"><span class="wa-card-ic">🚨</span><h3 style="margin:0">Doctor &amp; Emergency Clinical Alerts</h3></div>'
+      + '    <span class="muted" style="font-size:12.5px">Clinical safety &amp; referral sharing</span>'
+      + '  </div>'
+      + '  <div class="card-b">'
+      +     rowSwitch('waAutoCritical', autoCrit, 'Critical Value Panic Alerts', 'When a recorded test result is far outside the safe biological limit, immediately alert the referring doctor and your lab number.', '<span class="wa-badge-pill wa-badge-alert">Urgent Safety</span>')
+      +     rowSwitch('waAutoDoctor', autoDoc, 'Auto-send Report to Referring Doctor', 'Automatically send a digital copy of the finalized test report to the patient\'s referring doctor on WhatsApp.')
+      + '  </div>'
+      + '</div>'
+      + '<div class="card wa-card">'
+      + '  <div class="card-h">'
+      + '    <div class="wa-card-title-group"><span class="wa-card-ic">📈</span><h3 style="margin:0">Owner Summary &amp; Patient Retention</h3></div>'
+      + '    <span class="muted" style="font-size:12.5px">Business intelligence &amp; follow-ups</span>'
+      + '  </div>'
+      + '  <div class="card-b">'
+      +     rowSwitch('waAutoOwner', w.autoOwnerSummary === true, 'Daily Business Summary to Owner', 'Every evening, receive an automated WhatsApp report of today\'s total patients, total billing, cash collected, and outstanding dues.', '',
+              '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end"><div><label class="label" for="waOwnerHour" style="margin-bottom:3px">Delivery Time</label><select class="select" id="waOwnerHour">' + hours + '</select></div>'
+              + '<div style="flex:1;min-width:200px"><label class="label" for="waOwnerNum" style="margin-bottom:3px">Owner WhatsApp Number</label><input class="input" id="waOwnerNum" placeholder="Leave blank to use lab number above" value="' + App.esc(w.ownerNumber || '') + '"></div>'
+              + '<button class="btn btn-ghost btn-sm" id="waOwnerTest" type="button" style="font-weight:600">Send Today\'s Summary Now</button></div>')
+      +     rowSwitch('waAutoFeedback', w.autoFeedback === true, 'Feedback &amp; Google 5-Star Review Request', 'A day after a fully paid report, thank the patient and invite them to leave a review on your Google Maps profile.', '',
+              '<div><label class="label" for="waReviewUrl" style="margin-bottom:3px">Google Review Link <span class="muted" style="font-weight:400">(e.g. https://g.page/r/...)</span></label><input class="input" id="waReviewUrl" placeholder="https://g.page/r/..." value="' + App.esc(w.googleReviewUrl || '') + '"></div>')
+      +     rowSwitch('waAutoRetest', w.autoRetest === true, 'Periodic Repeat-Test Reminder', 'Remind chronic patients a few days before a test is due again (e.g. HbA1c after 3 months, Lipid after 6 months).', '',
+              '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="waRetestFill" type="button" style="font-weight:600">Auto-fill common repeat days on tests</button><span class="muted" id="waRetestMsg" style="font-size:12.5px"></span></div>')
+      + '  </div>'
+      + '</div>'
+      + '<div class="wa-action-bar">'
+      + '  <button class="btn btn-primary" id="waSaveAll" type="button" style="padding:10px 24px;font-weight:700;font-size:14px;background:#16a34a;border-color:#16a34a">'
+      + '    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;vertical-align:middle"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save WhatsApp Settings'
+      + '  </button>'
+      + '  <span class="muted" style="font-size:12.5px">Switches auto-save immediately on toggle. Delivery schedules are in Pakistan Standard Time (PKT).</span>'
+      + '</div>'
+      + '</div>';
+
     document.getElementById('setBody').innerHTML = html;
-    document.getElementById('waLabNumSave').addEventListener('click', function () {
-      var num = document.getElementById('waLabNum').value.trim();
+    wireGateway();
+
+    function saveAllWhatsApp(notify) {
+      var g = function (id) { return document.getElementById(id); };
       var st = DB.get('settings', 'main') || {};
       var ww = Object.assign(waDefaults(), st.whatsapp || {});
-      ww.labNumber = num;
-      ww.autoPatient = document.getElementById('waAutoPatient').checked;
-      ww.autoDoctor = document.getElementById('waAutoDoctor').checked;
+
+      var labNumEl = g('waLabNum');
+      if (labNumEl) ww.labNumber = labNumEl.value.trim();
+
+      var apEl = g('waAutoPatient'); if (apEl) ww.autoPatient = apEl.checked;
+      var adEl = g('waAutoDoctor'); if (adEl) ww.autoDoctor = adEl.checked;
+      var acEl = g('waAutoCritical'); if (acEl) ww.autoCritical = acEl.checked;
+
+      var arEl = g('waAutoReceipt'); if (arEl) ww.autoReceipt = arEl.checked;
+      var aduEl = g('waAutoDue'); if (aduEl) ww.autoDueReminder = aduEl.checked;
+      var ddEl = g('waDueDay'); if (ddEl) ww.dueReminderDay = +ddEl.value;
+
+      var aoEl = g('waAutoOwner'); if (aoEl) ww.autoOwnerSummary = aoEl.checked;
+      var ohEl = g('waOwnerHour'); if (ohEl) ww.ownerSummaryHour = +ohEl.value;
+      var onEl = g('waOwnerNum'); if (onEl) ww.ownerNumber = onEl.value.trim();
+
+      var afEl = g('waAutoFeedback'); if (afEl) ww.autoFeedback = afEl.checked;
+      var ruEl = g('waReviewUrl');
+      if (ruEl) {
+        var rUrl = ruEl.value.trim();
+        if (rUrl && !/^https:\/\//i.test(rUrl)) {
+          App.toast('Google review link must start with https://', 'err');
+          return false;
+        }
+        ww.googleReviewUrl = rUrl;
+      }
+
+      var atEl = g('waAutoRetest'); if (atEl) ww.autoRetest = atEl.checked;
+
       st.whatsapp = ww;
       DB.update('settings', 'main', st);
-      App.toast('WhatsApp settings saved');
-      renderSetWhatsapp();
+      if (notify !== false) App.toast('WhatsApp settings saved successfully!');
+      return true;
+    }
+
+    var saveBtn = document.getElementById('waSaveAll');
+    if (saveBtn) saveBtn.addEventListener('click', function () { saveAllWhatsApp(true); });
+
+    var labNumBtn = document.getElementById('waLabNumSave');
+    if (labNumBtn) labNumBtn.addEventListener('click', function () { saveAllWhatsApp(true); });
+
+    ['waAutoPatient', 'waAutoDoctor', 'waAutoCritical', 'waAutoReceipt', 'waAutoDue', 'waAutoOwner', 'waAutoFeedback', 'waAutoRetest'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', function () {
+          if (saveAllWhatsApp(false)) {
+            App.toast((this.checked ? 'Switched ON' : 'Switched OFF') + ' — saved');
+          }
+        });
+      }
     });
+
+    ['waDueDay', 'waOwnerHour'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('change', function () {
+          saveAllWhatsApp(false);
+        });
+      }
+    });
+
+    var ownerTestBtn = document.getElementById('waOwnerTest');
+    if (ownerTestBtn) {
+      ownerTestBtn.addEventListener('click', function () {
+        var b = this;
+        if (!saveAllWhatsApp(false)) return;
+        b.disabled = true;
+        DB.waGw('POST', 'auto/test', {}).then(function () {
+          b.disabled = false;
+          App.toast('Summary sent to owner number');
+        }, function (e) {
+          b.disabled = false;
+          App.toast(e && e.message ? e.message : 'Could not send — is WhatsApp connected?');
+        });
+      });
+    }
+
+    var retestFillBtn = document.getElementById('waRetestFill');
+    if (retestFillBtn) {
+      retestFillBtn.addEventListener('click', function () {
+        var rules = [
+          [/hba1c|glycosylated|glycated/i, 90],
+          [/lipid|cholesterol/i, 180],
+          [/tsh|thyroid|\bt3\b|\bt4\b/i, 180],
+          [/vitamin\s*d|25.?oh/i, 180],
+          [/vitamin\s*b.?12|b12/i, 180],
+          [/ferritin|iron/i, 180],
+          [/\bhb\b|cbc|complete blood/i, 0],
+          [/creatinine|urea|kft|rft|renal/i, 180],
+          [/lft|liver|alt|sgpt/i, 180],
+          [/psa/i, 365]
+        ];
+        var n = 0;
+        DB.all('tests').forEach(function (t) {
+          if (+t.retestDays > 0 || t.isPackage) return;
+          for (var i = 0; i < rules.length; i++) {
+            if (rules[i][1] && rules[i][0].test(t.name || '')) {
+              DB.update('tests', t.id, Object.assign({}, t, { retestDays: rules[i][1] }));
+              n++;
+              break;
+            }
+          }
+        });
+        var msgEl = document.getElementById('waRetestMsg');
+        if (msgEl) {
+          msgEl.textContent = n ? (n + ' test(s) updated (HbA1c 3 months; lipid, thyroid, vit D/B12, kidney, liver 6 months).') : 'Nothing to change — matching tests already have repeat days.';
+        }
+      });
+    }
+  }
+
+
+  /* ---- Dropdown Lists: the admin edits the choices that appear in forms ---- */
+  function renderSetLists() {
+    var st = DB.get('settings', 'main') || {}, work = {};
+    App.LIST_DEFS.forEach(function (d) { work[d.key] = App.listOptions(d.key).slice(); });
+    function cardHtml(d) {
+      var rows = work[d.key].map(function (v, i) {
+        var lock = (d.locked || []).indexOf(v) >= 0;
+        return '<div class="dl-row" style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><input class="input dl-in" data-k="' + d.key + '" data-i="' + i + '" value="' + App.esc(v) + '"' + (lock ? ' disabled' : '') + ' maxlength="60" style="flex:1;min-width:0">' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-up="' + d.key + ':' + i + '" title="Move up"' + (i === 0 || lock ? ' disabled' : '') + '>&uarr;</button><button type="button" class="btn btn-ghost btn-sm" data-down="' + d.key + ':' + i + '" title="Move down"' + (i === work[d.key].length - 1 || lock ? ' disabled' : '') + '>&darr;</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-del="' + d.key + ':' + i + '" title="Remove"' + (lock ? ' disabled' : '') + ' style="color:#b91c1c">&times;</button></div>';
+      }).join('');
+      return '<div class="card" style="margin:0" data-card="' + d.key + '"><div class="card-h"><h3>' + App.esc(d.label) + '</h3></div><div class="card-b"><p class="muted" style="font-size:12.5px;margin:0 0 10px">' + App.esc(d.hint) + '</p>' + (rows || '<p class="muted" style="font-size:13px;margin:0 0 8px">Empty. Add the first one below.</p>') +
+        '<div style="display:flex;gap:6px;margin-top:8px"><input class="input dl-new" data-k="' + d.key + '" placeholder="Add a new one…" maxlength="60" style="flex:1;min-width:0"><button type="button" class="btn btn-ghost btn-sm" data-add="' + d.key + '">+ Add</button></div>' +
+        '<div style="display:flex;gap:8px;margin-top:12px"><button type="button" class="btn btn-primary btn-sm" data-save="' + d.key + '">Save</button><button type="button" class="btn btn-ghost btn-sm" data-reset="' + d.key + '">Reset to default</button></div></div></div>';
+    }
+    function doctorsHtml() {
+      var docs = DB.all('doctors').slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+      return '<div class="card" style="margin:0"><div class="card-h"><h3>Consultant (doctors)</h3></div><div class="card-b"><p class="muted" style="font-size:12.5px;margin:0 0 10px">The doctors in the "Consultant" menu. Rename one here, or add a new one. Commission, clinic and statements are in the full <a href="#/doctors">Doctors page</a>.</p>' +
+        docs.map(function (d) { return '<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center"><input class="input dl-doc" data-id="' + App.esc(d.id) + '" value="' + App.esc(d.name || '') + '" maxlength="80" style="flex:1;min-width:0"><button type="button" class="btn btn-ghost btn-sm" data-docsave="' + App.esc(d.id) + '">Save name</button></div>'; }).join('') +
+        '<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap"><input class="input" id="dlDocNew" placeholder="New doctor name…" maxlength="80" style="flex:1;min-width:160px"><input class="input" id="dlDocPct" type="number" min="0" max="100" step="0.5" placeholder="Commission %" style="width:130px"><button type="button" class="btn btn-ghost btn-sm" id="dlDocAdd">+ Add doctor</button></div></div></div>';
+    }
+    function paint() {
+      var keep = document.activeElement && document.activeElement.getAttribute ? document.activeElement.getAttribute('data-k') + '|' + (document.activeElement.getAttribute('data-i') || 'new') : '';
+      document.getElementById('setBody').innerHTML = '<p class="muted" style="margin:0 0 14px;font-size:13.5px">The choices that appear in your forms. Change a name, add a new choice, remove one or move it up/down, then press <b>Save</b> on that list. Records already saved keep what they had.</p>' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;align-items:start">' + doctorsHtml() + App.LIST_DEFS.map(cardHtml).join('') + '</div>';
+      wire();
+    }
+    function readInputs() { document.querySelectorAll('.dl-in').forEach(function (e) { var k = e.getAttribute('data-k'), i = +e.getAttribute('data-i'); if (work[k] && work[k][i] != null && !e.disabled) work[k][i] = e.value; }); }
+    function wire() {
+      var b = document.getElementById('setBody');
+      b.querySelectorAll('[data-add]').forEach(function (x) { x.addEventListener('click', function () { var k = x.getAttribute('data-add'), inp = b.querySelector('.dl-new[data-k="' + k + '"]'), v = inp.value.trim(); if (!v) return; readInputs(); if (work[k].some(function (y) { return y.toLowerCase() === v.toLowerCase(); })) return App.toast('That is already in the list.', 'err'); work[k].push(v); paint(); }); });
+      b.querySelectorAll('.dl-new').forEach(function (inp) { inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); b.querySelector('[data-add="' + inp.getAttribute('data-k') + '"]').click(); } }); });
+      function move(attr, delta) { b.querySelectorAll('[' + attr + ']').forEach(function (x) { x.addEventListener('click', function () { var p2 = x.getAttribute(attr).split(':'), k = p2[0], i = +p2[1], j = i + delta; readInputs(); if (j < 0 || j >= work[k].length) return; var t = work[k][i]; work[k][i] = work[k][j]; work[k][j] = t; paint(); }); }); }
+      move('data-up', -1); move('data-down', 1);
+      b.querySelectorAll('[data-del]').forEach(function (x) { x.addEventListener('click', function () { var p2 = x.getAttribute('data-del').split(':'); readInputs(); work[p2[0]].splice(+p2[1], 1); paint(); }); });
+      b.querySelectorAll('[data-save]').forEach(function (x) { x.addEventListener('click', function () {
+        var k = x.getAttribute('data-save'); readInputs(); var out = [], seen = {};
+        work[k].forEach(function (v) { v = String(v).trim(); if (v && !seen[v.toLowerCase()]) { seen[v.toLowerCase()] = 1; out.push(v); } });
+        if (k === 'paymentMethod' && !seen['cash']) out.unshift('Cash');
+        if (!out.length && k !== 'regLocation' && k !== 'destLocation') return App.toast('Keep at least one choice in this list.', 'err');
+        var cur = DB.get('settings', 'main') || {}, fl = Object.assign({}, cur.formLists || {}); fl[k] = out; DB.update('settings', 'main', Object.assign({}, cur, { formLists: fl })); work[k] = out.slice(); App.toast('Saved.'); paint();
+      }); });
+      b.querySelectorAll('[data-reset]').forEach(function (x) { x.addEventListener('click', function () {
+        var k = x.getAttribute('data-reset'); App.confirm('Put this list back to the original choices?').then(function (ok) { if (!ok) return; var cur = DB.get('settings', 'main') || {}, fl = Object.assign({}, cur.formLists || {}); delete fl[k]; DB.update('settings', 'main', Object.assign({}, cur, { formLists: fl })); work[k] = App.listOptions(k).slice(); App.toast('Back to the original list.'); paint(); });
+      }); });
+      b.querySelectorAll('[data-docsave]').forEach(function (x) { x.addEventListener('click', function () { var id = x.getAttribute('data-docsave'), v = b.querySelector('.dl-doc[data-id="' + id + '"]').value.trim(); if (!v) return App.toast('A doctor needs a name.', 'err'); DB.update('doctors', id, { name: v }); App.toast('Name saved.'); }); });
+      var da = document.getElementById('dlDocAdd'); if (da) da.addEventListener('click', function () {
+        var n = document.getElementById('dlDocNew').value.trim(), c = parseFloat(document.getElementById('dlDocPct').value); if (!n) return App.toast('Type the doctor name.', 'err');
+        if (DB.all('doctors').some(function (d) { return String(d.name).toLowerCase() === n.toLowerCase(); })) return App.toast('This doctor already exists.', 'err');
+        DB.insert('doctors', { name: n, clinic: '', phone: '', whatsapp: '', email: '', commissionPct: isNaN(c) ? 0 : Math.min(100, Math.max(0, c)) }); App.toast('Doctor added.'); paint();
+      });
+    }
+    paint();
   }
 
   /* ---- Users (admin only) ---- */
-  function roleBadge(r) {
-    var cls = r === 'admin' ? 'b-paid' : (r === 'reception' ? 'b-ready' : 'b-partial');
+  function roleBadge(r, u) {
+    if (r === 'custom') { var d = (((DB.get('settings', 'main') || {}).customRoles) || []).filter(function (x) { return u && x.id === u.roleId; })[0]; return '<span class="badge b-ready">' + App.esc(d ? d.name : 'custom (missing)') + '</span>'; }
+    var cls = r === 'admin' ? 'b-paid' : (r === 'reception' ? 'b-ready' : (r === 'doctor' ? 'b-pending' : 'b-partial'));
     return '<span class="badge ' + cls + '">' + App.esc(r) + '</span>';
   }
 
@@ -1916,7 +3682,7 @@
     var users = DB.all('users').slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
     var me = sess();
     var html = '<div class="toolbar" style="margin-bottom:12px">'
-      + '<button class="btn btn-primary btn-sm" id="uAdd" style="margin-left:auto">+ Add User</button></div>'
+      + '<button class="btn btn-ghost btn-sm" id="uAddDoc" style="margin-left:auto">+ Doctor login</button> <button class="btn btn-primary btn-sm" id="uAdd">+ Add User</button></div>'
       + '<div class="tbl-wrap"><table class="table"><thead><tr>'
       + '<th>Name</th><th>Username</th><th>Role</th><th>Status</th><th style="text-align:right">Actions</th>'
       + '</tr></thead><tbody>';
@@ -1925,20 +3691,37 @@
       html += '<tr>'
         + '<td><strong>' + App.esc(u.name) + '</strong>' + (isMe ? ' <span class="badge b-ready">you</span>' : '') + '</td>'
         + '<td>' + App.esc(u.username) + '</td>'
-        + '<td>' + roleBadge(u.role) + '</td>'
+        + '<td>' + roleBadge(u.role, u) + (u.role === 'doctor' ? '<div class="muted" style="font-size:12px;margin-top:3px">' + App.esc(((DB.get('doctors', u.doctorId) || {}).name) || 'no doctor linked') + '</div>' : '') + '</td>'
         + '<td>' + (u.active ? '<span class="badge b-paid">active</span>' : '<span class="badge b-unpaid">inactive</span>') + '</td>'
         + '<td style="text-align:right;white-space:nowrap" class="actions">'
         + '<button class="btn btn-ghost btn-sm" data-uedit="' + App.esc(u.id) + '">Edit</button> '
         + '<button class="btn btn-ghost btn-sm" data-upw="' + App.esc(u.id) + '">Password</button> '
         + '<button class="btn btn-ghost btn-sm" data-utoggle="' + App.esc(u.id) + '"' + (isMe ? ' disabled style="opacity:.4"' : '') + '>'
-        + (u.active ? 'Deactivate' : 'Activate') + '</button>'
+        + (u.active ? 'Deactivate' : 'Activate') + '</button> '
+        + '<button class="btn btn-ghost btn-sm" data-udel="' + App.esc(u.id) + '"' + (isMe ? ' disabled style="opacity:.4;cursor:not-allowed"' : ' style="color:#b91c1c"') + '>Delete</button>'
         + '</td></tr>';
     });
     html += '</tbody></table></div>'
-      + '<p class="muted" style="font-size:12.5px;margin-top:12px">Roles — <strong>admin</strong>: everything · <strong>reception</strong>: billing, invoices, dues, patients, doctors, expenses · <strong>technician</strong>: results, tests & patients (view).</p>';
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:16px">'
+      + [['admin', 'Admin', 'Everything: settings, users, reports, backup, billing.'], ['reception', 'Reception', 'Patients, invoices, dues, expenses, doctors, WhatsApp and email.'], ['technician', 'Technician', 'Samples, lab results, stock and tests. No billing.'], ['doctor', 'Doctor', 'Own login: sees only the reports of the patients he referred and his commission. Cannot see anything else.']]
+        .map(function (r) { return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px"><div>' + roleBadge(r[0]) + '</div><div class="muted" style="font-size:12.5px;margin-top:6px;line-height:1.5">' + r[2] + '</div></div>'; }).join('')
+      + '</div>'
+      + customRolesHtml()
+      + '<p class="muted" style="font-size:12.5px;margin-top:10px">A <strong>doctor login</strong> does not use up one of your staff seats. Create it with <b>+ Doctor login</b>, then give the doctor your <b>Lab ID</b>, his username and password. He signs in on the normal sign-in page (web or Android app).</p>';
     document.getElementById('setBody').innerHTML = html;
 
+    document.getElementById('crNew').addEventListener('click', function () { openRoleModal(null); });
+    document.querySelectorAll('[data-cr-edit]').forEach(function (b) { b.addEventListener('click', function () { openRoleModal(b.getAttribute('data-cr-edit')); }); });
+    document.querySelectorAll('[data-cr-del]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = b.getAttribute('data-cr-del'), r = getRoles().filter(function (x) { return x.id === id; })[0]; if (!r) return;
+        var used = DB.all('users').filter(function (u) { return u.role === 'custom' && u.roleId === id; });
+        if (used.length) return App.toast(used.length + ' user(s) still have this role. Change their role first.', 'err');
+        App.confirm('Delete the role "' + r.name + '"?').then(function (ok) { if (!ok) return; saveRoles(getRoles().filter(function (x) { return x.id !== id; })); App.toast('Role deleted.'); renderSettings(); });
+      });
+    });
     document.getElementById('uAdd').addEventListener('click', function () { openUserModal(null); });
+    document.getElementById('uAddDoc').addEventListener('click', function () { openUserModal(null, 'doctor'); });
     document.querySelectorAll('[data-uedit]').forEach(function (b) {
       b.addEventListener('click', function () { openUserModal(DB.get('users', b.getAttribute('data-uedit'))); });
     });
@@ -1964,41 +3747,137 @@
         });
       });
     });
+    document.querySelectorAll('[data-udel]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var u = DB.get('users', b.getAttribute('data-udel'));
+        if (!u) return;
+        var me2 = sess();
+        if (me2 && u.id === me2.userId) return App.toast('You cannot delete your own account.', 'err');
+        if (u.role === 'admin') {
+          var admins = DB.all('users').filter(function (x) { return x.active && x.role === 'admin' && x.id !== u.id; });
+          if (!admins.length) return App.toast('Cannot delete the last admin account.', 'err');
+        }
+        App.confirm('Permanently delete user "' + u.name + '" (' + u.username + ')? This will remove their login and cannot be undone.').then(function (ok) {
+          if (!ok) return;
+          DB.remove('users', u.id);
+          App.toast('User deleted successfully.');
+          renderSettings();
+        });
+      });
+    });
   }
 
-  function openUserModal(u) {
+  /* ---- custom roles: the admin ticks which pages a role may open (saved in settings.customRoles) ---- */
+  function getRoles() { return ((DB.get('settings', 'main') || {}).customRoles || []).slice(); }
+  function saveRoles(list) { var st = DB.get('settings', 'main') || {}; st.customRoles = list; DB.update('settings', 'main', st); }
+  function customRolesHtml() {
+    var roles = getRoles(), pages = {}; App.ROLE_PAGES.forEach(function (p) { pages[p[0]] = p[1]; });
+    return '<div style="margin-top:22px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="margin:0;font-size:16px">Your own roles</h3><span class="muted" style="font-size:13px">Decide yourself who can see what.</span>'
+      + '<button class="btn btn-primary btn-sm" id="crNew" style="margin-left:auto">+ New role</button></div>'
+      + (roles.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px">' + roles.map(function (r) {
+        var n = DB.all('users').filter(function (u) { return u.role === 'custom' && u.roleId === r.id; }).length;
+        return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px"><div style="display:flex;align-items:center;gap:8px"><span class="badge b-ready">' + App.esc(r.name) + '</span><span class="muted" style="font-size:12px">' + n + ' user' + (n === 1 ? '' : 's') + '</span>'
+          + '<span style="margin-left:auto"><button class="btn btn-ghost btn-sm" data-cr-edit="' + App.esc(r.id) + '">Edit</button> <button class="btn btn-ghost btn-sm" data-cr-del="' + App.esc(r.id) + '" style="color:#b91c1c">Delete</button></span></div>'
+          + '<div class="muted" style="font-size:12.5px;margin-top:8px;line-height:1.55">' + ((r.pages || []).map(function (k) { return pages[k] || k; }).join(', ') || 'No pages ticked') + '</div>'
+          + '<div class="muted" style="font-size:12px;margin-top:6px">' + (r.money === false ? 'Money totals are hidden.' : 'Can see money totals.') + '</div></div>';
+      }).join('') + '</div>' : '<p class="muted" style="font-size:13px;margin:10px 0 0">No custom roles yet. Example: <b>Front desk</b> (patients and invoices only) or <b>Phlebotomist</b> (samples only). Create one, then choose it when you add a user.</p>')
+      + '</div>';
+  }
+  function openRoleModal(id) {
+    var r = id ? getRoles().filter(function (x) { return x.id === id; })[0] : null;
+    r = r || { id: '', name: '', pages: ['dashboard', 'patients'], money: true };
+    var body = '<div><label class="label">Role name *</label><input class="input" id="crName" maxlength="40" placeholder="e.g. Front desk" value="' + App.esc(r.name) + '"></div>'
+      + '<div style="margin-top:12px"><label class="label">This role can open</label><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:6px 14px">'
+      + App.ROLE_PAGES.map(function (p) { return '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px"><input type="checkbox" class="crPg" value="' + p[0] + '"' + ((r.pages || []).indexOf(p[0]) >= 0 ? ' checked' : '') + ' style="width:17px;height:17px;accent-color:var(--green)"> ' + p[1] + '</label>'; }).join('') + '</div></div>'
+      + '<div style="margin-top:12px;border-top:1px solid var(--line);padding-top:12px"><label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:14px"><input type="checkbox" id="crMoney"' + (r.money === false ? '' : ' checked') + ' style="width:17px;height:17px;margin-top:2px;accent-color:var(--green)"> <span><b>Can see money totals</b><span class="muted" style="display:block;font-size:12.5px">Untick to show counts instead of money amounts on the dashboard and the summary cards (like a technician).</span></span></label></div>'
+      + '<p class="muted" style="font-size:12.5px;margin:12px 0 0">Settings, Users &amp; Roles, Audit log and Subscription always stay for the admin only. A role cannot change data in a page it has not been given, even if someone tries.</p>'
+      + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px"><button class="btn btn-ghost" id="crCancel">Cancel</button><button class="btn btn-primary" id="crSave">' + (id ? 'Save role' : 'Create role') + '</button></div>';
+    App.modal(id ? 'Edit role' : 'New role', body, { wide: true, onOpen: function (ov, close) {
+      document.getElementById('crCancel').addEventListener('click', close);
+      document.getElementById('crSave').addEventListener('click', function () {
+        var name = document.getElementById('crName').value.trim();
+        if (!name) return App.toast('Give the role a name.', 'err');
+        var list = getRoles();
+        if (list.some(function (x) { return x.id !== id && x.name.toLowerCase() === name.toLowerCase(); }) || ['admin', 'reception', 'technician', 'doctor'].indexOf(name.toLowerCase()) >= 0) return App.toast('A role with this name already exists.', 'err');
+        var pages = Array.prototype.map.call(document.querySelectorAll('.crPg:checked'), function (c) { return c.value; });
+        if (!pages.length) return App.toast('Tick at least one page.', 'err');
+        var rec = { id: id || 'R-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name: name, pages: pages, money: document.getElementById('crMoney').checked };
+        if (id) list = list.map(function (x) { return x.id === id ? rec : x; }); else list.push(rec);
+        saveRoles(list); App.toast(id ? 'Role saved.' : 'Role created. Choose it when you add a user.'); close(); renderSettings();
+      });
+    } });
+  }
+
+  function openUserModal(u, presetRole) {
     var isEdit = !!u;
-    u = u || { name: '', username: '', role: 'reception', active: true };
+    var me = sess();
+    u = u || { name: '', username: '', role: presetRole || 'reception', active: true };
+    var allDocs = DB.all('doctors').slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
     var body = '<div class="form-grid">'
       + '<div><label class="label">Full Name *</label><input class="input" id="ufName" value="' + App.esc(u.name) + '"></div>'
       + '<div><label class="label">Username *</label><input class="input" id="ufUser" value="' + App.esc(u.username) + '"' + (isEdit ? ' disabled' : '') + '></div>'
       + (isEdit ? '' : '<div><label class="label">Password *</label><input class="input" id="ufPass" type="password" placeholder="min 4 characters"></div>')
       + '<div><label class="label">Role *</label><select class="select" id="ufRole">'
-      + ['admin', 'reception', 'technician'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + r + '</option>'; }).join('')
+      + ['admin', 'reception', 'technician', 'doctor'].map(function (r) { return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + r + '</option>'; }).join('')
+      + getRoles().map(function (r) { return '<option value="c:' + App.esc(r.id) + '"' + (u.role === 'custom' && u.roleId === r.id ? ' selected' : '') + '>' + App.esc(r.name) + ' (your role)</option>'; }).join('')
+      + '</select></div>'
+      + '<div id="ufDocBox" style="' + (u.role === 'doctor' ? '' : 'display:none') + '"><label class="label">Which doctor? *</label><select class="select" id="ufDoc"><option value="">— choose —</option>'
+      + allDocs.map(function (d) { return '<option value="' + App.esc(d.id) + '"' + (u.doctorId === d.id ? ' selected' : '') + '>' + App.esc(d.name) + (d.clinic ? ' — ' + App.esc(d.clinic) : '') + '</option>'; }).join('')
       + '</select></div>'
       + '</div>'
-      + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">'
+      + '<p class="muted" id="ufRoleNote" style="font-size:12.5px;margin:10px 0 0"></p>'
+      + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:18px">'
+      + (isEdit && (!me || u.id !== me.userId) ? '<button class="btn btn-ghost btn-sm" id="ufDelete" type="button" style="margin-right:auto;color:#b91c1c">Delete User</button>' : '')
       + '<button class="btn btn-ghost" id="ufCancel">Cancel</button>'
       + '<button class="btn btn-primary" id="ufSave">' + (isEdit ? 'Save Changes' : 'Add User') + '</button></div>';
     var close = App.modal(isEdit ? 'Edit User' : 'Add User', body, {
       onOpen: function (ov, close) {
         document.getElementById('ufCancel').addEventListener('click', close);
+        var delBtn = document.getElementById('ufDelete');
+        if (delBtn) {
+          delBtn.addEventListener('click', function () {
+            if (u.role === 'admin') {
+              var admins = DB.all('users').filter(function (x) { return x.active && x.role === 'admin' && x.id !== u.id; });
+              if (!admins.length) return App.toast('Cannot delete the last admin account.', 'err');
+            }
+            App.confirm('Permanently delete user "' + u.name + '" (' + u.username + ')? This will remove their login and cannot be undone.').then(function (ok) {
+              if (!ok) return;
+              DB.remove('users', u.id);
+              App.toast('User deleted successfully.');
+              close();
+              renderSettings();
+            });
+          });
+        }
+        var roleNote = { custom: 'Sees only the pages ticked in this role (set under Your own roles).', admin: 'Full access to everything in the lab.', reception: 'Patients, billing, invoices, dues, doctors, WhatsApp and email. No settings.', technician: 'Samples, lab results, stock and tests. No billing.', doctor: 'Signs in with this username and password and sees ONLY his own dashboard: reports of the patients he referred and his commission. Nothing else.' };
+        function syncRole() {
+          var rv = document.getElementById('ufRole').value; document.getElementById('ufDocBox').style.display = rv === 'doctor' ? '' : 'none';
+          document.getElementById('ufRoleNote').textContent = roleNote[rv.indexOf('c:') === 0 ? 'custom' : rv] || '';
+        }
+        document.getElementById('ufRole').addEventListener('change', syncRole);
+        document.getElementById('ufDoc').addEventListener('change', function () { var d = DB.get('doctors', this.value), n = document.getElementById('ufName'); if (d && !n.value.trim()) n.value = d.name; });
+        syncRole();
         document.getElementById('ufSave').addEventListener('click', function () {
           var name = document.getElementById('ufName').value.trim();
           var username = document.getElementById('ufUser').value.trim().toLowerCase();
-          var roleV = document.getElementById('ufRole').value;
+          var roleV = document.getElementById('ufRole').value, docId = document.getElementById('ufDoc').value, roleId = null;
+          if (roleV.indexOf('c:') === 0) { roleId = roleV.slice(2); roleV = 'custom'; }
           if (!name) return App.toast('Name is required.', 'err');
           if (!username) return App.toast('Username is required.', 'err');
+          if (roleV === 'doctor' && !docId) return App.toast('Choose which doctor this login is for.', 'err');
           if (isEdit) {
-            DB.update('users', u.id, { name: name, role: roleV });
+            DB.update('users', u.id, roleV === 'doctor' ? { name: name, role: roleV, doctorId: docId, roleId: null } : { name: name, role: roleV, doctorId: null, roleId: roleId });
             App.toast('User updated.');
           } else {
             var pass = document.getElementById('ufPass').value;
+            if (pass.length < 6 && roleV === 'doctor') return App.toast('Give the doctor a password of at least 6 characters.', 'err');
             if (pass.length < 4) return App.toast('Password must be at least 4 characters.', 'err');
             var dup = DB.all('users').some(function (x) { return x.username.toLowerCase() === username; });
             if (dup) return App.toast('Username already exists.', 'err');
-            DB.insert('users', { name: name, username: username, password: pass, role: roleV, active: true });
-            App.toast('User added.');
+            if (roleV !== 'doctor' && App.limitHit && App.limitHit('users')) return;
+            var rec = { name: name, username: username, password: pass, role: roleV, active: true }; if (roleV === 'doctor') rec.doctorId = docId; if (roleV === 'custom') rec.roleId = roleId;
+            DB.insert('users', rec);
+            App.toast(roleV === 'doctor' ? 'Doctor login created. Give him the Lab ID, this username and the password.' : 'User added.');
           }
           close();
           renderSettings();
@@ -2027,35 +3906,292 @@
     });
   }
 
-  /* ---- Backup ---- */
+  /* ---- Backup (Google Drive & Cloud + Local) ---- */
+  function formatBackupDate(iso) {
+    if (!iso) return '';
+    try {
+      var d = new Date(iso);
+      if (isNaN(d.getTime())) return String(iso);
+      var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      var day = ('0' + d.getDate()).slice(-2);
+      var month = months[d.getMonth()];
+      var year = d.getFullYear();
+      var hours = d.getHours();
+      var minutes = ('0' + d.getMinutes()).slice(-2);
+      var ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12;
+      return day + ' ' + month + ' ' + year + ', ' + ('0' + hours).slice(-2) + ':' + minutes + ' ' + ampm;
+    } catch (e) { return String(iso); }
+  }
+
+  function checkAutoCloudBackup() {
+    try {
+      var st = DB.get('settings', 'main') || {};
+      if (st.backupAutoOn === false || !st.gdriveBackupEmail) return;
+      var email = String(st.gdriveBackupEmail).trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+      var last = st.lastBackupAt ? new Date(st.lastBackupAt).getTime() : 0;
+      var now = Date.now();
+      var freq = st.backupFrequency || 'daily';
+      var intervalMs = 24 * 3600 * 1000;
+      if (freq === 'weekly') intervalMs = 7 * 24 * 3600 * 1000;
+      else if (freq === 'monthly') intervalMs = 30 * 24 * 3600 * 1000;
+      else if (freq === 'manual') return;
+
+      if (now - last >= intervalMs) {
+        var apiBase = String(window.LABPOS_API || '').replace(/\/+$/, '');
+        var headers = DB.authHeaders ? DB.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' };
+        fetch(apiBase + '/api/backup/email', {
+          method: 'POST',
+          headers: headers,
+          body: JSON.stringify({ email: email })
+        }).then(function (r) { return r.json(); }).then(function (res) {
+          if (res && res.ok) {
+            DB.update('settings', 'main', { lastBackupAt: new Date().toISOString(), lastBackupEmail: email });
+          }
+        }).catch(function () {});
+      }
+    } catch (e) {}
+  }
+
   function renderSetBackup() {
-    var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:860px" class="rep-cols">'
-      + '<div class="card" style="margin:0"><div class="card-b">'
-      + '<h3 style="margin-top:0">Export Backup</h3>'
-      + '<p class="muted">Download the complete database (patients, invoices, tests, users, settings) as a JSON file. Keep it safe.</p>'
-      + '<button class="btn btn-primary" id="bkExport">Download Backup</button>'
+    var st = DB.get('settings', 'main') || {};
+    var gEmail = st.gdriveBackupEmail || st.backupEmail || '';
+    var freq = st.backupFrequency || 'daily';
+    var autoOn = st.backupAutoOn !== false;
+    var lastAt = st.lastBackupAt || '';
+    var lastEmail = st.lastBackupEmail || gEmail || '';
+
+    var isConnected = !!(gEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(gEmail));
+    var statusBadge = isConnected
+      ? '<span style="display:inline-flex;align-items:center;gap:6px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#10b981"></span> Connected: ' + App.esc(gEmail) + '</span>'
+      : '<span style="display:inline-flex;align-items:center;gap:6px;background:#fffbeb;color:#92400e;border:1px solid #fde68a;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:600"><span style="width:7px;height:7px;border-radius:50%;background:#f59e0b"></span> Email Add Karein</span>';
+
+    var html = '<div style="display:flex;flex-direction:column;gap:20px;max-width:960px">'
+      /* Google Drive & Cloud Card */
+      + '<div class="card" style="margin:0;border:1px solid #bfdbfe;background:linear-gradient(180deg,#ffffff,#f8fafc);box-shadow:0 4px 16px rgba(0,0,0,0.03)"><div class="card-b" style="padding:22px">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #e2e8f0">'
+      + '<div style="display:flex;align-items:center;gap:12px">'
+      + '<div style="width:46px;height:46px;border-radius:12px;background:#f0f7ff;border:1px solid #c7d9fe;display:flex;align-items:center;justify-content:center;flex-shrink:0">'
+      + '<svg width="26" height="26" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">'
+      + '<path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>'
+      + '<path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44c-.8 1.4-1.2 2.95-1.2 4.5h27.5z" fill="#00ac47"/>'
+      + '<path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 10.15z" fill="#ea4335"/>'
+      + '<path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>'
+      + '<path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h55c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>'
+      + '<path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>'
+      + '</svg>'
+      + '</div>'
+      + '<div>'
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '<h2 style="margin:0;font-size:1.2rem;font-weight:700;color:#0f172a">Google Drive &amp; Cloud Email Backup</h2>'
+      + '<span style="font-size:11px;background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:12px;font-weight:600">Cloud Storage</span>'
+      + '</div>'
+      + '<p style="margin:3px 0 0 0;font-size:13px;color:#64748b">Apna Google / Gmail account add karein taake lab database ka mukammal backup mehfooz rahay.</p>'
+      + '</div>'
+      + '</div>'
+      + '<div>' + statusBadge + '</div>'
+      + '</div>'
+
+      + '<div style="display:grid;grid-template-columns:1.2fr 1fr;gap:18px;margin-bottom:18px" class="rep-cols">'
+      + '<div>'
+      + '<label style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Google / Gmail Account Email *</label>'
+      + '<div style="position:relative">'
+      + '<input type="email" id="bkGdriveEmail" class="input" style="width:100%;padding-left:34px;font-size:13px" placeholder="apna-email@gmail.com" value="' + App.esc(gEmail) + '">'
+      + '<span style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:14px">✉️</span>'
+      + '</div>'
+      + '<p style="margin:5px 0 0 0;font-size:11px;color:#64748b">Is Google email par system ka database backup JSON file bhej di jaye gi jo Google Drive me save ho sakti hai.</p>'
+      + '</div>'
+      + '<div>'
+      + '<label style="display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:6px">Auto-Backup Frequency</label>'
+      + '<select id="bkFrequency" class="input" style="width:100%;font-size:13px">'
+      + '<option value="daily"' + (freq === 'daily' ? ' selected' : '') + '>Rozana (Daily Automatic)</option>'
+      + '<option value="weekly"' + (freq === 'weekly' ? ' selected' : '') + '>Haftawar (Weekly Automatic)</option>'
+      + '<option value="monthly"' + (freq === 'monthly' ? ' selected' : '') + '>Mahana (Monthly Automatic)</option>'
+      + '<option value="manual"' + (freq === 'manual' ? ' selected' : '') + '>Manual / Sirf On Demand</option>'
+      + '</select>'
+      + '<div style="margin-top:8px;display:flex;align-items:center;gap:8px">'
+      + '<input type="checkbox" id="bkAutoOn" style="cursor:pointer;width:15px;height:15px"' + (autoOn ? ' checked' : '') + '>'
+      + '<label for="bkAutoOn" style="cursor:pointer;font-size:12px;color:#475569;font-weight:500;user-select:none">Automated cloud backup schedule enable rakhein</label>'
+      + '</div>'
+      + '</div>'
+      + '</div>'
+
+      + '<div style="display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding-top:14px;border-top:1px solid #f1f5f9">'
+      + '<button class="btn btn-primary" id="bkSendCloud" style="display:inline-flex;align-items:center;gap:8px;font-weight:600;padding:9px 18px">'
+      + '<svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>'
+      + '<span>Backup to Google Drive / Email Now</span>'
+      + '</button>'
+      + '<button class="btn btn-ghost" id="bkSaveCloudSettings" style="font-size:13px">Save Settings</button>'
+      + '<a href="https://drive.google.com/drive/u/0/my-drive" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;text-decoration:none;color:#1e40af">'
+      + '<svg width="15" height="15" fill="currentColor" viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>'
+      + '<span>Open Google Drive</span>'
+      + '</a>'
+      + '<a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;text-decoration:none;color:#475569">'
+      + '<span>Open Gmail Inbox</span>'
+      + '</a>'
+      + '</div>'
+
+      + '<div style="margin-top:18px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px">'
+      + '<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:10px">'
+      + '<div>'
+      + '<div style="font-size:11px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:0.5px">Cloud Backup Status</div>'
+      + '<div style="margin-top:3px;font-size:13px;color:#475569" id="bkLastStatus">'
+      + (lastAt ? 'Aakhri Backup: <strong style="color:#0f172a">' + formatBackupDate(lastAt) + '</strong> &bull; Destination: <strong style="color:#0f172a">' + App.esc(lastEmail) + '</strong>' : 'Abhi tak koi cloud backup send nahi kiya gaya.')
+      + '</div>'
+      + '</div>'
+      + '<div style="font-size:12px;color:#64748b;display:flex;align-items:center;gap:6px">'
+      + '<span style="color:#10b981">●</span> Secure Encrypted JSON Format'
+      + '</div>'
+      + '</div>'
+      + '<div style="margin-top:8px;padding-top:8px;border-top:1px dashed #cbd5e1;font-size:12px;color:#64748b;line-height:1.6">'
+      + '💡 <strong>Google Drive me backup mehfooz karne ka tareeqa:</strong>'
+      + '<br>1. Apna Gmail darj karke <strong>"Backup to Google Drive / Email Now"</strong> dabayein. Backup file aapke email par bhej di jaye gi aur fauran computer par download ho jaye gi.'
+      + '<br>2. <strong>"Open Google Drive"</strong> par click karein aur downloaded file ko Google Drive me drag & drop karein ya Google Drive folder me upload karein.'
+      + '<br>3. Kisi bhi waqt data wapis restore karne ke liye niche mojood <strong>"Choose File & Restore"</strong> option se yehi file select karein.'
+      + '</div>'
+      + '</div>'
       + '</div></div>'
-      + '<div class="card" style="margin:0"><div class="card-b">'
-      + '<h3 style="margin-top:0">Import Backup</h3>'
-      + '<p class="muted">Restore from a previously exported JSON file. This replaces all current data.</p>'
+
+      /* Local Export & Local Import Cards */
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px" class="rep-cols">'
+      + '<div class="card" style="margin:0"><div class="card-b" style="padding:20px">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      + '<div style="width:36px;height:36px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#475569;font-size:17px">💾</div>'
+      + '<h3 style="margin:0;font-size:1.05rem;color:#0f172a">Manual Export (JSON)</h3>'
+      + '</div>'
+      + '<p class="muted" style="font-size:13px;line-height:1.5;margin-bottom:16px">Poora database (patients, invoices, tests, users, settings) apne computer ya USB me download karein. Internet ke baghair offline use ke liye behtareen hai.</p>'
+      + '<button class="btn btn-ghost" id="bkExport" style="display:inline-flex;align-items:center;gap:6px;width:100%;justify-content:center;font-weight:600">'
+      + '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>'
+      + '<span>Download Local Backup (JSON)</span>'
+      + '</button>'
+      + '</div></div>'
+
+      + '<div class="card" style="margin:0"><div class="card-b" style="padding:20px">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      + '<div style="width:36px;height:36px;border-radius:8px;background:#fef2f2;display:flex;align-items:center;justify-content:center;color:#dc2626;font-size:17px">♻️</div>'
+      + '<h3 style="margin:0;font-size:1.05rem;color:#0f172a">Restore Database (Import)</h3>'
+      + '</div>'
+      + '<p class="muted" style="font-size:13px;line-height:1.5;margin-bottom:16px">Google Drive ya computer se pehle se save ki gayi JSON backup file se data restore karein. <span style="color:#b91c1c;font-weight:600">Khabardaar: Yeh mojooda data ko replace kar de ga.</span></p>'
       + '<input type="file" id="bkFile" accept="application/json" style="display:none">'
-      + '<button class="btn btn-ghost" id="bkImport">Choose File & Restore</button>'
-      + '</div></div></div>';
+      + '<button class="btn btn-ghost" id="bkImport" style="display:inline-flex;align-items:center;gap:6px;width:100%;justify-content:center;font-weight:600">'
+      + '<svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>'
+      + '<span>Choose File &amp; Restore</span>'
+      + '</button>'
+      + '</div></div>'
+      + '</div></div>';
+
     document.getElementById('setBody').innerHTML = html;
 
-    document.getElementById('bkExport').addEventListener('click', function () {
-      var raw = DB.export(); /* JSON string */
+    /* Cloud Settings Save */
+    document.getElementById('bkSaveCloudSettings').addEventListener('click', function () {
+      var email = (document.getElementById('bkGdriveEmail').value || '').trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return App.toast('Barah-e-karam apna durust Google / Gmail email address darj karein.', 'err');
+      }
+      var freqVal = document.getElementById('bkFrequency').value || 'daily';
+      var autoVal = document.getElementById('bkAutoOn').checked;
+      DB.update('settings', 'main', {
+        gdriveBackupEmail: email,
+        backupFrequency: freqVal,
+        backupAutoOn: autoVal
+      });
+      App.toast('Google Drive & Cloud backup settings mehfooz ho gayi hain.');
+      renderSetBackup();
+    });
+
+    /* Backup to Google Drive / Email Now */
+    document.getElementById('bkSendCloud').addEventListener('click', function () {
+      var email = (document.getElementById('bkGdriveEmail').value || '').trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        App.toast('Barah-e-karam apna durust Google / Gmail email address darj karein.', 'err');
+        document.getElementById('bkGdriveEmail').focus();
+        return;
+      }
+      var freqVal = document.getElementById('bkFrequency').value || 'daily';
+      var autoVal = document.getElementById('bkAutoOn').checked;
+      DB.update('settings', 'main', {
+        gdriveBackupEmail: email,
+        backupFrequency: freqVal,
+        backupAutoOn: autoVal
+      });
+
+      var btn = document.getElementById('bkSendCloud');
+      var origBtnHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:bsSpin .8s linear infinite;margin-right:6px;vertical-align:middle"></span> Generating &amp; Sending Backup...';
+
+      /* Generate local download */
+      var raw = DB.export();
       var pretty = raw;
       try { pretty = JSON.stringify(JSON.parse(raw), null, 2); } catch (e) {}
+      var labName = (((DB.get('settings', 'main') || {}).labName) || 'Optix-LAB').replace(/[^a-zA-Z0-9_-]/g, '_');
+      var filename = 'optix-backup-' + labName + '-' + App.today() + '.json';
       var blob = new Blob([pretty], { type: 'application/json' });
       var a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'optix-lab-medsync-backup-' + App.today() + '.json';
+      a.download = filename;
       document.body.appendChild(a);
       a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
-      App.toast('Backup downloaded.');
+
+      /* Trigger server email endpoint */
+      var apiBase = String(window.LABPOS_API || '').replace(/\/+$/, '');
+      var headers = DB.authHeaders ? DB.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' };
+
+      fetch(apiBase + '/api/backup/email', {
+        method: 'POST',
+        headers: headers,
+        body: JSON.stringify({ email: email })
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; });
+      }).then(function (resp) {
+        btn.disabled = false;
+        btn.innerHTML = origBtnHtml;
+        var nowIso = new Date().toISOString();
+        DB.update('settings', 'main', {
+          lastBackupAt: nowIso,
+          lastBackupEmail: email
+        });
+        if (resp && resp.ok) {
+          App.toast('Database backup aapke Google account (' + email + ') par send ho gaya aur download ho gaya!', 'ok');
+        } else if (resp && resp.mailNotConfigured) {
+          App.toast('Backup file download ho gayi! Isay apne Google Drive par upload karein.', 'ok');
+        } else {
+          App.toast('Backup file download ho gayi! (Notice: ' + (resp && resp.error ? resp.error : 'Saved') + ')', 'ok');
+        }
+        renderSetBackup();
+      }).catch(function (err) {
+        btn.disabled = false;
+        btn.innerHTML = origBtnHtml;
+        var nowIso = new Date().toISOString();
+        DB.update('settings', 'main', {
+          lastBackupAt: nowIso,
+          lastBackupEmail: email
+        });
+        App.toast('Backup file download ho gayi! Isay Google Drive par upload karein.', 'ok');
+        renderSetBackup();
+      });
     });
+
+    /* Manual Local Export */
+    document.getElementById('bkExport').addEventListener('click', function () {
+      var raw = DB.export();
+      var pretty = raw;
+      try { pretty = JSON.stringify(JSON.parse(raw), null, 2); } catch (e) {}
+      var labName = (((DB.get('settings', 'main') || {}).labName) || 'Optix-LAB').replace(/[^a-zA-Z0-9_-]/g, '_');
+      var blob = new Blob([pretty], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'optix-lab-medsync-backup-' + labName + '-' + App.today() + '.json';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+      App.toast('Local backup downloaded.');
+    });
+
+    /* Local Restore / Import */
     document.getElementById('bkImport').addEventListener('click', function () {
       document.getElementById('bkFile').click();
     });
@@ -2070,7 +4206,7 @@
         if (!data || typeof data !== 'object') return App.toast('Invalid backup file.', 'err');
         var chk = (data.tables && typeof data.tables === 'object') ? data.tables : data;
         if (!chk.settings || !Array.isArray(chk.invoices) || !Array.isArray(chk.patients))
-          return App.toast('This file is not an Optix LAB MedSync backup.', 'err');
+          return App.toast('This file is not an Optix Medical Sync backup.', 'err');
         App.confirm('Restore backup? ALL current data will be replaced.').then(function (ok) {
           if (!ok) return;
           Promise.resolve(DB.import(data)).then(function () {
@@ -2088,9 +4224,13 @@
 
   /* ---- Danger Zone ---- */
   function renderSetDanger() {
+    if (App.saasOn && App.saasOn()) { /* cloud labs cannot reset to the shipped demo data; a backup restore is the supported way */
+      document.getElementById('setBody').innerHTML = '<div class="card" style="max-width:720px;margin:0"><div class="card-b"><h3 style="margin-top:0">Reset is not available</h3><p class="muted">Cloud labs cannot be reset to demo data. To go back to an earlier state, restore a backup file from <strong>Settings &rarr; Backup</strong>.</p></div></div>';
+      return;
+    }
     var html = '<div class="card" style="border:1px solid var(--red);max-width:720px;margin:0"><div class="card-b">'
       + '<h3 style="margin-top:0;color:var(--red)">Reset Demo Data</h3>'
-      + '<p class="muted">This wipes <strong>everything</strong> — patients, invoices, payments, expenses, results, users — and restores the original demo dataset. You will be logged out.</p>'
+      + '<p class="muted">This wipes <strong>everything</strong> — patients, invoices, payments, expenses, results — and restores the original demo dataset. Your user accounts are kept. You will be logged out.</p>'
       + '<button class="btn btn-danger" id="dzReset">Reset All Data</button>'
       + '</div></div>';
     document.getElementById('setBody').innerHTML = html;
@@ -2111,6 +4251,17 @@
     });
   }
 
-  App.route('#/settings', renderSettings);
+  var SET_TABS = ['profile', 'account', 'templates', 'signatures', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
+  /* Dropdown Lists live under Patients now (#/patients/lists); the old Settings address still works */
+  App.route('#/patients/lists', function () {
+    if (role() !== 'admin') return denied();
+    document.getElementById('view').innerHTML = '<div class="page-head"><div><h1>Edit Patient Form</h1><p class="muted" style="margin:2px 0 0">The choices (dropdown menus) in your patient and bill forms: registration and destination location, reference, blood group, referred-by doctors and more.</p></div></div><div class="card"><div class="card-b"><div id="setBody"></div></div></div>';
+    renderSetLists();
+  });
+  App.route('#/settings/lists', function () { App.nav('#/patients/lists'); });
+  App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });
+  App.route('#/settings/branches', function () { App.nav('#/branches'); });
+  App.route('#/settings/:tab', function (p) { settingsTab = (p && SET_TABS.indexOf(p.tab) >= 0) ? p.tab : 'profile'; renderSettings(); });
+  App.route('#/signatures', function () { App.nav('#/settings/signatures'); });
 
 })();

@@ -27,16 +27,6 @@
 <div id="modal-root"></div>
 <div id="toast-root"></div>
 
-<script>
-/* Shell-level delegation (works regardless of module render timing) */
-document.addEventListener('click', function (e) {
-  if (e.target.closest('#navToggle')) document.body.classList.toggle('side-open');
-  else if (e.target.closest('.nav-it:not(.nav-par):not(.nav-fh)') || e.target.closest('.nav-sub-it')) document.body.classList.remove('side-open');
-});
-document.addEventListener('keydown', function (e) {
-  if (e.key === 'Escape') document.body.classList.remove('side-open');
-});
-</script>
 <!-- API base for the web build (Cloudflare Pages copies assets/); the desktop app serves its own /api-config.js -->
 <script src="assets/js/api-config.js"></script>
 <script src="assets/js/sms-gateway.js"></script>
@@ -50,6 +40,7 @@ window.__ASSET_V = '195';
 window.__LAZY_ROUTES = {
   '#/billing/:patientId': 'assets/js/mod-billing.js',
   '#/invoices': 'assets/js/mod-invoices.js',
+  '#/invoices/pending': 'assets/js/mod-invoices.js',
   '#/invoice/:id': 'assets/js/mod-invoices.js',
   '#/receipts': 'assets/js/mod-invoices.js',
   '#/dues': 'assets/js/mod-invoices.js',
@@ -63,6 +54,8 @@ window.__LAZY_ROUTES = {
   '/patient/:id': 'assets/js/mod-patients.js',
   '/tests': 'assets/js/mod-masters.js',
   '#/tests': 'assets/js/mod-masters.js',
+  '#/tests/regular': 'assets/js/mod-masters.js',
+  '#/tests/generic': 'assets/js/mod-masters.js',
   '#/packages': 'assets/js/mod-masters.js',
   '/doctors': 'assets/js/mod-masters.js',
   '#/results': 'assets/js/mod-results.js',
@@ -85,6 +78,7 @@ window.__LAZY_ROUTES = {
   '#/finance/:tab': 'assets/js/mod-finance.js',
   '#/close-day': 'assets/js/mod-finance.js',
   '#/profit': 'assets/js/mod-finance.js',
+  '#/branches': 'assets/js/mod-admin.js',
   '#/settings': 'assets/js/mod-admin.js',
   '#/settings/:tab': 'assets/js/mod-admin.js',
   '#/signatures': 'assets/js/mod-admin.js',

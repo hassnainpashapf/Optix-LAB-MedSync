@@ -2003,7 +2003,6 @@
       { id: 'payments', sec: 'GENERAL', label: 'Online Payments', desc: 'JazzCash, Easypaisa, Bank & Raast', icon: '💳' },
       { id: 'account', sec: 'GENERAL', label: 'My Account', desc: 'Admin credentials & password', icon: '👤' },
       { id: 'users', sec: 'GENERAL', label: 'Users & Roles', desc: 'Staff accounts & permissions', icon: '👥' },
-      { id: 'branches', sec: 'GENERAL', label: 'Branches', desc: 'Manage lab branches', icon: '🏪' },
 
       { id: 'templates', sec: 'REPORTS & PRINTING', label: 'Report Templates', desc: 'Presets, normal ranges & tests', icon: '📄' },
       { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: '🖋️' },
@@ -2063,7 +2062,6 @@
     else if (settingsTab === 'signatures') renderSetSignatures();
     else if (settingsTab === 'portal') renderSetPortal();
     else if (settingsTab === 'users') renderSetUsers();
-    else if (settingsTab === 'branches') renderSetBranches();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
     try { checkAutoCloudBackup(); } catch (e) {}
@@ -3581,8 +3579,10 @@
 
 
 
-  function renderSetBranches() {
-    var body = document.getElementById('setBody');
+  function renderBranches() {
+    if (role() !== 'admin') return denied();
+    document.getElementById('view').innerHTML = '<div class="stat-grid" id="branchStats"></div><div class="card"><div class="card-b" id="branchBody"></div></div>';
+    var body = document.getElementById('branchBody');
     body.innerHTML = '<p class="muted">Loading branches…</p>';
 
     /* GET /api/lab/features -> { maxBranches, branchesUsed }. Never throws;
@@ -3601,9 +3601,8 @@
       } catch (e) { done(null, null); }
     }
 
-    /* re-fetch usage and repaint; renderSettings() routes back to
-       renderSetBranches(), which fetches fresh features again. */
-    function refresh() { renderSettings(); }
+    /* Re-fetch usage and repaint the standalone page. */
+    function refresh() { renderBranches(); }
 
     function paint(feat) {
       var branches = DB.all('branches').slice().sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); });
@@ -3615,9 +3614,13 @@
         ? used + ' of unlimited branches used'
         : used + ' of ' + max + ' branches used';
 
+      document.getElementById('branchStats').innerHTML =
+        admStat(AICONS.list, 'blue', 'Total Branches', branches.length, 'registered locations', branches.length, false) +
+        admStat(AICONS.flask, 'green', 'Active Branches', localUsed, 'currently operating', localUsed, false) +
+        admStat(AICONS.cal, 'amber', 'Available Slots', max === Infinity ? 'Unlimited' : Math.max(0, max - used), usageText, null, false);
       var html = '<div class="toolbar" style="margin-bottom:12px;align-items:center">'
-        + '<div><h3 style="margin:0;font-size:16px">Branches</h3><div class="muted" style="font-size:12.5px;margin-top:2px">' + App.esc(usageText) + '</div></div>'
-        + '<button class="btn btn-primary btn-sm" id="bAdd" style="margin-left:auto"' + (limitReached ? ' disabled style="opacity:.4;cursor:not-allowed"' : '') + '>+ Add Branch</button></div>'
+        + '<div><h2 style="margin:0;font-size:20px">Manage Branches</h2><div class="muted" style="font-size:12.5px;margin-top:2px">' + App.esc(usageText) + '</div></div>'
+        + '<button class="btn btn-primary btn-sm" id="bAdd" style="margin-left:auto"' + (limitReached ? ' disabled' : '') + '>+ Add Branch</button></div>'
         + (limitReached ? '<p class="muted" style="font-size:12.5px;margin:-6px 0 12px">You are using all ' + max + ' branch slots on your plan. Ask support to raise your branch limit.</p>' : '')
         + '<div class="tbl-wrap"><table class="table"><thead><tr>'
         + '<th>Name</th><th>Code</th><th>Address</th><th>Phone</th><th>Manager</th><th>Status</th><th style="text-align:right">Actions</th>'
@@ -3723,7 +3726,7 @@
       });
     }
 
-    fetchBranchFeatures(paint);
+    fetchBranchFeatures(function (feat) { if (document.getElementById('branchBody') === body) paint(feat); });
   }
 
   /* ---- Dropdown Lists: the admin edits the choices that appear in forms ---- */
@@ -4361,10 +4364,12 @@
     });
   }
 
-  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'portal', 'users', 'branches', 'backup', 'danger'];
+  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'portal', 'users', 'backup', 'danger'];
   App.route('#/patients/lists', function () { App.nav('#/patients'); });
   App.route('#/settings/lists', function () { App.nav('#/patients'); });
   App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });
+  App.route('#/branches', renderBranches);
+  App.route('#/settings/branches', function () { App.nav('#/branches'); });
   App.route('#/settings/:tab', function (p) { settingsTab = (p && SET_TABS.indexOf(p.tab) >= 0) ? p.tab : 'profile'; renderSettings(); });
   App.route('#/signatures', function () { App.nav('#/settings/signatures'); });
 

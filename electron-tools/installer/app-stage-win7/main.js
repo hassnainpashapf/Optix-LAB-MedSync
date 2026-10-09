@@ -23,7 +23,7 @@ async function boot() {
     SQLITE_PATH: path.join(userData, 'labpos-sync.db'),
     DATA_DIR: userData,
     BIND_HOST: '127.0.0.1',
-    WWW_ROOT: __dirname,
+    WWW_ROOT: (updater.frontendRoot && updater.frontendRoot()) || __dirname, /* newest UI: downloaded update (userData overlay) or the one bundled in the installer */
     DESKTOP_CLOUD_URL: cloudUrl,
     SUPERADMIN_KEY: '',
   });

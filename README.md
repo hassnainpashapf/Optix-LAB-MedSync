@@ -15,6 +15,7 @@ The desktop apps keep their own copy of your data and work fully offline. When t
 - **App dashboard** styled to match the website (navy/blue palette, Plus Jakarta Sans): stat cards with count-ups, 7-day chart, monthly collection goal, payments-by-method donut, dues aging, month P&L, and a Desktop App download card.
 - **Header quick actions** in the app topbar: + New Bill, + Add Patient, + Add Expense, Download App (role-aware; technicians get Lab Results / View Tests).
 - **Dashboard-style stat cards** on every main page: New Bill, Lab Results, Invoices, Dues, Patients, Doctors, Expenses, Reports — all real data, no placeholders.
+- **Stock → Purchase Orders**: the first admin visit to Stock each local calendar month creates one draft for active low/out-of-stock items. Admins can edit quantities or remove lines; past drafts and empty months stay recorded. Drafts never send supplier orders or change stock. Generation requires a visit with the app open; missed months are not backfilled.
 - **10% zoom-out** across the app UI (`body{zoom:.9}`), with print output kept at full size.
 - Website notes: the "Book Service Now" buttons and the floating WhatsApp icon were removed from the marketing site.
 
