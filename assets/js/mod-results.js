@@ -1442,9 +1442,11 @@
     color: #000 !important;
   }
 
-  /* Clean standard multi-page pagination: the report body flows naturally across A4 pages.
-     Header and patient demographics stay pinned at the top of page 1; tests fill page 1 to capacity
-     and cleanly spill over to page 2+ without displacing or duplicating headers. */
+  /* Clean standard multi-page pagination: repeating header and footer on EVERY page.
+     The outer layout table utilizes <thead> (table-header-group) and <tfoot> (table-footer-group)
+     so the browser automatically prints the lab header and patient demographic banner at the top of EVERY page,
+     and the verification/signatories/disclaimer footer at the bottom of EVERY page.
+     If test parameters exceed page capacity, they cleanly shift to subsequent pages between the header and footer. */
   .rpt-page {
     display: block !important;
     width: 100% !important;
@@ -1453,19 +1455,57 @@
     min-height: auto !important;
     height: auto !important;
   }
+  table.rpt-layout-tbl {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    table-layout: fixed !important;
+  }
+  table.rpt-layout-tbl > thead.rpt-layout-head {
+    display: table-header-group !important;
+  }
+  table.rpt-layout-tbl > tbody.rpt-layout-body {
+    display: table-row-group !important;
+  }
+  table.rpt-layout-tbl > tfoot.rpt-layout-foot {
+    display: table-footer-group !important;
+  }
+  table.rpt-layout-tbl > thead > tr,
+  table.rpt-layout-tbl > tbody > tr,
+  table.rpt-layout-tbl > tfoot > tr {
+    display: table-row !important;
+  }
+  table.rpt-layout-tbl > thead > tr > td,
+  table.rpt-layout-tbl > tbody > tr > td,
+  table.rpt-layout-tbl > tfoot > tr > td {
+    display: table-cell !important;
+    border: 0 !important;
+    padding: 0 !important;
+    vertical-align: top !important;
+  }
   .rpt-header-block {
     display: block !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
+    padding-bottom: 4px !important;
   }
   .rpt-tests-block {
     display: block !important;
+  }
+  .rpt-footer-block {
+    display: block !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    padding-top: 6px !important;
   }
   .rpt-page .rpt-footer {
     display: block !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    margin-top: 18px !important;
+    margin-top: 6px !important;
   }
 
   /* Never leak screen chrome into the printout. */
@@ -1534,6 +1574,40 @@
     box-shadow: 0 8px 30px rgba(0,0,0,.28);
     display: flex;
     flex-direction: column;
+  }
+  .rpt-layout-tbl {
+    width: 100%;
+    min-height: 100%;
+    height: 100%;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .rpt-layout-tbl > thead.rpt-layout-head {
+    display: block;
+    width: 100%;
+  }
+  .rpt-layout-tbl > tbody.rpt-layout-body {
+    display: block;
+    width: 100%;
+    flex: 1 0 auto;
+  }
+  .rpt-layout-tbl > tfoot.rpt-layout-foot {
+    display: block;
+    width: 100%;
+    margin-top: auto;
+  }
+  .rpt-layout-tbl > thead > tr,
+  .rpt-layout-tbl > tbody > tr,
+  .rpt-layout-tbl > tfoot > tr,
+  .rpt-layout-tbl > thead > tr > td,
+  .rpt-layout-tbl > tbody > tr > td,
+  .rpt-layout-tbl > tfoot > tr > td {
+    display: block;
+    width: 100%;
+    border: 0;
+    padding: 0;
   }
   .report-preview .rpt-page .rpt-footer,
   body > .rpt-page .rpt-footer { margin-top: auto; }
@@ -2862,23 +2936,41 @@
     /* footer */
     var footOut = hasRealHtml(s.footerHtml) ? '<div class="rpt-footer">' + fillTokens(s.footerHtml, d) + '</div>' : reportFooterHtml(d);
 
-    var bodyHtml = '<div class="rpt-header-block">' + headOut + infoHtml + '</div>' +
-      '<div class="rpt-tests-block">' + testsHtml +
-      (pendingCount
-        ? '<p style="color:#000;font-size:0.96em;margin:6px 0"><em>Note: ' +
-          pendingCount + ' test(s) from this invoice are still pending.</em></p>'
-        : '') +
-      (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.'
-        ? '<p style="color:#000;margin-top:18px;margin-bottom:4px;font-size:0.92em"><em>' +
-          App.esc(s.footerNote) + '</em></p>'
-        : '') + '</div>' +
-      footOut;
-
-    if (d._cmpLegend) {
-      bodyHtml = bodyHtml.replace(footOut, '<p style="margin:6px 0 2px;font-size:0.82em;color:#000">' +
+    var legendHtml = d._cmpLegend
+      ? '<p style="margin:6px 0 2px;font-size:0.82em;color:#000">' +
         '<b>New result:</b> <span style="color:#dc2626;font-weight:700">&uarr; above range (high)</span> &nbsp;|&nbsp; ' +
-        '<span style="color:#2563eb;font-weight:700">&darr; below range (low)</span>. Previous results are shown as recorded.</p>' + footOut);
-    }
+        '<span style="color:#2563eb;font-weight:700">&darr; below range (low)</span>. Previous results are shown as recorded.</p>'
+      : '';
+
+    var bodyHtml =
+      '<table class="rpt-layout-tbl">' +
+        '<thead class="rpt-layout-head">' +
+          '<tr><td>' +
+            '<div class="rpt-header-block">' + headOut + infoHtml + '</div>' +
+          '</td></tr>' +
+        '</thead>' +
+        '<tbody class="rpt-layout-body">' +
+          '<tr><td>' +
+            '<div class="rpt-tests-block">' + testsHtml +
+            (pendingCount
+              ? '<p style="color:#000;font-size:0.96em;margin:6px 0"><em>Note: ' +
+                pendingCount + ' test(s) from this invoice are still pending.</em></p>'
+              : '') +
+            (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.'
+              ? '<p style="color:#000;margin-top:18px;margin-bottom:4px;font-size:0.92em"><em>' +
+                App.esc(s.footerNote) + '</em></p>'
+              : '') +
+            legendHtml +
+            '</div>' +
+          '</td></tr>' +
+        '</tbody>' +
+        '<tfoot class="rpt-layout-foot">' +
+          '<tr><td>' +
+            '<div class="rpt-footer-block">' + footOut + '</div>' +
+          '</td></tr>' +
+        '</tfoot>' +
+      '</table>';
+
     return '<style>' + RPT_PRINT_CSS + '</style>' +
       '<div class="rpt-page" style="font-size:' + rptBase + 'px">' + bodyHtml + '</div>';
   }
@@ -3258,7 +3350,100 @@
     var y = M;
 
     var inHdr = false;
-    function need(h) { if (y + h > 280) { doc.addPage(); y = M; if (!inHdr && typeof drawHeader === 'function') { inHdr = true; drawHeader(); inHdr = false; } } } /* every page starts with the letterhead + patient block */
+    var PH = 297, FM = M;                                   // A4 height, bottom margin
+    var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
+    var fVerLines = doc.splitTextToSize(fVerNote, CW);
+    var fSigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title) && g.active !== false; });
+    var fSw = fSigs.length ? CW / fSigs.length : CW;
+    var fHasSigImg = s.enableSignatures !== false && fSigs.some(function (g) { return !!(g.sigImg || g.signature); });
+    var fSigImgH = fHasSigImg ? 9 : 0;
+    var fSigBlockH = 0;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+    var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
+    fSigs.forEach(function (g, k) {
+      var h = fSigImgH + fSigNameLines[k].length * 4.1 + (g.qual ? 3.9 : 0) + (g.title ? 3.9 : 0);
+      if (h > fSigBlockH) fSigBlockH = h;
+    });
+    var fAddrParts = [];
+    if (s.address) fAddrParts.push(s.address);
+    if (s.headOffice) fAddrParts.push('Head Office: ' + s.headOffice);
+    if (s.mainLab) fAddrParts.push('Previous Lab: ' + s.mainLab);
+    if (s.phone) fAddrParts.push('Phone: ' + s.phone);
+    if (s.callCenter) fAddrParts.push('Call Center: ' + s.callCenter);
+    if (s.website) fAddrParts.push('Web: ' + s.website);
+    if (s.email) fAddrParts.push('Email: ' + s.email);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    var fAddrLines = fAddrParts.length ? doc.splitTextToSize(fAddrParts.join(' | '), CW) : [];
+    var fNote = s.disclaimer || ((s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') ? s.footerNote : '') || DEFAULT_DISCLAIMER;
+    doc.setFontSize(6.6);
+    var fNoteLines = doc.splitTextToSize(fNote, CW);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+    var fTextLines = String(s.footerText || '').trim() ? doc.splitTextToSize(String(s.footerText).trim(), CW) : [];
+    var fTextH = fTextLines.length ? fTextLines.length * 4.2 + 3 : 0;
+    var fH = (pre && pre.ftr)
+      ? (CW * pre.ftr.ratio + 2)
+      : (fTextH + fVerLines.length * 4.4 + 3 + 1 + 4 + fSigBlockH + 4 + 1 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + fNoteLines.length * 2.9 + 3 + 1 + 5);
+
+    function drawFooter() {
+      var fy = PH - FM - fH;
+      if (pre && pre.ftr) {
+        addImg(pre.ftr.url, M, fy, CW, fH - 2);
+        return;
+      }
+      var curY = fy;
+      if (fTextLines.length) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+        txt(fTextLines, W / 2, curY + 3, { align: 'center' });
+        curY += fTextH;
+      }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+      txt(fVerLines, W / 2, curY + 3, { align: 'center' });
+      curY += fVerLines.length * 4.4 + 3;
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, curY, W - M, curY); curY += 5;
+      fSigs.forEach(function (g, k) {
+        var fCx = M + fSw * (k + 0.5), fSy = curY;
+        var sigImgData = (s.enableSignatures !== false) ? (g.sigImg || g.signature) : null;
+        if (sigImgData) {
+          try { doc.addImage(sigImgData, 'PNG', fCx - 13, fSy, 26, 8.5); } catch (e) {}
+        }
+        if (s.showStamps !== false && g.stampImg) {
+          try { doc.addImage(g.stampImg, 'PNG', fCx + 10, fSy, 8, 8); } catch (e) {}
+        }
+        if (fSigImgH) fSy += fSigImgH + 1;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+        txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 4.1;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(40, 40, 40);
+        if (g.qual) { txt(g.qual, fCx, fSy, { align: 'center' }); fSy += 3.9; }
+        if (g.title) { txt(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fCx, fSy, { align: 'center' }); fSy += 3.9; }
+      });
+      curY += fSigBlockH + 3;
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(M, curY, W - M, curY); curY += 4;
+      if (fAddrLines.length) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+        txt(fAddrLines, W / 2, curY, { align: 'center' }); curY += fAddrLines.length * 4.2 + 2;
+      }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6); doc.setTextColor(20, 20, 20);
+      txt(fNoteLines, M, curY, {}); curY += fNoteLines.length * 2.9 + 2;
+      doc.setLineWidth(0.3); doc.line(M, curY, W - M, curY); curY += 4;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
+      txt('Powered by System Optix', W / 2, curY, { align: 'center' });
+    }
+
+    var maxBodyY = PH - FM - fH - 3;
+    function need(h) {
+      if (y + h > maxBodyY) {
+        if (!inHdr && typeof drawFooter === 'function') {
+          drawFooter();
+        }
+        doc.addPage();
+        y = M;
+        if (!inHdr && typeof drawHeader === 'function') {
+          inHdr = true;
+          drawHeader();
+          inHdr = false;
+        }
+      }
+    } /* every page starts with the letterhead + patient block */
     function txt(t, x, yy, opts) {
       // jsPDF renders a string[] as multiple lines; keep that working
       // (patient grid / wrapped footer lines pass splitTextToSize arrays).
@@ -3712,98 +3897,16 @@
       y += 6;
     }
 
-    // ----- footer (same content as the HTML report): verification line, signatories, address line, NOTE, powered-by.
-    // It is measured first and pinned to the bottom of the last page (a new page is added only if it cannot fit). -----
-    var PH = 297, FM = M;                                   // A4 height, bottom margin
-    if (pre && pre.ftr) {   /* custom footer from Lab Profile, drawn as a picture (same as the printout) */
-      var cfH = CW * pre.ftr.ratio + 2;
-      if (y + cfH > PH - FM) { doc.addPage(); y = M; }
-      y = Math.max(y + 4, PH - FM - cfH);
-      addImg(pre.ftr.url, M, y, CW, cfH - 2);
-      y += cfH;
-    } else {
-    var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
-    var fVerLines = doc.splitTextToSize(fVerNote, CW);
-    var fSigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title) && g.active !== false; });
-    var fSw = fSigs.length ? CW / fSigs.length : CW;
-    var fHasSigImg = s.enableSignatures !== false && fSigs.some(function (g) { return !!(g.sigImg || g.signature); });
-    var fSigImgH = fHasSigImg ? 9 : 0;
-    var fSigBlockH = 0;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
-    var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
-    fSigs.forEach(function (g, k) {
-      var h = fSigImgH + fSigNameLines[k].length * 4.1 + (g.qual ? 3.9 : 0) + (g.title ? 3.9 : 0);
-      if (h > fSigBlockH) fSigBlockH = h;
-    });
-    var fAddrParts = [];
-    if (s.address) fAddrParts.push(s.address);
-    if (s.headOffice) fAddrParts.push('Head Office: ' + s.headOffice);
-    if (s.mainLab) fAddrParts.push('Previous Lab: ' + s.mainLab);
-    if (s.phone) fAddrParts.push('Phone: ' + s.phone);
-    if (s.callCenter) fAddrParts.push('Call Center: ' + s.callCenter);
-    if (s.website) fAddrParts.push('Web: ' + s.website);
-    if (s.email) fAddrParts.push('Email: ' + s.email);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-    var fAddrLines = fAddrParts.length ? doc.splitTextToSize(fAddrParts.join(' | '), CW) : [];
-    var fNote = s.disclaimer || ((s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') ? s.footerNote : '') || DEFAULT_DISCLAIMER;
-    doc.setFontSize(6.6);
-    var fNoteLines = doc.splitTextToSize(fNote, CW);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
-    var fTextLines = String(s.footerText || '').trim() ? doc.splitTextToSize(String(s.footerText).trim(), CW) : [];
-    var fTextH = fTextLines.length ? fTextLines.length * 4.2 + 3 : 0;
-    var fH = fTextH + fVerLines.length * 4.4 + 3 + 1 + 4 + fSigBlockH + 4 + 1 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + fNoteLines.length * 2.9 + 3 + 1 + 5;
-    if (y + fH > PH - FM) { doc.addPage(); y = M; }
-    y = Math.max(y + 4, PH - FM - fH);                      // pin to the bottom of the page
+    // ----- footer on final page + page numbers for multi-page reports -----
+    drawFooter();
 
-    // plain footer text from Lab Profile ("Footer text"), above the verification line
-    if (fTextLines.length) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-      txt(fTextLines, W / 2, y + 3, { align: 'center' });
-      y += fTextH;
-    }
-    // verification line (bold, centered)
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-    txt(fVerLines, W / 2, y + 3, { align: 'center' });
-    y += fVerLines.length * 4.4 + 3;
-    // rule
-    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, y, W - M, y); y += 5;
-    // signatories, centered columns
-    fSigs.forEach(function (g, k) {
-      var fCx = M + fSw * (k + 0.5), fSy = y;
-      var sigImgData = (s.enableSignatures !== false) ? (g.sigImg || g.signature) : null;
-      if (sigImgData) {
-        try {
-          doc.addImage(sigImgData, 'PNG', fCx - 13, fSy, 26, 8.5);
-        } catch (e) {}
+    var totalPages = doc.getNumberOfPages();
+    if (totalPages > 1) {
+      for (var pi = 1; pi <= totalPages; pi++) {
+        doc.setPage(pi);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(120, 120, 120);
+        txt('Page ' + pi + ' of ' + totalPages, W - M, PH - 4, { align: 'right' });
       }
-      if (s.showStamps !== false && g.stampImg) {
-        try {
-          doc.addImage(g.stampImg, 'PNG', fCx + 10, fSy, 8, 8);
-        } catch (e) {}
-      }
-      if (fSigImgH) fSy += fSigImgH + 1;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-      txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 4.1;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(40, 40, 40);
-      if (g.qual)  { txt(g.qual,  fCx, fSy, { align: 'center' }); fSy += 3.9; }
-      if (g.title) { txt(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fCx, fSy, { align: 'center' }); fSy += 3.9; }
-    });
-    y += fSigBlockH + 3;
-    // rule + address line
-    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 4;
-    if (fAddrLines.length) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-      txt(fAddrLines, W / 2, y, { align: 'center' }); y += fAddrLines.length * 4.2 + 2;
-    }
-    // NOTE (small)
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6); doc.setTextColor(20, 20, 20);
-    txt(fNoteLines, M, y, {}); y += fNoteLines.length * 2.9 + 2;
-    doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 4;
-    // powered-by
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
-    txt('Powered by System Optix', W / 2, y, { align: 'center' });
-    y += 4;
     }
 
     var dataUri;
@@ -4228,6 +4331,7 @@
   App.compareReports = compareReports;
   /* exposed for Lab Profile preview QR */
   App.qrDataUrlFor = qrDataUrlFor;
+  App.reportHtml = reportHtml;
   /* Report preview for Lab Profile settings. It shows REAL data (no demo patient/tests): the newest patient report that has
      results; else the newest invoice's selected tests with empty result cells; else the first active tests of the catalog.
      `s` = the (possibly unsaved) form settings, merged over the saved ones so every setting flows into reportHtml. */

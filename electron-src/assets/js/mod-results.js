@@ -440,6 +440,17 @@
         }, { kind: 'critical' });
         sent.push(t.name);
       });
+      /* SMS critical alerts (plain SMS via the lab's SIM) — same targets, queued server-side */
+      try {
+        var scfg = smsCfg();
+        if (smsReady(scfg) && scfg.autoCritical) {
+          var smsMsg = smsCriticalMessage(inv, pat, it.crits, testName(it.row));
+          targets.forEach(function (t) {
+            smsQueueSend(t.to, smsMsg, { kind: 'critical', invoiceId: inv.id, invoiceNo: inv.no || inv.id, toName: t.name, toRole: t.role }).then(
+              function () {}, function () { App.toast('Critical SMS failed for ' + t.name, 'err'); });
+          });
+        }
+      } catch (e) {}
     });
     var body = items.map(function (it) {
       var inv = it.row.invoice, pat = it.row.patient || patOf(inv.patientId);
@@ -615,7 +626,7 @@
   function waAutoSendReady(invoiceIds) {
     try {
       var _ids = (invoiceIds || []).filter(function (id, i, a) { return id && a.indexOf(id) === i; });
-      portalAutoPrepare(_ids); slackAutoReady(_ids); emailAutoReady(_ids);
+      portalAutoPrepare(_ids); slackAutoReady(_ids); emailAutoReady(_ids); smsAutoReady(_ids);
     } catch (e) {}
     try {
       var ids = [];
@@ -631,6 +642,184 @@
       });
     } catch (e) {}
   }
+
+
+  /* ---------- SIM Setting (server outbox -> the lab's own phone app sends from the SIM) ----------
+     Mirrors the WhatsApp auto/manual flow, but messages are queued server-side
+     (POST /api/sms/queue) and delivered by the SMS gateway app through the lab's
+     own SIM card. Plain text, no markdown, no long links. */
+
+  var SMS_TPL = {
+    tplPatient: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}, {date}) is ready. Tests: {tests}. Please collect it from the lab. Thank you.',
+    tplDoctor: '{lab}: Assalam-o-Alaikum {doctor}, the lab report of your patient {patient} (Invoice {invoice}) is ready. Thank you.',
+    tplCritical: '{lab}: URGENT — critical result for {patient} (Invoice {invoice}): {test} = {value}. Please contact the lab immediately.',
+    tplDue: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}) is ready. A balance of {due} is pending. Please clear it at the lab. Thank you.'
+  };
+
+  function smsCfg() {
+    try {
+      var s = DB.get('settings', 'main') || {};
+      return Object.assign({ enabled: false, simNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true, tplPatient: '', tplDoctor: '', tplCritical: '', tplDue: '' }, s.sms || {});
+    } catch (e) { return {}; }
+  }
+  /* configured = switched on (the phone itself is the gateway) */
+  function smsReady(cfg) { return !!(cfg && cfg.enabled); }
+  function smsTplText(name) { var c = smsCfg(); return (c && c[name] && String(c[name]).replace(/\s/g, '')) ? c[name] : SMS_TPL[name]; }
+  function smsRenderTpl(tpl, v) {
+    v = v || {};
+    var vars = { lab: v.lab || 'Lab', patient: v.patient || '', doctor: v.doctor || '', invoice: v.invoice || '', date: v.date || '', tests: v.tests || '', total: v.total || '', due: v.due || '' };
+    var out = String(tpl).replace(/\{(\w+)\}/g, function (m, k) { return Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m; });
+    return out.replace(/\n{3,}/g, '\n\n').replace(/^\s+|\s+$/g, '');
+  }
+  function smsPatientMessage(inv, pat, testNames) { return smsRenderTpl(smsTplText('tplPatient'), waVars(inv, pat, null, testNames, '')); }
+  function smsDoctorMessage(inv, doc, pat, testNames) { return smsRenderTpl(smsTplText('tplDoctor'), waVars(inv, pat, doc, testNames, '')); }
+  function smsDueMessage(inv, pat, testNames) { return smsRenderTpl(smsTplText('tplDue'), waVars(inv, pat, null, testNames, '')); }
+  function smsCriticalMessage(inv, pat, crits, tname) {
+    var s = DB.get('settings', 'main') || {}, lab = s.labName || 'Lab';
+    var lines = (crits || []).map(function (c) {
+      return (c.name || '') + ': ' + (c.value || '') + ' ' + (c.unit || '') + (c.dir === 'high' ? ' (HIGH)' : ' (LOW)') + ' [normal ' + (c.ref || '-') + ']';
+    });
+    var custom = (smsCfg().tplCritical || '').trim();
+    if (custom) return smsRenderTpl(custom, { lab: lab, patient: pat.name || '', invoice: inv.no || inv.id, test: tname || '', value: lines.join(', ') });
+    return 'CRITICAL RESULT - ' + lab + '\nPatient: ' + (pat.name || '') + ' (' + (inv.no || inv.id) + ')\nTest: ' + (tname || '') + '\n' + lines.join('\n') + '\nPlease review immediately.';
+  }
+
+  /* queue one SMS server-side; the lab's phone app picks it up and sends it from the SIM.
+     Returns a promise resolving to { ok, id } or { ok, duplicate:true }. */
+  function smsQueueSend(to, text, opts) {
+    opts = opts || {};
+    if (!smsReady(smsCfg())) return Promise.reject(new Error('SMS is not configured'));
+    to = waPhone(to); /* same PK normalization as WhatsApp: 0300… -> 92300… */
+    if (!to) return Promise.reject(new Error('No phone number'));
+    text = String(text || '').trim();
+    if (!text) return Promise.reject(new Error('Message is empty'));
+    return DB.smsApi('POST', 'queue', {
+      to: to, text: text.slice(0, 1000),
+      kind: opts.kind || 'report',
+      invoiceId: opts.invoiceId || null, invoiceNo: opts.invoiceNo || '',
+      toName: opts.toName || '', toRole: opts.toRole || 'patient'
+    });
+  }
+
+  /* auto-send for one invoice once its WHOLE report is ready — same due-rule
+     policy as WhatsApp ('note' default: balance reminder now, report on payment). */
+  function smsTryAutoSendOne(invoiceId, cfg, autoPat, autoDoc) {
+    var inv = invOf(invoiceId);
+    if (!inv || !waAllReady(invoiceId)) return;
+    var testNames = waTestNames(invoiceId);
+    if (!testNames.length) return;
+    var pat = patOf(inv.patientId);
+    var owes = (+inv.due || 0) > 0.009;
+    var rule = (waCfg().dueRule) || 'note';
+    function sendIt(kind, toRole, to, name, text) {
+      smsQueueSend(to, text, { kind: kind, invoiceId: invoiceId, invoiceNo: inv.no || inv.id, toName: name, toRole: toRole }).then(
+        function (j) { if (!(j && j.duplicate)) App.toast('SMS queued for ' + (name || toRole)); },
+        function () { App.toast('SMS queue failed for ' + (name || toRole), 'err'); }
+      );
+    }
+    if (owes && rule !== 'send') {
+      if (rule === 'note' && autoPat) {
+        var to = waPhone(pat.whatsapp || pat.phone);
+        if (to) sendIt('due', 'patient', to, pat.name || '', smsDueMessage(inv, pat, testNames));
+      }
+      return; /* the report SMS goes out when the balance is paid (via waOnPaid -> smsAutoReady) */
+    }
+    if (autoPat) {
+      var tp = waPhone(pat.whatsapp || pat.phone);
+      if (tp) sendIt('report', 'patient', tp, pat.name || '', smsPatientMessage(inv, pat, testNames));
+    }
+    if (autoDoc && inv.doctorId) {
+      var doc = DB.get('doctors', inv.doctorId);
+      if (doc) {
+        var td = waPhone(doc.whatsapp || doc.phone);
+        if (td) sendIt('report', 'doctor', td, doc.name || '', smsDoctorMessage(inv, doc, pat, testNames));
+      }
+    }
+  }
+
+  /* Trigger: called from waAutoSendReady alongside the other channels. */
+  function smsAutoReady(invoiceIds) {
+    try {
+      var ids = [];
+      (invoiceIds || []).forEach(function (id) { if (id && ids.indexOf(id) < 0) ids.push(id); });
+      if (!ids.length) return;
+      var cfg = smsCfg();
+      var autoPat = cfg.autoPatient === true;  /* default ON (patient auto-send is on) */
+      var autoDoc = cfg.autoDoctor === true;   /* default OFF */
+      if (!autoPat && !autoDoc) return;
+      if (!smsReady(cfg)) return;
+      ids.forEach(function (invoiceId) { try { smsTryAutoSendOne(invoiceId, cfg, autoPat, autoDoc); } catch (e) {} });
+    } catch (e) {}
+  }
+
+  function smsGoSettings() {
+    App.nav('#/settings');
+    setTimeout(function () { if (App.openSmsSettingsTab) App.openSmsSettingsTab(); }, 80);
+  }
+
+  /* Manual send of a finalized report to the patient or the referring doctor. */
+  function smsManualSend(invoiceId, toRole) {
+    var inv = invOf(invoiceId);
+    if (!inv) { App.toast('Invoice not found', 'err'); return; }
+    var cfg = smsCfg();
+    if (!smsReady(cfg)) {
+      App.toast('SMS is not configured', 'err');
+      App.confirm('SMS sending is not set up yet. Open Settings to configure it now?').then(function (ok) {
+        if (ok) smsGoSettings();
+      });
+      return;
+    }
+    var pat = patOf(inv.patientId);
+    var doc = toRole === 'doctor' ? (inv.doctorId ? DB.get('doctors', inv.doctorId) : null) : null;
+    if (toRole === 'doctor' && !doc) { App.toast('No referring doctor on this invoice', 'err'); return; }
+    var target = toRole === 'doctor' ? doc : pat;
+    var to = waPhone(target.whatsapp || target.phone); /* dedicated number first, else phone */
+    if (!to) { App.toast(toRole === 'doctor' ? 'No phone number on file for the doctor' : 'No phone number on patient record', 'err'); return; }
+    var rows = joinedRows('ready').filter(function (r) { return r.invoice.id === invoiceId; });
+    var testNames = [];
+    rows.forEach(function (r) {
+      var nm = (r.item && r.item.name) || (r.test && r.test.name) || '';
+      if (nm && testNames.indexOf(nm) < 0) testNames.push(nm);
+    });
+    var msg = toRole === 'doctor' ? smsDoctorMessage(inv, doc, pat, testNames) : smsPatientMessage(inv, pat, testNames);
+    var whoName = toRole === 'doctor' ? (doc.name || 'doctor') : (pat.name || 'patient');
+    App.toast('Queueing SMS for ' + whoName + '…', 'info');
+    smsQueueSend(to, msg, { kind: 'report', invoiceId: invoiceId, invoiceNo: inv.no || inv.id, toName: whoName, toRole: toRole }).then(
+      function (j) {
+        App.toast(j && j.duplicate ? 'SMS already queued for ' + whoName : 'SMS queued for ' + whoName + ' — sending via your SIM');
+        smsRefreshHistory(invoiceId);
+      },
+      function (e) { App.toast('SMS queue failed: ' + String((e && e.message) || e).slice(0, 120), 'err'); }
+    );
+  }
+
+  /* compact "SMS queued/sent" history for one invoice, shown under the WhatsApp history */
+  function smsHistoryHtml(rows) {
+    rows = (rows || []).slice(0, 4);
+    if (!rows.length) return '';
+    var body = rows.map(function (e) {
+      var who = e.toRole === 'doctor' ? (e.toName || 'doctor') : 'patient';
+      var mark = (e.status === 'sent' || e.status === 'delivered') ? '✓' : (e.status === 'failed' ? '✗' : '…');
+      var verb = (e.status === 'sent' || e.status === 'delivered') ? 'SMS sent to' : (e.status === 'failed' ? 'SMS failed to' : 'SMS queued for');
+      return '<div style="padding:2px 0">' + mark + ' ' + verb + ' ' + App.esc(who) +
+        ' <span class="muted">' + App.esc(waHistTs(e.ts)) + '</span></div>';
+    }).join('');
+    return '<div style="font-size:12.5px;color:var(--ink,#1f2937);background:#eff6ff;' +
+      'border:1px solid #bfdbfe;border-radius:10px;padding:8px 12px;margin-bottom:4px">📲 ' + body + '</div>';
+  }
+  function smsRefreshHistory(invoiceId) {
+    var box = document.getElementById('rvSmsHist');
+    if (!box) return;
+    DB.smsApi('GET', 'log?invoiceId=' + encodeURIComponent(invoiceId), undefined).then(
+      function (j) { if (document.body.contains(box)) box.innerHTML = smsHistoryHtml((j && j.rows) || []); },
+      function () {}
+    );
+  }
+
+  /* shared with Settings (mod-admin.js) */
+  App.sms = { cfg: smsCfg, ready: smsReady, queue: smsQueueSend, manual: smsManualSend, autoReady: smsAutoReady,
+    tpl: SMS_TPL, tplText: smsTplText, render: smsRenderTpl,
+    patientMsg: smsPatientMessage, doctorMsg: smsDoctorMessage, dueMsg: smsDueMessage };
 
   /* shareReportWhatsApp: superseded by waManualSend() (strict API send with
      wa_log recording). Kept as a thin alias for any external callers. */
@@ -1253,9 +1442,11 @@
     color: #000 !important;
   }
 
-  /* Clean standard multi-page pagination: the report body flows naturally across A4 pages.
-     Header and patient demographics stay pinned at the top of page 1; tests fill page 1 to capacity
-     and cleanly spill over to page 2+ without displacing or duplicating headers. */
+  /* Clean standard multi-page pagination: repeating header and footer on EVERY page.
+     The outer layout table utilizes <thead> (table-header-group) and <tfoot> (table-footer-group)
+     so the browser automatically prints the lab header and patient demographic banner at the top of EVERY page,
+     and the verification/signatories/disclaimer footer at the bottom of EVERY page.
+     If test parameters exceed page capacity, they cleanly shift to subsequent pages between the header and footer. */
   .rpt-page {
     display: block !important;
     width: 100% !important;
@@ -1264,19 +1455,57 @@
     min-height: auto !important;
     height: auto !important;
   }
+  table.rpt-layout-tbl {
+    display: table !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    border: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    table-layout: fixed !important;
+  }
+  table.rpt-layout-tbl > thead.rpt-layout-head {
+    display: table-header-group !important;
+  }
+  table.rpt-layout-tbl > tbody.rpt-layout-body {
+    display: table-row-group !important;
+  }
+  table.rpt-layout-tbl > tfoot.rpt-layout-foot {
+    display: table-footer-group !important;
+  }
+  table.rpt-layout-tbl > thead > tr,
+  table.rpt-layout-tbl > tbody > tr,
+  table.rpt-layout-tbl > tfoot > tr {
+    display: table-row !important;
+  }
+  table.rpt-layout-tbl > thead > tr > td,
+  table.rpt-layout-tbl > tbody > tr > td,
+  table.rpt-layout-tbl > tfoot > tr > td {
+    display: table-cell !important;
+    border: 0 !important;
+    padding: 0 !important;
+    vertical-align: top !important;
+  }
   .rpt-header-block {
     display: block !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
+    padding-bottom: 4px !important;
   }
   .rpt-tests-block {
     display: block !important;
+  }
+  .rpt-footer-block {
+    display: block !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    padding-top: 6px !important;
   }
   .rpt-page .rpt-footer {
     display: block !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    margin-top: 18px !important;
+    margin-top: 6px !important;
   }
 
   /* Never leak screen chrome into the printout. */
@@ -1345,6 +1574,40 @@
     box-shadow: 0 8px 30px rgba(0,0,0,.28);
     display: flex;
     flex-direction: column;
+  }
+  .rpt-layout-tbl {
+    width: 100%;
+    min-height: 100%;
+    height: 100%;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .rpt-layout-tbl > thead.rpt-layout-head {
+    display: block;
+    width: 100%;
+  }
+  .rpt-layout-tbl > tbody.rpt-layout-body {
+    display: block;
+    width: 100%;
+    flex: 1 0 auto;
+  }
+  .rpt-layout-tbl > tfoot.rpt-layout-foot {
+    display: block;
+    width: 100%;
+    margin-top: auto;
+  }
+  .rpt-layout-tbl > thead > tr,
+  .rpt-layout-tbl > tbody > tr,
+  .rpt-layout-tbl > tfoot > tr,
+  .rpt-layout-tbl > thead > tr > td,
+  .rpt-layout-tbl > tbody > tr > td,
+  .rpt-layout-tbl > tfoot > tr > td {
+    display: block;
+    width: 100%;
+    border: 0;
+    padding: 0;
   }
   .report-preview .rpt-page .rpt-footer,
   body > .rpt-page .rpt-footer { margin-top: auto; }
@@ -2673,23 +2936,41 @@
     /* footer */
     var footOut = hasRealHtml(s.footerHtml) ? '<div class="rpt-footer">' + fillTokens(s.footerHtml, d) + '</div>' : reportFooterHtml(d);
 
-    var bodyHtml = '<div class="rpt-header-block">' + headOut + infoHtml + '</div>' +
-      '<div class="rpt-tests-block">' + testsHtml +
-      (pendingCount
-        ? '<p style="color:#000;font-size:0.96em;margin:6px 0"><em>Note: ' +
-          pendingCount + ' test(s) from this invoice are still pending.</em></p>'
-        : '') +
-      (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.'
-        ? '<p style="color:#000;margin-top:18px;margin-bottom:4px;font-size:0.92em"><em>' +
-          App.esc(s.footerNote) + '</em></p>'
-        : '') + '</div>' +
-      footOut;
-
-    if (d._cmpLegend) {
-      bodyHtml = bodyHtml.replace(footOut, '<p style="margin:6px 0 2px;font-size:0.82em;color:#000">' +
+    var legendHtml = d._cmpLegend
+      ? '<p style="margin:6px 0 2px;font-size:0.82em;color:#000">' +
         '<b>New result:</b> <span style="color:#dc2626;font-weight:700">&uarr; above range (high)</span> &nbsp;|&nbsp; ' +
-        '<span style="color:#2563eb;font-weight:700">&darr; below range (low)</span>. Previous results are shown as recorded.</p>' + footOut);
-    }
+        '<span style="color:#2563eb;font-weight:700">&darr; below range (low)</span>. Previous results are shown as recorded.</p>'
+      : '';
+
+    var bodyHtml =
+      '<table class="rpt-layout-tbl">' +
+        '<thead class="rpt-layout-head">' +
+          '<tr><td>' +
+            '<div class="rpt-header-block">' + headOut + infoHtml + '</div>' +
+          '</td></tr>' +
+        '</thead>' +
+        '<tbody class="rpt-layout-body">' +
+          '<tr><td>' +
+            '<div class="rpt-tests-block">' + testsHtml +
+            (pendingCount
+              ? '<p style="color:#000;font-size:0.96em;margin:6px 0"><em>Note: ' +
+                pendingCount + ' test(s) from this invoice are still pending.</em></p>'
+              : '') +
+            (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.'
+              ? '<p style="color:#000;margin-top:18px;margin-bottom:4px;font-size:0.92em"><em>' +
+                App.esc(s.footerNote) + '</em></p>'
+              : '') +
+            legendHtml +
+            '</div>' +
+          '</td></tr>' +
+        '</tbody>' +
+        '<tfoot class="rpt-layout-foot">' +
+          '<tr><td>' +
+            '<div class="rpt-footer-block">' + footOut + '</div>' +
+          '</td></tr>' +
+        '</tfoot>' +
+      '</table>';
+
     return '<style>' + RPT_PRINT_CSS + '</style>' +
       '<div class="rpt-page" style="font-size:' + rptBase + 'px">' + bodyHtml + '</div>';
   }
@@ -2999,11 +3280,14 @@
         previewQr(reportHtml(d), invoiceId) +
       '</div>' +
       '<div id="rvWaHist" style="margin-top:12px">' + waHistoryHtml(invoiceId) + '</div>' +
+      '<div id="rvSmsHist" style="margin-top:6px"></div>' +
       '<div id="rvAuto" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>' +
       '<div class="actions" style="margin-top:12px;flex-wrap:wrap;justify-content:flex-end;gap:8px">' +
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
         '<button class="btn btn-ghost" id="rvWaPatient">' + WA_ICON + ' Send to Patient (WhatsApp)</button>' +
         docWaBtn +
+        '<button class="btn btn-ghost" id="rvSmsPatient">📲 Send SMS to Patient</button>' +
+        (d.doc ? '<button class="btn btn-ghost" id="rvSmsDoctor">📲 Send SMS to Doctor</button>' : '') +
         '<span id="rvShare" style="display:contents"></span>' +
         '<button class="btn btn-primary" id="rvPrint">' + PRINT_ICON + ' Print Report <span style="opacity:.7;font-weight:500;font-size:11px;margin-left:4px">Ctrl+P</span></button>' +
       '</div>',
@@ -3042,6 +3326,10 @@
           document.getElementById('rvWaPatient').addEventListener('click', function () { waManualSend(invoiceId, 'patient'); });
           var wdoc = document.getElementById('rvWaDoctor');
           if (wdoc && !wdoc.disabled) wdoc.addEventListener('click', function () { waManualSend(invoiceId, 'doctor'); });
+          document.getElementById('rvSmsPatient').addEventListener('click', function () { smsManualSend(invoiceId, 'patient'); });
+          var sdoc = document.getElementById('rvSmsDoctor');
+          if (sdoc) sdoc.addEventListener('click', function () { smsManualSend(invoiceId, 'doctor'); });
+          smsRefreshHistory(invoiceId);
         }
       });
   }
@@ -3062,7 +3350,100 @@
     var y = M;
 
     var inHdr = false;
-    function need(h) { if (y + h > 280) { doc.addPage(); y = M; if (!inHdr && typeof drawHeader === 'function') { inHdr = true; drawHeader(); inHdr = false; } } } /* every page starts with the letterhead + patient block */
+    var PH = 297, FM = M;                                   // A4 height, bottom margin
+    var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
+    var fVerLines = doc.splitTextToSize(fVerNote, CW);
+    var fSigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title) && g.active !== false; });
+    var fSw = fSigs.length ? CW / fSigs.length : CW;
+    var fHasSigImg = s.enableSignatures !== false && fSigs.some(function (g) { return !!(g.sigImg || g.signature); });
+    var fSigImgH = fHasSigImg ? 9 : 0;
+    var fSigBlockH = 0;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+    var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
+    fSigs.forEach(function (g, k) {
+      var h = fSigImgH + fSigNameLines[k].length * 4.1 + (g.qual ? 3.9 : 0) + (g.title ? 3.9 : 0);
+      if (h > fSigBlockH) fSigBlockH = h;
+    });
+    var fAddrParts = [];
+    if (s.address) fAddrParts.push(s.address);
+    if (s.headOffice) fAddrParts.push('Head Office: ' + s.headOffice);
+    if (s.mainLab) fAddrParts.push('Previous Lab: ' + s.mainLab);
+    if (s.phone) fAddrParts.push('Phone: ' + s.phone);
+    if (s.callCenter) fAddrParts.push('Call Center: ' + s.callCenter);
+    if (s.website) fAddrParts.push('Web: ' + s.website);
+    if (s.email) fAddrParts.push('Email: ' + s.email);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    var fAddrLines = fAddrParts.length ? doc.splitTextToSize(fAddrParts.join(' | '), CW) : [];
+    var fNote = s.disclaimer || ((s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') ? s.footerNote : '') || DEFAULT_DISCLAIMER;
+    doc.setFontSize(6.6);
+    var fNoteLines = doc.splitTextToSize(fNote, CW);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
+    var fTextLines = String(s.footerText || '').trim() ? doc.splitTextToSize(String(s.footerText).trim(), CW) : [];
+    var fTextH = fTextLines.length ? fTextLines.length * 4.2 + 3 : 0;
+    var fH = (pre && pre.ftr)
+      ? (CW * pre.ftr.ratio + 2)
+      : (fTextH + fVerLines.length * 4.4 + 3 + 1 + 4 + fSigBlockH + 4 + 1 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + fNoteLines.length * 2.9 + 3 + 1 + 5);
+
+    function drawFooter() {
+      var fy = PH - FM - fH;
+      if (pre && pre.ftr) {
+        addImg(pre.ftr.url, M, fy, CW, fH - 2);
+        return;
+      }
+      var curY = fy;
+      if (fTextLines.length) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+        txt(fTextLines, W / 2, curY + 3, { align: 'center' });
+        curY += fTextH;
+      }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+      txt(fVerLines, W / 2, curY + 3, { align: 'center' });
+      curY += fVerLines.length * 4.4 + 3;
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, curY, W - M, curY); curY += 5;
+      fSigs.forEach(function (g, k) {
+        var fCx = M + fSw * (k + 0.5), fSy = curY;
+        var sigImgData = (s.enableSignatures !== false) ? (g.sigImg || g.signature) : null;
+        if (sigImgData) {
+          try { doc.addImage(sigImgData, 'PNG', fCx - 13, fSy, 26, 8.5); } catch (e) {}
+        }
+        if (s.showStamps !== false && g.stampImg) {
+          try { doc.addImage(g.stampImg, 'PNG', fCx + 10, fSy, 8, 8); } catch (e) {}
+        }
+        if (fSigImgH) fSy += fSigImgH + 1;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
+        txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 4.1;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(40, 40, 40);
+        if (g.qual) { txt(g.qual, fCx, fSy, { align: 'center' }); fSy += 3.9; }
+        if (g.title) { txt(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fCx, fSy, { align: 'center' }); fSy += 3.9; }
+      });
+      curY += fSigBlockH + 3;
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(M, curY, W - M, curY); curY += 4;
+      if (fAddrLines.length) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+        txt(fAddrLines, W / 2, curY, { align: 'center' }); curY += fAddrLines.length * 4.2 + 2;
+      }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6); doc.setTextColor(20, 20, 20);
+      txt(fNoteLines, M, curY, {}); curY += fNoteLines.length * 2.9 + 2;
+      doc.setLineWidth(0.3); doc.line(M, curY, W - M, curY); curY += 4;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
+      txt('Powered by System Optix', W / 2, curY, { align: 'center' });
+    }
+
+    var maxBodyY = PH - FM - fH - 3;
+    function need(h) {
+      if (y + h > maxBodyY) {
+        if (!inHdr && typeof drawFooter === 'function') {
+          drawFooter();
+        }
+        doc.addPage();
+        y = M;
+        if (!inHdr && typeof drawHeader === 'function') {
+          inHdr = true;
+          drawHeader();
+          inHdr = false;
+        }
+      }
+    } /* every page starts with the letterhead + patient block */
     function txt(t, x, yy, opts) {
       // jsPDF renders a string[] as multiple lines; keep that working
       // (patient grid / wrapped footer lines pass splitTextToSize arrays).
@@ -3516,98 +3897,16 @@
       y += 6;
     }
 
-    // ----- footer (same content as the HTML report): verification line, signatories, address line, NOTE, powered-by.
-    // It is measured first and pinned to the bottom of the last page (a new page is added only if it cannot fit). -----
-    var PH = 297, FM = M;                                   // A4 height, bottom margin
-    if (pre && pre.ftr) {   /* custom footer from Lab Profile, drawn as a picture (same as the printout) */
-      var cfH = CW * pre.ftr.ratio + 2;
-      if (y + cfH > PH - FM) { doc.addPage(); y = M; }
-      y = Math.max(y + 4, PH - FM - cfH);
-      addImg(pre.ftr.url, M, y, CW, cfH - 2);
-      y += cfH;
-    } else {
-    var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
-    var fVerLines = doc.splitTextToSize(fVerNote, CW);
-    var fSigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title) && g.active !== false; });
-    var fSw = fSigs.length ? CW / fSigs.length : CW;
-    var fHasSigImg = s.enableSignatures !== false && fSigs.some(function (g) { return !!(g.sigImg || g.signature); });
-    var fSigImgH = fHasSigImg ? 9 : 0;
-    var fSigBlockH = 0;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
-    var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
-    fSigs.forEach(function (g, k) {
-      var h = fSigImgH + fSigNameLines[k].length * 4.1 + (g.qual ? 3.9 : 0) + (g.title ? 3.9 : 0);
-      if (h > fSigBlockH) fSigBlockH = h;
-    });
-    var fAddrParts = [];
-    if (s.address) fAddrParts.push(s.address);
-    if (s.headOffice) fAddrParts.push('Head Office: ' + s.headOffice);
-    if (s.mainLab) fAddrParts.push('Previous Lab: ' + s.mainLab);
-    if (s.phone) fAddrParts.push('Phone: ' + s.phone);
-    if (s.callCenter) fAddrParts.push('Call Center: ' + s.callCenter);
-    if (s.website) fAddrParts.push('Web: ' + s.website);
-    if (s.email) fAddrParts.push('Email: ' + s.email);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
-    var fAddrLines = fAddrParts.length ? doc.splitTextToSize(fAddrParts.join(' | '), CW) : [];
-    var fNote = s.disclaimer || ((s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') ? s.footerNote : '') || DEFAULT_DISCLAIMER;
-    doc.setFontSize(6.6);
-    var fNoteLines = doc.splitTextToSize(fNote, CW);
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
-    var fTextLines = String(s.footerText || '').trim() ? doc.splitTextToSize(String(s.footerText).trim(), CW) : [];
-    var fTextH = fTextLines.length ? fTextLines.length * 4.2 + 3 : 0;
-    var fH = fTextH + fVerLines.length * 4.4 + 3 + 1 + 4 + fSigBlockH + 4 + 1 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + fNoteLines.length * 2.9 + 3 + 1 + 5;
-    if (y + fH > PH - FM) { doc.addPage(); y = M; }
-    y = Math.max(y + 4, PH - FM - fH);                      // pin to the bottom of the page
+    // ----- footer on final page + page numbers for multi-page reports -----
+    drawFooter();
 
-    // plain footer text from Lab Profile ("Footer text"), above the verification line
-    if (fTextLines.length) {
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-      txt(fTextLines, W / 2, y + 3, { align: 'center' });
-      y += fTextH;
-    }
-    // verification line (bold, centered)
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-    txt(fVerLines, W / 2, y + 3, { align: 'center' });
-    y += fVerLines.length * 4.4 + 3;
-    // rule
-    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, y, W - M, y); y += 5;
-    // signatories, centered columns
-    fSigs.forEach(function (g, k) {
-      var fCx = M + fSw * (k + 0.5), fSy = y;
-      var sigImgData = (s.enableSignatures !== false) ? (g.sigImg || g.signature) : null;
-      if (sigImgData) {
-        try {
-          doc.addImage(sigImgData, 'PNG', fCx - 13, fSy, 26, 8.5);
-        } catch (e) {}
+    var totalPages = doc.getNumberOfPages();
+    if (totalPages > 1) {
+      for (var pi = 1; pi <= totalPages; pi++) {
+        doc.setPage(pi);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(120, 120, 120);
+        txt('Page ' + pi + ' of ' + totalPages, W - M, PH - 4, { align: 'right' });
       }
-      if (s.showStamps !== false && g.stampImg) {
-        try {
-          doc.addImage(g.stampImg, 'PNG', fCx + 10, fSy, 8, 8);
-        } catch (e) {}
-      }
-      if (fSigImgH) fSy += fSigImgH + 1;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-      txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 4.1;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(40, 40, 40);
-      if (g.qual)  { txt(g.qual,  fCx, fSy, { align: 'center' }); fSy += 3.9; }
-      if (g.title) { txt(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fCx, fSy, { align: 'center' }); fSy += 3.9; }
-    });
-    y += fSigBlockH + 3;
-    // rule + address line
-    doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 4;
-    if (fAddrLines.length) {
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-      txt(fAddrLines, W / 2, y, { align: 'center' }); y += fAddrLines.length * 4.2 + 2;
-    }
-    // NOTE (small)
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6); doc.setTextColor(20, 20, 20);
-    txt(fNoteLines, M, y, {}); y += fNoteLines.length * 2.9 + 2;
-    doc.setLineWidth(0.3); doc.line(M, y, W - M, y); y += 4;
-    // powered-by
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
-    txt('Powered by System Optix', W / 2, y, { align: 'center' });
-    y += 4;
     }
 
     var dataUri;
@@ -4032,6 +4331,7 @@
   App.compareReports = compareReports;
   /* exposed for Lab Profile preview QR */
   App.qrDataUrlFor = qrDataUrlFor;
+  App.reportHtml = reportHtml;
   /* Report preview for Lab Profile settings. It shows REAL data (no demo patient/tests): the newest patient report that has
      results; else the newest invoice's selected tests with empty result cells; else the first active tests of the catalog.
      `s` = the (possibly unsaved) form settings, merged over the saved ones so every setting flows into reportHtml. */

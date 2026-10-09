@@ -172,6 +172,7 @@
     report_templates: { prefix: 'TPL', digits: 3 },
     report_schedules: { prefix: 'SCH', digits: 3 },
     wa_log: { prefix: 'WAL', digits: 4 },
+    sms_outbox: { prefix: 'SMS', digits: 4 },
     samples: { prefix: 'S', digits: 5 },
     closings: { prefix: 'CL', digits: 4 },
     stock_items: { prefix: 'SI', digits: 3 },
@@ -182,7 +183,7 @@
     outsourced: { prefix: 'OS', digits: 5 },
     onlinepay_claims: { prefix: 'OPC', digits: 4 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced', 'onlinepay_claims'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'sms_outbox', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced', 'onlinepay_claims'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -235,7 +236,7 @@
   function seedStore(opts) {
     opts = opts || {};
     var store = {
-      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0, samples: 0 },
+      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0, sms_outbox: 0, samples: 0 },
       settings: {
         id: 'main',
         labName: opts.labName || 'Optix Medical Sync',
@@ -247,6 +248,7 @@
         footerNote: '',
         currency: 'PKR',
         whatsapp: { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false },
+        sms: { enabled: false, simNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true },
         signatories: [
           { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
           { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: '' },
@@ -256,7 +258,7 @@
       },
       users: [], patients: [], tests: [], doctors: [],
       invoices: [], payments: [], expenses: [], results: [],
-      wa_log: [], samples: [], stock_items: [], stock_moves: [], email_log: [], panels: [], ref_labs: [], outsourced: [], onlinepay_claims: []
+      wa_log: [], sms_outbox: [], samples: [], stock_items: [], stock_moves: [], email_log: [], panels: [], ref_labs: [], outsourced: [], onlinepay_claims: []
     };
 
     function put(table, obj) {
@@ -828,9 +830,24 @@
       }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
     },
     /* the lab's own linked WhatsApp number (/api/wa/*): status, link (QR), unlink, send. Resolves the JSON; rejects with a message. */
+    /* current Bearer session token (used by the phone's SMS gateway plugin) */
+    sessToken: sessToken,
     waGw: function (method, path, body) {
       if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));
       return window.fetch(API + '/api/wa/' + path, {
+        method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: body === undefined ? undefined : JSON.stringify(body)
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 401 && sessToken()) fireAuthError();
+          if (!r.ok) { var e = new Error(j.error || ('Request failed (' + r.status + ')')); e.status = r.status; throw e; }
+          return j;
+        });
+      }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
+    },
+    /* SMS outbox (/api/sms/*): queue, status, retry. Resolves the JSON; rejects with a message. */
+    smsApi: function (method, path, body) {
+      if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));
+      return window.fetch(API + '/api/sms/' + path, {
         method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: body === undefined ? undefined : JSON.stringify(body)
       }).then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
