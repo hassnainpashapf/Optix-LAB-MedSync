@@ -1967,6 +1967,7 @@
     '.unifi-shell{background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px -4px rgba(15,23,42,.06);margin-bottom:24px}' +
     '.unifi-top-bar{padding:18px 24px 14px;border-bottom:1px solid #e2e8f0;background:#ffffff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}' +
     '.unifi-top-title{font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:8px}' +
+    '.unifi-top-title>svg,.unifi-tab-btn>svg{display:block;flex:none}' +
     '.unifi-top-desc{font-size:12.5px;color:#64748b;margin:3px 0 0}' +
     '.unifi-tab-strip{display:flex;gap:6px;overflow-x:auto;padding:12px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;scrollbar-width:thin}' +
     '.unifi-tab-strip::-webkit-scrollbar{height:4px}' +
@@ -1999,18 +2000,18 @@
   function renderSettings() {
     if (role() !== 'admin') return denied();
     var tabs = [
-      { id: 'profile', sec: 'GENERAL', label: 'Lab Profile', desc: 'Identity, logo, contact & branches', icon: '🏢' },
-      { id: 'payments', sec: 'GENERAL', label: 'Online Payments', desc: 'JazzCash, Easypaisa, Bank & Raast', icon: '💳' },
-      { id: 'account', sec: 'GENERAL', label: 'My Account', desc: 'Admin credentials & password', icon: '👤' },
-      { id: 'users', sec: 'GENERAL', label: 'Users & Roles', desc: 'Staff accounts & permissions', icon: '👥' },
+      { id: 'profile', sec: 'GENERAL', label: 'Lab Profile', desc: 'Identity, logo, contact & branches', icon: 'flask' },
+      { id: 'payments', sec: 'GENERAL', label: 'Online Payments', desc: 'JazzCash, Easypaisa, Bank & Raast', icon: 'card' },
+      { id: 'account', sec: 'GENERAL', label: 'My Account', desc: 'Admin credentials & password', icon: 'users' },
+      { id: 'users', sec: 'GENERAL', label: 'Users & Roles', desc: 'Staff accounts & permissions', icon: 'shield' },
 
-      { id: 'templates', sec: 'REPORTS & PRINTING', label: 'Report Templates', desc: 'Presets, normal ranges & tests', icon: '📄' },
-      { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: '🖋️' },
+      { id: 'templates', sec: 'REPORTS & PRINTING', label: 'Report Templates', desc: 'Presets, normal ranges & tests', icon: 'file' },
+      { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: 'check' },
 
-      { id: 'portal', sec: 'AUTOMATION & PORTAL', label: 'Patient Portal', desc: 'Online verification & QR access', icon: '🌐' },
+      { id: 'portal', sec: 'AUTOMATION & PORTAL', label: 'Patient Portal', desc: 'Online verification & QR access', icon: 'lock' },
 
-      { id: 'backup', sec: 'SYSTEM', label: 'Backup & Cloud Sync', desc: 'Automated backups & export', icon: '💾' },
-      { id: 'danger', sec: 'SYSTEM', label: 'Danger Zone', desc: 'Factory reset & data purge', icon: '⚠️', isDanger: true }
+      { id: 'backup', sec: 'SYSTEM', label: 'Backup & Cloud Sync', desc: 'Automated backups & export', icon: 'download' },
+      { id: 'danger', sec: 'SYSTEM', label: 'Danger Zone', desc: 'Factory reset & data purge', icon: 'alert', isDanger: true }
     ];
 
     var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
@@ -2018,7 +2019,7 @@
     var tabsHtml = tabs.map(function (t) {
       var isAct = t.id === cur.id;
       return '<a href="#/settings/' + t.id + '" class="unifi-tab-btn' + (isAct ? ' active' : '') + (t.isDanger ? ' unifi-danger' : '') + '">'
-        + '<span>' + t.icon + '</span>'
+        + App.icon(t.icon, 16)
         + '<span>' + App.esc(t.label) + '</span>'
         + '</a>';
     }).join('');
@@ -2030,7 +2031,7 @@
         '<div class="unifi-top-bar">' +
           '<div>' +
             '<h2 class="unifi-top-title">' +
-              '<span>' + cur.icon + '</span>' +
+              App.icon(cur.icon, 20) +
               '<span>' + App.esc(cur.label) + '</span>' +
             '</h2>' +
             '<p class="unifi-top-desc">' + App.esc(cur.desc) + '</p>' +

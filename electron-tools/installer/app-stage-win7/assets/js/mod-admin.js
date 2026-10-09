@@ -1941,22 +1941,22 @@
   function renderSettings() {
     if (role() !== 'admin') return denied();
     var tabs = [
-      { id: 'profile', label: 'Edit Report Form' },
-      { id: 'account', label: 'My Account' },
-      { id: 'templates', label: 'Report Templates' },
-      { id: 'signatures', label: 'Digital Signatures' },
-      { id: 'whatsapp', label: 'WhatsApp' },
-      { id: 'sharing', label: 'Email & Slack' },
-      { id: 'portal', label: 'Patient portal' },
-      { id: 'users', label: 'Users & Roles' },
-      { id: 'backup', label: 'Backup' },
-      { id: 'danger', label: 'Danger Zone' }
+      { id: 'profile', label: 'Edit Report Form', icon: 'flask' },
+      { id: 'account', label: 'My Account', icon: 'users' },
+      { id: 'templates', label: 'Report Templates', icon: 'file' },
+      { id: 'signatures', label: 'Digital Signatures', icon: 'check' },
+      { id: 'whatsapp', label: 'WhatsApp', icon: 'chat' },
+      { id: 'sharing', label: 'Email & Slack', icon: 'mail' },
+      { id: 'portal', label: 'Patient portal', icon: 'lock' },
+      { id: 'users', label: 'Users & Roles', icon: 'shield' },
+      { id: 'backup', label: 'Backup', icon: 'download' },
+      { id: 'danger', label: 'Danger Zone', icon: 'alert' }
     ];
     /* the sections are sidebar sub-menu items now (#/settings, #/settings/account, …); the card only labels the open one */
     var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
     var html = ''
       + '<div class="card"><div class="card-b">'
-      + '<div style="margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:12px"><b style="font-size:17px;color:' + (cur.id === 'danger' ? 'var(--red)' : 'var(--brand)') + '">' + cur.label + '</b></div>'
+      + '<div style="margin-bottom:18px;border-bottom:1px solid var(--line);padding-bottom:12px"><b style="display:inline-flex;align-items:center;gap:8px;font-size:17px;color:' + (cur.id === 'danger' ? 'var(--red)' : 'var(--brand)') + '">' + App.icon(cur.icon, 20) + '<span>' + cur.label + '</span></b></div>'
       + '<div id="setBody"></div>'
       + '</div></div>';
     document.getElementById('view').innerHTML = html;
