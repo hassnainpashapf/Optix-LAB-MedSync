@@ -1127,6 +1127,16 @@ function loadSaasLabs(silent) {
 function loadBranchLabs(silent) {
   return loadSection('branchlabs', function () { return api('/api/saas/labs'); }, function (r) {
     state.branchlabs = (r && r.labs) || [];
+    /* per-lab branch counts for the table's "used / limit" column (parallel, labs are few) */
+    var labs = state.branchlabs;
+    if (labs.length) {
+      Promise.all(labs.map(function (l) {
+        return api('/api/saas/labs/' + encodeURIComponent(l.id) + '/branches').then(function (br) {
+          var arr = (br && br.branches) || [];
+          l.branchCount = arr.filter(function (b) { return b && b.is_active !== false; }).length;
+        }, function () { l.branchCount = null; });
+      })).then(function () { if (state.view === 'branchlabs' && !state.managingLabId) paintMain(); });
+    }
   }, silent);
 }
 function loadLabBranches(labId) {
@@ -1319,7 +1329,7 @@ function branchLabsTableHtml() {
   }
   var rows = labs.map(function (l) {
     var limit = (l.maxBranches == null ? 5 : l.maxBranches);
-    var used = (l.branchCount == null ? 0 : l.branchCount);
+    var used = (l.branchCount == null ? '\u2013' : l.branchCount);
     var fc = branchFeatureCount(l);
     var managing = state.managingLabId === l.id;
     return '<tr data-lab="' + esc(l.id) + '">' +

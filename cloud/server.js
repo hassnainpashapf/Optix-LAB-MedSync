@@ -188,6 +188,7 @@ async function main() {
   ];
   /* returns { test, params: bool, ranges: bool } — `test` is the same object when nothing changed */
   function withDefaults(t) {
+    let out = t, params = false, ranges = false; /* pre-existing ReferenceError fix: was using undeclared out/params/ranges */
     if ((!Array.isArray(out.params) || !out.params.length) && DEFAULT_PARAMS[out.code] && !out.isPackage) { out = Object.assign({}, out, { params: DEFAULT_PARAMS[out.code] }); params = true; }
     if (out.code === 'TYPHI') {
       let typhiDirty = false, patch = {};
@@ -1799,7 +1800,7 @@ async function main() {
     rows.sort((a, b) => String(a.created_at || '') < String(b.created_at || '') ? -1 : (String(a.created_at || '') > String(b.created_at || '') ? 1 : 0));
     res.json(rows);
   });
-  app.post('/api/branches', needUser, async (req, res) => {
+  app.post('/api/branches', needAdmin, async (req, res) => {
     try {
       const b = req.body || {};
       if (!b.name || !String(b.name).trim()) return res.status(400).json({ error: 'Branch name is required' });
@@ -1817,18 +1818,26 @@ async function main() {
       res.status(201).json(branchView(row));
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
-  app.put('/api/branches/:id', needUser, async (req, res) => {
+  app.put('/api/branches/:id', needAdmin, async (req, res) => {
     try {
       const cur = await req.store.get('branches', req.params.id);
       if (!cur) return res.status(404).json({ error: 'branch not found' });
-      const b = req.body || {}, next = Object.assign({}, cur, { id: cur.id, created_at: cur.created_at });
+      const b = req.body || {};
+      /* reactivating a branch consumes a slot: enforce the limit like creation does */
+      if (b.is_active === true && cur.is_active === false) {
+        const lab = req.lab || {};
+        const maxB = lab.maxBranches != null ? lab.maxBranches : 5;
+        const active = (await req.store.all('branches')).filter(x => x && x.is_active !== false).length;
+        if (active >= maxB) return res.status(403).json({ error: 'Branch limit reached (' + active + ' of ' + maxB + ' branches). Ask your superadmin to raise the limit.' });
+      }
+      const next = Object.assign({}, cur, { id: cur.id, created_at: cur.created_at });
       ['name', 'code', 'address', 'phone', 'manager_name'].forEach((f) => { if (b[f] !== undefined) next[f] = String(b[f]).trim(); });
       if (b.is_active !== undefined) next.is_active = !!b.is_active;
       await req.store.put('branches', next);
       res.json(branchView(next));
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
-  app.delete('/api/branches/:id', needUser, async (req, res) => {
+  app.delete('/api/branches/:id', needAdmin, async (req, res) => {
     try {
       const cur = await req.store.get('branches', req.params.id);
       if (!cur) return res.status(404).json({ error: 'branch not found' });
@@ -1866,6 +1875,21 @@ async function main() {
     try {
       let n = 0;
       if (t === 'invoices') { const e = await withLock(lockKey(req), () => limitErr(req, t, rows)); if (e) return res.status(402).json(e); }
+      if (t === 'branches') {
+        /* branch limit applies to bulk upserts too: count rows that would become newly active */
+        const lab = req.lab || {};
+        const maxB = lab.maxBranches != null ? lab.maxBranches : 5;
+        const existing = await store.all('branches');
+        const activeNow = existing.filter(x => x && x.is_active !== false).length;
+        let newActive = 0;
+        for (const r of rows) {
+          if (!r || r.id == null) continue;
+          const cur = existing.find(x => x && x.id === r.id);
+          if (r.is_active !== false && (!cur || cur.is_active === false)) newActive++;
+        }
+        if (activeNow + newActive > maxB)
+          return res.status(403).json({ error: 'Branch limit reached (' + activeNow + ' of ' + maxB + ' branches). Ask your superadmin to raise the limit.' });
+      }
       for (const r of rows) { if (r && r.id != null) { await store.put(t, r); n++; } }
       if (n && ['tests', 'invoices', 'patients', 'doctors', 'expenses', 'payments', 'results'].indexOf(t) >= 0) await auditLog(req, 'bulk', t, '', { label: n + ' ' + t + ' saved in one batch' });
       res.json({ ok: true, saved: n });
