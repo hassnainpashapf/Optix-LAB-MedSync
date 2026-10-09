@@ -166,12 +166,6 @@ function renderTests() {
   }).join(' ');
 
   view().innerHTML =
-    '<div class="test-head-bar" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">' +
-      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
-        '<a class="btn btn-sm btn-primary" href="#/tests" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🔬 All Tests Catalog</a>' +
-        '<a class="btn btn-sm btn-ghost" href="#/packages" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🎁 Health Packages &amp; Screening Deals Center</a>' +
-      '</div>' +
-    '</div>' +
     statCards +
     '<div class="card"><div class="card-b">' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">' +
@@ -1174,16 +1168,10 @@ function renderPackages() {
     + '</style>'
     + '<div class="pkg-dash">'
 
-    /* Top Header Navigation Tabs & Actions */
-    + '<div class="pkg-head-bar" style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap">'
-    +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-    +     '<a class="btn btn-sm btn-ghost" href="#/tests" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🔬 All Tests Catalog</a>'
-    +     '<a class="btn btn-sm btn-primary" href="#/packages" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🎁 Health Packages &amp; Screening Deals Center</a>'
-    +   '</div>'
-    +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-    +     '<button class="btn btn-ghost btn-sm" id="pkgSeedBtn">⚡ Quick Seed Premier Deals</button>'
-    +     '<button class="btn btn-primary btn-sm" id="pkgAddBtn">+ Create Health Package</button>'
-    +   '</div>'
+    /* Top Header Actions */
+    + '<div class="pkg-head-bar" style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap">'
+    +   '<button class="btn btn-ghost btn-sm" id="pkgSeedBtn">⚡ Quick Seed Premier Deals</button>'
+    +   '<button class="btn btn-primary btn-sm" id="pkgAddBtn">+ Create Health Package</button>'
     + '</div>'
 
     /* 4 Unified KPI Stat Cards (.kpi-grid + .kpi) */

@@ -1127,8 +1127,9 @@
       + '<style>' + ADM_STAT_CSS + '</style>'
       + repKpis
       + filterCard
+      + repSlotTemplates
       + (showFinance ? cmpCard : '')
-      + repSlotSchedules + repSlotBuilder + (showFinance ? repSlotTemplates : '')
+      + repSlotSchedules + repSlotBuilder
       + (showFinance ? (finSumCard + finCallout) : '')
       + (showDues ? duesCard : '')
       + (showPatients ? finCard : '')
@@ -1601,17 +1602,10 @@
       + '</div>'
       + '</div>'
 
-      /* 2. Action buttons row below cards */
-      + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap" class="no-print">'
-      +   '<button class="btn btn-ghost btn-sm" id="ptRefreshBtn">🔄 Refresh</button>'
-      +   '<button class="btn btn-ghost btn-sm" id="ptCsvBtn">📥 Export CSV</button>'
-      +   '<button class="btn btn-primary btn-sm" id="ptPrintBtn">' + PRINT_ICON + ' Print Trend Report</button>'
-      + '</div>'
-
-      /* 3. Patient & Parameter Selector Controls (Below cards) */
+      /* 2. Patient & Parameter Selector Controls with Actions (Inside toolbar card) */
       + '<div class="card pt-filter-box" style="margin-bottom:18px"><div class="card-b" style="padding:14px 16px">'
-      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-      +     '<div style="flex:1;min-width:260px">'
+      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">'
+      +     '<div style="flex:1;min-width:240px">'
       +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Select Patient</label>'
       +       '<select class="select" id="ptPatSelect" style="font-weight:600;width:100%">'
       +         allPatients.map(function (p) {
@@ -1623,7 +1617,7 @@
                 }).join('')
       +       '</select>'
       +     '</div>'
-      +     '<div style="flex:1;min-width:240px">'
+      +     '<div style="flex:1;min-width:220px">'
       +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Biometric Parameter</label>'
       +       '<select class="select" id="ptParamSelect" style="font-weight:600;width:100%"' + (!series.length ? ' disabled' : '') + '>'
       +         (series.length ? series.map(function (m, i) {
@@ -1634,14 +1628,19 @@
                 }).join('') : '<option value="">No numeric parameters reported</option>')
       +       '</select>'
       +     '</div>'
-      +     '<div style="min-width:160px">'
+      +     '<div style="min-width:150px">'
       +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Visits Range</label>'
-      +       '<select class="select" id="ptRangeSelect" style="font-weight:600">'
+      +       '<select class="select" id="ptRangeSelect" style="font-weight:600;width:100%">'
       +         '<option value="all"' + (trendsState.visitLimit === 'all' ? ' selected' : '') + '>All Historical Visits</option>'
       +         '<option value="last3"' + (trendsState.visitLimit === 'last3' ? ' selected' : '') + '>Last 3 Visits</option>'
       +         '<option value="last5"' + (trendsState.visitLimit === 'last5' ? ' selected' : '') + '>Last 5 Visits</option>'
       +         '<option value="last10"' + (trendsState.visitLimit === 'last10' ? ' selected' : '') + '>Last 10 Visits</option>'
       +       '</select>'
+      +     '</div>'
+      +     '<div style="display:flex;gap:6px;align-items:center;margin-left:auto;flex-wrap:wrap" class="no-print">'
+      +       '<button class="btn btn-ghost btn-sm" id="ptRefreshBtn" style="height:36px">🔄 Refresh</button>'
+      +       '<button class="btn btn-ghost btn-sm" id="ptCsvBtn" style="height:36px">📥 Export CSV</button>'
+      +       '<button class="btn btn-primary btn-sm" id="ptPrintBtn" style="height:36px">' + PRINT_ICON + ' Print Trend Report</button>'
       +     '</div>'
       +   '</div>'
       + '</div></div>'

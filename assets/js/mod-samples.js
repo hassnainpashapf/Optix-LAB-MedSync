@@ -1150,45 +1150,22 @@
       + '</style>'
       + '<div class="hs-dash">'
 
-      /* Clean Page Header */
-      + '<div style="margin-bottom:18px">'
-      +   '<h2 style="margin:0;font-size:20px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px">🛵 Home Sampling &amp; Dispatch</h2>'
-      +   '<p class="muted" style="margin:3px 0 0;font-size:12.5px">Doorstep sample collection bookings, phlebotomist tracking &amp; lab intake check-in</p>'
-      + '</div>'
-
-      /* 4 Unified KPI Cards (Standard size, branded gradients & borders) */
-      + '<div class="kpi-grid" style="margin-bottom:18px">'
-      +   '<div class="kpi t-navy" style="cursor:pointer" data-hs-filter-date="today" title="Filter Today\'s Pickups">'
-      +     '<div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>'
-      +     '<div class="kpi-lb">TODAY\'S PICKUPS</div>'
-      +     '<div class="kpi-nm">' + todayBookings.length + '</div>'
-      +     '<div class="kpi-sb">' + bookings.length + ' all-time bookings</div>'
+      /* Clean Page Header with Action Buttons */
+      + '<div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">'
+      +   '<div>'
+      +     '<h2 style="margin:0;font-size:20px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px">🛵 Home Sampling &amp; Dispatch</h2>'
+      +     '<p class="muted" style="margin:3px 0 0;font-size:12.5px">Doorstep sample collection bookings, phlebotomist tracking &amp; lab intake check-in</p>'
       +   '</div>'
-
-      +   '<div class="kpi t-blue" style="cursor:pointer" data-hs-filter-status="dispatched" title="Filter Dispatched">'
-      +     '<div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg></div>'
-      +     '<div class="kpi-lb">CURRENTLY DISPATCHED</div>'
-      +     '<div class="kpi-nm">' + dispatchedCount + '</div>'
-      +     '<div class="kpi-sb">phlebotomists on the road</div>'
-      +   '</div>'
-
-      +   '<div class="kpi t-purple" style="cursor:pointer" data-hs-filter-status="collected" title="Filter Collected">'
-      +     '<div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6.3L4.6 18.1a1.5 1.5 0 0 0 1.3 2.2h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.3V3"/></svg></div>'
-      +     '<div class="kpi-lb">SAMPLES COLLECTED</div>'
-      +     '<div class="kpi-nm">' + collectedCount + '</div>'
-      +     '<div class="kpi-sb">specimens en route to lab</div>'
-      +   '</div>'
-
-      +   '<div class="kpi t-green" style="cursor:pointer" data-hs-filter-status="received_in_lab" title="Filter Received in Lab">'
-      +     '<div class="kpi-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg></div>'
-      +     '<div class="kpi-lb">CHECKED-IN TO LAB</div>'
-      +     '<div class="kpi-nm">' + receivedCount + '</div>'
-      +     '<div class="kpi-sb">received &amp; ready for testing</div>'
+      +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      +     '<button class="btn btn-sm" id="hsRidersBtn" title="Manage Phlebotomist Riders" style="font-weight:600">👥 Phlebotomist Riders (' + riders.length + ')</button>'
+      +     '<button class="btn btn-sm" id="hsSeedBtn" title="Seed Demo Bookings" style="font-weight:600">⚡ Seed Bookings</button>'
+      +     '<button class="btn btn-primary btn-sm" id="hsBookBtn" style="font-weight:700">+ Book Home Collection</button>'
       +   '</div>'
       + '</div>'
 
-      /* Pipeline Tabs */
-      + '<div class="hs-tab-bar">'
+      /* Search & Filter Card with Integrated Status Pipeline Tabs */
+      + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="padding:14px 16px">'
+      +   '<div class="hs-tab-bar" style="border-bottom:1.5px solid var(--bd);padding-bottom:12px;margin-bottom:12px">'
       +   [
             { id: 'all', label: 'All Bookings', count: tabCounts.all },
             { id: 'scheduled', label: '📅 Scheduled', count: tabCounts.scheduled },
@@ -1202,12 +1179,9 @@
               + tab.label + ' <span class="hs-tab-count">' + tab.count + '</span>'
               + '</button>';
           }).join('')
-      + '</div>'
-
-      /* Search & Filter Toolbar with Action Buttons */
-      + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="padding:12px 16px">'
+      +   '</div>'
       +   '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
-      +     '<input class="input search" id="hsSearch" placeholder="Search by patient, phone, address, booking #, tests..." value="' + App.esc(HS_FILTER.q) + '" style="max-width:280px;min-width:180px;flex:1 1 200px">'
+      +     '<input class="input search" id="hsSearch" placeholder="Search by patient, phone, address, booking #, tests..." value="' + App.esc(HS_FILTER.q) + '" style="flex:1 1 240px;min-width:200px">'
       +     '<div style="display:flex;gap:6px;align-items:center">'
       +       '<span style="font-size:11.5px;font-weight:700;color:var(--muted);text-transform:uppercase">Date:</span>'
       +       '<select class="select" id="hsDateSelect" style="width:auto;padding:5px 8px;font-size:12.5px">'
@@ -1226,11 +1200,6 @@
       +       '</select>'
       +     '</div>'
       +     (HS_FILTER.q || HS_FILTER.date !== 'all' || HS_FILTER.riderId !== 'all' ? '<button class="btn btn-ghost btn-sm" id="hsClearFilter" style="color:var(--red);padding:5px 8px">✕ Reset</button>' : '')
-      +     '<div style="margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-      +       '<button class="btn btn-sm" id="hsRidersBtn" title="Manage Phlebotomist Riders" style="font-weight:600">👥 Phlebotomist Riders (' + riders.length + ')</button>'
-      +       '<button class="btn btn-sm" id="hsSeedBtn" title="Seed Demo Bookings" style="font-weight:600">⚡ Seed Bookings</button>'
-      +       '<button class="btn btn-primary btn-sm" id="hsBookBtn" style="font-weight:700">+ Book Home Collection</button>'
-      +     '</div>'
       +   '</div>'
       + '</div></div>';
 
@@ -1891,7 +1860,7 @@
     renderHomeSamplingDashboard();
   }
 
-  App.route('#/home-sampling', function () { App.nav('#/samples'); });
-  App.route('#/samples/home', function () { App.nav('#/samples'); });
+  App.route('#/home-sampling', renderHomeSamplingDashboard);
+  App.route('#/samples/home', renderHomeSamplingDashboard);
 })();
 
