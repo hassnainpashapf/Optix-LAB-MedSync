@@ -1247,6 +1247,10 @@
         '@media(max-width:980px){.rcp-layout{grid-template-columns:1fr}}' +
         '.rcp-prev-box{position:sticky;top:16px;background:#f8fafc;border:1px solid var(--bd);border-radius:14px;padding:16px;box-shadow:var(--sh-sm)}' +
         '.rcp-prev-box h3 svg{width:18px;height:18px;max-width:18px;max-height:18px;flex-shrink:0}' +
+        '.rcp-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}' +
+        '.rcp-toolbar .input.search{flex:1 1 200px;min-width:160px;width:auto;padding:7px 12px;font-size:13px;height:36px;border-radius:8px}' +
+        '.rcp-toolbar .select{width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px}' +
+        '.rcp-toolbar input[type="date"]{width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px}' +
         '</style>' +
         '<div class="rcp-head">' +
         '<div>' +
@@ -1261,20 +1265,20 @@
         kpiHtml +
         '<div class="rcp-layout">' +
           '<div class="card"><div class="card-b">' +
-            '<div class="smp-filters" style="margin-bottom:12px">' +
-              '<input class="input search" id="rcpSearch" placeholder="Search invoice no, patient, phone, MR#..." value="' + App.esc(RCP.q) + '" style="flex:1 1 240px">' +
-              '<select class="select" id="rcpDate">' +
+            '<div class="rcp-toolbar">' +
+              '<input class="input search" id="rcpSearch" placeholder="Search invoice no, patient, phone, MR#..." value="' + App.esc(RCP.q) + '" style="flex:1 1 200px;min-width:160px;width:auto;padding:7px 12px;font-size:13px;height:36px;border-radius:8px">' +
+              '<select class="select" id="rcpDate" style="width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px">' +
                 [['today', 'Today'], ['yesterday', 'Yesterday'], ['last7', 'Last 7 days'], ['all', 'All dates'], ['pick', 'Pick date...']].map(function (o) {
                   return '<option value="' + o[0] + '"' + (RCP.date === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
                 }).join('') +
               '</select>' +
-              '<input type="date" class="input" id="rcpPickDate" value="' + App.esc(RCP.pickDate) + '" ' + (RCP.date === 'pick' ? '' : 'hidden') + '>' +
-              '<select class="select" id="rcpStatus">' +
+              '<input type="date" class="input" id="rcpPickDate" value="' + App.esc(RCP.pickDate) + '" style="width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px" ' + (RCP.date === 'pick' ? '' : 'hidden') + '>' +
+              '<select class="select" id="rcpStatus" style="width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px">' +
                 '<option value="all">All Payments</option>' +
                 '<option value="paid"' + (RCP.status === 'paid' ? ' selected' : '') + '>Fully Paid</option>' +
                 '<option value="due"' + (RCP.status === 'due' ? ' selected' : '') + '>Has Due Balance</option>' +
               '</select>' +
-              '<select class="select" id="rcpWidthFilter">' +
+              '<select class="select" id="rcpWidthFilter" style="width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px">' +
                 '<option value="80"' + (RCP.width === 80 ? ' selected' : '') + '>80mm POS Width</option>' +
                 '<option value="58"' + (RCP.width === 58 ? ' selected' : '') + '>58mm Mini Width</option>' +
               '</select>' +

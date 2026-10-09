@@ -669,7 +669,10 @@
     '.stk-prev-grid{display:grid;grid-template-columns:minmax(320px,1.2fr) minmax(280px,1fr);gap:24px;align-items:start}' +
     '@media(max-width:880px){.stk-prev-grid{grid-template-columns:1fr}}' +
     '.stk-tip-box{font-size:12px;color:var(--muted);background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px 14px;line-height:1.5}' +
-    '.stk-tip-box b{color:var(--ink);font-weight:700}';
+    '.stk-tip-box b{color:var(--ink);font-weight:700}' +
+    '.smp-filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}' +
+    '.smp-filters .input.search,.smp-filters .input.smp-q{flex:1 1 200px;min-width:160px;width:auto;padding:7px 12px;font-size:13px;height:36px;border-radius:8px}' +
+    '.smp-filters .select,.smp-filters input[type=date]{width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px}';
 
   function renderStickersDashboard() {
     var view = document.getElementById('view');
@@ -859,14 +862,14 @@
         '<div class="stk-layout">' +
           '<div class="card"><div class="card-b">' +
             '<div class="smp-filters" style="margin-bottom:12px">' +
-              '<input class="input search smp-q" id="stkSearch" placeholder="Search barcode, patient, MR#, invoice, test..." value="' + esc(STK.q) + '">' +
-              '<select class="select" id="stkRange">' +
+              '<input class="input search smp-q" id="stkSearch" placeholder="Search barcode, patient, MR#, invoice, test..." value="' + esc(STK.q) + '" style="flex:1 1 200px;min-width:160px;width:auto;padding:7px 12px;font-size:13px;height:36px;border-radius:8px">' +
+              '<select class="select" id="stkRange" style="width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px">' +
                 [['today', 'Today'], ['yesterday', 'Yesterday'], ['last7', 'Last 7 days'], ['last30', 'Last 30 days'], ['all', 'All dates'], ['pick', 'Pick date...']].map(function (o) {
                   return '<option value="' + o[0] + '"' + (STK.range === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
                 }).join('') +
               '</select>' +
-              '<input type="date" class="input" id="stkDate" value="' + esc(STK.date) + '" ' + (STK.range === 'pick' ? '' : 'hidden') + '>' +
-              '<select class="select" id="stkTubeFilter">' +
+              '<input type="date" class="input" id="stkDate" value="' + esc(STK.date) + '" style="width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px" ' + (STK.range === 'pick' ? '' : 'hidden') + '>' +
+              '<select class="select" id="stkTubeFilter" style="width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px">' +
                 '<option value="all">All Tubes</option>' +
                 '<option value="edta"' + (STK.tube === 'edta' ? ' selected' : '') + '>EDTA (Purple)</option>' +
                 '<option value="serum"' + (STK.tube === 'serum' ? ' selected' : '') + '>Serum (Red)</option>' +
@@ -874,7 +877,7 @@
                 '<option value="fluoride"' + (STK.tube === 'fluoride' ? ' selected' : '') + '>Fluoride (Grey)</option>' +
                 '<option value="urine"' + (STK.tube === 'urine' ? ' selected' : '') + '>Urine</option>' +
               '</select>' +
-              '<select class="select" id="stkStatusFilter">' +
+              '<select class="select" id="stkStatusFilter" style="width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px">' +
                 '<option value="all">All Statuses</option>' +
                 '<option value="pending"' + (STK.status === 'pending' ? ' selected' : '') + '>To collect</option>' +
                 '<option value="collected"' + (STK.status === 'collected' ? ' selected' : '') + '>Collected</option>' +
