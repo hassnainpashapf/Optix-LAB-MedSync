@@ -914,7 +914,10 @@
         var isNum = p.type === 'number';
         return '<tr>' +
           '<td><strong>' + App.esc(p.name) + '</strong></td>' +
-          '<td>' + resultField(p, v, 'data-pi="' + i + '"') + '</td>' +
+          '<td><div style="display:flex;align-items:center;gap:6px">' +
+            resultField(p, v, 'data-pi="' + i + '"') +
+            '<span class="res-abn-badge" data-pi="' + i + '" style="font-size:18px;font-weight:900;min-width:18px;line-height:1"></span>' +
+          '</div></td>' +
           '<td class="muted">' + App.esc(p.unit || '') + '</td>' +
           '<td class="muted">' + App.esc(refFor(p, pat)) + '</td></tr>';
       }).join('');
@@ -945,6 +948,43 @@
           document.getElementById('resSave').addEventListener('click', function () {
             saveResult(row, params, close, onSaved);
           });
+          // Live abnormal high (red up arrow) & low (blue down arrow) indicators
+          function updateAbnormalFields() {
+            var inputs = ov.querySelectorAll('[data-pi]');
+            inputs.forEach(function (inp) {
+              if (inp.classList.contains('res-abn-badge')) return;
+              var pi = parseInt(inp.getAttribute('data-pi'), 10);
+              if (isNaN(pi) || !params[pi]) return;
+              var p = params[pi];
+              var pref = refFor(p, pat);
+              var val = inp.value;
+              var sev = abnormalSeverity(val, pref);
+              var badge = ov.querySelector('.res-abn-badge[data-pi="' + pi + '"]');
+              if (sev && sev.dir === 'high') {
+                inp.style.borderColor = '#dc2626';
+                inp.style.color = '#dc2626';
+                inp.style.fontWeight = '700';
+                inp.style.backgroundColor = '#fef2f2';
+                if (badge) badge.innerHTML = '<span style="color:#dc2626" title="High (Above Normal Range)">↑</span>';
+              } else if (sev && sev.dir === 'low') {
+                inp.style.borderColor = '#2563eb';
+                inp.style.color = '#2563eb';
+                inp.style.fontWeight = '700';
+                inp.style.backgroundColor = '#eff6ff';
+                if (badge) badge.innerHTML = '<span style="color:#2563eb" title="Low (Below Normal Range)">↓</span>';
+              } else {
+                inp.style.borderColor = '';
+                inp.style.color = '';
+                inp.style.fontWeight = '';
+                inp.style.backgroundColor = '';
+                if (badge) badge.innerHTML = '';
+              }
+            });
+          }
+          ov.addEventListener('input', updateAbnormalFields);
+          ov.addEventListener('change', updateAbnormalFields);
+          updateAbnormalFields();
+
           // Live trend graph: re-render on every param input, scoped to this modal's overlay.
           function renderGraph() {
             if (!graphCfg) return;
@@ -1853,8 +1893,11 @@
   function resultCellDiv(valueStr, refStr) {
     var disp = (valueStr == null) ? '' : String(valueStr);
     var dir = abnormalDir(valueStr, refStr);
-    var arrow = dir === 'high' ? ' ↑' : (dir === 'low' ? ' ↓' : '');
-    return '<div style="text-align:right' + (dir ? ';color:#c00;font-weight:700' : '') + '">' +
+    if (!dir) return '<div style="text-align:right">' + App.esc(disp) + '</div>';
+    var isHigh = dir === 'high';
+    var col = isHigh ? '#dc2626' : '#2563eb';
+    var arrow = isHigh ? ' ↑' : ' ↓';
+    return '<div style="text-align:right;color:' + col + ';font-weight:800">' +
       App.esc(disp) + arrow + '</div>';
   }
 
@@ -1863,8 +1906,10 @@
     var disp = (valueStr == null) ? '' : String(valueStr);
     var dir = abnormalDir(valueStr, refStr);
     if (!dir) return '<td>' + App.esc(disp) + '</td>';
-    var arrow = (dir === 'high') ? ' ↑' : ' ↓';
-    return '<td style="color:#c00;font-weight:700">' + App.esc(disp) + arrow + '</td>';
+    var isHigh = dir === 'high';
+    var col = isHigh ? '#dc2626' : '#2563eb';
+    var arrow = isHigh ? ' ↑' : ' ↓';
+    return '<td style="color:' + col + ';font-weight:800">' + App.esc(disp) + arrow + '</td>';
   }
 
   /* ---------- worker 9/20: Code39-style barcode (pure HTML/CSS) ----------
@@ -2025,19 +2070,27 @@
     /* value cell. Normal print: abnormal = bold black. Comparison print: the NEW result is colour-coded by how far it is
        outside the range (amber = slightly, orange = moderately, red = critical) with an arrow (up = high, down = low);
        previous results stay plain so the doctor can read the change at a glance. */
-    var SEV_COLOR = { mild: '#b45309', moderate: '#c2410c', critical: '#b91c1c' };
     function valCell(valueStr, refStr, isNew) {
       var disp = (valueStr == null) ? '' : String(valueStr);
       var sev = abnormalSeverity(disp, refStr);
       var base = 'text-align:right;padding-right:20px';
       if (cmp) {
         if (isNew && sev) {
-          return '<div style="' + base + '"><span style="font-weight:800;color:' + SEV_COLOR[sev.severity] + '">' +
-            (sev.dir === 'high' ? '&uarr; ' : '&darr; ') + App.esc(disp) + '</span></div>';
+          var isH = (sev.dir === 'high');
+          var cCol = isH ? '#dc2626' : '#2563eb';
+          var cArr = isH ? ' &uarr;' : ' &darr;';
+          return '<div style="' + base + '"><span style="font-weight:800;color:' + cCol + '">' +
+            App.esc(disp) + cArr + '</span></div>';
         }
         return '<div style="' + base + '">' + App.esc(disp) + '</div>';
       }
-      if (sev) return '<div style="' + base + '"><span style="font-weight:700;color:#000">' + App.esc(disp) + '</span></div>';
+      if (sev) {
+        var isHigh = (sev.dir === 'high');
+        var col = isHigh ? '#dc2626' : '#2563eb';
+        var arr = isHigh ? ' &uarr;' : ' &darr;';
+        return '<div style="' + base + '"><span style="font-weight:800;color:' + col + '">' +
+          App.esc(disp) + arr + '</span></div>';
+      }
       return '<div style="' + base + '">' + App.esc(disp) + '</div>';
     }
 
@@ -2607,10 +2660,8 @@
 
     if (d._cmpLegend) {
       bodyHtml = bodyHtml.replace(footOut, '<p style="margin:6px 0 2px;font-size:0.82em;color:#000">' +
-        '<b>New result:</b> &uarr; above range &nbsp; &darr; below range &nbsp;|&nbsp; ' +
-        '<span style="color:#b45309;font-weight:700">amber</span> slightly outside &nbsp; ' +
-        '<span style="color:#c2410c;font-weight:700">orange</span> moderately outside &nbsp; ' +
-        '<span style="color:#b91c1c;font-weight:700">red</span> critical. Previous results are shown as recorded.</p>' + footOut);
+        '<b>New result:</b> <span style="color:#dc2626;font-weight:700">&uarr; above range (high)</span> &nbsp;|&nbsp; ' +
+        '<span style="color:#2563eb;font-weight:700">&darr; below range (low)</span>. Previous results are shown as recorded.</p>' + footOut);
     }
     return '<style>' + RPT_PRINT_CSS + '</style>' +
       '<div class="rpt-page" style="font-size:' + rptBase + 'px">' + bodyHtml + '</div>';
@@ -3138,7 +3189,8 @@
       var RBW  = 30;                // RESULT box width (~30mm per reference)
       var GREY = [169, 169, 169];   // #A9A9A9 header fill
       var INK  = [20, 20, 20];
-      var RED  = [198, 20, 20];     // abnormal value color
+      var RED  = [220, 38, 38];     // abnormal high
+      var BLUE = [37, 99, 235];     // abnormal low
       var CX_TEST = M + 2;          // param name column
       var CX_REF  = M + 55;         // NORMAL VALUE column
       var CX_UNIT = M + 84;         // UNIT column
@@ -3270,15 +3322,21 @@
           });
           if (!subs.length) subs = null;
         }
+        var rf = rangeFlag(refStr, valStr);
+        var dir = rf === 1 ? 'high' : (rf === -1 ? 'low' : null);
+        if (!dir) {
+          var sev = abnormalSeverity(valStr, refStr);
+          if (sev) dir = sev.dir;
+        }
         return {
           name: nameL, ref: refL, unit: unitL, val: valL, subs: subs,
-          abnormal: rangeFlag(refStr, valStr) !== 0,
+          dir: dir,
           rh: n * LINE + 2.5
         };
       }
 
       // ---- draw one param row: bold name | ref | unit | right-aligned value ----
-      // No gridlines. Abnormal values are bold red.
+      // No gridlines. Abnormal values are bold red (high) with up triangle or blue (low) with down triangle.
       function tableRow(row) {
         need(row.rh);
         var li;
@@ -3288,9 +3346,28 @@
         doc.setFont('helvetica', 'normal');
         for (li = 0; li < row.ref.length; li++) txt(row.ref[li], CX_REF, y + LINE + li * LINE);
         for (li = 0; li < row.unit.length; li++) txt(row.unit[li], CX_UNIT, y + LINE + li * LINE);
-        if (row.abnormal) { doc.setFont('helvetica', 'bold'); doc.setTextColor(RED[0], RED[1], RED[2]); }
+        if (row.dir === 'high') { doc.setFont('helvetica', 'bold'); doc.setTextColor(RED[0], RED[1], RED[2]); }
+        else if (row.dir === 'low') { doc.setFont('helvetica', 'bold'); doc.setTextColor(BLUE[0], BLUE[1], BLUE[2]); }
         else { doc.setFont('helvetica', 'bold'); doc.setTextColor(INK[0], INK[1], INK[2]); }
-        for (li = 0; li < row.val.length; li++) txt(row.val[li], RX, y + LINE + li * LINE, { align: 'right' });
+        for (li = 0; li < row.val.length; li++) {
+          if (row.dir && li === 0 && row.val[li]) {
+            txt(row.val[li], RX - 3.5, y + LINE + li * LINE, { align: 'right' });
+            var arrowCol = row.dir === 'high' ? RED : BLUE;
+            doc.setFillColor(arrowCol[0], arrowCol[1], arrowCol[2]);
+            doc.setDrawColor(arrowCol[0], arrowCol[1], arrowCol[2]);
+            var baseY = y + LINE + li * LINE;
+            var triMidY = baseY - 1.1;
+            if (row.dir === 'high') {
+              // Up triangle (▲)
+              doc.triangle(RX - 2.6, triMidY + 1.2, RX, triMidY + 1.2, RX - 1.3, triMidY - 1.3, 'FD');
+            } else {
+              // Down triangle (▼)
+              doc.triangle(RX - 2.6, triMidY - 1.2, RX, triMidY - 1.2, RX - 1.3, triMidY + 1.3, 'FD');
+            }
+          } else {
+            txt(row.val[li], RX, y + LINE + li * LINE, { align: 'right' });
+          }
+        }
         y += row.rh;
         if (row.subs && row.subs.length) {
           doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
