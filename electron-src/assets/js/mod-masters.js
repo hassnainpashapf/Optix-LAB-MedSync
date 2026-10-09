@@ -133,10 +133,32 @@ function renderTests() {
   var nPkg = fT.filter(function (t) { return t.isPackage; }).length;
   var catLbl = testFilter.cat === 'All' ? 'in catalog' : 'in ' + testFilter.cat;
   var statCards =
-    tStat(TICONS.flask, 'blue', 'Total Tests', fT.length, catLbl) +
-    tStat(TICONS.check, 'green', 'Active Tests', nActive, testFilter.cat === 'All' ? 'available for booking' : 'active in ' + testFilter.cat) +
-    tStat(TICONS.tag, 'amber', 'Categories', cats.length, 'test categories') +
-    tStat(TICONS.box, 'brand', 'Packages', nPkg, 'bundled offers');
+    '<div class="kpi-grid" style="margin-bottom:18px">' +
+      '<div class="kpi t-navy">' +
+        '<div class="kpi-ic">' + App.icon('flask', 18) + '</div>' +
+        '<div class="kpi-lb">TOTAL TESTS</div>' +
+        '<div class="kpi-nm">' + fT.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">tests</span></div>' +
+        '<div class="kpi-sb">' + App.esc(catLbl) + '</div>' +
+      '</div>' +
+      '<div class="kpi t-green">' +
+        '<div class="kpi-ic">' + App.icon('check', 18) + '</div>' +
+        '<div class="kpi-lb">ACTIVE TESTS</div>' +
+        '<div class="kpi-nm">' + nActive + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">active</span></div>' +
+        '<div class="kpi-sb">' + (testFilter.cat === 'All' ? 'Available for booking' : 'Active in ' + App.esc(testFilter.cat)) + '</div>' +
+      '</div>' +
+      '<div class="kpi t-amber">' +
+        '<div class="kpi-ic">' + App.icon('scan', 18) + '</div>' +
+        '<div class="kpi-lb">CATEGORIES</div>' +
+        '<div class="kpi-nm">' + cats.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">categories</span></div>' +
+        '<div class="kpi-sb">Organized test groups</div>' +
+      '</div>' +
+      '<div class="kpi t-purple" style="cursor:pointer" onclick="location.hash=\'#/packages\'" title="View Health Packages">' +
+        '<div class="kpi-ic">' + App.icon('box', 18) + '</div>' +
+        '<div class="kpi-lb">HEALTH PACKAGES</div>' +
+        '<div class="kpi-nm">' + nPkg + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">deals</span></div>' +
+        '<div class="kpi-sb">Screening packages &rarr;</div>' +
+      '</div>' +
+    '</div>';
   var chips = ['All'].concat(cats).map(function (c) {
     return '<button type="button" class="btn btn-sm ' +
       (testFilter.cat === c ? 'btn-primary' : 'btn-ghost') +
@@ -150,7 +172,7 @@ function renderTests() {
         '<a class="btn btn-sm btn-ghost" href="#/packages" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🎁 Health Packages &amp; Screening Deals Center</a>' +
       '</div>' +
     '</div>' +
-    '<div class="stat-grid">' + statCards + '</div>' +
+    statCards +
     '<div class="card"><div class="card-b">' +
       '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">' +
         '<input id="t-q" class="input search" placeholder="Search code, name, category..." value="' + App.esc(testFilter.q) + '" style="max-width:280px">' +
@@ -1140,18 +1162,15 @@ function renderPackages() {
     + '<style>'
     + '.pkg-dash { max-width: 1300px; margin: 0 auto; }'
     + '.pkg-head-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }'
-    + '.pkg-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }'
-    + '.pkg-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
-    + '.pkg-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
-    + '.pkg-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
-    + '.pkg-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; }'
-    + '.pkg-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
     + '.pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px; margin-bottom: 24px; }'
-    + '.pkg-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(15,23,42,.04); transition: transform .15s, box-shadow .15s; }'
-    + '.pkg-card:hover { border-color: #0ea5e9; box-shadow: 0 4px 16px rgba(14,165,233,.12); transform: translateY(-2px); }'
-    + '.pkg-badge-deal { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .05em; }'
-    + '.pkg-inc-tag { display: inline-flex; align-items: center; gap: 4px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px 7px; font-size: 12px; margin: 3px 4px 3px 0; color: #334155; }'
-    + '.pkg-price-bar { background: #f0fdf4; border: 1px dashed #86efac; border-radius: 10px; padding: 10px 14px; margin: 14px 0 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }'
+    + '.pkg-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(15,23,42,.04); transition: transform .18s, box-shadow .18s, border-color .18s; position: relative; overflow: hidden; }'
+    + '.pkg-card:hover { border-color: #38bdf8; box-shadow: 0 8px 24px rgba(14,165,233,.12); transform: translateY(-2px); }'
+    + '.pkg-card.is-inactive { opacity: .68; background: #f8fafc; border-style: dashed; }'
+    + '.pkg-card.is-inactive:hover { opacity: .9; transform: none; }'
+    + '.pkg-badge-deal { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: .05em; display: inline-flex; align-items: center; gap: 4px; }'
+    + '.pkg-inc-tag { display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px 8px; font-size: 11.5px; font-weight: 600; margin: 3px 4px 3px 0; color: #334155; transition: background .12s; }'
+    + '.pkg-inc-tag:hover { background: #e2e8f0; }'
+    + '.pkg-price-bar { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 12px 14px; margin: 14px 0 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }'
     + '</style>'
     + '<div class="pkg-dash">'
 
@@ -1169,32 +1188,32 @@ function renderPackages() {
 
     /* 4 Unified KPI Stat Cards (.kpi-grid + .kpi) */
     + '<div class="kpi-grid" style="margin-bottom:18px">'
-    +   '<div class="kpi t-navy">'
-    +     '<div class="kpi-ic" style="font-size:16px">🎁</div>'
-    +     '<div class="kpi-lb">ACTIVE HEALTH PACKAGES</div>'
-    +     '<div class="kpi-nm">' + activePkgs.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">deals</span></div>'
-    +     '<div class="kpi-sb">' + pkgs.length + ' total packages configured</div>'
+    +   '<div class="kpi t-navy" style="cursor:pointer" id="kpiPkgAll" title="Click to view all packages">'
+    +     '<div class="kpi-ic">' + App.icon('box', 18) + '</div>'
+    +     '<div class="kpi-lb">TOTAL HEALTH PACKAGES</div>'
+    +     '<div class="kpi-nm">' + pkgs.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">packages</span></div>'
+    +     '<div class="kpi-sb">' + activePkgs.length + ' currently active deals</div>'
     +   '</div>'
 
-    +   '<div class="kpi t-green">'
-    +     '<div class="kpi-ic">' + App.icon('flask', 18) + '</div>'
-    +     '<div class="kpi-lb">DIAGNOSTIC TESTS COVERED</div>'
-    +     '<div class="kpi-nm">' + coveredCount + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">tests</span></div>'
-    +     '<div class="kpi-sb">Included across active bundles</div>'
+    +   '<div class="kpi t-green" style="cursor:pointer" id="kpiPkgActive" title="Click to filter active deals">'
+    +     '<div class="kpi-ic">' + App.icon('check', 18) + '</div>'
+    +     '<div class="kpi-lb">ACTIVE PROMOTIONS</div>'
+    +     '<div class="kpi-nm">' + activePkgs.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">active</span></div>'
+    +     '<div class="kpi-sb">Available on billing counter</div>'
     +   '</div>'
 
     +   '<div class="kpi t-amber">'
     +     '<div class="kpi-ic">' + App.icon('coins', 18) + '</div>'
     +     '<div class="kpi-lb">AVERAGE PATIENT SAVINGS</div>'
-    +     '<div class="kpi-nm" style="color:var(--amber,#b45309)">~' + avgSavingsPct + '% <span style="font-size:14px;font-weight:600;color:var(--muted)">OFF</span></div>'
-    +     '<div class="kpi-sb">Bundle discount vs individual tests</div>'
+    +     '<div class="kpi-nm">' + (avgSavingsPct > 0 ? '~' + avgSavingsPct + '%' : '0%') + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">SAVINGS</span></div>'
+    +     '<div class="kpi-sb">' + coveredCount + ' tests covered across deals</div>'
     +   '</div>'
 
     +   '<div class="kpi t-purple">'
     +     '<div class="kpi-ic">' + App.icon('file', 18) + '</div>'
     +     '<div class="kpi-lb">PACKAGE BILLINGS</div>'
     +     '<div class="kpi-nm">' + pkgBilledCount + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">orders</span></div>'
-    +     '<div class="kpi-sb">Total times booked in patient invoices</div>'
+    +     '<div class="kpi-sb">Booked in patient invoices</div>'
     +   '</div>'
     + '</div>'
 
@@ -1255,38 +1274,41 @@ function renderPackages() {
     var savingsPct = regSum > 0 ? Math.round((savings / regSum) * 100) : 0;
 
     var badgeText = pkg.dealBadge || 'SPECIAL DEAL';
-    var badgeStyle = 'background:#fef3c7;color:#b45309;border:1px solid #fde68a';
-    if (/best/i.test(badgeText)) badgeStyle = 'background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5';
-    else if (/exec/i.test(badgeText)) badgeStyle = 'background:#f3e8ff;color:#7e22ce;border:1px solid #d8b4fe';
-    else if (/pop/i.test(badgeText)) badgeStyle = 'background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd';
+    var badgeStyle = 'background:#fef3c7;color:#92400e;border:1px solid #fde68a';
+    var badgeIcon = '🏷️';
+    if (/best/i.test(badgeText)) { badgeStyle = 'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca'; badgeIcon = '🔥'; }
+    else if (/exec/i.test(badgeText)) { badgeStyle = 'background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff'; badgeIcon = '👑'; }
+    else if (/pop/i.test(badgeText)) { badgeStyle = 'background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd'; badgeIcon = '⭐'; }
+    else if (/screen|health/i.test(badgeText)) { badgeStyle = 'background:#ecfdf5;color:#15803d;border:1px solid #a7f3d0'; badgeIcon = '💚'; }
 
-    html += '<div class="pkg-card">'
+    html += '<div class="pkg-card' + (pkg.active === false ? ' is-inactive' : '') + '">'
       + '<div>'
       /* Card Header */
-      +   '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px">'
-      +     '<span class="pkg-badge-deal" style="' + badgeStyle + '">' + App.esc(badgeText) + '</span>'
-      +     '<button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" data-pkg-toggle="' + App.esc(pkg.id) + '">'
-      +       (pkg.active !== false ? '🟢 Active' : '⚪ Inactive')
+      +   '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">'
+      +     '<span class="pkg-badge-deal" style="' + badgeStyle + '">' + badgeIcon + ' ' + App.esc(badgeText) + '</span>'
+      +     '<button class="btn btn-ghost btn-sm" style="padding:3px 10px;font-size:11.5px;border-radius:20px;font-weight:700;' + (pkg.active !== false ? 'background:#ecfdf5;color:#15803d;border:1px solid #a7f3d0' : 'background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1') + '" data-pkg-toggle="' + App.esc(pkg.id) + '">'
+      +       (pkg.active !== false ? '● Active' : '○ Inactive')
       +     '</button>'
       +   '</div>'
 
       /* Name & Code */
-      +   '<h3 style="margin:0 0 4px;font-size:17px;font-weight:800;color:var(--ink)">' + App.esc(pkg.name) + '</h3>'
-      +   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-      +     '<span class="mono" style="font-size:12px;font-weight:700;color:var(--muted)">' + App.esc(pkg.code) + '</span>'
-      +     (pkg.category ? '<span class="badge" style="background:#f1f5f9;color:#475569;font-size:11px">' + App.esc(pkg.category) + '</span>' : '')
+      +   '<h3 style="margin:0 0 6px;font-size:17.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em;line-height:1.25">' + App.esc(pkg.name) + '</h3>'
+      +   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">'
+      +     '<span class="mono" style="font-size:12px;font-weight:700;color:#0284c7;background:#e0f2fe;padding:2px 7px;border-radius:6px">' + App.esc(pkg.code) + '</span>'
+      +     (pkg.category ? '<span style="font-size:11.5px;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;padding:2px 8px;border-radius:6px;font-weight:600">📁 ' + App.esc(pkg.category) + '</span>' : '')
+      +     '<span style="font-size:11.5px;color:var(--muted);margin-left:auto;font-weight:600">' + incTests.length + ' tests included</span>'
       +   '</div>'
 
       /* Preparation Instructions */
-      +   (pkg.prepNote ? '<div style="background:#f8fafc;border-left:3px solid #0ea5e9;padding:6px 10px;border-radius:4px;font-size:11.5px;color:#334155;margin-bottom:10px">🍽️ ' + App.esc(pkg.prepNote) + '</div>' : '')
+      +   (pkg.prepNote ? '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-left:3.5px solid #0284c7;padding:7px 11px;border-radius:8px;font-size:11.5px;color:#0369a1;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span>ℹ️</span><span>' + App.esc(pkg.prepNote) + '</span></div>' : '')
 
       /* Included Tests List */
       +   '<div style="margin-bottom:12px">'
-      +     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px">' + incTests.length + ' Included Diagnostic Tests:</div>'
-      +     '<div style="max-height:120px;overflow-y:auto;padding-right:4px">'
+      +     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.04em;margin-bottom:6px">Included Diagnostic Tests:</div>'
+      +     '<div style="max-height:115px;overflow-y:auto;padding-right:4px">'
       +       incTests.map(function (it) {
                 return '<span class="pkg-inc-tag" title="' + App.esc(it.name) + ' (' + App.money(+it.price || 0) + ')">'
-                  + App.esc(it.code || it.name) + ' <span style="color:var(--muted);font-size:11px">(' + App.money(+it.price || 0) + ')</span>'
+                  + App.esc(it.code || it.name) + ' <span style="color:var(--muted);font-size:11px;font-weight:500">(' + App.money(+it.price || 0) + ')</span>'
                   + '</span>';
               }).join('')
       +     '</div>'
@@ -1297,18 +1319,18 @@ function renderPackages() {
       + '<div>'
       +   '<div class="pkg-price-bar">'
       +     '<div>'
-      +       '<div style="font-size:11px;color:#64748b;text-decoration:line-through">Catalog Sum: ' + App.money(regSum) + '</div>'
-      +       '<div style="font-size:20px;font-weight:800;color:#15803d;line-height:1.2">' + App.money(dealPrice) + '</div>'
+      +       '<div style="font-size:11px;color:#64748b;font-weight:600;text-decoration:line-through">Catalog Sum: ' + App.money(regSum) + '</div>'
+      +       '<div style="font-size:22px;font-weight:900;color:#15803d;line-height:1.15;letter-spacing:-.02em">' + App.money(dealPrice) + '</div>'
       +     '</div>'
-      +     (savings > 0 ? '<span class="badge" style="background:#16a34a;color:#fff;font-weight:800;font-size:12px;padding:4px 8px">SAVE ' + App.money(savings) + ' (' + savingsPct + '% OFF)</span>' : '')
+      +     (savings > 0 ? '<div style="background:#16a34a;color:#ffffff;font-weight:800;font-size:12px;padding:5px 10px;border-radius:8px;box-shadow:0 2px 6px rgba(22,163,74,.25);letter-spacing:.02em;text-align:right">SAVE ' + App.money(savings) + '<br><span style="font-size:10.5px;opacity:.9;font-weight:700">(' + savingsPct + '% OFF)</span></div>' : '')
       +   '</div>'
 
       /* Action Buttons */
-      +   '<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      +     '<button class="btn btn-primary btn-sm" style="flex:1" data-pkg-bill="' + App.esc(pkg.id) + '">🧾 Quick Bill Deal</button>'
-      +     '<button class="btn btn-ghost btn-sm" data-pkg-flyer="' + App.esc(pkg.id) + '" title="Print Counter Flyer">🖨️ Flyer</button>'
-      +     '<button class="btn btn-ghost btn-sm" data-pkg-edit="' + App.esc(pkg.id) + '">Edit</button>'
-      +     '<button class="btn btn-ghost btn-sm" data-pkg-del="' + App.esc(pkg.id) + '" style="color:var(--red)">Delete</button>'
+      +   '<div style="display:flex;gap:7px;align-items:center">'
+      +     '<button class="btn btn-primary btn-sm" style="flex:1;font-weight:700" data-pkg-bill="' + App.esc(pkg.id) + '">🧾 Quick Bill Deal</button>'
+      +     '<button class="btn btn-ghost btn-sm" data-pkg-flyer="' + App.esc(pkg.id) + '" title="Print Counter Flyer" style="border:1px solid var(--bd)">🖨️ Flyer</button>'
+      +     '<button class="btn btn-ghost btn-sm" data-pkg-edit="' + App.esc(pkg.id) + '" style="border:1px solid var(--bd)">Edit</button>'
+      +     '<button class="btn btn-ghost btn-sm" data-pkg-del="' + App.esc(pkg.id) + '" style="color:var(--red);border:1px solid var(--bd)">Delete</button>'
       +   '</div>'
       + '</div>'
 
@@ -1351,6 +1373,26 @@ function renderPackages() {
     if (resetBtn) {
       resetBtn.addEventListener('click', function () {
         pkgFilter = { q: '', cat: 'all', status: 'all' };
+        renderPackages();
+      });
+    }
+
+    /* KPI Click Filters */
+    var kAll = document.getElementById('kpiPkgAll');
+    if (kAll) {
+      kAll.addEventListener('click', function () {
+        pkgFilter.status = 'all';
+        var sel = document.getElementById('pkgStatusSelect');
+        if (sel) sel.value = 'all';
+        renderPackages();
+      });
+    }
+    var kAct = document.getElementById('kpiPkgActive');
+    if (kAct) {
+      kAct.addEventListener('click', function () {
+        pkgFilter.status = 'active';
+        var sel = document.getElementById('pkgStatusSelect');
+        if (sel) sel.value = 'active';
         renderPackages();
       });
     }
