@@ -32,7 +32,8 @@
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
     tube: '<path d="M8 2h8"/><path d="M9 2v16.5a3 3 0 0 0 6 0V2"/><path d="M9 11h6"/>',
     scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M11 8v8M15 8v8M18 8v8"/>',
-    finance: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/>'
+    finance: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/>',
+    phone: '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/>'
   };
   function icon(name, size) {
     size = size || 18;
@@ -71,9 +72,9 @@
       ] },
     { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads', color: '#06b6d4' },
     { key: 'email',     label: 'Email',      icon: 'mail',      route: '#/email',     color: '#0ea5e9', cloudOnly: true,
-      sub: [{ key: 'ready', label: 'Ready to send', route: '#/email' }, { key: 'log', label: 'Email log', route: '#/email/log' }, { key: 'tpl', label: 'Templates & rules', route: '#/email/templates', roles: ['admin'] }] },
+      sub: [{ key: 'ready', label: 'Ready to send', route: '#/email' }, { key: 'log', label: 'Email log', route: '#/email/log' }, { key: 'tpl', label: 'Templates & rules', route: '#/email/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', route: '#/email/settings', roles: ['admin'] }] },
     { key: 'whatsapp',  label: 'WhatsApp',   icon: 'chat',      route: '#/whatsapp',  color: '#22c55e',
-      sub: [{ key: 'ready', label: 'Ready to send', route: '#/whatsapp' }, { key: 'log', label: 'Message log', route: '#/whatsapp/log' }, { key: 'digest', label: '🌙 Owner Night Digest', route: '#/whatsapp/digest' }, { key: 'tpl', label: 'Templates & rules', route: '#/whatsapp/templates', roles: ['admin'] }] },
+      sub: [{ key: 'ready', label: 'Ready to send', route: '#/whatsapp' }, { key: 'log', label: 'Message log', route: '#/whatsapp/log' }, { key: 'digest', label: '🌙 Owner Night Digest', route: '#/whatsapp/digest' }, { key: 'tpl', label: 'Templates & rules', route: '#/whatsapp/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', route: '#/whatsapp/settings', roles: ['admin'] }] },
     { key: 'sms',       label: 'SIM Setting', icon: 'phone',     route: '#/sms',       color: '#8b5cf6',
       sub: [{ key: 'settings', label: 'SIM Setting', route: '#/sms' }, { key: 'log', label: 'SMS log', route: '#/sms/log' }] },
     { key: 'audit',     label: 'Audit Log',  icon: 'shield',    route: '#/audit',     color: '#0ea5e9' },
@@ -86,8 +87,6 @@
         { key: 'users', label: 'Users & Roles', route: '#/settings/users' },
         { key: 'templates', label: 'Report Templates', route: '#/settings/templates' },
         { key: 'signatures', label: 'Digital Signatures', route: '#/settings/signatures' },
-        { key: 'whatsapp', label: 'WhatsApp', route: '#/settings/whatsapp' },
-        { key: 'sharing', label: 'Email & Slack', route: '#/settings/sharing' },
         { key: 'portal', label: 'Patient Portal', route: '#/settings/portal' },
         { key: 'backup', label: 'Backup', route: '#/settings/backup' },
         { key: 'danger', label: 'Danger Zone', route: '#/settings/danger', danger: true }

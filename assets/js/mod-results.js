@@ -525,7 +525,7 @@
       return true;
     }, function (e) { mailLog({ invoiceId: invoiceId, to: to, toName: who, toRole: role, status: 'failed', error: (e && e.message) || 'error', auto: auto }); throw e; });
   }
-  /* auto-email the finished report (Settings -> Email & Slack, or the tick boxes in the report window): once per invoice,
+  /* auto-email the finished report (Tools → Email → Settings, or the tick boxes in the report window): once per invoice,
      only when the patient / doctor has an email address, and (like WhatsApp) not while a balance is unpaid unless the lab chose "send anyway" */
   function emailAutoReady(ids) {
     if (!shareOn()) return;

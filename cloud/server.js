@@ -1302,7 +1302,7 @@ async function main() {
     app.post('/api/share/slack', needUser, async (req, res) => {
       try {
         const m = (await req.store.getMeta('slack')) || {}, b = req.body || {}, lid = req.lab ? req.lab.id : 'main';
-        if (!m.webhook) return res.status(400).json({ error: 'Slack is not set up. Add the webhook URL in Settings → Email & Slack.' });
+        if (!m.webhook) return res.status(400).json({ error: 'Slack is not set up. Add the webhook URL in Tools → Email → Settings.' });
         if (!ownPdf(req, b.key)) return res.status(404).json({ error: 'The report PDF was not found. Open the report again and retry.' });
         if (bump(slackHits, lid, 3600000).n > 200) return res.status(429).json({ error: 'Too many Slack messages this hour.' });
         const st = (await req.store.get('settings', 'main')) || {};

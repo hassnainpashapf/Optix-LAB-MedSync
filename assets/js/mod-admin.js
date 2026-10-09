@@ -2007,8 +2007,6 @@
       { id: 'templates', sec: 'REPORTS & PRINTING', label: 'Report Templates', desc: 'Presets, normal ranges & tests', icon: '📄' },
       { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: '🖋️' },
 
-      { id: 'whatsapp', sec: 'AUTOMATION & PORTAL', label: 'WhatsApp Automation', desc: 'Auto-send reports on payment', icon: '💬' },
-      { id: 'sharing', sec: 'AUTOMATION & PORTAL', label: 'Email & Slack', desc: 'Notifications & webhook alerts', icon: '✉️' },
       { id: 'portal', sec: 'AUTOMATION & PORTAL', label: 'Patient Portal', desc: 'Online verification & QR access', icon: '🌐' },
 
       { id: 'backup', sec: 'SYSTEM', label: 'Backup & Cloud Sync', desc: 'Automated backups & export', icon: '💾' },
@@ -2062,8 +2060,6 @@
     else if (settingsTab === 'account') renderSetAccount();
     else if (settingsTab === 'templates') renderSetTemplates();
     else if (settingsTab === 'signatures') renderSetSignatures();
-    else if (settingsTab === 'whatsapp') renderSetWhatsapp();
-    else if (settingsTab === 'sharing') renderSetSharing();
     else if (settingsTab === 'portal') renderSetPortal();
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
@@ -2073,7 +2069,7 @@
 
   /* deep-link into the WhatsApp settings tab (used by report-view send buttons
      when the WhatsApp API is not configured yet) */
-  App.openWaSettingsTab = function () { App.nav('#/settings/whatsapp'); };
+  App.openWaSettingsTab = function () { App.nav('#/whatsapp/settings'); };
 
   /* ---- Lab Profile ---- */
   function renderSetProfile() {
@@ -3010,65 +3006,6 @@
     paint(tests[0].id);
   }
 
-  /* ---- WhatsApp API (admin only) ---- */
-  function waDefaults() {
-    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true, autoReceipt: false, autoDueReminder: false, dueReminderDay: 1, autoOwnerSummary: false, ownerSummaryHour: 21, ownerNumber: '', autoFeedback: false, googleReviewUrl: '', autoRetest: false };
-  }
-  /* ---- Link the lab's own WhatsApp number with a QR code (the server then sends from it) ---- */
-  function wireGateway() {
-    var box = document.getElementById('waGwBox'); if (!box) return;
-    if (!(DB.isCloud && DB.isCloud()) || (window.labposDesktop && window.labposDesktop.isDesktop)) { box.remove(); return; }
-    var timer = null, last = '';
-    function setCfg(patch) { var st = DB.get('settings', 'main') || {}, ww = Object.assign(waDefaults(), st.whatsapp || {}); Object.assign(ww, patch); st.whatsapp = ww; DB.update('settings', 'main', st); }
-    function qrImg(str) { try { var q = qrcode(0, 'L'); q.addData(str); q.make(); return q.createDataURL(5, 4); } catch (e) { return ''; } }
-    function draw(st) {
-      var sig = JSON.stringify([st.state, st.qr, st.number, st.err]); if (sig === last) return; last = sig;
-      var w = (DB.get('settings', 'main') || {}).whatsapp || {};
-      var head = '<div class="card wa-card" style="margin-bottom:16px"><div class="card-h"><h3>Connect your WhatsApp number</h3><span class="badge ' + (st.state === 'open' ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.state === 'open' ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">';
-      var body = '';
-      if (st.enabled === false) body = '<p class="muted" style="margin:0">Linking a WhatsApp number is not available on this server.</p>';
-      else if (st.state === 'open') {
-        body = '<p style="margin-top:0">Connected: <b>+' + App.esc(st.number) + '</b>. These messages are now sent from this number:</p>' +
-          '<ul style="margin:0 0 12px;padding-left:18px;line-height:1.75;font-size:13.5px"><li><b>Report ready</b> to the patient (and, if switched on below, the referring doctor)</li><li><b>Balance pending</b> note to the patient</li><li><b>Critical result</b> alert to the referring doctor and your lab number</li><li><b>Sign-in code and link</b> when a patient or doctor opens the reports portal</li><li><b>Doctor statements</b>, when you press Send on WhatsApp</li></ul>' +
-          '<div style="margin:0 0 12px"><label class="label" for="gwGap">Sending speed (protects your number from being blocked)</label><select class="select" id="gwGap" style="max-width:380px">' +
-          [[30, 'One message every 30 seconds'], [60, 'One message every minute (recommended)'], [120, 'One message every 2 minutes'], [300, 'One message every 5 minutes']].map(function (o) { return '<option value="' + o[0] + '"' + ((+w.gapSeconds || 60) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
-          '<div class="muted" style="font-size:12.5px;margin-top:5px">When many reports are sent together they wait in a line and leave one by one. <b>Sign-in codes and critical alerts are never delayed.</b></div></div>' +
-          '<p class="muted" style="margin:0 0 12px;font-size:13px">You can change the wording in <b>WhatsApp → Templates &amp; rules</b>. Messages go only to people with a phone number saved in your records.</p>' +
-          '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="gwTest">Send a test message to this number</button><button class="btn btn-ghost" id="gwOff" style="margin-left:auto;color:#b91c1c">Disconnect</button></div><p class="muted" id="gwMsg" style="margin:10px 0 0;font-size:13px"></p>';
-      } else if (st.state === 'qr' && st.qr) {
-        body = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start"><img alt="QR" style="width:230px;height:230px;border:1px solid var(--line);border-radius:12px;padding:6px;background:#fff" src="' + qrImg(st.qr) + '">' +
-          '<ol style="margin:0;padding-left:18px;line-height:1.9;font-size:14px;flex:1;min-width:210px"><li>Open <b>WhatsApp</b> on the lab\'s phone</li><li>Tap <b>Settings → Linked devices</b></li><li>Tap <b>Link a device</b> and scan this code</li></ol></div><p class="muted" style="margin:10px 0 0;font-size:13px">Waiting for the scan… the code refreshes by itself.</p>';
-      } else if (st.state === 'connecting') {
-        body = '<p class="muted" style="margin:0">Connecting to WhatsApp…</p>';
-      } else {
-        body = '<p class="muted" style="margin-top:0">Link <b>your lab\'s own WhatsApp number</b> by scanning a QR code, just like WhatsApp Web. After that, report links and sign-in codes go out from your number automatically. No paid API needed.</p>' +
-          '<div style="background:#fff8e6;border:1px solid #f0d9a0;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.55;margin-bottom:12px"><b>Please note:</b> this works like WhatsApp Web, it is not the official WhatsApp Business API. Use a <b>separate number kept for the lab</b>, message only your own patients, and avoid bulk or promotional messages, otherwise WhatsApp can block the number.</div>' +
-          (st.err ? '<p style="color:#b45309;margin:0 0 10px;font-size:13.5px">' + App.esc(st.err) + '</p>' : '') + '<button class="btn btn-primary" id="gwOn">Link my WhatsApp number</button>';
-      }
-      box.innerHTML = head + body + '</div></div>';
-      var on = document.getElementById('gwOn'); if (on) on.addEventListener('click', function () { on.disabled = true; last = ''; DB.waGw('POST', 'connect', {}).then(function (s) { draw(s); poll(); }, function (e) { on.disabled = false; App.toast(e.message, 'err'); }); });
-      var gp = document.getElementById('gwGap'); if (gp) gp.addEventListener('change', function () { setCfg({ gapSeconds: +gp.value }); App.toast('Sending speed saved: one message every ' + (+gp.value >= 60 ? (gp.value / 60) + ' min' : gp.value + ' seconds')); });
-      var test = document.getElementById('gwTest'); if (test) test.addEventListener('click', function () { test.disabled = true; DB.waGw('POST', 'send', { to: st.number, text: '*' + ((DB.get('settings', 'main') || {}).labName || 'Your lab') + '*\n\nThis is a test message. Your WhatsApp number is linked and ready to send reports.' }).then(function () { document.getElementById('gwMsg').textContent = 'Sent! Check WhatsApp (it may appear in "Message yourself").'; test.disabled = false; }, function (e) { document.getElementById('gwMsg').textContent = e.message; document.getElementById('gwMsg').style.color = '#b91c1c'; test.disabled = false; }); });
-      var off = document.getElementById('gwOff'); if (off) off.addEventListener('click', function () { App.confirm('Disconnect this WhatsApp number? Reports will stop going out on WhatsApp until you link a number again.').then(function (ok) { if (!ok) return; DB.waGw('POST', 'disconnect', {}).then(function () { setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' }); last = ''; draw({ enabled: true, state: 'idle', qr: '', number: '', err: '' }); }, function (e) { App.toast(e.message, 'err'); }); }); });
-    }
-    function poll() {
-      clearInterval(timer);
-      timer = setInterval(function () {
-        if (!document.getElementById('waGwBox')) { clearInterval(timer); return; }
-        DB.waGw('GET', 'status').then(function (st) {
-          var w = (DB.get('settings', 'main') || {}).whatsapp || {};
-          if (st.state === 'open' && (w.provider !== 'gateway' || w.gatewayNumber !== st.number)) { setCfg({ provider: 'gateway', gatewayNumber: st.number, labNumber: w.labNumber || st.number }); App.toast('WhatsApp number linked'); }
-          draw(st); if (st.state === 'open' || st.state === 'idle' || st.state === 'loggedout') clearInterval(timer);
-        }, function () {});
-      }, 2000);
-    }
-    DB.waGw('GET', 'status').then(function (st) {
-      var w = (DB.get('settings', 'main') || {}).whatsapp || {};
-      if (st.state === 'open' && (w.provider !== 'gateway' || w.gatewayNumber !== st.number)) setCfg({ provider: 'gateway', gatewayNumber: st.number, labNumber: w.labNumber || st.number });
-      if (st.state === 'loggedout' && w.provider === 'gateway') setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' });
-      draw(st); if (st.state === 'qr' || st.state === 'connecting') poll();
-    }, function (e) { box.innerHTML = ''; });
-  }
 
   /* ==========================================================================
      DEDICATED DASHBOARD: PATHOLOGIST & RADIOLOGIST DIGITAL SIGNATURES (#/settings/signatures)
@@ -3621,7 +3558,7 @@
         '<div id="ptBody" style="margin-top:14px;' + (s.portalOn ? '' : 'opacity:.55') + '">' +
         '<label class="label">Link to share (put it on invoices, WhatsApp, or print the QR)</label><div style="display:flex;gap:8px"><input class="input" id="ptLink" readonly value="' + App.esc(link) + '"><button class="btn" id="ptCopy">Copy</button></div>' +
         '<div id="ptQr" style="margin:12px 0"></div>' +
-        '<div style="background:#f6f8fd;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.6"><b>How the code is sent:</b> ' + (waOn ? 'on <b>WhatsApp</b>, from your lab\'s WhatsApp number (the one set up in Settings → WhatsApp).' : '<span style="color:#b45309">your WhatsApp is not set up yet, so codes go <b>by email</b> to people who have an email address on file. Set up Settings → WhatsApp for the best experience.</span>') +
+        '<div style="background:#f6f8fd;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.6"><b>How the code is sent:</b> ' + (waOn ? 'on <b>WhatsApp</b>, from your lab\'s WhatsApp number (the one set up in Tools → WhatsApp → Settings).' : '<span style="color:#b45309">your WhatsApp is not set up yet, so codes go <b>by email</b> to people who have an email address on file. Set up Tools → WhatsApp → Settings for the best experience.</span>') +
         '<br>Make sure patients\' and doctors\' <b>phone numbers</b> are saved correctly; that is how they are recognised.</div>' +
         '<div style="margin-top:16px"><b>Reports ready for the portal:</b> ' + withPdf + ' of ' + ready + ' finished reports<div class="muted" style="font-size:12.5px;margin:4px 0 8px">New reports are prepared automatically. Use the button for the older ones.</div>' +
         '<button class="btn btn-primary" id="ptPrep"' + (ready > withPdf ? '' : ' disabled') + '>Prepare ' + (ready - withPdf) + ' older report' + (ready - withPdf === 1 ? '' : 's') + '</button> <span class="muted" id="ptProg" style="font-size:13px"></span></div></div></div></div>';
@@ -3637,302 +3574,7 @@
     }, function (e) { box.innerHTML = '<p style="color:#b91c1c">' + App.esc(e.message) + '</p>'; });
   }
 
-  /* ---- Email & Slack: how finished reports leave the lab besides WhatsApp ---- */
-  function renderSetSharing() {
-    var s = DB.get('settings', 'main') || {}, box = document.getElementById('setBody');
-    var cloud = !!(DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop);
-    if (!cloud) { box.innerHTML = '<p class="muted">Email and Slack sharing work in the web / Android app (cloud). Open your lab in the browser to use them.</p>'; return; }
-    box.innerHTML = '<p class="muted">Loading…</p>';
-    DB.share('GET', 'status').then(function (st) {
-      var tail = st.slackTail ? '…' + App.esc(st.slackTail) : '';
-      box.innerHTML =
-        '<div class="card" style="max-width:720px"><div class="card-h"><h3>Email reports</h3><span class="badge ' + (st.email ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.email ? 'ON' : 'NOT SET UP') + '</span></div><div class="card-b">' +
-        (st.email
-          ? '<p class="muted" style="margin-top:0">Open any report and press <b>Email Patient</b> or <b>Email Doctor</b>. The PDF is attached, with a link to open it on a phone. Mail shows your lab\'s name as the sender' + (s.email ? ' and replies go to <b>' + App.esc(s.email) + '</b>' : '') + '. Limit: <b>' + st.perDay + ' report emails per day</b> for your lab.</p>' +
-            (s.email ? '' : '<p style="color:#b45309;font-size:13px">Tip: add your lab\'s <b>Email</b> in Edit Report Form, so patients can reply to you.</p>')
-          : '<p class="muted" style="margin-top:0">Email sending is not set up on this server yet. The system owner can set it up in the superadmin console (Email sender).</p>') +
-        (st.email ? '<div style="margin:12px 0 4px;display:grid;gap:8px"><label class="check" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="emAutoPat"' + (s.emailAuto ? ' checked' : '') + '> Email every report to the <b>patient</b> automatically when it is ready</label>' +
-          '<label class="check" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="emAutoDoc"' + (s.emailAutoDoctor ? ' checked' : '') + '> Also email it to the <b>referring doctor</b></label>' +
-          '<span class="muted" style="font-size:12.5px">Only patients / doctors who have an email address on file get it. A report with an unpaid balance waits until it is paid (same rule as WhatsApp).</span></div>' : '') +
-        '<p class="muted" style="font-size:12.5px;margin-bottom:0">Patient and doctor email addresses are saved on their records (Patients, Doctors).</p></div></div>' +
-        '<div class="card" style="max-width:720px;margin-top:14px"><div class="card-h"><h3>Slack</h3><span class="badge ' + (st.slack ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.slack ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">' +
-        '<p class="muted" style="margin-top:0">Post a message with the report link to a Slack channel (for your team or a doctor group). Only the patient name, invoice number, test names and the report link are sent.</p>' +
-        '<ol class="muted" style="margin:0 0 12px 18px;padding:0;line-height:1.8;font-size:13px"><li>Open <b>api.slack.com/apps</b> → <b>Create New App</b> → From scratch → pick your workspace.</li><li><b>Incoming Webhooks</b> → turn it <b>On</b> → <b>Add New Webhook to Workspace</b> → choose the channel.</li><li>Copy the <b>Webhook URL</b> (starts with <code>https://hooks.slack.com/services/</code>) and paste it here.</li></ol>' +
-        '<label class="label" for="skUrl">Webhook URL</label><input class="input" id="skUrl" autocomplete="off" placeholder="' + (st.slack ? 'saved (' + tail + ') — paste a new one to replace it' : 'https://hooks.slack.com/services/…') + '">' +
-        '<label class="check" style="margin-top:12px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="skAuto"' + (st.slackAuto ? ' checked' : '') + '> Post to Slack automatically when a report becomes ready</label>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-primary" id="skSave">Save</button>' +
-        (st.slack ? '<button class="btn" id="skTest">Send test message</button><button class="btn btn-ghost" id="skClear" style="margin-left:auto">Remove</button>' : '') + '</div>' +
-        '<p class="muted" id="skMsg" style="margin:10px 0 0;font-size:13px"></p></div></div>';
-      var ea = document.getElementById('emAutoPat'), ed = document.getElementById('emAutoDoc');
-      if (ea) ea.addEventListener('change', function () { DB.update('settings', 'main', { emailAuto: ea.checked }); App.toast(ea.checked ? 'Automatic email to patients is ON' : 'Automatic email to patients is OFF'); });
-      if (ed) ed.addEventListener('change', function () { DB.update('settings', 'main', { emailAutoDoctor: ed.checked }); App.toast(ed.checked ? 'Automatic email to doctors is ON' : 'Automatic email to doctors is OFF'); });
-      var msg = function (t, bad) { var e = document.getElementById('skMsg'); if (e) { e.textContent = t; e.style.color = bad ? '#b91c1c' : '#047857'; } };
-      document.getElementById('skSave').addEventListener('click', function () {
-        var url = document.getElementById('skUrl').value.trim(), auto = document.getElementById('skAuto').checked;
-        if (!url && !st.slack) { msg('Paste the Slack webhook URL first.', true); return; }
-        DB.share('PUT', 'slack', { webhook: url || undefined, auto: auto }).then(function () { if (App.shareStatus) App.shareStatus(true); App.toast('Slack settings saved.'); renderSetSharing(); }, function (e) { msg(e.message, true); });
-      });
-      var t = document.getElementById('skTest'); if (t) t.addEventListener('click', function () {
-        t.disabled = true; msg('Sending…');
-        DB.share('POST', 'slack/test', {}).then(function () { t.disabled = false; msg('Sent! Check your Slack channel.'); }, function (e) { t.disabled = false; msg(e.message, true); });
-      });
-      var c = document.getElementById('skClear'); if (c) c.addEventListener('click', function () {
-        App.confirm('Disconnect Slack?').then(function (ok) { if (!ok) return; DB.share('PUT', 'slack', { clear: true }).then(function () { if (App.shareStatus) App.shareStatus(true); renderSetSharing(); }, function (e) { msg(e.message, true); }); });
-      });
-    }, function (e) { box.innerHTML = '<p style="color:#b91c1c">' + App.esc(e.message) + '</p>'; });
-  }
 
-  function renderSetWhatsapp() {
-    var s = DB.get('settings', 'main') || {};
-    var w = Object.assign(waDefaults(), s.whatsapp || {});
-    var autoPat = w.autoPatient !== false;   /* default ON */
-    var autoDoc = w.autoDoctor === true;     /* default OFF */
-    var autoCrit = w.autoCritical !== false; /* default ON */
-
-    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    var hours = [18, 19, 20, 21, 22, 23].map(function (h) {
-      return '<option value="' + h + '"' + ((+w.ownerSummaryHour || 21) === h ? ' selected' : '') + '>' + (h - 12) + ':00 PM</option>';
-    }).join('');
-
-    function rowSwitch(id, checked, title, desc, badge, extra) {
-      return '<div class="wa-row-item">'
-        + '<div class="wa-row-content">'
-        + '  <div class="wa-row-title">'
-        + '    <span>' + title + '</span>'
-        +      (badge ? (' ' + badge) : '')
-        + '  </div>'
-        + '  <p class="wa-row-desc">' + desc + '</p>'
-        +    (extra ? ('<div class="wa-sub-box">' + extra + '</div>') : '')
-        + '</div>'
-        + '<label class="wa-switch" title="Toggle ' + App.esc(title) + '">'
-        + '  <input type="checkbox" id="' + id + '"' + (checked ? ' checked' : '') + '>'
-        + '  <span class="wa-slider"></span>'
-        + '</label>'
-        + '</div>';
-    }
-
-    var html =
-      '<style>'
-      + '.wa-set-wrap{max-width:820px;margin:0}'
-      + '.wa-set-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;background:linear-gradient(135deg,#f0fdf4 0%,#e6f7ec 100%);border:1.5px solid #bbf7d0;border-radius:14px;margin-bottom:18px}'
-      + '.wa-set-head-left{display:flex;align-items:center;gap:14px}'
-      + '.wa-brand-ico{width:46px;height:46px;border-radius:12px;background:#25D366;color:#fff;display:grid;place-items:center;box-shadow:0 4px 14px rgba(37,211,102,.35);flex:none}'
-      + '.wa-set-title{font-size:18px;font-weight:800;color:#14532d;margin:0 0 3px}'
-      + '.wa-set-sub{font-size:13px;color:#166534;margin:0}'
-      + '.wa-card{margin-bottom:16px;border-radius:14px;box-shadow:0 1px 4px rgba(15,30,46,.04)}'
-      + '.wa-card .card-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px}'
-      + '.wa-card-title-group{display:flex;align-items:center;gap:9px}'
-      + '.wa-card-ic{font-size:16px}'
-      + '.wa-row-item{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--line2)}'
-      + '.wa-row-item:first-of-type{border-top:none;padding-top:2px}'
-      + '.wa-row-content{flex:1;min-width:0}'
-      + '.wa-row-title{font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;margin-bottom:2px}'
-      + '.wa-row-desc{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}'
-      + '.wa-sub-box{margin-top:10px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px}'
-      + '.wa-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer;margin-top:2px}'
-      + '.wa-switch input{opacity:0;width:0;height:0;position:absolute}'
-      + '.wa-slider{position:absolute;inset:0;background-color:#cbd5e1;border-radius:99px;transition:.2s ease}'
-      + '.wa-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:#fff;border-radius:50%;transition:.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.25)}'
-      + '.wa-switch input:checked + .wa-slider{background-color:#16a34a}'
-      + '.wa-switch input:checked + .wa-slider:before{transform:translateX(20px)}'
-      + '.wa-badge-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700}'
-      + '.wa-badge-alert{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}'
-      + '.wa-badge-green{background:#dcfce7;color:#15803d;border:1px solid #86efac}'
-      + '.wa-action-bar{display:flex;align-items:center;gap:14px;margin-top:20px;padding:16px 20px;background:#f8fafc;border:1px solid var(--line);border-radius:14px;flex-wrap:wrap}'
-      + '@media(max-width:640px){.wa-set-head{flex-direction:column;align-items:flex-start}.wa-row-item{flex-direction:column-reverse;align-items:flex-end;gap:8px}}'
-      + '</style>'
-      + '<div class="wa-set-wrap">'
-      + '<div class="wa-set-head">'
-      + '  <div class="wa-set-head-left">'
-      + '    <div class="wa-brand-ico">'
-      + '      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 0 1 2.4 5.83c0 4.54-3.7 8.24-8.24 8.24-1.44 0-2.86-.38-4.12-1.1l-.3-.17-3.12.82.83-3.04-.19-.31a8.16 8.16 0 0 1-1.25-4.44c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.87.85-.87 2.08s.89 2.41 1.01 2.58c.13.17 1.76 2.68 4.26 3.76.6.26 1.06.41 1.42.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3"/></svg>'
-      + '    </div>'
-      + '    <div>'
-      + '      <h2 class="wa-set-title">WhatsApp Automation &amp; Alerts</h2>'
-      + '      <p class="wa-set-sub">Deliver reports, billing receipts, dues reminders and critical clinical alerts automatically.</p>'
-      + '    </div>'
-      + '  </div>'
-      + '  <div>'
-      + '    <a href="#/whatsapp" class="btn btn-sm btn-ghost" style="font-weight:700">Open WhatsApp Center &rarr;</a>'
-      + '  </div>'
-      + '</div>'
-      + '<div id="waGwBox"></div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">📱</span><h3 style="margin:0">Lab WhatsApp Number</h3></div>'
-      + '    <span class="badge ' + (w.labNumber ? 'b-ready' : 'b-pending') + '">' + (w.labNumber ? 'NUMBER SET' : 'NOT SET') + '</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      + '    <p class="muted" style="font-size:13px;margin:0 0 10px">This number represents your lab on WhatsApp — printed on bills and invoices, and used as the sender contact.</p>'
-      + '    <div style="display:flex;gap:10px;align-items:center;max-width:440px">'
-      + '      <input class="input" id="waLabNum" placeholder="e.g. 0300-1234567 or 923001234567" value="' + App.esc(w.labNumber || '') + '" style="font-size:14px;font-weight:600">'
-      + '      <button class="btn btn-primary" id="waLabNumSave" type="button" style="flex:none">Save</button>'
-      + '    </div>'
-      + '  </div>'
-      + '</div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">👤</span><h3 style="margin:0">Patient Automated Messages</h3></div>'
-      + '    <span class="muted" style="font-size:12.5px">Sent to patient\'s mobile number</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      +     rowSwitch('waAutoPatient', autoPat, 'Auto-send Report when Ready', 'Automatically send the PDF report download link to the patient on WhatsApp as soon as all test results are ready and finalized.', '<span class="wa-badge-pill wa-badge-green">Instant</span>')
-      +     rowSwitch('waAutoReceipt', w.autoReceipt === true, 'Billing Receipt on Registration', 'A few minutes after an invoice is created, send the patient an instant digital receipt with invoice no., total billed, amount paid, and balance.')
-      +     rowSwitch('waAutoDue', w.autoDueReminder === true, 'Weekly Outstanding Balance Reminder', 'Send a polite weekly balance reminder with the remaining amount to patients who have unpaid dues (sent at most 4 times per invoice).', '',
-              '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><label class="label" for="waDueDay" style="margin:0">Send weekly on:</label><select class="select" id="waDueDay" style="max-width:180px">' + days.map(function (d, i) { return '<option value="' + i + '"' + ((+w.dueReminderDay === i) ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></div>')
-      + '  </div>'
-      + '</div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">🚨</span><h3 style="margin:0">Doctor &amp; Emergency Clinical Alerts</h3></div>'
-      + '    <span class="muted" style="font-size:12.5px">Clinical safety &amp; referral sharing</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      +     rowSwitch('waAutoCritical', autoCrit, 'Critical Value Panic Alerts', 'When a recorded test result is far outside the safe biological limit, immediately alert the referring doctor and your lab number.', '<span class="wa-badge-pill wa-badge-alert">Urgent Safety</span>')
-      +     rowSwitch('waAutoDoctor', autoDoc, 'Auto-send Report to Referring Doctor', 'Automatically send a digital copy of the finalized test report to the patient\'s referring doctor on WhatsApp.')
-      + '  </div>'
-      + '</div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">📈</span><h3 style="margin:0">Owner Summary &amp; Patient Retention</h3></div>'
-      + '    <span class="muted" style="font-size:12.5px">Business intelligence &amp; follow-ups</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      +     rowSwitch('waAutoOwner', w.autoOwnerSummary === true, 'Daily Business Summary to Owner', 'Every evening, receive an automated WhatsApp report of today\'s total patients, total billing, cash collected, and outstanding dues.', '',
-              '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end"><div><label class="label" for="waOwnerHour" style="margin-bottom:3px">Delivery Time</label><select class="select" id="waOwnerHour">' + hours + '</select></div>'
-              + '<div style="flex:1;min-width:200px"><label class="label" for="waOwnerNum" style="margin-bottom:3px">Owner WhatsApp Number</label><input class="input" id="waOwnerNum" placeholder="Leave blank to use lab number above" value="' + App.esc(w.ownerNumber || '') + '"></div>'
-              + '<button class="btn btn-ghost btn-sm" id="waOwnerTest" type="button" style="font-weight:600">Send Today\'s Summary Now</button></div>')
-      +     rowSwitch('waAutoFeedback', w.autoFeedback === true, 'Feedback &amp; Google 5-Star Review Request', 'A day after a fully paid report, thank the patient and invite them to leave a review on your Google Maps profile.', '',
-              '<div><label class="label" for="waReviewUrl" style="margin-bottom:3px">Google Review Link <span class="muted" style="font-weight:400">(e.g. https://g.page/r/...)</span></label><input class="input" id="waReviewUrl" placeholder="https://g.page/r/..." value="' + App.esc(w.googleReviewUrl || '') + '"></div>')
-      +     rowSwitch('waAutoRetest', w.autoRetest === true, 'Periodic Repeat-Test Reminder', 'Remind chronic patients a few days before a test is due again (e.g. HbA1c after 3 months, Lipid after 6 months).', '',
-              '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="waRetestFill" type="button" style="font-weight:600">Auto-fill common repeat days on tests</button><span class="muted" id="waRetestMsg" style="font-size:12.5px"></span></div>')
-      + '  </div>'
-      + '</div>'
-      + '<div class="wa-action-bar">'
-      + '  <button class="btn btn-primary" id="waSaveAll" type="button" style="padding:10px 24px;font-weight:700;font-size:14px;background:#16a34a;border-color:#16a34a">'
-      + '    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;vertical-align:middle"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save WhatsApp Settings'
-      + '  </button>'
-      + '  <span class="muted" style="font-size:12.5px">Switches auto-save immediately on toggle. Delivery schedules are in Pakistan Standard Time (PKT).</span>'
-      + '</div>'
-      + '</div>';
-
-    document.getElementById('setBody').innerHTML = html;
-    wireGateway();
-
-    function saveAllWhatsApp(notify) {
-      var g = function (id) { return document.getElementById(id); };
-      var st = DB.get('settings', 'main') || {};
-      var ww = Object.assign(waDefaults(), st.whatsapp || {});
-
-      var labNumEl = g('waLabNum');
-      if (labNumEl) ww.labNumber = labNumEl.value.trim();
-
-      var apEl = g('waAutoPatient'); if (apEl) ww.autoPatient = apEl.checked;
-      var adEl = g('waAutoDoctor'); if (adEl) ww.autoDoctor = adEl.checked;
-      var acEl = g('waAutoCritical'); if (acEl) ww.autoCritical = acEl.checked;
-
-      var arEl = g('waAutoReceipt'); if (arEl) ww.autoReceipt = arEl.checked;
-      var aduEl = g('waAutoDue'); if (aduEl) ww.autoDueReminder = aduEl.checked;
-      var ddEl = g('waDueDay'); if (ddEl) ww.dueReminderDay = +ddEl.value;
-
-      var aoEl = g('waAutoOwner'); if (aoEl) ww.autoOwnerSummary = aoEl.checked;
-      var ohEl = g('waOwnerHour'); if (ohEl) ww.ownerSummaryHour = +ohEl.value;
-      var onEl = g('waOwnerNum'); if (onEl) ww.ownerNumber = onEl.value.trim();
-
-      var afEl = g('waAutoFeedback'); if (afEl) ww.autoFeedback = afEl.checked;
-      var ruEl = g('waReviewUrl');
-      if (ruEl) {
-        var rUrl = ruEl.value.trim();
-        if (rUrl && !/^https:\/\//i.test(rUrl)) {
-          App.toast('Google review link must start with https://', 'err');
-          return false;
-        }
-        ww.googleReviewUrl = rUrl;
-      }
-
-      var atEl = g('waAutoRetest'); if (atEl) ww.autoRetest = atEl.checked;
-
-      st.whatsapp = ww;
-      DB.update('settings', 'main', st);
-      if (notify !== false) App.toast('WhatsApp settings saved successfully!');
-      return true;
-    }
-
-    var saveBtn = document.getElementById('waSaveAll');
-    if (saveBtn) saveBtn.addEventListener('click', function () { saveAllWhatsApp(true); });
-
-    var labNumBtn = document.getElementById('waLabNumSave');
-    if (labNumBtn) labNumBtn.addEventListener('click', function () { saveAllWhatsApp(true); });
-
-    ['waAutoPatient', 'waAutoDoctor', 'waAutoCritical', 'waAutoReceipt', 'waAutoDue', 'waAutoOwner', 'waAutoFeedback', 'waAutoRetest'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', function () {
-          if (saveAllWhatsApp(false)) {
-            App.toast((this.checked ? 'Switched ON' : 'Switched OFF') + ' — saved');
-          }
-        });
-      }
-    });
-
-    ['waDueDay', 'waOwnerHour'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', function () {
-          saveAllWhatsApp(false);
-        });
-      }
-    });
-
-    var ownerTestBtn = document.getElementById('waOwnerTest');
-    if (ownerTestBtn) {
-      ownerTestBtn.addEventListener('click', function () {
-        var b = this;
-        if (!saveAllWhatsApp(false)) return;
-        b.disabled = true;
-        DB.waGw('POST', 'auto/test', {}).then(function () {
-          b.disabled = false;
-          App.toast('Summary sent to owner number');
-        }, function (e) {
-          b.disabled = false;
-          App.toast(e && e.message ? e.message : 'Could not send — is WhatsApp connected?');
-        });
-      });
-    }
-
-    var retestFillBtn = document.getElementById('waRetestFill');
-    if (retestFillBtn) {
-      retestFillBtn.addEventListener('click', function () {
-        var rules = [
-          [/hba1c|glycosylated|glycated/i, 90],
-          [/lipid|cholesterol/i, 180],
-          [/tsh|thyroid|\bt3\b|\bt4\b/i, 180],
-          [/vitamin\s*d|25.?oh/i, 180],
-          [/vitamin\s*b.?12|b12/i, 180],
-          [/ferritin|iron/i, 180],
-          [/\bhb\b|cbc|complete blood/i, 0],
-          [/creatinine|urea|kft|rft|renal/i, 180],
-          [/lft|liver|alt|sgpt/i, 180],
-          [/psa/i, 365]
-        ];
-        var n = 0;
-        DB.all('tests').forEach(function (t) {
-          if (+t.retestDays > 0 || t.isPackage) return;
-          for (var i = 0; i < rules.length; i++) {
-            if (rules[i][1] && rules[i][0].test(t.name || '')) {
-              DB.update('tests', t.id, Object.assign({}, t, { retestDays: rules[i][1] }));
-              n++;
-              break;
-            }
-          }
-        });
-        var msgEl = document.getElementById('waRetestMsg');
-        if (msgEl) {
-          msgEl.textContent = n ? (n + ' test(s) updated (HbA1c 3 months; lipid, thyroid, vit D/B12, kidney, liver 6 months).') : 'Nothing to change — matching tests already have repeat days.';
-        }
-      });
-    }
-  }
 
 
 
@@ -4572,7 +4214,7 @@
     });
   }
 
-  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
+  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'portal', 'users', 'backup', 'danger'];
   App.route('#/patients/lists', function () { App.nav('#/patients'); });
   App.route('#/settings/lists', function () { App.nav('#/patients'); });
   App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });
