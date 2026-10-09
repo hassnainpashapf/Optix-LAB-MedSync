@@ -529,6 +529,10 @@
     var camSupport = typeof window.BarcodeDetector === 'function' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
 
     view.innerHTML = '<style>' + CSS + '</style>' +
+      '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px">' +
+        '<a href="#/samples" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' + App.icon('tube', 15) + ' Sample Tracking &amp; Phlebotomy</a>' +
+        '<a href="#/samples/stickers" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('printer', 15) + ' Tube Stickers (50×25mm)</a>' +
+      '</div>' +
       sampleKpis() +
       '<div class="smp-scan" id="smpScanBox">' +
         '<div class="smp-scan-row">' +
@@ -853,6 +857,10 @@
 
       view.innerHTML =
         '<style>' + CSS + LABEL_CSS + STK_CSS + '</style>' +
+        '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px">' +
+          '<a href="#/samples" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('tube', 15) + ' Sample Tracking &amp; Phlebotomy</a>' +
+          '<a href="#/samples/stickers" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' + App.icon('printer', 15) + ' Tube Stickers (50×25mm)</a>' +
+        '</div>' +
         kpiHtml +
         '<div class="stk-layout">' +
           '<div class="card"><div class="card-b">' +
@@ -1860,7 +1868,7 @@
     renderHomeSamplingDashboard();
   }
 
-  App.route('#/home-sampling', renderHomeSamplingDashboard);
-  App.route('#/samples/home', renderHomeSamplingDashboard);
+  App.route('#/home-sampling', function () { App.nav('#/samples'); });
+  App.route('#/samples/home', function () { App.nav('#/samples'); });
 })();
 

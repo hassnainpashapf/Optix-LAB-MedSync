@@ -622,8 +622,7 @@
       +     '<div class="kpi-lb">DIAGNOSTIC OPS &amp; ALERTS</div>'
       +     '<div class="kpi-nm" style="color:#7c3aed">' + m.testsTotal + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">Tests</span></div>'
       +     '<div class="kpi-sb">' + m.testsReady + ' Ready (' + m.completionRate + '%) • '
-      +       (m.criticals.length ? '<span style="color:#b91c1c;font-weight:800">🚨 ' + m.criticals.length + ' Critical</span>' : '<span style="color:#047857">0 Critical</span>')
-      +       (m.homeTotal ? ' • 🛵 ' + m.homeCollected + ' Home' : '') + '</div>'
+      +       (m.criticals.length ? '<span style="color:#b91c1c;font-weight:800">🚨 ' + m.criticals.length + ' Critical</span>' : '<span style="color:#047857">0 Critical</span>') + '</div>'
       +   '</div>'
       + '</div>'
 
@@ -648,7 +647,6 @@
       +       '<span class="wnd-pill' + (digestOpts.dues ? ' on' : '') + '" data-wnd-opt="dues">' + (digestOpts.dues ? '✓ ' : '') + 'Dues</span>'
       +       '<span class="wnd-pill' + (digestOpts.ops ? ' on' : '') + '" data-wnd-opt="ops">' + (digestOpts.ops ? '✓ ' : '') + 'Tests Ops</span>'
       +       '<span class="wnd-pill' + (digestOpts.crit ? ' on' : '') + '" data-wnd-opt="crit">' + (digestOpts.crit ? '✓ ' : '') + 'Criticals</span>'
-      +       '<span class="wnd-pill' + (digestOpts.home ? ' on' : '') + '" data-wnd-opt="home">' + (digestOpts.home ? '✓ ' : '') + 'Home Sampling</span>'
       +       '<span class="wnd-pill' + (digestOpts.docs ? ' on' : '') + '" data-wnd-opt="docs">' + (digestOpts.docs ? '✓ ' : '') + 'Top Doctors</span>'
       +     '</div>'
 

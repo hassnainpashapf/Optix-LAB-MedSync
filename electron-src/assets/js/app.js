@@ -44,8 +44,7 @@
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
       sub: [{ key: 'new', label: 'Add Patient', route: '#/patients/new' }, { key: 'all', label: 'All Patients', route: '#/patients' }] },
-    { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
-      sub: [{ key: 'all', label: 'Sample Tracking', route: '#/samples' }, { key: 'stickers', label: 'Tube Stickers (50×25mm)', route: '#/samples/stickers' }, { key: 'home', label: 'Home Sampling & Dispatch', route: '#/home-sampling' }] },
+    { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48' },
     { key: 'inventory', label: 'Inventory',  icon: 'box',       route: '#/inventory', color: '#0ea5e9' },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', route: '#/results' }, { key: 'ready', label: 'Ready Reports', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', route: '#/results/old' }] },
@@ -795,7 +794,6 @@
     var _curHash = (location.hash || '').split('?')[0];
     var _pageTitle = _curHash === '#/packages' ? 'Health Packages & Screening Deals Center' :
                      _curHash === '#/samples/stickers' ? 'Tube Stickers (50×25mm)' :
-                     _curHash === '#/home-sampling' ? 'Home Sampling & Dispatch' :
                      (_curHash === '#/reports/trends' || _curHash === '#/trends') ? 'Patient Trends & Delta' :
                      (navItem ? navItem.label : '');
     document.getElementById('topbar').innerHTML =
