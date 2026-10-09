@@ -181,9 +181,10 @@
     panels: { prefix: 'PN', digits: 3 },
     ref_labs: { prefix: 'RL', digits: 3 },
     outsourced: { prefix: 'OS', digits: 5 },
-    onlinepay_claims: { prefix: 'OPC', digits: 4 }
+    onlinepay_claims: { prefix: 'OPC', digits: 4 },
+    branches: { prefix: 'B',  digits: 2 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'sms_outbox', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced', 'onlinepay_claims'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'sms_outbox', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced', 'onlinepay_claims', 'branches'];
 
   /* ---------------- storage ---------------- */
   function load() {

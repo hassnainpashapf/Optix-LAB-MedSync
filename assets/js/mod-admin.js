@@ -2003,6 +2003,7 @@
       { id: 'payments', sec: 'GENERAL', label: 'Online Payments', desc: 'JazzCash, Easypaisa, Bank & Raast', icon: '💳' },
       { id: 'account', sec: 'GENERAL', label: 'My Account', desc: 'Admin credentials & password', icon: '👤' },
       { id: 'users', sec: 'GENERAL', label: 'Users & Roles', desc: 'Staff accounts & permissions', icon: '👥' },
+      { id: 'branches', sec: 'GENERAL', label: 'Branches', desc: 'Manage lab branches', icon: '🏪' },
 
       { id: 'templates', sec: 'REPORTS & PRINTING', label: 'Report Templates', desc: 'Presets, normal ranges & tests', icon: '📄' },
       { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: '🖋️' },
@@ -2062,6 +2063,7 @@
     else if (settingsTab === 'signatures') renderSetSignatures();
     else if (settingsTab === 'portal') renderSetPortal();
     else if (settingsTab === 'users') renderSetUsers();
+    else if (settingsTab === 'branches') renderSetBranches();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
     try { checkAutoCloudBackup(); } catch (e) {}
@@ -3579,6 +3581,151 @@
 
 
 
+  function renderSetBranches() {
+    var body = document.getElementById('setBody');
+    body.innerHTML = '<p class="muted">Loading branches…</p>';
+
+    /* GET /api/lab/features -> { maxBranches, branchesUsed }. Never throws;
+       falls back to { maxBranches: null, branchesUsed: null } offline. */
+    function fetchBranchFeatures(cb) {
+      var done = function (max, used) { cb({ maxBranches: max, branchesUsed: used }); };
+      try {
+        var base = String(window.LABPOS_API || '').replace(/\/+$/, '');
+        if (!base || !window.fetch || !DB.authHeaders) return done(null, null);
+        window.fetch(base + '/api/lab/features', { headers: DB.authHeaders({ 'Content-Type': 'application/json' }) })
+          .then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (j) {
+            var max = j && j.maxBranches, used = j && j.branchesUsed;
+            done(typeof max === 'number' ? max : null, typeof used === 'number' ? used : null);
+          }, function () { done(null, null); });
+      } catch (e) { done(null, null); }
+    }
+
+    /* re-fetch usage and repaint; renderSettings() routes back to
+       renderSetBranches(), which fetches fresh features again. */
+    function refresh() { renderSettings(); }
+
+    function paint(feat) {
+      var branches = DB.all('branches').slice().sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); });
+      var localUsed = branches.filter(function (b) { return b.is_active; }).length;
+      var used = (feat.branchesUsed != null) ? feat.branchesUsed : localUsed;
+      var max = (feat.maxBranches != null) ? feat.maxBranches : Infinity;
+      var limitReached = used >= max;
+      var usageText = max === Infinity
+        ? used + ' of unlimited branches used'
+        : used + ' of ' + max + ' branches used';
+
+      var html = '<div class="toolbar" style="margin-bottom:12px;align-items:center">'
+        + '<div><h3 style="margin:0;font-size:16px">Branches</h3><div class="muted" style="font-size:12.5px;margin-top:2px">' + App.esc(usageText) + '</div></div>'
+        + '<button class="btn btn-primary btn-sm" id="bAdd" style="margin-left:auto"' + (limitReached ? ' disabled style="opacity:.4;cursor:not-allowed"' : '') + '>+ Add Branch</button></div>'
+        + (limitReached ? '<p class="muted" style="font-size:12.5px;margin:-6px 0 12px">You are using all ' + max + ' branch slots on your plan. Ask support to raise your branch limit.</p>' : '')
+        + '<div class="tbl-wrap"><table class="table"><thead><tr>'
+        + '<th>Name</th><th>Code</th><th>Address</th><th>Phone</th><th>Manager</th><th>Status</th><th style="text-align:right">Actions</th>'
+        + '</tr></thead><tbody>';
+      if (!branches.length) {
+        html += '<tr><td colspan="7" style="text-align:center;padding:26px 10px">'
+          + '<div style="font-size:15px;font-weight:600">No branches yet</div>'
+          + '<div class="muted" style="font-size:13px;margin-top:4px">Add your first branch with the <b>+ Add Branch</b> button above.</div>'
+          + '</td></tr>';
+      }
+      branches.forEach(function (b) {
+        var active = !!b.is_active;
+        html += '<tr>'
+          + '<td><strong>' + App.esc(b.name || '') + '</strong></td>'
+          + '<td>' + App.esc(b.code || '') + '</td>'
+          + '<td>' + App.esc(b.address || '—') + '</td>'
+          + '<td>' + App.esc(b.phone || '—') + '</td>'
+          + '<td>' + App.esc(b.manager_name || '—') + '</td>'
+          + '<td>' + (active ? '<span class="badge b-paid">Active</span>' : '<span class="badge b-unpaid">Inactive</span>') + '</td>'
+          + '<td style="text-align:right;white-space:nowrap" class="actions">'
+          + '<button class="btn btn-ghost btn-sm" data-bedit="' + App.esc(b.id) + '">Edit</button> '
+          + '<button class="btn btn-ghost btn-sm" data-btoggle="' + App.esc(b.id) + '">' + (active ? 'Deactivate' : 'Activate') + '</button> '
+          + '<button class="btn btn-ghost btn-sm" data-bdel="' + App.esc(b.id) + '" style="color:#b91c1c">Delete</button>'
+          + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+      body.innerHTML = html;
+
+      var addBtn = document.getElementById('bAdd');
+      if (addBtn && !limitReached) addBtn.addEventListener('click', function () { openBranchModal(null, max); });
+
+      document.querySelectorAll('[data-bedit]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openBranchModal(DB.get('branches', btn.getAttribute('data-bedit')), max); });
+      });
+      document.querySelectorAll('[data-btoggle]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var b = DB.get('branches', btn.getAttribute('data-btoggle'));
+          if (!b) return;
+          if (b.is_active) {
+            var others = DB.all('branches').filter(function (x) { return x.is_active && x.id !== b.id; });
+            if (!others.length) return App.toast('Cannot deactivate the last active branch. Add or activate another branch first.', 'err');
+          }
+          App.confirm((b.is_active ? 'Deactivate' : 'Activate') + ' branch "' + b.name + '"?').then(function (ok) {
+            if (!ok) return;
+            DB.update('branches', b.id, { is_active: !b.is_active });
+            App.toast('Branch ' + (b.is_active ? 'deactivated' : 'activated') + '.');
+            refresh();
+          });
+        });
+      });
+      document.querySelectorAll('[data-bdel]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var b = DB.get('branches', btn.getAttribute('data-bdel'));
+          if (!b) return;
+          App.confirm('Permanently delete branch "' + b.name + '"? This cannot be undone.').then(function (ok) {
+            if (!ok) return;
+            DB.remove('branches', b.id);
+            App.toast('Branch deleted.');
+            refresh();
+          });
+        });
+      });
+    }
+
+    /* add / edit modal (mirrors openUserModal) */
+    function openBranchModal(b, max) {
+      var isEdit = !!b;
+      b = b || { name: '', code: '', address: '', phone: '', manager_name: '' };
+      var form = '<div class="form-grid">'
+        + '<div><label class="label">Branch name *</label><input class="input" id="bfName" maxlength="60" placeholder="e.g. Main Branch" value="' + App.esc(b.name || '') + '"></div>'
+        + '<div><label class="label">Branch code</label><input class="input" id="bfCode" maxlength="20" placeholder="e.g. BR-01" value="' + App.esc(b.code || '') + '"' + (isEdit ? ' disabled' : '') + '></div>'
+        + '<div style="grid-column:1/-1"><label class="label">Address</label><input class="input" id="bfAddr" maxlength="140" placeholder="Street, city" value="' + App.esc(b.address || '') + '"></div>'
+        + '<div><label class="label">Phone</label><input class="input" id="bfPhone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + App.esc(b.phone || '') + '"></div>'
+        + '<div><label class="label">Manager name</label><input class="input" id="bfMgr" maxlength="60" placeholder="Branch manager" value="' + App.esc(b.manager_name || '') + '"></div>'
+        + '</div>'
+        + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">'
+        + '<button class="btn btn-ghost" id="bfCancel">Cancel</button>'
+        + '<button class="btn btn-primary" id="bfSave">' + (isEdit ? 'Save Changes' : 'Add Branch') + '</button></div>';
+      App.modal(isEdit ? 'Edit Branch' : 'Add Branch', form, {
+        onOpen: function (ov, close) {
+          document.getElementById('bfCancel').addEventListener('click', close);
+          document.getElementById('bfSave').addEventListener('click', function () {
+            var name = document.getElementById('bfName').value.trim();
+            var code = document.getElementById('bfCode').value.trim();
+            var addr = document.getElementById('bfAddr').value.trim();
+            var phone = document.getElementById('bfPhone').value.trim();
+            var mgr = document.getElementById('bfMgr').value.trim();
+            if (!name) return App.toast('Branch name is required.', 'err');
+            if (isEdit) {
+              DB.update('branches', b.id, { name: name, address: addr, phone: phone, manager_name: mgr });
+              App.toast('Branch updated.');
+            } else {
+              if (max !== Infinity && DB.all('branches').length >= max) return App.toast('Branch limit reached. Ask support to raise your branch limit.', 'err');
+              var dup = code && DB.all('branches').some(function (x) { return String(x.code || '').toLowerCase() === code.toLowerCase(); });
+              if (dup) return App.toast('A branch with this code already exists.', 'err');
+              DB.insert('branches', { name: name, code: code, address: addr, phone: phone, manager_name: mgr, is_active: true });
+              App.toast('Branch added.');
+            }
+            close();
+            refresh();
+          });
+        }
+      });
+    }
+
+    fetchBranchFeatures(paint);
+  }
+
   /* ---- Dropdown Lists: the admin edits the choices that appear in forms ---- */
   function renderSetLists() {
     var st = DB.get('settings', 'main') || {}, work = {};
@@ -4214,7 +4361,7 @@
     });
   }
 
-  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'portal', 'users', 'backup', 'danger'];
+  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'portal', 'users', 'branches', 'backup', 'danger'];
   App.route('#/patients/lists', function () { App.nav('#/patients'); });
   App.route('#/settings/lists', function () { App.nav('#/patients'); });
   App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });

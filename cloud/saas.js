@@ -31,6 +31,13 @@ const DEFAULT_SETTINGS = {
   payMethods: [], /* [{ name:'JazzCash', account:'03xx-xxxxxxx', title:'Account title' }] */
 };
 
+/* multi-branch: every lab may run up to this many branches by default (per-lab override lives on lab.maxBranches) */
+const DEFAULT_MAX_BRANCHES = 5;
+/* per-module feature gating: keys mirror the app.js NAV; lab.features stores only explicit `false` overrides (absent = enabled) */
+const FEATURE_KEYS = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced',
+  'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'doctors', 'expenses', 'finance',
+  'reports', 'downloads', 'email', 'whatsapp', 'sms', 'audit', 'subscription', 'settings'];
+
 function slugify(s) {
   return String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
 }
@@ -59,7 +66,7 @@ function create(ctx) {
     cache.labs = new Map(rows.map(r => [r.id, r]));
     return cache.labs;
   }
-  async function saveLab(l) { await raw.put(LABS_T, l); (await loadLabs()).set(l.id, l); return l; }
+  async function saveLab(l) { await raw.put(LABS_T, l); (await loadLabs()).set(l.id, l); return l; } /* raw.put stores the whole row: maxBranches / features survive the save */
   async function getLab(id) { return (await loadLabs()).get(id || 'main') || null; }
   async function findBySlug(slug) {
     slug = String(slug || '').trim().toLowerCase();
@@ -122,7 +129,22 @@ function create(ctx) {
   }
   async function limitsOf(lab) {
     const p = (await getPlans())[lab.plan] || DEFAULT_PLANS.starter;
-    return { users: lab.limitUsers != null ? lab.limitUsers : p.users, invoicesPerMonth: lab.limitInvoices != null ? lab.limitInvoices : p.invoicesPerMonth };
+    return { users: lab.limitUsers != null ? lab.limitUsers : p.users, invoicesPerMonth: lab.limitInvoices != null ? lab.limitInvoices : p.invoicesPerMonth,
+      maxBranches: lab.maxBranches != null ? lab.maxBranches : DEFAULT_MAX_BRANCHES };
+  }
+  /* effective feature map: all-true defaults, then lab.features overrides (only `false` is stored; absent = enabled) */
+  function getFeatures(lab) {
+    const overrides = (lab && lab.features) || {};
+    const out = {};
+    for (const k of FEATURE_KEYS) out[k] = overrides[k] !== false;
+    return out;
+  }
+  async function setFeatures(lab, features) {
+    const overrides = {};
+    for (const k of FEATURE_KEYS) if (features && features[k] === false) overrides[k] = false;
+    lab.features = overrides;
+    await saveLab(lab);
+    return getFeatures(lab);
   }
   async function view(lab, withUsage) {
     const plans = await getPlans();
@@ -130,7 +152,8 @@ function create(ctx) {
       id: lab.id, slug: lab.slug, name: lab.name, ownerName: lab.ownerName || '', ownerEmail: lab.ownerEmail || '', phone: lab.phone || '',
       plan: lab.plan, planName: (plans[lab.plan] || {}).name || lab.plan, status: effStatus(lab), rawStatus: lab.status,
       trialEndsAt: lab.trialEndsAt || null, paidUntil: lab.paidUntil || null, daysLeft: daysLeft(lab), createdAt: lab.createdAt,
-      notes: lab.notes || '', legacy: !!lab.legacy, limits: await limitsOf(lab), history: lab.history || [],
+      notes: lab.notes || '', legacy: !!lab.legacy, limits: await limitsOf(lab), maxBranches: lab.maxBranches != null ? lab.maxBranches : DEFAULT_MAX_BRANCHES,
+      features: getFeatures(lab), history: lab.history || [],
     };
     if (withUsage) v.usage = await usageOf(lab);
     return v;
@@ -160,6 +183,7 @@ function create(ctx) {
       const id = 'l' + crypto.randomBytes(5).toString('hex');
       const now = new Date();
       const lab = { id, slug, prefix: id + '/', name: labName, ownerName, ownerEmail: email, phone, plan: 'trial', status: 'active',
+        maxBranches: DEFAULT_MAX_BRANCHES, features: {},
         trialEndsAt: new Date(now.getTime() + (+settings.trialDays || 14) * DAY).toISOString(), paidUntil: null,
         createdAt: now.toISOString(), history: [] };
       await addHistory(lab, 'Signed up — ' + (+settings.trialDays || 14) + '-day free trial', by || 'signup');
@@ -196,8 +220,8 @@ function create(ctx) {
     return new Date(base + (period === 'yearly' ? 365 : 30) * DAY).toISOString();
   }
 
-  return { LABS_T, PAY_T, DAY, DEFAULT_PLANS, getSettings, getPlans, loadLabs, saveLab, getLab, findBySlug, storeFor, bootstrap, effStatus, daysLeft,
-    usageOf, limitsOf, view, createLab, purgeLab, addPeriod, addHistory, slugify, SLUG_RE, RESERVED, raw };
+  return { LABS_T, PAY_T, DAY, DEFAULT_PLANS, FEATURE_KEYS, DEFAULT_MAX_BRANCHES, getSettings, getPlans, loadLabs, saveLab, getLab, findBySlug, storeFor, bootstrap, effStatus, daysLeft,
+    usageOf, limitsOf, view, createLab, purgeLab, addPeriod, addHistory, getFeatures, setFeatures, slugify, SLUG_RE, RESERVED, raw };
 }
 
-module.exports = { create, slugify, DEFAULT_PLANS, DEFAULT_SETTINGS };
+module.exports = { create, slugify, DEFAULT_PLANS, DEFAULT_SETTINGS, FEATURE_KEYS, DEFAULT_MAX_BRANCHES };

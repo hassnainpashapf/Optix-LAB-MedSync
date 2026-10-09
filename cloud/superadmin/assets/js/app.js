@@ -752,6 +752,7 @@ function changelogCardHtml() {
 var NAV = [
   { id: 'overview', label: 'SaaS Overview' },
   { id: 'labs', label: 'Labs' },
+  { id: 'branchlabs', label: 'Branch Controls' },
   { id: 'payments', label: 'Payments' },
   { id: 'settings', label: 'Plans & Settings' },
   { id: 'fleet', label: 'Fleet & Updates' }
@@ -854,6 +855,7 @@ function paintMain() {
   var v = state.view;
   if (v === 'fleet') { main.innerHTML = fleetViewHtml(); wireFleet(); }
   else if (v === 'labs') { main.innerHTML = labsViewHtml(); wireLabsView(); }
+  else if (v === 'branchlabs') { main.innerHTML = branchLabsViewHtml(); wireBranchLabsView(); }
   else if (v === 'payments') { main.innerHTML = paymentsViewHtml(); wirePaymentsView(); }
   else if (v === 'settings') { main.innerHTML = settingsViewHtml(); wireSettingsView(); }
   else { main.innerHTML = overviewViewHtml(); wireOverviewView(); }
@@ -884,6 +886,7 @@ function applyView() {
 function loadViewData(v, silent) {
   if (v === 'overview') return loadOverview(silent);
   if (v === 'labs') return loadSaasLabs(silent);
+  if (v === 'branchlabs') return loadBranchLabs(silent);
   if (v === 'payments') return loadPayments(silent);
   if (v === 'settings') return loadSettings(silent);
   if (v === 'fleet') return loadData(!!silent);
@@ -1121,6 +1124,25 @@ function loadSaasLabs(silent) {
     setPending(r && r.pendingPayments);
   }, silent);
 }
+function loadBranchLabs(silent) {
+  return loadSection('branchlabs', function () { return api('/api/saas/labs'); }, function (r) {
+    state.branchlabs = (r && r.labs) || [];
+  }, silent);
+}
+function loadLabBranches(labId) {
+  return api('/api/saas/labs/' + encodeURIComponent(labId) + '/branches').then(function (r) {
+    state.labBranches = (r && r.branches) || [];
+    return state.labBranches;
+  }, function (err) {
+    if (err && err.status === 404) {
+      state.labBranches = [];
+      toast('Lab not found.', 'err');
+      return state.labBranches;
+    }
+    return Promise.reject(err);
+  });
+}
+
 function loadPayments(silent) {
   return loadSection('payments', function () { return api('/api/saas/payments'); }, function (r) {
     state.payments = Array.isArray(r) ? r : [];
@@ -1232,6 +1254,168 @@ function filteredLabs() {
   });
 }
 
+/* 24 feature keys in display order, grouped under headings. */
+var BRANCH_FEATURE_GROUPS = [
+  { title: 'Laboratory', keys: [
+    ['dashboard', 'Dashboard'],
+    ['patients', 'Patients'],
+    ['samples', 'Samples'],
+    ['inventory', 'Inventory'],
+    ['results', 'Lab Results'],
+    ['tests', 'Tests'],
+    ['packages', 'Packages'],
+    ['outsourced', 'Outsourced Tests']
+  ]},
+  { title: 'Billing', keys: [
+    ['invoices', 'Invoices'],
+    ['dues', 'Dues'],
+    ['discounts', 'Discounts'],
+    ['onlinepay', 'Online Payments'],
+    ['panels', 'Panels'],
+    ['doctors', 'Doctors'],
+    ['expenses', 'Expenses'],
+    ['finance', 'Finance'],
+    ['reports', 'Reports'],
+    ['downloads', 'Downloads']
+  ]},
+  { title: 'Tools', keys: [
+    ['email', 'Email'],
+    ['whatsapp', 'WhatsApp'],
+    ['sms', 'SMS']
+  ]},
+  { title: 'System', keys: [
+    ['audit', 'Audit'],
+    ['subscription', 'Subscription'],
+    ['settings', 'Settings']
+  ]}
+];
+
+function branchFeatureCount(lab) {
+  var feats = (lab && lab.features) || {};
+  var enabled = 0, total = 0;
+  BRANCH_FEATURE_GROUPS.forEach(function (g) {
+    g.keys.forEach(function (k) {
+      total++;
+      if (feats[k[0]] !== false) enabled++;
+    });
+  });
+  return { enabled: enabled, total: total };
+}
+
+function branchLabsViewHtml() {
+  var head = pageHead('Branch Controls',
+    'Branch limits and feature availability for every lab on the platform.');
+  if (!state.branchlabs) {
+    return head + (state.er.branchlabs ? errorCard(state.er.branchlabs) : '<div class="spin"></div>');
+  }
+  return head + branchLabsTableHtml() + branchLabDetailHtml();
+}
+
+function branchLabsTableHtml() {
+  var labs = state.branchlabs || [];
+  if (!labs.length) {
+    return '<div class="card"><div class="empty"><div class="e-ico">' + IC.lab + '</div>' +
+      '<h4>No labs yet</h4><p>Labs appear here when they sign up.</p></div></div>';
+  }
+  var rows = labs.map(function (l) {
+    var limit = (l.maxBranches == null ? 5 : l.maxBranches);
+    var used = (l.branchCount == null ? 0 : l.branchCount);
+    var fc = branchFeatureCount(l);
+    var managing = state.managingLabId === l.id;
+    return '<tr data-lab="' + esc(l.id) + '">' +
+      '<td class="td-main"><strong>' + esc(l.name || 'Unnamed lab') + '</strong>' +
+      '<div class="cell-sub">' + esc(l.slug || '') + '</div></td>' +
+      '<td data-label="Plan">' + planBadge(l.plan) + '</td>' +
+      '<td data-label="Status">' + statusBadge(l.status) + '</td>' +
+      '<td data-label="Branches">' + '<span class="us"><span class="' +
+      (limit > 0 && used >= limit ? 'dl-bad' : '') + '">' + num(used) + '</span> ' +
+      '<span class="muted-t">/ ' + num(limit) + '</span></span></td>' +
+      '<td data-label="Features"><span class="us"><span>' + fc.enabled + '</span> ' +
+      '<span class="muted-t">/ ' + fc.total + ' on</span></span></td>' +
+      '<td data-label="Actions"><button type="button" class="btn btn-sm ' +
+      (managing ? 'btn-ghost' : 'btn-primary') + '" data-manage="' + esc(l.id) + '">' +
+      (managing ? 'Close' : 'Manage') + '</button></td>' +
+      '</tr>';
+  }).join('');
+  return '<div class="card"><div class="tbl-wrap"><table class="table stack"><thead><tr>' +
+    '<th>Lab</th><th>Plan</th><th>Status</th><th>Branches</th><th>Features</th><th>Actions</th>' +
+    '</tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+}
+
+function branchLabDetailHtml() {
+  var lab = null, i, labs = state.branchlabs || [];
+  for (i = 0; i < labs.length; i++) {
+    if (labs[i].id === state.managingLabId) { lab = labs[i]; break; }
+  }
+  if (!lab) return '';
+  var feats = lab.features || {};
+  var limit = (lab.maxBranches == null ? 5 : lab.maxBranches);
+
+  /* Branch limit editor */
+  var limitHtml = '<div class="card"><div class="card-h"><h3>Branch limit</h3>' +
+    '<span class="sub">Maximum branches this lab may create</span></div>' +
+    '<div class="toolbar"><div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
+    '<input class="input" id="branchLimitInput" type="number" min="1" max="999" step="1" ' +
+    'value="' + num(limit) + '" style="width:110px">' +
+    '<button type="button" class="btn btn-primary btn-sm" id="branchLimitSave" data-limit-save="' + esc(lab.id) + '">Save</button>' +
+    '</div></div></div>';
+
+  /* Feature matrix: checkbox grid grouped under headings */
+  var groupsHtml = BRANCH_FEATURE_GROUPS.map(function (g) {
+    var boxes = g.keys.map(function (k) {
+      var key = k[0], label = k[1];
+      var on = feats[key] !== false;
+      var locked = (key === 'dashboard' || key === 'settings'); /* core routes: cannot be disabled */
+      return '<label style="display:flex;align-items:center;gap:8px;font-weight:400;font-size:13.5px;cursor:pointer"' +
+        (locked ? ' title="Core feature — always enabled"' : '') + '>' +
+        '<input type="checkbox" data-feature="' + esc(key) + '"' + (on ? ' checked' : '') +
+        (locked ? ' checked disabled' : '') + '> ' + esc(label) + (locked ? ' <span class="muted-t">(core)</span>' : '') + '</label>';
+    }).join('');
+    return '<div style="margin-bottom:18px"><h4 style="margin:0 0 8px">' + esc(g.title) + '</h4>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 14px">' + boxes + '</div></div>';
+  }).join('');
+  var featHtml = '<div class="card"><div class="card-h"><h3>Features</h3>' +
+    '<span class="sub">Uncheck to disable a feature for this lab; enabled by default</span></div>' +
+    groupsHtml +
+    '<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">' +
+    '<button type="button" class="btn btn-primary btn-sm" id="featuresSave" data-features-save="' + esc(lab.id) + '">Save features</button>' +
+    '<button type="button" class="btn btn-sm btn-ghost" id="featuresReset">Reset to all enabled</button>' +
+    '</div></div>';
+
+  /* Branch list for the lab */
+  var branchHtml;
+  if (!state.labBranches) {
+    branchHtml = state.er.labBranches
+      ? errorCard(state.er.labBranches)
+      : '<div class="card"><div class="spin"></div></div>';
+  } else if (!state.labBranches.length) {
+    branchHtml = '<div class="card"><div class="empty"><div class="e-ico">' + IC.lab + '</div>' +
+      '<h4>No branches</h4><p>This lab has not created any branches yet.</p></div></div>';
+  } else {
+    var brows = state.labBranches.map(function (b) {
+      return '<tr>' +
+        '<td class="td-main"><strong>' + esc(b.name || 'Unnamed branch') + '</strong>' +
+        '<div class="cell-sub">' + esc(b.code || '') + '</div></td>' +
+        '<td data-label="Phone">' + esc(b.phone || '—') + '</td>' +
+        '<td data-label="Manager">' + esc(b.manager || '—') + '</td>' +
+        '<td data-label="Status">' + statusBadge(b.status) + '</td>' +
+        '</tr>';
+    }).join('');
+    branchHtml = '<div class="card"><div class="card-h"><h3>Branches</h3>' +
+      '<span class="sub">' + state.labBranches.length + ' branch' + (state.labBranches.length === 1 ? '' : 'es') + '</span></div>' +
+      '<div class="tbl-wrap"><table class="table stack"><thead><tr>' +
+      '<th>Name</th><th>Phone</th><th>Manager</th><th>Status</th>' +
+      '</tr></thead><tbody>' + brows + '</tbody></table></div></div>';
+  }
+
+  return '<div class="card" style="border-top:2px solid var(--brand,#2f6df6)">' +
+    '<div class="card-h"><h3>' + esc(lab.name || 'Unnamed lab') + '</h3>' +
+    '<span class="sub">' + esc(lab.slug || '') + '</span></div>' +
+    '<div class="page-act" style="margin-bottom:14px"><button type="button" class="btn btn-sm btn-ghost" data-close-manage>Back to labs</button></div>' +
+    '</div>' +
+    limitHtml + featHtml + branchHtml;
+}
+
 function labsViewHtml() {
   var head = pageHead('Labs', 'Every lab on the platform — plans, usage and account actions.',
     '<button class="btn btn-primary" id="newLabBtn">' + IC.plus + ' New lab</button>');
@@ -1312,6 +1496,158 @@ function wireLabsView() {
 }
 
 /* ---- lab detail drawer ---- */
+
+function wireBranchLabsView() {
+  /* 1 — Manage / Close button on each lab row. */
+  Array.prototype.forEach.call(document.querySelectorAll('[data-manage]'), function (btn) {
+    btn.addEventListener('click', function () {
+      var id = btn.getAttribute('data-manage');
+      if (!id) return;
+      /* Toggle off when the same lab is clicked again (button reads "Close"). */
+      if (state.managingLabId === id) {
+        state.managingLabId = null;
+        state.labBranches = null;
+        state.er.labBranches = null;
+        paintMain();
+        return;
+      }
+      state.managingLabId = id;
+      state.labBranches = null;
+      state.er.labBranches = null;
+      paintMain(); /* renders the detail card with a branch-list spinner */
+      api('/api/saas/labs/' + encodeURIComponent(id) + '/branches').then(function (r) {
+        if (state.managingLabId !== id) return; /* user moved on; drop stale result */
+        state.labBranches = Array.isArray(r) ? r : ((r && r.branches) || []);
+        paintMain();
+      }, function (err) {
+        if (state.managingLabId !== id) return;
+        if (err && err.status === 404) {
+          state.managingLabId = null;
+          state.labBranches = null;
+          toast('Lab not found. The list has been refreshed.', 'err');
+          loadBranchLabs(false);
+          return;
+        }
+        state.er.labBranches = (err && err.message) ? err.message : 'Could not load branches.';
+        state.labBranches = null;
+        paintMain();
+      });
+    });
+  });
+
+  /* 5 — "Back to labs" clears the managed lab. */
+  Array.prototype.forEach.call(document.querySelectorAll('[data-close-manage]'), function (btn) {
+    btn.addEventListener('click', function () {
+      state.managingLabId = null;
+      state.labBranches = null;
+      state.er.labBranches = null;
+      paintMain();
+    });
+  });
+
+  /* 2 — Branch limit save, with inline validation. */
+  var limitSave = $('branchLimitSave');
+  if (limitSave) limitSave.addEventListener('click', function () {
+    var labId = limitSave.getAttribute('data-limit-save');
+    var input = $('branchLimitInput');
+    var raw = input ? input.value.trim() : '';
+    var n = Number(raw);
+    if (raw === '' || !Number.isFinite(n) || Math.floor(n) !== n || n < 0) {
+      showBranchLimitError('Enter a whole number of 0 or more.');
+      return;
+    }
+    showBranchLimitError('');
+    limitSave.disabled = true;
+    api('/api/saas/labs/' + encodeURIComponent(labId), {
+      method: 'PUT',
+      body: { maxBranches: n }
+    }).then(function (r) {
+      if (r && r.lab) applyBranchLab(r.lab);
+      else return loadBranchLabs(false);
+      toast('Branch limit saved.', 'ok');
+      paintMain();
+    }, function (err) {
+      limitSave.disabled = false;
+      handleErr(err);
+    });
+  });
+
+  /* 3 — Feature flags: collect all 24 keys, send the full map. */
+  var featsSave = $('featuresSave');
+  if (featsSave) featsSave.addEventListener('click', function () {
+    saveBranchFeatures(featsSave.getAttribute('data-features-save'), collectBranchFeatures(), featsSave);
+  });
+
+  /* 4 — Reset: check every box (all enabled) and persist with {} so the
+   * server stores no overrides (absent key = enabled). */
+  var featsReset = $('featuresReset');
+  if (featsReset) featsReset.addEventListener('click', function () {
+    Array.prototype.forEach.call(document.querySelectorAll('[data-feature]'), function (box) {
+      box.checked = true;
+    });
+    saveBranchFeatures(featsReset.getAttribute('data-features-save') || state.managingLabId, {}, featsReset);
+  });
+}
+
+/* Inline error under the branch-limit input. Empty msg clears it. */
+function showBranchLimitError(msg) {
+  var input = $('branchLimitInput');
+  if (!input) { if (msg) toast(msg, 'err'); return; }
+  var el = $('branchLimitErr');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'branchLimitErr';
+    el.className = 'form-err';
+    el.style.cssText = 'color:#c0392b;font-size:12.5px;margin-top:6px;display:none';
+    input.parentNode.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = msg ? '' : 'none';
+}
+
+/* Read all 24 feature checkboxes into a { key: bool } map. */
+function collectBranchFeatures() {
+  var map = {};
+  BRANCH_FEATURE_GROUPS.forEach(function (g) {
+    g.keys.forEach(function (k) {
+      var key = k[0];
+      var box = document.querySelector('[data-feature="' + key + '"]');
+      map[key] = box ? !!box.checked : true;
+    });
+  });
+  return map;
+}
+
+/* Shared save path for feature flags. No confirm dialog — same fast feel as
+ * the existing labs view. */
+function saveBranchFeatures(labId, features, btn) {
+  if (!labId) return;
+  if (btn) btn.disabled = true;
+  api('/api/saas/labs/' + encodeURIComponent(labId), {
+    method: 'PUT',
+    body: { features: features }
+  }).then(function (r) {
+    if (r && r.lab) applyBranchLab(r.lab);
+    else return loadBranchLabs(false);
+    toast('Features saved.', 'ok');
+    paintMain();
+  }, function (err) {
+    if (btn) btn.disabled = false;
+    handleErr(err);
+  });
+}
+
+/* Apply the updated lab object to state.branchlabs (the sibling of the labs
+ * view's applyLab, which targets state.slabs). */
+function applyBranchLab(lab) {
+  if (!lab) return;
+  var a = state.branchlabs || (state.branchlabs = []);
+  var found = false;
+  for (var i = 0; i < a.length; i++) {
+    if (a[i].id === lab.id) { a[i] = lab; found = true; break; }
+  }
+  if (!found) a.unshift(lab);
+}
 
 function openDrawer(id) {
   if (!findLab(id)) return;
@@ -1997,8 +2333,9 @@ function logout(expired) {
   state.apiDown = false;
   state.loading = false;
   state.stats = null; state.slabs = null; state.payments = null; state.settingsData = null; state.pending = 0;
-  state.ld = { overview: false, labs: false, payments: false, settings: false };
-  state.er = { overview: null, labs: null, payments: null, settings: null };
+  state.branchlabs = null; state.managingLabId = null; state.labBranches = null;
+  state.ld = { overview: false, labs: false, branchlabs: false, payments: false, settings: false };
+  state.er = { overview: null, labs: null, branchlabs: null, labBranches: null, payments: null, settings: null };
   closeDrawer();
   closeModal();
   stopPoll();

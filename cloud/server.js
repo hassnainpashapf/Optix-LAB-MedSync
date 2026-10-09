@@ -348,6 +348,7 @@ async function main() {
     await store.setMeta('labs', labs);
     res.json({ ok: true, targetVersion: labs[labId].targetVersion });
   });
+
   app.get('/api/labs', requireSuperadmin, async (req, res) => {
     const labs = await getLabs();
     const list = Object.keys(labs).map(id => Object.assign({ labId: id }, labs[id]));
@@ -835,6 +836,17 @@ async function main() {
       if (b.status !== undefined) { if (['active', 'suspended'].indexOf(b.status) < 0) return res.status(400).json({ error: 'status must be active or suspended' }); if (b.status !== lab.status) notes.push(b.status === 'suspended' ? 'Suspended' : 'Re-activated'); lab.status = b.status; }
       ['trialEndsAt', 'paidUntil'].forEach(k => { if (b[k] !== undefined) { lab[k] = b[k] ? new Date(b[k]).toISOString() : null; notes.push(k + ' → ' + (lab[k] ? lab[k].slice(0, 10) : 'none')); } });
       ['limitUsers', 'limitInvoices'].forEach(k => { if (b[k] !== undefined) lab[k] = (b[k] === '' || b[k] === null) ? null : Math.max(0, +b[k] || 0); });
+      if (b.maxBranches !== undefined) { const mb = Math.max(0, Math.floor(+b.maxBranches || 0)); if (mb !== lab.maxBranches) notes.push('maxBranches → ' + mb); lab.maxBranches = mb; }
+      if (b.features !== undefined && b.features !== null && typeof b.features === 'object') {
+        /* dashboard + settings are core routes and cannot be disabled for a lab */
+        if (b.features.dashboard === false || b.features.settings === false)
+          return res.status(400).json({ error: 'dashboard and settings cannot be disabled' });
+        const FEATURE_KEYS = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'doctors', 'expenses', 'finance', 'reports', 'downloads', 'email', 'whatsapp', 'sms', 'audit', 'subscription', 'settings'];
+        lab.features = Object.assign({}, lab.features);
+        let touched = 0;
+        for (const k of FEATURE_KEYS) if (typeof b.features[k] === 'boolean') { lab.features[k] = b.features[k]; touched++; }
+        if (touched) notes.push('features updated');
+      }
       ['name', 'notes', 'ownerName', 'ownerEmail', 'phone'].forEach(k => { if (typeof b[k] === 'string') lab[k] = b[k].slice(0, 300); });
       if (notes.length) await saas.addHistory(lab, notes.join('; '), 'operator');
       await saas.saveLab(lab);
@@ -874,6 +886,10 @@ async function main() {
       for (const p of await rawStore.all(saas.PAY_T)) if (p.labId === lab.id) await rawStore.del(saas.PAY_T, p.id);
       console.log('[labpos-cloud] saas: lab deleted:', lab.slug);
       res.json({ ok: true });
+    });
+    app.get('/api/saas/labs/:id/branches', requireSuperadmin, async (req, res) => {
+      const lab = await saas.getLab(req.params.id); if (!lab) return res.status(404).json({ error: 'unknown lab' });
+      res.json(await saas.storeFor(lab).all('branches'));
     });
     app.get('/api/saas/payments', requireSuperadmin, async (req, res) => {
       let rows = await rawStore.all(saas.PAY_T);
@@ -1770,6 +1786,76 @@ async function main() {
     const stats = { total: rows.length };
     res.json({ total: rows.length, rows: rows.slice(off, off + lim).map((r) => { const c = Object.assign({}, r); delete c._o; delete c._c; delete c._u; delete c._s; return c; }), users, tables: Object.keys(tables).sort(), stats });
   });
+  /* ---- branch management (multi-branch labs): dedicated CRUD with per-lab branch-limit enforcement.
+     Registered BEFORE the generic /api/:table routes below — /api/:table would otherwise swallow /api/branches. */
+  const BRANCH_FIELDS = ['id', 'name', 'code', 'address', 'phone', 'manager_name', 'is_active', 'created_at'];
+  const branchView = (r) => { const o = {}; BRANCH_FIELDS.forEach((f) => { o[f] = r ? r[f] : undefined; }); return o; };
+  const branchLimit = async (req) => {
+    if (saas && req.lab) return (await saas.limitsOf(req.lab)).maxBranches; /* saas.js: lab.maxBranches, default 5 */
+    return req.lab && req.lab.maxBranches != null ? req.lab.maxBranches : 5;
+  };
+  app.get('/api/branches', needUser, async (req, res) => {
+    const rows = (await req.store.all('branches') || []).map(branchView);
+    rows.sort((a, b) => String(a.created_at || '') < String(b.created_at || '') ? -1 : (String(a.created_at || '') > String(b.created_at || '') ? 1 : 0));
+    res.json(rows);
+  });
+  app.post('/api/branches', needUser, async (req, res) => {
+    try {
+      const b = req.body || {};
+      if (!b.name || !String(b.name).trim()) return res.status(400).json({ error: 'Branch name is required' });
+      const maxB = await branchLimit(req);
+      const active = (await req.store.all('branches') || []).filter((r) => r && r.is_active !== false).length;
+      if (active >= maxB) return res.status(403).json({ error: 'Branch limit reached (' + active + ' of ' + maxB + ' branches). Ask your superadmin to raise the limit.' });
+      /* prefer the client-generated id (web DB assigns one before POSTing, keeps local/server in sync);
+         fall back to server-generated; 409 on collision like the generic table handler */
+      let id = (b.id && String(b.id).trim()) || ('B' + crypto.randomBytes(5).toString('hex'));
+      if (await req.store.get('branches', id)) return res.status(409).json({ error: 'Branch already exists' });
+      const row = { id, name: String(b.name).trim(), code: b.code ? String(b.code).trim() : '', address: b.address ? String(b.address) : '',
+        phone: b.phone ? String(b.phone) : '', manager_name: b.manager_name ? String(b.manager_name) : '',
+        is_active: true, created_at: new Date().toISOString() };
+      await req.store.put('branches', row);
+      res.status(201).json(branchView(row));
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+  app.put('/api/branches/:id', needUser, async (req, res) => {
+    try {
+      const cur = await req.store.get('branches', req.params.id);
+      if (!cur) return res.status(404).json({ error: 'branch not found' });
+      const b = req.body || {}, next = Object.assign({}, cur, { id: cur.id, created_at: cur.created_at });
+      ['name', 'code', 'address', 'phone', 'manager_name'].forEach((f) => { if (b[f] !== undefined) next[f] = String(b[f]).trim(); });
+      if (b.is_active !== undefined) next.is_active = !!b.is_active;
+      await req.store.put('branches', next);
+      res.json(branchView(next));
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+  app.delete('/api/branches/:id', needUser, async (req, res) => {
+    try {
+      const cur = await req.store.get('branches', req.params.id);
+      if (!cur) return res.status(404).json({ error: 'branch not found' });
+      await req.store.del('branches', req.params.id);
+      res.json({ ok: true });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+  /* ---- signed-in lab: effective limits + feature flags for this lab (read-only; any authenticated role) ---- */
+  app.get('/api/lab/features', needUser, async (req, res) => {
+    const lab = req.lab || {};
+    const maxBranches = lab.maxBranches != null ? lab.maxBranches : 5;
+    const branchesUsed = (await req.store.all('branches')).filter(b => b && b.is_active !== false).length;
+    let features;
+    if (saas && typeof saas.getFeatures === 'function') {
+      features = await saas.getFeatures(lab);
+    } else {
+      /* all 24 keys mirror the app.js NAV; lab.features stores only explicit overrides (absent = enabled) */
+      features = {};
+      const ov = (lab.features && typeof lab.features === 'object') ? lab.features : {};
+      ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced',
+       'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'doctors', 'expenses', 'finance',
+       'reports', 'downloads', 'email', 'whatsapp', 'sms', 'audit', 'subscription', 'settings']
+        .forEach(k => { features[k] = ov[k] !== false; });
+    }
+    res.json({ maxBranches, branchesUsed, features });
+  });
+
   /* batched upsert (imports / bulk price updates). users + settings keep their dedicated, guarded routes */
   app.post('/api/bulk/:table', tableGuard, async (req, res) => {
     const store = req.store;
