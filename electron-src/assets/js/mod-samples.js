@@ -529,9 +529,10 @@
     var camSupport = typeof window.BarcodeDetector === 'function' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
 
     view.innerHTML = '<style>' + CSS + '</style>' +
-      '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px">' +
+      '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px;flex-wrap:wrap">' +
         '<a href="#/samples" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' + App.icon('tube', 15) + ' Sample Tracking &amp; Phlebotomy</a>' +
         '<a href="#/samples/stickers" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('printer', 15) + ' Tube Stickers (50×25mm)</a>' +
+        '<a href="#/home-sampling" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">🛵 Home Sampling &amp; Dispatch</a>' +
       '</div>' +
       sampleKpis() +
       '<div class="smp-scan" id="smpScanBox">' +
@@ -857,9 +858,10 @@
 
       view.innerHTML =
         '<style>' + CSS + LABEL_CSS + STK_CSS + '</style>' +
-        '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px">' +
+        '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px;flex-wrap:wrap">' +
           '<a href="#/samples" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('tube', 15) + ' Sample Tracking &amp; Phlebotomy</a>' +
           '<a href="#/samples/stickers" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' + App.icon('printer', 15) + ' Tube Stickers (50×25mm)</a>' +
+          '<a href="#/home-sampling" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">🛵 Home Sampling &amp; Dispatch</a>' +
         '</div>' +
         kpiHtml +
         '<div class="stk-layout">' +
@@ -1158,17 +1160,11 @@
       + '</style>'
       + '<div class="hs-dash">'
 
-      /* Clean Page Header with Action Buttons */
-      + '<div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">'
-      +   '<div>'
-      +     '<h2 style="margin:0;font-size:20px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px">🛵 Home Sampling &amp; Dispatch</h2>'
-      +     '<p class="muted" style="margin:3px 0 0;font-size:12.5px">Doorstep sample collection bookings, phlebotomist tracking &amp; lab intake check-in</p>'
-      +   '</div>'
-      +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-      +     '<button class="btn btn-sm" id="hsRidersBtn" title="Manage Phlebotomist Riders" style="font-weight:600">👥 Phlebotomist Riders (' + riders.length + ')</button>'
-      +     '<button class="btn btn-sm" id="hsSeedBtn" title="Seed Demo Bookings" style="font-weight:600">⚡ Seed Bookings</button>'
-      +     '<button class="btn btn-primary btn-sm" id="hsBookBtn" style="font-weight:700">+ Book Home Collection</button>'
-      +   '</div>'
+      /* 3 Top Horizontal View Tabs */
+      + '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px;flex-wrap:wrap">'
+      +   '<a href="#/samples" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('tube', 15) + ' Sample Tracking &amp; Phlebotomy</a>'
+      +   '<a href="#/samples/stickers" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('printer', 15) + ' Tube Stickers (50×25mm)</a>'
+      +   '<a href="#/home-sampling" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🛵 Home Sampling &amp; Dispatch</a>'
       + '</div>'
 
       /* Search & Filter Card with Integrated Status Pipeline Tabs */
@@ -1208,6 +1204,12 @@
       +       '</select>'
       +     '</div>'
       +     (HS_FILTER.q || HS_FILTER.date !== 'all' || HS_FILTER.riderId !== 'all' ? '<button class="btn btn-ghost btn-sm" id="hsClearFilter" style="color:var(--red);padding:5px 8px">✕ Reset</button>' : '')
+      +     '<span style="flex:1"></span>'
+      +     '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      +       '<button class="btn btn-sm btn-secondary" id="hsRidersBtn" title="Manage Phlebotomist Riders" style="font-weight:600;background:#fff;border:1.5px solid var(--bd,#cbd5e1)">👥 Phlebotomist Riders (' + riders.length + ')</button>'
+      +       '<button class="btn btn-sm btn-secondary" id="hsSeedBtn" title="Seed Demo Bookings" style="font-weight:600;background:#fff;border:1.5px solid var(--bd,#cbd5e1)">⚡ Seed Bookings</button>'
+      +       '<button class="btn btn-primary btn-sm" id="hsBookBtn" style="font-weight:700">+ Book Home Collection</button>'
+      +     '</div>'
       +   '</div>'
       + '</div></div>';
 
@@ -1868,7 +1870,7 @@
     renderHomeSamplingDashboard();
   }
 
-  App.route('#/home-sampling', function () { App.nav('#/samples'); });
-  App.route('#/samples/home', function () { App.nav('#/samples'); });
+  App.route('#/home-sampling', renderHomeSamplingDashboard);
+  App.route('#/samples/home', renderHomeSamplingDashboard);
 })();
 
