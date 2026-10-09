@@ -382,6 +382,7 @@
     var s = {};
     try { s = window.DB.get('settings', 'main') || {}; } catch (e) {}
     var noHeader = !!(opts && opts.noHeader);
+    var noNote = !!(opts && (opts.noNote || opts.noFooter || opts.noHeader));
     var fd = fontDef();
     var css = '' +
       '*{margin:0;padding:0;box-sizing:border-box}' +
@@ -419,7 +420,7 @@
       '<div class="addr">' + esc(s.address || '') + ' &nbsp;•&nbsp; ' + esc(s.phone || '') +
       (s.email ? ' &nbsp;•&nbsp; ' + esc(s.email) : '') + '</div></div>') +
       bodyHTML +
-      (noHeader ? '' : '<div class="note">' + esc(s.footerNote || '') + ' &nbsp;•&nbsp; Printed: ' + esc(dt(new Date())) + '</div>') +
+      (noNote ? '' : '<div class="note">' + esc(s.footerNote || '') + ' &nbsp;•&nbsp; Printed: ' + esc(dt(new Date())) + '</div>') +
       '</body></html>');
     if (native) { showNativePrint(title, _buf); return; }
     w.document.write(_buf);

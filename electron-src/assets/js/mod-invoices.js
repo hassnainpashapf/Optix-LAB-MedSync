@@ -756,59 +756,93 @@
         '<div style="flex:1;min-width:0"><div style="font-weight:800;font-size:13px;margin-bottom:2px">Pay Online</div>' + lines.join('') +
         (s.opInstructions ? '<div style="color:#64748b;font-size:11.5px;margin-top:2px">' + App.esc(s.opInstructions) + '</div>' : '') + '</div>' + qr + '</div>';
     })();
-    return '' +   /* the lab header (logo, name, address, phone, email) is printed once, by App.print */
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:16px">' +
-        '<div><div style="font-size:20px;font-weight:800">INVOICE</div>' +
-          '<div style="font-size:13.5px;margin-top:6px"><strong>Invoice No:</strong> ' + App.esc(inv.no || inv.id) + '</div>' +
-          '<div style="font-size:13.5px"><strong>Patient No:</strong> ' + (function () { var n = App.visitNos(inv).cas; return n < 10 ? '0' + n : String(n); })() + ' <span style="color:#666;font-size:12px">(today)</span>' + ((p && p.id) ? ' &nbsp;<span style="color:#666;font-size:12px">ID: ' + App.esc(p.id) + '</span>' : '') + '</div>' +
-          '<div style="font-size:13px;color:#555;margin-top:4px">Date: ' + App.dt(inv.createdAt) + '</div>' +
-          '<div style="font-size:13px">Status: <strong>' + inv.status.toUpperCase() + '</strong></div></div>' +
-        codesHTML(inv, p) +
-      '</div>' +
-      '<div style="display:flex;gap:32px;margin-bottom:16px;font-size:14px">' +
-        '<div><strong>Patient:</strong> ' + App.esc(p ? p.name : 'Walk-in') +
-        (p ? ' &nbsp;(' + App.esc(String(p.age || '')) + ' / ' + App.esc(p.gender || '') + ')' : '') +
-        '<br><strong>Phone:</strong> ' + App.esc((p && p.phone) || '—') +
-        (p && p.address ? '<br><strong>Address:</strong> ' + App.esc(p.address) : '') + '</div>' +
-        '<div><strong>Consultant:</strong> ' + App.esc(d ? d.name : 'Self') +
-        (d ? '<br><span style="color:#555;font-size:12px">' + App.esc(d.clinic || '') + '</span>' : '') +
-        (inv.panelId && DB.get('panels', inv.panelId) ? '<br><strong>Billed to:</strong> ' + App.esc(DB.get('panels', inv.panelId).name) + (p && p.panelRef ? '<br><span style="color:#555;font-size:12px">ID: ' + App.esc(p.panelRef) + '</span>' : '') : '') + '</div>' +
-      '</div>' +
-      '<table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:8px">' +
-        '<thead><tr style="background:#f1f5f9"><th style="text-align:left;padding:8px;border:1px solid #ddd">#</th>' +
-        '<th style="text-align:left;padding:8px;border:1px solid #ddd">Code</th>' +
-        '<th style="text-align:left;padding:8px;border:1px solid #ddd">Test</th>' +
-        '<th style="text-align:right;padding:8px;border:1px solid #ddd">Price</th></tr></thead>' +
-        '<tbody>' + itemRows + '</tbody>' +
-      '</table>' +
-      '<div style="text-align:right;font-size:14px;margin-bottom:16px">' +
-        '<div>Subtotal: ' + App.money(inv.subtotal) + '</div>' +
-        (inv.discount ? '<div style="color:#b45309">Discount: -' + App.money(inv.discount) + '</div>' : '') +
-        '<div style="font-size:18px;font-weight:800">Total: ' + App.money(inv.total) + '</div>' +
-        (inv.panelId ? '<div style="font-weight:700;color:#334155">Charged to the company account</div>' : '<div>Paid: ' + App.money(inv.paid) + '</div>' +
-        '<div style="font-weight:800;color:#dc2626">Due: ' + App.money(inv.due) + '</div>') +
-      '</div>' +
-      opBox +
-      '<div style="font-weight:700;margin-bottom:6px">Payments Received</div>' +
-      '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:20px">' +
-        '<thead><tr style="background:#f1f5f9"><th style="text-align:left;padding:8px;border:1px solid #ddd">#</th>' +
-        '<th style="text-align:left;padding:8px;border:1px solid #ddd">Date</th>' +
-        '<th style="text-align:left;padding:8px;border:1px solid #ddd">Method</th>' +
-        '<th style="text-align:left;padding:8px;border:1px solid #ddd">Note</th>' +
-        '<th style="text-align:right;padding:8px;border:1px solid #ddd">Amount</th></tr></thead>' +
-        '<tbody>' + payRows + '</tbody>' +
-      '</table>' +
-      '<div style="font-size:12px;color:#555;text-align:center;margin-bottom:6px">' + App.esc(s.footerNote || '') + '</div>' +
-      '<div style="font-size:11px;color:#999;text-align:center;margin-bottom:24px">Powered by System Optix</div>' +
-      '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:32px">' +
-        '<div>Received by: __________________</div><div>Authorised signature: __________________</div>' +
+    var css =
+      '<style>' +
+      '@media print {' +
+        '@page { size: A4 portrait; margin: 12mm; }' +
+        'html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; color: #000 !important; }' +
+        '.inv-page { display: flex !important; flex-direction: column !important; min-height: 228mm !important; width: 100% !important; max-width: 186mm !important; margin: 0 auto !important; box-sizing: border-box !important; }' +
+        '.inv-body { flex: 1 0 auto !important; }' +
+        '.inv-footer { margin-top: auto !important; flex: none !important; break-inside: avoid !important; page-break-inside: avoid !important; padding-top: 14px !important; }' +
+        'table tr { break-inside: avoid !important; page-break-inside: avoid !important; }' +
+      '}' +
+      '@media screen {' +
+        '.inv-page { display: flex; flex-direction: column; min-height: 228mm; width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; }' +
+        '.inv-body { flex: 1 0 auto; }' +
+        '.inv-footer { margin-top: auto; padding-top: 14px; }' +
+      '}' +
+      '</style>';
+
+    var addrParts = [];
+    if (s.address) addrParts.push(App.esc(s.address));
+    if (s.phone) addrParts.push('Phone: ' + App.esc(s.phone));
+    if (s.email) addrParts.push('Email: ' + App.esc(s.email));
+    var addrLine = addrParts.length ? '<div style="border-top:1px solid #000;margin:4px 0 2px;padding-top:4px;text-align:center;font-size:11px;color:#222;line-height:1.5">' + addrParts.join(' &nbsp;•&nbsp; ') + '</div>' : '';
+
+    var _fn = (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') ? s.footerNote : '';
+    var noteLine = _fn ? '<div style="font-size:11.5px;color:#555;text-align:center;margin:3px 0 2px">' + App.esc(_fn) + '</div>' : '';
+
+    return css +
+      '<div class="inv-page">' +
+        '<div class="inv-body">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;border-top:2px solid #131845;border-bottom:2px solid #131845;padding:10px 0;margin-bottom:14px">' +
+            '<div><div style="font-size:20px;font-weight:800;letter-spacing:0.5px">INVOICE</div>' +
+              '<div style="font-size:13.5px;margin-top:4px"><strong>Invoice No:</strong> ' + App.esc(inv.no || inv.id) + '</div>' +
+              '<div style="font-size:13.5px"><strong>Patient No:</strong> ' + (function () { var n = App.visitNos(inv).cas; return n < 10 ? '0' + n : String(n); })() + ' <span style="color:#666;font-size:12px">(today)</span>' + ((p && p.id) ? ' &nbsp;<span style="color:#666;font-size:12px">ID: ' + App.esc(p.id) + '</span>' : '') + '</div>' +
+              '<div style="font-size:13px;color:#555;margin-top:3px">Date: ' + App.dt(inv.createdAt) + '</div>' +
+              '<div style="font-size:13px">Status: <strong style="color:' + (inv.status === 'paid' ? '#16a34a' : '#dc2626') + '">' + inv.status.toUpperCase() + '</strong></div></div>' +
+            codesHTML(inv, p) +
+          '</div>' +
+          '<div style="display:flex;gap:32px;margin-bottom:14px;font-size:13.5px">' +
+            '<div><strong>Patient:</strong> ' + App.esc(p ? p.name : 'Walk-in') +
+            (p ? ' &nbsp;(' + App.esc(String(p.age || '')) + ' / ' + App.esc(p.gender || '') + ')' : '') +
+            '<br><strong>Phone:</strong> ' + App.esc((p && p.phone) || '—') +
+            (p && p.address ? '<br><strong>Address:</strong> ' + App.esc(p.address) : '') + '</div>' +
+            '<div><strong>Consultant:</strong> ' + App.esc(d ? d.name : 'Self') +
+            (d ? '<br><span style="color:#555;font-size:12px">' + App.esc(d.clinic || '') + '</span>' : '') +
+            (inv.panelId && DB.get('panels', inv.panelId) ? '<br><strong>Billed to:</strong> ' + App.esc(DB.get('panels', inv.panelId).name) + (p && p.panelRef ? '<br><span style="color:#555;font-size:12px">ID: ' + App.esc(p.panelRef) + '</span>' : '') : '') + '</div>' +
+          '</div>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px">' +
+            '<thead><tr style="background:#f1f5f9"><th style="text-align:left;padding:7px 8px;border:1px solid #ddd">#</th>' +
+            '<th style="text-align:left;padding:7px 8px;border:1px solid #ddd">Code</th>' +
+            '<th style="text-align:left;padding:7px 8px;border:1px solid #ddd">Test Description</th>' +
+            '<th style="text-align:right;padding:7px 8px;border:1px solid #ddd">Price</th></tr></thead>' +
+            '<tbody>' + itemRows + '</tbody>' +
+          '</table>' +
+          '<div style="text-align:right;font-size:13.5px;margin-bottom:14px;line-height:1.6">' +
+            '<div>Subtotal: ' + App.money(inv.subtotal) + '</div>' +
+            (inv.discount ? '<div style="color:#b45309">Discount: -' + App.money(inv.discount) + '</div>' : '') +
+            '<div style="font-size:16px;font-weight:800;border-top:1px solid #ccc;padding-top:4px;margin-top:2px">Total: ' + App.money(inv.total) + '</div>' +
+            (inv.panelId ? '<div style="font-weight:700;color:#334155">Charged to the company account</div>' : '<div>Paid: ' + App.money(inv.paid) + '</div>' +
+            '<div style="font-weight:800;color:#dc2626">Due: ' + App.money(inv.due) + '</div>') +
+          '</div>' +
+          opBox +
+          (pays.length ?
+            '<div style="font-weight:700;margin-bottom:6px;font-size:13px">Payments Received</div>' +
+            '<table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:14px">' +
+              '<thead><tr style="background:#f1f5f9"><th style="text-align:left;padding:6px 8px;border:1px solid #ddd">#</th>' +
+              '<th style="text-align:left;padding:6px 8px;border:1px solid #ddd">Date</th>' +
+              '<th style="text-align:left;padding:6px 8px;border:1px solid #ddd">Method</th>' +
+              '<th style="text-align:left;padding:6px 8px;border:1px solid #ddd">Note</th>' +
+              '<th style="text-align:right;padding:6px 8px;border:1px solid #ddd">Amount</th></tr></thead>' +
+              '<tbody>' + payRows + '</tbody>' +
+            '</table>' : '') +
+        '</div>' +
+        '<div class="inv-footer">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-end;font-size:12.5px;margin-bottom:12px;padding:0 2px">' +
+            '<div>Received by: __________________</div><div>Authorised signature: __________________</div>' +
+          '</div>' +
+          addrLine +
+          noteLine +
+          '<div style="font-size:10.5px;color:#777;text-align:center;margin-top:3px">Powered by System Optix</div>' +
+        '</div>' +
       '</div>';
   }
 
   function printInvoice(id) {
     var inv = DB.get('invoices', id);
     if (!inv) return;
-    App.print('Invoice ' + inv.no, invoicePrintHTML(inv));
+    App.print('Invoice ' + inv.no, invoicePrintHTML(inv), { noNote: true });
   }
 
   /* ---------- 80mm & 58mm POS thermal counter receipt ---------- */

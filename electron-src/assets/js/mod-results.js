@@ -1253,10 +1253,31 @@
     color: #000 !important;
   }
 
-  /* Footer (doctors, address, NOTE, powered-by) sits at the very bottom of the page:
-     the report fills one A4 sheet (297mm - 2x12mm page margin - 2x28px body padding) and the footer is pushed down. */
-  .rpt-page { display: flex; flex-direction: column; min-height: 244mm; }
-  .rpt-page .rpt-footer { margin-top: auto !important; }
+  /* Clean standard multi-page pagination: the report body flows naturally across A4 pages.
+     Header and patient demographics stay pinned at the top of page 1; tests fill page 1 to capacity
+     and cleanly spill over to page 2+ without displacing or duplicating headers. */
+  .rpt-page {
+    display: block !important;
+    width: 100% !important;
+    max-width: 186mm !important;
+    margin: 0 auto !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+  .rpt-header-block {
+    display: block !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+  .rpt-tests-block {
+    display: block !important;
+  }
+  .rpt-page .rpt-footer {
+    display: block !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+    margin-top: 18px !important;
+  }
 
   /* Never leak screen chrome into the printout. */
   .noprint,
@@ -1461,12 +1482,10 @@
   vertical-align: top;
   color: #000;
 }
-/* The letterhead + patient block sit in a <thead>: when a report runs over several pages it is printed again at the top of each page. */
-.rpt-page table.rpt-wrap { width: 100%; border-collapse: collapse; margin: 0; flex: none; }
-.rpt-page table.rpt-wrap > thead > tr > td,
-.rpt-page table.rpt-wrap > tbody > tr > td { border: 0; padding: 0; font-size: inherit; vertical-align: top; }
-.rpt-page table.rpt-wrap > thead { display: table-header-group; }
-.rpt-page table.rpt-wrap > tbody > tr { break-inside: auto; page-break-inside: auto; }
+.rpt-page .rpt-section {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
 .rpt-page thead th {
   font-weight: 700;
   font-size: 11.5px;
@@ -2654,7 +2673,8 @@
     /* footer */
     var footOut = hasRealHtml(s.footerHtml) ? '<div class="rpt-footer">' + fillTokens(s.footerHtml, d) + '</div>' : reportFooterHtml(d);
 
-    var bodyHtml = '<table class="rpt-wrap"><thead><tr><td>' + headOut + infoHtml + '</td></tr></thead><tbody><tr><td>' + testsHtml +
+    var bodyHtml = '<div class="rpt-header-block">' + headOut + infoHtml + '</div>' +
+      '<div class="rpt-tests-block">' + testsHtml +
       (pendingCount
         ? '<p style="color:#000;font-size:0.96em;margin:6px 0"><em>Note: ' +
           pendingCount + ' test(s) from this invoice are still pending.</em></p>'
@@ -2662,7 +2682,7 @@
       (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.'
         ? '<p style="color:#000;margin-top:18px;margin-bottom:4px;font-size:0.92em"><em>' +
           App.esc(s.footerNote) + '</em></p>'
-        : '') + '</td></tr></tbody></table>' +
+        : '') + '</div>' +
       footOut;
 
     if (d._cmpLegend) {
