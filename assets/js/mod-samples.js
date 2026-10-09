@@ -854,14 +854,9 @@
       view.innerHTML =
         '<style>' + CSS + LABEL_CSS + STK_CSS + '</style>' +
         kpiHtml +
-        '<div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">' +
-          '<button class="btn btn-primary" id="stkPrintAllToday">' + App.icon('printer', 15) + ' Print All Today\'s Stickers</button>' +
-          '<button class="btn btn-ghost" id="stkGenMissing">' + App.icon('plus', 14) + ' Generate Missing Tubes</button>' +
-          '<a class="btn btn-ghost" href="#/samples">' + App.icon('scan', 14) + ' Sample Tracking</a>' +
-        '</div>' +
         '<div class="stk-layout">' +
           '<div class="card"><div class="card-b">' +
-            '<div class="smp-filters" style="margin-bottom:12px">' +
+            '<div class="smp-filters" style="margin-bottom:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
               '<input class="input search smp-q" id="stkSearch" placeholder="Search barcode, patient, MR#, invoice, test..." value="' + esc(STK.q) + '" style="flex:1 1 200px;min-width:160px;width:auto;padding:7px 12px;font-size:13px;height:36px;border-radius:8px">' +
               '<select class="select" id="stkRange" style="width:auto;flex:0 0 auto;padding:7px 10px;font-size:13px;height:36px;border-radius:8px">' +
                 [['today', 'Today'], ['yesterday', 'Yesterday'], ['last7', 'Last 7 days'], ['last30', 'Last 30 days'], ['all', 'All dates'], ['pick', 'Pick date...']].map(function (o) {
@@ -884,6 +879,9 @@
                 '<option value="received"' + (STK.status === 'received' ? ' selected' : '') + '>In lab</option>' +
                 '<option value="done"' + (STK.status === 'done' ? ' selected' : '') + '>Done</option>' +
               '</select>' +
+              '<button class="btn btn-primary" id="stkPrintAllToday" style="height:36px;padding:0 14px;white-space:nowrap;font-size:13px;display:inline-flex;align-items:center;gap:6px">' + App.icon('printer', 15) + ' Print All Today\'s Stickers</button>' +
+              '<button class="btn btn-ghost" id="stkGenMissing" style="height:36px;padding:0 12px;white-space:nowrap;font-size:13px;display:inline-flex;align-items:center;gap:6px">' + App.icon('plus', 14) + ' Generate Missing Tubes</button>' +
+              '<a class="btn btn-ghost" href="#/samples" style="height:36px;padding:0 12px;white-space:nowrap;font-size:13px;display:inline-flex;align-items:center;gap:6px">' + App.icon('scan', 14) + ' Sample Tracking</a>' +
             '</div>' +
             (checkedCount > 0
               ? '<div class="smp-bulk" style="margin-bottom:12px">' +
