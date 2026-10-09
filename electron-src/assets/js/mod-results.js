@@ -2048,11 +2048,18 @@
        date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
       var bv = c.caseCode ? { code: c.caseCode, text: c.caseText } : (vn ? { code: vn.caseCode, text: vn.caseText } : null);
+      var bt = bv && bv.text ? String(bv.text).split(' - ') : [];
+      var bVal = String(bt[0] || '').replace(/^P\s*#\s*/i, '').trim();
+      if (!bVal && vn && vn.cas) {
+        var cn = +vn.cas;
+        bVal = (cn < 10 ? '0' : '') + cn;
+      }
       return '<div style="border:2px solid #000;background:#fff;box-sizing:border-box;' +
         'padding:0;line-height:1.25;font-size:0.76em;grid-row:span 2;display:flex;flex-direction:column;justify-content:flex-start;align-items:stretch;width:100%">' +
         '<div style="font-weight:700;color:#000;font-size:1em;background:#bfbfbf;padding:3px 0;border-bottom:2px solid #000;text-align:center;width:100%">RESULT</div>' +
         '<div style="padding:3px 3px 2px;display:flex;flex-direction:column;align-items:center;width:100%;box-sizing:border-box">' +
         '<div style="width:100%;margin:0 0 2px">' + barcodeHtml((bv && bv.code) || c.invoiceNo || invNo, '100%', '11px') + '</div>' +
+        (bVal ? '<div style="font-size:1em;color:#000;font-weight:700;white-space:nowrap;line-height:1.2">' + App.esc(bVal) + '</div>' : '') +
         '<div style="font-size:1em;color:#000;white-space:nowrap">' +
           App.esc(chughtaiTs(c.reportedAt)).replace(/ /g, '&nbsp;') +
         '</div></div>' +
@@ -3198,7 +3205,7 @@
       var LINE    = 4.6;            // row line height
 
       var showBc = (s.showBarcode !== false);   // default true
-      var BOX_H  = showBc ? 20 : 13.5;
+      var BOX_H  = showBc ? 22 : 14;
 
       // ---- "15-Jun-2026 14:56" style timestamp ----
       var MONS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -3275,16 +3282,29 @@
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
         doc.setTextColor(INK[0], INK[1], INK[2]);
         txt('RESULT', cx, byy + 3.9, { align: 'center' });
+        var valOnly = String(patText || '').replace(/^P\s*#\s*/i, '').trim();
         if (showBc) {
           drawBarcode(bx, yy + 1, RBW, 6.5, patCode);
-          yy += 8.5;
+          yy += 8.2;
+          if (valOnly) {
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+            doc.setTextColor(INK[0], INK[1], INK[2]);
+            txt(valOnly, cx, yy + 2.2, { align: 'center' });
+            yy += 3.2;
+          }
         } else {
           yy += 1.5;
+          if (valOnly) {
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+            doc.setTextColor(INK[0], INK[1], INK[2]);
+            txt(valOnly, cx, yy + 2.2, { align: 'center' });
+            yy += 3.2;
+          }
         }
         if (ddmm) {
           doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
           doc.setTextColor(60, 60, 60);
-          txt(ddmm, cx, yy + 3.5, { align: 'center' });
+          txt(ddmm, cx, yy + 2.6, { align: 'center' });
         }
       }
 
@@ -3431,7 +3451,8 @@
         var boxCode = caseNo, boxText = dash(caseNo), boxDate = fmtTs(repV);
         if (pvn && pvn.caseCode) {
           boxCode = pvn.caseCode;
-          boxText = String(pvn.caseText || '').split(' - ')[0] || String(pvn.caseText || '');
+          var pvRaw = pvn.cas != null ? ((pvn.cas < 10 ? '0' : '') + pvn.cas) : (String(pvn.caseText || '').split(' - ')[0] || '');
+          boxText = String(pvRaw).replace(/^P\s*#\s*/i, '').trim();
           boxDate = fmtTs(repV);
         }
         resultBox(W - M - RBW, y - 1, boxCode, boxText, boxDate);
