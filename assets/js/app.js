@@ -25,6 +25,7 @@
     check: '<path d="M20 6 9 17l-5-5"/>',
     alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
     download: '<path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
     card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
     chat: '<path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.5A8.4 8.4 0 1 1 21 11.5z"/><path d="M8.5 10.5h7M8.5 14h4"/>',
     shield: '<path d="M12 3l8 3v6c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/>',
@@ -161,6 +162,7 @@
     return { id: '', name: 'No role', pages: [], money: false };
   }
   function can(key, role) {
+    if (key === 'notifications') return ['admin', 'reception', 'technician', 'custom'].indexOf(role) !== -1;
     if (role === 'custom') {
       var d = roleDef(); if (!d) return false;
       if (key === 'profile') return true;
@@ -183,6 +185,7 @@
     } catch (e) { return null; }
   }
   function logout() {
+    if (App.notifications) App.notifications.stop();
     var wasCloud = false;
     try { wasCloud = !!(window.DB && DB.isCloud && DB.isCloud()); } catch (e) {}
     localStorage.removeItem(SKEY);
@@ -525,6 +528,7 @@
   function render() {
     var hash = location.hash || '';
     var s = session();
+    if (App.notifications && (!s || s.role === 'doctor' || /^#\/(portal|login|signup|forgot|reset)/.test(hash))) App.notifications.stop();
     /* multi-branch: fetch the lab's feature map once per session, before any nav renders.
        Fail-open and never awaited: a dead server must not block login or the first render. */
     if (s && window.App && App.loadLabFeatures && App.__lfLab !== s.labId) {
@@ -807,12 +811,12 @@
       : '<a class="btn btn-sm tb-qab tb-classic" href="#/patients/new">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
          '<a class="btn btn-sm tb-qab tb-classic" href="#/packages">' + icon('box', 14) + '<span class="tb-qa-t">Packages</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses">' + icon('wallet', 14) + '<span class="tb-qa-t">Add Expense</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/finance">' + icon('finance', 14) + '<span class="tb-qa-t">Close Day</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>';
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/finance">' + icon('finance', 14) + '<span class="tb-qa-t">Close Day</span></a>';
     var _curHash = (location.hash || '').split('?')[0];
     var _pageTitle = (_curHash === '#/tests' || _curHash === '#/tests/regular') ? 'Regular Tests' :
                      _curHash === '#/tests/generic' ? 'Generic Tests' :
                      _curHash === '#/packages' ? 'Packages' :
+                     _curHash === '#/notifications' ? 'Notifications' :
                      _curHash === '#/invoices/pending' ? 'Pending Invoices' :
                      _curHash === '#/samples/stickers' ? 'Tube Stickers (50×25mm)' :
                      (_curHash === '#/reports/trends' || _curHash === '#/trends') ? 'Patient Trends & Delta' :
@@ -838,7 +842,8 @@
       '.tb-qa .tb-classic{background:#fff;border:1px solid var(--bd);color:#131845;font-weight:600;box-shadow:none}' +
       '.tb-qa .tb-classic:hover{background:#ebf4f8;border-color:#8fa0c0;color:#131845;transform:none}' +
       '.tb-qa .tb-classic svg{color:#131845;flex:none}' +
-      '.tb-qa .tb-icon{padding:7px;border-radius:10px;min-width:34px;justify-content:center}' +
+      '.tb-qa .tb-icon,.tb-alert-actions .tb-icon{padding:7px;border-radius:10px;min-width:34px;justify-content:center}' +
+      '.tb-alert-actions{display:flex;align-items:center;gap:8px}.tb-bell{position:relative}.tb-bell-count{position:absolute;top:-7px;right:-7px;min-width:18px;padding:2px 4px;border-radius:20px;background:#131845;color:#fff;font-size:10px;line-height:14px;text-align:center}.tb-bell-count[hidden]{display:none}.tb-bell.has-urgent{color:#b91c1c;border-color:#fca5a5;background:#fff5f5}.tb-bell.has-urgent .tb-bell-count{background:#b91c1c}' +
       '@media(max-width:640px){.tb-qa .tb-qa-t{display:none}.tb-qa{gap:6px}.tb-qa .tb-qab{padding:7px 9px}}' +
       '.tb-greet{display:flex;flex-direction:column;justify-content:center;line-height:1.3;min-width:0;margin-right:2px}' +
       '.tb-greet b{font-size:14.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}' +
@@ -849,7 +854,9 @@
       '</style>' +
        '<button type="button" class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false" title="Toggle navigation">' + icon('menu', 18) + '</button>' +
        '<h1 class="page-title">' + esc(activeKey === 'dashboard' ? 'Dashboard' : _pageTitle) + '</h1>' +
-      '<div class="top-right"><div class="tb-qa">' + tbQa + '</div></div>' +
+      '<div class="top-right"><div class="tb-qa">' + tbQa + '</div><div class="tb-alert-actions">' +
+      (can('downloads', s.role) ? '<a class="btn btn-sm tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>' : '') +
+      '<a class="btn btn-sm tb-icon tb-bell" id="notificationBell" href="#/notifications" title="Notifications" aria-label="Notifications">' + icon('bell', 18) + '<span id="notificationCount" class="tb-bell-count" hidden></span></a></div></div>' +
       '<div class="tb-acct">' +
       '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + _avatarInner + '</button>' +
       '<div class="tb-menu" id="userMenu" hidden>' +
@@ -859,6 +866,7 @@
       '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
       '</div></div>';
     document.getElementById('menuLogout').addEventListener('click', logout);
+    if (App.notifications) App.notifications.start();
     /* avatar dropdown: toggle, close on outside click / Escape (delegated once) */
     (function () {
       var avatarBtn = document.getElementById('avatarBtn');
@@ -1200,26 +1208,11 @@
       toast(window.__loginNote || 'Your session expired. Please sign in again.', 'err');
       setTimeout(logout, 1200);
     };
-    /* new CRITICAL results saved on another PC/phone: alert here too (toast + browser notification when allowed) */
-    var _critSeen = null;
-    function critWatch() {
-      try {
-        var list = DB.all('results').filter(function (r) { return r.critical && r.critical.length && !r.criticalAck; });
-        var ids = list.map(function (r) { return r.id; });
-        var fresh = _critSeen === null ? [] : list.filter(function (r) { return _critSeen.indexOf(r.id) < 0; });
-        _critSeen = ids;
-        if (!fresh.length) return;
-        var msg = '🚨 ' + fresh.length + ' new critical result' + (fresh.length > 1 ? 's' : '') + ' — open the Dashboard';
-        toast(msg, 'err');
-        if (window.Notification && Notification.permission === 'granted') { try { new Notification('Critical result', { body: msg }); } catch (e) {} }
-      } catch (e) {}
-    }
-    window.__critWatch = critWatch;
+    /* Notification aggregation owns alert/sound deduplication; this remains the shared cloud-data refresh. */
     setInterval(function () {
       if (document.hidden || !session() || !DB.isRemote || !DB.isRemote() || !DB.isCloud || !DB.isCloud()) return;
-      DB.refresh().then(function (ok) { if (ok) critWatch(); });
+      DB.refresh().then(function (ok) { if (ok && App.notifications) App.notifications.refresh(); });
     }, 30000);
-    setInterval(function () { if (_critSeen === null && session() && DB.isRemote && DB.isRemote()) critWatch(); }, 5000); /* baseline once signed in */
   }
   function boot() {
     if (boot.done) return;

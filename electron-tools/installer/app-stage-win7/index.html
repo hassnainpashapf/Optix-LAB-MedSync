@@ -65,6 +65,7 @@ window.__ASSET_V = '195';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
+  '#/notifications': 'assets/js/mod-notifications.js',
   '#/billing/:patientId': 'assets/js/mod-billing.js',
   '#/invoices': 'assets/js/mod-invoices.js',
   '#/invoices/pending': 'assets/js/mod-invoices.js',
@@ -131,6 +132,7 @@ window.__LAZY_ROUTES = {
 <script src="assets/js/db.js?v=144"></script>
 <script src="assets/js/graph-config.js?v=144"></script>
 <script src="assets/js/app.js?v=144"></script>
+<script src="assets/js/notifications-core.js?v=195"></script>
 <script src="assets/js/mod-auth.js?v=144"></script>
 <script src="assets/js/samples-core.js?v=144"></script>
 <script src="assets/js/mod-dashboard.js?v=144"></script>

@@ -25,6 +25,7 @@
     check: '<path d="M20 6 9 17l-5-5"/>',
     alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
     download: '<path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
+    bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
     card: '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/>',
     chat: '<path d="M21 11.5a8.4 8.4 0 0 1-12.3 7.4L3 21l2.2-5.5A8.4 8.4 0 1 1 21 11.5z"/><path d="M8.5 10.5h7M8.5 14h4"/>',
     shield: '<path d="M12 3l8 3v6c0 5-3.4 8.4-8 9-4.6-.6-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/>',
@@ -101,6 +102,7 @@
   ];
   var PERMS = {
     dashboard: ['admin', 'reception', 'technician'],
+    notifications: ['admin', 'reception', 'technician'],
     billing:   ['admin', 'reception'],
     invoices:  ['admin', 'reception'],
     dues:      ['admin', 'reception'],
@@ -160,7 +162,7 @@
   function can(key, role) {
     if (role === 'custom') {
       var d = roleDef(); if (!d) return false;
-      if (key === 'profile') return true;
+      if (key === 'profile' || key === 'notifications') return true;
       if (key === 'billing') key = 'invoices';
       if (key === 'stock' && (d.pages || []).indexOf('inventory') !== -1) return true;
       return (d.pages || []).indexOf(key) !== -1;
@@ -181,6 +183,7 @@
     } catch (e) { return null; }
   }
   function logout() {
+    if (window.App && App.notifications) App.notifications.stop();
     var wasCloud = false;
     try { wasCloud = !!(window.DB && DB.isCloud && DB.isCloud()); } catch (e) {}
     localStorage.removeItem(SKEY);
@@ -523,6 +526,7 @@
   function render() {
     var hash = location.hash || '';
     var s = session();
+    if (window.App && App.notifications && (!s || !can('notifications', s.role) || /^#\/(portal|forgot|reset)/.test(hash))) App.notifications.stop();
     /* multi-branch: fetch the lab's feature map once per session, before any nav renders.
        Fail-open and never awaited: a dead server must not block login or the first render. */
     if (s && window.App && App.loadLabFeatures && App.__lfLab !== s.labId) {
@@ -798,7 +802,7 @@
     document.getElementById('sideLogout').addEventListener('click', logout);
     paintSidePlan();
     /* topbar */
-    var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
+    var navItem = activeKey === 'notifications' ? { label: 'Notifications' } : NAV.filter(function (n) { return n.key === activeKey; })[0];
     /* time-aware greeting for the header */
     var _gh = new Date().getHours();
     var _greet = _gh < 12 ? 'Good morning' : (_gh < 17 ? 'Good afternoon' : 'Good evening');
@@ -827,6 +831,9 @@
     document.getElementById('topbar').innerHTML =
       '<style>' +
       '.tb-acct{position:relative;flex:none}' +
+      '.notification-bell{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;border:1px solid var(--line);border-radius:10px;color:var(--ink);background:var(--card,#fff)}' +
+      '.notification-count{position:absolute;top:-7px;right:-7px;background:#475569;color:#fff;border-radius:20px;min-width:18px;padding:1px 4px;text-align:center;font-size:10px;font-weight:800;border:2px solid var(--card,#fff)}' +
+      '.notification-count.urgent{background:#dc2626}.notification-count[hidden],.notification-bell[hidden]{display:none}' +
       '.tb-div{width:1px;align-self:stretch;background:var(--line);margin:3px 0}' +
       '.tb-avatar{width:36px;height:36px;border-radius:50%;border:2px solid #fff;background:var(--brand-grad);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(19,24,69,.35);transition:transform .15s,box-shadow .15s;padding:0}' +
       '.tb-avatar:hover{transform:scale(1.07);box-shadow:0 3px 12px rgba(19,24,69,.5)}' +
@@ -858,6 +865,7 @@
       (activeKey === 'dashboard' ? '<div class="tb-greet"><b>' + esc(_greet + _greetName) + '</b><span>' + esc(_longDate) + '</span></div>' : '') +
       '<h1 class="page-title"' + (activeKey === 'dashboard' ? ' hidden' : '') + '>' + esc(_pageTitle) + '</h1>' +
       '<div class="top-right"><div class="tb-qa">' + tbQa + '</div></div>' +
+      (can('notifications', s.role) && App.featureOn('notifications') ? '<a class="notification-bell" id="notificationBell" href="#/notifications" aria-label="Notifications" title="Notifications">' + icon('bell', 19) + '<span class="notification-count" id="notificationCount" hidden></span></a>' : '') +
       '<div class="tb-acct">' +
       '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + _avatarInner + '</button>' +
       '<div class="tb-menu" id="userMenu" hidden>' +
@@ -867,6 +875,7 @@
       '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
       '</div></div>';
     document.getElementById('menuLogout').addEventListener('click', logout);
+    if (App.notifications) App.notifications.start();
     /* avatar dropdown: toggle, close on outside click / Escape (delegated once) */
     (function () {
       var avatarBtn = document.getElementById('avatarBtn');

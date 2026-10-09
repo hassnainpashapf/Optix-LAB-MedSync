@@ -350,6 +350,8 @@
 
     /* Critical results nobody has acknowledged yet (set when a result far outside the normal range is saved) */
     function critCard() {
+      var me = App.session();
+      if (!me || ['admin', 'technician'].indexOf(me.role) === -1 || !App.canPage('results') || (App.featureOn && !App.featureOn('results'))) return '';
       var crits = DB.all('results').filter(function (r) { return r.critical && r.critical.length && !r.criticalAck; })
         .sort(function (a, b) { return String(b.reportedAt || '').localeCompare(String(a.reportedAt || '')); });
       if (!crits.length) return '';
@@ -367,7 +369,10 @@
     function wireCrit(v) {
       v.querySelectorAll('[data-ack]').forEach(function (b) {
         b.addEventListener('click', function () {
+          var me = App.session();
+          if (!me || ['admin', 'technician'].indexOf(me.role) === -1 || !App.canPage('results') || (App.featureOn && !App.featureOn('results'))) return;
           DB.update('results', b.getAttribute('data-ack'), { criticalAck: { by: (session() || {}).name || 'user', at: new Date().toISOString() } });
+          if (App.notifications) App.notifications.refresh();
           v.innerHTML = buildDashboard(); wireCrit(v); scheduleCountUp();
         });
       });
