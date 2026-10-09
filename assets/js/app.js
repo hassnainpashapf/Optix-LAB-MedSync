@@ -1293,7 +1293,7 @@
     regLocation: [], destLocation: [],
     reference: ['Standard', 'Urgent', 'Camp', 'Corporate', 'VIP'],
     bloodGroup: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-    sampleType: ['Blood', 'Serum', 'Plasma', 'Urine', 'Stool', 'Other'],
+    sampleType: ['Blood', 'Serum', 'Plasma', 'Citrated Blood', 'Whole Blood', 'EDTA', 'Clot Blood', 'Urine', 'Stool', 'Other'],
     expenseCategory: ['Rent', 'Salaries', 'Reagents', 'Utilities', 'Other'],
     paymentMethod: ['Cash', 'Bank', 'Card']
   };
@@ -1311,6 +1311,11 @@
     var l = s.formLists && Array.isArray(s.formLists[key]) ? s.formLists[key] : (LIST_DEFAULTS[key] || []), out = [], seen = {};
     l.forEach(function (x) { x = String(x == null ? '' : x).trim(); if (x && !seen[x.toLowerCase()]) { seen[x.toLowerCase()] = 1; out.push(x); } });
     if (key === 'paymentMethod' && !seen['cash']) out.unshift('Cash');
+    if (key === 'sampleType') {
+      (LIST_DEFAULTS.sampleType || []).forEach(function (x) {
+        if (!seen[x.toLowerCase()]) { seen[x.toLowerCase()] = 1; out.push(x); }
+      });
+    }
     return out;
   };
   App.listDefault = function (key) { return LIST_DEFAULTS[key] ? LIST_DEFAULTS[key].slice() : []; };
