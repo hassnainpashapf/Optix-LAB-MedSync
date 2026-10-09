@@ -1522,21 +1522,42 @@
       ? '<span class="badge" style="background:' + latestSevCol + '18;color:' + latestSevCol + ';font-weight:800;border:1px solid ' + latestSevCol + '44">' + (latestPt.dir === 'high' ? '↑ HIGH' : '↓ LOW') + (latestPt.sev === 'critical' ? ' · CRITICAL' : '') + '</span>'
       : '<span class="badge" style="background:#16a34a18;color:#16a34a;font-weight:700;border:1px solid #16a34a44">Normal</span>') : '—';
 
+    /* Determine unified KPI themes */
+    var latestCardTheme = 't-green';
+    if (latestPt) {
+      if (latestPt.sev === 'critical') latestCardTheme = 't-red';
+      else if (latestPt.sev === 'moderate' || latestPt.sev === 'mild') latestCardTheme = 't-amber';
+      else if (latestPt.sev === 'ok' || !latestPt.sev) latestCardTheme = 't-green';
+    } else {
+      latestCardTheme = 't-navy';
+    }
+
+    var deltaCardTheme = 't-blue';
+    if (selSeries && basePt && latestPt) {
+      var dLatest = App.outDist ? App.outDist(selSeries, latestPt.v) : 0;
+      var dBase = App.outDist ? App.outDist(selSeries, basePt.v) : 0;
+      if (dLatest === 0) {
+        deltaCardTheme = 't-green';
+      } else if (dLatest < dBase) {
+        deltaCardTheme = 't-green';
+      } else if (dLatest > dBase) {
+        deltaCardTheme = 't-red';
+      } else {
+        deltaCardTheme = 't-amber';
+      }
+    } else {
+      deltaCardTheme = 't-blue';
+    }
+
     /* Build HTML */
     var html = ''
       + '<style>'
       + '.pt-trend-dash { max-width: 1300px; margin: 0 auto; }'
-      + '.pt-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; }'
-      + '.pt-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
-      + '.pt-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
-      + '.pt-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
-      + '.pt-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; font-variant-numeric: tabular-nums; }'
-      + '.pt-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
       + '.pt-pat-banner { display: flex; align-items: center; gap: 16px; background: #fff; border: 1.5px solid var(--bd); border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
-      + '.pt-avatar-circle { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; display: grid; place-items: center; font-size: 19px; font-weight: 800; flex: 0 0 50px; }'
+      + '.pt-avatar-circle { width: 48px; height: 48px; border-radius: 50%; background: var(--brand-grad); color: #fff; display: grid; place-items: center; font-size: 18px; font-weight: 800; flex: 0 0 48px; box-shadow: 0 4px 12px rgba(19,24,69,.25); }'
       + '.pt-param-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }'
-      + '.pt-param-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 12px; padding: 14px 16px; transition: border-color .15s, box-shadow .15s; }'
-      + '.pt-param-card:hover { border-color: #3b82f6; box-shadow: 0 3px 10px rgba(59,130,246,.08); }'
+      + '.pt-param-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 14px; padding: 14px 16px; transition: border-color .15s, box-shadow .15s; }'
+      + '.pt-param-card:hover { border-color: var(--brand); box-shadow: 0 4px 14px rgba(19,24,69,.08); }'
       + '@media print { .sidebar, .topbar, .pt-head-bar .btn, .pt-filter-box, .no-print { display: none !important; } .main { padding: 0 !important; } }'
       + '</style>'
       + '<div class="pt-trend-dash">';
@@ -1549,27 +1570,34 @@
       ? (deltaSign + (Math.round(Math.abs(baseDelta) * 100) / 100) + ' ' + selSeries.unit + ' (' + (baseDeltaPct >= 0 ? '+' : '') + (Math.round(baseDeltaPct * 10) / 10) + '%)')
       : '—';
 
-    /* 1. 4 KPI Stat Cards directly at top */
-    html += '<div class="pt-card-grid">'
-      + '<div class="pt-kpi-card" style="border-left:4px solid #3b82f6">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Historical Readings</span><span style="font-size:16px">📊</span></div>'
-      +   '<div class="pt-kpi-val">' + pts.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">readings</span></div>'
-      +   '<div class="pt-kpi-sub">' + (pts.length > 1 ? 'From ' + App.d(basePt.t) + ' to ' + App.d(latestPt.t) : (pts.length ? '1 visit recorded' : '0 readings recorded')) + '</div>'
+    /* 1. 4 Unified KPI Stat Cards (.kpi-grid + .kpi) */
+    html += '<div class="kpi-grid" style="margin-bottom:18px">'
+      + '<div class="kpi t-navy">'
+      +   '<div class="kpi-ic">' + App.icon('chart', 18) + '</div>'
+      +   '<div class="kpi-lb">HISTORICAL READINGS</div>'
+      +   '<div class="kpi-nm">' + pts.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">readings</span></div>'
+      +   '<div class="kpi-sb">' + (pts.length > 1 ? 'From ' + App.d(basePt.t) + ' to ' + App.d(latestPt.t) : (pts.length ? '1 visit recorded' : '0 readings recorded')) + '</div>'
       + '</div>'
-      + '<div class="pt-kpi-card" style="border-left:4px solid #8b5cf6">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Baseline (Initial) Reading</span><span style="font-size:16px">🏷️</span></div>'
-      +   '<div class="pt-kpi-val">' + App.esc(baselineValText) + '</div>'
-      +   '<div class="pt-kpi-sub">' + (basePt ? App.d(basePt.t) + ' (' + App.esc(basePt.inv) + ')' : '—') + '</div>'
+      + '<div class="kpi t-purple">'
+      +   '<div class="kpi-ic">' + App.icon('flask', 18) + '</div>'
+      +   '<div class="kpi-lb">BASELINE (INITIAL) READING</div>'
+      +   '<div class="kpi-nm">' + App.esc(baselineValText) + '</div>'
+      +   '<div class="kpi-sb">' + (basePt ? App.d(basePt.t) + ' (' + App.esc(basePt.inv) + ')' : 'No baseline data') + '</div>'
       + '</div>'
-      + '<div class="pt-kpi-card" style="border-left:4px solid ' + latestSevCol + '">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Latest (Current) Reading</span>' + latestSevBadge + '</div>'
-      +   '<div class="pt-kpi-val" style="color:' + latestSevCol + '">' + App.esc(latestValText) + '</div>'
-      +   '<div class="pt-kpi-sub">' + (latestPt ? 'Tested on ' + App.d(latestPt.t) + ' (' + App.esc(latestPt.inv) + ')' : '—') + '</div>'
+      + '<div class="kpi ' + latestCardTheme + '">'
+      +   '<div class="kpi-ic">' + App.icon('clipboard', 18) + '</div>'
+      +   '<div class="kpi-lb">LATEST (CURRENT) READING</div>'
+      +   '<div class="kpi-nm" style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
+      +     '<span>' + App.esc(latestValText) + '</span>'
+      +     (latestSevBadge !== '—' ? latestSevBadge : '')
+      +   '</div>'
+      +   '<div class="kpi-sb">' + (latestPt ? 'Tested on ' + App.d(latestPt.t) + ' (' + App.esc(latestPt.inv) + ')' : 'No readings recorded') + '</div>'
       + '</div>'
-      + '<div class="pt-kpi-card" style="border-left:4px solid ' + dirColor + '">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Net Delta from Baseline</span><span style="font-size:16px">📈</span></div>'
-      +   '<div class="pt-kpi-val" style="color:' + dirColor + ';font-size:18px">' + App.esc(deltaValText) + '</div>'
-      +   '<div class="pt-kpi-sub" style="color:' + dirColor + ';font-weight:600">' + App.esc(dirNote) + '</div>'
+      + '<div class="kpi ' + deltaCardTheme + '">'
+      +   '<div class="kpi-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 6-6 4 4 8-8"/><path d="M14 6h7v7"/></svg></div>'
+      +   '<div class="kpi-lb">NET DELTA FROM BASELINE</div>'
+      +   '<div class="kpi-nm" style="font-size:' + (deltaValText.length > 20 ? '17px' : '20px') + '">' + App.esc(deltaValText) + '</div>'
+      +   '<div class="kpi-sb" title="' + App.esc(dirNote) + '">' + App.esc(dirNote) + '</div>'
       + '</div>'
       + '</div>'
 
@@ -1757,13 +1785,13 @@
               var mDeltaPct = (mBase && mBase.v !== 0) ? ((mDelta / Math.abs(mBase.v)) * 100) : 0;
               var mSev = mLatest ? (COL_SEV[mLatest.sev || 'ok'] || '#16a34a') : '#16a34a';
 
-              return '<div class="pt-param-card"' + (isCurrent ? ' style="border-color:#3b82f6;background:#f8faff"' : '') + '>'
+              return '<div class="pt-param-card"' + (isCurrent ? ' style="border-color:var(--brand);background:#f8fafc;box-shadow:0 0 0 2px rgba(19,24,69,.12)"' : '') + '>'
                 + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'
                 +   '<strong style="font-size:14px;color:var(--ink)">' + App.esc(m.name) + '</strong>'
                 +   (isCurrent ? '<span class="badge b-ready">Active</span>' : '<span class="badge b-pending">' + mPts.length + ' visits</span>')
                 + '</div>'
                 + '<div class="muted" style="font-size:11.5px;margin-bottom:8px">Normal: ' + App.esc(m.ref || '—') + ' ' + App.esc(m.unit) + '</div>'
-                + '<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-bottom:10px">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin-bottom:10px">'
                 +   '<div><div class="muted" style="font-size:10px;text-transform:uppercase">Baseline</div><div style="font-size:13px;font-weight:700">' + App.esc(mBase ? mBase.raw : '—') + '</div></div>'
                 +   '<div style="font-size:14px;color:var(--muted)">→</div>'
                 +   '<div><div class="muted" style="font-size:10px;text-transform:uppercase">Latest</div><div style="font-size:14px;font-weight:800;color:' + mSev + '">' + App.esc(mLatest ? mLatest.raw : '—') + '</div></div>'
