@@ -134,28 +134,28 @@ function renderTests() {
   var catLbl = testFilter.cat === 'All' ? 'in catalog' : 'in ' + testFilter.cat;
   var statCards =
     '<div class="kpi-grid" style="margin-bottom:18px">' +
-      '<div class="kpi t-navy">' +
+      '<div class="kpi t-navy" style="border-left:4px solid #0284c7 !important">' +
         '<div class="kpi-ic">' + App.icon('flask', 18) + '</div>' +
         '<div class="kpi-lb">TOTAL TESTS</div>' +
-        '<div class="kpi-nm">' + fT.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">tests</span></div>' +
+        '<div class="kpi-nm" style="color:#0284c7">' + fT.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">tests</span></div>' +
         '<div class="kpi-sb">' + App.esc(catLbl) + '</div>' +
       '</div>' +
-      '<div class="kpi t-green">' +
+      '<div class="kpi t-green" style="border-left:4px solid #16a34a !important">' +
         '<div class="kpi-ic">' + App.icon('check', 18) + '</div>' +
         '<div class="kpi-lb">ACTIVE TESTS</div>' +
-        '<div class="kpi-nm">' + nActive + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">active</span></div>' +
+        '<div class="kpi-nm" style="color:#16a34a">' + nActive + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">active</span></div>' +
         '<div class="kpi-sb">' + (testFilter.cat === 'All' ? 'Available for booking' : 'Active in ' + App.esc(testFilter.cat)) + '</div>' +
       '</div>' +
-      '<div class="kpi t-amber">' +
+      '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">' +
         '<div class="kpi-ic">' + App.icon('scan', 18) + '</div>' +
         '<div class="kpi-lb">CATEGORIES</div>' +
-        '<div class="kpi-nm">' + cats.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">categories</span></div>' +
+        '<div class="kpi-nm" style="color:#d97706">' + cats.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">categories</span></div>' +
         '<div class="kpi-sb">Organized test groups</div>' +
       '</div>' +
-      '<div class="kpi t-purple" style="cursor:pointer" onclick="location.hash=\'#/packages\'" title="View Health Packages">' +
+      '<div class="kpi t-purple" style="cursor:pointer;border-left:4px solid #7c3aed !important" onclick="location.hash=\'#/packages\'" title="View Health Packages">' +
         '<div class="kpi-ic">' + App.icon('box', 18) + '</div>' +
         '<div class="kpi-lb">HEALTH PACKAGES</div>' +
-        '<div class="kpi-nm">' + nPkg + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">deals</span></div>' +
+        '<div class="kpi-nm" style="color:#7c3aed">' + nPkg + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">deals</span></div>' +
         '<div class="kpi-sb">Screening packages &rarr;</div>' +
       '</div>' +
     '</div>';
@@ -1188,31 +1188,31 @@ function renderPackages() {
 
     /* 4 Unified KPI Stat Cards (.kpi-grid + .kpi) */
     + '<div class="kpi-grid" style="margin-bottom:18px">'
-    +   '<div class="kpi t-navy" style="cursor:pointer" id="kpiPkgAll" title="Click to view all packages">'
+    +   '<div class="kpi t-navy" style="cursor:pointer;border-left:4px solid #0284c7 !important" id="kpiPkgAll" title="Click to view all packages">'
     +     '<div class="kpi-ic">' + App.icon('box', 18) + '</div>'
     +     '<div class="kpi-lb">TOTAL HEALTH PACKAGES</div>'
-    +     '<div class="kpi-nm">' + pkgs.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">packages</span></div>'
+    +     '<div class="kpi-nm" style="color:#0284c7">' + pkgs.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">packages</span></div>'
     +     '<div class="kpi-sb">' + activePkgs.length + ' currently active deals</div>'
     +   '</div>'
 
-    +   '<div class="kpi t-green" style="cursor:pointer" id="kpiPkgActive" title="Click to filter active deals">'
+    +   '<div class="kpi t-green" style="cursor:pointer;border-left:4px solid #16a34a !important" id="kpiPkgActive" title="Click to filter active deals">'
     +     '<div class="kpi-ic">' + App.icon('check', 18) + '</div>'
     +     '<div class="kpi-lb">ACTIVE PROMOTIONS</div>'
-    +     '<div class="kpi-nm">' + activePkgs.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">active</span></div>'
+    +     '<div class="kpi-nm" style="color:#16a34a">' + activePkgs.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">active</span></div>'
     +     '<div class="kpi-sb">Available on billing counter</div>'
     +   '</div>'
 
-    +   '<div class="kpi t-amber">'
+    +   '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">'
     +     '<div class="kpi-ic">' + App.icon('coins', 18) + '</div>'
     +     '<div class="kpi-lb">AVERAGE PATIENT SAVINGS</div>'
-    +     '<div class="kpi-nm">' + (avgSavingsPct > 0 ? '~' + avgSavingsPct + '%' : '0%') + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">SAVINGS</span></div>'
+    +     '<div class="kpi-nm" style="color:#d97706">' + (avgSavingsPct > 0 ? '~' + avgSavingsPct + '%' : '0%') + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">SAVINGS</span></div>'
     +     '<div class="kpi-sb">' + coveredCount + ' tests covered across deals</div>'
     +   '</div>'
 
-    +   '<div class="kpi t-purple">'
+    +   '<div class="kpi t-purple" style="border-left:4px solid #7c3aed !important">'
     +     '<div class="kpi-ic">' + App.icon('file', 18) + '</div>'
     +     '<div class="kpi-lb">PACKAGE BILLINGS</div>'
-    +     '<div class="kpi-nm">' + pkgBilledCount + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">orders</span></div>'
+    +     '<div class="kpi-nm" style="color:#7c3aed">' + pkgBilledCount + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">orders</span></div>'
     +     '<div class="kpi-sb">Booked in patient invoices</div>'
     +   '</div>'
     + '</div>'
@@ -1260,8 +1260,18 @@ function renderPackages() {
   }
 
   /* Render Package Cards */
+  var THEMES = [
+    { border: '#0284c7', bg: '#f0f9ff', tagBg: '#e0f2fe', tagColor: '#0369a1', badgeBg: '#e0f2fe', badgeColor: '#0284c7', badgeBd: '#bae6fd', btnBg: '#0284c7' }, // Sky Blue
+    { border: '#16a34a', bg: '#f0fdf4', tagBg: '#dcfce7', tagColor: '#15803d', badgeBg: '#dcfce7', badgeColor: '#15803d', badgeBd: '#bbf7d0', btnBg: '#16a34a' }, // Emerald Green
+    { border: '#7c3aed', bg: '#faf5ff', tagBg: '#f3e8ff', tagColor: '#6b21a8', badgeBg: '#f3e8ff', badgeColor: '#7c3aed', badgeBd: '#e9d5ff', btnBg: '#7c3aed' }, // Purple
+    { border: '#ea580c', bg: '#fff7ed', tagBg: '#ffedd5', tagColor: '#9a3412', badgeBg: '#ffedd5', badgeColor: '#c2410c', badgeBd: '#fed7aa', btnBg: '#ea580c' }, // Amber Orange
+    { border: '#e11d48', bg: '#fff1f2', tagBg: '#ffe4e6', tagColor: '#9f1239', badgeBg: '#ffe4e6', badgeColor: '#e11d48', badgeBd: '#fecdd3', btnBg: '#e11d48' }, // Rose Pink
+    { border: '#0d9488', bg: '#f0fdfa', tagBg: '#ccfbf1', tagColor: '#115e59', badgeBg: '#ccfbf1', badgeColor: '#0d9488', badgeBd: '#99f6e4', btnBg: '#0d9488' }  // Teal
+  ];
+
   html += '<div class="pkg-grid">';
-  filtered.forEach(function (pkg) {
+  filtered.forEach(function (pkg, pIdx) {
+    var c = THEMES[pIdx % THEMES.length];
     var regSum = 0;
     var incTests = (pkg.includes || []).map(function (tid) {
       var it = testMap[tid];
@@ -1274,18 +1284,17 @@ function renderPackages() {
     var savingsPct = regSum > 0 ? Math.round((savings / regSum) * 100) : 0;
 
     var badgeText = pkg.dealBadge || 'SPECIAL DEAL';
-    var badgeStyle = 'background:#fef3c7;color:#92400e;border:1px solid #fde68a';
     var badgeIcon = '🏷️';
-    if (/best/i.test(badgeText)) { badgeStyle = 'background:#fef2f2;color:#b91c1c;border:1px solid #fecaca'; badgeIcon = '🔥'; }
-    else if (/exec/i.test(badgeText)) { badgeStyle = 'background:#faf5ff;color:#7e22ce;border:1px solid #e9d5ff'; badgeIcon = '👑'; }
-    else if (/pop/i.test(badgeText)) { badgeStyle = 'background:#f0f9ff;color:#0369a1;border:1px solid #bae6fd'; badgeIcon = '⭐'; }
-    else if (/screen|health/i.test(badgeText)) { badgeStyle = 'background:#ecfdf5;color:#15803d;border:1px solid #a7f3d0'; badgeIcon = '💚'; }
+    if (/best/i.test(badgeText)) badgeIcon = '🔥';
+    else if (/exec|vip/i.test(badgeText)) badgeIcon = '👑';
+    else if (/pop|star/i.test(badgeText)) badgeIcon = '⭐';
+    else if (/screen|health/i.test(badgeText)) badgeIcon = '💚';
 
-    html += '<div class="pkg-card' + (pkg.active === false ? ' is-inactive' : '') + '">'
+    html += '<div class="pkg-card' + (pkg.active === false ? ' is-inactive' : '') + '" style="border-top:4px solid ' + c.border + ';box-shadow:0 3px 12px rgba(15,23,42,.06);' + (pkg.active === false ? 'border-top-style:dashed;' : '') + '">'
       + '<div>'
       /* Card Header */
       +   '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">'
-      +     '<span class="pkg-badge-deal" style="' + badgeStyle + '">' + badgeIcon + ' ' + App.esc(badgeText) + '</span>'
+      +     '<span class="pkg-badge-deal" style="background:' + c.badgeBg + ';color:' + c.badgeColor + ';border:1.5px solid ' + c.badgeBd + '">' + badgeIcon + ' ' + App.esc(badgeText) + '</span>'
       +     '<button class="btn btn-ghost btn-sm" style="padding:3px 10px;font-size:11.5px;border-radius:20px;font-weight:700;' + (pkg.active !== false ? 'background:#ecfdf5;color:#15803d;border:1px solid #a7f3d0' : 'background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1') + '" data-pkg-toggle="' + App.esc(pkg.id) + '">'
       +       (pkg.active !== false ? '● Active' : '○ Inactive')
       +     '</button>'
@@ -1294,13 +1303,13 @@ function renderPackages() {
       /* Name & Code */
       +   '<h3 style="margin:0 0 6px;font-size:17.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em;line-height:1.25">' + App.esc(pkg.name) + '</h3>'
       +   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">'
-      +     '<span class="mono" style="font-size:12px;font-weight:700;color:#0284c7;background:#e0f2fe;padding:2px 7px;border-radius:6px">' + App.esc(pkg.code) + '</span>'
+      +     '<span class="mono" style="font-size:12px;font-weight:700;color:' + c.tagColor + ';background:' + c.tagBg + ';padding:2px 8px;border-radius:6px;border:1px solid ' + c.border + '33">' + App.esc(pkg.code) + '</span>'
       +     (pkg.category ? '<span style="font-size:11.5px;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;padding:2px 8px;border-radius:6px;font-weight:600">📁 ' + App.esc(pkg.category) + '</span>' : '')
       +     '<span style="font-size:11.5px;color:var(--muted);margin-left:auto;font-weight:600">' + incTests.length + ' tests included</span>'
       +   '</div>'
 
       /* Preparation Instructions */
-      +   (pkg.prepNote ? '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-left:3.5px solid #0284c7;padding:7px 11px;border-radius:8px;font-size:11.5px;color:#0369a1;font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span>ℹ️</span><span>' + App.esc(pkg.prepNote) + '</span></div>' : '')
+      +   (pkg.prepNote ? '<div style="background:' + c.bg + ';border:1px solid ' + c.border + '33;border-left:3.5px solid ' + c.border + ';padding:7px 11px;border-radius:8px;font-size:11.5px;color:' + c.tagColor + ';font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span>ℹ️</span><span>' + App.esc(pkg.prepNote) + '</span></div>' : '')
 
       /* Included Tests List */
       +   '<div style="margin-bottom:12px">'
@@ -1317,17 +1326,17 @@ function renderPackages() {
 
       /* Price & Savings Bar */
       + '<div>'
-      +   '<div class="pkg-price-bar">'
+      +   '<div class="pkg-price-bar" style="background:linear-gradient(135deg, ' + c.bg + ' 0%, #ffffff 100%);border:1.5px solid ' + c.border + '44">'
       +     '<div>'
       +       '<div style="font-size:11px;color:#64748b;font-weight:600;text-decoration:line-through">Catalog Sum: ' + App.money(regSum) + '</div>'
-      +       '<div style="font-size:22px;font-weight:900;color:#15803d;line-height:1.15;letter-spacing:-.02em">' + App.money(dealPrice) + '</div>'
+      +       '<div style="font-size:23px;font-weight:900;color:' + c.border + ';line-height:1.15;letter-spacing:-.02em">' + App.money(dealPrice) + '</div>'
       +     '</div>'
-      +     (savings > 0 ? '<div style="background:#16a34a;color:#ffffff;font-weight:800;font-size:12px;padding:5px 10px;border-radius:8px;box-shadow:0 2px 6px rgba(22,163,74,.25);letter-spacing:.02em;text-align:right">SAVE ' + App.money(savings) + '<br><span style="font-size:10.5px;opacity:.9;font-weight:700">(' + savingsPct + '% OFF)</span></div>' : '')
+      +     (savings > 0 ? '<div style="background:' + c.border + ';color:#ffffff;font-weight:800;font-size:12px;padding:5px 11px;border-radius:8px;box-shadow:0 2px 8px ' + c.border + '44;letter-spacing:.02em;text-align:right">SAVE ' + App.money(savings) + '<br><span style="font-size:10.5px;opacity:.9;font-weight:700">(' + savingsPct + '% OFF)</span></div>' : '')
       +   '</div>'
 
       /* Action Buttons */
       +   '<div style="display:flex;gap:7px;align-items:center">'
-      +     '<button class="btn btn-primary btn-sm" style="flex:1;font-weight:700" data-pkg-bill="' + App.esc(pkg.id) + '">🧾 Quick Bill Deal</button>'
+      +     '<button class="btn btn-sm" style="flex:1;font-weight:700;background:' + c.btnBg + ';color:#ffffff;border:none;box-shadow:0 2px 6px ' + c.border + '44" data-pkg-bill="' + App.esc(pkg.id) + '">🧾 Quick Bill Deal</button>'
       +     '<button class="btn btn-ghost btn-sm" data-pkg-flyer="' + App.esc(pkg.id) + '" title="Print Counter Flyer" style="border:1px solid var(--bd)">🖨️ Flyer</button>'
       +     '<button class="btn btn-ghost btn-sm" data-pkg-edit="' + App.esc(pkg.id) + '" style="border:1px solid var(--bd)">Edit</button>'
       +     '<button class="btn btn-ghost btn-sm" data-pkg-del="' + App.esc(pkg.id) + '" style="color:var(--red);border:1px solid var(--bd)">Delete</button>'
