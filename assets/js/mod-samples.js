@@ -656,18 +656,19 @@
   };
 
   var STK_CSS =
-    '.stk-layout{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:16px;align-items:start}' +
-    '@media(max-width:980px){.stk-layout{grid-template-columns:1fr}}' +
+    '.stk-layout{display:flex;flex-direction:column;gap:20px;width:100%}' +
     '.stk-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px;flex-wrap:wrap}' +
     '.stk-head-title h2{margin:0 0 4px;font-size:20px;font-weight:800;color:var(--brand-d);display:flex;align-items:center;gap:8px}' +
     '.stk-head-title p{margin:0;font-size:13px;color:var(--muted)}' +
     '.stk-head-acts{display:flex;gap:8px;align-items:center;flex-wrap:wrap}' +
-    '.stk-preview-box{position:sticky;top:16px;background:#f8fafc;border:1px solid var(--bd);border-radius:14px;padding:16px;box-shadow:var(--sh-sm)}' +
-    '.stk-prev-card{background:#e2e8f0;border-radius:10px;padding:18px 8px;display:flex;justify-content:center;align-items:center;min-height:140px;margin-bottom:14px;overflow:hidden}' +
-    '.stk-prev-zoom{zoom:1.7;display:flex;justify-content:center}' +
-    '.stk-prev-zoom .smp-lbl{box-shadow:0 4px 14px rgba(0,0,0,.18);border-radius:2px}' +
-    '.stk-prev-empty{font-size:13px;color:var(--muted);text-align:center;padding:20px 10px}' +
-    '.stk-tip-box{font-size:11.5px;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px 12px;line-height:1.45;margin-top:14px}' +
+    '.stk-preview-box{background:#ffffff;border:1.5px solid var(--bd);border-radius:16px;padding:22px 24px;box-shadow:0 4px 20px rgba(15,23,42,.05)}' +
+    '.stk-prev-card{background:radial-gradient(circle at 50% 50%, #f8fafc 0%, #e2e8f0 100%);border:1px solid #cbd5e1;border-radius:14px;padding:34px 20px;display:flex;flex-direction:column;justify-content:center;align-items:center;min-height:220px;margin-bottom:0;overflow:hidden}' +
+    '.stk-prev-zoom{zoom:2.5;-moz-transform:scale(2.5);-moz-transform-origin:center;display:flex;justify-content:center}' +
+    '.stk-prev-zoom .smp-lbl{box-shadow:0 10px 30px rgba(0,0,0,.22), 0 2px 6px rgba(0,0,0,.1);border-radius:3px}' +
+    '.stk-prev-empty{font-size:14px;color:var(--muted);text-align:center;padding:36px 16px}' +
+    '.stk-prev-grid{display:grid;grid-template-columns:minmax(320px,1.2fr) minmax(280px,1fr);gap:24px;align-items:start}' +
+    '@media(max-width:880px){.stk-prev-grid{grid-template-columns:1fr}}' +
+    '.stk-tip-box{font-size:12px;color:var(--muted);background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px 14px;line-height:1.5}' +
     '.stk-tip-box b{color:var(--ink);font-weight:700}';
 
   function renderStickersDashboard() {
@@ -750,32 +751,73 @@
       if (currentSample) {
         var labelHtml = oneLabel(currentSample, false);
         previewHtml =
-          '<div class="stk-prev-card">' +
-            '<div class="stk-prev-zoom">' + labelHtml + '</div>' +
-          '</div>' +
-          '<div style="margin-bottom:12px;font-size:12.5px;color:var(--ink);line-height:1.4">' +
-            '<div><b>Patient:</b> ' + esc(currentSample.patientName) + ' ' + esc(currentSample.patientId ? '(MR: ' + currentSample.patientId + ')' : '') + '</div>' +
-            '<div><b>Invoice:</b> ' + esc(currentSample.invoiceNo || '—') + ' &middot; <b>Barcode:</b> <code>' + esc(currentSample.barcode) + '</code></div>' +
-            '<div style="margin-top:4px"><b>Tube:</b> ' + tubeBadge(currentSample.tube) + '</div>' +
-          '</div>' +
-          '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px">' +
-            '<label style="font-size:13px;font-weight:700">Copies:</label>' +
-            '<input type="number" id="stkCopies" class="input" min="1" max="10" value="' + STK.copies + '" style="width:70px;padding:6px 8px;font-weight:700">' +
-            '<select id="stkFmt" class="select" style="padding:6px 8px;font-size:12.5px;flex:1">' +
-              '<option value="thermal"' + (STK.fmt === 'thermal' ? ' selected' : '') + '>50×25mm Thermal Roll</option>' +
-              '<option value="a4"' + (STK.fmt === 'a4' ? ' selected' : '') + '>A4 Sheet (3×8 Labels)</option>' +
-            '</select>' +
-          '</div>' +
-          '<button class="btn btn-primary" id="stkPrintCurrent" style="width:100%;justify-content:center;font-weight:800;padding:10px 14px">' +
-            App.icon('printer', 16) + ' Print This Sticker Now' +
-          '</button>' +
-          (checkedCount > 1
-            ? '<button class="btn btn-ghost" id="stkPrintChecked" style="width:100%;margin-top:8px;justify-content:center;font-weight:700">' +
-                App.icon('printer', 14) + ' Print ' + checkedCount + ' Selected Stickers' +
-              '</button>'
-            : '');
+          '<div class="stk-prev-grid">' +
+            '<div>' +
+              '<div class="stk-prev-card">' +
+                '<div class="stk-prev-zoom">' + labelHtml + '</div>' +
+              '</div>' +
+              '<div style="text-align:center;font-size:12px;color:var(--muted);margin-top:10px;font-weight:600">' +
+                '🔍 2.5× Magnified Thermal Label Preview (50×25mm) &bull; Click any tube row in table above to switch' +
+              '</div>' +
+            '</div>' +
+            '<div style="display:flex;flex-direction:column;gap:14px;justify-content:center">' +
+              '<div style="background:#f8fafc;border:1.5px solid var(--bd);border-radius:14px;padding:16px 18px;line-height:1.5">' +
+                '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">' +
+                  '<span style="font-size:17px;font-weight:800;color:var(--ink)">' + esc(currentSample.patientName) + '</span>' +
+                  (currentSample.patientId ? '<span class="badge" style="font-size:11.5px;background:#e2e8f0;color:var(--ink);font-weight:700">MR: ' + esc(currentSample.patientId) + '</span>' : '') +
+                '</div>' +
+                '<div style="font-size:13px;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px">' +
+                  '<span><b>Invoice:</b> ' + esc(currentSample.invoiceNo || '—') + '</span>' +
+                  '<span><b>Barcode:</b> <code style="font-weight:800;color:var(--brand-d);background:#e2e8f0;padding:2px 8px;border-radius:4px;font-size:13px">' + esc(currentSample.barcode) + '</code></span>' +
+                '</div>' +
+                '<div style="margin-top:6px;display:flex;align-items:center;gap:10px">' +
+                  '<span style="font-size:13px;font-weight:700;color:var(--ink)">Specimen Tube:</span>' +
+                  tubeBadge(currentSample.tube) +
+                '</div>' +
+                (currentSample.testNames && currentSample.testNames.length ? '<div style="margin-top:10px;font-size:12.5px;color:var(--ink2);line-height:1.4"><b>Tests:</b> ' + esc(currentSample.testNames.join(', ')) + '</div>' : '') +
+              '</div>' +
+              '<div style="display:flex;gap:12px;align-items:flex-end">' +
+                '<div style="width:90px">' +
+                  '<label style="font-size:11.5px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase">Copies:</label>' +
+                  '<input type="number" id="stkCopies" class="input" min="1" max="20" value="' + STK.copies + '" style="width:100%;padding:9px 12px;font-weight:800;font-size:15px;text-align:center">' +
+                '</div>' +
+                '<div style="flex:1">' +
+                  '<label style="font-size:11.5px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px;text-transform:uppercase">Format:</label>' +
+                  '<select id="stkFmt" class="select" style="padding:9px 12px;font-size:13.5px;width:100%">' +
+                    '<option value="thermal"' + (STK.fmt === 'thermal' ? ' selected' : '') + '>50×25mm Thermal Roll</option>' +
+                    '<option value="a4"' + (STK.fmt === 'a4' ? ' selected' : '') + '>A4 Sheet (3×8 Labels)</option>' +
+                  '</select>' +
+                '</div>' +
+              '</div>' +
+              '<button class="btn btn-primary" id="stkPrintCurrent" style="justify-content:center;font-weight:800;font-size:15px;padding:13px 20px;box-shadow:0 4px 14px rgba(19,24,69,.35)">' +
+                App.icon('printer', 18) + ' Print This Sticker Now' +
+              '</button>' +
+              (checkedCount > 1
+                ? '<button class="btn btn-ghost" id="stkPrintChecked" style="justify-content:center;font-weight:700;padding:10px 16px">' +
+                    App.icon('printer', 16) + ' Print ' + checkedCount + ' Selected Stickers' +
+                  '</button>'
+                : '') +
+              '<div class="stk-tip-box" style="margin-top:4px">' +
+                '<b>Thermal Printer Standard:</b> 50mm width × 25mm height.<br>' +
+                'Barcode uses Code128 standard supported by all lab analyzers and handheld laser scanners.<br>' +
+                'Set printer margin to <b>None</b> for seamless thermal alignment.' +
+              '</div>' +
+            '</div>' +
+          '</div>';
       } else {
-        previewHtml = '<div class="stk-prev-empty">No tube selected. Click on a tube row to preview sticker.</div>';
+        previewHtml =
+          '<div style="text-align:center;padding:48px 24px;background:#f8fafc;border:2px dashed var(--bd);border-radius:16px">' +
+            '<div style="font-size:48px;margin-bottom:12px">🖨️</div>' +
+            '<h3 style="margin:0 0 8px;font-size:17px;font-weight:800;color:var(--ink)">No Tube Selected</h3>' +
+            '<p class="muted" style="margin:0 0 20px;max-width:480px;margin-left:auto;margin-right:auto;font-size:14px">' +
+              'Click on any tube row in the table above to preview and print its 50×25mm thermal barcode sticker.' +
+            '</p>' +
+            '<div class="stk-tip-box" style="max-width:540px;margin:0 auto;text-align:left">' +
+              '<b>Thermal Printer Standard:</b> 50mm width × 25mm height.<br>' +
+              'Barcode uses Code128 standard supported by all lab analyzers and handheld laser scanners.<br>' +
+              'Set printer margin to <b>None</b> for seamless thermal alignment.' +
+            '</div>' +
+          '</div>';
       }
 
       var PAGE_SIZE = 40;
@@ -807,7 +849,7 @@
       }
 
       view.innerHTML =
-        '<style>' + CSS + STK_CSS + '</style>' +
+        '<style>' + CSS + LABEL_CSS + STK_CSS + '</style>' +
         kpiHtml +
         '<div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap">' +
           '<button class="btn btn-primary" id="stkPrintAllToday">' + App.icon('printer', 15) + ' Print All Today\'s Stickers</button>' +
@@ -865,15 +907,20 @@
             '</div>' +
           '</div></div>' +
           '<div class="stk-preview-box">' +
-            '<h3 style="margin:0 0 12px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:6px">' +
-              App.icon('printer', 16) + ' Live Sticker Preview' +
-            '</h3>' +
-            previewHtml +
-            '<div class="stk-tip-box">' +
-              '<b>Thermal Printer Standard:</b> 50mm width × 25mm height.<br>' +
-              'Barcode uses Code128 standard supported by all lab analyzers and handheld laser scanners.<br>' +
-              'Set printer margin to <b>None</b> for seamless thermal alignment.' +
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">' +
+              '<div style="display:flex;align-items:center;gap:10px">' +
+                '<span style="width:36px;height:36px;border-radius:10px;background:#e0e7ff;color:#4338ca;display:inline-flex;align-items:center;justify-content:center">' + App.icon('printer', 20) + '</span>' +
+                '<div>' +
+                  '<h3 style="margin:0;font-size:17px;font-weight:800;color:var(--ink)">Live Sticker Preview</h3>' +
+                  '<span style="font-size:12.5px;color:var(--muted)">Direct Thermal Label (50mm × 25mm) Barcode Preview</span>' +
+                '</div>' +
+              '</div>' +
+              '<div style="display:flex;align-items:center;gap:8px">' +
+                '<span class="badge" style="background:#e0f2fe;color:#0369a1;font-weight:700;padding:4px 10px;font-size:12px;border-radius:8px">50 × 25 mm Thermal Roll</span>' +
+                (currentSample ? '<span class="badge" style="background:#dcfce7;color:#15803d;font-weight:700;padding:4px 10px;font-size:12px;border-radius:8px">Ready to Print</span>' : '') +
+              '</div>' +
             '</div>' +
+            previewHtml +
           '</div>' +
         '</div>';
 
