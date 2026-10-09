@@ -1731,7 +1731,7 @@
         '<div style="margin-top:2px">' + (_tpl ? '{{lab_barcode}}' : barcodeHtml(_caseCode, '100%', '15px').replace('margin:0 auto', 'margin:0')) +
           '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2;white-space:nowrap">' + (_tpl ? '{{lab_no}}' : App.esc(_caseNo)) + '</div></div>' +
         '<div style="margin-top:7px">' + (_tpl ? '{{case_number_barcode}}' : barcodeHtml(_patCode, '100%', '15px').replace('margin:0 auto', 'margin:0')) +
-          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2;white-space:nowrap">' + (_tpl ? '{{case_number}}' : App.esc(String(_patId || '').replace(/^P\s*#\s*/i, ''))) + '</div></div>' +
+          '<div style="font-weight:700;letter-spacing:1px;font-size:0.7em;margin-top:3px;line-height:1.2;white-space:nowrap">' + (_tpl ? '{{case_number}}' : App.esc(/^P\s*#/i.test(String(_patId || '')) ? _patId : ('P # ' + _patId))) + '</div></div>' +
         '</div>' +
         (showQr
           ? (_tpl ? '<div>{{qr}}</div>' : '<div><img data-qr="1" style="width:70px;height:70px" alt="QR"></div>')
@@ -3126,7 +3126,7 @@
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
       txt(vnp.labText.replace('INV # ', ''), hnx, y + 10, { align: 'right', charSpace: 0.6 });
       doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt(vnp.caseText.replace('P # ', ''), hnx, y + 17, { align: 'right', charSpace: 0.6 });
+      txt((/^P\s*#/i.test(String(vnp.caseText || '')) ? vnp.caseText : ('P # ' + vnp.caseText)), hnx, y + 17, { align: 'right', charSpace: 0.6 });
 
       // --- QR 26mm at far right ---
       if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
