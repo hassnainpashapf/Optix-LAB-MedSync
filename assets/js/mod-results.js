@@ -3090,6 +3090,7 @@
           try { DB.update('invoices', invoiceId, { reportPdfKey: key }); } catch (e) {}
           return j.url;
         }
+        if (j && j.code === 'LIMIT_STORAGE') App.toast(j.error, 'err'); /* the plan's report storage is full: say so instead of a silent missing QR link */
         return null;
       })
       .catch(function () { return null; });

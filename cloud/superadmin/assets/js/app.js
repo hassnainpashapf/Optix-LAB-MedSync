@@ -1045,6 +1045,15 @@ function usageHtml(used, limit) {
   var over = limit > 0 && used >= limit;
   return '<span class="us"><span class="' + (over ? 'dl-bad' : '') + '">' + num(used) + '</span> <span class="muted-t">/ ' + limitStr(limit) + '</span></span>';
 }
+function fmtBytes(b) {
+  b = +b || 0;
+  if (b < 1048576) return Math.max(0, Math.round(b / 1024)) + ' KB';
+  return (b / 1048576 >= 100 ? Math.round(b / 1048576) : Math.round(b / 104857.6) / 10) + ' MB';
+}
+function storageHtml(bytes, limitMb) {
+  var over = limitMb > 0 && bytes >= limitMb * 1048576;
+  return '<span class="us"><span class="' + (over ? 'dl-bad' : '') + '">' + esc(fmtBytes(bytes)) + '</span> <span class="muted-t">/ ' + (limitMb > 0 ? esc(limitMb) + ' MB' : 'Unlimited') + '</span></span>';
+}
 function slugify(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30).replace(/-+$/, '');
 }
@@ -1710,6 +1719,7 @@ function drawerHtml(l) {
     kv('Created', esc(fmtDate(l.createdAt))) +
     kv('Users', usageHtml(u.users, lim.users)) +
     kv('Invoices this month', usageHtml(u.invoicesThisMonth, lim.invoicesPerMonth)) +
+    kv('Report storage', storageHtml(u.storageBytes, lim.storageMb)) +
     kv('Patients', num(u.patients)) +
     kv('Invoices total', num(u.invoicesTotal)) +
     kv('Last activity', esc(relTime(u.lastActivity))) +
@@ -1737,6 +1747,7 @@ function drawerHtml(l) {
     '<div><label class="label" for="dfPaid">Paid until</label><input class="input" type="date" id="dfPaid" value="' + esc(dateInput(l.paidUntil)) + '"></div>' +
     '<div><label class="label" for="dfLimU">Max users</label><input class="input" type="number" min="0" id="dfLimU" value="' + esc(lim.users) + '"></div>' +
     '<div><label class="label" for="dfLimI">Max invoices / month</label><input class="input" type="number" min="0" id="dfLimI" value="' + esc(lim.invoicesPerMonth) + '"></div>' +
+    '<div><label class="label" for="dfLimS">Max report storage (MB)</label><input class="input" type="number" min="0" id="dfLimS" value="' + esc(lim.storageMb || 0) + '"></div>' +
     '<div class="span2"><p class="hint" style="margin:-4px 0 0">Limits: 0 = unlimited. Clear a field to go back to the plan default.</p></div>' +
     '<div class="span2"><label class="label" for="dfName">Lab name</label><input class="input" id="dfName" value="' + esc(l.name) + '"></div>' +
     '<div><label class="label" for="dfOwner">Owner name</label><input class="input" id="dfOwner" value="' + esc(l.ownerName) + '"></div>' +
@@ -1850,6 +1861,8 @@ function saveLabForm(l, btn) {
   if (lu !== String(lim.users)) body.limitUsers = lu;
   var li = $('dfLimI').value.trim();
   if (li !== String(lim.invoicesPerMonth)) body.limitInvoices = li;
+  var ls = $('dfLimS').value.trim();
+  if (ls !== String(lim.storageMb || 0)) body.limitStorageMb = ls;
   var name = $('dfName').value.trim();
   if (!name) { toast('Lab name cannot be empty.', 'err'); return; }
   if (name !== l.name) body.name = name;
@@ -2066,7 +2079,7 @@ function planCardHtml(key, p) {
     '<input class="input" id="pl_' + key + '_name" value="' + esc(p.name) + '" maxlength="60">' +
     '<div style="height:12px"></div>' + prices +
     '<div style="height:12px"></div><div class="fgrid">' +
-    numField('pl_' + key + '_users', 'Max users', p.users) + numField('pl_' + key + '_inv', 'Invoices / month', p.invoicesPerMonth) + '</div>' +
+    numField('pl_' + key + '_users', 'Max users', p.users) + numField('pl_' + key + '_inv', 'Invoices / month', p.invoicesPerMonth) + numField('pl_' + key + '_mb', 'Report storage (MB)', p.storageMb || 0) + '</div>' +
     '<p class="hint" style="margin-top:4px">0 means unlimited.</p>' +
     '<label class="label" for="pl_' + key + '_desc" style="margin-top:10px">Description</label>' +
     '<textarea class="input" id="pl_' + key + '_desc" rows="2" maxlength="140">' + esc(p.desc) + '</textarea></div>';
@@ -2364,7 +2377,7 @@ function saveSettings() {
     };
     plans[k] = {
       name: name, monthly: n('monthly', old.monthly || 0), yearly: n('yearly', old.yearly || 0),
-      users: n('users', 0), invoicesPerMonth: n('inv', 0), desc: $('pl_' + k + '_desc').value.trim()
+      users: n('users', 0), invoicesPerMonth: n('inv', 0), storageMb: n('mb', 0), desc: $('pl_' + k + '_desc').value.trim()
     };
   }
   var methods = collectMethods().filter(function (m) { return m.name || m.account || m.title; });

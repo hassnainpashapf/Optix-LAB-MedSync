@@ -19,10 +19,10 @@ const GRACE_DAYS = 3;          /* after paidUntil, still fully usable for a few 
 const RESERVED = ['admin', 'api', 'app', 'www', 'superadmin', 'support', 'help', 'login', 'signup', 'demo', 'test', 'optix', 'system', 'root', 'static', 'assets'];
 
 const DEFAULT_PLANS = {
-  trial:      { name: 'Free Trial',   monthly: 0,    yearly: 0,     users: 5,  invoicesPerMonth: 500,  desc: 'Everything unlocked for 14 days' },
-  starter:    { name: 'Starter',      monthly: 2500, yearly: 25000, users: 3,  invoicesPerMonth: 300,  desc: 'Small collection centre' },
-  pro:        { name: 'Professional', monthly: 6000, yearly: 60000, users: 10, invoicesPerMonth: 3000, desc: 'Busy diagnostic lab' },
-  enterprise: { name: 'Enterprise',   monthly: 0,    yearly: 0,     users: 0,  invoicesPerMonth: 0,    desc: 'Chains & hospitals — unlimited, custom pricing' },
+  trial:      { name: 'Free Trial',   monthly: 0,    yearly: 0,     users: 5,  invoicesPerMonth: 500,  storageMb: 200,  desc: 'Everything unlocked for 14 days' },
+  starter:    { name: 'Starter',      monthly: 2500, yearly: 25000, users: 3,  invoicesPerMonth: 300,  storageMb: 500,  desc: 'Small collection centre' },
+  pro:        { name: 'Professional', monthly: 6000, yearly: 60000, users: 10, invoicesPerMonth: 3000, storageMb: 5000, desc: 'Busy diagnostic lab' },
+  enterprise: { name: 'Enterprise',   monthly: 0,    yearly: 0,     users: 0,  invoicesPerMonth: 0,    storageMb: 0,    desc: 'Chains & hospitals — unlimited, custom pricing' },
 };
 const DEFAULT_SETTINGS = {
   trialDays: 14,
@@ -102,6 +102,7 @@ const USER_RE = /^[a-zA-Z0-9._-]{3,30}$/;
 
 function create(ctx) {
   const { raw, TABLES, hashPassword, defaultsFor } = ctx;
+  const fileBytes = typeof ctx.fileBytes === 'function' ? ctx.fileBytes : () => 0; /* bytes of report files a lab keeps on this server */
   const cache = { labs: null, stores: new Map() };
   const pendingSlugs = new Set(); /* slugs being created right now: reserved before the (slow) seeding so two signups cannot take the same one */
 
@@ -211,12 +212,13 @@ function create(ctx) {
       last = Math.max(last, +i._u || 0);
     }
     const patients = (await st.all('patients')).length;
-    return { users, invoicesThisMonth: invMonth, invoicesTotal: invoices.length, patients, lastActivity: last ? new Date(last).toISOString() : null };
+    return { users, invoicesThisMonth: invMonth, invoicesTotal: invoices.length, patients, storageBytes: +fileBytes(lab.id) || 0, lastActivity: last ? new Date(last).toISOString() : null };
   }
   async function limitsOf(lab) {
     const p = (await getPlans())[lab.plan] || DEFAULT_PLANS.starter;
     return { users: lab.limitUsers != null ? lab.limitUsers : p.users, invoicesPerMonth: lab.limitInvoices != null ? lab.limitInvoices : p.invoicesPerMonth,
-      maxBranches: lab.maxBranches != null ? lab.maxBranches : DEFAULT_MAX_BRANCHES };
+      maxBranches: lab.maxBranches != null ? lab.maxBranches : DEFAULT_MAX_BRANCHES,
+      storageMb: lab.limitStorageMb != null ? lab.limitStorageMb : (p.storageMb || 0) };
   }
   /* effective feature map: all-true defaults, then lab.features overrides (only `false` is stored; absent = enabled) */
   function getFeatures(lab) {

@@ -239,7 +239,7 @@ async function main() {
   /* ---- SaaS: lab registry + per-lab isolated stores (cloud only; the desktop app is a single local lab) ---- */
   let saas = null;
   if (!DESKTOP) {
-    saas = saasMod.create({ raw: rawStore, TABLES, hashPassword, defaultsFor });
+    saas = saasMod.create({ raw: rawStore, TABLES, hashPassword, defaultsFor, fileBytes: (id) => pdfUsage().get(id) || 0 });
     await saas.bootstrap(store);
   }
 
@@ -269,6 +269,23 @@ async function main() {
 
   const REPORT_PDFS_DIR = path.join(DATA_DIR, 'report-pdfs');
   if (!fs.existsSync(REPORT_PDFS_DIR)) fs.mkdirSync(REPORT_PDFS_DIR, { recursive: true });
+  /* bytes of report PDFs per lab (a file with no .owner mark belongs to the default lab); counted from the folder and cached for a few seconds */
+  let pdfUsageCache = null;
+  function pdfUsage() {
+    if (pdfUsageCache && Date.now() - pdfUsageCache.at < 15000) return pdfUsageCache.map;
+    const map = new Map();
+    try {
+      for (const f of fs.readdirSync(REPORT_PDFS_DIR)) {
+        if (!/\.pdf$/.test(f)) continue;
+        let size = 0, owner = 'main';
+        try { size = fs.statSync(path.join(REPORT_PDFS_DIR, f)).size; } catch (e) { continue; }
+        try { owner = fs.readFileSync(path.join(REPORT_PDFS_DIR, f.replace(/\.pdf$/, '.owner')), 'utf8').trim() || 'main'; } catch (e) { /* default lab */ }
+        map.set(owner, (map.get(owner) || 0) + size);
+      }
+    } catch (e) { /* folder unreadable: report nothing */ }
+    pdfUsageCache = { at: Date.now(), map };
+    return map;
+  }
   const desktop = DESKTOP ? require('./desktop-sync').create({
     store, TABLES, cloudUrl: DESKTOP_CLOUD_URL, deviceId, reportDir: REPORT_PDFS_DIR,
     hashPassword, verifyPassword, isHashed,
@@ -676,7 +693,7 @@ async function main() {
     app.get('/api/saas/plans', async (req, res) => {
       const plans = await saas.getPlans();
       const out = {};
-      Object.keys(plans).forEach(k => { out[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'desc']); });
+      Object.keys(plans).forEach(k => { out[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'storageMb', 'desc']); });
       res.json({ plans: out, info: await publicPay() });
     });
     app.get('/api/saas/check-slug', async (req, res) => {
@@ -851,7 +868,7 @@ async function main() {
       const lab = req.lab || await saas.getLab('main');
       const pays = (await rawStore.all(saas.PAY_T)).filter(p => p.labId === lab.id).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
       const plans = await saas.getPlans(); const pl = {};
-      Object.keys(plans).forEach(k => { pl[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'desc']); });
+      Object.keys(plans).forEach(k => { pl[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'storageMb', 'desc']); });
       const v = await saas.view(lab, true); delete v.history;
       res.json({ lab: v, apps: req.user.apps || ['lab'], catalog: saas.catalogFor(req.user.apps || ['lab']), plans: pl, info: await publicPay(), online: gwReady(await gwLoad()), payments: pays.slice(0, 20).map(payView) });
     });
@@ -903,7 +920,7 @@ async function main() {
       if (b.plan !== undefined) { if (!plans[b.plan]) return res.status(400).json({ error: 'unknown plan' }); if (b.plan !== lab.plan) notes.push('Plan → ' + plans[b.plan].name); lab.plan = b.plan; }
       if (b.status !== undefined) { if (['active', 'suspended'].indexOf(b.status) < 0) return res.status(400).json({ error: 'status must be active or suspended' }); if (b.status !== lab.status) notes.push(b.status === 'suspended' ? 'Suspended' : 'Re-activated'); lab.status = b.status; }
       ['trialEndsAt', 'paidUntil'].forEach(k => { if (b[k] !== undefined) { lab[k] = b[k] ? new Date(b[k]).toISOString() : null; notes.push(k + ' → ' + (lab[k] ? lab[k].slice(0, 10) : 'none')); } });
-      ['limitUsers', 'limitInvoices'].forEach(k => { if (b[k] !== undefined) lab[k] = (b[k] === '' || b[k] === null) ? null : Math.max(0, +b[k] || 0); });
+      ['limitUsers', 'limitInvoices', 'limitStorageMb'].forEach(k => { if (b[k] !== undefined) lab[k] = (b[k] === '' || b[k] === null) ? null : Math.max(0, +b[k] || 0); });
       if (b.maxBranches !== undefined) { const mb = Math.max(0, Math.floor(+b.maxBranches || 0)); if (mb !== lab.maxBranches) notes.push('maxBranches → ' + mb); lab.maxBranches = mb; }
       if (b.features !== undefined && b.features !== null && typeof b.features === 'object') {
         /* dashboard + settings are core routes and cannot be disabled for a lab */
@@ -957,6 +974,7 @@ async function main() {
           if (o === lab.id) { fs.rmSync(path.join(REPORT_PDFS_DIR, f), { force: true }); fs.rmSync(path.join(REPORT_PDFS_DIR, f.replace(/\.owner$/, '.pdf')), { force: true }); }
         }
       } catch (e) { /* best effort */ }
+      pdfUsageCache = null;
       await rawStore.del(saas.LABS_T, lab.id); (await saas.loadLabs()).delete(lab.id);
       for (const p of await rawStore.all(saas.PAY_T)) if (p.labId === lab.id) await rawStore.del(saas.PAY_T, p.id);
       console.log('[labpos-cloud] saas: lab deleted:', lab.slug);
@@ -1358,7 +1376,7 @@ async function main() {
       }
       if (b.plans && typeof b.plans === 'object') {
         const cur = (await rawStore.getMeta('saas_plans')) || {};
-        Object.keys(saas.DEFAULT_PLANS).forEach(k => { if (b.plans[k]) cur[k] = Object.assign({}, cur[k] || {}, clean(b.plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'desc'])); });
+        Object.keys(saas.DEFAULT_PLANS).forEach(k => { if (b.plans[k]) cur[k] = Object.assign({}, cur[k] || {}, clean(b.plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'storageMb', 'desc'])); });
         await rawStore.setMeta('saas_plans', cur);
       }
       res.json({ ok: true, settings: await saas.getSettings(), plans: await saas.getPlans() });
@@ -1479,7 +1497,15 @@ async function main() {
       /* one lab can never overwrite another lab's PDF: each key remembers its owner (files from before SaaS belong to the default lab) */
       const fpdf = path.join(REPORT_PDFS_DIR, key + '.pdf'), fown = path.join(REPORT_PDFS_DIR, key + '.owner'), me = req.lab ? req.lab.id : 'main';
       if (fs.existsSync(fpdf) && (fs.existsSync(fown) ? fs.readFileSync(fown, 'utf8').trim() : 'main') !== me) return res.status(409).json({ error: 'key already in use' });
-      fs.writeFileSync(fpdf, buf);
+      if (saas && req.lab) { /* storage quota of the plan: new bytes minus what this key already holds */
+        const lim = (await saas.limitsOf(req.lab)).storageMb;
+        if (lim) {
+          pdfUsageCache = null;
+          let had = 0; try { had = fs.statSync(fpdf).size; } catch (e) { /* new file */ }
+          if (((pdfUsage().get(me) || 0) - had + buf.length) > lim * 1048576) return res.status(413).json({ error: 'Report storage (' + lim + ' MB) of your plan is full. Upgrade the plan or ask support for more space.', code: 'LIMIT_STORAGE' });
+        }
+      }
+      fs.writeFileSync(fpdf, buf); pdfUsageCache = null;
       if (!DESKTOP) fs.writeFileSync(fown, me);
       if (DESKTOP) desktop.onPdfSaved(key); /* uploaded to the cloud as soon as a session is available */
       res.json({ ok: true, key, url: (DESKTOP ? DESKTOP_CLOUD_URL : (PUBLIC_API_URL || (req.protocol + '://' + req.get('host')))) + '/r/' + key });
