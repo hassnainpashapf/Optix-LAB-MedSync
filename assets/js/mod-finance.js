@@ -162,7 +162,14 @@
     '.fn-page{max-width:1280px;margin:0 auto}' +
     '.fn-bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px}' +
     '.fn-bar .sp{flex:1}' +
-    '.fn-tabs a.tab{text-decoration:none;display:inline-flex;align-items:center;gap:8px}' +
+    '.fn-tabs{display:flex;gap:18px;border-bottom:1px solid var(--line);margin-bottom:18px;align-items:flex-end}' +
+    '.fn-tabs a.tab{text-decoration:none;display:inline-flex;align-items:center;gap:10px;padding:8px 4px 12px;border-bottom:3px solid transparent;margin-bottom:-1px;color:var(--ink2);font-weight:800;letter-spacing:-.01em}' +
+    '.fn-tabs a.tab .tab-ico{width:28px;height:28px;border-radius:8px;background:#f8fafc;border:1px solid var(--line);display:grid;place-items:center;color:var(--ink2);box-shadow:inset 0 1px 0 rgba(255,255,255,.65)}' +
+    '.fn-tabs a.tab .tab-ico svg{width:16px;height:16px;stroke:currentColor}' +
+    '.fn-tabs a.tab.on{color:var(--ink);border-bottom-color:var(--ink);background:transparent}' +
+    '.fn-tabs a.tab.on .tab-ico{background:var(--brand-soft);border-color:rgba(14,165,164,.28);color:var(--brand-d)}' +
+    '.fn-tabs a.tab .tab-ico-alt{background:#fff5f2;border-color:#f2d3c8;color:#d53d2d}' +
+    '.fn-tabs a.tab.on .tab-ico-alt{background:#fff1f0;border-color:#f4c9bf;color:#c03728}' +
     '.fn-date{display:flex;align-items:center;gap:8px;flex-wrap:wrap}' +
     '.fn-date .input{width:auto;min-width:150px}' +
     '.fn-ib{width:38px;height:38px;border-radius:10px;border:2px solid var(--bd);background:#fff;color:var(--ink2);font-weight:800;font-size:16px;display:grid;place-items:center;padding:0}' +
@@ -261,9 +268,11 @@
     return '<span class="' + (d < 0 ? 'fn-neg' : 'fn-pos') + '">' + (d < 0 ? 'Short ' : 'Over ') + money(Math.abs(d)) + '</span>';
   }
   function tabsHtml(active) {
+    var calendarIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/></svg>';
+    var chartIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18V6"/><path d="M4 18h16"/><path d="M7 14l4-4 3 2 6-8"/><path d="M17 4h3v3"/></svg>';
     return '<div class="tabs fn-tabs" style="margin-bottom:18px">' +
-      '<a class="tab' + (active === 'closing' ? ' on' : '') + '" href="#/finance" data-fntab="closing">📅 Close Day (Daily Cash)</a>' +
-      (canProfit() ? '<a class="tab' + (active === 'profit' ? ' on' : '') + '" href="#/finance/profit" data-fntab="profit">📈 Profit &amp; Loss Statement</a>' : '') +
+      '<a class="tab' + (active === 'closing' ? ' on' : '') + '" href="#/finance" data-fntab="closing"><span class="tab-ico">' + calendarIcon + '</span>Close Day (Daily Cash)</a>' +
+      (canProfit() ? '<a class="tab' + (active === 'profit' ? ' on' : '') + '" href="#/finance/profit" data-fntab="profit"><span class="tab-ico tab-ico-alt">' + chartIcon + '</span>Profit &amp; Loss Statement</a>' : '') +
       '</div>';
   }
 

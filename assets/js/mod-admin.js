@@ -1449,8 +1449,7 @@
     }
 
     if (!curPat) {
-      var emptyHtml = '<div class="page-head"><div><h1>📈 Patient Historical Trend &amp; Delta Analysis Center</h1>'
-        + '<p class="muted">Track multi-visit biometric trajectories, evaluate delta variations, and monitor patient health recovery over time.</p></div></div>'
+      var emptyHtml = '<div class="page-head"><div><h1>📈 Patient Historical Trend &amp; Delta Analysis Center</h1></div></div>'
         + '<div class="card"><div class="card-b">' + App.empty('No patients registered in the system yet. Register patients and enter lab results to see trend charts.') + '</div></div>';
       document.getElementById('view').innerHTML = emptyHtml;
       return;
