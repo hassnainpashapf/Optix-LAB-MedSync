@@ -785,7 +785,7 @@
        A key that is in no section simply shows at the bottom. */
     var SECTIONS = [
       { label: 'Overview', keys: ['dashboard', 'branches'] },
-      { label: 'Laboratory', keys: ['patients', 'samples', 'results', 'invoices', 'inventory-stock', 'tests', 'packages', 'folder:lab'] },
+      { label: 'Laboratory', keys: ['patients', 'appointments', 'samples', 'results', 'invoices', 'inventory-stock', 'tests', 'packages', 'folder:lab'] },
       { label: 'Finance', keys: ['folder:acct'] },
       { label: 'Insights', keys: ['reports', 'audit'] },
       { label: 'Communication', keys: ['folder:tools'] },
@@ -816,7 +816,7 @@
         if (k.indexOf('folder:') === 0) { html += folderHtml(FOLDERS.filter(function (f) { return 'folder:' + f.id === k; })[0]); return; }
         if (byKey[k]) { html += itemHtml(byKey[k]); placed[k] = 1; }
       });
-      if (html) items += '<div class="nav-sec">' + sec.label + '</div>' + html;
+      if (html) items += '<div class="nav-sec2">' + sec.label + '</div>' + html;
     });
     visible.forEach(function (n) { if (!placed[n.key]) items += itemHtml(n); });
     /* current user record (for profile photo in avatar & sidebar) */
