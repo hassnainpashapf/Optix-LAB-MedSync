@@ -42,6 +42,9 @@ const DEFAULT_PRODUCTS = [
   { id: 'pharmacy', name: 'Pharmacy POS', sub: 'Medicines, stock and billing counter', color: '#2f6df6', icon: 'pill',
     url: 'https://pharmacy-pos.ellahabad.workers.dev', host: false,
     roles: [{ value: 'ADMIN', label: 'Admin' }, { value: 'MANAGER', label: 'Manager' }, { value: 'PHARMACIST', label: 'Pharmacist' }, { value: 'CASHIER', label: 'Cashier' }] },
+  { id: 'hospital', name: 'Hospital Management', sub: 'Patients, doctors, billing and wards', color: '#0f766e', icon: 'users',
+    url: 'https://hospital.150.230.52.29.sslip.io/app', host: false,
+    roles: [{ value: 'SUPER_ADMIN', label: 'Super Admin' }, { value: 'DOCTOR', label: 'Doctor' }, { value: 'RECEPTIONIST', label: 'Receptionist' }, { value: 'ACCOUNTANT', label: 'Accountant' }, { value: 'PHARMACIST', label: 'Pharmacist' }] },
 ];
 const PRODUCT_ID_RE = /^[a-z][a-z0-9-]{1,19}$/;
 /* validate / normalise an edited registry; throws a readable Error */

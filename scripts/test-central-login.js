@@ -58,7 +58,7 @@ const auth = (t) => ({ Authorization: 'Bearer ' + t });
     assert.deepEqual((await login('plain')).d.apps, ['lab'], 'a user without a list gets the lab only, never the pharmacy by default');
 
     /* the product list is a registry: the superadmin can add a product, pick roles for it, and give a business access */
-    r = await j('GET', '/api/saas/products', null, SK); assert.equal(r.s, 200); assert.deepEqual(r.d.products.map((p) => p.id), ['lab', 'pharmacy']);
+    r = await j('GET', '/api/saas/products', null, SK); assert.equal(r.s, 200); assert.deepEqual(r.d.products.map((p) => p.id), ['lab', 'pharmacy', 'hospital']);
     assert.ok([401, 403].includes((await j('GET', '/api/saas/products')).s), 'registry is superadmin only');
     const reg = r.d.products.concat([{ id: 'crm', name: 'Optix CRM', sub: 'Leads and follow-ups', color: '#7c3aed', icon: 'users', url: 'https://crm.example.pk', roles: [{ value: 'agent', label: 'Agent' }, { value: 'MANAGER', label: 'Manager' }] }]);
     assert.equal((await j('PUT', '/api/saas/products', { products: reg.filter((p) => p.id !== 'lab') }, SK)).s, 400, 'the lab product cannot be removed');
