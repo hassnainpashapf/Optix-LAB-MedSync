@@ -21,7 +21,7 @@ const auth = (t) => ({ Authorization: 'Bearer ' + t });
 (async () => {
   const srv = spawn(process.execPath, [path.join(__dirname, '..', 'cloud', 'server.js')], {
     cwd: path.join(__dirname, '..', 'cloud'),
-    env: Object.assign({}, process.env, { DB_ADAPTER: 'sqlite', PORT: String(PORT), SQLITE_PATH: path.join(dir, 't.db'), DATA_DIR: dir, SUPERADMIN_KEY: 'k', SESSION_SECRET: 'x', ADMIN_PASSWORD: 'admin123', PHARMACY_URL: 'https://pharmacy.example', CORS_ORIGINS: 'https://example.org' }),
+    env: Object.assign({}, process.env, { DB_ADAPTER: 'sqlite', PORT: String(PORT), SQLITE_PATH: path.join(dir, 't.db'), DATA_DIR: dir, SUPERADMIN_KEY: 'k', SESSION_SECRET: 'x', ADMIN_PASSWORD: 'admin123', PHARMACY_URL: 'https://pharmacy.example', CORS_ORIGINS: 'https://example.org', MAIL_DEBUG_FILE: path.join(dir, 'mail.jsonl') }),
     stdio: 'ignore',
   });
   try {
@@ -53,6 +53,7 @@ const auth = (t) => ({ Authorization: 'Bearer ' + t });
     const login = (u) => j('POST', '/api/auth/login', { username: u, password: 'pass1234', lab: 'both-co' });
     assert.deepEqual((await login('both')).d.apps, ['lab', 'pharmacy']);
     r = await login('pharm'); assert.deepEqual(r.d.apps, ['pharmacy']); assert.equal(r.d.user.pharmacyRole, 'CASHIER', 'pharmacy role travels with the login');
+    assert.equal(r.d.user.username, 'pharm', 'the username travels with the login (the pharmacy app needs it for its local account)');
     const pharmTok = r.d.token;
     assert.deepEqual((await login('plain')).d.apps, ['lab'], 'a user without a list gets the lab only, never the pharmacy by default');
 
@@ -68,6 +69,13 @@ const auth = (t) => ({ Authorization: 'Bearer ' + t });
     assert.equal((await j('GET', '/api/wa/status', null, auth(pharmTok))).s, 200, 'WhatsApp status is shared');
     assert.equal((await j('GET', '/api/sms/status', null, auth(pharmTok))).s, 200, 'SIM SMS status is shared');
     r = await j('GET', '/api/saas/me', null, auth(pharmTok)); assert.deepEqual(r.d.apps, ['pharmacy']);
+
+    /* shared email: any signed-in user of the business can send a plain message through the business mailbox */
+    r = await j('POST', '/api/mail/send', { to: 'customer@example.pk', subject: 'Your order', text: 'Hello from the pharmacy' }, auth(pharmTok));
+    assert.equal(r.s, 200, 'plain email sent'); assert.match(fs.readFileSync(path.join(dir, 'mail.jsonl'), 'utf8'), /Hello from the pharmacy/);
+    assert.equal((await j('POST', '/api/mail/send', { to: 'not-an-email', subject: 's', text: 't' }, auth(pharmTok))).s, 400, 'bad address refused');
+    assert.equal((await j('POST', '/api/mail/send', { to: 'a@b.pk', subject: '', text: 't' }, auth(pharmTok))).s, 400, 'empty subject refused');
+    assert.equal((await j('POST', '/api/mail/send', { to: 'a@b.pk', subject: 's', text: 't' })).s, 401, 'email needs a signed-in user');
 
     /* one-time tickets */
     r = await j('POST', '/api/sso/ticket', { app: 'pharmacy' }, auth(bothTok));

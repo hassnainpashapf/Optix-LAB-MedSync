@@ -442,7 +442,7 @@ async function main() {
     if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
     if (!isHashed(u.password)) await lstore.put('users', Object.assign({}, u, { password: hashPassword(password) }));
     const fresh = (await lstore.get('users', u.id)) || u;
-    const user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined, pharmacyRole: u.pharmacyRole || undefined };
+    const user = { id: u.id, name: u.name, username: u.username, email: u.email || undefined, role: u.role, roleId: u.roleId || undefined, pharmacyRole: u.pharmacyRole || undefined };
     await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username });
     const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(fresh), exp: Date.now() + TOKEN_TTL_MS });
     res.json({ ok: true, user, token, lab: await saas.view(lab), apps: saas.appsFor(lab, fresh) });
@@ -819,7 +819,7 @@ async function main() {
         const lstore = saas.storeFor(lab), u = await lstore.get('users', rec.uid);
         if (!u || u.active === false) return res.status(401).json({ error: 'This login is no longer active.' });
         const apps = saas.appsFor(lab, u); if (apps.indexOf(rec.app) < 0) return res.status(403).json({ error: 'You do not have access to this app.' });
-        const user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined, pharmacyRole: u.pharmacyRole || undefined };
+        const user = { id: u.id, name: u.name, username: u.username, email: u.email || undefined, role: u.role, roleId: u.roleId || undefined, pharmacyRole: u.pharmacyRole || undefined };
         await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username + ' (via ' + rec.app + ')' });
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         res.json({ ok: true, user, token, lab: await saas.view(lab), apps, app: rec.app });
@@ -1503,6 +1503,23 @@ async function main() {
       } catch (e) { console.error('[labpos-cloud] report email failed:', String((e && e.message) || e).slice(0, 200)); res.status(502).json({ error: mailer.friendlyError(e) }); }
     });
 
+    /* a plain message by email through the business's shared mailbox: used by the Pharmacy POS (and any other app on this account) */
+    app.post('/api/mail/send', needUser, async (req, res) => {
+      try {
+        if (!mailer.configured()) return res.status(503).json({ error: 'Email sending is not set up on this server yet. Ask the system owner to set it up.' });
+        const b = req.body || {}, to = String(b.to || '').trim(), lid = req.lab ? req.lab.id : 'main';
+        const subject = clean1(b.subject, 150), text = String(b.text || '').trim();
+        if (!EMAIL_OK.test(to) || to.length > 120 || /[,;\s]/.test(to)) return res.status(400).json({ error: 'Enter one valid email address' });
+        if (!subject || !text || text.length > 4000) return res.status(400).json({ error: 'The subject or message is empty, or the message is too long' });
+        if (bump(shareUser, req.user.id + '|' + lid, 60000).n > 6) return res.status(429).json({ error: 'Too many emails in a minute. Please wait a moment.' });
+        if (bump(shareLab, lid, 86400000).n > EMAILS_PER_DAY) return res.status(429).json({ error: 'Your business reached today\'s limit of ' + EMAILS_PER_DAY + ' emails. It resets in 24 hours.' });
+        const st = (await req.store.get('settings', 'main')) || {}, labName = clean1(st.labName || (req.lab && req.lab.name) || 'Your business', 80);
+        await mailer.send({ to, subject, text, fromName: labName + ' (via Optix Medical Sync)', replyTo: EMAIL_OK.test(String(st.email || '')) ? String(st.email).trim() : undefined });
+        await auditLog(req, 'email-message', 'message', '', { label: maskEmail(to) + ' — ' + subject.slice(0, 60) });
+        res.json({ ok: true });
+      } catch (e) { console.error('[labpos-cloud] email failed:', String((e && e.message) || e).slice(0, 200)); res.status(502).json({ error: mailer.friendlyError(e) }); }
+    });
+
     app.post('/api/backup/email', needAdmin, async (req, res) => {
       try {
         const b = req.body || {}, to = String(b.email || '').trim();
@@ -2017,7 +2034,7 @@ async function main() {
       if (!to || to.length < 10) return res.status(400).json({ error: 'The phone number does not look right' });
       const text = String(b.text || '').trim();
       if (!text || text.length > 1000) return res.status(400).json({ error: 'The message is empty or too long' });
-      const kind = ['report', 'due', 'critical', 'test'].indexOf(b.kind) >= 0 ? b.kind : 'report';
+      const kind = ['report', 'due', 'critical', 'test', 'message'].indexOf(b.kind) >= 0 ? b.kind : 'report';
       const toRole = b.toRole === 'doctor' ? 'doctor' : 'patient';
       const store = req.store;
       /* idempotency: never queue the same report/due SMS twice for an invoice */
@@ -2027,7 +2044,7 @@ async function main() {
         if (dup) return res.json({ ok: true, duplicate: true });
       }
       const row = { id: smsRowId(), to, text, kind, invoiceId: b.invoiceId || null, invoiceNo: String(b.invoiceNo || ''),
-        toName: String(b.toName || ''), toRole, status: 'pending', attempts: 0, error: '',
+        toName: String(b.toName || ''), toRole, source: String(b.source || '').replace(/[^a-z-]/gi, '').slice(0, 20), status: 'pending', attempts: 0, error: '',
         ts: new Date().toISOString(), sentAt: '', deliveredAt: '', gatewayId: '' };
       await store.put('sms_outbox', row);
       res.json({ ok: true, id: row.id });
