@@ -1160,7 +1160,12 @@
       + '.hs-badge-status { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .03em; display: inline-flex; align-items: center; gap: 4px; }'
       + '</style>'
       + '<div class="hs-dash">'
-      + (listOnly ? '' : '<div class="stat-grid">'
+      + (listOnly ? '<div class="stat-grid">'
+          + statCard('brand', STAT_ICON.box, 'Total Bookings', tabCounts.all, 'all home collection bookings')
+          + statCard('amber', STAT_ICON.clock, 'Scheduled', tabCounts.scheduled, 'waiting for dispatch')
+          + statCard('green', STAT_ICON.check, 'Completed', (tabCounts.collected || 0) + (tabCounts.received_in_lab || 0), 'collected or received in lab')
+          + statCard('red', App.icon('x', 18), 'Cancelled', tabCounts.cancelled, 'bookings cancelled')
+          + '</div>' : '<div class="stat-grid">'
       + [
           { label: "Today's Bookings", value: todayBookings.length, subtitle: 'Scheduled for today', tint: 'blue', icon: STAT_ICON.cal },
           { label: 'Pending Dispatch', value: pendingCount, subtitle: 'Scheduled · All dates', tint: 'amber', icon: STAT_ICON.clock },
@@ -1169,7 +1174,7 @@
         ].map(function (card) {
           return statCard(card.tint, card.icon, App.esc(card.label), App.esc(String(card.value)), App.esc(card.subtitle));
         }).join('')
-      + '</div>') /* the All Bookings menu shows the list only; the cards belong to Home Sampling & Dispatch */
+      + '</div>') /* All Bookings has its own booking-status cards; Home Sampling & Dispatch keeps today / dispatch cards */
 
       /* Search & Filter Card with Integrated Status Pipeline Tabs */
       + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="padding:14px 16px">'
