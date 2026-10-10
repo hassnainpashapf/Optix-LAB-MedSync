@@ -814,6 +814,11 @@ async function main() {
       const base = prod.host ? APP_URL + '/app' : ((target === 'pharmacy' && process.env.PHARMACY_URL) ? process.env.PHARMACY_URL.replace(/\/+$/, '') : prod.url);
       res.json({ ok: true, ticket, url: base + '/#/sso?ticket=' + ticket });
     });
+    /* the public face of the suite (no sign-in): what the main Optix website shows about every product */
+    app.get('/api/suite/products', (req, res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*'); res.setHeader('Cache-Control', 'public, max-age=60');
+      res.json({ suite: 'Optix Suite', hub: apiBase(req), products: saas.getProducts().map((p) => ({ id: p.id, name: p.name, sub: p.sub, color: p.color, icon: p.icon, desc: p.desc || '', features: p.features || [], downloads: p.downloads || [], site: p.site || '', url: p.host ? APP_URL + '/app/' : p.url, host: !!p.host })) });
+    });
     /* the suite's product list: the superadmin adds / edits products here (name, colour, icon, web address, roles) */
     app.get('/api/saas/products', requireSuperadmin, (req, res) => res.json({ products: saas.getProducts(), icons: saasMod.PRODUCT_ICONS }));
     app.put('/api/saas/products', requireSuperadmin, async (req, res) => {

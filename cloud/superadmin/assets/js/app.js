@@ -2132,7 +2132,11 @@ function productRowHtml(p, icons) {
     '<div><label class="label">Icon</label><select class="input pd-icon">' + icons.map(function (i) { return '<option value="' + i + '"' + (p.icon === i ? ' selected' : '') + '>' + i + '</option>'; }).join('') + '</select></div>' +
     '<div style="grid-column:span 2"><label class="label">Web address</label><input class="input pd-url" value="' + esc(p.url) + '" ' + (isLab ? 'disabled placeholder="this site (built in)"' : 'placeholder="https://crm.example.pk"') + '></div>' +
     '<div style="grid-column:1/-1"><label class="label">Roles inside this product <span class="hint">(optional, VALUE:Label, comma separated)</span></label><input class="input pd-roles" value="' + esc((p.roles || []).map(function (r) { return r.value + ':' + r.label; }).join(', ')) + '" placeholder="ADMIN:Admin, AGENT:Agent"></div>' +
-    '</div>' + (isLab ? '' : '<button type="button" class="icon-btn danger" data-pd-del="' + esc(p.id) + '" aria-label="Remove product" title="Remove">' + IC.trash + '</button>') + '</div>';
+    '<div style="grid-column:1/-1"><label class="label">Website of this product <span class="hint">(its own site, shown on the main Optix website)</span></label><input class="input pd-site" value="' + esc(p.site || '') + '" placeholder="https://..."></div>' +
+    '<div style="grid-column:1/-1"><label class="label">Description <span class="hint">(main website)</span></label><textarea class="input pd-desc" rows="2" maxlength="500">' + esc(p.desc || '') + '</textarea></div>' +
+    '<div style="grid-column:1/-1"><label class="label">Features <span class="hint">(one per line, up to 8)</span></label><textarea class="input pd-feat" rows="3">' + esc((p.features || []).join('\n')) + '</textarea></div>' +
+    '<div style="grid-column:1/-1"><label class="label">Downloads <span class="hint">(one per line: platform | name | https address | note — platform is windows, mac, android, ios, linux or web)</span></label><textarea class="input pd-dl" rows="3" placeholder="windows | Windows 10 / 11 | https://... | Installer, 100 MB">' + esc((p.downloads || []).map(function (d) { return [d.platform, d.label, d.url, d.note || ''].join(' | '); }).join('\n')) + '</textarea></div>' +
+    '</div>' + (isLab ? '' : '<button type="button" class="icon-btn danger" data-pd-del=""' + esc(p.id) + '" aria-label="Remove product" title="Remove">' + IC.trash + '</button>') + '</div>';
 }
 function productsCardHtml(pr) {
   if (!pr || !pr.products) return '';
@@ -2148,7 +2152,10 @@ function collectProducts() {
   return Array.prototype.map.call(document.querySelectorAll('#pdList .pd-row'), function (row) {
     var q = function (c) { return row.querySelector(c); };
     return { id: q('.pd-id').value.trim().toLowerCase(), name: q('.pd-name').value.trim(), sub: q('.pd-sub').value.trim(), color: q('.pd-color').value, icon: q('.pd-icon').value, url: q('.pd-url').value.trim(),
-      roles: q('.pd-roles').value.split(',').map(function (x) { var p = x.split(':'); return { value: p[0].trim(), label: (p[1] || p[0]).trim() }; }).filter(function (r) { return r.value; }) };
+      roles: q('.pd-roles').value.split(',').map(function (x) { var p = x.split(':'); return { value: p[0].trim(), label: (p[1] || p[0]).trim() }; }).filter(function (r) { return r.value; }),
+      site: q('.pd-site').value.trim(), desc: q('.pd-desc').value.trim(),
+      features: q('.pd-feat').value.split('\n').map(function (x) { return x.trim(); }).filter(Boolean),
+      downloads: q('.pd-dl').value.split('\n').map(function (x) { var p = x.split('|').map(function (y) { return y.trim(); }); return { platform: (p[0] || '').toLowerCase(), label: p[1] || '', url: p[2] || '', note: p[3] || '' }; }).filter(function (d) { return d.label || d.url; }) };
   });
 }
 function wireProductsCard() {

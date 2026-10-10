@@ -38,13 +38,29 @@ const DEFAULT_MAX_BRANCHES = 5;
    'lab' is the product that hosts the hub today; it cannot be removed. */
 const PRODUCT_ICONS = ['flask', 'pill', 'cart', 'truck', 'users', 'chart', 'box', 'file'];
 const DEFAULT_PRODUCTS = [
-  { id: 'lab', name: 'Blood Test Lab', sub: 'Patients, tests, reports and invoices', color: '#0ea5a4', icon: 'flask', url: '', roles: [], host: true },
+  { id: 'lab', name: 'Blood Test Lab', sub: 'Patients, tests, reports and invoices', color: '#0ea5a4', icon: 'flask', url: '', roles: [], host: true,
+    desc: 'Everything a diagnostic lab runs on: patient registration, a ready test catalog, result entry, printed and QR-verified reports, billing and dues, WhatsApp / SIM SMS / Email, branches and cloud backup.',
+    features: ['Patients, invoices, dues and daily cash closing', '5000+ tests with report templates and reference ranges', 'QR-verified reports sent by WhatsApp, SMS or Email', 'Roles, audit log and multi-branch control', 'Works offline on desktop and syncs to the cloud'],
+    site: 'https://optix-lab-medsync.pages.dev/',
+    downloads: [
+      { platform: 'windows', label: 'Windows 10 / 11 (64-bit)', url: 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-Setup-1.4.0-win10-11-x64.exe', note: 'Installer, about 100 MB' },
+      { platform: 'windows', label: 'Windows 7 / 8 (64-bit)', url: 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-Setup-1.4.0-win7-8-x64.exe', note: 'Installer, about 75 MB' },
+      { platform: 'mac', label: 'Mac (Apple chip)', url: 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-1.3.1-arm64.dmg.tar.gz', note: 'Version 1.3.1' },
+      { platform: 'mac', label: 'Mac (Intel)', url: 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-1.3.1-x64.dmg.tar.gz', note: 'Version 1.3.1' },
+      { platform: 'android', label: 'Android app', url: 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.1.0.apk', note: 'Version 2.1.0, also sends SMS from the phone SIM' }] },
   { id: 'pharmacy', name: 'Pharmacy POS', sub: 'Medicines, stock and billing counter', color: '#2f6df6', icon: 'pill',
     url: 'https://pharmacy-pos.ellahabad.workers.dev', host: false,
-    roles: [{ value: 'ADMIN', label: 'Admin' }, { value: 'MANAGER', label: 'Manager' }, { value: 'PHARMACIST', label: 'Pharmacist' }, { value: 'CASHIER', label: 'Cashier' }] },
+    roles: [{ value: 'ADMIN', label: 'Admin' }, { value: 'MANAGER', label: 'Manager' }, { value: 'PHARMACIST', label: 'Pharmacist' }, { value: 'CASHIER', label: 'Cashier' }],
+    desc: 'A fast point of sale for pharmacies: barcode checkout, batch and expiry control, purchases and suppliers, returns, customer credit and loyalty, shifts and reports. Runs offline-first on the counter.',
+    features: ['Barcode billing with FEFO batch and expiry control', 'Purchases, suppliers, returns and stock audit', 'Customer ledger (udhar), loyalty and wholesale rates', 'Shift closing, accounting and reports', 'Messages to customers by WhatsApp, SMS or Email'],
+    site: 'https://pharmacy-pos.ellahabad.workers.dev/',
+    downloads: [{ platform: 'windows', label: 'Windows installer', url: 'https://github.com/hassnainpashapf/Pharmacy-POS/releases/download/v2.0.0/Optix-MedSync-Setup-2.0.0.exe', note: 'Version 2.0.0, about 120 MB' }] },
   { id: 'hospital', name: 'Hospital Management', sub: 'Patients, doctors, billing and wards', color: '#0f766e', icon: 'users',
     url: 'https://hospital.150.230.52.29.sslip.io/app', host: false,
-    roles: [{ value: 'SUPER_ADMIN', label: 'Super Admin' }, { value: 'DOCTOR', label: 'Doctor' }, { value: 'RECEPTIONIST', label: 'Receptionist' }, { value: 'ACCOUNTANT', label: 'Accountant' }, { value: 'PHARMACIST', label: 'Pharmacist' }] },
+    roles: [{ value: 'SUPER_ADMIN', label: 'Super Admin' }, { value: 'DOCTOR', label: 'Doctor' }, { value: 'RECEPTIONIST', label: 'Receptionist' }, { value: 'ACCOUNTANT', label: 'Accountant' }, { value: 'PHARMACIST', label: 'Pharmacist' }],
+    desc: 'A hospital system with a workspace for every hospital: appointments and doctor calendars, patient records, billing and transactions, suppliers and stock, staff roles and an audit trail.',
+    features: ['No double-booked doctors, calendar and appointments', 'Patient records, vitals and reservations', 'Billing, transactions, suppliers and stock', 'Access by role, enforced on the server', 'Every change written to an audit log'],
+    site: 'https://hospital.150.230.52.29.sslip.io/', downloads: [] },
 ];
 const PRODUCT_ID_RE = /^[a-z][a-z0-9-]{1,19}$/;
 /* validate / normalise an edited registry; throws a readable Error */
@@ -61,7 +77,13 @@ function cleanProducts(list) {
     if (id !== 'lab' && !/^https:\/\/[^\s/]+(\/[^\s]*)?$|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[^\s]*)?$/.test(url)) throw new Error('Product "' + id + '" needs its web address (https://...).');
     const roles = (Array.isArray(p.roles) ? p.roles : []).slice(0, 10).map((r) => ({ value: String((r && r.value) || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 30), label: String((r && r.label) || '').trim().slice(0, 40) }))
       .filter((r) => r.value).map((r) => ({ value: r.value, label: r.label || r.value }));
-    return { id, name, sub: String(p.sub || '').trim().slice(0, 80), color, icon: PRODUCT_ICONS.indexOf(p.icon) >= 0 ? p.icon : 'box', url: id === 'lab' ? '' : url, roles, host: id === 'lab' };
+    const okUrl = (u) => /^https:\/\/[^\s/]+(\/[^\s]*)?$|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[^\s]*)?$/.test(u);
+    const features = (Array.isArray(p.features) ? p.features : []).map((x) => String(x || '').trim().slice(0, 90)).filter(Boolean).slice(0, 8);
+    const downloads = (Array.isArray(p.downloads) ? p.downloads : []).slice(0, 12).map((d) => ({ platform: ['windows', 'mac', 'android', 'ios', 'linux', 'web'].indexOf(d && d.platform) >= 0 ? d.platform : 'web', label: String((d && d.label) || '').trim().slice(0, 50), url: String((d && d.url) || '').trim().slice(0, 300), note: String((d && d.note) || '').trim().slice(0, 80) }))
+      .filter((d) => d.label || d.url).map((d) => { if (!d.label || !okUrl(d.url)) throw new Error('Each download of "' + id + '" needs a name and an https address.'); return d; });
+    const site = String(p.site || '').trim().slice(0, 200); if (site && !okUrl(site)) throw new Error('The website address of "' + id + '" must start with https://');
+    return { id, name, sub: String(p.sub || '').trim().slice(0, 80), color, icon: PRODUCT_ICONS.indexOf(p.icon) >= 0 ? p.icon : 'box', url: id === 'lab' ? '' : url, roles, host: id === 'lab',
+      desc: String(p.desc || '').trim().slice(0, 500), features, downloads, site };
   });
   if (!seen.lab) throw new Error('The lab product cannot be removed.');
   return out;

@@ -57,6 +57,13 @@ const auth = (t) => ({ Authorization: 'Bearer ' + t });
     const pharmTok = r.d.token;
     assert.deepEqual((await login('plain')).d.apps, ['lab'], 'a user without a list gets the lab only, never the pharmacy by default');
 
+    /* the public face of the suite: the main website reads this without signing in */
+    const pub = await fetch(B + '/api/suite/products', { headers: { Origin: 'https://some-website.example' } }); const pj = await pub.json();
+    assert.equal(pub.status, 200); assert.equal(pub.headers.get('access-control-allow-origin'), '*', 'any website may read the public product list');
+    assert.deepEqual(pj.products.map((p) => p.id), ['lab', 'pharmacy', 'hospital']);
+    const labP = pj.products.find((p) => p.id === 'lab'); assert.ok(labP.desc.length > 20 && labP.features.length >= 3 && labP.downloads.some((d) => d.platform === 'android'), 'product info and downloads are there');
+    assert.ok(!('roles' in labP), 'roles stay private'); assert.match(labP.url, /\/app\/$/, 'the lab app address is the hub site');
+    assert.equal(pj.products.find((p) => p.id === 'pharmacy').url, 'https://pharmacy-pos.ellahabad.workers.dev', 'the pharmacy address comes from the registry');
     /* the product list is a registry: the superadmin can add a product, pick roles for it, and give a business access */
     r = await j('GET', '/api/saas/products', null, SK); assert.equal(r.s, 200); assert.deepEqual(r.d.products.map((p) => p.id), ['lab', 'pharmacy', 'hospital']);
     assert.ok([401, 403].includes((await j('GET', '/api/saas/products')).s), 'registry is superadmin only');
@@ -64,6 +71,7 @@ const auth = (t) => ({ Authorization: 'Bearer ' + t });
     assert.equal((await j('PUT', '/api/saas/products', { products: reg.filter((p) => p.id !== 'lab') }, SK)).s, 400, 'the lab product cannot be removed');
     assert.equal((await j('PUT', '/api/saas/products', { products: reg.concat([{ id: 'Bad Id', name: 'x', url: 'https://x.pk' }]) }, SK)).s, 400, 'bad product id refused');
     assert.equal((await j('PUT', '/api/saas/products', { products: reg.map((p) => p.id === 'crm' ? Object.assign({}, p, { url: 'ftp://nope' }) : p) }, SK)).s, 400, 'product needs an https address');
+    assert.equal((await j('PUT', '/api/saas/products', { products: reg.map((p) => p.id === 'crm' ? Object.assign({}, p, { downloads: [{ platform: 'windows', label: 'Setup', url: 'ftp://x' }] }) : p) }, SK)).s, 400, 'a download needs an https address');
     r = await j('PUT', '/api/saas/products', { products: reg }, SK); assert.equal(r.s, 200, 'product added'); assert.deepEqual(r.d.products.find((p) => p.id === 'crm').roles.map((x) => x.value), ['AGENT', 'MANAGER'], 'role values are normalised');
     const crmPre = await fetch(B + '/api/auth/login', { method: 'OPTIONS', headers: { Origin: 'https://crm.example.pk', 'Access-Control-Request-Method': 'POST' } });
     assert.equal(crmPre.headers.get('access-control-allow-origin'), 'https://crm.example.pk', 'a product added in the registry is allowed to call the API from its own address');
