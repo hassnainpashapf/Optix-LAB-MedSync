@@ -2083,9 +2083,9 @@
           ['Blood Group', t(pat.blood, 'Unknown')]
         ], [
           ['Phone', t(pat.phone || pat.whatsapp)],
-          ['Address', t(pat.address, '.')]
-        ], [
           ['CNIC', t(pat.cnic)]
+        ], [
+          ['Address', t(pat.address, '.')]
         ]
       ],
       visit: [
