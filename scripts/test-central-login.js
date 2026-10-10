@@ -65,6 +65,8 @@ const auth = (t) => ({ Authorization: 'Bearer ' + t });
     assert.equal((await j('PUT', '/api/saas/products', { products: reg.concat([{ id: 'Bad Id', name: 'x', url: 'https://x.pk' }]) }, SK)).s, 400, 'bad product id refused');
     assert.equal((await j('PUT', '/api/saas/products', { products: reg.map((p) => p.id === 'crm' ? Object.assign({}, p, { url: 'ftp://nope' }) : p) }, SK)).s, 400, 'product needs an https address');
     r = await j('PUT', '/api/saas/products', { products: reg }, SK); assert.equal(r.s, 200, 'product added'); assert.deepEqual(r.d.products.find((p) => p.id === 'crm').roles.map((x) => x.value), ['AGENT', 'MANAGER'], 'role values are normalised');
+    const crmPre = await fetch(B + '/api/auth/login', { method: 'OPTIONS', headers: { Origin: 'https://crm.example.pk', 'Access-Control-Request-Method': 'POST' } });
+    assert.equal(crmPre.headers.get('access-control-allow-origin'), 'https://crm.example.pk', 'a product added in the registry is allowed to call the API from its own address');
     r = await j('PUT', '/api/saas/labs/' + labId, { products: ['lab', 'pharmacy', 'crm'] }, SK); assert.equal(r.s, 200); assert.deepEqual(r.d.lab.products, ['lab', 'pharmacy', 'crm']);
     assert.deepEqual(r.d.lab.productInfo.map((p) => p.id), ['lab', 'pharmacy', 'crm'], 'the business view carries the product info for the admin screens');
     r = await login('both'); assert.deepEqual(r.d.apps, ['lab', 'pharmacy'], 'an existing user does not get the new product by themselves');

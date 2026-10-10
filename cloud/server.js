@@ -284,7 +284,9 @@ async function main() {
   app.use((req, res, next) => {
     const origin = req.get('Origin');
     if (CORS_ORIGINS.length) {
-      if (origin && (CORS_ORIGINS.includes(origin) || CORS_ALWAYS.includes(origin) || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin))) { /* + the desktop app's embedded page */ res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); }
+      /* every product in the suite registry may call this API from its own web address (so a new product needs no code change) */
+      const productOrigin = !!origin && !!saas && saas.getProducts().some((p) => { try { return !!p.url && new URL(p.url).origin === origin; } catch (e) { return false; } });
+      if (origin && (CORS_ORIGINS.includes(origin) || CORS_ALWAYS.includes(origin) || productOrigin || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin))) { /* + the desktop app's embedded page */ res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); }
     } else res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Superadmin-Key, X-Confirm-Slug, Authorization');
