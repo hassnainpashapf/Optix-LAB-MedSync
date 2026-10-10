@@ -571,6 +571,16 @@
       if (window.App && App[rf]) App[rf](); else location.hash = '#/login';
       return;
     }
+    /* one login for the Lab and the Pharmacy POS: arriving from the other site, and the "where do you want to go" chooser */
+    if (hash.indexOf('#/sso') === 0) { if (App.ssoLanding) App.ssoLanding(hash); return; }
+    if (s && s.apps && s.apps.length) {
+      var _chose = ''; try { _chose = sessionStorage.getItem('labpos_chose') || ''; } catch (e) {}
+      var _entry = hash === '#/dashboard' || hash === '' || hash === '#';
+      if (hash === '#/apps' || (s.apps.indexOf('lab') < 0) || (s.apps.length > 1 && !_chose && _entry)) {
+        if (hash !== '#/apps') { location.hash = '#/apps'; return; }
+        if (App.renderApps) App.renderApps(); return;
+      }
+    } else if (hash === '#/apps') { location.hash = s ? '#/dashboard' : '#/login'; return; }
     /* auth guard */
     if (!s && hash !== '#/login' && hash !== '#/signup') { location.hash = '#/login'; return; }
     if (s && (hash === '#/login' || hash === '#/signup' || hash === '' || hash === '#')) { location.hash = '#/dashboard'; return; }
@@ -910,6 +920,7 @@
       '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + _avatarInner + '</button>' +
       '<div class="tb-menu" id="userMenu" hidden>' +
       '<div class="tb-menu-head"><b>' + esc(s.name) + '</b>' + (s.role === 'custom' ? '<span class="badge b-ready">' + esc(roleLabel(s)) + '</span>' : badge(s.role)) + '</div>' +
+      ((s.apps && s.apps.length > 1) ? '<a class="tb-menu-it" href="#/apps">' + icon('grid', 16) + '<span>Switch app</span></a>' : '') +
       '<a class="tb-menu-it" href="#/profile">' + icon('gear', 16) + '<span>Settings</span></a>' +
       '<a class="tb-menu-it" href="#/profile">' + icon('lock', 16) + '<span>Change Password</span></a>' +
       '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +

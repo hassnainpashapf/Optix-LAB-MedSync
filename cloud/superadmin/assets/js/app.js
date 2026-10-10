@@ -1742,6 +1742,13 @@ function drawerHtml(l) {
     '<div class="span2"><label class="label" for="dfNotes">Internal notes</label><textarea class="input" id="dfNotes" rows="3" placeholder="Visible to operators only">' + esc(l.notes) + '</textarea></div>' +
     '</div><div style="margin-top:14px"><button class="btn btn-primary" id="drSave">Save changes</button></div></div>' +
 
+    '<div class="dr-sec"><h4>Apps (one login)</h4>' +
+    '<p class="hint">Which apps this business can open with a single login. The business admin then decides, per person, who gets which app (Settings &rarr; Users &amp; Roles). Someone with both sees two cards after signing in.</p>' +
+    '<div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:8px">' +
+    '<label style="display:inline-flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="drPrLab"' + (((l.products || ['lab']).indexOf('lab') >= 0) ? ' checked' : '') + '> Blood Test Lab</label>' +
+    '<label style="display:inline-flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="drPrPh"' + (((l.products || ['lab']).indexOf('pharmacy') >= 0) ? ' checked' : '') + '> Pharmacy POS</label></div>' +
+    '<div style="margin-top:12px"><button class="btn btn-primary" id="drProducts">Save apps</button></div></div>' +
+
     '<div class="dr-sec danger"><h4>Account</h4>' +
     '<div class="danger-row"><div><strong>Reset admin password</strong><p class="hint">Set a new password for this lab\'s admin login.</p></div>' +
     '<button class="btn btn-sm" id="drReset">Reset password</button></div>' +
@@ -1788,6 +1795,11 @@ function paintDrawer(animate) {
     doLabCall(re, api('/api/saas/labs/' + encodeURIComponent(l.id), { method: 'PUT', body: { status: 'active' } }), 'Lab re-activated.');
   });
   $('drSave').addEventListener('click', function () { saveLabForm(l, $('drSave')); });
+  $('drProducts').addEventListener('click', function () {
+    var p = []; if ($('drPrLab').checked) p.push('lab'); if ($('drPrPh').checked) p.push('pharmacy');
+    if (!p.length) { toast('Tick at least one app.', 'err'); return; }
+    doLabCall($('drProducts'), api('/api/saas/labs/' + encodeURIComponent(l.id), { method: 'PUT', body: { products: p } }), 'Apps updated for ' + l.name + '.');
+  });
   $('drReset').addEventListener('click', function () { resetAdminModal(l); });
   var del = $('drDelete');
   if (del && !l.legacy) del.addEventListener('click', function () { deleteLabModal(l); });

@@ -280,7 +280,7 @@ async function main() {
   app.use(express.json({ limit: '25mb' }));
   /* CORS (manual, no extra deps): the static frontend and phone QR scanners
      fetch /api/* and /r/* cross-origin */
-  const CORS_ALWAYS = ['https://optix-lab-medsync.pages.dev', 'https://labpos-api.150.230.52.29.sslip.io'];
+  const CORS_ALWAYS = ['https://optix-lab-medsync.pages.dev', 'https://labpos-api.150.230.52.29.sslip.io', 'https://pharmacy-pos.ellahabad.workers.dev', 'https://localhost', 'capacitor://localhost'];
   app.use((req, res, next) => {
     const origin = req.get('Origin');
     if (CORS_ORIGINS.length) {
@@ -442,10 +442,10 @@ async function main() {
     if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
     if (!isHashed(u.password)) await lstore.put('users', Object.assign({}, u, { password: hashPassword(password) }));
     const fresh = (await lstore.get('users', u.id)) || u;
-    const user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined };
+    const user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined, pharmacyRole: u.pharmacyRole || undefined };
     await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username });
     const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(fresh), exp: Date.now() + TOKEN_TTL_MS });
-    res.json({ ok: true, user, token, lab: await saas.view(lab) });
+    res.json({ ok: true, user, token, lab: await saas.view(lab), apps: saas.appsFor(lab, fresh) });
   });
 
   /* ---- audit trail: who created / changed / deleted what, and when. Written server-side only (clients cannot POST to
@@ -537,7 +537,7 @@ async function main() {
       let lab = null, ts = store;
       if (saas) { lab = await saas.getLab(t.lab || 'main'); ts = lab ? saas.storeFor(lab) : null; } /* tokens issued before SaaS belong to the default lab */
       const u = ts && await ts.get('users', t.uid); /* re-check: deleted/disabled users lose access immediately */
-      if (u && u.active !== false && (!t.pv || t.pv === pvOf(u))) { req.user = { id: u.id, role: u.role, name: u.name }; req.store = ts; req.lab = lab; }
+      if (u && u.active !== false && (!t.pv || t.pv === pvOf(u))) { req.user = { id: u.id, role: u.role, name: u.name, apps: saas ? saas.appsFor(lab, u) : ['lab'] }; req.store = ts; req.lab = lab; }
 
     }
     /* custom roles (made in Settings -> Users & Roles): the pages a role ticks decide what its users may change; this is enforced here, not just hidden in the app */
@@ -688,7 +688,7 @@ async function main() {
         const u = (await saas.storeFor(lab).all('users'))[0];
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         console.log('[labpos-cloud] saas: new lab signed up:', lab.slug, '<' + lab.ownerEmail + '>');
-        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab) });
+        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), apps: saas.appsFor(lab, u) });
       } catch (e) { res.status(400).json({ error: e.message }); }
     });
 
@@ -751,7 +751,7 @@ async function main() {
         const u = (await saas.storeFor(lab).all('users'))[0];
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         console.log('[labpos-cloud] saas: new lab signed up with Google:', lab.slug, '<' + lab.ownerEmail + '>');
-        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), google: { username, passwordSet: !!String(b.password || '') } });
+        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), apps: saas.appsFor(lab, u), google: { username, passwordSet: !!String(b.password || '') } });
       } catch (e) { res.status(e.status || 400).json({ error: e.message }); }
     });
     /* sign in with Google: with a Lab ID typed, any active user of that lab whose profile email is this Google email; without one,
@@ -789,18 +789,49 @@ async function main() {
         const lstore = saas.storeFor(lab), user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined };
         await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username + ' (Google)' });
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
-        res.json({ ok: true, user, token, lab: await saas.view(lab) });
+        res.json({ ok: true, user, token, lab: await saas.view(lab), apps: saas.appsFor(lab, u) });
       } catch (e) { res.status(e.status || 400).json({ error: e.message }); }
     });
 
     /* ---- signed-in lab: my subscription ---- */
+    /* ---- one login for both apps. After signing in on either site the person picks an app; moving to the other site uses a
+       one-time ticket (60 s, single use) that the other site swaps for its own token, so no password and no long-lived token
+       ever travels in a URL. The ticket only works for an app the user is allowed into. ---- */
+    const ssoTickets = new Map(), ssoHits = new Map();
+    const PHARMACY_URL = (process.env.PHARMACY_URL || 'https://pharmacy-pos.ellahabad.workers.dev').replace(/\/+$/, '');
+    app.post('/api/sso/ticket', needUser, (req, res) => {
+      const target = String((req.body || {}).app || '');
+      if (saas.PRODUCTS.indexOf(target) < 0 || (req.user.apps || ['lab']).indexOf(target) < 0) return res.status(403).json({ error: 'You do not have access to this app.' });
+      const now = Date.now(); for (const [k, v] of ssoTickets) if (v.exp < now) ssoTickets.delete(k);
+      if (ssoTickets.size > 5000) return res.status(429).json({ error: 'Too many sign-in requests. Try again in a minute.' });
+      const ticket = crypto.randomBytes(24).toString('hex');
+      ssoTickets.set(ticket, { uid: req.user.id, lab: req.lab ? req.lab.id : 'main', app: target, exp: now + 60000 });
+      res.json({ ok: true, ticket, url: target === 'pharmacy' ? PHARMACY_URL + '/#/sso?ticket=' + ticket : APP_URL + '/app/#/sso?ticket=' + ticket });
+    });
+    app.post('/api/sso/exchange', async (req, res) => {
+      try {
+        if (bump(ssoHits, req.ip, 60000).n > 30) return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+        const ticket = String((req.body || {}).ticket || ''), rec = ssoTickets.get(ticket);
+        ssoTickets.delete(ticket); /* single use, whatever happens next */
+        if (!rec || rec.exp < Date.now()) return res.status(401).json({ error: 'This sign-in link has expired. Open the app again from your login.' });
+        const lab = await saas.getLab(rec.lab); if (!lab) return res.status(401).json({ error: 'Unknown business.' });
+        if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This account is suspended. Please contact support.', code: 'SUSPENDED' });
+        const lstore = saas.storeFor(lab), u = await lstore.get('users', rec.uid);
+        if (!u || u.active === false) return res.status(401).json({ error: 'This login is no longer active.' });
+        const apps = saas.appsFor(lab, u); if (apps.indexOf(rec.app) < 0) return res.status(403).json({ error: 'You do not have access to this app.' });
+        const user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined, pharmacyRole: u.pharmacyRole || undefined };
+        await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username + ' (via ' + rec.app + ')' });
+        const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
+        res.json({ ok: true, user, token, lab: await saas.view(lab), apps, app: rec.app });
+      } catch (e) { res.status(400).json({ error: e.message }); }
+    });
     app.get('/api/saas/me', needUser, async (req, res) => {
       const lab = req.lab || await saas.getLab('main');
       const pays = (await rawStore.all(saas.PAY_T)).filter(p => p.labId === lab.id).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
       const plans = await saas.getPlans(); const pl = {};
       Object.keys(plans).forEach(k => { pl[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'desc']); });
       const v = await saas.view(lab, true); delete v.history;
-      res.json({ lab: v, plans: pl, info: await publicPay(), online: gwReady(await gwLoad()), payments: pays.slice(0, 20).map(payView) });
+      res.json({ lab: v, apps: req.user.apps || ['lab'], plans: pl, info: await publicPay(), online: gwReady(await gwLoad()), payments: pays.slice(0, 20).map(payView) });
     });
     app.post('/api/saas/pay-request', needAdmin, async (req, res) => {
       try {
@@ -861,6 +892,12 @@ async function main() {
         let touched = 0;
         for (const k of FEATURE_KEYS) if (typeof b.features[k] === 'boolean') { lab.features[k] = b.features[k]; touched++; }
         if (touched) notes.push('features updated');
+      }
+      if (b.products !== undefined) {
+        if (!Array.isArray(b.products) || !b.products.length || b.products.some((x) => saas.PRODUCTS.indexOf(x) < 0)) return res.status(400).json({ error: 'products must be a non-empty list of: ' + saas.PRODUCTS.join(', ') });
+        const np = saas.PRODUCTS.filter((x) => b.products.indexOf(x) >= 0);
+        if (np.join() !== saas.productsOf(lab).join()) notes.push('Products → ' + np.join(' + '));
+        lab.products = np;
       }
       ['name', 'notes', 'ownerName', 'ownerEmail', 'phone'].forEach(k => { if (typeof b[k] === 'string') lab[k] = b[k].slice(0, 300); });
       if (notes.length) await saas.addHistory(lab, notes.join('; '), 'operator');
@@ -2172,6 +2209,7 @@ async function main() {
     if (!okTable(req.params.table)) return res.status(404).json({ error: 'unknown table' });
     if (req.params.table === 'audit') return res.status(403).json({ error: 'audit log is read-only (use GET /api/audit)' });
     if (!req.user) return res.status(401).json({ error: 'auth required' });
+    if (req.user.apps && req.user.apps.indexOf('lab') < 0) return res.status(403).json({ error: 'Your account does not have access to the lab app.', code: 'NO_LAB_APP' });
     const t = req.params.table, admin = req.user.role === 'admin';
     if (t === 'settings' && req.method !== 'GET' && !admin) return res.status(403).json({ error: 'admin only' });
     if (t === 'users' && req.method !== 'GET' && !admin) {
@@ -2189,8 +2227,15 @@ async function main() {
       const dup = (await req.store.all('users')).some((u) => u.id !== (b.id != null ? String(b.id) : req.params.id) && String(u.username).toLowerCase() === b.username.toLowerCase());
       if (dup) throw new Error('This username is already taken');
     }
-    if (req.user.role !== 'admin') { delete b.doctorId; delete b.roleId; }
+    if (req.user.role !== 'admin') { delete b.doctorId; delete b.roleId; delete b.apps; delete b.pharmacyRole; }
     else {
+      if (b.apps !== undefined) {
+        const allow = saas ? saas.productsOf(req.lab) : ['lab'];
+        if (!Array.isArray(b.apps)) throw new Error('apps must be a list');
+        b.apps = b.apps.filter((x, i, a) => typeof x === 'string' && a.indexOf(x) === i);
+        if (!b.apps.length || b.apps.some((x) => allow.indexOf(x) < 0)) throw new Error('Choose at least one app, and only apps your business has.');
+      }
+      if (b.pharmacyRole !== undefined && b.pharmacyRole !== null && b.pharmacyRole !== '' && ['ADMIN', 'MANAGER', 'CASHIER', 'PHARMACIST'].indexOf(b.pharmacyRole) < 0) throw new Error('Unknown pharmacy role');
       const ROLES = ['admin', 'reception', 'technician', 'doctor', 'custom'];
       if (b.role !== undefined && ROLES.indexOf(b.role) < 0) throw new Error('Unknown role');
       const before = existing ? ((await req.store.get('users', String(req.params.id))) || {}) : {};

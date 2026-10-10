@@ -1604,3 +1604,18 @@ body:not(.auth) textarea:focus-visible{outline:2px solid #829cc5;outline-offset:
   body:not(.auth) .side-close{display:grid}
   body:not(.auth) .nav-it{min-height:40px}
 }
+
+/* ===== app chooser (one login, Lab + Pharmacy) ===== */
+.ap-box{position:relative;z-index:1;width:640px;max-width:100%;background:#fff;border-radius:22px;padding:34px 30px 26px;box-shadow:0 24px 60px rgba(15,30,46,.18);text-align:center}
+.ap-head h1{margin:0 0 6px;font-size:24px;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.ap-sub{margin:0;color:var(--muted);font-size:14px}
+.ap-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:24px 0 8px}
+.ap-card{display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 16px 22px;border-radius:18px;border:1.5px solid color-mix(in srgb,var(--ap) 35%,#fff);background:linear-gradient(160deg,color-mix(in srgb,var(--ap) 10%,#fff),#fff 70%);cursor:pointer;font-family:inherit;transition:transform .15s,box-shadow .15s,border-color .15s}
+.ap-card:hover{transform:translateY(-3px);box-shadow:0 14px 30px color-mix(in srgb,var(--ap) 22%,transparent);border-color:var(--ap)}
+.ap-card.busy{opacity:.6;pointer-events:none}
+.ap-ic{display:grid;place-items:center;width:60px;height:60px;border-radius:18px;color:#fff;background:var(--ap);margin-bottom:6px;box-shadow:0 8px 18px color-mix(in srgb,var(--ap) 40%,transparent)}
+.ap-card b{font-size:17px;color:var(--ink)}
+.ap-card small{font-size:12.5px;color:var(--muted);line-height:1.4}
+.ap-out{margin-top:14px;background:none;border:0;color:var(--muted);font-weight:700;font-size:13px;cursor:pointer}
+.ap-out:hover{color:var(--red)}
+@media(max-width:560px){.ap-cards{grid-template-columns:1fr}.ap-box{padding:26px 18px 20px}}

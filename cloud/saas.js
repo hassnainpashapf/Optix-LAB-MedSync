@@ -33,6 +33,20 @@ const DEFAULT_SETTINGS = {
 
 /* multi-branch: every lab may run up to this many branches by default (per-lab override lives on lab.maxBranches) */
 const DEFAULT_MAX_BRANCHES = 5;
+/* one account system for several products: a business (lab record) is entitled to some of them by the superadmin,
+   and each user is allowed into some of those (user.apps). 'lab' = this blood-test lab app, 'pharmacy' = the Pharmacy POS. */
+const PRODUCTS = ['lab', 'pharmacy'];
+function productsOf(lab) {
+  const p = lab && Array.isArray(lab.products) ? lab.products.filter((x) => PRODUCTS.indexOf(x) >= 0) : [];
+  return p.length ? PRODUCTS.filter((x) => p.indexOf(x) >= 0) : ['lab'];
+}
+/* the apps one user can open: what the business has, narrowed by user.apps. A user without an explicit list gets
+   every product if they are the admin, otherwise only the lab (so switching Pharmacy on never opens it to everyone). */
+function appsFor(lab, user) {
+  const prod = productsOf(lab);
+  const want = user && Array.isArray(user.apps) ? user.apps : (user && user.role === 'admin' ? prod : ['lab']);
+  return prod.filter((x) => want.indexOf(x) >= 0);
+}
 /* per-module feature gating: keys mirror the app.js NAV; lab.features stores only explicit `false` overrides (absent = enabled) */
 const FEATURE_KEYS = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced',
   'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'doctors', 'expenses', 'finance',
@@ -153,7 +167,7 @@ function create(ctx) {
       plan: lab.plan, planName: (plans[lab.plan] || {}).name || lab.plan, status: effStatus(lab), rawStatus: lab.status,
       trialEndsAt: lab.trialEndsAt || null, paidUntil: lab.paidUntil || null, daysLeft: daysLeft(lab), createdAt: lab.createdAt,
       notes: lab.notes || '', legacy: !!lab.legacy, limits: await limitsOf(lab), maxBranches: lab.maxBranches != null ? lab.maxBranches : DEFAULT_MAX_BRANCHES,
-      features: getFeatures(lab), history: lab.history || [],
+      features: getFeatures(lab), history: lab.history || [], products: productsOf(lab),
     };
     if (withUsage) v.usage = await usageOf(lab);
     return v;
@@ -221,7 +235,7 @@ function create(ctx) {
   }
 
   return { LABS_T, PAY_T, DAY, DEFAULT_PLANS, FEATURE_KEYS, DEFAULT_MAX_BRANCHES, getSettings, getPlans, loadLabs, saveLab, getLab, findBySlug, storeFor, bootstrap, effStatus, daysLeft,
-    usageOf, limitsOf, view, createLab, purgeLab, addPeriod, addHistory, getFeatures, setFeatures, slugify, SLUG_RE, RESERVED, raw };
+    usageOf, limitsOf, view, createLab, purgeLab, addPeriod, addHistory, getFeatures, setFeatures, slugify, SLUG_RE, RESERVED, raw, PRODUCTS, productsOf, appsFor };
 }
 
-module.exports = { create, slugify, DEFAULT_PLANS, DEFAULT_SETTINGS, FEATURE_KEYS, DEFAULT_MAX_BRANCHES };
+module.exports = { create, slugify, DEFAULT_PLANS, DEFAULT_SETTINGS, FEATURE_KEYS, DEFAULT_MAX_BRANCHES, PRODUCTS, productsOf, appsFor };

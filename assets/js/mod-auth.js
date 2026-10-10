@@ -127,8 +127,10 @@
   function setSession(j, labSlug) {
     localStorage.setItem(SKEY, JSON.stringify({
       labId: 'cloud', userId: j.user.id, name: j.user.name, role: j.user.role, roleId: j.user.roleId || '',
-      token: j.token, lab: labSlug || (j.lab && j.lab.slug) || '', loginAt: new Date().toISOString()
+      token: j.token, lab: labSlug || (j.lab && j.lab.slug) || '', loginAt: new Date().toISOString(),
+      apps: (j.apps && j.apps.length) ? j.apps : ['lab'], products: (j.lab && j.lab.products) || ['lab'], labName: (j.lab && j.lab.name) || ''
     }));
+    try { sessionStorage.removeItem('labpos_chose'); } catch (e) {} /* a fresh sign-in shows the app chooser again (when there is a choice) */
   }
 
   /* ---------- "Continue with Google" (shown only when the operator has set a Google Client ID in the superadmin console) ---------- */
@@ -165,6 +167,77 @@
       location.hash = '#/dashboard';
     });
   }
+
+  /* ---------- one login, two apps (Lab + Pharmacy POS) ----------
+     After signing in, a person with access to both apps sees two cards; a person with one app is taken straight to it.
+     Going to the other site uses a one-time ticket from the server (see /api/sso/*), never a password. */
+  var APP_CARDS = {
+    pharmacy: { name: 'Pharmacy POS', sub: 'Medicines, stock and billing counter', color: '#2f6df6',
+      svg: '<path d="M10.5 20.5 3.5 13.5a4.95 4.95 0 0 1 7-7l7 7a4.95 4.95 0 0 1-7 7z"/><path d="m8.5 8.5 7 7"/>' },
+    lab: { name: 'Blood Test Lab', sub: 'Patients, tests, reports and invoices', color: '#0ea5a4',
+      svg: '<path d="M9 3h6M10 3v6.3L4.6 18.1A1.5 1.5 0 0 0 5.9 20.3h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.3V3"/><path d="M8 14h8"/>' }
+  };
+  function ssoCall(path, body, withAuth) {
+    var h = { 'Content-Type': 'application/json' };
+    if (withAuth && window.DB && DB.sessToken && DB.sessToken()) h.Authorization = 'Bearer ' + DB.sessToken();
+    return window.fetch((window.LABPOS_API || '') + path, { method: 'POST', headers: h, body: JSON.stringify(body || {}) }).then(function (r) {
+      return r.json().catch(function () { return {}; }).then(function (j) { if (!r.ok) { var e = new Error(j.error || 'Something went wrong. Please try again.'); e.code = j.code; throw e; } return j; });
+    });
+  }
+  A.openApp = function (app) {
+    if (app === 'lab') { try { sessionStorage.setItem('labpos_chose', '1'); } catch (e) {} location.hash = '#/dashboard'; return Promise.resolve(); }
+    return ssoCall('/api/sso/ticket', { app: app }, true).then(function (j) { location.href = j.url; });
+  };
+  function apShell(inner) {
+    document.body.className = 'login-mode';
+    document.body.innerHTML = '<div class="login-wrap"><div class="ap-box">' + inner + '</div></div>';
+  }
+  A.renderApps = function () {
+    var s = A.session(); if (!s) { location.hash = '#/login'; return; }
+    var apps = (s.apps && s.apps.length) ? s.apps : ['lab'];
+    if (apps.length === 1 && apps[0] !== 'lab') { /* only one app and it lives on the other site: go straight there */
+      apShell('<div class="ap-head"><h1>Opening ' + esc(APP_CARDS[apps[0]].name) + '…</h1><p class="ap-sub" id="apMsg">Signing you in</p></div>');
+      A.openApp(apps[0]).catch(function (e) { var m = document.getElementById('apMsg'); if (m) m.textContent = (e && e.message) || 'Could not open the app.'; });
+      return;
+    }
+    if (apps.length === 1) { A.openApp('lab'); return; }
+    apShell('<div class="ap-head"><h1>Where do you want to go?</h1><p class="ap-sub">Signed in as <b>' + esc(s.name || '') + '</b>' + (s.labName ? ' · ' + esc(s.labName) : '') + '</p></div>' +
+      '<div class="ap-cards">' + ['pharmacy', 'lab'].filter(function (k) { return apps.indexOf(k) >= 0; }).map(function (k) {
+        var c = APP_CARDS[k];
+        return '<button type="button" class="ap-card" data-app="' + k + '" style="--ap:' + c.color + '"><span class="ap-ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + c.svg + '</svg></span>' +
+          '<b>' + esc(c.name) + '</b><small>' + esc(c.sub) + '</small></button>';
+      }).join('') + '</div><div class="login-err" id="apErr" hidden></div>' +
+      '<button type="button" class="ap-out" id="apOut">Sign out</button>');
+    document.getElementById('apOut').addEventListener('click', function () { A.logout(); });
+    Array.prototype.forEach.call(document.querySelectorAll('.ap-card'), function (btn) {
+      btn.addEventListener('click', function () {
+        btn.disabled = true; btn.classList.add('busy');
+        A.openApp(btn.getAttribute('data-app')).catch(function (e) {
+          btn.disabled = false; btn.classList.remove('busy');
+          var er = document.getElementById('apErr'); if (er) { er.hidden = false; er.textContent = (e && e.message) || 'Could not open the app.'; }
+        });
+      });
+    });
+  };
+  /* arriving from the other site: #/sso?ticket=... */
+  A.ssoLanding = function (hash) {
+    var m = /[?&]ticket=([0-9a-f]+)/.exec(hash || ''), ticket = m ? m[1] : '';
+    try { history.replaceState(null, '', location.pathname + location.search + '#/sso'); } catch (e) {} /* the ticket never stays in the address bar / history */
+    apShell('<div class="ap-head"><h1>Signing you in…</h1><p class="ap-sub" id="apMsg">One moment</p></div>');
+    var fail = function (e) {
+      var msg = (e && e.message) || 'This sign-in link is not valid. Please sign in again.';
+      apShell('<div class="ap-head"><h1>Could not sign you in</h1><p class="ap-sub">' + esc(msg) + '</p></div><a class="btn btn-primary" href="#/login" style="margin-top:14px">Go to sign in</a>');
+    };
+    if (!ticket) { fail(null); return; }
+    ssoCall('/api/sso/exchange', { ticket: ticket }, false).then(function (j) {
+      if ((j.apps || []).indexOf('lab') < 0) throw new Error('Your account does not have access to the lab app.');
+      return DB.adoptSession(j).then(function () { return j; }, function () { return j; });
+    }).then(function (j) {
+      lset(LKEY, j.lab.slug); setSession(j, j.lab.slug);
+      try { sessionStorage.setItem('labpos_chose', '1'); } catch (e) {}
+      location.hash = '#/dashboard';
+    }).catch(fail);
+  };
 
   /* ---------- sign in ---------- */
   A.renderLogin = function () {
