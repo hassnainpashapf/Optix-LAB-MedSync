@@ -53,6 +53,49 @@
   function waReady(cfg) {
     return !!(cfg && ((cfg.provider === 'gateway' && cfg.gatewayNumber) || (cfg.instanceId && cfg.token)));
   }
+  function invoicePaymentStatus(inv) {
+    var total = Math.max(0, +((inv && inv.total) || 0));
+    var due = Math.max(0, +((inv && inv.due) || 0));
+    var paid = inv && inv.paid != null ? Math.max(0, +(inv.paid || 0)) : Math.max(0, total - due);
+    if (due <= 0.009) return 'Paid';
+    return paid > 0.009 ? 'Part-paid' : 'Unpaid';
+  }
+  function invoiceSummaryText(inv) {
+    var total = Math.max(0, +((inv && inv.total) || 0));
+    var due = Math.max(0, +((inv && inv.due) || 0));
+    var paid = inv && inv.paid != null ? Math.max(0, +(inv.paid || 0)) : Math.max(0, total - due);
+    return 'Invoice summary: ' + ((inv && (inv.no || inv.id)) || '') +
+      ' | Total: ' + App.money(total) + ' | Paid: ' + App.money(paid) +
+      ' | Due: ' + App.money(due) + ' | Status: ' + invoicePaymentStatus(inv);
+  }
+  /* Only use a URL explicitly configured as a public payment URL. Do not build
+     a route here: payment links may contain an intended public checkout token,
+     while WhatsApp/session credentials must never enter a customer message. */
+  function publicPaymentUrl(settings) {
+    settings = settings || {};
+    var keys = ['opPaymentUrl', 'onlinePaymentUrl', 'paymentUrl'];
+    for (var i = 0; i < keys.length; i++) {
+      var u = String(settings[keys[i]] || '').trim();
+      if (/^https:\/\/[^\s<>"']+$/i.test(u)) return u;
+    }
+    return '';
+  }
+  function onlinePaymentLine(inv) {
+    var due = Math.max(0, +((inv && inv.due) || 0));
+    if (due <= 0.009) return '';
+    var s = DB.get('settings', 'main') || {};
+    if (!s.opEnabled) return '';
+    var parts = [], u = publicPaymentUrl(s);
+    if (u) parts.push('Pay online: ' + u);
+    if (s.opJazzcashNo) parts.push('JazzCash: ' + s.opJazzcashNo + (s.opJazzcashTitle ? ' (' + s.opJazzcashTitle + ')' : ''));
+    if (s.opEasypaisaNo) parts.push('Easypaisa: ' + s.opEasypaisaNo + (s.opEasypaisaTitle ? ' (' + s.opEasypaisaTitle + ')' : ''));
+    if (s.opBankName || s.opIban || s.opRaastId) {
+      parts.push('Bank: ' + (s.opBankName || '') + (s.opIban ? ', IBAN: ' + s.opIban : '') + (s.opRaastId ? ', Raast ID: ' + s.opRaastId : ''));
+    }
+    if (!parts.length) return '';
+    return 'Online payment available: ' + parts.join(' | ') +
+      (s.opInstructions ? '\n' + s.opInstructions : '');
+  }
   function waSummaryText(inv, pat) {
     var s = DB.get('settings', 'main') || {};
     return (s.labName || 'Lab') + '\nAssalam-o-Alaikum ' + (pat.name || '') + ',\n' +
@@ -268,29 +311,38 @@
      {lab} {patient} {doctor} {invoice} {date} {tests} {total} {due} {link} {linkline}
      {linkline} = "View / download: <link>" when a report link exists, otherwise "Please collect your report from the lab." */
   var WA_TPL = {
-    tplPatient: '*{lab}*\n\nAssalam-o-Alaikum {patient},\n\nYour laboratory report is ready.\n\n*Invoice:* {invoice} ({date})\n*Tests:* {tests}\n\n{linkline}\n\nThank you for choosing {lab}.',
+    tplPatient: '*{lab}*\n\nAssalam-o-Alaikum {patient},\n\nYour laboratory report is ready.\n\n*Invoice:* {invoice} ({date})\n*Tests:* {tests}\n\n{invoiceSummary}\n{paymentline}\n\n{linkline}\n\nThank you for choosing {lab}.',
     tplDoctor: '*{lab}*\n\nAssalam-o-Alaikum {doctor},\n\nThe laboratory report of your patient *{patient}* is ready.\n\n*Invoice:* {invoice} ({date})\n*Tests:* {tests}\n\n{linkline}\n\nWith regards,\n{lab}',
-    tplDue: '*{lab}*\n\nAssalam-o-Alaikum {patient},\n\nYour laboratory report (invoice {invoice}) is ready.\nAn outstanding balance of *{due}* is pending. Please clear it at the lab and your report will be sent to you here automatically.\n\nThank you for your cooperation.'
+    tplDue: '*{lab}*\n\nAssalam-o-Alaikum {patient},\n\nYour laboratory report (invoice {invoice}) is ready.\nAn outstanding balance of *{due}* is pending. Please clear it at the lab and your report will be sent to you here automatically.\n\n{invoiceSummary}\n{paymentline}\n\nThank you for your cooperation.'
   };
 
   function waRenderTpl(tpl, v) {
     v = v || {};
     var lineText = v.link ? 'Report (PDF): ' + v.link : 'Please collect your report from the lab.';
-    var vars = { lab: v.lab || 'Lab', patient: v.patient || '', doctor: v.doctor || '', invoice: v.invoice || '', date: v.date || '', tests: v.tests || '', total: v.total || '', due: v.due || '', link: v.link || '', linkline: lineText };
+    var vars = { lab: v.lab || 'Lab', patient: v.patient || '', doctor: v.doctor || '', invoice: v.invoice || '', date: v.date || '', tests: v.tests || '', total: v.total || '', paid: v.paid || '', due: v.due || '', status: v.status || '', invoiceSummary: v.invoiceSummary || '', paymentline: v.paymentline || '', link: v.link || '', linkline: lineText };
     var out = String(tpl).replace(/\{(\w+)\}/g, function (m, k) { return Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m; });
     return out.replace(/\n{3,}/g, '\n\n').replace(/^\s+|\s+$/g, '');
   }
   function waTplText(name) { var c = waCfg(); return (c && c[name] && String(c[name]).replace(/\s/g, '')) ? c[name] : WA_TPL[name]; }
-  function waVars(inv, pat, doc, testNames, link) {
+  function waVars(inv, pat, doc, testNames, link, includePayment) {
     var s = DB.get('settings', 'main') || {};
-    return { lab: s.labName || 'Lab', patient: pat.name || '', doctor: (doc && doc.name) || '', invoice: inv.no || inv.id, date: App.d(inv.createdAt), tests: (testNames || []).join(', '), total: App.money(inv.total), due: App.money(inv.due), link: link || '' };
+    var v = { lab: s.labName || 'Lab', patient: pat.name || '', doctor: (doc && doc.name) || '', invoice: inv.no || inv.id, date: App.d(inv.createdAt), tests: (testNames || []).join(', '), total: App.money(inv.total), paid: App.money(inv.paid != null ? inv.paid : Math.max(0, (+inv.total || 0) - (+inv.due || 0))), due: App.money(inv.due), status: invoicePaymentStatus(inv), link: link || '' };
+    v.invoiceSummary = invoiceSummaryText(inv);
+    v.paymentline = includePayment ? onlinePaymentLine(inv) : '';
+    return v;
   }
   function waAlreadyNoted(invoiceId) {
     try { return DB.all('wa_log').some(function (e) { return e.kind === 'due' && e.invoiceId === invoiceId && e.status === 'sent'; }); } catch (e) { return false; }
   }
-  function waPatientMessage(inv, pat, testNames, link) { return waRenderTpl(waTplText('tplPatient'), waVars(inv, pat, null, testNames, link)); }
-  function waDoctorMessage(inv, doc, pat, testNames, link) { return waRenderTpl(waTplText('tplDoctor'), waVars(inv, pat, doc, testNames, link)); }
-  function waDueMessage(inv, pat, testNames) { return waRenderTpl(waTplText('tplDue'), waVars(inv, pat, null, testNames, '')); }
+  function ensureInvoiceDetails(text, v) {
+    var out = String(text || '');
+    if (out.indexOf('Invoice summary:') < 0) out += '\n\n' + v.invoiceSummary;
+    if (v.paymentline && out.indexOf(v.paymentline) < 0) out += '\n' + v.paymentline;
+    return out.replace(/\n{3,}/g, '\n\n').replace(/^\s+|\s+$/g, '');
+  }
+  function waPatientMessage(inv, pat, testNames, link) { var v = waVars(inv, pat, null, testNames, link, true); return ensureInvoiceDetails(waRenderTpl(waTplText('tplPatient'), v), v); }
+  function waDoctorMessage(inv, doc, pat, testNames, link) { return waRenderTpl(waTplText('tplDoctor'), waVars(inv, pat, doc, testNames, link, false)); }
+  function waDueMessage(inv, pat, testNames) { var v = waVars(inv, pat, null, testNames, '', true); return ensureInvoiceDetails(waRenderTpl(waTplText('tplDue'), v), v); }
 
   function waTestNames(invoiceId) {
     var names = [];
@@ -650,10 +702,10 @@
      own SIM card. Plain text, no markdown, no long links. */
 
   var SMS_TPL = {
-    tplPatient: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}, {date}) is ready. Tests: {tests}. Please collect it from the lab. Thank you.',
+    tplPatient: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}, {date}) is ready. Tests: {tests}. {invoiceSummary} {paymentline} Please collect it from the lab. Thank you.',
     tplDoctor: '{lab}: Assalam-o-Alaikum {doctor}, the lab report of your patient {patient} (Invoice {invoice}) is ready. Thank you.',
     tplCritical: '{lab}: URGENT — critical result for {patient} (Invoice {invoice}): {test} = {value}. Please contact the lab immediately.',
-    tplDue: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}) is ready. A balance of {due} is pending. Please clear it at the lab. Thank you.'
+    tplDue: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}) is ready. A balance of {due} is pending. {invoiceSummary} {paymentline} Please clear it at the lab. Thank you.'
   };
 
   function smsCfg() {
@@ -667,13 +719,13 @@
   function smsTplText(name) { var c = smsCfg(); return (c && c[name] && String(c[name]).replace(/\s/g, '')) ? c[name] : SMS_TPL[name]; }
   function smsRenderTpl(tpl, v) {
     v = v || {};
-    var vars = { lab: v.lab || 'Lab', patient: v.patient || '', doctor: v.doctor || '', invoice: v.invoice || '', date: v.date || '', tests: v.tests || '', total: v.total || '', due: v.due || '' };
+    var vars = { lab: v.lab || 'Lab', patient: v.patient || '', doctor: v.doctor || '', invoice: v.invoice || '', date: v.date || '', tests: v.tests || '', total: v.total || '', paid: v.paid || '', due: v.due || '', status: v.status || '', invoiceSummary: v.invoiceSummary || '', paymentline: v.paymentline || '' };
     var out = String(tpl).replace(/\{(\w+)\}/g, function (m, k) { return Object.prototype.hasOwnProperty.call(vars, k) ? vars[k] : m; });
     return out.replace(/\n{3,}/g, '\n\n').replace(/^\s+|\s+$/g, '');
   }
-  function smsPatientMessage(inv, pat, testNames) { return smsRenderTpl(smsTplText('tplPatient'), waVars(inv, pat, null, testNames, '')); }
-  function smsDoctorMessage(inv, doc, pat, testNames) { return smsRenderTpl(smsTplText('tplDoctor'), waVars(inv, pat, doc, testNames, '')); }
-  function smsDueMessage(inv, pat, testNames) { return smsRenderTpl(smsTplText('tplDue'), waVars(inv, pat, null, testNames, '')); }
+  function smsPatientMessage(inv, pat, testNames) { var v = waVars(inv, pat, null, testNames, '', true); return ensureInvoiceDetails(smsRenderTpl(smsTplText('tplPatient'), v), v); }
+  function smsDoctorMessage(inv, doc, pat, testNames) { return smsRenderTpl(smsTplText('tplDoctor'), waVars(inv, pat, doc, testNames, '', false)); }
+  function smsDueMessage(inv, pat, testNames) { var v = waVars(inv, pat, null, testNames, '', true); return ensureInvoiceDetails(smsRenderTpl(smsTplText('tplDue'), v), v); }
   function smsCriticalMessage(inv, pat, crits, tname) {
     var s = DB.get('settings', 'main') || {}, lab = s.labName || 'Lab';
     var lines = (crits || []).map(function (c) {
@@ -2036,7 +2088,8 @@
         ['Age / Sex', ageSex],
         ['Blood Group', t(pat.blood, 'Unknown')],
         ['Phone', t(pat.phone || pat.whatsapp)],
-        ['Address', t(pat.address, '.')]
+        ['Address', t(pat.address, '.')],
+        ['CNIC', t(pat.cnic)]
       ],
       right: [
         ['Registration Date', dts(inv.createdAt)],
@@ -2568,7 +2621,7 @@
           }).join('') + '</div>';
     }
 
-    /* 4: address block, centered bold-ish — all in ONE row */
+    /* 5: address block, centered bold — below the disclaimer */
     var addrParts = [];
     if (s.address) addrParts.push(s.address);
     if (s.headOffice) addrParts.push('Head Office: ' + s.headOffice);
@@ -2580,13 +2633,13 @@
     var addrHtml = '';
     if (addrParts.length) {
       addrHtml =
-        '<div style="border-top:1px solid #000;margin:4px 0 3px;padding-top:3px">' +
-        '<div style="text-align:center;font-weight:400;font-size:0.85em;line-height:1.6">' +
+        '<div style="margin:4px 0 3px;padding-top:3px">' +
+        '<div style="text-align:center;font-weight:700;font-size:0.85em;line-height:1.6">' +
           App.esc(addrParts.join(' | ')) +
         '</div></div>';
     }
 
-    /* 5: disclaimer box — skip the old "Get well soon" default footer note */
+    /* 4: disclaimer box — skip the old "Get well soon" default footer note */
     var _fn = s.footerNote;
     if (_fn === 'Get well soon. Reports available on counter & phone.') _fn = '';
     var disc = s.disclaimer || _fn || DEFAULT_DISCLAIMER;
@@ -2601,7 +2654,7 @@
     var ftHtml = String(s.footerText || '').trim()
       ? '<div class="rpt-ftext" style="text-align:center;color:#000;font-size:0.92em;font-weight:600;line-height:1.45;margin:6px 0 2px;white-space:pre-line">' + App.esc(String(s.footerText).trim()) + '</div>'
       : '';
-    return '<div class="rpt-footer">' + ftHtml + line1 + rule + sigHtml + addrHtml + discHtml + powered + '</div>';
+    return '<div class="rpt-footer">' + ftHtml + line1 + rule + sigHtml + discHtml + addrHtml + powered + '</div>';
   }
   window.reportFooterHtml = reportFooterHtml;
 
@@ -3020,10 +3073,10 @@
       } catch (e) { done(null); }
     });
   }
-  function customPdfParts(invoiceId, qrDataUrl) {
-    var d = null; try { d = reportData(invoiceId); } catch (e) {}
+  function customPdfParts(invoiceId, qrDataUrl, opts) {
+    var d = null; try { d = reportData(invoiceId, opts); } catch (e) {}
     if (!d) return Promise.resolve({});
-    var s = d.s || {}, hasH = realHtml(s.headerHtml), hasF = realHtml(s.footerHtml);
+    var s = d.s || {}, hasH = !(opts && opts.noLabHeader) && realHtml(s.headerHtml), hasF = realHtml(s.footerHtml);
     if (!hasH && !hasF) return Promise.resolve({});
     var base = Math.round(12.5 * (RPT.setScale(s.reportFontSize || 'medium') || 1) * 10) / 10;
     function prep(h) {
@@ -3038,7 +3091,7 @@
   }
 
   // Build the report PDF, upload it to the cloud API, return the public URL (or null).
-  function getReportPdfUrl(invoiceId, force) {
+  function getReportPdfUrl(invoiceId, force, opts) {
     var inv = invOf(invoiceId);
     if (!inv) return Promise.resolve(null);
     // QR goes live only when the invoice is fully paid; unpaid reports print without a live QR
@@ -3051,9 +3104,10 @@
       var qb = String(window.LABPOS_API || '').replace(/\/+$/, '');
       if (qb && !(window.labposDesktop && window.labposDesktop.isDesktop)) selfQr = qrDataUrlFor(qb + '/r/' + key);
     } catch (e) { selfQr = null; }
-    return customPdfParts(invoiceId, selfQr).catch(function () { return {}; }).then(function (pre) {
+    return customPdfParts(invoiceId, selfQr, opts).catch(function () { return {}; }).then(function (pre) {
     var pdf = null;
-    try { pdf = buildReportPdf(invoiceId, selfQr, pre); } catch (e) { pdf = null; }
+    try { pdf = buildReportPdf(invoiceId, selfQr, pre, opts); }
+    catch (e) { App.toast('Could not build complete report PDF: ' + e.message, 'err'); return null; }
     if (!pdf || !pdf.dataUri) return null;
     var rawUri = String(pdf.dataUri);
     var b64 = rawUri.slice(rawUri.indexOf(',') + 1); // strip data:...;base64, prefix (jsPDF adds filename=)
@@ -3119,7 +3173,7 @@
     if (App.isNative && App.isNative()) {
       try {
         if (await App.ensureJsPDF()) {
-          var nurl = await getReportPdfUrl(invoiceId, true);
+          var nurl = await getReportPdfUrl(invoiceId, true, opts);
           if (nurl) { location.href = nurl; return; }
         }
       } catch (e) {}
@@ -3129,7 +3183,7 @@
     try {
       var jsOk = await App.ensureJsPDF();
       if (jsOk) {
-        var url = await getReportPdfUrl(invoiceId);
+        var url = await getReportPdfUrl(invoiceId, false, opts);
         /* fallback: if backend upload fails or invoice unpaid, generate QR with invoice reference */
         if (!url) url = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
         qrImg = qrDataUrlFor(url);
@@ -3338,8 +3392,8 @@
 
   // Returns { dataUri } or null (error toasted).
   // qrDataUrl (optional): QR image data URL embedded in the header.
-  function buildReportPdf(invoiceId, qrDataUrl, pre) {
-    var d = reportData(invoiceId);
+  function buildReportPdf(invoiceId, qrDataUrl, pre, opts) {
+    var d = reportData(invoiceId, opts);
     if (!d) { App.toast('No ready results for PDF', 'err'); return null; }
     var JSPDF = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF;
     if (!JSPDF) { App.toast('PDF engine not loaded — check connection and reload', 'err'); return null; }
@@ -3372,10 +3426,10 @@
     if (s.callCenter) fAddrParts.push('Call Center: ' + s.callCenter);
     if (s.website) fAddrParts.push('Web: ' + s.website);
     if (s.email) fAddrParts.push('Email: ' + s.email);
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
     var fAddrLines = fAddrParts.length ? doc.splitTextToSize(fAddrParts.join(' | '), CW) : [];
     var fNote = s.disclaimer || ((s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') ? s.footerNote : '') || DEFAULT_DISCLAIMER;
-    doc.setFontSize(6.6);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6);
     var fNoteLines = doc.splitTextToSize(fNote, CW);
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
     var fTextLines = String(s.footerText || '').trim() ? doc.splitTextToSize(String(s.footerText).trim(), CW) : [];
@@ -3418,13 +3472,13 @@
       });
       curY += fSigBlockH + 3;
       doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(M, curY, W - M, curY); curY += 4;
-      if (fAddrLines.length) {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-        txt(fAddrLines, W / 2, curY, { align: 'center' }); curY += fAddrLines.length * 4.2 + 2;
-      }
       doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6); doc.setTextColor(20, 20, 20);
       txt(fNoteLines, M, curY, {}); curY += fNoteLines.length * 2.9 + 2;
       doc.setLineWidth(0.3); doc.line(M, curY, W - M, curY); curY += 4;
+      if (fAddrLines.length) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+        txt(fAddrLines, W / 2, curY, { align: 'center' }); curY += fAddrLines.length * 4.2 + 2;
+      }
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
       txt('Powered by System Optix', W / 2, curY, { align: 'center' });
     }
@@ -3451,7 +3505,6 @@
       else t = String(t == null ? '' : t);
       doc.text(t, x, yy, opts || {});
     }
-    function dash(v) { return (v == null || v === '') ? '—' : String(v); }
     function addImg(dataUrl, x, yy, w, h) {
       try {
         var fmt = /image\/png/i.test(dataUrl) ? 'PNG' : (/image\/gif/i.test(dataUrl) ? 'GIF' : 'JPEG');
@@ -3478,6 +3531,7 @@
     var headH = showQr ? qrS : 23;                 // header block height
 
     function drawHeader() {
+      if (opts && opts.noLabHeader) { drawPatientGrid(); return; }
       if (pre && pre.hdr) {   /* custom header from Lab Profile, drawn as a picture (same as the printout) */
         var chH = CW * pre.hdr.ratio;
         addImg(pre.hdr.url, M, y, CW, chH);
@@ -3589,6 +3643,71 @@
     }
     drawHeader();
 
+    // Vector counterpart of graph-config.js: same configured parameter order,
+    // parseFloat semantics, missing-point gaps, reference band and padded scale.
+    // No canvas/font/network race; a drawing failure aborts the upload explicitly.
+    function drawReportGraph(test, values) {
+      if (!App.graphFor) return;
+      var g = App.graphFor(test);
+      if (!g) return;
+      var keys = g.params && g.params.length ? g.params : (g.xLabels || []);
+      var pts = [];
+      keys.forEach(function (key, i) {
+        var raw = values[key], v = parseFloat(raw);
+        if (raw != null && String(raw).trim() !== '' && isFinite(v)) pts.push({ x: i, y: v, label: (g.xLabels || [])[i] || '' });
+      });
+      if (pts.length < 2) return;
+      var lo = Math.min.apply(null, pts.map(function (p) { return p.y; }));
+      var hi = Math.max.apply(null, pts.map(function (p) { return p.y; }));
+      if (typeof g.refLo === 'number' && isFinite(g.refLo)) lo = Math.min(lo, g.refLo);
+      if (typeof g.refHi === 'number' && isFinite(g.refHi)) hi = Math.max(hi, g.refHi);
+      var span = hi - lo;
+      if (span <= 0) span = Math.max(Math.abs(hi) * 0.2, 1);
+      lo -= span * 0.12; hi += span * 0.18;
+      var gw = Math.min(CW, 160), left = M + 17, plotW = gw - 28, plotH = 52;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10);
+      var titles = doc.splitTextToSize(g.title || 'Trend Graph', gw);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+      var labelW = Math.min(24, plotW / Math.max(keys.length, 2));
+      var labels = pts.map(function (p) { return doc.splitTextToSize(String(p.label), labelW); });
+      var labelH = Math.max.apply(null, labels.map(function (lines) { return lines.length; })) * 3;
+      var units = doc.splitTextToSize(g.unit ? 'Unit: ' + g.unit : '', gw);
+      var titleH = titles.length * 4.5 + 4;
+      var height = titleH + plotH + labelH + units.length * 3 + 10;
+      need(height);
+      if (y + height > maxBodyY) throw new Error('Graph is too tall for the report body');
+      var top = y + titleH;
+      function X(i) { return left + plotW * i / Math.max(keys.length - 1, 1); }
+      function Y(v) { return top + plotH - (v - lo) / (hi - lo) * plotH; }
+      function fmt(v) { return String(Math.round(v * 100) / 100); }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(20, 20, 20);
+      titles.forEach(function (line, i) { txt(line, M, y + 4 + i * 4.5); });
+      if (typeof g.refLo === 'number' && typeof g.refHi === 'number' && g.refHi > g.refLo) {
+        doc.setFillColor(235, 243, 254);
+        doc.rect(left, Y(g.refHi), plotW, Y(g.refLo) - Y(g.refHi), 'F');
+      }
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+      for (var tick = 0; tick <= 4; tick++) {
+        var v = lo + (hi - lo) * tick / 4;
+        doc.setDrawColor(229, 231, 235); doc.setLineWidth(0.2);
+        doc.line(left, Y(v), left + plotW, Y(v));
+        doc.setTextColor(80, 80, 80); txt(fmt(v), left - 2, Y(v) + 1, { align: 'right' });
+      }
+      doc.setDrawColor(156, 163, 175);
+      doc.line(left, top, left, top + plotH); doc.line(left, top + plotH, left + plotW, top + plotH);
+      pts.forEach(function (p, i) {
+        doc.setDrawColor(29, 78, 216); doc.setLineWidth(0.65);
+        if (i) doc.line(X(pts[i - 1].x), Y(pts[i - 1].y), X(p.x), Y(p.y));
+        doc.setFillColor(29, 78, 216); doc.circle(X(p.x), Y(p.y), 1.2, 'F');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8); doc.setTextColor(30, 58, 138);
+        txt(fmt(p.y), X(p.x), Y(p.y) - 2.7, { align: 'center' });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(75, 85, 99);
+        labels[i].forEach(function (line, li) { txt(line, X(p.x), top + plotH + 4 + li * 3, { align: 'center' }); });
+      });
+      units.forEach(function (line, i) { txt(line, M, top + plotH + labelH + 6 + i * 3); });
+      y += height + 3;
+    }
+
     /* ----- test tables: section title + RESULT box, grey bar, rows ----- */
     (function () {
       var s = d.s || {}, inv = d.inv || {};
@@ -3602,8 +3721,8 @@
       var CX_TEST = M + 2;          // param name column
       var CX_REF  = M + 55;         // NORMAL VALUE column
       var CX_UNIT = M + 84;         // UNIT column
-      var RX      = W - M - 2;      // right-aligned result value x
       var LINE    = 4.6;            // row line height
+      var resultCols = [], resultStart = W - M - RBW;
 
       var showBc = (s.showBarcode !== false);   // default true
       var BOX_H  = showBc ? 22 : 14;
@@ -3674,7 +3793,7 @@
       }
 
       // ---- the RESULT box (top-right of each section) ----
-      function resultBox(bx, byy, patCode, patText, ddmm) {
+      function resultBox(bx, byy, patCode, patText, ddmm, invoiceNo, previous) {
         var cx = bx + RBW / 2, yy = byy + 5.5;
         doc.setDrawColor(60, 60, 60); doc.setLineWidth(0.4);
         doc.rect(bx, byy, RBW, BOX_H);                       // outer border
@@ -3682,7 +3801,7 @@
         doc.rect(bx, byy, RBW, 5.5, 'F');                    // grey RESULT strip
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
         doc.setTextColor(INK[0], INK[1], INK[2]);
-        txt('RESULT', cx, byy + 3.9, { align: 'center' });
+        txt(previous ? 'PREVIOUS' : 'RESULT', cx, byy + 3.9, { align: 'center' });
         var valOnly = String(patText || '').replace(/^P\s*#\s*/i, '').trim();
         if (showBc) {
           drawBarcode(bx, yy + 1, RBW, 6.5, patCode);
@@ -3703,10 +3822,14 @@
           }
         }
         if (ddmm) {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5);
           doc.setTextColor(60, 60, 60);
           txt(ddmm, cx, yy + 2.6, { align: 'center' });
         }
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+        doc.splitTextToSize(String(invoiceNo || ''), RBW - 3).forEach(function (line, i) {
+          txt(line, cx, yy + 6 + i * 3.2, { align: 'center' });
+        });
       }
 
       // ---- grey header bar: TEST | NORMAL VALUE | UNIT ----
@@ -3723,18 +3846,25 @@
         y += 7;
       }
 
-      // ---- build one param row (lines pre-wrapped, height pre-computed) ----
+      // ---- build one param row, wrapping every selected result column ----
       function buildRow(p, vals) {
         var valStr = vals[p.name] != null ? String(vals[p.name]) : '';
         var refStr = refFor(p, d.pat) || '—';
         var nameW = CX_REF - CX_TEST - 2;
         var refW  = CX_UNIT - CX_REF - 2;
-        var unitW = RX - 36 - CX_UNIT - 2;   // keep clear of right-aligned value
+        var unitW = resultStart - CX_UNIT - 2;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
         var nameL = doc.splitTextToSize(p.name || '', Math.max(10, nameW));
+        doc.setFont('helvetica', 'normal');
         var refL  = doc.splitTextToSize(refStr, Math.max(10, refW));
         var unitL = doc.splitTextToSize(p.unit || '—', Math.max(10, unitW));
-        var valL  = valStr ? doc.splitTextToSize(valStr, 34) : [''];
-        var n = Math.max(nameL.length, refL.length, unitL.length, valL.length);
+        doc.setFont('helvetica', 'bold');
+        var valueLines = resultCols.map(function (c) {
+          return doc.splitTextToSize(String(c.values[p.name] == null ? '' : c.values[p.name]), RBW - 7);
+        });
+        var n = Math.max(nameL.length, refL.length, unitL.length);
+        valueLines.forEach(function (lines) { n = Math.max(n, lines.length); });
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
         var subs = null, sl = subRefLines(p);
         if (sl) {
           subs = [];
@@ -3750,56 +3880,74 @@
           if (sev) dir = sev.dir;
         }
         return {
-          name: nameL, ref: refL, unit: unitL, val: valL, subs: subs,
-          dir: dir,
-          rh: n * LINE + 2.5
+          name: nameL, ref: refL, unit: unitL, values: valueLines, subs: subs, count: n,
+          dir: dir
         };
       }
 
       // ---- draw one param row: bold name | ref | unit | right-aligned value ----
       // No gridlines. Abnormal values are bold red (high) with up triangle or blue (low) with down triangle.
       function tableRow(row) {
-        need(row.rh);
-        var li;
-        doc.setTextColor(INK[0], INK[1], INK[2]);
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-        for (li = 0; li < row.name.length; li++) txt(row.name[li], CX_TEST, y + LINE + li * LINE);
-        doc.setFont('helvetica', 'normal');
-        for (li = 0; li < row.ref.length; li++) txt(row.ref[li], CX_REF, y + LINE + li * LINE);
-        for (li = 0; li < row.unit.length; li++) txt(row.unit[li], CX_UNIT, y + LINE + li * LINE);
-        if (row.dir === 'high') { doc.setFont('helvetica', 'bold'); doc.setTextColor(RED[0], RED[1], RED[2]); }
-        else if (row.dir === 'low') { doc.setFont('helvetica', 'bold'); doc.setTextColor(BLUE[0], BLUE[1], BLUE[2]); }
-        else { doc.setFont('helvetica', 'bold'); doc.setTextColor(INK[0], INK[1], INK[2]); }
-        for (li = 0; li < row.val.length; li++) {
-          if (row.dir && li === 0 && row.val[li]) {
-            txt(row.val[li], RX - 3.5, y + LINE + li * LINE, { align: 'right' });
-            var arrowCol = row.dir === 'high' ? RED : BLUE;
-            doc.setFillColor(arrowCol[0], arrowCol[1], arrowCol[2]);
-            doc.setDrawColor(arrowCol[0], arrowCol[1], arrowCol[2]);
-            var baseY = y + LINE + li * LINE;
-            var triMidY = baseY - 1.1;
-            if (row.dir === 'high') {
-              // Up triangle (▲)
-              doc.triangle(RX - 2.6, triMidY + 1.2, RX, triMidY + 1.2, RX - 1.3, triMidY - 1.3, 'FD');
-            } else {
-              // Down triangle (▼)
-              doc.triangle(RX - 2.6, triMidY - 1.2, RX, triMidY - 1.2, RX - 1.3, triMidY + 1.3, 'FD');
+        // Paginate each physical line; a single free-text result can exceed a page.
+        for (var li = 0; li < row.count; li++) {
+          tableNeed(LINE + 2.5);
+          doc.setTextColor(20, 20, 20); doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          if (row.name[li]) txt(row.name[li], CX_TEST, y + LINE);
+          doc.setFont('helvetica', 'normal');
+          if (row.ref[li]) txt(row.ref[li], CX_REF, y + LINE);
+          if (row.unit[li]) txt(row.unit[li], CX_UNIT, y + LINE);
+          row.values.forEach(function (lines, ci) {
+            var value = lines[li], dir = ci === 0 ? row.dir : null;
+            if (!value) return;
+            var rx = resultStart + (ci + 1) * RBW - 2;
+            var color = dir === 'high' ? RED : (dir === 'low' ? BLUE : INK);
+            doc.setFont('helvetica', ci === 0 ? 'bold' : 'normal');
+            doc.setTextColor(color[0], color[1], color[2]);
+            txt(value, rx - (dir ? 3.5 : 0), y + LINE, { align: 'right' });
+            if (dir && li === 0) {
+              doc.setFillColor(color[0], color[1], color[2]);
+              var by = y + LINE - 1.1, sign = dir === 'high' ? 1 : -1;
+              doc.triangle(rx - 2.6, by + sign * 1.2, rx, by + sign * 1.2, rx - 1.3, by - sign * 1.3, 'F');
             }
-          } else {
-            txt(row.val[li], RX, y + LINE + li * LINE, { align: 'right' });
-          }
+          });
+          y += LINE;
         }
-        y += row.rh;
+        y += 2.5;
         if (row.subs && row.subs.length) {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
-          doc.setTextColor(INK[0], INK[1], INK[2]);
-          row.subs.forEach(function (s) { txt(s, CX_TEST, y + 4.2); y += 4.2; });
+          row.subs.forEach(function (line) {
+            tableNeed(5);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5); doc.setTextColor(20, 20, 20);
+            txt(line, CX_TEST, y + 4.2); y += 4.2;
+          });
           y += 1;
         }
       }
 
+      function tableNeed(h) {
+        if (y + h <= maxBodyY) return;
+        need(h + BOX_H + 11);
+        drawResultBoxes();
+        y += BOX_H + 2;
+        tableHead();
+        if (y + h > maxBodyY) throw new Error('Report header leaves no room for result rows');
+      }
+      function drawResultBoxes() {
+        if (y + BOX_H + 16 > maxBodyY) throw new Error('Report header leaves no room for result identifiers');
+        resultCols.forEach(function (c, ci) {
+          resultBox(resultStart + ci * RBW, y, c.caseCode || c.invoiceNo, c.boxCaseText,
+            fmtTs(c.reportedAt), c.boxInvoiceNo, ci > 0);
+        });
+      }
+      function bodyLines(lines, style, size) {
+        lines.forEach(function (line) {
+          need(5);
+          doc.setFont('helvetica', style); doc.setFontSize(size); doc.setTextColor(40, 40, 40);
+          txt(line, M, y + 4.4); y += 4.4;
+        });
+      }
+
       /* ----- one section per ready row ----- */
-      var caseNo = inv.no || inv.id;
       /* patient-visit numbers for the RESULT box (falls back to invoice no. if unavailable) */
       var pvn = null;
       if (inv && typeof App !== 'undefined' && App.visitNos) {
@@ -3810,75 +3958,98 @@
         var test = r.test || {};
         var params = Array.isArray(test.params) ? test.params : [];
         var vals = (r.res && r.res.values) || {};
+        var tid = (r.item && (r.item.testId || r.item.id)) || '';
+        resultCols = [{ values: vals, invoiceNo: inv.no || inv.id,
+          caseCode: pvn && pvn.caseCode, caseText: pvn && pvn.caseText,
+          reportedAt: (r.res && r.res.reportedAt) || d.maxReported || inv.createdAt }]
+          .concat((d.prevByTest && d.prevByTest[tid]) || []).map(function (c, ci) {
+            // Keep repeating boxes bounded; preserve oversized identifiers in a
+            // full-width, paginated legend rather than clipping or shrinking them.
+            var copy = Object.assign({}, c), label = 'Report ' + (ci + 1);
+            copy.identifierNotes = [];
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+            copy.boxInvoiceNo = String(c.invoiceNo || '');
+            if (doc.splitTextToSize(copy.boxInvoiceNo, RBW - 3).length > 2) {
+              copy.identifierNotes.push(label + ' invoice: ' + copy.boxInvoiceNo);
+              copy.boxInvoiceNo = label + ' (see ID above)';
+            }
+            copy.boxCaseText = String(c.caseText || '').replace(/^P\s*#\s*/i, '').trim();
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
+            if (doc.getTextWidth(copy.boxCaseText) > RBW - 3) {
+              copy.identifierNotes.push(label + ' patient number: ' + copy.boxCaseText);
+              copy.boxCaseText = label;
+            }
+            return copy;
+          });
+        resultStart = W - M - resultCols.length * RBW;
+        CX_REF = M + (resultCols.length > 1 ? 40 : 55);
+        CX_UNIT = M + (resultCols.length > 1 ? 70 : 84);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
+        var idLines = 1;
+        resultCols.forEach(function (c) { idLines = Math.max(idLines, doc.splitTextToSize(c.boxInvoiceNo, RBW - 3).length); });
+        BOX_H = (showBc ? 23 : 16) + idLines * 3.2;
 
-        // Section title (kept clear of the RESULT box on the right).
+        // Full-width section title above the selected result identifiers.
         doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5);
         var titleLines = doc.splitTextToSize(
-          testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : ''), CW - RBW - 6);
+          testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : ''), CW);
         var titleH = titleLines.length * 6;
 
-        // Build rows up-front so the whole section page-breaks cleanly.
-        var shown = params.filter(function (p) { var v = vals[p.name]; return v != null && String(v).trim() !== ''; });
+        // Include parameters populated only in a selected previous report.
+        var shown = params.filter(function (p) {
+          return resultCols.some(function (c) { var v = c.values[p.name]; return v != null && String(v).trim() !== ''; });
+        });
         if (!shown.length) shown = params; /* no values entered: keep blank layout */
         var rows = params.length
           ? shown.map(function (p) { return buildRow(p, vals); })
           : [buildRow({ name: 'Result', ref: '', unit: '' },
                       { Result: vals['Result'] != null ? String(vals['Result']) : '' })];
 
-        var rowsH = rows.reduce(function (a, row) {
-          return a + row.rh + (row.subs ? row.subs.length * 4.2 + 1 : 0);
-        }, 0);
-
-        var noteLines = null, noteH = 0;
+        var noteLines = null;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
         var tnote = test.note || test.notes || '';
         if (tnote) {
           noteLines = doc.splitTextToSize(String(tnote), CW - 4);
-          noteH = 6 + noteLines.length * 4.4;
         }
-        var remLines = null, remH = 0;
+        var remLines = null;
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
         if (vals['Remarks']) {
           remLines = doc.splitTextToSize('Remarks: ' + vals['Remarks'], CW - 4);
-          remH = remLines.length * 4.4 + 2;
         }
 
-        need(Math.max(titleH, BOX_H) + 2 + 7 + rowsH + noteH + remH + 6);
+        need(Math.min(titleH, 12) + BOX_H + 18);
 
-        // Title (left) + RESULT box (right).
+        // Title, then current/previous RESULT boxes.
         doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5);
         doc.setTextColor(INK[0], INK[1], INK[2]);
-        titleLines.forEach(function (tl, i) { txt(tl, M, y + 5 + i * 6); });
-        /* patient code/text/date in the RESULT box (invoice no. + timestamp as fallback) */
-        var repV = (r.res && r.res.reportedAt) || d.maxReported || inv.createdAt;
-        var boxCode = caseNo, boxText = dash(caseNo), boxDate = fmtTs(repV);
-        if (pvn && pvn.caseCode) {
-          boxCode = pvn.caseCode;
-          var pvRaw = pvn.cas != null ? ((pvn.cas < 10 ? '0' : '') + pvn.cas) : (String(pvn.caseText || '').split(' - ')[0] || '');
-          boxText = String(pvRaw).replace(/^P\s*#\s*/i, '').trim();
-          boxDate = fmtTs(repV);
-        }
-        resultBox(W - M - RBW, y - 1, boxCode, boxText, boxDate);
-        y += Math.max(titleH, BOX_H) + 2;
+        titleLines.forEach(function (tl) {
+          need(6); doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(20, 20, 20);
+          txt(tl, M, y + 5); y += 6;
+        });
+        resultCols.forEach(function (c) {
+          c.identifierNotes.forEach(function (note) {
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+            bodyLines(doc.splitTextToSize(note, CW - 4), 'normal', 8.5);
+          });
+        });
+        need(BOX_H + 16);
+        drawResultBoxes();
+        y += BOX_H + 2;
 
         // Grey bar + rows.
         tableHead();
         rows.forEach(tableRow);
 
+        drawReportGraph(test, vals);
+
         // Optional test-level note.
         if (noteLines) {
-          doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-          doc.setTextColor(INK[0], INK[1], INK[2]);
-          txt('Note:', M, y + 4.5);
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
-          doc.setTextColor(70, 70, 70);
-          txt(noteLines, M, y + 8.9);
-          y += noteH;
+          bodyLines(['Note:'], 'bold', 9);
+          bodyLines(noteLines, 'normal', 8.5);
         }
         // Remarks (existing behavior).
         if (remLines) {
-          doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
-          doc.setTextColor(100, 100, 100);
-          txt(remLines, M, y + 4.5);
-          y += remH;
+          bodyLines(remLines, 'italic', 9);
         }
         y += 5;
       });
@@ -3891,10 +4062,12 @@
       y += 7;
     }
     if (s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') {
-      need(8);
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(120, 120, 120);
-      txt(doc.splitTextToSize(s.footerNote, CW), M, y);
-      y += 6;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
+      doc.splitTextToSize(s.footerNote, CW).forEach(function (line) {
+        need(5);
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(9); doc.setTextColor(120, 120, 120);
+        txt(line, M, y + 4.4); y += 4.4;
+      });
     }
 
     // ----- footer on final page + page numbers for multi-page reports -----
@@ -3912,6 +4085,10 @@
     var dataUri;
     try { dataUri = doc.output('datauristring'); }
     catch (e) { App.toast('Could not build PDF: ' + e.message, 'err'); return null; }
+    if (typeof dataUri !== 'string' || !/^data:application\/pdf;[^,]*base64,[A-Za-z0-9+/]+={0,2}$/.test(dataUri)) {
+      App.toast('Could not build PDF: PDF engine returned no valid document', 'err');
+      return null;
+    }
     return { dataUri: dataUri };
   }
 

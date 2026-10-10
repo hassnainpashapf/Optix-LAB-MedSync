@@ -159,7 +159,7 @@ assert.ok(reads.includes('home_sampling'));
 ["Today's Bookings", 'Pending Dispatch', 'Dispatched', 'Collected', 'Scheduled for today', 'Scheduled · All dates', 'All dates', '6', '3', '2', '0'].forEach(value => {
   assert.ok(escaped.includes(value), 'summary text passes through App.esc: ' + value);
 });
-assert.match(view.innerHTML, /\.hs-dash \.hs-summary-grid \{[^}]*grid-template-columns:repeat\(4,minmax\(0,1fr\)\)/);
+assert.match(view.innerHTML, /\.hs-dash \.hs-summary-grid \{[^}]*grid-template-columns:repeat\(4,1fr\)/);
 assert.match(view.innerHTML, /@media\(max-width:1100px\) \{ \.hs-dash \.hs-summary-grid \{ grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
 assert.match(view.innerHTML, /@media\(max-width:560px\) \{ \.hs-dash \.hs-summary-grid \{ grid-template-columns:minmax\(0,1fr\)/);
 console.log('PASS: web home sampling summary totals, empty state, mixed dates/statuses, read-only rendering, unchanged filters/workflow controls, escaping, scoped responsive grid');
