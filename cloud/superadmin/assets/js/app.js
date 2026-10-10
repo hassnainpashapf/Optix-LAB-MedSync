@@ -1111,14 +1111,16 @@ function loadSection(key, fetcher, apply, silent) {
 
 function loadOverview(silent) {
   return loadSection('overview', function () {
-    return Promise.all([api('/api/saas/stats'), api('/api/saas/labs')]);
+    return Promise.all([api('/api/saas/stats'), api('/api/saas/labs'), api('/api/saas/products').catch(function () { return null; })]);
   }, function (r) {
+    if (r[2] && r[2].products) state.registry = r[2].products;
     state.stats = r[0];
     state.slabs = (r[1] && r[1].labs) || [];
     setPending(r[0] && r[0].pendingPayments);
   }, silent);
 }
 function loadSaasLabs(silent) {
+  api('/api/saas/products').then(function (r) { if (r && r.products) { state.registry = r.products; if (state.drawerLab) paintDrawer(false); } }, function () {});
   return loadSection('labs', function () { return api('/api/saas/labs'); }, function (r) {
     state.slabs = (r && r.labs) || [];
     setPending(r && r.pendingPayments);
@@ -1162,9 +1164,10 @@ function loadPayments(silent) {
 }
 function loadSettings(silent) {
   return loadSection('settings', function () {
-    return Promise.all([api('/api/saas/settings'), api('/api/saas/mail').catch(function () { return null; }), api('/api/saas/google').catch(function () { return null; }), api('/api/saas/paygw').catch(function () { return null; })]).then(function (x) { x[0].mail = x[1]; x[0].google = x[2]; x[0].paygw = x[3]; return x[0]; });
+    return Promise.all([api('/api/saas/settings'), api('/api/saas/mail').catch(function () { return null; }), api('/api/saas/google').catch(function () { return null; }), api('/api/saas/paygw').catch(function () { return null; }), api('/api/saas/products').catch(function () { return null; })]).then(function (x) { x[0].mail = x[1]; x[0].google = x[2]; x[0].paygw = x[3]; x[0].products = x[4]; return x[0]; });
   }, function (r) {
-    state.settingsData = { settings: r.settings || {}, plans: r.plans || {}, mail: r.mail || null, google: r.google || null, paygw: r.paygw || null };
+    state.settingsData = { settings: r.settings || {}, plans: r.plans || {}, mail: r.mail || null, google: r.google || null, paygw: r.paygw || null, products: r.products || null };
+    if (r.products && r.products.products) state.registry = r.products.products;
   }, silent);
 }
 
@@ -1742,12 +1745,12 @@ function drawerHtml(l) {
     '<div class="span2"><label class="label" for="dfNotes">Internal notes</label><textarea class="input" id="dfNotes" rows="3" placeholder="Visible to operators only">' + esc(l.notes) + '</textarea></div>' +
     '</div><div style="margin-top:14px"><button class="btn btn-primary" id="drSave">Save changes</button></div></div>' +
 
-    '<div class="dr-sec"><h4>Apps (one login)</h4>' +
-    '<p class="hint">Which apps this business can open with a single login. The business admin then decides, per person, who gets which app (Settings &rarr; Users &amp; Roles). Someone with both sees two cards after signing in.</p>' +
-    '<div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:8px">' +
-    '<label style="display:inline-flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="drPrLab"' + (((l.products || ['lab']).indexOf('lab') >= 0) ? ' checked' : '') + '> Blood Test Lab</label>' +
-    '<label style="display:inline-flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" id="drPrPh"' + (((l.products || ['lab']).indexOf('pharmacy') >= 0) ? ' checked' : '') + '> Pharmacy POS</label></div>' +
-    '<div style="margin-top:12px"><button class="btn btn-primary" id="drProducts">Save apps</button></div></div>' +
+    '<div class="dr-sec"><h4>Products (one login)</h4>' +
+    '<p class="hint">Which products this business can open with a single login. The business admin then decides, per person, who gets which product (Settings &rarr; Users &amp; Roles). Someone with two or more sees a card for each after signing in.</p>' +
+    '<div style="display:flex;gap:22px;flex-wrap:wrap;margin-top:8px">' + (state.registry || [{ id: 'lab', name: 'Blood Test Lab' }, { id: 'pharmacy', name: 'Pharmacy POS' }]).map(function (p) {
+      return '<label style="display:inline-flex;align-items:center;gap:8px;font-weight:600"><input type="checkbox" class="drProd" value="' + esc(p.id) + '"' + (((l.products || ['lab']).indexOf(p.id) >= 0) ? ' checked' : '') + '> ' + esc(p.name) + '</label>';
+    }).join('') + '</div>' +
+    '<div style="margin-top:12px"><button class="btn btn-primary" id="drProducts">Save products</button></div></div>' +
 
     '<div class="dr-sec danger"><h4>Account</h4>' +
     '<div class="danger-row"><div><strong>Reset admin password</strong><p class="hint">Set a new password for this lab\'s admin login.</p></div>' +
@@ -1796,9 +1799,9 @@ function paintDrawer(animate) {
   });
   $('drSave').addEventListener('click', function () { saveLabForm(l, $('drSave')); });
   $('drProducts').addEventListener('click', function () {
-    var p = []; if ($('drPrLab').checked) p.push('lab'); if ($('drPrPh').checked) p.push('pharmacy');
-    if (!p.length) { toast('Tick at least one app.', 'err'); return; }
-    doLabCall($('drProducts'), api('/api/saas/labs/' + encodeURIComponent(l.id), { method: 'PUT', body: { products: p } }), 'Apps updated for ' + l.name + '.');
+    var p = Array.prototype.map.call(document.querySelectorAll('.drProd:checked'), function (c) { return c.value; });
+    if (!p.length) { toast('Tick at least one product.', 'err'); return; }
+    doLabCall($('drProducts'), api('/api/saas/labs/' + encodeURIComponent(l.id), { method: 'PUT', body: { products: p } }), 'Products updated for ' + l.name + '.');
   });
   $('drReset').addEventListener('click', function () { resetAdminModal(l); });
   var del = $('drDelete');
@@ -2110,12 +2113,63 @@ function settingsViewHtml() {
     '<div class="card"><div class="card-h"><h3>Payment methods</h3><span class="sub">accounts labs can pay into (up to 8)</span>' +
     '<button class="btn btn-sm" id="pmAdd" style="margin-left:auto">' + IC.plus + ' Add method</button></div>' +
     '<div class="card-b" id="pmList">' + methodsHtml(s.payMethods || []) + '</div></div>' +
+    productsCardHtml(state.settingsData.products) +
     paygwCardHtml(state.settingsData.paygw) +
     mailCardHtml(state.settingsData.mail) +
     googleCardHtml(state.settingsData.google) +
     '<div class="save-bar"><button class="btn btn-primary" id="setSave2">Save changes</button></div>';
 }
 
+
+/* ---- Products (the suite): every product keeps its own website + backend; this list is what the one login connects ---- */
+function productRowHtml(p, icons) {
+  var isLab = p.id === 'lab';
+  return '<div class="pm-row pd-row" data-pd-id="' + esc(p.id) + '"><div class="pm-grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr))">' +
+    '<div><label class="label">Product id</label><input class="input pd-id" value="' + esc(p.id) + '" maxlength="20" ' + (p.id && p._saved ? 'readonly' : '') + ' placeholder="crm"></div>' +
+    '<div><label class="label">Name</label><input class="input pd-name" value="' + esc(p.name) + '" maxlength="40" placeholder="Optix CRM"></div>' +
+    '<div><label class="label">Short description</label><input class="input pd-sub" value="' + esc(p.sub) + '" maxlength="80" placeholder="What people do here"></div>' +
+    '<div><label class="label">Colour</label><input class="input pd-color" type="color" value="' + esc(p.color || '#475569') + '" style="padding:3px;height:38px"></div>' +
+    '<div><label class="label">Icon</label><select class="input pd-icon">' + icons.map(function (i) { return '<option value="' + i + '"' + (p.icon === i ? ' selected' : '') + '>' + i + '</option>'; }).join('') + '</select></div>' +
+    '<div style="grid-column:span 2"><label class="label">Web address</label><input class="input pd-url" value="' + esc(p.url) + '" ' + (isLab ? 'disabled placeholder="this site (built in)"' : 'placeholder="https://crm.example.pk"') + '></div>' +
+    '<div style="grid-column:1/-1"><label class="label">Roles inside this product <span class="hint">(optional, VALUE:Label, comma separated)</span></label><input class="input pd-roles" value="' + esc((p.roles || []).map(function (r) { return r.value + ':' + r.label; }).join(', ')) + '" placeholder="ADMIN:Admin, AGENT:Agent"></div>' +
+    '</div>' + (isLab ? '' : '<button type="button" class="icon-btn danger" data-pd-del="' + esc(p.id) + '" aria-label="Remove product" title="Remove">' + IC.trash + '</button>') + '</div>';
+}
+function productsCardHtml(pr) {
+  if (!pr || !pr.products) return '';
+  var icons = pr.icons || ['box'];
+  var rows = pr.products.map(function (p) { return productRowHtml(Object.assign({ _saved: true }, p), icons); }).join('');
+  return '<div class="card" id="productsCard"><div class="card-h"><h3>Products (one login for all)</h3><span class="sub">each product keeps its own website and backend</span>' +
+    '<button class="btn btn-sm" id="pdAdd" style="margin-left:auto">' + IC.plus + ' Add product</button></div><div class="card-b">' +
+    '<p class="hint" style="margin:0 0 10px">The people who sign in see a card for every product they may open. A new product only needs its web address here and a <code>#/sso?ticket=</code> landing page (see docs/PRODUCT-INTEGRATION.md). Which business has which product is set in each lab\'s drawer; which person gets which is set by the business admin.</p>' +
+    '<div id="pdList">' + rows + '</div>' +
+    '<div style="margin-top:14px"><button class="btn btn-primary" id="pdSave">Save products</button></div></div></div>';
+}
+function collectProducts() {
+  return Array.prototype.map.call(document.querySelectorAll('#pdList .pd-row'), function (row) {
+    var q = function (c) { return row.querySelector(c); };
+    return { id: q('.pd-id').value.trim().toLowerCase(), name: q('.pd-name').value.trim(), sub: q('.pd-sub').value.trim(), color: q('.pd-color').value, icon: q('.pd-icon').value, url: q('.pd-url').value.trim(),
+      roles: q('.pd-roles').value.split(',').map(function (x) { var p = x.split(':'); return { value: p[0].trim(), label: (p[1] || p[0]).trim() }; }).filter(function (r) { return r.value; }) };
+  });
+}
+function wireProductsCard() {
+  var add = $('pdAdd'); if (!add) return;
+  add.addEventListener('click', function () {
+    var icons = (state.settingsData.products && state.settingsData.products.icons) || ['box'];
+    var d = document.createElement('div'); d.innerHTML = productRowHtml({ id: '', name: '', sub: '', color: '#475569', icon: 'box', url: '', roles: [] }, icons);
+    $('pdList').appendChild(d.firstChild); var ids = document.querySelectorAll('#pdList .pd-id'); ids[ids.length - 1].focus();
+  });
+  $('pdList').addEventListener('click', function (e) {
+    var b = e.target; while (b && b !== $('pdList') && !(b.getAttribute && b.getAttribute('data-pd-del') != null)) b = b.parentNode;
+    if (!b || b === $('pdList')) return;
+    var row = b.parentNode; row.parentNode.removeChild(row);
+  });
+  $('pdSave').addEventListener('click', function () {
+    var btn = $('pdSave'); btn.disabled = true;
+    api('/api/saas/products', { method: 'PUT', body: { products: collectProducts() } }).then(function (r) {
+      state.registry = r.products; state.settingsData.products.products = r.products; toast('Products saved.', 'ok'); if (state.view === 'settings') paintMain();
+    }, function (err) { btn.disabled = false; toast((err && err.message) || 'Could not save the products.', 'err'); });
+  });
+}
 
 /* ---- "Continue with Google" on the sign-in / sign-up pages: needs a Google OAuth Client ID ---- */
 function googleCardHtml(g) {
@@ -2261,6 +2315,7 @@ function wireSettingsView() {
   if (!state.settingsData) return;
   wireMailCard();
   wireGoogleCard();
+  wireProductsCard();
   wirePaygwCard();
   var s1 = $('setSave'), s2 = $('setSave2');
   if (s1) s1.addEventListener('click', saveSettings);

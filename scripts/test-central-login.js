@@ -57,6 +57,29 @@ const auth = (t) => ({ Authorization: 'Bearer ' + t });
     const pharmTok = r.d.token;
     assert.deepEqual((await login('plain')).d.apps, ['lab'], 'a user without a list gets the lab only, never the pharmacy by default');
 
+    /* the product list is a registry: the superadmin can add a product, pick roles for it, and give a business access */
+    r = await j('GET', '/api/saas/products', null, SK); assert.equal(r.s, 200); assert.deepEqual(r.d.products.map((p) => p.id), ['lab', 'pharmacy']);
+    assert.ok([401, 403].includes((await j('GET', '/api/saas/products')).s), 'registry is superadmin only');
+    const reg = r.d.products.concat([{ id: 'crm', name: 'Optix CRM', sub: 'Leads and follow-ups', color: '#7c3aed', icon: 'users', url: 'https://crm.example.pk', roles: [{ value: 'agent', label: 'Agent' }, { value: 'MANAGER', label: 'Manager' }] }]);
+    assert.equal((await j('PUT', '/api/saas/products', { products: reg.filter((p) => p.id !== 'lab') }, SK)).s, 400, 'the lab product cannot be removed');
+    assert.equal((await j('PUT', '/api/saas/products', { products: reg.concat([{ id: 'Bad Id', name: 'x', url: 'https://x.pk' }]) }, SK)).s, 400, 'bad product id refused');
+    assert.equal((await j('PUT', '/api/saas/products', { products: reg.map((p) => p.id === 'crm' ? Object.assign({}, p, { url: 'ftp://nope' }) : p) }, SK)).s, 400, 'product needs an https address');
+    r = await j('PUT', '/api/saas/products', { products: reg }, SK); assert.equal(r.s, 200, 'product added'); assert.deepEqual(r.d.products.find((p) => p.id === 'crm').roles.map((x) => x.value), ['AGENT', 'MANAGER'], 'role values are normalised');
+    r = await j('PUT', '/api/saas/labs/' + labId, { products: ['lab', 'pharmacy', 'crm'] }, SK); assert.equal(r.s, 200); assert.deepEqual(r.d.lab.products, ['lab', 'pharmacy', 'crm']);
+    assert.deepEqual(r.d.lab.productInfo.map((p) => p.id), ['lab', 'pharmacy', 'crm'], 'the business view carries the product info for the admin screens');
+    r = await login('both'); assert.deepEqual(r.d.apps, ['lab', 'pharmacy'], 'an existing user does not get the new product by themselves');
+    assert.equal((await j('PUT', '/api/users/U-both', { apps: ['lab', 'crm'], appRoles: { crm: 'AGENT' } }, A)).s, 200, 'admin gives the new product + its role');
+    assert.equal((await j('PUT', '/api/users/U-both', { appRoles: { crm: 'GOD' } }, A)).s, 400, 'a role the product does not list is refused');
+    assert.equal((await j('PUT', '/api/users/U-both', { appRoles: { nope: 'X' } }, A)).s, 400, 'a role for an unknown app is refused');
+    r = await login('both'); assert.deepEqual(r.d.apps, ['lab', 'crm']); assert.deepEqual(r.d.catalog.map((p) => p.id), ['lab', 'crm'], 'the login answer lists the apps to draw'); assert.deepEqual(r.d.user.appRoles, { crm: 'AGENT' });
+    const crmTok = r.d.token;
+    r = await j('POST', '/api/sso/ticket', { app: 'crm' }, auth(crmTok)); assert.match(r.d.url, /^https:\/\/crm\.example\.pk\/#\/sso\?ticket=[0-9a-f]{48}$/, 'ticket goes to the product address from the registry');
+    r = await j('POST', '/api/sso/exchange', { ticket: r.d.ticket }); assert.equal(r.d.app, 'crm'); assert.equal(r.s, 200);
+    r = await j('GET', '/api/auth/whoami', null, auth(crmTok)); assert.equal(r.s, 200, 'a product backend can ask who a token belongs to');
+    assert.equal(r.d.user.username, 'both'); assert.equal(r.d.lab.slug, 'both-co'); assert.deepEqual(r.d.apps, ['lab', 'crm']);
+    assert.equal((await j('GET', '/api/auth/whoami')).s, 401, 'whoami needs a token');
+    await j('PUT', '/api/users/U-both', { apps: ['lab', 'pharmacy'], appRoles: { crm: null } }, A);
+
     /* a staff member cannot widen their own access */
     const bothTok = (await login('both')).d.token;
     r = await j('PUT', '/api/users/U-plain', { apps: ['lab', 'pharmacy'] }, auth((await login('plain')).d.token));

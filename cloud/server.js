@@ -410,6 +410,9 @@ async function main() {
   const DUMMY_HASH = hashPassword('not-a-real-password'); /* unknown user / lab costs the same scrypt time as a wrong password */
   /* a token stops working when the user's password changes, or the account is disabled (stolen-token revocation) */
   const pvOf = (u) => crypto.createHash('sha256').update(String(u.password || '') + '|' + (u.active === false ? '0' : '1')).digest('hex').slice(0, 12);
+  /* the apps a user may open plus what the app chooser needs to draw them (name, colour, icon, roles) */
+  const appPack = (lab, u) => { const apps = saas.appsFor(lab, u); return { apps, catalog: saas.catalogFor(apps) }; };
+  const userView = (u) => { const ar = saas.appRolesOf(u); return { id: u.id, name: u.name, username: u.username, email: u.email || undefined, role: u.role, roleId: u.roleId || undefined, appRoles: Object.keys(ar).length ? ar : undefined, pharmacyRole: ar.pharmacy || undefined }; };
   const BAD_LOGIN = 'Invalid Lab ID, username or password';
   app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body || {};
@@ -442,10 +445,10 @@ async function main() {
     if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
     if (!isHashed(u.password)) await lstore.put('users', Object.assign({}, u, { password: hashPassword(password) }));
     const fresh = (await lstore.get('users', u.id)) || u;
-    const user = { id: u.id, name: u.name, username: u.username, email: u.email || undefined, role: u.role, roleId: u.roleId || undefined, pharmacyRole: u.pharmacyRole || undefined };
+    const user = userView(u);
     await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username });
     const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(fresh), exp: Date.now() + TOKEN_TTL_MS });
-    res.json({ ok: true, user, token, lab: await saas.view(lab), apps: saas.appsFor(lab, fresh) });
+    res.json({ ok: true, user, token, lab: await saas.view(lab), ...appPack(lab, fresh) });
   });
 
   /* ---- audit trail: who created / changed / deleted what, and when. Written server-side only (clients cannot POST to
@@ -688,7 +691,7 @@ async function main() {
         const u = (await saas.storeFor(lab).all('users'))[0];
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         console.log('[labpos-cloud] saas: new lab signed up:', lab.slug, '<' + lab.ownerEmail + '>');
-        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), apps: saas.appsFor(lab, u) });
+        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), ...appPack(lab, u) });
       } catch (e) { res.status(400).json({ error: e.message }); }
     });
 
@@ -751,7 +754,7 @@ async function main() {
         const u = (await saas.storeFor(lab).all('users'))[0];
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         console.log('[labpos-cloud] saas: new lab signed up with Google:', lab.slug, '<' + lab.ownerEmail + '>');
-        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), apps: saas.appsFor(lab, u), google: { username, passwordSet: !!String(b.password || '') } });
+        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), ...appPack(lab, u), google: { username, passwordSet: !!String(b.password || '') } });
       } catch (e) { res.status(e.status || 400).json({ error: e.message }); }
     });
     /* sign in with Google: with a Lab ID typed, any active user of that lab whose profile email is this Google email; without one,
@@ -789,7 +792,7 @@ async function main() {
         const lstore = saas.storeFor(lab), user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined };
         await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username + ' (Google)' });
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
-        res.json({ ok: true, user, token, lab: await saas.view(lab), apps: saas.appsFor(lab, u) });
+        res.json({ ok: true, user, token, lab: await saas.view(lab), ...appPack(lab, u) });
       } catch (e) { res.status(e.status || 400).json({ error: e.message }); }
     });
 
@@ -798,15 +801,27 @@ async function main() {
        one-time ticket (60 s, single use) that the other site swaps for its own token, so no password and no long-lived token
        ever travels in a URL. The ticket only works for an app the user is allowed into. ---- */
     const ssoTickets = new Map(), ssoHits = new Map();
-    const PHARMACY_URL = (process.env.PHARMACY_URL || 'https://pharmacy-pos.ellahabad.workers.dev').replace(/\/+$/, '');
     app.post('/api/sso/ticket', needUser, (req, res) => {
-      const target = String((req.body || {}).app || '');
-      if (saas.PRODUCTS.indexOf(target) < 0 || (req.user.apps || ['lab']).indexOf(target) < 0) return res.status(403).json({ error: 'You do not have access to this app.' });
+      const target = String((req.body || {}).app || ''), prod = saas.productById(target);
+      if (!prod || (req.user.apps || ['lab']).indexOf(target) < 0) return res.status(403).json({ error: 'You do not have access to this app.' });
       const now = Date.now(); for (const [k, v] of ssoTickets) if (v.exp < now) ssoTickets.delete(k);
       if (ssoTickets.size > 5000) return res.status(429).json({ error: 'Too many sign-in requests. Try again in a minute.' });
       const ticket = crypto.randomBytes(24).toString('hex');
       ssoTickets.set(ticket, { uid: req.user.id, lab: req.lab ? req.lab.id : 'main', app: target, exp: now + 60000 });
-      res.json({ ok: true, ticket, url: target === 'pharmacy' ? PHARMACY_URL + '/#/sso?ticket=' + ticket : APP_URL + '/app/#/sso?ticket=' + ticket });
+      /* each product receives the ticket at <its address>/#/sso?ticket=... (the lab site lives under /app/) */
+      const base = prod.host ? APP_URL + '/app' : ((target === 'pharmacy' && process.env.PHARMACY_URL) ? process.env.PHARMACY_URL.replace(/\/+$/, '') : prod.url);
+      res.json({ ok: true, ticket, url: base + '/#/sso?ticket=' + ticket });
+    });
+    /* the suite's product list: the superadmin adds / edits products here (name, colour, icon, web address, roles) */
+    app.get('/api/saas/products', requireSuperadmin, (req, res) => res.json({ products: saas.getProducts(), icons: saasMod.PRODUCT_ICONS }));
+    app.put('/api/saas/products', requireSuperadmin, async (req, res) => {
+      try { const list = await saas.setProducts((req.body || {}).products); console.log('[labpos-cloud] saas: product list updated (' + list.map((p) => p.id).join(', ') + ')'); res.json({ ok: true, products: list }); }
+      catch (e) { res.status(400).json({ error: e.message }); }
+    });
+    /* for a product's own backend: hand over a user's token and learn who it is, which business, and which apps they may open */
+    app.get('/api/auth/whoami', needUser, async (req, res) => {
+      const lab = req.lab || await saas.getLab('main'), u = await req.store.get('users', req.user.id) || {};
+      res.json({ ok: true, user: userView(u), lab: { id: lab.id, slug: lab.slug, name: lab.name, status: saas.effStatus(lab) }, apps: req.user.apps || ['lab'], catalog: saas.catalogFor(req.user.apps || ['lab']) });
     });
     app.post('/api/sso/exchange', async (req, res) => {
       try {
@@ -819,10 +834,10 @@ async function main() {
         const lstore = saas.storeFor(lab), u = await lstore.get('users', rec.uid);
         if (!u || u.active === false) return res.status(401).json({ error: 'This login is no longer active.' });
         const apps = saas.appsFor(lab, u); if (apps.indexOf(rec.app) < 0) return res.status(403).json({ error: 'You do not have access to this app.' });
-        const user = { id: u.id, name: u.name, username: u.username, email: u.email || undefined, role: u.role, roleId: u.roleId || undefined, pharmacyRole: u.pharmacyRole || undefined };
+        const user = userView(u);
         await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username + ' (via ' + rec.app + ')' });
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
-        res.json({ ok: true, user, token, lab: await saas.view(lab), apps, app: rec.app });
+        res.json({ ok: true, user, token, lab: await saas.view(lab), apps, catalog: saas.catalogFor(apps), app: rec.app });
       } catch (e) { res.status(400).json({ error: e.message }); }
     });
     app.get('/api/saas/me', needUser, async (req, res) => {
@@ -831,7 +846,7 @@ async function main() {
       const plans = await saas.getPlans(); const pl = {};
       Object.keys(plans).forEach(k => { pl[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'desc']); });
       const v = await saas.view(lab, true); delete v.history;
-      res.json({ lab: v, apps: req.user.apps || ['lab'], plans: pl, info: await publicPay(), online: gwReady(await gwLoad()), payments: pays.slice(0, 20).map(payView) });
+      res.json({ lab: v, apps: req.user.apps || ['lab'], catalog: saas.catalogFor(req.user.apps || ['lab']), plans: pl, info: await publicPay(), online: gwReady(await gwLoad()), payments: pays.slice(0, 20).map(payView) });
     });
     app.post('/api/saas/pay-request', needAdmin, async (req, res) => {
       try {
@@ -894,8 +909,9 @@ async function main() {
         if (touched) notes.push('features updated');
       }
       if (b.products !== undefined) {
-        if (!Array.isArray(b.products) || !b.products.length || b.products.some((x) => saas.PRODUCTS.indexOf(x) < 0)) return res.status(400).json({ error: 'products must be a non-empty list of: ' + saas.PRODUCTS.join(', ') });
-        const np = saas.PRODUCTS.filter((x) => b.products.indexOf(x) >= 0);
+        const ids = saas.productIds();
+        if (!Array.isArray(b.products) || !b.products.length || b.products.some((x) => ids.indexOf(x) < 0)) return res.status(400).json({ error: 'products must be a non-empty list of: ' + ids.join(', ') });
+        const np = ids.filter((x) => b.products.indexOf(x) >= 0);
         if (np.join() !== saas.productsOf(lab).join()) notes.push('Products → ' + np.join(' + '));
         lab.products = np;
       }
@@ -2244,7 +2260,7 @@ async function main() {
       const dup = (await req.store.all('users')).some((u) => u.id !== (b.id != null ? String(b.id) : req.params.id) && String(u.username).toLowerCase() === b.username.toLowerCase());
       if (dup) throw new Error('This username is already taken');
     }
-    if (req.user.role !== 'admin') { delete b.doctorId; delete b.roleId; delete b.apps; delete b.pharmacyRole; }
+    if (req.user.role !== 'admin') { delete b.doctorId; delete b.roleId; delete b.apps; delete b.pharmacyRole; delete b.appRoles; }
     else {
       if (b.apps !== undefined) {
         const allow = saas ? saas.productsOf(req.lab) : ['lab'];
@@ -2252,7 +2268,19 @@ async function main() {
         b.apps = b.apps.filter((x, i, a) => typeof x === 'string' && a.indexOf(x) === i);
         if (!b.apps.length || b.apps.some((x) => allow.indexOf(x) < 0)) throw new Error('Choose at least one app, and only apps your business has.');
       }
-      if (b.pharmacyRole !== undefined && b.pharmacyRole !== null && b.pharmacyRole !== '' && ['ADMIN', 'MANAGER', 'CASHIER', 'PHARMACIST'].indexOf(b.pharmacyRole) < 0) throw new Error('Unknown pharmacy role');
+      /* roles inside other products: { pharmacy: 'CASHIER' }. Only products the business has, and (when the product lists its roles) only those roles. */
+      if (b.pharmacyRole !== undefined) { b.appRoles = Object.assign({}, b.appRoles || {}, b.pharmacyRole ? { pharmacy: b.pharmacyRole } : {}); delete b.pharmacyRole; }
+      if (b.appRoles !== undefined) {
+        const have = saas ? saas.productsOf(req.lab) : ['lab'], clean = {};
+        if (b.appRoles && typeof b.appRoles === 'object') for (const k of Object.keys(b.appRoles)) {
+          const v = b.appRoles[k]; if (v === null || v === '') continue;
+          const pr = saas && saas.productById(k);
+          if (!pr || have.indexOf(k) < 0) throw new Error('Unknown app "' + k + '" for this business.');
+          if (pr.roles.length && !pr.roles.some((r) => r.value === v)) throw new Error('Unknown ' + pr.name + ' role');
+          clean[k] = String(v).slice(0, 30);
+        }
+        b.appRoles = clean;
+      }
       const ROLES = ['admin', 'reception', 'technician', 'doctor', 'custom'];
       if (b.role !== undefined && ROLES.indexOf(b.role) < 0) throw new Error('Unknown role');
       const before = existing ? ((await req.store.get('users', String(req.params.id))) || {}) : {};

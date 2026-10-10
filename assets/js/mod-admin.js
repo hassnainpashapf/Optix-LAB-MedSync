@@ -3968,26 +3968,32 @@
     } });
   }
 
-  /* One login for the Lab and the Pharmacy POS: which apps this person may open (only shown when the business has more than one) */
-  var APP_NAMES = { lab: 'Blood Test Lab', pharmacy: 'Pharmacy POS' };
+  /* One login for the whole suite: which apps this person may open, and their role inside each (the list comes from the product registry) */
   function appAccessHtml(u, isEdit, me) {
-    var prods = (me && me.products && me.products.length) ? me.products : ['lab'];
-    if (prods.length < 2) return '';
-    var have = Array.isArray(u.apps) ? u.apps : (isEdit && u.role === 'admin' ? prods : ['lab']);
+    var info = (me && me.productInfo && me.productInfo.length) ? me.productInfo : (me && me.products ? me.products.map(function (id) { return { id: id, name: id, roles: [] }; }) : []);
+    if (info.length < 2) return '';
+    var ids = info.map(function (p) { return p.id; });
+    var have = Array.isArray(u.apps) ? u.apps : (isEdit && u.role === 'admin' ? ids : ['lab']);
+    var roles = Object.assign({}, u.pharmacyRole ? { pharmacy: u.pharmacyRole } : {}, u.appRoles || {});
     return '<div id="ufAppBox" style="margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:10px 12px"><label class="label" style="margin-bottom:6px">Can open</label>'
-      + '<div style="display:flex;gap:18px;flex-wrap:wrap">' + prods.map(function (p) {
-        return '<label style="display:inline-flex;align-items:center;gap:7px;font-weight:600;cursor:pointer"><input type="checkbox" class="ufApp" value="' + p + '"' + (have.indexOf(p) >= 0 ? ' checked' : '') + '> ' + App.esc(APP_NAMES[p] || p) + '</label>';
-      }).join('') + '</div>'
-      + '<div id="ufPhBox" style="margin-top:10px;display:' + (have.indexOf('pharmacy') >= 0 ? 'block' : 'none') + '"><label class="label">Role in the Pharmacy POS</label><select class="select" id="ufPhRole">'
-      + [['', 'Automatic (from the lab role)'], ['ADMIN', 'Admin'], ['MANAGER', 'Manager'], ['PHARMACIST', 'Pharmacist'], ['CASHIER', 'Cashier']].map(function (o) { return '<option value="' + o[0] + '"' + ((u.pharmacyRole || '') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('')
-      + '</select></div>'
-      + '<div class="muted" style="font-size:12px;margin-top:8px">Someone with both apps sees two cards after signing in; with one app they go straight to it.</div></div>';
+      + info.map(function (p) {
+        var on = have.indexOf(p.id) >= 0, rl = (p.roles || []);
+        return '<div class="ufAppRow" data-app="' + App.esc(p.id) + '" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:3px 0">'
+          + '<label style="display:inline-flex;align-items:center;gap:7px;font-weight:600;cursor:pointer;min-width:190px"><input type="checkbox" class="ufApp" value="' + App.esc(p.id) + '"' + (on ? ' checked' : '') + '> ' + App.esc(p.name) + '</label>'
+          + (rl.length ? '<select class="select ufAppRole" data-app="' + App.esc(p.id) + '" style="width:auto;min-width:190px;' + (on ? '' : 'display:none') + '" title="Role inside ' + App.esc(p.name) + '"><option value="">Role: automatic</option>'
+            + rl.map(function (r) { return '<option value="' + App.esc(r.value) + '"' + (roles[p.id] === r.value ? ' selected' : '') + '>' + App.esc(r.label) + '</option>'; }).join('') + '</select>' : '')
+          + '</div>';
+      }).join('')
+      + '<div class="muted" style="font-size:12px;margin-top:8px">Someone with two or more apps sees a card for each after signing in; with one app they go straight to it.</div></div>';
   }
   function readAppAccess() {
     var box = document.getElementById('ufAppBox'); if (!box) return null;
-    var apps = Array.prototype.map.call(box.querySelectorAll('.ufApp:checked'), function (c) { return c.value; });
-    var ph = document.getElementById('ufPhRole');
-    return { apps: apps, pharmacyRole: apps.indexOf('pharmacy') >= 0 && ph ? (ph.value || null) : null };
+    var apps = [], appRoles = {};
+    Array.prototype.forEach.call(box.querySelectorAll('.ufApp'), function (c) {
+      if (!c.checked) return; apps.push(c.value);
+      var sel = box.querySelector('.ufAppRole[data-app="' + c.value + '"]'); if (sel && sel.value) appRoles[c.value] = sel.value;
+    });
+    return { apps: apps, appRoles: appRoles };
   }
   function openUserModal(u, presetRole) {
     var isEdit = !!u;
@@ -4037,7 +4043,7 @@
           document.getElementById('ufRoleNote').textContent = roleNote[rv.indexOf('c:') === 0 ? 'custom' : rv] || '';
         }
         document.getElementById('ufRole').addEventListener('change', syncRole);
-        Array.prototype.forEach.call(document.querySelectorAll('.ufApp'), function (c) { c.addEventListener('change', function () { var ph = document.querySelector('.ufApp[value="pharmacy"]'), bx = document.getElementById('ufPhBox'); if (bx) bx.style.display = ph && ph.checked ? 'block' : 'none'; }); });
+        Array.prototype.forEach.call(document.querySelectorAll('.ufApp'), function (c) { c.addEventListener('change', function () { var sel = document.querySelector('.ufAppRole[data-app="' + c.value + '"]'); if (sel) sel.style.display = c.checked ? '' : 'none'; }); });
         document.getElementById('ufDoc').addEventListener('change', function () { var d = DB.get('doctors', this.value), n = document.getElementById('ufName'); if (d && !n.value.trim()) n.value = d.name; });
         syncRole();
         document.getElementById('ufSave').addEventListener('click', function () {
@@ -4052,7 +4058,7 @@
           if (acc && !acc.apps.length) return App.toast('Tick at least one app this person can open.', 'err');
           if (isEdit) {
             var upd = roleV === 'doctor' ? { name: name, role: roleV, doctorId: docId, roleId: null } : { name: name, role: roleV, doctorId: null, roleId: roleId };
-            if (acc) { upd.apps = acc.apps; upd.pharmacyRole = acc.pharmacyRole; }
+            if (acc) { upd.apps = acc.apps; upd.appRoles = acc.appRoles; }
             DB.update('users', u.id, upd);
             App.toast('User updated.');
           } else {
@@ -4063,7 +4069,7 @@
             if (dup) return App.toast('Username already exists.', 'err');
             if (roleV !== 'doctor' && App.limitHit && App.limitHit('users')) return;
             var rec = { name: name, username: username, password: pass, role: roleV, active: true }; if (roleV === 'doctor') rec.doctorId = docId; if (roleV === 'custom') rec.roleId = roleId;
-            if (acc) { rec.apps = acc.apps; if (acc.pharmacyRole) rec.pharmacyRole = acc.pharmacyRole; }
+            if (acc) { rec.apps = acc.apps; if (Object.keys(acc.appRoles).length) rec.appRoles = acc.appRoles; }
             DB.insert('users', rec);
             App.toast(roleV === 'doctor' ? 'Doctor login created. Give him the Lab ID, this username and the password.' : 'User added.');
           }

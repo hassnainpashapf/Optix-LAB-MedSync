@@ -128,7 +128,7 @@
     localStorage.setItem(SKEY, JSON.stringify({
       labId: 'cloud', userId: j.user.id, name: j.user.name, role: j.user.role, roleId: j.user.roleId || '',
       token: j.token, lab: labSlug || (j.lab && j.lab.slug) || '', loginAt: new Date().toISOString(),
-      apps: (j.apps && j.apps.length) ? j.apps : ['lab'], products: (j.lab && j.lab.products) || ['lab'], labName: (j.lab && j.lab.name) || ''
+      apps: (j.apps && j.apps.length) ? j.apps : ['lab'], products: (j.lab && j.lab.products) || ['lab'], productInfo: (j.lab && j.lab.productInfo) || [], catalog: j.catalog || [], labName: (j.lab && j.lab.name) || ''
     }));
     try { sessionStorage.removeItem('labpos_chose'); } catch (e) {} /* a fresh sign-in shows the app chooser again (when there is a choice) */
   }
@@ -171,12 +171,25 @@
   /* ---------- one login, two apps (Lab + Pharmacy POS) ----------
      After signing in, a person with access to both apps sees two cards; a person with one app is taken straight to it.
      Going to the other site uses a one-time ticket from the server (see /api/sso/*), never a password. */
-  var APP_CARDS = {
-    pharmacy: { name: 'Pharmacy POS', sub: 'Medicines, stock and billing counter', color: '#2f6df6',
-      svg: '<path d="M10.5 20.5 3.5 13.5a4.95 4.95 0 0 1 7-7l7 7a4.95 4.95 0 0 1-7 7z"/><path d="m8.5 8.5 7 7"/>' },
-    lab: { name: 'Blood Test Lab', sub: 'Patients, tests, reports and invoices', color: '#0ea5a4',
-      svg: '<path d="M9 3h6M10 3v6.3L4.6 18.1A1.5 1.5 0 0 0 5.9 20.3h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.3V3"/><path d="M8 14h8"/>' }
+  /* the apps come from the suite registry (server: login answer `catalog`); these paths draw the icon names the registry allows */
+  var APP_ICONS = {
+    pill: '<path d="M10.5 20.5 3.5 13.5a4.95 4.95 0 0 1 7-7l7 7a4.95 4.95 0 0 1-7 7z"/><path d="m8.5 8.5 7 7"/>',
+    flask: '<path d="M9 3h6M10 3v6.3L4.6 18.1A1.5 1.5 0 0 0 5.9 20.3h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.3V3"/><path d="M8 14h8"/>',
+    cart: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.7 12.4a1 1 0 0 0 1 .8h8.8a1 1 0 0 0 1-.8L20 7H6"/>',
+    truck: '<path d="M1 4h13v11H1zM14 8h4l4 4v3h-8z"/><circle cx="6" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+    chart: '<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>',
+    box: '<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>',
+    file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6"/>'
   };
+  var FALLBACK_CATALOG = [
+    { id: 'pharmacy', name: 'Pharmacy POS', sub: 'Medicines, stock and billing counter', color: '#2f6df6', icon: 'pill' },
+    { id: 'lab', name: 'Blood Test Lab', sub: 'Patients, tests, reports and invoices', color: '#0ea5a4', icon: 'flask', host: true }
+  ];
+  function catalogOf(s) { /* the user's apps, drawn from the registry (older sessions fall back to the two built-in products) */
+    var cat = (s.catalog && s.catalog.length) ? s.catalog : FALLBACK_CATALOG, apps = (s.apps && s.apps.length) ? s.apps : ['lab'];
+    return cat.filter(function (c) { return apps.indexOf(c.id) >= 0; });
+  }
   function ssoCall(path, body, withAuth) {
     var h = { 'Content-Type': 'application/json' };
     if (withAuth && window.DB && DB.sessToken && DB.sessToken()) h.Authorization = 'Bearer ' + DB.sessToken();
@@ -185,7 +198,7 @@
     });
   }
   A.openApp = function (app) {
-    if (app === 'lab') { try { sessionStorage.setItem('labpos_chose', '1'); } catch (e) {} location.hash = '#/dashboard'; return Promise.resolve(); }
+    if (app === 'lab') { try { sessionStorage.setItem('labpos_chose', '1'); } catch (e) {} location.hash = '#/dashboard'; return Promise.resolve(); } /* 'lab' is this site */
     return ssoCall('/api/sso/ticket', { app: app }, true).then(function (j) { location.href = j.url; });
   };
   function apShell(inner) {
@@ -194,18 +207,17 @@
   }
   A.renderApps = function () {
     var s = A.session(); if (!s) { location.hash = '#/login'; return; }
-    var apps = (s.apps && s.apps.length) ? s.apps : ['lab'];
-    if (apps.length === 1 && apps[0] !== 'lab') { /* only one app and it lives on the other site: go straight there */
-      apShell('<div class="ap-head"><h1>Opening ' + esc(APP_CARDS[apps[0]].name) + '…</h1><p class="ap-sub" id="apMsg">Signing you in</p></div>');
-      A.openApp(apps[0]).catch(function (e) { var m = document.getElementById('apMsg'); if (m) m.textContent = (e && e.message) || 'Could not open the app.'; });
+    var list = catalogOf(s);
+    if (list.length === 1 && list[0].id !== 'lab') { /* only one app and it lives on another site: go straight there */
+      apShell('<div class="ap-head"><h1>Opening ' + esc(list[0].name) + '…</h1><p class="ap-sub" id="apMsg">Signing you in</p></div>');
+      A.openApp(list[0].id).catch(function (e) { var m = document.getElementById('apMsg'); if (m) m.textContent = (e && e.message) || 'Could not open the app.'; });
       return;
     }
-    if (apps.length === 1) { A.openApp('lab'); return; }
+    if (list.length <= 1) { A.openApp('lab'); return; }
     apShell('<div class="ap-head"><h1>Where do you want to go?</h1><p class="ap-sub">Signed in as <b>' + esc(s.name || '') + '</b>' + (s.labName ? ' · ' + esc(s.labName) : '') + '</p></div>' +
-      '<div class="ap-cards">' + ['pharmacy', 'lab'].filter(function (k) { return apps.indexOf(k) >= 0; }).map(function (k) {
-        var c = APP_CARDS[k];
-        return '<button type="button" class="ap-card" data-app="' + k + '" style="--ap:' + c.color + '"><span class="ap-ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + c.svg + '</svg></span>' +
-          '<b>' + esc(c.name) + '</b><small>' + esc(c.sub) + '</small></button>';
+      '<div class="ap-cards">' + list.map(function (c) {
+        return '<button type="button" class="ap-card" data-app="' + esc(c.id) + '" style="--ap:' + esc(c.color || '#475569') + '"><span class="ap-ic"><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + (APP_ICONS[c.icon] || APP_ICONS.box) + '</svg></span>' +
+          '<b>' + esc(c.name) + '</b><small>' + esc(c.sub || '') + '</small></button>';
       }).join('') + '</div><div class="login-err" id="apErr" hidden></div>' +
       '<button type="button" class="ap-out" id="apOut">Sign out</button>');
     document.getElementById('apOut').addEventListener('click', function () { A.logout(); });
