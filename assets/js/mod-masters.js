@@ -938,6 +938,8 @@ function testModal(t) {
       '<div><label class="label">Status</label><label style="display:flex;align-items:center;gap:8px;font-weight:600"><input id="tm-active" type="checkbox"' + (t.active ? ' checked' : '') + '> Active</label></div>' +
       '<div><label class="label">Remind to repeat after (days)</label><input id="tm-retest" class="input" type="number" min="0" step="1" value="' + App.esc(t.retestDays ? String(t.retestDays) : '') + '" placeholder="e.g. 90 (optional)"><div class="muted" style="font-size:12px;margin-top:3px">Used by WhatsApp &rarr; Automatic messages &rarr; repeat-test reminder.</div></div>' +
     '</div>' +
+    '<div style="margin-top:14px"><label class="label">Report Note <span class="muted" style="font-weight:500">(optional — printed in a box under this test on the report)</span></label>' +
+      '<textarea id="tm-note" class="input" rows="2" placeholder="e.g. Fasting sample is preferred." style="width:100%">' + App.esc(t.note || '') + '</textarea></div>' +
     '<div style="margin-top:14px"><label class="label">Report Parameters</label>' +
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
         '<select class="select" id="tm-tpl" style="flex:1"><option value="">Load template…</option>' +
@@ -1068,6 +1070,7 @@ function testModal(t) {
         sampleType: m.querySelector('#tm-sample').value,
         tat: m.querySelector('#tm-tat').value.trim() || 'Same day',
         retestDays: Math.max(0, parseInt(m.querySelector('#tm-retest').value, 10) || 0),
+        note: m.querySelector('#tm-note').value.trim(),
         outsourced: m.querySelector('#tm-out').checked,
         outsourcedAt: m.querySelector('#tm-out').checked ? (t.outsourced && t.outsourcedAt ? t.outsourcedAt : new Date().toISOString()) : (t.outsourcedAt || ''),
         refLabId: m.querySelector('#tm-out').checked ? m.querySelector('#tm-reflab').value : '',

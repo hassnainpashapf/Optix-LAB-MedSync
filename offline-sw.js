@@ -2,7 +2,7 @@
 'use strict';
 
 var CACHE_PREFIX = 'optix-app-shell-';
-var CACHE_NAME = CACHE_PREFIX + '219';
+var CACHE_NAME = CACHE_PREFIX + '225';
 var APP_ROOT = new URL('./', self.registration.scope);
 
 self.addEventListener('install', function (event) {

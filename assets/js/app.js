@@ -781,30 +781,44 @@
     }
     /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
        A new page only needs its key added to a folder below (a key that is in no folder simply shows at the bottom). */
-    var TOP = ['dashboard', 'branches', 'patients', 'samples', 'results', 'invoices', 'inventory-stock', 'tests', 'packages', 'reports'];
+    /* The menu is grouped under category headings (Overview, Laboratory, ...); pages that belong together and are used less often live in folders.
+       A key that is in no section simply shows at the bottom. */
+    var SECTIONS = [
+      { label: 'Overview', keys: ['dashboard', 'branches'] },
+      { label: 'Laboratory', keys: ['patients', 'appointments', 'samples', 'results', 'invoices', 'inventory-stock', 'tests', 'packages', 'folder:lab'] },
+      { label: 'Finance', keys: ['folder:acct'] },
+      { label: 'Insights', keys: ['reports', 'audit'] },
+      { label: 'Communication', keys: ['folder:tools'] },
+      { label: 'Account', keys: ['subscription', 'settings'] }
+    ];
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['outsourced', 'doctors'] },
       { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit'] },
       { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'sms', 'email', 'downloads'] }
     ];
-    var BOTTOM = ['subscription', 'settings']; /* keep account areas at the end, matching the compact admin dashboard */
     var savedOpen = {}; try { savedOpen = JSON.parse(localStorage.getItem('labpos_navfolders') || '{}') || {}; } catch (e) { savedOpen = {}; }
     var byKey = {}; visible.forEach(function (n) { byKey[n.key] = n; });
     var placed = {}, items = '';
-    TOP.forEach(function (k) { if (byKey[k]) { items += itemHtml(byKey[k]); placed[k] = 1; } });
-    FOLDERS.forEach(function (f) {
+    function folderHtml(f) {
       var inside = f.keys.filter(function (k) { return byKey[k]; });
       inside.forEach(function (k) { placed[k] = 1; });
-      if (!inside.length) return;
-      if (inside.length === 1) { items += itemHtml(byKey[inside[0]]); return; } /* a folder with one page is just that page */
+      if (!inside.length) return '';
+      if (inside.length === 1) return itemHtml(byKey[inside[0]]); /* a folder with one page is just that page */
       var holds = inside.indexOf(activeKey) >= 0, open = holds || !!savedOpen[f.id];
-      items += '<div class="nav-fold' + (open ? ' open' : '') + (holds ? ' has-active' : '') + '" data-fold="' + f.id + '">' +
+      return '<div class="nav-fold' + (open ? ' open' : '') + (holds ? ' has-active' : '') + '" data-fold="' + f.id + '">' +
          '<button type="button" class="nav-it nav-fh" data-route="' + (byKey[inside[0]] ? byKey[inside[0]].route : '#/dashboard') + '" title="' + esc(f.label) + '" aria-label="' + esc(f.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="nav-ic">' + icon(f.icon, 20) + '</span><span class="nav-lb">' + f.label + '</span>' +
         '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
         '<div class="nav-fb">' + inside.map(function (k) { return itemHtml(byKey[k]); }).join('') + '</div></div>';
+    }
+    SECTIONS.forEach(function (sec) {
+      var html = '';
+      sec.keys.forEach(function (k) {
+        if (k.indexOf('folder:') === 0) { html += folderHtml(FOLDERS.filter(function (f) { return 'folder:' + f.id === k; })[0]); return; }
+        if (byKey[k]) { html += itemHtml(byKey[k]); placed[k] = 1; }
+      });
+      if (html) items += '<div class="nav-sec2">' + sec.label + '</div>' + html;
     });
-    visible.forEach(function (n) { if (!placed[n.key] && BOTTOM.indexOf(n.key) < 0) items += itemHtml(n); });
-    BOTTOM.forEach(function (k) { if (byKey[k]) items += itemHtml(byKey[k]); });
+    visible.forEach(function (n) { if (!placed[n.key]) items += itemHtml(n); });
     /* current user record (for profile photo in avatar & sidebar) */
     var _me = null;
     try { _me = window.DB.get('users', s.userId); } catch (e) {}
