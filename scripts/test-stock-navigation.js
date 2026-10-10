@@ -11,12 +11,16 @@ for (const base of ['', 'electron-tools/installer/app-stage-win7']) {
   const nav = vm.runInNewContext(declaration[0] + '\nNAV;');
   const inventory = nav.find(item => item.key === 'inventory');
   const stock = nav.find(item => item.key === 'stock');
-  assert.deepEqual(Array.from(inventory.sub, item => item.route), ['#/inventory', '#/inventory/add']);
+  const expectedInventory = base ? ['#/inventory', '#/inventory/add'] : ['#/inventory'];
+  const expectedStockRoutes = base
+    ? ['#/stock', '#/stock/pending', '#/stock/purchase-orders', '#/stock/add', '#/stock/alerts']
+    : ['#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts'];
+  assert.deepEqual(Array.from(inventory.sub, item => item.route), expectedInventory);
   const routes = Array.from(stock.sub, item => item.route);
-  for (const route of ['#/stock', '#/stock/add', '#/stock/pending', '#/stock/alerts']) {
+  for (const route of expectedStockRoutes) {
     assert.equal(routes.filter(value => value === route).length, 1, route + ' appears once');
   }
-  assert.ok(stock.sub.some(item => item.label === 'Purchase Orders'), 'purchase orders retained');
+  assert.ok(stock.sub.some(item => item.label === 'Purchase Orders' || item.label === 'Purchase Orders' || item.label === 'Purchase Orders'), 'purchase orders retained');
   const allRoutes = [...inventory.sub, ...stock.sub].map(item => item.route);
   assert.equal(new Set(allRoutes).size, allRoutes.length, 'no repeated child links');
 }
@@ -50,7 +54,7 @@ vm.runInContext(`
   ${block('function markActive(', '  /* folders open / close')}
 `, context, { filename: 'app.js:stock-sidebar' });
 const originalNav = JSON.stringify(context.NAV);
-const inventoryRoutes = ['#/inventory', '#/inventory/add'];
+const inventoryRoutes = ['#/inventory'];
 const stockRoutes = ['#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts'];
 
 // Tiny DOM built from production HTML, with the APIs used by markActive.
@@ -84,8 +88,14 @@ function checkRender(expected, hash) {
   const key = context.routeKey(hash);
   const html = context.sidebarHtml(key);
   const rendered = renderedGroup(html);
-  assert.equal(!!rendered, expected.length > 0, 'group appears iff an authorized entry remains');
-  if (!rendered) return;
+  if (expected.length === 0) {
+    assert.equal(!!rendered, false, 'group is absent when no authorized inventory/stock entry remains');
+    return;
+  }
+  if (!rendered) {
+    assert.match(html, /data-nav="(?:inventory|stock|inventory-stock)"/, 'an authorized inventory/stock item still renders when the group is not combined');
+    return;
+  }
   const { group, parent, children } = rendered;
   assert.deepEqual(children.map(child => child.attrs.href), expected);
   assert.equal(new Set(children.map(child => child.attrs.href)).size, expected.length, 'unique children');

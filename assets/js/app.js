@@ -52,7 +52,7 @@
         { key: 'stickers', label: 'Tube Stickers (50×25mm)', icon: 'scan', route: '#/samples/stickers' },
         { key: 'home', label: 'Home Sampling & Dispatch', icon: 'box', route: '#/samples/home' }] },
     { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9',
-      sub: [{ key: 'catalog', label: 'Item Catalog', icon: 'box', route: '#/inventory' }, { key: 'add', label: 'Add Item', icon: 'plus', route: '#/inventory/add' }] },
+      sub: [{ key: 'catalog', label: 'Item Catalog', icon: 'box', route: '#/inventory' }] },
     { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock', color: '#0ea5e9',
       sub: [{ key: 'moves', label: 'Movement History', icon: 'clipboard', route: '#/stock' }, { key: 'add', label: 'Add Stock', icon: 'plus', route: '#/stock/add' },
         { key: 'pending', label: 'Pending Stock', icon: 'box', route: '#/stock/pending' }, { key: 'orders', label: 'Purchase Orders', route: '#/stock/orders', icon: 'receipt' }, { key: 'alerts', label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' }] },
