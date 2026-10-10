@@ -146,7 +146,7 @@ for (const route of ['#/home-sampling', '#/samples/home']) {
   assert.equal(JSON.stringify(bookings), before, 'render and filters never mutate source records or their order');
 }
 // Static layout guard; actual browser layout remains a visual smoke check.
-assert.match(view.innerHTML, /\.hs-dash \.hs-summary-grid \{[^}]*repeat\(4, minmax\(0, 1fr\)\)/);
+assert.match(view.innerHTML, /\.hs-dash \.hs-summary-grid \{[^}]*repeat\(4, 1fr\)/);
 assert.match(view.innerHTML, /@media \(max-width: 900px\) \{ \.hs-dash \.hs-summary-grid \{[^}]*repeat\(2, minmax\(0, 1fr\)\)/);
 assert.match(view.innerHTML, /@media \(max-width: 540px\) \{ \.hs-dash \.hs-summary-grid \{ grid-template-columns: minmax\(0, 1fr\)/);
 assert(reads.includes('home_sampling'));

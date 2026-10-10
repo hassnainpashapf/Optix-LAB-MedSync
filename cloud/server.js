@@ -1671,18 +1671,19 @@ async function main() {
   try { viewerHtml = fs.readFileSync(path.join(__dirname, 'report-viewer.html'), 'utf8'); } catch (e) { viewerHtml = null; }
   app.get('/r/:key', async (req, res) => {
     const store = req.store;
+    /* Stable QR keys are overwritten when results change; never cache patient reports. */
+    res.setHeader('Cache-Control', 'private, no-store, no-cache, max-age=0, must-revalidate');
+    res.vary('Accept');
     const key = req.params.key || '';
     if (!REPORT_KEY_RE.test(key)) return res.status(400).json({ error: 'invalid key' });
     const file = path.join(REPORT_PDFS_DIR, key + '.pdf');
     if (!fs.existsSync(file) && !(DESKTOP && await desktop.fetchPdf(key))) return res.status(404).json({ error: 'not found' });
     if (viewerHtml && !req.query.raw && /text\/html/.test(req.get('Accept') || '')) {
-      res.set('Cache-Control', 'public, max-age=300');
       return res.type('html').send(viewerHtml);
     }
     if (req.query.dl) res.setHeader('Content-Disposition', 'attachment; filename="lab-report-' + key + '.pdf"');
     res.setHeader('Content-Type', 'application/pdf');
     if (!req.query.dl) res.setHeader('Content-Disposition', 'inline; filename="lab-report-' + key + '.pdf"');
-    res.setHeader('Cache-Control', 'public, max-age=31536000');
     fs.createReadStream(file).pipe(res);
   });
 

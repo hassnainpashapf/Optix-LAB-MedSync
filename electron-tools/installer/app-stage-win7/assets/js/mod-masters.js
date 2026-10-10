@@ -114,6 +114,13 @@ function doctorInvoiceCount(id) {
 /* filter state (module-level so it survives re-render) */
 var testFilter = { q: '', cat: 'All', status: 'All' };
 var catalogType = 'all';
+var testCatalogMode = 'all';
+var testSelection = {};
+var testSelectionMode = null;
+var testSelectionSession = null;
+var testSelectionRevision = 0;
+var testMovePending = false;
+var testVisibleRows = [];
 function catalogTests() {
   return DB.all('tests').filter(function (t) {
     return catalogType === 'all' || (t.type === 'generic' ? 'generic' : 'regular') === catalogType;
@@ -121,6 +128,11 @@ function catalogTests() {
 }
 function openCatalog(type) {
   catalogType = type;
+  if (testSelectionMode !== type) {
+    testSelection = {};
+    testSelectionMode = type;
+  }
+  testCatalogMode = type;
   testFilter = { q: '', cat: 'All', status: 'All' };
   renderTests();
 }
@@ -166,13 +178,19 @@ function renderTests() {
             return '<option' + (testFilter.status === s ? ' selected' : '') + '>' + s + '</option>';
           }).join('') +
         '</select>' +
+        (testCatalogMode === 'all' && canEdit ?
+          '<span style="display:inline-flex;gap:8px;align-items:center;margin-left:8px" id="t-classify-controls">' +
+            '<button type="button" class="btn btn-ghost" id="t-move-generic" disabled>Move to Generic</button>' +
+            '<button type="button" class="btn btn-ghost" id="t-move-regular" disabled>Move to Regular</button>' +
+          '</span>' : '') +
         (canEdit ? '<button type="button" class="btn" id="t-import" style="margin-left:8px;border:2px solid var(--bd)">📥 Import CSV</button>' : '') +
         (canEdit ? '<button type="button" class="btn" id="t-bulkprice" style="margin-left:8px;border:2px solid var(--bd)">💰 Bulk Prices</button>' : '') +
         (canEdit ? '' : '') +
         (canEdit ? '<button type="button" class="btn btn-primary" id="t-add" style="margin-left:auto">+ Add Test</button>' : '') +
       '</div>' +
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="t-chips">' + chips + '</div>' +
-      '<div class="tbl-wrap"><table class="table"><thead><tr>' +
+        '<div class="tbl-wrap"><table class="table"><thead><tr>' +
+        (testCatalogMode === 'all' && canEdit ? '<th style="width:34px"><input type="checkbox" id="t-select-all" title="Select all shown"></th>' : '') +
         '<th>Code</th><th>Test Name</th><th>Category</th><th>Sample</th><th>TAT</th>' +
         '<th style="text-align:right">Price</th><th>Status</th><th style="text-align:right">Actions</th>' +
       '</tr></thead><tbody id="t-rows"></tbody></table></div>' +
@@ -196,6 +214,10 @@ function renderTests() {
   });
   var addBtn = document.getElementById('t-add');
   if (addBtn) addBtn.addEventListener('click', function () { testModal(null); });
+  if (testCatalogMode === 'all' && canEdit) {
+    document.getElementById('t-move-generic').addEventListener('click', function () { moveSelectedTests('generic', canEdit); });
+    document.getElementById('t-move-regular').addEventListener('click', function () { moveSelectedTests('regular', canEdit); });
+  }
   /* bulk price update */
   var bulkBtn = document.getElementById('t-bulkprice');
   if (bulkBtn) bulkBtn.addEventListener('click', function () { bulkPriceModal(); });
@@ -296,6 +318,10 @@ function drawTestRows(canEdit) {
   var tb = document.getElementById('t-rows');
   if (!tb) return;
   var q = testFilter.q.trim().toLowerCase();
+  testSelectionRevision++;
+  var session = localStorage.getItem('labpos_session');
+  if (session !== testSelectionSession) testSelection = {};
+  testSelectionSession = session;
   var rows = catalogTests().slice().sort(function (a, b) {
     return String(a.code || '').localeCompare(String(b.code || ''));
   }).filter(function (t) {
@@ -308,8 +334,22 @@ function drawTestRows(canEdit) {
     }
     return true;
   });
+  testVisibleRows = rows;
 
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8">' + App.empty('No tests found.') + '</td></tr>'; return; }
+  /* Keep selection limited to tests still visible under the current filter. */
+  var visibleIds = {};
+  rows.forEach(function (t) { visibleIds[String(t.id)] = true; });
+  Object.keys(testSelection).forEach(function (id) {
+    if (!visibleIds[id]) delete testSelection[id];
+  });
+
+  var classify = testCatalogMode === 'all' && canEdit;
+  var colCount = classify ? 9 : 8;
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="' + colCount + '">' + App.empty('No tests found.') + '</td></tr>';
+    syncTestClassificationControls(rows, classify);
+    return;
+  }
 
   /* group tests by department (category) */
   var groups = {}, order = [];
@@ -323,7 +363,7 @@ function drawTestRows(canEdit) {
   var htmlParts = [];
   order.forEach(function (cat) {
     var isUncat = cat === 'Uncategorized';
-    htmlParts.push('<tr class="dept-head"><td colspan="8" style="background:' + (isUncat ? '#fef3c7' : 'var(--brand-soft)') + ';font-weight:800;padding:10px 12px;color:' + (isUncat ? '#92400e' : 'var(--brand)') + ';border-left:4px solid ' + (isUncat ? '#f59e0b' : 'var(--brand)') + '">' +
+    htmlParts.push('<tr class="dept-head"><td colspan="' + colCount + '" style="background:' + (isUncat ? '#fef3c7' : 'var(--brand-soft)') + ';font-weight:800;padding:10px 12px;color:' + (isUncat ? '#92400e' : 'var(--brand)') + ';border-left:4px solid ' + (isUncat ? '#f59e0b' : 'var(--brand)') + '">' +
       '📁 ' + App.esc(cat) + ' <span class="muted" style="font-weight:400">(' + groups[cat].length + ' test' + (groups[cat].length === 1 ? '' : 's') + ')</span></td></tr>');
     groups[cat].forEach(function (t) {
       var status = t.active
@@ -339,8 +379,9 @@ function drawTestRows(canEdit) {
           '</div>'
         : '<span class="muted">—</span>';
       htmlParts.push('<tr>' +
+        (classify ? '<td><input type="checkbox" class="t-test-select" data-test-select="' + App.esc(t.id) + '"' + (testSelection[String(t.id)] ? ' checked' : '') + '></td>' : '') +
         '<td><strong>' + App.esc(t.code || '') + '</strong></td>' +
-        '<td>' + App.esc(t.name || '') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
+        '<td>' + App.esc(t.name || '') + (testCatalogMode === 'all' ? (t.type === 'generic' ? ' <span class="badge b-ready">Generic</span>' : ' <span class="badge b-ready">Regular</span>') : '') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
           (t.isPackage && t.includes ? '<div style="font-size:11.5px;color:var(--muted)">' + t.includes.length + ' tests included</div>' : '') +
           '<div style="margin-top:4px"><span class="badge" style="background:var(--brand-soft);color:var(--brand);font-size:11px">📁 ' + App.esc(t.category || 'Uncategorized') + '</span></div></td>' +
         '<td>' + App.esc(t.category || '') + '</td>' +
@@ -353,6 +394,17 @@ function drawTestRows(canEdit) {
     });
   });
   tb.innerHTML = htmlParts.join('');
+
+  if (classify) {
+    tb.querySelectorAll('[data-test-select]').forEach(function (c) {
+      c.addEventListener('change', function () {
+        var id = c.getAttribute('data-test-select');
+        if (c.checked) testSelection[id] = true;
+        else delete testSelection[id];
+        drawTestRows(canEdit);
+      });
+    });
+  }
 
   if (!canEdit) return;
   tb.querySelectorAll('[data-book]').forEach(function (b) {
@@ -392,6 +444,86 @@ function drawTestRows(canEdit) {
         renderTests();
       });
     });
+  });
+  syncTestClassificationControls(rows, classify);
+}
+
+function selectedTestIds() {
+  return Object.keys(testSelection).filter(function (id) { return testSelection[id]; });
+}
+
+function syncTestClassificationControls(rows, classify) {
+  if (!classify) return;
+  var ids = selectedTestIds();
+  var generic = document.getElementById('t-move-generic');
+  var regular = document.getElementById('t-move-regular');
+  if (generic) generic.disabled = testMovePending || !ids.length;
+  if (regular) regular.disabled = testMovePending || !ids.length;
+  var selectAll = document.getElementById('t-select-all');
+  if (selectAll) {
+    selectAll.checked = !!rows.length && rows.every(function (t) { return !!testSelection[String(t.id)]; });
+    selectAll.indeterminate = !!ids.length && !selectAll.checked;
+    if (!selectAll._classificationBound) {
+      selectAll.addEventListener('change', function () {
+        testSelection = {};
+        if (selectAll.checked) testVisibleRows.forEach(function (t) { testSelection[String(t.id)] = true; });
+        drawTestRows(canClassifyTests());
+      });
+      selectAll._classificationBound = true;
+    }
+  }
+}
+
+function canClassifyTests() {
+  var r = sessionRole();
+  return r === 'admin' || (r === 'custom' && App.canPage('tests'));
+}
+
+function moveSelectedTests(targetType) {
+  if (!canClassifyTests()) { App.toast('You do not have permission to edit tests.', 'err'); return; }
+  if (testMovePending || testCatalogMode !== 'all' || (targetType !== 'generic' && targetType !== 'regular')) return;
+  if (testSelectionSession !== localStorage.getItem('labpos_session')) {
+    testSelection = {};
+    App.toast('Session changed. Select the tests again.', 'err');
+    drawTestRows(canClassifyTests());
+    return;
+  }
+  var ids = selectedTestIds();
+  if (!ids.length) { App.toast('No tests selected.', 'err'); return; }
+  var label = targetType === 'generic' ? 'Generic' : 'Regular';
+  var session = testSelectionSession, revision = testSelectionRevision;
+  var table = document.getElementById('t-rows'), hash = location.hash;
+  testMovePending = true;
+  syncTestClassificationControls(catalogTests(), true);
+  Promise.resolve().then(function () {
+    return App.confirm('Move ' + ids.length + ' selected test' + (ids.length === 1 ? '' : 's') + ' to ' + label + '?');
+  }).then(function (ok) {
+    if (!ok) return;
+    if (!canClassifyTests()) { App.toast('You do not have permission to edit tests.', 'err'); return; }
+    if (session !== localStorage.getItem('labpos_session') || revision !== testSelectionRevision || hash !== location.hash || table !== document.getElementById('t-rows')) {
+      App.toast('Selection or session changed. Select the tests again.', 'err');
+      return;
+    }
+    var visible = {};
+    testVisibleRows.forEach(function (t) { visible[String(t.id)] = true; });
+    var updated = 0, unconfirmed = 0;
+    ids.forEach(function (id) {
+      try {
+        if (!visible[id] || !canClassifyTests() || session !== localStorage.getItem('labpos_session')) { unconfirmed++; return; }
+        var result = DB.update('tests', id, { type: targetType });
+        if (!result || result.type !== targetType) { unconfirmed++; return; }
+        updated++;
+        delete testSelection[id];
+      } catch (e) { unconfirmed++; }
+    });
+    App.toast(updated + ' test' + (updated === 1 ? '' : 's') + ' moved to ' + label + ' in this catalog.' +
+      (unconfirmed ? ' ' + unconfirmed + ' could not be confirmed; review the catalog before retrying.' : '') +
+      (updated && DB.isRemote && DB.isRemote() ? ' Server sync is pending.' : ''), unconfirmed ? 'err' : 'ok');
+  }).catch(function () {
+    App.toast('Move could not be confirmed. Review the catalog before retrying.', 'err');
+  }).then(function () {
+    testMovePending = false;
+    if (table === document.getElementById('t-rows') && hash === location.hash) drawTestRows(canClassifyTests());
   });
 }
 

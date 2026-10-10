@@ -114,6 +114,12 @@ function doctorInvoiceCount(id) {
 /* filter state (module-level so it survives re-render) */
 var testFilter = { q: '', cat: 'All', status: 'All' };
 var testCatalogMode = 'all';
+var testSelection = {};
+var testSelectionMode = null;
+var testSelectionSession = null;
+var testSelectionRevision = 0;
+var testMovePending = false;
+var testVisibleRows = [];
 var docFilter = { q: '' };
 
 /* ============================================================
@@ -127,9 +133,15 @@ function renderTests() {
   var canEdit = (r === 'admin' || cust);
 
   var hash = (location.hash || '').split('?')[0];
-  testCatalogMode = hash === '#/tests/regular' ? 'regular' : 'all';
+  var nextMode = hash === '#/tests/generic' ? 'generic' : hash === '#/tests/regular' ? 'regular' : 'all';
+  if (testSelectionMode !== nextMode) {
+    testSelection = {};
+    testSelectionMode = nextMode;
+    testFilter = { q: '', cat: 'All', status: 'All' };
+  }
+  testCatalogMode = nextMode;
   var allT = DB.all('tests');
-  var displayT = testCatalogMode === 'regular' ? allT.filter(function (t) { return t.type !== 'generic' && !t.templateKey; }) : allT;
+  var displayT = allT.filter(function (t) { return testCatalogMode === 'all' || (t.type === 'generic' ? 'generic' : 'regular') === testCatalogMode; });
   var cats = categories(displayT);
   /* filter by selected category for stat cards */
   var fT = testFilter.cat === 'All' ? displayT : displayT.filter(function (t) { return t.category === testFilter.cat; });
@@ -171,8 +183,9 @@ function renderTests() {
   }).join('');
 
   view().innerHTML =
-   '<p class="muted">' + (testCatalogMode === 'all' ? 'All Tests combines saved lab tests (including imported generic tests) with reusable generic templates shown below.' : 'Regular Tests shows saved tests used for routine booking. Reusable definitions are available under Generic Tests.') + '</p>' +
+    (testCatalogMode === 'all' ? '<p class="muted">All Tests combines saved lab tests (including imported generic tests) with reusable generic templates shown below.</p>' : '') +
     statCards +
+    (testCatalogMode === 'generic' ? '<h3>Saved Generic Tests</h3>' : '') +
     '<div class="card"><div class="card-b">' +
       '<div class="test-menu-wrap">' +
         '<div class="test-menu-row">' +
@@ -183,6 +196,11 @@ function renderTests() {
             '<span>' + App.esc(testFilter.status || 'All') + '</span>' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>' +
           '</button>' +
+          (testCatalogMode === 'all' && canEdit ?
+            '<span class="test-classify-group" id="t-classify-controls">' +
+              '<button type="button" class="test-action-pill secondary" id="t-move-generic" disabled>Move to Generic</button>' +
+              '<button type="button" class="test-action-pill secondary" id="t-move-regular" disabled>Move to Regular</button>' +
+            '</span>' : '') +
           (canEdit ? '<button type="button" class="test-action-pill" id="t-import">📥 Import CSV</button>' : '') +
           (canEdit ? '<button type="button" class="test-action-pill" id="t-bulkprice">💰 Bulk Prices</button>' : '') +
           (canEdit ? '<button type="button" class="test-add-pill" id="t-add">+ Add Test</button>' : '') +
@@ -190,11 +208,13 @@ function renderTests() {
         '<div class="test-type-menu" id="t-chips">' + chips + '</div>' +
       '</div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
+        (testCatalogMode === 'all' && canEdit ? '<th style="width:34px"><input type="checkbox" id="t-select-all" title="Select all shown"></th>' : '') +
         '<th>Code</th><th>Test Name</th><th>Category</th><th>Sample</th><th>TAT</th>' +
         '<th style="text-align:right">Price</th><th>Status</th><th style="text-align:right">Actions</th>' +
       '</tr></thead><tbody id="t-rows"></tbody></table></div>' +
-       '</div></div>' +
-       (testCatalogMode === 'all' ? '<div class="card"><div class="card-h"><div><h3>Generic test templates</h3><div class="muted" style="font-size:12px;margin-top:2px">Reusable definitions that can be imported into the saved catalog</div></div><a class="btn btn-ghost btn-sm" href="#/tests/generic">Open Generic Tests</a></div><div class="card-b"><div class="muted">' + genericTemplates().length + ' templates · ' + genericTemplates().filter(function (t) { return !!t.test; }).length + ' already saved as catalog tests · ' + genericTemplates().filter(function (t) { return !t.test; }).length + ' available to add</div></div></div>' : '');
+    '</div></div>' +
+    (testCatalogMode === 'generic' ? '<div id="generic-template-browser"></div>' : '') +
+    (testCatalogMode === 'all' ? '<div class="card"><div class="card-h"><div><h3>Generic test templates</h3><div class="muted" style="font-size:12px;margin-top:2px">Reusable definitions that can be imported into the saved catalog</div></div><a class="btn btn-ghost btn-sm" href="#/tests/generic">Open Generic Tests</a></div><div class="card-b"><div class="muted">' + genericTemplates().length + ' templates · ' + genericTemplates().filter(function (t) { return !!t.test; }).length + ' already saved as catalog tests · ' + genericTemplates().filter(function (t) { return !t.test; }).length + ' available to add</div></div></div>' : '');
 
   var qEl = document.getElementById('t-q');
   qEl.addEventListener('input', function () { testFilter.q = qEl.value; drawTestRows(canEdit); });
@@ -216,6 +236,10 @@ function renderTests() {
   });
   var addBtn = document.getElementById('t-add');
   if (addBtn) addBtn.addEventListener('click', function () { testModal(null); });
+  if (testCatalogMode === 'all' && canEdit) {
+    document.getElementById('t-move-generic').addEventListener('click', function () { moveSelectedTests('generic', canEdit); });
+    document.getElementById('t-move-regular').addEventListener('click', function () { moveSelectedTests('regular', canEdit); });
+  }
   /* bulk price update */
   var bulkBtn = document.getElementById('t-bulkprice');
   if (bulkBtn) bulkBtn.addEventListener('click', function () { bulkPriceModal(); });
@@ -262,7 +286,7 @@ function renderTests() {
               name: name, category: cat || 'General', price: price,
               sampleType: ciSample >= 0 ? (cols[ciSample] || 'Blood') : 'Blood',
               tat: ciTat >= 0 ? (cols[ciTat] || 'Same day') : 'Same day',
-              active: true, params: []
+              active: true, type: testCatalogMode === 'generic' ? 'generic' : 'regular', params: []
             });
             existing[name.toLowerCase()] = 1;
             added++;
@@ -310,16 +334,15 @@ function renderTests() {
   });
 
   drawTestRows(canEdit);
+  if (testCatalogMode === 'generic') renderGenericTemplates();
 }
 
-function drawTestRows(canEdit) {
-  var tb = document.getElementById('t-rows');
-  if (!tb) return;
+function visibleTestRows() {
   var q = testFilter.q.trim().toLowerCase();
-  var rows = DB.all('tests').slice().sort(function (a, b) {
+  return DB.all('tests').slice().sort(function (a, b) {
     return String(a.code || '').localeCompare(String(b.code || ''));
   }).filter(function (t) {
-    if (testCatalogMode === 'regular' && (t.type === 'generic' || t.templateKey)) return false;
+    if (testCatalogMode !== 'all' && (t.type === 'generic' ? 'generic' : 'regular') !== testCatalogMode) return false;
     if (testFilter.cat !== 'All' && t.category !== testFilter.cat) return false;
     if (testFilter.status === 'Active' && t.active === false) return false;
     if (testFilter.status === 'Inactive' && t.active !== false) return false;
@@ -329,8 +352,34 @@ function drawTestRows(canEdit) {
     }
     return true;
   });
+}
 
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="8">' + App.empty('No tests found.') + '</td></tr>'; return; }
+function drawTestRows(canEdit) {
+  var tb = document.getElementById('t-rows');
+  if (!tb) return;
+  testSelectionRevision++;
+  var session = localStorage.getItem('labpos_session');
+  if (session !== testSelectionSession) testSelection = {};
+  testSelectionSession = session;
+  var rows = visibleTestRows();
+  testVisibleRows = rows;
+
+  /* Keep selection across redraws, but never retain a record hidden by the
+     current route/filter. This also prevents a later move from touching an
+     unselected or filtered-out test. */
+  var visibleIds = {};
+  rows.forEach(function (t) { visibleIds[String(t.id)] = true; });
+  Object.keys(testSelection).forEach(function (id) {
+    if (!visibleIds[id]) delete testSelection[id];
+  });
+
+  var classify = testCatalogMode === 'all' && canEdit;
+  var colCount = classify ? 9 : 8;
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="' + colCount + '">' + App.empty('No tests found.') + '</td></tr>';
+    syncTestClassificationControls(rows, classify);
+    return;
+  }
 
   /* group tests by department (category) */
   var groups = {}, order = [];
@@ -344,7 +393,7 @@ function drawTestRows(canEdit) {
   var htmlParts = [];
   order.forEach(function (cat) {
     var isUncat = cat === 'Uncategorized';
-    htmlParts.push('<tr class="dept-head"><td colspan="8" style="background:' + (isUncat ? '#fef3c7' : 'var(--brand-soft)') + ';font-weight:800;padding:10px 12px;color:' + (isUncat ? '#92400e' : 'var(--brand)') + ';border-left:4px solid ' + (isUncat ? '#f59e0b' : 'var(--brand)') + '">' +
+    htmlParts.push('<tr class="dept-head"><td colspan="' + colCount + '" style="background:' + (isUncat ? '#fef3c7' : 'var(--brand-soft)') + ';font-weight:800;padding:10px 12px;color:' + (isUncat ? '#92400e' : 'var(--brand)') + ';border-left:4px solid ' + (isUncat ? '#f59e0b' : 'var(--brand)') + '">' +
       '📁 ' + App.esc(cat) + ' <span class="muted" style="font-weight:400">(' + groups[cat].length + ' test' + (groups[cat].length === 1 ? '' : 's') + ')</span></td></tr>');
     groups[cat].forEach(function (t) {
       var status = t.active !== false
@@ -362,8 +411,9 @@ function drawTestRows(canEdit) {
           '</div>'
         : '<span class="muted">—</span>';
       htmlParts.push('<tr>' +
+        (classify ? '<td><input type="checkbox" class="t-test-select" data-test-select="' + App.esc(t.id) + '"' + (testSelection[String(t.id)] ? ' checked' : '') + '></td>' : '') +
         '<td><strong>' + App.esc(t.code || '') + '</strong></td>' +
-        '<td>' + App.esc(t.name || '') + (t.type === 'generic' ? ' <span class="badge b-ready">Generic</span>' : '') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
+        '<td>' + App.esc(t.name || '') + (t.type === 'generic' ? ' <span class="badge b-ready">Generic</span>' : ' <span class="badge b-ready">Regular</span>') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
           (t.isPackage && t.includes ? '<div style="font-size:11.5px;color:var(--muted)">' + t.includes.length + ' tests included</div>' : '') +
           '<div style="margin-top:4px"><span class="badge" style="background:var(--brand-soft);color:var(--brand);font-size:11px">📁 ' + App.esc(t.category || 'Uncategorized') + '</span></div></td>' +
         '<td>' + App.esc(t.category || '') + '</td>' +
@@ -377,11 +427,23 @@ function drawTestRows(canEdit) {
   });
   tb.innerHTML = htmlParts.join('');
 
+  if (classify) {
+    tb.querySelectorAll('[data-test-select]').forEach(function (c) {
+      c.addEventListener('change', function () {
+        var id = c.getAttribute('data-test-select');
+        if (c.checked) testSelection[id] = true;
+        else delete testSelection[id];
+        drawTestRows(canEdit);
+      });
+    });
+  }
+
   tb.querySelectorAll('[data-book]').forEach(function (b) {
     b.addEventListener('click', function () {
       bookCatalogTest(b.getAttribute('data-book'));
     });
   });
+  syncTestClassificationControls(rows, classify);
   if (!canEdit) return;
   tb.querySelectorAll('[data-edit]').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -413,6 +475,87 @@ function drawTestRows(canEdit) {
         renderTests();
       });
     });
+  });
+}
+
+function selectedTestIds() {
+  return Object.keys(testSelection).filter(function (id) { return testSelection[id]; });
+}
+
+function syncTestClassificationControls(rows, classify) {
+  if (!classify) return;
+  var ids = selectedTestIds();
+  var generic = document.getElementById('t-move-generic');
+  var regular = document.getElementById('t-move-regular');
+  if (generic) generic.disabled = testMovePending || !ids.length;
+  if (regular) regular.disabled = testMovePending || !ids.length;
+  var selectAll = document.getElementById('t-select-all');
+  if (selectAll) {
+    selectAll.checked = !!rows.length && rows.every(function (t) { return !!testSelection[String(t.id)]; });
+    selectAll.indeterminate = !!ids.length && !selectAll.checked;
+    // Replace the handler on redraw; never retain a previous filter's rows.
+    if (!selectAll._classificationBound) {
+      selectAll.addEventListener('change', function () {
+        testSelection = {};
+        if (selectAll.checked) testVisibleRows.forEach(function (t) { testSelection[String(t.id)] = true; });
+        drawTestRows(canClassifyTests());
+      });
+      selectAll._classificationBound = true;
+    }
+  }
+}
+
+function canClassifyTests() {
+  var r = sessionRole();
+  return r === 'admin' || (r === 'custom' && App.canPage('tests'));
+}
+
+function moveSelectedTests(targetType) {
+  if (!canClassifyTests()) { App.toast('You do not have permission to edit tests.', 'err'); return; }
+  if (testMovePending || testCatalogMode !== 'all' || (targetType !== 'generic' && targetType !== 'regular')) return;
+  if (testSelectionSession !== localStorage.getItem('labpos_session')) {
+    testSelection = {};
+    App.toast('Session changed. Select the tests again.', 'err');
+    drawTestRows(canClassifyTests());
+    return;
+  }
+  var ids = selectedTestIds();
+  if (!ids.length) { App.toast('No tests selected.', 'err'); return; }
+  var label = targetType === 'generic' ? 'Generic' : 'Regular';
+  var session = testSelectionSession, revision = testSelectionRevision;
+  var table = document.getElementById('t-rows'), hash = location.hash;
+  testMovePending = true;
+  syncTestClassificationControls(visibleTestRows(), true);
+  return Promise.resolve().then(function () {
+    return App.confirm('Move ' + ids.length + ' selected test' + (ids.length === 1 ? '' : 's') + ' to ' + label + '?');
+  }).then(function (ok) {
+    if (!ok) return;
+    if (!canClassifyTests()) { App.toast('You do not have permission to edit tests.', 'err'); return; }
+    if (session !== localStorage.getItem('labpos_session') || revision !== testSelectionRevision || hash !== location.hash || table !== document.getElementById('t-rows')) {
+      App.toast('Selection or session changed. Select the tests again.', 'err');
+      return;
+    }
+    var visible = {};
+    visibleTestRows().forEach(function (t) { visible[String(t.id)] = true; });
+    var updated = 0, unconfirmed = 0;
+    ids.forEach(function (id) {
+      try {
+        if (!visible[id] || !canClassifyTests() || session !== localStorage.getItem('labpos_session')) { unconfirmed++; return; }
+        // Only classification changes. Template keys remain provenance.
+        var result = DB.update('tests', id, { type: targetType });
+        if (!result || result.type !== targetType) { unconfirmed++; return; }
+        updated++;
+        delete testSelection[id];
+      } catch (e) { unconfirmed++; }
+    });
+    App.toast(updated + ' test' + (updated === 1 ? '' : 's') + ' moved to ' + label + ' in this catalog.' +
+      (unconfirmed ? ' ' + unconfirmed + ' could not be confirmed; review the catalog before retrying.' : '') +
+      (updated && DB.isRemote && DB.isRemote() ? ' Server sync is pending.' : ''), unconfirmed ? 'err' : 'ok');
+  }).catch(function () {
+    App.toast('Move could not be confirmed. Review the catalog before retrying.', 'err');
+  }).then(function () {
+    testMovePending = false;
+    if (table === document.getElementById('t-rows') && hash === location.hash) drawTestRows(canClassifyTests());
   });
 }
 
@@ -598,11 +741,15 @@ function importGenericTemplate(key) {
 }
 var genericQuery = '';
 function renderGenericTests() {
-  if (!App.canPage('tests')) { deny(); return; }
+  renderTests();
+}
+function renderGenericTemplates() {
   var templates = genericTemplates(), admin = sessionRole() === 'admin';
   var saved = templates.filter(function (t) { return !!t.test; }).length;
-  view().innerHTML =
-    '<p class="muted">Reusable common test templates. Import a template and set its price to create a real lab test before booking. Existing matching tests are reused without changing their prices or reports.</p>' +
+  var box = document.getElementById('generic-template-browser');
+  if (!box) return;
+  box.innerHTML =
+    '<h3>Generic Test Templates</h3><p class="muted">Reusable common test templates. Import a template and set its price to create a real lab test before booking. Existing matching tests are reused without changing their prices or reports.</p>' +
     '<div class="stat-grid" style="margin-bottom:18px">' +
       tStat(TICONS.flask, 'blue', 'Templates', templates.length, 'Common report definitions') +
       tStat(TICONS.check, 'green', 'Already in catalog', saved, 'Saved lab tests') +
@@ -612,7 +759,7 @@ function renderGenericTests() {
       '<div class="tbl-wrap"><table class="table"><thead><tr><th>Template</th><th>Parameters</th><th>Availability</th><th>Price</th><th>Actions</th></tr></thead><tbody id="gt-rows"></tbody></table></div></div></div>';
   function draw() {
     var q = genericQuery.trim().toLowerCase(), rows = genericTemplates().filter(function (t) { return t.name.toLowerCase().indexOf(q) !== -1; });
-    document.getElementById('gt-rows').innerHTML = rows.map(function (tpl) {
+    box.querySelector('#gt-rows').innerHTML = rows.map(function (tpl) {
       var t = tpl.test, status = t ? ((t.active === false ? 'Inactive' : 'Available') + ' · ' + (t.type === 'generic' ? 'Generic' : 'Regular') + ' test') : 'Not imported — unavailable';
       var actions = t ? ((t.active !== false && App.canPage('patients') && App.canPage('billing') ? '<button type="button" class="btn btn-primary btn-sm" data-gbook="' + App.esc(t.id) + '">Book</button> ' : '') +
         (admin ? '<button type="button" class="btn btn-ghost btn-sm" data-gedit="' + App.esc(t.id) + '">Edit saved test</button>' : '')) :
@@ -621,8 +768,8 @@ function renderGenericTests() {
         '</td><td>' + tpl.parameterCount + '</td><td>' + App.esc(status) + '</td><td>' + (t ? App.money(+t.price || 0) : '—') + '</td><td>' + actions + '</td></tr>';
     }).join('') || '<tr><td colspan="5">' + App.empty('No templates found.') + '</td></tr>';
   }
-  document.getElementById('gt-q').addEventListener('input', function (e) { genericQuery = e.target.value; draw(); });
-  document.getElementById('gt-rows').addEventListener('click', function (e) {
+  box.querySelector('#gt-q').addEventListener('input', function (e) { genericQuery = e.target.value; draw(); });
+  box.querySelector('#gt-rows').addEventListener('click', function (e) {
     var btn = e.target.closest('button'); if (!btn) return;
     if (btn.hasAttribute('data-gimport')) importGenericTemplate(btn.getAttribute('data-gimport'));
     if (btn.hasAttribute('data-gbook')) bookCatalogTest(btn.getAttribute('data-gbook'));
@@ -635,7 +782,7 @@ function renderGenericTests() {
 function _bulkFilteredTests() {
   var q = (testFilter.q || '').trim().toLowerCase();
   return DB.all('tests').filter(function (t) {
-    if (testCatalogMode === 'regular' && (t.type === 'generic' || t.templateKey)) return false;
+    if (testCatalogMode !== 'all' && (t.type === 'generic' ? 'generic' : 'regular') !== testCatalogMode) return false;
     if (testFilter.cat !== 'All' && t.category !== testFilter.cat) return false;
     if (testFilter.status === 'Active' && !t.active) return false;
     if (testFilter.status === 'Inactive' && t.active) return false;
