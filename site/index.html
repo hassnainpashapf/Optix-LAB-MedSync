@@ -5,774 +5,136 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Optix Medical Sync — Medical Management Software for Healthcare in Pakistan</title>
 <meta name="description" content="Medical management software for Pakistan on cloud, desktop and Android. Available now: a complete lab system with patients, billing, lab results, PDF reports with QR, WhatsApp sending and an offline desktop app with cloud sync. Start a 14-day free trial, no credit card needed.">
+<meta name="theme-color" content="#101a3d">
+<meta name="color-scheme" content="light">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Optix Medical Sync">
 <meta property="og:locale" content="en_PK">
 <meta property="og:title" content="Optix Medical Sync — Medical Management Software for Healthcare in Pakistan">
-<meta property="og:description" content="Patients, billing, lab results with QR reports and WhatsApp sending. Works offline on Windows &amp; Mac, plus Android and Web. Start a 14-day free trial, no credit card needed.">
+<meta property="og:description" content="Medical management software for Pakistan on cloud, desktop and Android. Available now: a complete lab system with patients, billing, lab results, PDF reports with QR, WhatsApp sending and an offline desktop app with cloud sync. Start a 14-day free trial, no credit card needed.">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Optix Medical Sync — Medical Management Software for Healthcare in Pakistan">
-<meta name="twitter:description" content="Patients, billing, lab results with QR reports and WhatsApp sending. Works offline on Windows &amp; Mac, plus Android and Web. Start a 14-day free trial.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 48 48%27%3E%3Ccircle cx=%2724%27 cy=%2724%27 r=%2722%27 fill=%27%23e9f4fc%27 stroke=%27%235b9bd5%27 stroke-width=%272%27/%3E%3Cpath d=%27M24 8c-5 6.5-9 11.3-9 16.2A9 9 0 0 0 24 33.5a9 9 0 0 0 9-9.3C33 19.3 29 14.5 24 8z%27 fill=%27%235b9bd5%27 stroke=%27%230b1740%27 stroke-width=%272%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101a3d'/%3E%3Cpath d='M13 7h6v7l4 9.2c.6 1.4-.4 2.8-1.9 2.8H10.9c-1.5 0-2.5-1.4-1.9-2.8L13 14V7z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cpath d='M11 20h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=plat1">
-<link rel="stylesheet" href="assets/css/animations.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/optix-theme.css?v=ot1">
+<link rel="stylesheet" href="assets/css/site.css?v=ot1">
+<script src="assets/js/ads-config.js?v=ot1"></script>
 </head>
 <body>
-
+<a class="skip" href="#top">Skip to content</a>
+<div class="progress" id="progress"></div>
 <header class="nav" id="nav">
-  <div class="nav-inner">
-    <a class="brand" href="#top">
-      <svg class="brand-logo" width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-        <circle cx="24" cy="24" r="22" fill="#e9f4fc" stroke="#5b9bd5" stroke-width="2"/>
-        <path d="M24 8c-5 6.5-9 11.3-9 16.2A9 9 0 0 0 24 33.5a9 9 0 0 0 9-9.3C33 19.3 29 14.5 24 8z" fill="#5b9bd5" stroke="#0b1740" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M20 25.5c0 2.4 1.8 4.3 4 4.3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <span class="brand-tx"><b>Optix Medical Sync</b><small>MEDICAL MANAGEMENT SOFTWARE</small></span>
-    </a>
-    <nav class="nav-links" id="navLinks">
-      <a href="#platform">Platform</a>
-      <a href="#features">Features</a>
-      <a href="#how">How it works</a>
-      <a href="#pricing">Pricing</a>
-      <a href="download.html">Download</a>
-      <a href="#contact">Contact</a>
-      <a href="https://optix-suite.ellahabad.workers.dev" class="suite-link" rel="noopener">All Optix apps</a>
-      <a href="/app/#/login" class="staff">Sign in</a>
-      <a href="/app/#/signup" class="nav-trial">Start free trial</a>
+  <div class="wrap nav-in">
+    <a class="brand" href="#top" aria-label="Optix Medical Sync home"><span class="mark"><svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.3" stroke-linejoin="round" aria-hidden="true"><path d="M13 7h6v7l4 9.2c.6 1.4-.4 2.8-1.9 2.8H10.9c-1.5 0-2.5-1.4-1.9-2.8L13 14V7z"/><path d="M11 20h10" stroke-linecap="round"/></svg></span><b>Optix</b><span class="suite">Medical Sync</span></a>
+    <nav class="links" id="links" aria-label="Main">
+      <a href="#platform">Platform</a><a href="#features">Features</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="download.html">Download</a><a href="#contact">Contact</a><a href="https://optix-suite.ellahabad.workers.dev" class="suite-link" rel="noopener">All Optix apps</a><a href="/app/#/login" class="m-only">Sign in</a>
     </nav>
-    <div class="nav-cta">
-      <button class="burger" id="burger" type="button" aria-label="Open menu" aria-controls="navLinks" aria-expanded="false"><span></span><span></span><span></span></button>
-    </div>
+    <div class="nav-act"><a class="btn sm ghost" href="/app/#/login">Sign in</a><a class="btn sm" href="/app/#/signup">Start free trial</a></div>
+    <button class="burger" id="burger" type="button" aria-label="Menu" aria-controls="links" aria-expanded="false"><span></span><span></span><span></span></button>
   </div>
 </header>
 
 <main id="top">
 
-  <section class="hero">
-    <div class="hero-inner">
-      <div class="pill-badge">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M12 2l7 3v6c0 5-3.2 9.4-7 11-3.8-1.6-7-6-7-11V5l7-3z" stroke="#0b1740" stroke-width="1.8" stroke-linejoin="round"/>
-          <path d="M9 12l2.2 2.2L15.5 10" stroke="#0b1740" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Medical Management Software for Pakistan &middot; Cloud, Desktop &amp; Android
-      </div>
-      <h1>Run Your Lab<br>Smarter &amp; Faster!</h1>
-      <p class="lede">Patients, billing, lab results, QR-verified PDF reports and WhatsApp delivery &mdash; on Windows, Mac, Android and the web, and it keeps working even when the internet is down.</p>
-      <div class="hero-cta">
-        <a class="btn btn-navy" href="/app/#/signup"><span>Start <span data-trial>14</span>-day free trial</span></a>
-        <a class="btn btn-blue" href="#pricing">See Plans &amp; Pricing</a>
-      </div>
+<section class="hero">
+  <div class="wrap hero-in">
+    <div>
+      <span class="eyebrow">Medical management software &middot; Pakistan</span>
+      <h1>Run your lab <em>smarter &amp; faster</em></h1>
+      <p class="lead">Patients, billing, lab results, QR-verified PDF reports and WhatsApp delivery &mdash; on Windows, Mac, Android and the web, and it keeps working even when the internet is down.</p>
+      <div class="pact"><a class="btn lg" href="/app/#/signup"><span>Start <span data-trial>14</span>-day free trial</span></a><a class="btn lg ghost light" href="#pricing">See plans &amp; pricing</a></div>
       <p class="hero-trust">No credit card needed &middot; Works offline &middot; Windows, Mac, Android &amp; Web</p>
-      <div class="hero-proof" aria-label="Key performance metrics">
-        <div class="metric">
-          <strong>15k+</strong>
-          <span>reports sent</span>
-        </div>
-        <div class="metric">
-          <strong>2 min</strong>
-          <span>average billing</span>
-        </div>
-        <div class="metric">
-          <strong>99.9%</strong>
-          <span>offline reliability</span>
-        </div>
-      </div>
+      <div class="proof" aria-label="Key performance metrics"><div><strong>15k+</strong><span>reports sent</span></div><div><strong>2 min</strong><span>average billing</span></div><div><strong>99.9%</strong><span>offline reliability</span></div></div>
     </div>
-    <div class="strip" id="strip">
-      <div class="strip-track" id="stripTrack">
-        <figure class="strip-card"><img src="assets/img/hero-4.jpg" width="1920" height="1280" alt="Smiling healthcare professional"></figure>
-        <figure class="strip-card"><img src="assets/img/hero-2.jpg" width="1920" height="1280" alt="Sample tubes ready for testing"></figure>
-        <figure class="strip-card"><img src="assets/img/hero-5.jpg" width="1920" height="1280" alt="Lab technician at work"></figure>
-        <figure class="strip-card"><img src="assets/img/how-it-works.jpg" width="1120" height="2240" alt="Technician in a laboratory"></figure>
-        <figure class="strip-card"><img src="assets/img/svc-whatsapp.jpg" width="1920" height="1280" alt="Smartphone showing charts"></figure>
-      </div>
+    <div class="hero-vis">
+      <div class="hpanel"><div class="hph"><span class="dots"><i></i><i></i><i></i></span><span>Optix Medical Sync &middot; Dashboard</span></div><img src="assets/img/app-dashboard.jpg" width="1440" height="900" alt="Optix Medical Sync dashboard with today's collection, pending results and 7-day graphs"></div>
+      <div class="float f1"><i><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><span>Report sent<small>on WhatsApp</small></span></div>
+      <div class="float f2"><i><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 16H3z"/><path d="M12 10v4"/></svg></i><span>Critical value<small>doctor alerted</small></span></div>
+      <div class="float f3"><i><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.2"/><path d="M8 8h8"/></svg></i><span>QR-verified<small>PDF report</small></span></div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <section class="platform" id="platform">
-    <div class="wrap">
-      <p class="eyebrow eyebrow-c"><span class="dot"></span>ONE PLATFORM</p>
-      <h2 class="center">One Platform for Every Part of Healthcare</h2>
-      <p class="sec-sub">We started with the laboratory. Pharmacy and hospital / clinic modules are being built on the same platform.</p>
+<section class="stats"><div class="wrap stats-in">
+  <div class="stat"><b data-count="5000" data-suffix="+">5000+</b><span>ready-made tests</span></div>
+  <div class="stat"><b>PKR</b><span>billing in rupees</span></div>
+  <div class="stat"><b>WhatsApp</b><span>report delivery</span></div>
+  <div class="stat"><b>Offline</b><span>desktop app, syncs later</span></div>
+</div></section>
+<div class="marq" aria-hidden="true"><div class="marq-t"><div class="marq-r"><span>Patients &amp; billing</span><span>Lab results</span><span>QR-verified reports</span><span>WhatsApp Center</span><span>Critical alerts</span><span>Barcode samples</span><span>Cash closing</span><span>Profit &amp; loss</span><span>Result trends</span><span>Audit log</span><span>5000+ tests</span><span>Offline desktop</span><span>Android app</span><span>Staff roles</span><span>PKR billing</span><span>Dues tracking</span></div><div class="marq-r"><span>Patients &amp; billing</span><span>Lab results</span><span>QR-verified reports</span><span>WhatsApp Center</span><span>Critical alerts</span><span>Barcode samples</span><span>Cash closing</span><span>Profit &amp; loss</span><span>Result trends</span><span>Audit log</span><span>5000+ tests</span><span>Offline desktop</span><span>Android app</span><span>Staff roles</span><span>PKR billing</span><span>Dues tracking</span></div></div></div>
 
-      <ul class="pl-grid">
-        <li class="pl-card pl-live reveal">
-          <span class="pl-badge live">Available now</span>
-          <span class="pl-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3v6.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L15 9.5V3M8 3h8M7.5 15h9"/></svg></span>
-          <h3>Laboratory</h3>
-          <p>Patients, billing, test results, QR-verified PDF reports, WhatsApp delivery, doctor commission, corporate clients and outsourced tests.</p>
-          <a class="pl-link" href="#features">See the lab features &rarr;</a>
-        </li>
-        <li class="pl-card reveal">
-          <span class="pl-badge soon">Coming soon</span>
-          <span class="pl-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="9" width="18" height="6" rx="3" transform="rotate(-35 12 12)"/><path d="M9.5 8.2l5.3 7.6"/></svg></span>
-          <h3>Pharmacy</h3>
-          <p>Medicine stock with expiry dates, fast sales and billing, supplier purchases and low-stock alerts.</p>
-          <a class="pl-link" href="#contact">Tell us what you need &rarr;</a>
-        </li>
-        <li class="pl-card reveal">
-          <span class="pl-badge soon">Coming soon</span>
-          <span class="pl-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 21V6a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v15M16 10h2a2 2 0 0 1 2 2v9M2 21h20M9 8v6M6 11h6"/></svg></span>
-          <h3>Hospital &amp; Clinic</h3>
-          <p>Appointments, OPD visits, doctor prescriptions and patient history, connected to your lab.</p>
-          <a class="pl-link" href="#contact">Tell us what you need &rarr;</a>
-        </li>
-        <li class="pl-card reveal">
-          <span class="pl-badge soon">Planned</span>
-          <span class="pl-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></span>
-          <h3>Radiology &amp; more</h3>
-          <p>Imaging centres, collection centres and other medical services. Tell us which one you want first.</p>
-          <a class="pl-link" href="#contact">Tell us what you need &rarr;</a>
-        </li>
-      </ul>
-      <p class="pl-note">The modules are planned to share one account, so your patients, billing and staff are set up only once. Dates are not fixed yet; the lab system is ready to use today.</p>
-    </div>
-  </section>
+<section class="sec" id="platform"><div class="wrap sec-c">
+  <span class="kicker">One platform</span>
+  <h2>One platform for every part of healthcare</h2>
+  <p class="sub">We started with the laboratory. Pharmacy and hospital / clinic software run on the same Optix account.</p>
+  <div class="grid" style="text-align:left"><article class="pcard rv" style="--c:#0ea5a4"><span class="pic" style="--c:#0ea5a4"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6.3L4.6 18.1A1.5 1.5 0 0 0 5.9 20.3h12.2a1.5 1.5 0 0 0 1.3-2.2L14 9.3V3"/><path d="M8 14h8"/></svg></span><span class="pbadge">Available now</span><h3>Laboratory</h3><p>Patients, billing, test results, QR-verified PDF reports, WhatsApp delivery, doctor commission, corporate clients and outsourced tests.</p><a class="plink" href="#features">See the lab features <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></article><article class="pcard rv" style="--c:#2f6df6"><span class="pic" style="--c:#2f6df6"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.5 20.5 3.5 13.5a4.95 4.95 0 0 1 7-7l7 7a4.95 4.95 0 0 1-7 7z"/><path d="m8.5 8.5 7 7"/></svg></span><span class="pbadge soon">Optix Suite</span><h3>Pharmacy POS</h3><p>Barcode billing, medicine stock with batch and expiry control, supplier purchases, returns and customer credit.</p><a class="plink" href="https://pharmacy-pos.ellahabad.workers.dev/" target="_blank" rel="noopener">Visit the Pharmacy website <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></article><article class="pcard rv" style="--c:#0f766e"><span class="pic" style="--c:#0f766e"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></span><span class="pbadge soon">Optix Suite</span><h3>Hospital &amp; Clinic</h3><p>Appointments, doctor calendars, patient records, billing, stock and an audit trail for every hospital.</p><a class="plink" href="https://hospital.150.230.52.29.sslip.io/" target="_blank" rel="noopener">Visit the Hospital website <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></article><article class="pcard rv" style="--c:#7c3aed"><span class="pic" style="--c:#7c3aed"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg></span><span class="pbadge soon">Planned</span><h3>Radiology &amp; more</h3><p>Imaging centres, collection centres and other medical services. Tell us which one you want first.</p><a class="plink" href="#contact">Tell us what you need <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></article></div>
+  <p class="pnote">One Optix account can open the lab, pharmacy and hospital apps, so your staff are set up only once. <a href="https://optix-suite.ellahabad.workers.dev" rel="noopener" style="color:var(--blue);font-weight:700">See all Optix apps</a>.</p>
+</div></section>
 
-  <section class="features" id="features">
-    <div class="wrap">
-      <p class="eyebrow eyebrow-c"><span class="dot"></span>FEATURES</p>
-      <h2 class="center">Everything Your Lab Needs, in One Place</h2>
-      <p class="sec-sub">From the front desk to the final report. Optix Medical Sync covers the daily work of a diagnostic lab.</p>
+<section class="sec alt" id="features"><div class="wrap">
+  <div class="sec-c"><span class="kicker">Features</span><h2>Everything your lab needs, in one place</h2>
+  <p class="sub">From the front desk to the final report. Optix Medical Sync covers the daily work of a diagnostic lab.</p></div>
+  <div class="show"><div class="stabs" role="tablist" aria-label="App screens"><button class="stab on" type="button" role="tab" data-tab="dash" aria-selected="true" style="--c:#2f6df6"><span class="pic sm" style="--c:#2f6df6"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span><span><b>Dashboard</b><small>Today's collection and 7-day graphs</small></span></button><button class="stab" type="button" role="tab" data-tab="profit" aria-selected="false" style="--c:#0ea5a4"><span class="pic sm" style="--c:#0ea5a4"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7.5 15l3.5-4 3 3 5-6"/></svg></span><span><b>Cash &amp; Profit</b><small>Daily cash closing and profit &amp; loss</small></span></button><button class="stab" type="button" role="tab" data-tab="wa" aria-selected="false" style="--c:#16a34a"><span class="pic sm" style="--c:#16a34a"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.4-4.2A8 8 0 1 1 8.4 18.6z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5"/></svg></span><span><b>WhatsApp Center</b><small>Auto-send rules and templates</small></span></button><button class="stab" type="button" role="tab" data-tab="samples" aria-selected="false" style="--c:#f59e0b"><span class="pic sm" style="--c:#f59e0b"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v12a3 3 0 0 0 6 0V3"/><path d="M8 3h8M9 10h6"/></svg></span><span><b>Samples</b><small>Track every tube from collection to done</small></span></button></div><div><figure class="spanel on" data-panel="dash" style="--c:#2f6df6;margin:0"><div class="mock"><div class="mk-bar" aria-hidden="true"><i></i><i></i><i></i><span>Optix Medical Sync · Dashboard</span></div><img src="assets/img/app-dashboard.jpg" width="1440" height="900" alt="Dashboard with today's collection, pending results and two 7-day graphs for collections versus expenses and tests versus invoices"></div><figcaption><b>Dashboard.</b> Today's collection, pending results and 7-day graphs at a glance.</figcaption></figure><figure class="spanel" data-panel="profit" style="--c:#0ea5a4;margin:0"><div class="mock"><div class="mk-bar" aria-hidden="true"><i></i><i></i><i></i><span>Cash &amp; Profit</span></div><img src="assets/img/app-profit.jpg" width="1440" height="900" loading="lazy" alt="Cash and Profit page with revenue, expenses, net result, margin, outstanding dues and a daily revenue versus expenses chart"></div><figcaption><b>Cash &amp; Profit.</b> Daily cash closing and a profit and loss report.</figcaption></figure><figure class="spanel" data-panel="wa" style="--c:#16a34a;margin:0"><div class="mock"><div class="mk-bar" aria-hidden="true"><i></i><i></i><i></i><span>WhatsApp Center</span></div><img src="assets/img/app-whatsapp.jpg" width="1440" height="900" loading="lazy" alt="WhatsApp Center settings with auto-send rules, critical value alerts and an editable report message with live preview"></div><figcaption><b>WhatsApp Center.</b> Auto-send rules and editable message templates.</figcaption></figure><figure class="spanel" data-panel="samples" style="--c:#f59e0b;margin:0"><div class="mock"><div class="mk-bar" aria-hidden="true"><i></i><i></i><i></i><span>Samples</span></div><img src="assets/img/app-samples.jpg" width="1440" height="900" loading="lazy" alt="Samples page showing sample tubes moving from to collect to collected, in lab, processing and done"></div><figcaption><b>Samples.</b> Follow each tube: collected, received, processing, done.</figcaption></figure></div></div>
+  <div class="tools"><div class="tool rv" style="--c:#2f6df6"><span class="pic" style="--c:#2f6df6"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5h12v17l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg></span><h4>Patients &amp; billing</h4><p>Register patients, bill their tests and track every unpaid balance with dues tracking.</p></div><div class="tool rv" style="--c:#0ea5a4"><span class="pic" style="--c:#0ea5a4"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v6.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L15 9.5V3M8 3h8M7.5 15h9"/></svg></span><h4>Smart lab results</h4><p>Normal ranges fill in automatically by age and gender. Abnormal values show in colour.</p></div><div class="tool rv" style="--c:#dc2626"><span class="pic" style="--c:#dc2626"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.4"/></svg></span><h4>Critical-value alerts</h4><p>A red pop-up on screen and a WhatsApp message to the doctor and the lab.</p></div><div class="tool rv" style="--c:#7c3aed"><span class="pic" style="--c:#7c3aed"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.2"/><path d="M8 8h8M8 12h4"/><rect x="13.5" y="13.5" width="4" height="4" rx=".6"/></svg></span><h4>QR-verified PDF reports</h4><p>Print or share clean PDF reports. A QR code on each one lets anyone verify it.</p></div><div class="tool rv" style="--c:#16a34a"><span class="pic" style="--c:#16a34a"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.4-4.2A8 8 0 1 1 8.4 18.6z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5"/></svg></span><h4>WhatsApp Center</h4><p>Auto-send reports, edit your message templates and set rules for invoices with a balance due.</p></div><div class="tool rv" style="--c:#f59e0b"><span class="pic" style="--c:#f59e0b"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v12a3 3 0 0 0 6 0V3"/><path d="M8 3h8M9 10h6"/></svg></span><h4>Sample labels &amp; tracking</h4><p>Print barcode labels and follow each sample: collected, received, processing, done.</p></div><div class="tool rv" style="--c:#2f6df6"><span class="pic" style="--c:#2f6df6"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6.5 9.5v.1M17.5 14.5v.1"/></svg></span><h4>Cash closing &amp; profit</h4><p>Close the day with a cash count, then see your profit and loss report.</p></div><div class="tool rv" style="--c:#0ea5a4"><span class="pic" style="--c:#0ea5a4"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7.5 15l3.5-4 3 3 5-6"/></svg></span><h4>Result trend graphs</h4><p>See how a patient's values change over time on a simple graph.</p></div><div class="tool rv" style="--c:#475569"><span class="pic" style="--c:#475569"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></span><h4>Audit log</h4><p>Every change is recorded, so you can see what changed and who changed it.</p></div><div class="tool rv" style="--c:#7c3aed"><span class="pic" style="--c:#7c3aed"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M9 9h6M9 13h6"/></svg></span><h4>5000+ tests, ready to use</h4><p>Start with a ready test catalog and edit the report templates to match your lab.</p></div><div class="tool rv" style="--c:#2f6df6"><span class="pic" style="--c:#2f6df6"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span><h4>Offline desktop app</h4><p>Windows 7, 8, 10, 11 and Mac. Keep working without internet and sync with the cloud later.</p></div><div class="tool rv" style="--c:#0ea5a4"><span class="pic" style="--c:#0ea5a4"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.8-3.3 2.8-5 5.5-5s4.7 1.7 5.5 5"/><circle cx="17" cy="9" r="2.3"/><path d="M16 14.2c2.4-.3 4 1 4.8 4.3"/></svg></span><h4>Android, web &amp; staff roles</h4><p>Use the Android app or any browser. Give each person a role: admin, reception or technician.</p></div></div>
+</div></section>
 
-      <div class="showcase">
-        <figure class="sc-main reveal">
-          <div class="browser">
-            <div class="browser-bar" aria-hidden="true"><i></i><i></i><i></i><span class="browser-title">Optix Medical Sync &middot; Dashboard</span></div>
-            <img src="assets/img/app-dashboard.jpg" width="1440" height="900" loading="lazy" alt="Optix Medical Sync dashboard with today's collection, pending results and two 7-day graphs for collections versus expenses and tests versus invoices">
-          </div>
-          <figcaption><b>Dashboard.</b> Today's collection, pending results and 7-day graphs at a glance.</figcaption>
-        </figure>
-        <div class="sc-side">
-          <figure class="reveal">
-            <div class="browser">
-              <div class="browser-bar" aria-hidden="true"><i></i><i></i><i></i><span class="browser-title">Cash &amp; Profit</span></div>
-              <img src="assets/img/app-profit.jpg" width="1440" height="900" loading="lazy" alt="Cash and Profit page with revenue, expenses, net result, margin, outstanding dues and a daily revenue versus expenses chart">
-            </div>
-            <figcaption><b>Cash &amp; Profit.</b> Daily cash closing and a profit and loss report.</figcaption>
-          </figure>
-          <figure class="reveal">
-            <div class="browser">
-              <div class="browser-bar" aria-hidden="true"><i></i><i></i><i></i><span class="browser-title">WhatsApp Center</span></div>
-              <img src="assets/img/app-whatsapp.jpg" width="1440" height="900" loading="lazy" alt="WhatsApp Center settings with auto-send rules, critical value alerts and an editable report message with live preview">
-            </div>
-            <figcaption><b>WhatsApp Center.</b> Auto-send rules and editable message templates.</figcaption>
-          </figure>
-        </div>
-      </div>
+<div class="wrap"><div class="adslot" data-adslot="home" hidden></div></div>
 
-      <ul class="feat-grid">
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3.5h12v17l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg></span>
-          <h3>Patients &amp; billing</h3>
-          <p>Register patients, bill their tests and track every unpaid balance with dues tracking.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3v6.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L15 9.5V3M8 3h8M7.5 15h9"/></svg></span>
-          <h3>Smart lab results</h3>
-          <p>Normal ranges fill in automatically by age and gender. Abnormal values show in colour.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.4"/></svg></span>
-          <h3>Critical-value alerts</h3>
-          <p>A red pop-up on screen and a WhatsApp message to the doctor and the lab.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="3.5" width="16" height="17" rx="2.2"/><path d="M8 8h8M8 12h4"/><rect x="13.5" y="13.5" width="4" height="4" rx=".6"/></svg></span>
-          <h3>QR-verified PDF reports</h3>
-          <p>Print or share clean PDF reports. A QR code on each one lets anyone verify it.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20l1.4-4.2A8 8 0 1 1 8.4 18.6z"/><path d="M9 9.5c0 3 2.5 5.5 5.5 5.5"/></svg></span>
-          <h3>WhatsApp Center</h3>
-          <p>Auto-send reports, edit your message templates and set rules for invoices with a balance due.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 3v12a3 3 0 0 0 6 0V3"/><path d="M8 3h8M9 10h6"/></svg></span>
-          <h3>Sample labels &amp; tracking</h3>
-          <p>Print barcode labels and follow each sample: collected, received, processing, done.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6.5 9.5v.1M17.5 14.5v.1"/></svg></span>
-          <h3>Cash closing &amp; profit</h3>
-          <p>Close the day with a cash count, then see your profit and loss report.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 19V5M4 19h16"/><path d="M7.5 15l3.5-4 3 3 5-6"/></svg></span>
-          <h3>Result trend graphs</h3>
-          <p>See how a patient's values change over time on a simple graph.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3l7 3v5c0 5-3.2 8.4-7 10-3.8-1.6-7-5-7-10V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg></span>
-          <h3>Audit log</h3>
-          <p>Every change is recorded, so you can see what changed and who changed it.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M9 9h6M9 13h6"/></svg></span>
-          <h3>5000+ tests, ready to use</h3>
-          <p>Start with a ready test catalog and edit the report templates to match your lab.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span>
-          <h3>Offline desktop app</h3>
-          <p>Windows 7, 8, 10, 11 and Mac. Keep working without internet and sync with the cloud later.</p>
-        </li>
-        <li class="feat-card reveal">
-          <span class="feat-ico"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3.5 19c.8-3.3 2.8-5 5.5-5s4.7 1.7 5.5 5"/><circle cx="17" cy="9" r="2.3"/><path d="M16 14.2c2.4-.3 4 1 4.8 4.3"/></svg></span>
-          <h3>Android, web &amp; staff roles</h3>
-          <p>Use the Android app or any browser. Give each person a role: admin, reception or technician.</p>
-        </li>
-      </ul>
-    </div>
-  </section>
+<section class="sec" id="how"><div class="wrap how">
+  <div class="how-media rv"><div class="mock"><div class="mk-bar" aria-hidden="true"><i></i><i></i><i></i><span>Samples</span></div><img src="assets/img/app-samples.jpg" width="1440" height="900" loading="lazy" alt="Samples page showing sample tubes moving from to collect to collected, in lab, processing and done"></div>
+    <div class="badge-float"><i><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></i><div><b>Report ready</b><span>Print it or send it on WhatsApp</span></div></div></div>
+  <div><span class="kicker">Day to day</span><h2>How it works</h2><p class="sub">Four steps from the front desk to the patient&rsquo;s phone.</p><ol class="steps"><li class="step rv"><h4>Register the patient &amp; bill</h4><p>Add the patient, choose the tests and create the invoice. Any unpaid balance is tracked as a due.</p></li><li class="step rv"><h4>Collect &amp; label samples</h4><p>Print barcode labels and scan each tube as it moves from collected to received, processing and done.</p></li><li class="step rv"><h4>Enter results</h4><p>Normal ranges fill in by age and gender, abnormal values show in colour, and critical values raise an alert.</p></li><li class="step rv"><h4>Print or send the report</h4><p>Print a PDF report with a verification QR, or send it to the patient and doctor on WhatsApp.</p></li></ol></div>
+</div></section>
 
-  <section class="how" id="how">
-    <div class="wrap how-grid">
-      <div class="how-media reveal">
-        <div class="browser">
-          <div class="browser-bar" aria-hidden="true"><i></i><i></i><i></i><span class="browser-title">Samples</span></div>
-          <img src="assets/img/app-samples.jpg" width="1440" height="900" loading="lazy" alt="Samples page showing sample tubes moving from to collect to collected, in lab, processing and done">
-        </div>
-        <div class="served-badge">
-          <span class="badge-ico" aria-hidden="true">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </span>
-          <div class="served-tx"><b>Report ready</b><span>Print it or send it on WhatsApp</span></div>
-        </div>
-      </div>
-      <div class="how-body">
-        <p class="eyebrow"><span class="dot"></span>DAY TO DAY</p>
-        <h2>How It Works</h2>
-        <ol class="steps">
-          <li class="step reveal">
-            <span class="ghost">01</span>
-            <div class="step-card">
-              <span class="step-ico">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <circle cx="10" cy="8" r="3.4" stroke="#fff" stroke-width="1.8"/>
-                  <path d="M4 20c1-3.8 3.2-5.7 6-5.7 1.4 0 2.7.5 3.7 1.4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-                  <path d="M18.5 13.5v6M15.5 16.5h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-              </span>
-              <div>
-                <h3>Register the patient &amp; bill</h3>
-                <p>Add the patient, choose the tests and create the invoice. Any unpaid balance is tracked as a due.</p>
-              </div>
-            </div>
-          </li>
-          <li class="step reveal">
-            <span class="ghost">02</span>
-            <div class="step-card">
-              <span class="step-ico">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M9 3v12a3 3 0 0 0 6 0V3" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M8 3h8M9 10h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-              </span>
-              <div>
-                <h3>Collect &amp; label samples</h3>
-                <p>Print barcode labels and scan each tube as it moves from collected to received, processing and done.</p>
-              </div>
-            </div>
-          </li>
-          <li class="step reveal">
-            <span class="ghost">03</span>
-            <div class="step-card">
-              <span class="step-ico">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M9 3v6.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L15 9.5V3" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M8 3h8M7.5 15h9" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-                </svg>
-              </span>
-              <div>
-                <h3>Enter results</h3>
-                <p>Normal ranges fill in by age and gender, abnormal values show in colour, and critical values raise an alert.</p>
-              </div>
-            </div>
-          </li>
-          <li class="step reveal">
-            <span class="ghost">04</span>
-            <div class="step-card">
-              <span class="step-ico">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <rect x="4" y="3.5" width="16" height="17" rx="2.2" stroke="#fff" stroke-width="1.8"/>
-                  <path d="M8 8h8M8 12h4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-                  <rect x="13.5" y="13.5" width="4" height="4" rx=".6" stroke="#fff" stroke-width="1.6"/>
-                </svg>
-              </span>
-              <div>
-                <h3>Print or send the report</h3>
-                <p>Print a PDF report with a verification QR, or send it to the patient and doctor on WhatsApp.</p>
-              </div>
-            </div>
-          </li>
-        </ol>
-      </div>
-    </div>
-  </section>
+<section class="sec" style="padding-top:20px"><div class="wrap"><div class="why">
+  <div class="why-media"><img src="assets/img/loc-banner.jpg" width="1920" height="1280" loading="lazy" alt="Two laboratory scientists working at a bench"></div>
+  <div class="why-body"><span class="kicker">Why Optix Medical Sync?</span><h2>Why labs choose Optix Medical Sync</h2><p>Simple software that fits how Pakistani labs actually work, with no special hardware and no waiting around for set-up.</p><ul class="why-list"><li><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg><div><b>Works without internet</b><span>The desktop app keeps running when the connection drops and syncs later.</span></div></li><li><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5" width="13" height="9" rx="1.6"/><rect x="15.5" y="9" width="6" height="10" rx="1.4"/><path d="M6 18h6"/></svg><div><b>One login on every device</b><span>Sign in on your PC, phone or browser with the same lab account.</span></div></li><li><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="10.5" width="12" height="8.5" rx="2"/><path d="M8.8 10.5V8a3.2 3.2 0 0 1 6.4 0v2.5M12 13.5v2.5"/></svg><div><b>Backed up and kept private</b><span>Data is backed up daily, and every lab's data is isolated from other labs.</span></div></li><li><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13.5" r="6.2"/><path d="M12 10v3.5l2.4 1.5M9.5 3.5h5"/></svg><div><b>Fast set-up</b><span>5000+ tests come pre-loaded, so you can start billing the same day.</span></div></li><li><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/></svg><div><b>Built in Pakistan</b><span>Bills in PKR. Pay for your plan with JazzCash, Easypaisa or bank transfer.</span></div></li><li><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3.5h7l4 4V20.5H7z"/><path d="M14 3.5V8h4M10 13.8l1.8 1.8 3-3.2"/></svg><div><b>No hardware lock-in</b><span>Use the Windows PCs, Macs and Android phones you already have.</span></div></li></ul></div>
+</div></div></section>
 
-  <section class="why" id="why">
-    <div class="wrap">
-      <div class="why-panel">
-        <div class="why-media">
-          <img src="assets/img/loc-banner.jpg" width="1920" height="1280" loading="lazy" alt="Two laboratory scientists working at a bench">
-        </div>
-        <div class="why-body">
-          <p class="eyebrow light"><span class="dot"></span>WHY OPTIX LAB MEDSYNC?</p>
-          <h2>Why Labs Choose Optix Medical Sync</h2>
-          <p class="why-lede">Simple software that fits how Pakistani labs actually work, with no special hardware and no waiting around for set-up.</p>
-          <ul class="why-list">
-            <li>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="3" y="4" width="18" height="12" rx="2" stroke="#fff" stroke-width="1.5"/>
-                <path d="M8 20h8M12 16v4" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <div><b>Works without internet</b><span>The desktop app keeps running when the connection drops and syncs later.</span></div>
-            </li>
-            <li>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="2.5" y="5" width="13" height="9" rx="1.6" stroke="#fff" stroke-width="1.5"/>
-                <rect x="15.5" y="9" width="6" height="10" rx="1.4" stroke="#fff" stroke-width="1.5"/>
-                <path d="M6 18h6" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <div><b>One login on every device</b><span>Sign in on your PC, phone or browser with the same lab account.</span></div>
-            </li>
-            <li>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="6" y="10.5" width="12" height="8.5" rx="2" stroke="#fff" stroke-width="1.5"/>
-                <path d="M8.8 10.5V8a3.2 3.2 0 0 1 6.4 0v2.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-                <path d="M12 13.5v2.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <div><b>Backed up and kept private</b><span>Data is backed up daily, and every lab's data is isolated from other labs.</span></div>
-            </li>
-            <li>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <circle cx="12" cy="13.5" r="6.2" stroke="#fff" stroke-width="1.5"/>
-                <path d="M12 10v3.5l2.4 1.5" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M9.5 3.5h5" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
-              </svg>
-              <div><b>Fast set-up</b><span>5000+ tests come pre-loaded, so you can start billing the same day.</span></div>
-            </li>
-            <li>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="3" y="6" width="18" height="12" rx="2" stroke="#fff" stroke-width="1.5"/>
-                <circle cx="12" cy="12" r="2.6" stroke="#fff" stroke-width="1.5"/>
-              </svg>
-              <div><b>Built in Pakistan</b><span>Bills in PKR. Pay for your plan with JazzCash, Easypaisa or bank transfer.</span></div>
-            </li>
-            <li>
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M7 3.5h7l4 4V20.5H7z" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
-                <path d="M14 3.5V8h4" stroke="#fff" stroke-width="1.5" stroke-linejoin="round"/>
-                <path d="M10 13.8l1.8 1.8 3-3.2" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <div><b>No hardware lock-in</b><span>Use the Windows PCs, Macs and Android phones you already have.</span></div>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  </section>
+<section class="sec alt"><div class="wrap sec-c"><span class="kicker">Compare</span><h2>From paper and spreadsheets to one system</h2><p class="sub">What changes on the first day.</p><div class="cmp" style="text-align:left"><div class="cmp-h"><span></span><span>Paper &amp; spreadsheets</span><span class="us">Optix Medical Sync</span></div><div class="cmp-r"><span>Patient records</span><span class="no">Paper registers, lost files</span><span class="yes">One searchable record per patient</span></div><div class="cmp-r"><span>Billing &amp; dues</span><span class="no">Hand-written bills, forgotten balances</span><span class="yes">Invoices with dues tracking</span></div><div class="cmp-r"><span>Reference ranges</span><span class="no">Looked up in a book</span><span class="yes">Filled in by age and gender</span></div><div class="cmp-r"><span>Reports</span><span class="no">Typed or hand-copied</span><span class="yes">QR-verified PDF, printed or on WhatsApp</span></div><div class="cmp-r"><span>Internet down</span><span class="no">Work stops or gets repeated</span><span class="yes">Desktop app keeps working, syncs later</span></div><div class="cmp-r"><span>Daily cash</span><span class="no">Counted and written at night</span><span class="yes">Cash closing and profit report</span></div></div></div></section>
 
-  <section class="labhow" id="lab-how">
-    <div class="wrap">
-      <p class="eyebrow eyebrow-c"><span class="dot"></span>GET STARTED</p>
-      <h2 class="center">Up and Running in 3 Steps</h2>
-      <p class="sec-sub">Run your whole diagnostic lab on Optix Medical Sync &mdash; cloud, desktop and Android, one account.</p>
-      <ol class="lh-grid">
-        <li class="lh-card reveal">
-          <span class="lh-ghost" aria-hidden="true">01</span>
-          <span class="lh-ico">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="10" cy="8" r="3.4" stroke="#fff" stroke-width="1.8"/>
-              <path d="M4 20c1-3.8 3.2-5.7 6-5.7 1.4 0 2.7.5 3.7 1.4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-              <path d="M18.5 13.5v6M15.5 16.5h6" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <h3>Sign up in 1 minute</h3>
-          <p>Create your lab account and start the free trial. No credit card, no installation needed to begin.</p>
-        </li>
-        <li class="lh-card alt reveal">
-          <span class="lh-ghost" aria-hidden="true">02</span>
-          <span class="lh-ico">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M9 3v6.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L15 9.5V3" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M8 3h8M7.5 15h9" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <h3>Add your tests &amp; staff</h3>
-          <p>Set up your test list, reference ranges and prices, then invite your reception and technicians.</p>
-        </li>
-        <li class="lh-card reveal">
-          <span class="lh-ghost" aria-hidden="true">03</span>
-          <span class="lh-ico">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <rect x="4" y="3.5" width="16" height="17" rx="2.2" stroke="#fff" stroke-width="1.8"/>
-              <path d="M8 8h8M8 12h4" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
-              <rect x="13.5" y="13.5" width="4" height="4" rx=".6" stroke="#fff" stroke-width="1.6"/>
-            </svg>
-          </span>
-          <h3>Print reports with QR &amp; send on WhatsApp</h3>
-          <p>Enter results, print branded PDF reports with a verification QR, and send them to patients on WhatsApp.</p>
-        </li>
-      </ol>
-    </div>
-  </section>
+<section class="sec" id="who"><div class="wrap sec-c"><span class="kicker">Who it&rsquo;s for</span><h2>Made for labs of every size</h2>
+  <p class="about-tx">Optix Medical Sync is made by System Optix for diagnostic labs and collection centres in Pakistan. It bills in rupees, sends reports on WhatsApp and keeps working when the internet does not.</p>
+  <div class="grid" style="text-align:left"><div class="serve rv" style="--c:#0ea5a4"><span class="pic" style="--c:#0ea5a4"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v6.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L15 9.5V3M8 3h8M7.5 15h9"/></svg></span><b>Diagnostic Labs</b><small>Standalone labs of any size</small></div><div class="serve rv" style="--c:#2f6df6"><span class="pic" style="--c:#2f6df6"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3v12a3 3 0 0 0 6 0V3"/><path d="M8 3h8M9 10h6"/></svg></span><b>Collection Centres</b><small>Register, bill and track samples</small></div><div class="serve rv" style="--c:#7c3aed"><span class="pic" style="--c:#7c3aed"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-6.5L20 11"/><path d="M6.5 9.3V19h11V9.3"/><path d="M12 12v4M10 14h4"/></svg></span><b>Hospital &amp; Clinic Labs</b><small>In-house labs with several staff roles</small></div><div class="serve rv" style="--c:#f59e0b"><span class="pic" style="--c:#f59e0b"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5L12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M10 20v-5h4v5"/></svg></span><b>Home-Collection Labs</b><small>Track every sample you collect</small></div></div>
+  <p class="pnote">Running more than one branch? Multi-branch support is coming. <a href="#contact" style="color:var(--blue);font-weight:700">Tell us what you need</a>.</p>
+</div></section>
 
-  <section class="serve" id="who">
-    <div class="wrap">
-      <p class="eyebrow eyebrow-c"><span class="dot"></span>WHO IT'S FOR</p>
-      <h2 class="center">Made for Labs of Every Size</h2>
-      <div class="serve-stage" id="serveStage">
-        <div class="serve-blob"></div>
-        <svg class="serve-arrow sa-tr" width="110" height="70" viewBox="0 0 110 70" aria-hidden="true">
-          <path d="M104 12 C 80 2, 52 8, 44 22 C 38 32, 46 40, 54 36 C 60 33, 58 25, 51 26"/>
-          <path d="M28 16 L 41 25 L 32 36"/>
-        </svg>
-        <svg class="serve-arrow sa-bl" width="110" height="70" viewBox="0 0 110 70" aria-hidden="true">
-          <path d="M6 58 C 30 68, 58 62, 66 48 C 72 38, 64 30, 56 34 C 50 37, 52 45, 59 44"/>
-          <path d="M82 50 L 69 43 L 78 33"/>
-        </svg>
-        <div class="serve-center reveal">
-          <img src="assets/img/hero-5.jpg" width="1920" height="1280" loading="lazy" alt="Technician working at a laboratory bench">
-          <span>Your lab, your way</span>
-        </div>
-        <article class="serve-card sc-1 reveal">
-          <span class="serve-ico">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M9 3v6.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L15 9.5V3" stroke="#131845" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M8 3h8M7.5 15h9" stroke="#131845" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <b>Diagnostic Labs</b>
-          <small>Standalone labs of any size</small>
-        </article>
-        <article class="serve-card sc-2 reveal">
-          <span class="serve-ico">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M9 3v12a3 3 0 0 0 6 0V3" stroke="#131845" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M8 3h8M9 10h6" stroke="#131845" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <b>Collection Centres</b>
-          <small>Register, bill and track samples</small>
-        </article>
-        <article class="serve-card sc-3 reveal">
-          <span class="serve-ico">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M4 11l8-6.5L20 11" stroke="#131845" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M6.5 9.3V19h11V9.3" stroke="#131845" stroke-width="1.6" stroke-linejoin="round"/>
-              <path d="M12 12v4M10 14h4" stroke="#131845" stroke-width="1.6" stroke-linecap="round"/>
-            </svg>
-          </span>
-          <b>Hospital &amp; Clinic Labs</b>
-          <small>In-house labs with several staff roles</small>
-        </article>
-        <article class="serve-card sc-4 reveal">
-          <span class="serve-ico">
-            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <path d="M3 11.5L12 4l9 7.5" stroke="#131845" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M5.5 10.5V20h13v-9.5" stroke="#131845" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M10 20v-5h4v5" stroke="#131845" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </span>
-          <b>Home-Collection Labs</b>
-          <small>Track every sample you collect</small>
-        </article>
-      </div>
-      <p class="serve-note">Running more than one branch? Multi-branch support is coming. <a href="#contact">Tell us what you need</a>.</p>
-    </div>
-  </section>
+<section class="sec alt" id="devices"><div class="wrap sec-c"><span class="kicker">Every device</span><h2>Works on every device</h2><p class="sub">One lab account on your PC, phone and browser. Your data stays in sync through the cloud.</p><div class="devs" style="text-align:left"><a class="dev rv" href="download.html" style="--c:#2f6df6"><span class="pic" style="--c:#2f6df6"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5.6 10.6 4.5v7H3zM11.7 4.3 21 3v8.5h-9.3zM3 12.5h7.6v7L3 18.4zM11.7 12.5H21V21l-9.3-1.3z" fill="currentColor" stroke="none"/></svg></span><b>Windows</b><span>Windows 7, 8, 10 &amp; 11. Works offline.</span><em>Download &rarr;</em></a><a class="dev rv" href="download.html" style="--c:#475569"><span class="pic" style="--c:#475569"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" fill="currentColor" stroke="none"/></svg></span><b>Mac</b><span>macOS 12 or later. Works offline.</span><em>Download &rarr;</em></a><a class="dev rv" href="download.html#android" style="--c:#16a34a"><span class="pic" style="--c:#16a34a"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="9" width="10" height="11" rx="2"/><path d="M4 12.5v2M20 12.5v2M9.5 9 8 6.5M14.5 9 16 6.5M10 14.5h4"/></svg></span><b>Android</b><span>Android 6.0 or newer. Needs internet.</span><em>Get the app &rarr;</em></a><a class="dev rv" href="/app/" style="--c:#0ea5a4"><span class="pic" style="--c:#0ea5a4"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.3 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.3-3.5-8.5s1-6 3.5-8.5z"/></svg></span><b>Web</b><span>Chrome, Edge or Safari. Needs internet.</span><em>Open web app &rarr;</em></a></div></div></section>
 
-  <section class="about" id="about">
-    <div class="wrap narrow">
-      <p class="eyebrow eyebrow-c"><span class="dot"></span>BUILT FOR PAKISTAN</p>
-      <h2 class="center">Software That Fits Your Lab</h2>
-      <p class="about-tx">Optix Medical Sync is made by System Optix for diagnostic labs and collection centres in Pakistan. It bills in rupees, sends reports on WhatsApp and keeps working when the internet does not.</p>
-      <div class="stats">
-        <div class="stat reveal"><b>5000+</b><span>ready-made tests</span></div>
-        <div class="stat reveal"><b>PKR</b><span>billing in rupees</span></div>
-        <div class="stat reveal"><b>WhatsApp</b><span>report delivery</span></div>
-        <div class="stat reveal"><b>Offline</b><span>desktop app, syncs later</span></div>
-      </div>
-    </div>
-  </section>
+<section class="sec" id="pricing"><div class="wrap sec-c"><span class="kicker">Pricing</span><h2>Simple plans for every lab</h2><p class="sub">Every plan includes all the features below. Plans differ only in staff users and monthly invoices.</p><div style="text-align:left"><div class="pr-toggle"><div class="pr-switch" role="group" aria-label="Billing period"><button type="button" data-period="monthly" aria-pressed="true">Monthly</button><button type="button" data-period="yearly" aria-pressed="false">Yearly <span class="pr-badge" id="prBadge">2 months free</span></button></div></div>
+<div class="pr-grid" id="prGrid">
+<article class="pr-card rv" data-plan="starter"><h3 class="pr-name">Starter</h3><p class="pr-desc">Small collection centre</p><div class="pr-price"><span class="pr-amt">Rs 2,500</span><span class="pr-per">/month</span></div><p class="pr-save">Or Rs 25,000/year &mdash; 2 months free</p><div class="pr-limits"><div class="pr-lim"><b class="pr-users">3</b><span>staff users</span></div><div class="pr-lim"><b class="pr-inv">300</b><span>invoices / month</span></div></div><ul class="pr-feats"><li>Patients &amp; billing</li><li>Lab results &amp; PDF reports with QR</li><li>WhatsApp report sending</li><li>Critical-value alerts</li><li>Reference ranges by age &amp; gender</li><li>Patient result trends</li><li>Offline desktop app with cloud sync</li><li>Android app</li><li>Daily cash closing &amp; profit report</li><li>Audit log</li><li>Sample barcode tracking</li></ul><a class="btn ghost block" href="/app/#/signup">Start free trial</a></article>
+<article class="pr-card pop rv" data-plan="pro"><span class="pr-tag">Most popular</span><h3 class="pr-name">Professional</h3><p class="pr-desc">Busy diagnostic lab</p><div class="pr-price"><span class="pr-amt">Rs 6,000</span><span class="pr-per">/month</span></div><p class="pr-save">Or Rs 60,000/year &mdash; 2 months free</p><div class="pr-limits"><div class="pr-lim"><b class="pr-users">10</b><span>staff users</span></div><div class="pr-lim"><b class="pr-inv">3,000</b><span>invoices / month</span></div></div><ul class="pr-feats"><li>Patients &amp; billing</li><li>Lab results &amp; PDF reports with QR</li><li>WhatsApp report sending</li><li>Critical-value alerts</li><li>Reference ranges by age &amp; gender</li><li>Patient result trends</li><li>Offline desktop app with cloud sync</li><li>Android app</li><li>Daily cash closing &amp; profit report</li><li>Audit log</li><li>Sample barcode tracking</li></ul><a class="btn white block" href="/app/#/signup">Start free trial</a></article>
+<article class="pr-card rv" data-plan="enterprise"><h3 class="pr-name">Enterprise</h3><p class="pr-desc">Chains &amp; hospitals</p><div class="pr-price"><span class="pr-amt">Custom</span><span class="pr-per">pricing</span></div><p class="pr-save">Tailored to your lab or chain</p><div class="pr-limits"><div class="pr-lim"><b class="pr-users">Unlimited</b><span>staff users</span></div><div class="pr-lim"><b class="pr-inv">Unlimited</b><span>invoices / month</span></div></div><ul class="pr-feats"><li>Everything in Professional</li><li>Unlimited users &amp; invoices</li><li>Pricing tailored to your lab or chain</li><li>Talk to our team about your setup</li></ul><a class="btn ghost block pr-contact" href="#contact">Contact us</a></article>
+</div>
+<p class="pr-note rv">All plans start with a <span data-trial>14</span>-day free trial. Pay by JazzCash, Easypaisa or bank transfer.</p></div></div></section>
 
-  <section class="devices" id="devices">
-    <div class="wrap">
-      <p class="eyebrow eyebrow-c"><span class="dot"></span>EVERY DEVICE</p>
-      <h2 class="center">Works on Every Device</h2>
-      <p class="sec-sub">One lab account on your PC, phone and browser. Your data stays in sync through the cloud.</p>
-      <div class="dev-grid">
-        <a class="dev-card reveal" href="download.html">
-          <span class="dev-ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 5.6 10.6 4.5v7H3zM11.7 4.3 21 3v8.5h-9.3zM3 12.5h7.6v7L3 18.4zM11.7 12.5H21V21l-9.3-1.3z"/></svg></span>
-          <b>Windows</b>
-          <span>Windows 7, 8, 10 &amp; 11. Works offline.</span>
-          <em>Download</em>
-        </a>
-        <a class="dev-card reveal" href="download.html">
-          <span class="dev-ico"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.53 4.08zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/></svg></span>
-          <b>Mac</b>
-          <span>macOS 12 or later. Works offline.</span>
-          <em>Download</em>
-        </a>
-        <a class="dev-card reveal" href="download.html#android">
-          <span class="dev-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="9" width="10" height="11" rx="2"/><path d="M4 12.5v2M20 12.5v2M9.5 9 8 6.5M14.5 9 16 6.5M10 14.5h4"/></svg></span>
-          <b>Android</b>
-          <span>Android 6.0 or newer. Needs internet.</span>
-          <em>Get the app</em>
-        </a>
-        <a class="dev-card reveal" href="/app/">
-          <span class="dev-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.3 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.3-3.5-8.5s1-6 3.5-8.5z"/></svg></span>
-          <b>Web</b>
-          <span>Chrome, Edge or Safari. Needs internet.</span>
-          <em>Open web app</em>
-        </a>
-      </div>
-    </div>
-  </section>
+<section class="sec alt" id="faq"><div class="wrap sec-c"><span class="kicker">FAQ</span><h2>Questions, answered</h2><div class="faqs"><details class="faq rv"><summary>Is my data safe?</summary><p>Your lab&rsquo;s data is stored on our cloud server, and every lab&rsquo;s data is fully isolated &mdash; other labs can never see your patients or reports. Only the staff accounts you create can sign in, and we back up the server.</p></details><details class="faq rv"><summary>Does it work without internet?</summary><p>Yes. The Windows and Mac desktop app keeps working when your internet is down and syncs automatically with the cloud once you are back online. The web app needs an internet connection.</p></details><details class="faq rv"><summary>Can I use it on multiple PCs?</summary><p>Yes. Sign in with your lab account on several PCs, on Android or on the web, and everything stays in sync through the cloud. Your plan sets how many staff users you can add &mdash; see the plans above.</p></details><details class="faq rv"><summary>What happens after the trial?</summary><p>When the <span data-trial>14</span>-day trial ends, your account becomes read-only until a plan is activated. Nothing is deleted &mdash; once your plan is active you continue exactly where you left off.</p></details><details class="faq rv"><summary>Can I export my data?</summary><p>Yes. You can export your lab&rsquo;s data as a backup from Settings at any time. Your data belongs to you.</p></details><details class="faq rv"><summary>Which payment methods do you accept?</summary><p>JazzCash, Easypaisa or bank transfer. No credit card is needed to start your trial. After you pay, submit your transaction ID and your plan is activated within a few hours.</p></details></div></div></section>
 
+<section class="sec" id="contact"><div class="wrap"><div class="sec-c"><span class="kicker">Talk to us</span><h2>Questions about plans or a demo?</h2><p class="sub">Ask about plans, set-up or a live demo. Send us a message and we will get back to you.</p></div>
+  <div class="contact-grid"><div><div class="crow"><span class="ti"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></span><div><b>Phone / WhatsApp</b><a href="tel:03001234567">0300-1234567</a></div></div><div class="crow"><span class="ti"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2"/><path d="M4 7.5l8 6 8-6"/></svg></span><div><b>Email</b><a href="mailto:info@optixlabmedsync.pk">info@optixlabmedsync.pk</a></div></div><div class="crow"><span class="ti"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span><div><b>Want a demo?</b><span>Tell us about your lab and we will show you around.</span></div></div></div>
+  <form class="cform" id="ctForm" novalidate><label>Your name<input id="ctName" required placeholder="Full name"></label><label>Phone<input id="ctPhone" required inputmode="tel" placeholder="0300-1234567"></label><label>Message<textarea id="ctMsg" rows="4" required placeholder="Ask about plans, set-up or a demo"></textarea></label><button class="btn block" type="submit">Send on WhatsApp</button><p class="form-err" id="ctErr" hidden></p></form></div>
+</div></section>
 
-  <section class="pricing" id="pricing">
-    <div class="wrap">
-      <p class="eyebrow eyebrow-c"><span class="dot"></span>PRICING</p>
-      <h2 class="center">Simple Plans for Every Lab</h2>
-      <p class="sec-sub">Every plan includes all the features below. Plans differ only in staff users and monthly invoices.</p>
-
-      <div class="pr-toggle">
-        <div class="pr-switch" role="group" aria-label="Billing period">
-          <button type="button" data-period="monthly" aria-pressed="true">Monthly</button>
-          <button type="button" data-period="yearly" aria-pressed="false">Yearly <span class="pr-badge" id="prBadge">2 months free</span></button>
-        </div>
-      </div>
-
-      <div class="pr-grid" id="prGrid">
-        <article class="pr-card reveal" data-plan="starter">
-          <h3 class="pr-name">Starter</h3>
-          <p class="pr-desc">Small collection centre</p>
-          <div class="pr-price"><span class="pr-amt">Rs 2,500</span><span class="pr-per">/month</span></div>
-          <p class="pr-save">Or Rs 25,000/year &mdash; 2 months free</p>
-          <div class="pr-limits">
-            <div class="pr-lim"><b class="pr-users">3</b><span>staff users</span></div>
-            <div class="pr-lim"><b class="pr-inv">300</b><span>invoices / month</span></div>
-          </div>
-          <ul class="pr-feats">
-            <li>Patients &amp; billing</li>
-            <li>Lab results &amp; PDF reports with QR</li>
-            <li>WhatsApp report sending</li>
-            <li>Critical-value alerts</li>
-            <li>Reference ranges by age &amp; gender</li>
-            <li>Patient result trends</li>
-            <li>Offline desktop app with cloud sync</li>
-            <li>Android app</li>
-            <li>Daily cash closing &amp; profit report</li>
-            <li>Audit log</li>
-            <li>Sample barcode tracking</li>
-          </ul>
-          <a class="btn btn-navy btn-block" href="/app/#/signup">Start free trial</a>
-        </article>
-
-        <article class="pr-card pop reveal" data-plan="pro">
-          <span class="pr-tag">Most popular</span>
-          <h3 class="pr-name">Professional</h3>
-          <p class="pr-desc">Busy diagnostic lab</p>
-          <div class="pr-price"><span class="pr-amt">Rs 6,000</span><span class="pr-per">/month</span></div>
-          <p class="pr-save">Or Rs 60,000/year &mdash; 2 months free</p>
-          <div class="pr-limits">
-            <div class="pr-lim"><b class="pr-users">10</b><span>staff users</span></div>
-            <div class="pr-lim"><b class="pr-inv">3,000</b><span>invoices / month</span></div>
-          </div>
-          <ul class="pr-feats">
-            <li>Patients &amp; billing</li>
-            <li>Lab results &amp; PDF reports with QR</li>
-            <li>WhatsApp report sending</li>
-            <li>Critical-value alerts</li>
-            <li>Reference ranges by age &amp; gender</li>
-            <li>Patient result trends</li>
-            <li>Offline desktop app with cloud sync</li>
-            <li>Android app</li>
-            <li>Daily cash closing &amp; profit report</li>
-            <li>Audit log</li>
-            <li>Sample barcode tracking</li>
-          </ul>
-          <a class="btn btn-white btn-block" href="/app/#/signup">Start free trial</a>
-        </article>
-
-        <article class="pr-card reveal" data-plan="enterprise">
-          <h3 class="pr-name">Enterprise</h3>
-          <p class="pr-desc">Chains &amp; hospitals</p>
-          <div class="pr-price"><span class="pr-amt">Custom</span><span class="pr-per">pricing</span></div>
-          <p class="pr-save">Tailored to your lab or chain</p>
-          <div class="pr-limits">
-            <div class="pr-lim"><b class="pr-users">Unlimited</b><span>staff users</span></div>
-            <div class="pr-lim"><b class="pr-inv">Unlimited</b><span>invoices / month</span></div>
-          </div>
-          <ul class="pr-feats">
-            <li>Everything in Professional</li>
-            <li>Unlimited users &amp; invoices</li>
-            <li>Pricing tailored to your lab or chain</li>
-            <li>Talk to our team about your setup</li>
-          </ul>
-          <a class="btn btn-outline btn-block pr-contact" href="#contact">Contact us</a>
-        </article>
-      </div>
-
-      <p class="pr-note reveal">All plans start with a <span data-trial>14</span>-day free trial. Pay by JazzCash, Easypaisa or bank transfer.</p>
-    </div>
-  </section>
-
-  <section class="faq" id="faq">
-    <div class="wrap narrow">
-      <p class="eyebrow eyebrow-c"><span class="dot"></span>FAQ</p>
-      <h2 class="center">Questions, Answered</h2>
-      <div class="faq-list">
-        <details class="faq-item reveal">
-          <summary>Is my data safe?</summary>
-          <p>Your lab&rsquo;s data is stored on our cloud server, and every lab&rsquo;s data is fully isolated &mdash; other labs can never see your patients or reports. Only the staff accounts you create can sign in, and we back up the server.</p>
-        </details>
-        <details class="faq-item reveal">
-          <summary>Does it work without internet?</summary>
-          <p>Yes. The Windows and Mac desktop app keeps working when your internet is down and syncs automatically with the cloud once you are back online. The web app needs an internet connection.</p>
-        </details>
-        <details class="faq-item reveal">
-          <summary>Can I use it on multiple PCs?</summary>
-          <p>Yes. Sign in with your lab account on several PCs, on Android or on the web, and everything stays in sync through the cloud. Your plan sets how many staff users you can add &mdash; see the plans above.</p>
-        </details>
-        <details class="faq-item reveal">
-          <summary>What happens after the trial?</summary>
-          <p>When the <span data-trial>14</span>-day trial ends, your account becomes read-only until a plan is activated. Nothing is deleted &mdash; once your plan is active you continue exactly where you left off.</p>
-        </details>
-        <details class="faq-item reveal">
-          <summary>Can I export my data?</summary>
-          <p>Yes. You can export your lab&rsquo;s data as a backup from Settings at any time. Your data belongs to you.</p>
-        </details>
-        <details class="faq-item reveal">
-          <summary>Which payment methods do you accept?</summary>
-          <p>JazzCash, Easypaisa or bank transfer. No credit card is needed to start your trial. After you pay, submit your transaction ID and your plan is activated within a few hours.</p>
-        </details>
-      </div>
-    </div>
-  </section>
-
-
-  <section class="contact" id="contact">
-    <div class="wrap">
-      <p class="eyebrow eyebrow-c"><span class="dot"></span>TALK TO US</p>
-      <h2 class="center">Questions About Plans or a Demo?</h2>
-      <p class="sec-sub">Ask about plans, set-up or a live demo. Send us a message and we will get back to you.</p>
-      <div class="contact-grid">
-        <div class="c-info">
-          <div class="c-row">
-            <span class="c-ico">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" stroke="#5b9bd5" stroke-width="1.8" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <div><b>Phone / WhatsApp</b><a href="tel:03001234567">0300-1234567</a></div>
-          </div>
-          <div class="c-row">
-            <span class="c-ico">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="3" y="5.5" width="18" height="13" rx="2" stroke="#5b9bd5" stroke-width="1.8"/>
-                <path d="M4 7.5l8 6 8-6" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
-            <div><b>Email</b><a href="mailto:info@optixlabmedsync.pk">info@optixlabmedsync.pk</a></div>
-          </div>
-          <div class="c-row">
-            <span class="c-ico">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="3" y="4" width="18" height="12" rx="2" stroke="#5b9bd5" stroke-width="1.8"/>
-                <path d="M8 20h8M12 16v4" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round"/>
-              </svg>
-            </span>
-            <div><b>Want a demo?</b><span>Tell us about your lab and we will show you around.</span></div>
-          </div>
-        </div>
-        <form class="c-form" id="ctForm" novalidate>
-          <label>Your name<input id="ctName" required placeholder="Full name"></label>
-          <label>Phone<input id="ctPhone" required inputmode="tel" placeholder="0300-1234567"></label>
-          <label>Message<textarea id="ctMsg" rows="4" required placeholder="Ask about plans, set-up or a demo"></textarea></label>
-          <button class="btn btn-navy" type="submit">Send on WhatsApp</button>
-          <p class="form-err" id="ctErr" hidden></p>
-        </form>
-      </div>
-    </div>
-  </section>
-
-  <section class="cta">
-    <div class="wrap">
-      <div class="cta-banner reveal">
-        <img class="cta-bg" src="assets/img/hero-2.jpg" width="1920" height="1280" loading="lazy" alt="">
-        <div class="cta-ol"></div>
-        <div class="cta-inner">
-          <p class="eyebrow light"><span class="dot"></span>GET STARTED</p>
-          <h2>Ready to run your lab on Optix Medical Sync?</h2>
-          <p>Try every feature free for <span data-trial>14</span> days. No credit card needed.</p>
-          <div class="cta-btns">
-            <a class="btn btn-white" href="/app/#/signup"><span>Start <span data-trial>14</span>-day free trial</span></a>
-            <a class="btn btn-ghost-light" href="download.html">Download the app</a>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+<section class="cta"><div class="wrap cta-in"><div><h2>Ready to run your lab on Optix Medical Sync?</h2><p>Try every feature free for <span data-trial>14</span> days. No credit card needed.</p></div><div class="pact"><a class="btn lg light" href="/app/#/signup"><span>Start <span data-trial>14</span>-day free trial</span></a><a class="btn lg ghost light" href="download.html">Download the app</a></div></div></section>
 
 </main>
 
-<footer class="footer">
+<footer class="foot">
   <div class="wrap foot-grid">
-    <div class="f-brand">
-      <svg class="brand-logo" width="40" height="40" viewBox="0 0 48 48" fill="none" aria-hidden="true">
-        <circle cx="24" cy="24" r="22" fill="#e9f4fc" stroke="#5b9bd5" stroke-width="2"/>
-        <path d="M24 8c-5 6.5-9 11.3-9 16.2A9 9 0 0 0 24 33.5a9 9 0 0 0 9-9.3C33 19.3 29 14.5 24 8z" fill="#5b9bd5" stroke="#0b1740" stroke-width="2" stroke-linejoin="round"/>
-        <path d="M20 25.5c0 2.4 1.8 4.3 4 4.3" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-      </svg>
-      <span class="brand-tx"><b>Optix Medical Sync</b><small>MEDICAL MANAGEMENT SOFTWARE</small></span>
-      <p class="f-row">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <rect x="3" y="5.5" width="18" height="13" rx="2" stroke="#5b9bd5" stroke-width="1.8"/>
-          <path d="M4 7.5l8 6 8-6" stroke="#5b9bd5" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        <a href="mailto:info@optixlabmedsync.pk">info@optixlabmedsync.pk</a>
-      </p>
-      <p class="f-row">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path d="M5 4h4l2 5-2.5 1.5a12 12 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z" stroke="#5b9bd5" stroke-width="1.8" stroke-linejoin="round"/>
-        </svg>
-        <a href="tel:03001234567">0300-1234567</a>
-      </p>
-    </div>
-    <div>
-      <b>Product</b>
-      <a href="#features">Features</a>
-      <a href="#how">How it works</a>
-      <a href="#pricing">Pricing</a>
-      <a href="download.html">Download</a>
-      <a href="https://optix-suite.ellahabad.workers.dev" rel="noopener">All Optix apps</a>
-      <a href="/app/#/login">Sign in</a>
-      <a href="/app/#/signup">Start free trial</a>
-    </div>
-    <div>
-      <b>Support</b>
-      <a href="#contact">Contact</a>
-      <a href="#faq">FAQ</a>
-    </div>
-    <div>
-      <b>Legal</b>
-      <a href="terms.html">Terms of Service</a>
-      <a href="privacy.html">Privacy Policy</a>
-    </div>
+    <div><a class="brand" href="index.html" aria-label="Optix Medical Sync home"><span class="mark"><svg viewBox="0 0 32 32" width="22" height="22" fill="none" stroke="#fff" stroke-width="2.3" stroke-linejoin="round" aria-hidden="true"><path d="M13 7h6v7l4 9.2c.6 1.4-.4 2.8-1.9 2.8H10.9c-1.5 0-2.5-1.4-1.9-2.8L13 14V7z"/><path d="M11 20h10" stroke-linecap="round"/></svg></span><b>Optix</b><span class="suite">Medical Sync</span></a>
+      <p class="muted">Medical management software for labs in Pakistan: patients, billing, results, QR-verified reports and WhatsApp, on Windows, Mac, Android and the web.</p>
+      <p class="muted" style="margin-top:8px"><a href="mailto:info@optixlabmedsync.pk">info@optixlabmedsync.pk</a><br><a href="tel:03001234567">0300-1234567</a></p></div>
+    <div><h5>Product</h5><div class="flinks"><a href="index.html#features">Features</a><a href="index.html#how">How it works</a><a href="index.html#pricing">Pricing</a><a href="download.html">Download</a><a href="/app/#/login">Sign in</a><a href="/app/#/signup">Start free trial</a></div></div>
+    <div><h5>Optix</h5><div class="flinks"><a href="https://optix-suite.ellahabad.workers.dev" rel="noopener">All Optix apps</a><a href="index.html#platform">Platform</a><a href="index.html#faq">FAQ</a><a href="index.html#contact">Contact</a></div></div>
+    <div><h5>Legal</h5><div class="flinks"><a href="terms.html">Terms of Service</a><a href="privacy.html">Privacy Policy</a><a href="privacy.html#advertising" data-ad-choices>Ad choices</a></div></div>
   </div>
-  <div class="foot-base">&#169; 2026 Optix Medical Sync | All Rights Reserved &#8226; Powered by System Optix</div>
+  <div class="wrap foot-base"><span>&copy; 2026 Optix Medical Sync &middot; Powered by System Optix</span><span><a href="privacy.html">Privacy</a> &middot; <a href="terms.html">Terms</a> &middot; <a href="privacy.html#advertising" data-ad-choices>Ad choices</a></span></div>
 </footer>
-
-<script src="assets/js/main.js"></script>
-<script src="assets/js/saas.js"></script>
+<button class="totop" id="totop" type="button" aria-label="Back to top"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+<script src="assets/js/site.js?v=ot1"></script>
+<script src="assets/js/saas.js?v=ot1"></script>
 <script src="/app/assets/js/mod-chatbot.js?v=132z"></script>
 <script>OptixChat.init({ endpoint: 'https://labpos-api.150.230.52.29.sslip.io/api/chat', context: 'website', labName: 'Optix Medical Sync' });</script>
 </body>
