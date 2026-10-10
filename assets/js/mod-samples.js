@@ -1102,6 +1102,7 @@
 
     var todayStr = App.today();
     var tomorrowStr = addDays(todayStr, 1);
+    var listOnly = typeof location !== 'undefined' && String(location.hash).indexOf('#/samples/bookings') === 0;
 
     /* Summary totals use all bookings, independent of table filters. */
     var todayBookings = bookings.filter(function (b) { return b.scheduledDate === todayStr; });
@@ -1159,7 +1160,7 @@
       + '.hs-badge-status { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .03em; display: inline-flex; align-items: center; gap: 4px; }'
       + '</style>'
       + '<div class="hs-dash">'
-      + '<div class="stat-grid">'
+      + (listOnly ? '' : '<div class="stat-grid">'
       + [
           { label: "Today's Bookings", value: todayBookings.length, subtitle: 'Scheduled for today', tint: 'blue', icon: STAT_ICON.cal },
           { label: 'Pending Dispatch', value: pendingCount, subtitle: 'Scheduled · All dates', tint: 'amber', icon: STAT_ICON.clock },
@@ -1168,7 +1169,7 @@
         ].map(function (card) {
           return statCard(card.tint, card.icon, App.esc(card.label), App.esc(String(card.value)), App.esc(card.subtitle));
         }).join('')
-      + '</div>'
+      + '</div>') /* the All Bookings menu shows the list only; the cards belong to Home Sampling & Dispatch */
 
       /* Search & Filter Card with Integrated Status Pipeline Tabs */
       + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="padding:14px 16px">'

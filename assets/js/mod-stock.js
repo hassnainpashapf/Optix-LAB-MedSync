@@ -308,11 +308,6 @@
     };
 
     v.innerHTML = '' +
-      '<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">' +
-        (canEdit() ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="sdRecv">' + App.icon('plus', 16) + ' Receive Stock</button>' +
-          '<button class="btn btn-ghost" id="sdUse" style="border:1.5px solid var(--bd,#cbd5e1)">🚚 Move / Use</button>' +
-          '<button class="btn btn-ghost" id="sdAdd" style="border:1.5px solid var(--bd,#cbd5e1)">' + App.icon('plus', 16) + ' Add Item</button></div>' : '') +
-      '</div>' +
       '<div class="stat-grid">' +
         statCard('brand', App.icon('box', 18), 'Total Inventory Items', S.rows.length, 'Tracked in lab catalog') +
         statCard('amber', App.icon('alert', 18), 'Low / Out of Stock', S.low + S.out, S.out + ' out of stock • ' + S.low + ' low balance') +
@@ -324,6 +319,11 @@
         statCard('blue', App.icon('plus', 18), 'Received · 7 days', recvWeek, 'stock-in entries') +
         statCard('amber', App.icon('tube', 18), 'Used / Waste · 7 days', usedWeek, 'stock-out entries') +
         statCard('brand', App.icon('clipboard', 18), 'Movements Today', todayMoves, 'stock entries logged today') +
+      '</div>' +
+      '<div style="display:flex;justify-content:flex-start;align-items:center;margin:0 0 16px;flex-wrap:wrap;gap:12px">' +
+        (canEdit() ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="sdRecv">' + App.icon('plus', 16) + ' Receive Stock</button>' +
+          '<button class="btn btn-ghost" id="sdUse" style="border:1.5px solid var(--bd,#cbd5e1)">🚚 Move / Use</button>' +
+          '<button class="btn btn-ghost" id="sdAdd" style="border:1.5px solid var(--bd,#cbd5e1)">' + App.icon('plus', 16) + ' Add Item</button></div>' : '') +
       '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:14px">' +
         card('Needs Attention', '#/stock/pending', 'View all', '<th>Item</th><th>On hand</th><th>Status</th>', needRows) +

@@ -23,7 +23,7 @@ The gateway switch, last-check time and sent counter live in the web UI (Setting
 through `assets/js/sms-gateway.js` and are only shown inside the native app. For reliable background sending, set the app's
 battery usage to **Unrestricted** (Android Settings → Apps → Optix Lab → Battery).
 
-## Build (needs JDK 17+ + Android SDK 34)
+## Build (needs JDK 21 + Android SDK 35; Capacitor 7.6 does not compile on JDK 17)
 
 ```
 npm install            # installs @capacitor/* v7 + the local @optix/sms-gateway plugin
@@ -33,3 +33,10 @@ npx cap sync android   # picks up plugins/sms-gateway into the native project
 
 Then copy `capacitor.config.json` + `www/` from here, set the icons/version/signing, then `cd android && ./gradlew assembleRelease`.
 Keep the signing keystore (not in this repo) safe: updates of the app must be signed with the same key.
+
+Build notes (2.1.0, the first APK that contains the SMS gateway): the working project lives outside the repo in `~/optix-android`
+(signing keystore + `keystore.properties` are there; a backup of the keystore is on the VPS in `/home/ubuntu/backups/optix-apk-signing/`).
+Copy `plugins/sms-gateway` into it, `npm install ./plugins/sms-gateway`, `npx cap sync android`, set `versionCode 210 / versionName "2.1.0"`
+and build with `JAVA_HOME=<JDK 21> ANDROID_HOME=~/android-sdk ./gradlew assembleRelease`. `apksigner verify --print-certs` must show the same
+certificate SHA-256 as the previous APK (7225fae6…86bd), otherwise phones refuse the update. The plugin's minSdk is 23 so Android 6 keeps working.
+
