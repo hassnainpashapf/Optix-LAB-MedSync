@@ -1037,9 +1037,9 @@
         ivIsTech ? 'invoices with dues' : 'yet to collect');
 
     view.innerHTML =
+      SC_STYLE +
+      '<div class="stat-grid">' + invStats + '</div>' +
       '<div class="card"><div class="card-b">' +
-        SC_STYLE +
-        '<div class="stat-grid">' + invStats + '</div>' +
         '<div class="toolbar" style="margin:0 0 12px;gap:8px;flex-wrap:nowrap">' +
           '<input id="f-q" class="input" style="flex:1;min-width:0;width:auto;padding:8px 12px;font-size:13px" placeholder="Search invoice no, patient, phone..." value="' + App.esc(F.q) + '">' +
           '<select id="f-date" class="select" style="width:auto;flex:0 0 auto;padding:8px 10px;font-size:13px">' +
@@ -1124,8 +1124,8 @@
       kpiCard(SC_ICONS.clock, 'red', 'Unpaid Invoices', String(pending.length - partial), 'no payment received') +
       kpiCard(SC_ICONS.cal, 'blue', 'Partial Invoices', String(partial), 'part payment received');
     view.innerHTML =
+      '<div class="stat-grid">' + stats + '</div>' +
       '<div class="card"><div class="card-b">' +
-        '<div class="stat-grid">' + stats + '</div>' +
         '<div class="toolbar" style="gap:8px;flex-wrap:wrap">' +
           '<input id="pi-q" class="input" style="flex:1;min-width:180px" aria-label="Search pending invoices" placeholder="Search invoice no, patient, phone..." value="' + App.esc(PF.q) + '">' +
           '<input id="pi-date" class="input" type="date" style="width:auto" aria-label="Invoice date" value="' + App.esc(PF.date) + '">' +

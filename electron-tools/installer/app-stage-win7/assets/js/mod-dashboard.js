@@ -153,14 +153,14 @@
     // ---- quick-access cards ----
     var quickCss =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px;align-items:stretch}' +
-    '.dbq-card{display:flex;flex-direction:column;height:100%;min-height:96px;transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
-    '.dbq-card .card-b{padding:10px!important;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;gap:6px!important;box-sizing:border-box}' +
-    '.dbq-card .card-b>span:first-child{width:32px!important;height:32px!important;border-radius:9px!important}.dbq-card .card-b>span:first-child svg{width:18px;height:18px}' +
+    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 7 : 8) + ',minmax(0,1fr));gap:8px;margin-bottom:12px;align-items:stretch}' +
+    '.dbq-card{display:flex;flex-direction:column;height:100%;min-height:78px;transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
+    '.dbq-card .card-b{padding:8px 6px!important;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;gap:4px!important;box-sizing:border-box}' +
+    '.dbq-card .card-b>span:first-child{width:28px!important;height:28px!important;border-radius:8px!important}.dbq-card .card-b>span:first-child svg{width:16px;height:16px}' +
     '.dbq-card .card-b>span:last-child{width:100%;min-width:0;overflow-wrap:break-word}' +
-    '.dbq-card b{display:block;font-size:13px!important;line-height:1.3!important}.dbq-card br{display:none}.dbq-card small{font-size:11px!important;line-height:1.3!important;display:block;margin-top:3px}' +
-    '@media(max-width:1200px){.dbw-grid{grid-template-columns:repeat(3,1fr)}}' +
-    '@media(max-width:900px){.dbw-grid{grid-template-columns:1fr}}' +
+    '.dbq-card b{display:block;font-size:12px!important;line-height:1.3!important}.dbq-card br{display:none}.dbq-card small{font-size:10px!important;line-height:1.25!important;display:block;margin-top:2px}' +
+    '@media(max-width:1180px){.dbw-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}' +
+    '@media(max-width:900px){.dbw-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}' +
     '</style>';
     var quickAccess =
     '<div class="dbw-grid">' +

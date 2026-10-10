@@ -1830,7 +1830,17 @@ async function main() {
     const key = req.params.key || '';
     if (!REPORT_KEY_RE.test(key)) return res.status(400).json({ error: 'invalid key' });
     const file = path.join(REPORT_PDFS_DIR, key + '.pdf');
-    if (!fs.existsSync(file) && !(DESKTOP && await desktop.fetchPdf(key))) return res.status(404).json({ error: 'not found' });
+    if (!fs.existsSync(file) && !(DESKTOP && await desktop.fetchPdf(key))) {
+      /* a patient who scanned a QR sees a readable page, not raw JSON */
+      if (/text\/html/.test(req.get('Accept') || '')) {
+        return res.status(404).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report not available</title></head>' +
+          '<body style="margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f1f5f9;display:grid;place-items:center;min-height:100vh;padding:24px;box-sizing:border-box">' +
+          '<div style="max-width:420px;background:#fff;border-radius:16px;padding:28px 24px;text-align:center;box-shadow:0 8px 30px rgba(15,23,42,.08)">' +
+          '<h1 style="font-size:20px;margin:0 0 10px;color:#131845">This report is not available yet</h1>' +
+          '<p style="margin:0;color:#475569;line-height:1.6;font-size:15px">The link may be incomplete, or the report is still being prepared. Please contact the laboratory and they will share it with you.</p></div></body></html>');
+      }
+      return res.status(404).json({ error: 'not found' });
+    }
     if (viewerHtml && !req.query.raw && /text\/html/.test(req.get('Accept') || '')) {
       return res.type('html').send(viewerHtml);
     }

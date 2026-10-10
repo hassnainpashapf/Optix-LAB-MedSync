@@ -292,7 +292,7 @@ async function suite(folder) {
     assert.equal(uploads.length, 0, 'Never upload invalid/missing output');
     assert.equal(prints.length, 1, 'Browser retains HTML print fallback');
     assert.ok(prints[0].html.includes('History only'));
-    assert.equal(qrTargets[qrTargets.length - 1], 'https://optix-lab-medsync.pages.dev/app/#/invoice/i', 'Failed PDF uses existing invoice-reference fallback');
+    assert.ok(!qrTargets.some(t => String(t).indexOf('#/invoice/') >= 0), 'A failed PDF never prints a staff-login invoice link as the QR');
     assert.ok(messages.some(m => /Could not build PDF:/.test(m)), 'Output failure is reported');
     assert.equal(JSON.stringify(tables), beforeFailure, 'Failure never changes key or clinical records');
     native = true;

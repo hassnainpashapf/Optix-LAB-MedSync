@@ -599,25 +599,25 @@
     var h = ''
       /* 4 Executive KPI Cards */
       + '<div class="kpi-grid" style="margin-bottom:18px">'
-      +   '<div class="kpi t-navy" style="border-left:4px solid #0284c7 !important">'
+      +   '<div class="kpi t-navy">'
       +     '<div class="kpi-ic">' + App.icon('file', 18) + '</div>'
       +     '<div class="kpi-lb">TODAY\'S NET BILLED</div>'
       +     '<div class="kpi-nm" style="color:#0284c7">' + App.money(m.totalBilled) + '</div>'
       +     '<div class="kpi-sb">' + m.invoicesCount + ' Invoices • Disc: ' + App.money(m.discountsTotal) + '</div>'
       +   '</div>'
-      +   '<div class="kpi t-green" style="border-left:4px solid #16a34a !important">'
+      +   '<div class="kpi t-green">'
       +     '<div class="kpi-ic">' + App.icon('wallet', 18) + '</div>'
       +     '<div class="kpi-lb">TOTAL COLLECTIONS (IN-HAND)</div>'
       +     '<div class="kpi-nm" style="color:#16a34a">' + App.money(m.totalCollections) + '</div>'
       +     '<div class="kpi-sb">Cash: ' + App.money(m.cashCollected) + ' • Online: ' + App.money(m.onlineCollected) + (m.duesTotal > 0 ? ' • Dues: ' + App.money(m.duesTotal) : '') + '</div>'
       +   '</div>'
-      +   '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">'
+      +   '<div class="kpi t-amber">'
       +     '<div class="kpi-ic">' + App.icon('chart', 18) + '</div>'
       +     '<div class="kpi-lb">NET LAB SURPLUS (PROFIT)</div>'
       +     '<div class="kpi-nm" style="color:#d97706">' + App.money(m.netSurplus) + '</div>'
       +     '<div class="kpi-sb">Collections - Expenses (' + App.money(m.totalExpenses) + ') • ' + m.profitMargin + '% Margin</div>'
       +   '</div>'
-      +   '<div class="kpi t-purple" style="border-left:4px solid #7c3aed !important">'
+      +   '<div class="kpi t-purple">'
       +     '<div class="kpi-ic">' + App.icon('flask', 18) + '</div>'
       +     '<div class="kpi-lb">DIAGNOSTIC OPS &amp; ALERTS</div>'
       +     '<div class="kpi-nm" style="color:#7c3aed">' + m.testsTotal + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">Tests</span></div>'
@@ -931,25 +931,25 @@
 
     var h = (ready ? '' : '<div class="card" style="margin-bottom:14px;border-color:#f6c6c6;background:#fff6f6"><div class="card-b"><b style="color:#b91c1c">WhatsApp sending is not configured yet.</b> <span class="muted">Link the lab WhatsApp number in Tools → WhatsApp → Settings (scan a QR code). Reports can still be printed and shared manually.</span></div></div>') +
       '<div class="kpi-grid" style="margin-bottom:18px">' +
-        '<div class="kpi t-green" style="border-left:4px solid #16a34a !important">' +
+        '<div class="kpi t-green">' +
           '<div class="kpi-ic">' + App.icon('check', 18) + '</div>' +
           '<div class="kpi-lb">SENT TODAY</div>' +
           '<div class="kpi-nm" style="color:#16a34a">' + sentToday + '</div>' +
           '<div class="kpi-sb">Delivered via WhatsApp</div>' +
         '</div>' +
-        '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">' +
+        '<div class="kpi t-amber">' +
           '<div class="kpi-ic">' + App.icon('clock', 18) + '</div>' +
           '<div class="kpi-lb">WAITING TO SEND</div>' +
           '<div class="kpi-nm" style="color:#d97706">' + waiting + '</div>' +
           '<div class="kpi-sb">Ready reports queued</div>' +
         '</div>' +
-        '<div class="kpi t-red" style="border-left:4px solid #dc2626 !important">' +
+        '<div class="kpi t-red">' +
           '<div class="kpi-ic">' + App.icon('alert', 18) + '</div>' +
           '<div class="kpi-lb">FAILED (ALL TIME)</div>' +
           '<div class="kpi-nm" style="color:' + (failed ? '#dc2626' : 'var(--muted)') + '">' + failed + '</div>' +
           '<div class="kpi-sb">Delivery failures</div>' +
         '</div>' +
-        '<div class="kpi t-blue" style="border-left:4px solid #2563eb !important">' +
+        '<div class="kpi t-blue">' +
           '<div class="kpi-ic">' + App.icon('chat', 18) + '</div>' +
           '<div class="kpi-lb">AUTO-SEND</div>' +
           '<div class="kpi-nm" style="color:#2563eb;font-size:18px">' + (cfg.autoPatient !== false ? 'Patient ✓ ' : '') + (cfg.autoDoctor === true ? 'Doctor ✓' : '') + ((cfg.autoPatient === false && cfg.autoDoctor !== true) ? 'Off' : '') + '</div>' +

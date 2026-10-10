@@ -14,7 +14,7 @@ for (const base of ['', 'electron-tools/installer/app-stage-win7']) {
   const expectedInventory = base ? ['#/inventory', '#/inventory/add'] : ['#/inventory'];
   const expectedStockRoutes = base
     ? ['#/stock', '#/stock/pending', '#/stock/purchase-orders', '#/stock/add', '#/stock/alerts']
-    : ['#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts'];
+    : ['#/stock/dashboard', '#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts'];
   assert.deepEqual(Array.from(inventory.sub, item => item.route), expectedInventory);
   const routes = Array.from(stock.sub, item => item.route);
   for (const route of expectedStockRoutes) {
@@ -55,7 +55,7 @@ vm.runInContext(`
 `, context, { filename: 'app.js:stock-sidebar' });
 const originalNav = JSON.stringify(context.NAV);
 const inventoryRoutes = ['#/inventory'];
-const stockRoutes = ['#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts'];
+const stockRoutes = ['#/stock/dashboard', '#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts'];
 
 // Tiny DOM built from production HTML, with the APIs used by markActive.
 function node(tag) {

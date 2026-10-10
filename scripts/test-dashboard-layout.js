@@ -24,10 +24,10 @@ for (const source of [webDashboard, desktopDashboard]) {
     assert.match(bodyStyle, /flex-direction:column/);
     assert.match(bodyStyle, /align-items:center/);
     assert.match(bodyStyle, /text-align:center/);
-    assert.match(bodyStyle, /padding:10px!important/);
-    assert.match(bodyStyle, /gap:6px!important/);
-    assert.match(context.quickCss, /min-height:96px/);
-    assert.match(context.quickCss, /width:32px!important;height:32px!important/);
+    assert.match(bodyStyle, /padding:8px 6px!important/);
+    assert.match(bodyStyle, /gap:4px!important/);
+    assert.match(context.quickCss, /min-height:78px/);
+    assert.match(context.quickCss, /width:28px!important;height:28px!important/);
     const cards = [...context.quickAccess.matchAll(/<a href="([^"]+)" class="card dbq-card"[^>]*>([\s\S]*?)<\/a>/g)];
     assert.equal(cards.length, isTech ? 7 : 8);
     for (const [, , body] of cards) {

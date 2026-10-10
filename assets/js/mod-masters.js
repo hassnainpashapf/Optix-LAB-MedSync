@@ -44,6 +44,15 @@ var TICONS = {
   box: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 8.3L12 13l8.7-4.7"/><path d="M12 13v9"/></svg>'
 };
 
+/* catalog / packages stat card — the main dashboard's look (.stat / .stat-ico / .lb / .vl / .dl in app.css); `attrs` adds id / click / title */
+function cStat(tint, icon, label, value, sub, attrs) {
+  return '<div class="stat" data-tint="' + tint + '"' + (attrs || '') + '>' +
+    '<div class="stat-ico">' + icon + '</div>' +
+    '<div class="lb">' + label + '</div>' +
+    '<div class="vl">' + value + '</div>' +
+    '<div class="dl">' + sub + '</div></div>';
+}
+
 /* dashboard-style stat card — reuses global .stat classes from app.css */
 function tStat(icon, tint, label, value, sub) {
   return '<div class="stat" data-tint="' + tint + '">' +
@@ -149,31 +158,11 @@ function renderTests() {
   var nPkg = fT.filter(function (t) { return t.isPackage; }).length;
   var catLbl = testFilter.cat === 'All' ? 'in catalog' : 'in ' + testFilter.cat;
   var statCards =
-    '<div class="kpi-grid" style="margin-bottom:18px">' +
-      '<div class="kpi t-navy" style="border-left:4px solid #0284c7 !important">' +
-        '<div class="kpi-ic">' + App.icon('flask', 18) + '</div>' +
-        '<div class="kpi-lb">TOTAL TESTS</div>' +
-        '<div class="kpi-nm" style="color:#0284c7">' + fT.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">tests</span></div>' +
-        '<div class="kpi-sb">' + App.esc(catLbl) + '</div>' +
-      '</div>' +
-      '<div class="kpi t-green" style="border-left:4px solid #16a34a !important">' +
-        '<div class="kpi-ic">' + App.icon('check', 18) + '</div>' +
-        '<div class="kpi-lb">ACTIVE TESTS</div>' +
-        '<div class="kpi-nm" style="color:#16a34a">' + nActive + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">active</span></div>' +
-        '<div class="kpi-sb">' + (testFilter.cat === 'All' ? 'Available for booking' : 'Active in ' + App.esc(testFilter.cat)) + '</div>' +
-      '</div>' +
-      '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">' +
-        '<div class="kpi-ic">' + App.icon('scan', 18) + '</div>' +
-        '<div class="kpi-lb">CATEGORIES</div>' +
-        '<div class="kpi-nm" style="color:#d97706">' + cats.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">categories</span></div>' +
-        '<div class="kpi-sb">Organized test groups</div>' +
-      '</div>' +
-      '<div class="kpi t-purple" style="cursor:pointer;border-left:4px solid #7c3aed !important" onclick="location.hash=\'#/packages\'" title="View Health Packages">' +
-        '<div class="kpi-ic">' + App.icon('box', 18) + '</div>' +
-        '<div class="kpi-lb">HEALTH PACKAGES</div>' +
-        '<div class="kpi-nm" style="color:#7c3aed">' + nPkg + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">deals</span></div>' +
-        '<div class="kpi-sb">Screening packages &rarr;</div>' +
-      '</div>' +
+    '<div class="stat-grid">' +
+      cStat('brand', App.icon('flask', 18), 'Total Tests', fT.length, App.esc(catLbl)) +
+      cStat('green', App.icon('check', 18), 'Active Tests', nActive, testFilter.cat === 'All' ? 'Available for booking' : 'Active in ' + App.esc(testFilter.cat)) +
+      cStat('amber', App.icon('scan', 18), 'Categories', cats.length, 'Organized test groups') +
+      cStat('blue', App.icon('box', 18), 'Health Packages', nPkg, 'Screening packages &rarr;', ' style="cursor:pointer" onclick="location.hash=\'#/packages\'" title="View Health Packages"') +
     '</div>';
   var chips = ['All'].concat(cats).map(function (c) {
     var label = c === 'All' ? 'All' : c;
@@ -183,8 +172,9 @@ function renderTests() {
   }).join('');
 
   view().innerHTML =
-    (testCatalogMode === 'all' ? '<p class="muted">All Tests combines saved lab tests (including imported generic tests) with reusable generic templates shown below.</p>' : '') +
-    statCards +
+    (testCatalogMode === 'all' ? '<p class="muted" style="margin:0 0 12px">All Tests combines saved lab tests (including imported generic tests) with reusable generic templates shown below.</p>' : '') +
+    /* the Generic page has its own Templates / Already in catalog / Not imported cards below, so the four catalog cards would be a second row */
+    (testCatalogMode === 'generic' ? '<div id="generic-template-cards"></div>' : statCards) +
     (testCatalogMode === 'generic' ? '<h3>Saved Generic Tests</h3>' : '') +
     '<div class="card"><div class="card-b">' +
       '<div class="test-menu-wrap">' +
@@ -748,13 +738,16 @@ function renderGenericTemplates() {
   var saved = templates.filter(function (t) { return !!t.test; }).length;
   var box = document.getElementById('generic-template-browser');
   if (!box) return;
+  /* the three template cards sit at the top of the page, like the stat cards on the other catalog pages */
+  var cardsBox = document.getElementById('generic-template-cards');
+  if (cardsBox) cardsBox.innerHTML = '<div class="stat-grid">' +
+    cStat('blue', TICONS.flask, 'Templates', templates.length, 'Common report definitions') +
+    cStat('green', TICONS.check, 'Already in catalog', saved, 'Saved lab tests') +
+    cStat('amber', TICONS.box, 'Not imported', templates.length - saved, 'Unavailable for booking') +
+  '</div>';
   box.innerHTML =
     '<h3>Generic Test Templates</h3><p class="muted">Reusable common test templates. Import a template and set its price to create a real lab test before booking. Existing matching tests are reused without changing their prices or reports.</p>' +
-    '<div class="stat-grid" style="margin-bottom:18px">' +
-      tStat(TICONS.flask, 'blue', 'Templates', templates.length, 'Common report definitions') +
-      tStat(TICONS.check, 'green', 'Already in catalog', saved, 'Saved lab tests') +
-      tStat(TICONS.box, 'amber', 'Not imported', templates.length - saved, 'Unavailable for booking') +
-    '</div><div class="card"><div class="card-b">' +
+    '<div class="card"><div class="card-b">' +
       '<label class="label" for="gt-q">Find a template</label><input id="gt-q" class="input search" placeholder="Search templates…" value="' + App.esc(genericQuery) + '">' +
       '<div class="tbl-wrap"><table class="table"><thead><tr><th>Template</th><th>Parameters</th><th>Availability</th><th>Price</th><th>Actions</th></tr></thead><tbody id="gt-rows"></tbody></table></div></div></div>';
   function draw() {
@@ -939,6 +932,9 @@ function testModal(t) {
       '<div><label class="label">Price (Rs) *</label><input id="tm-price" class="input" type="number" min="0" step="1" value="' + App.esc(String(t.price === '' ? '' : t.price)) + '" required></div>' +
       '<div><label class="label">Sample Type</label><select id="tm-sample" class="select">' + sampleOpts + '</select></div>' +
       '<div><label class="label">Turnaround Time</label><input id="tm-tat" class="input" value="' + App.esc(t.tat || '') + '" placeholder="e.g. Same day"></div>' +
+      '<div><label class="label">Test Type</label><select id="tm-type" class="select" title="Move this test between the Regular and Generic catalogs">' +
+        '<option value="regular"' + ((t.type || (testCatalogMode === 'generic' ? 'generic' : 'regular')) === 'generic' ? '' : ' selected') + '>Regular Test</option>' +
+        '<option value="generic"' + ((t.type || (testCatalogMode === 'generic' ? 'generic' : 'regular')) === 'generic' ? ' selected' : '') + '>Generic Test</option></select></div>' +
       '<div><label class="label">Status</label><label style="display:flex;align-items:center;gap:8px;font-weight:600"><input id="tm-active" type="checkbox"' + (t.active ? ' checked' : '') + '> Active</label></div>' +
       '<div><label class="label">Remind to repeat after (days)</label><input id="tm-retest" class="input" type="number" min="0" step="1" value="' + App.esc(t.retestDays ? String(t.retestDays) : '') + '" placeholder="e.g. 90 (optional)"><div class="muted" style="font-size:12px;margin-top:3px">Used by WhatsApp &rarr; Automatic messages &rarr; repeat-test reminder.</div></div>' +
     '</div>' +
@@ -1068,7 +1064,7 @@ function testModal(t) {
       Array.prototype.forEach.call(m.querySelectorAll('.tm-crow'), function (r) { var q = +r.querySelector('.tm-cq').value, id = r.querySelector('.tm-ci').value; if (id && q > 0) consumes.push({ itemId: id, qty: q }); });
       var data = {
         code: code, name: name, category: category, price: price, consumes: consumes,
-        type: t.type === 'generic' ? 'generic' : 'regular',
+        type: m.querySelector('#tm-type').value === 'generic' ? 'generic' : 'regular',
         sampleType: m.querySelector('#tm-sample').value,
         tat: m.querySelector('#tm-tat').value.trim() || 'Same day',
         retestDays: Math.max(0, parseInt(m.querySelector('#tm-retest').value, 10) || 0),
@@ -1085,7 +1081,7 @@ function testModal(t) {
       if (t.templateKey) data.templateKey = t.templateKey;
       if (data.isPackage && !data.includes.length) { App.toast('Select at least one test for the package.', 'err'); return; }
       if (isNew) { DB.insert('tests', data); App.toast('Test added.'); }
-      else { DB.update('tests', t.id, data); App.toast('Test updated.'); }
+      else { DB.update('tests', t.id, data); App.toast(data.type !== (t.type === 'generic' ? 'generic' : 'regular') ? 'Test updated and moved to ' + (data.type === 'generic' ? 'Generic' : 'Regular') + ' tests.' : 'Test updated.'); }
       close();
       refreshTestCatalog();
     });
@@ -1425,35 +1421,12 @@ function renderPackages() {
     + '</style>'
     + '<div class="pkg-dash">'
 
-    /* 4 Unified KPI Stat Cards (.kpi-grid + .kpi) */
-    + '<div class="kpi-grid" style="margin-bottom:18px">'
-    +   '<div class="kpi t-navy" style="cursor:pointer;border-left:4px solid #0284c7 !important" id="kpiPkgAll" title="Click to view all packages">'
-    +     '<div class="kpi-ic">' + App.icon('box', 18) + '</div>'
-    +     '<div class="kpi-lb">TOTAL HEALTH PACKAGES</div>'
-    +     '<div class="kpi-nm" style="color:#0284c7">' + pkgs.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">packages</span></div>'
-    +     '<div class="kpi-sb">' + activePkgs.length + ' currently active deals</div>'
-    +   '</div>'
-
-    +   '<div class="kpi t-green" style="cursor:pointer;border-left:4px solid #16a34a !important" id="kpiPkgActive" title="Click to filter active deals">'
-    +     '<div class="kpi-ic">' + App.icon('check', 18) + '</div>'
-    +     '<div class="kpi-lb">ACTIVE PROMOTIONS</div>'
-    +     '<div class="kpi-nm" style="color:#16a34a">' + activePkgs.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">active</span></div>'
-    +     '<div class="kpi-sb">Available on billing counter</div>'
-    +   '</div>'
-
-    +   '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">'
-    +     '<div class="kpi-ic">' + App.icon('coins', 18) + '</div>'
-    +     '<div class="kpi-lb">AVERAGE PATIENT SAVINGS</div>'
-    +     '<div class="kpi-nm" style="color:#d97706">' + (avgSavingsPct > 0 ? '~' + avgSavingsPct + '%' : '0%') + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">SAVINGS</span></div>'
-    +     '<div class="kpi-sb">' + coveredCount + ' tests covered across deals</div>'
-    +   '</div>'
-
-    +   '<div class="kpi t-purple" style="border-left:4px solid #7c3aed !important">'
-    +     '<div class="kpi-ic">' + App.icon('file', 18) + '</div>'
-    +     '<div class="kpi-lb">PACKAGE BILLINGS</div>'
-    +     '<div class="kpi-nm" style="color:#7c3aed">' + pkgBilledCount + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">orders</span></div>'
-    +     '<div class="kpi-sb">Booked in patient invoices</div>'
-    +   '</div>'
+    /* 4 stat cards — same look as the main dashboard */
+    + '<div class="stat-grid">'
+    +   cStat('brand', App.icon('box', 18), 'Total Health Packages', pkgs.length, activePkgs.length + ' currently active deals', ' id="kpiPkgAll" style="cursor:pointer" title="Click to view all packages"')
+    +   cStat('green', App.icon('check', 18), 'Active Promotions', activePkgs.length, 'Available on billing counter', ' id="kpiPkgActive" style="cursor:pointer" title="Click to filter active deals"')
+    +   cStat('amber', App.icon('coins', 18), 'Average Patient Savings', (avgSavingsPct > 0 ? '~' + avgSavingsPct + '%' : '0%'), coveredCount + ' tests covered across deals')
+    +   cStat('blue', App.icon('file', 18), 'Package Billings', pkgBilledCount, 'Booked in patient invoices')
     + '</div>'
 
     /* Filter Toolbar */
