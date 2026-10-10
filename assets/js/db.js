@@ -182,9 +182,10 @@
     ref_labs: { prefix: 'RL', digits: 3 },
     outsourced: { prefix: 'OS', digits: 5 },
     onlinepay_claims: { prefix: 'OPC', digits: 4 },
+    appointments: { prefix: 'APT', digits: 4 },
     branches: { prefix: 'B',  digits: 2 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'sms_outbox', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced', 'onlinepay_claims', 'branches'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'sms_outbox', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced', 'onlinepay_claims', 'appointments', 'branches'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -237,7 +238,7 @@
   function seedStore(opts) {
     opts = opts || {};
     var store = {
-      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0, sms_outbox: 0, samples: 0 },
+      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0, sms_outbox: 0, samples: 0, appointments: 0 },
       settings: {
         id: 'main',
         labName: opts.labName || 'Optix Medical Sync',
@@ -259,7 +260,7 @@
       },
       users: [], patients: [], tests: [], doctors: [],
       invoices: [], payments: [], expenses: [], results: [],
-      wa_log: [], sms_outbox: [], samples: [], stock_items: [], stock_moves: [], email_log: [], panels: [], ref_labs: [], outsourced: [], onlinepay_claims: []
+      wa_log: [], sms_outbox: [], samples: [], stock_items: [], stock_moves: [], email_log: [], panels: [], ref_labs: [], outsourced: [], onlinepay_claims: [], appointments: []
     };
 
     function put(table, obj) {
@@ -599,6 +600,12 @@
       store.onlinepay_claims = [];
       if (!store.seq) store.seq = {};
       if (store.seq.onlinepay_claims == null) store.seq.onlinepay_claims = 0;
+      save(store);
+    }
+    if (store && !Array.isArray(store.appointments)) {
+      store.appointments = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.appointments == null) store.seq.appointments = 0;
       save(store);
     }
     /* existing installs lack the stock tables */
@@ -1028,7 +1035,7 @@
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
         expenses: tables.expenses, results: tables.results,
         report_templates: tables.report_templates, report_schedules: tables.report_schedules,
-        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || [], email_log: tables.email_log || [], panels: tables.panels || [], ref_labs: tables.ref_labs || [], outsourced: tables.outsourced || [], onlinepay_claims: tables.onlinepay_claims || []
+        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || [], email_log: tables.email_log || [], panels: tables.panels || [], ref_labs: tables.ref_labs || [], outsourced: tables.outsourced || [], onlinepay_claims: tables.onlinepay_claims || [], appointments: tables.appointments || []
       };
       normalizeSeq(store);
       persist();

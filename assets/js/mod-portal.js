@@ -7,7 +7,40 @@
   var A = window.App, esc = A.esc, API = String(window.LABPOS_API || '').replace(/\/+$/, '');
   var SS = 'labpos_portal', LS = 'labpos_portal_ls', LLAB = 'labpos_portal_lab', LPH = 'labpos_portal_phone';
   var inApp = /OptixApp/.test(navigator.userAgent || '');
-  var S = { doc: false, pwOpen: false, pwMsg: '', lab: '', info: null, step: 'phone', phone: '', token: '', data: null, role: '', view: 'home', q: '', filt: 'all', busy: false, err: '', note: '', cool: 0, remember: inApp };
+  var S = { doc: false, pwOpen: false, pwMsg: '', lab: '', info: null, step: 'phone', phone: '', token: '', data: null, role: '', view: 'home', q: '', filt: 'all', busy: false, err: '', note: '', cool: 0, remember: inApp, payInvoice: '', offline: false };
+  function nativeOfflineCache() {
+    try { return inApp && window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.OfflineCache || null; }
+    catch (e) { return null; }
+  }
+  function cacheKey() { return S.lab + '|' + String(S.phone || '').replace(/\D/g, '').slice(-10); }
+  function saveOfflinePortal(data) {
+    var plugin = nativeOfflineCache();
+    if (inApp && !plugin) return Promise.reject(new Error('The installed Android app does not include encrypted offline storage yet.'));
+    if (!plugin || !data || !data.patient) return Promise.resolve(false);
+    var patientData = JSON.parse(JSON.stringify(data));
+    patientData.doctor = null;
+    var snapshot = { lab: S.lab, phone: cacheKey().split('|')[1], cachedAt: Date.now(), data: patientData };
+    return plugin.save({ key: cacheKey(), value: JSON.stringify(snapshot) }).then(function () { return true; });
+  }
+  function loadOfflinePortal() {
+    var plugin = nativeOfflineCache(), key = cacheKey();
+    if (inApp && !plugin) return Promise.reject(new Error('This Android app needs an update to enable encrypted offline portal access.'));
+    if (!plugin || !S.phone) return Promise.resolve(null);
+    return plugin.load({ key: key }).then(function (result) {
+      if (!result || !result.value) return null;
+      var cached = JSON.parse(result.value);
+      if (cached.lab !== S.lab || cached.phone !== key.split('|')[1] ||
+          !cached.data || !cached.data.patient || !cached.cachedAt ||
+          Date.now() - cached.cachedAt > 30 * 86400000) return null;
+      cached.data.doctor = null;
+      cached.data._offlineCachedAt = cached.cachedAt;
+      return cached.data;
+    });
+  }
+  function clearOfflinePortal() {
+    var plugin = nativeOfflineCache();
+    if (plugin) plugin.clear().catch(function (e) { console.error('[portal] secure cache clear failed:', e); });
+  }
 
   var CSS = '' +
     'body.portal-mode{background:#eef2fa;margin:0;font-family:"Plus Jakarta Sans",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#1b2540}' +
@@ -34,6 +67,8 @@
     '.pt-fl{display:flex;gap:8px;margin:10px 0 14px}.pt-fl button{flex:1;height:36px;border:1.5px solid #cdd7ee;background:#fff;border-radius:99px;font-weight:700;color:#44527a;font-size:13px;cursor:pointer;font-family:inherit}.pt-fl button.on{background:#131845;color:#fff;border-color:#131845}' +
     '.pt-mo{width:100%;border-collapse:collapse;font-size:13.5px}.pt-mo th{font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;color:#6b7694;text-align:right;padding:6px 4px;border-bottom:2px solid #e3e9f6}.pt-mo th:first-child,.pt-mo td:first-child{text-align:left}' +
     '.pt-mo td{padding:9px 4px;border-bottom:1px solid #eef1f7;text-align:right}.pt-foot{text-align:center;font-size:12px;color:#8a94ad;margin-top:18px}' +
+    '.pt-inv{border:1px solid #e3e9f6;border-radius:14px;padding:14px;margin:10px 0;background:#fff}.pt-inv-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.pt-inv-total{font-weight:800;color:#131845;white-space:nowrap}.pt-inv-due{font-weight:800;color:#b91c1c}.pt-inv-paid{font-weight:800;color:#047857}.pt-payinfo{background:#f4f7fc;border-radius:11px;padding:12px;margin:10px 0;font-size:13px;line-height:1.55}.pt-pay-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.pt-pay-method{background:#fff;border:1px solid #e3e9f6;border-radius:9px;padding:9px}.pt-pay-form{border-top:1px solid #e3e9f6;margin-top:12px;padding-top:12px}.pt-pay-form label{display:block;font-size:12px;font-weight:700;color:#44527a;margin:8px 0 4px}.pt-pay-form .pt-in{height:42px;font-size:14px}.pt-history{font-size:13px;margin-top:12px}.pt-history-row{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid #eef1f7}.pt-history-row:last-child{border-bottom:0}' +
+    '.pt-appt{border:1px solid #e3e9f6;border-radius:12px;padding:12px;margin:9px 0}.pt-appt-head{display:flex;justify-content:space-between;gap:8px}.pt-appt-form{margin-top:12px}.pt-appt-form label{display:block;font-size:12px;font-weight:700;color:#44527a;margin:8px 0 4px}.pt-appt-form .pt-in{height:42px;font-size:14px}.pt-offline{background:#fff4e0;color:#854d0e;border:1px solid #fde68a;border-radius:10px;padding:10px 12px;font-size:12.5px;margin-bottom:12px;line-height:1.45}' +
     '.pt-bar{position:fixed;left:0;right:0;bottom:0;background:#fff;box-shadow:0 -6px 24px rgba(19,24,69,.10);display:flex;justify-content:center;padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:5}' +
     '.pt-bar div{display:flex;max-width:560px;width:100%}.pt-bar button{flex:1;border:0;background:none;padding:7px 4px;font-family:inherit;font-size:11.5px;font-weight:800;color:#8590ad;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}.pt-bar button i{font-style:normal;font-size:19px}.pt-bar button.on{color:#131845}';
 
@@ -53,7 +88,7 @@
     if (days) lset(LS, rec, false); else lset(SS, rec, true);
     lset(LLAB, S.lab, false); lset(LPH, S.phone, false);
   }
-  function clear() { lset(LS, '', false); lset(SS, '', true); S.token = ''; S.data = null; }
+  function clear() { lset(LS, '', false); lset(SS, '', true); S.token = ''; S.data = null; S.offline = false; S.offlineAt = 0; }
   function restore(slug) {
     var ls = null, ss = null; try { ls = JSON.parse(lget(LS)); } catch (e) {} try { ss = JSON.parse(lget(SS, true)); } catch (e) {}
     var r = (ls && ls.lab === slug && Date.now() - ls.at < (ls.days || 1) * 86400000 - 60000) ? ls : ((ss && ss.lab === slug && Date.now() - ss.at < 29 * 60000) ? ss : null);
@@ -90,6 +125,69 @@
       (f.length ? f.map(function (r) { return repHtml(r, doc); }).join('') : '<p class="pt-sub" style="margin:0">' + esc(S.q || S.filt !== 'all' ? 'Nothing matches.' : empty) + '</p>');
   }
 
+  function claimLabel(claim) {
+    if (!claim) return '';
+    var text = claim.status === 'approved' ? 'Payment verified' : (claim.status === 'rejected' ? 'Payment needs attention' : 'Payment awaiting verification');
+    var cls = claim.status === 'approved' ? 'g' : (claim.status === 'rejected' ? 'o' : 'n');
+    return '<span class="pt-chip ' + cls + '">' + text + '</span>' +
+      (claim.status === 'rejected' && claim.rejectReason ? '<div class="pt-sub" style="margin:6px 0 0">Reason: ' + esc(claim.rejectReason) + '</div>' : '');
+  }
+  function invoicesHtml(P) {
+    var invoices = P.invoices || [], payments = P.payments || [], info = P.paymentInfo || {};
+    var dueTotal = invoices.reduce(function (sum, i) { return sum + (+i.due || 0); }, 0);
+    var methods = info.methods || [];
+    var out = '<div class="pt-card"><h2>Invoices &amp; payments</h2><p class="pt-sub">Outstanding balance: <b style="color:' + (dueTotal > 0 ? '#b91c1c' : '#047857') + '">' + money(dueTotal) + '</b></p>';
+    if (!invoices.length) out += '<p class="pt-sub" style="margin:0">No invoices found.</p>';
+    invoices.forEach(function (inv) {
+      var claim = inv.latestClaim;
+      out += '<div class="pt-inv"><div class="pt-inv-head"><div><b>' + esc(inv.no) + '</b><div class="pt-sub" style="margin:2px 0 0">' + dlabel(inv.date) + '</div></div><div class="pt-inv-total">' + money(inv.total) + '</div></div>' +
+        '<div class="pt-sub" style="margin:8px 0">' + esc(inv.tests || 'Laboratory services') + '</div>' +
+        '<div class="pt-inv-head"><span class="pt-inv-paid">Paid ' + money(inv.paid) + '</span><span class="' + (+inv.due > 0 ? 'pt-inv-due' : 'pt-inv-paid') + '">' + (+inv.due > 0 ? 'Due ' + money(inv.due) : 'Paid in full') + '</span></div>' +
+        (claim ? '<div style="margin-top:8px">' + claimLabel(claim) + '</div>' : '') +
+        (+inv.due > 0 && info.enabled ? '<button class="pt-open" type="button" data-pay="' + esc(inv.id) + '">' + (S.payInvoice === inv.id ? 'Close payment form' : 'Submit a payment') + '</button>' : '') +
+        (S.payInvoice === inv.id ? paymentForm(inv, info) : '') + '</div>';
+    });
+    out += '</div><div class="pt-card"><h2>Payment history</h2>';
+    var history = payments.slice().sort(function (a, b) { return String(b.date || '').localeCompare(String(a.date || '')); });
+    out += history.length ? '<div class="pt-history">' + history.map(function (p) {
+      var inv = invoices.filter(function (i) { return String(i.id) === String(p.invoiceId); })[0];
+      return '<div class="pt-history-row"><span>' + esc(p.method || 'Payment') + '<div class="pt-sub" style="margin:2px 0 0">' + esc(inv ? inv.no : '') + ' · ' + dlabel(p.date) + '</div></span><b>' + money(p.amount) + '</b></div>';
+    }).join('') + '</div>' : '<p class="pt-sub" style="margin:0">No payments recorded yet.</p>';
+    return out + '</div>';
+  }
+  function paymentForm(inv, info) {
+    if (S.offline) return '<div class="pt-payinfo">Payment claims need an internet connection. Your saved billing details are read-only offline.</div>';
+    var methods = info.methods || [];
+    if (!methods.length) return '<div class="pt-payinfo">The lab has not added payment account details yet. Please contact the lab to pay.</div>';
+    return '<div class="pt-payinfo"><b>Pay the lab using one of these accounts</b><div class="pt-pay-grid">' + methods.map(function (m) {
+      return '<div class="pt-pay-method"><b>' + esc(m.method) + '</b><br>' + esc(m.number) + (m.title ? '<br>' + esc(m.title) : '') + '</div>';
+    }).join('') + '</div>' + (info.instructions ? '<div style="margin-top:8px;white-space:pre-wrap">' + esc(info.instructions) + '</div>' : '') +
+      '<div class="pt-pay-form"><label for="ptPayMethod">Payment method</label><select class="pt-in pt-s" id="ptPayMethod">' + methods.map(function (m) { return '<option value="' + esc(m.method) + '">' + esc(m.method) + '</option>'; }).join('') + '</select>' +
+      '<label for="ptPayTid">Transaction reference / TID</label><input class="pt-in" id="ptPayTid" maxlength="80" autocomplete="off" placeholder="Enter the reference from your receipt">' +
+      '<label for="ptPayName">Sender name</label><input class="pt-in" id="ptPayName" maxlength="80" autocomplete="name" placeholder="Name on the payment">' +
+      '<label for="ptPayPhone">Sender mobile number</label><input class="pt-in" id="ptPayPhone" type="tel" inputmode="tel" maxlength="24" value="' + esc(S.phone) + '" autocomplete="tel" placeholder="03XX XXXXXXX">' +
+      '<label for="ptPayAmount">Amount paid (max ' + money(inv.due) + ')</label><input class="pt-in" id="ptPayAmount" type="number" min="1" max="' + Math.max(0, +inv.due || 0) + '" step="0.01" value="' + Math.max(0, +inv.due || 0) + '">' +
+      '<button class="pt-btn" type="button" id="ptPaySubmit"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Submitting…' : 'Submit for verification') + '</button>' +
+      '<div class="pt-sub" style="margin:8px 0 0">The balance will update after lab staff verify your payment.</div></div></div>';
+  }
+  function appointmentsHtml(P) {
+    var list = P.appointments || [], profiles = P.profiles || [];
+    var patientSelect = profiles.length > 1 ? '<label for="ptApPatient">Patient</label><select class="pt-in pt-s" id="ptApPatient">' + profiles.map(function (p) {
+      return '<option value="' + esc(p.id) + '">' + esc(p.name) + '</option>';
+    }).join('') + '</select>' : '';
+    return '<div class="pt-card"><h2>Book an appointment</h2><p class="pt-sub">Choose a service and preferred time. The lab will confirm your request.</p>' +
+      (S.offline ? '<div class="pt-payinfo">Connect to the internet to request a new appointment. Existing requests are shown below.</div>' : '<div class="pt-appt-form">' + patientSelect +
+      '<label for="ptApType">Service</label><select class="pt-in pt-s" id="ptApType"><option value="lab-visit">Visit the lab</option><option value="home-collection">Home sample collection</option></select>' +
+      '<label for="ptApDate">Preferred date</label><input class="pt-in" id="ptApDate" type="date" min="' + new Date().toISOString().slice(0, 10) + '" max="' + new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10) + '">' +
+      '<label for="ptApSlot">Preferred time</label><select class="pt-in pt-s" id="ptApSlot"><option value="09:00-11:00">9:00 AM – 11:00 AM</option><option value="11:00-13:00">11:00 AM – 1:00 PM</option><option value="14:00-16:00">2:00 PM – 4:00 PM</option><option value="16:00-18:00">4:00 PM – 6:00 PM</option></select>' +
+      '<label for="ptApNote">Note (optional)</label><input class="pt-in" id="ptApNote" maxlength="300" placeholder="Brief reason or accessibility needs">' +
+      '<button class="pt-btn" id="ptApSubmit"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Sending request…' : 'Request appointment') + '</button></div>') + '</div>' +
+      '<div class="pt-card"><h2>Your appointment requests</h2>' + (list.length ? list.map(function (a) {
+        var status = a.status === 'confirmed' || a.status === 'completed' ? '<span class="pt-chip g">' + esc(a.status === 'completed' ? 'Completed' : 'Confirmed') + '</span>' : (a.status === 'rejected' || a.status === 'cancelled' ? '<span class="pt-chip o">' + esc(a.status === 'rejected' ? 'Declined' : 'Cancelled') + '</span>' : '<span class="pt-chip n">Awaiting confirmation</span>');
+        return '<div class="pt-appt"><div class="pt-appt-head"><b>' + dlabel(a.date) + ' · ' + esc(a.timeSlot) + '</b>' + status + '</div><div class="pt-sub" style="margin:5px 0 0">' + (a.serviceType === 'home-collection' ? 'Home sample collection' : 'Lab visit') + (a.note ? ' · ' + esc(a.note) : '') + '</div></div>';
+      }).join('') : '<p class="pt-sub" style="margin:0">No appointment requests yet.</p>') + '</div>';
+  }
+
   /* ---- the dashboard ---- */
   function appHtml() {
     var d = S.data; if (!d) return card('<p class="pt-sub" style="margin:0">Loading your reports…</p>');
@@ -98,6 +196,8 @@
     if (role === 'patient') {
       var P = d.patient, reps = P.reports, rdy = reps.filter(function (r) { return r.status === 'ready'; }), wait = reps.filter(function (r) { return r.status !== 'ready'; }), last = rdy[0];
       if (S.view === 'reports') return h + '<div class="pt-card"><h2>All reports</h2>' + listHtml(reps, false, 'No reports yet.') + '</div>';
+      if (S.view === 'invoices') return h + invoicesHtml(P);
+      if (S.view === 'appointments') return h + appointmentsHtml(P);
       h += '<div class="pt-hi">Hello, ' + esc(P.names[0] || '') + '</div><div class="pt-hs">Your reports from ' + esc(d.lab.name || 'the lab') + '</div>';
       if (last) h += '<div class="pt-last"><div class="k">Your latest report</div><b>' + esc(last.tests || last.no) + '</b><div class="m">' + esc(last.no) + ' · ' + dlabel(last.date) + '</div><a href="' + esc(last.link) + '" target="_blank" rel="noopener">Open / download report</a></div>';
       h += '<div class="pt-stats"><div class="pt-st"><div class="k">Reports</div><b>' + reps.length + '</b></div><div class="pt-st grn"><div class="k">Ready</div><b>' + rdy.length + '</b></div><div class="pt-st"><div class="k">Waiting</div><b>' + wait.length + '</b></div>' +
@@ -129,7 +229,7 @@
   function barHtml() {
     var d = S.data; if (!d) return '';
     var role = (d.patient && d.doctor) ? (S.role || 'patient') : (d.doctor ? 'doctor' : 'patient');
-    var tabs = role === 'patient' ? [['home', '🏠', 'Home'], ['reports', '📄', 'Reports']] : [['home', '🏠', 'Home'], ['patients', '👥', 'Patients'], ['commission', '💰', 'Commission']];
+    var tabs = role === 'patient' ? [['home', '🏠', 'Home'], ['reports', '📄', 'Reports'], ['invoices', '🧾', 'Billing'], ['appointments', '🗓', 'Book']] : [['home', '🏠', 'Home'], ['patients', '👥', 'Patients'], ['commission', '💰', 'Commission']];
     return '<div class="pt-bar"><div>' + tabs.map(function (t) { return '<button data-v="' + t[0] + '" class="' + (S.view === t[0] ? 'on' : '') + '"><i>' + t[1] + '</i>' + t[2] + '</button>'; }).join('') + '</div></div>';
   }
 
@@ -156,7 +256,7 @@
         '<button class="pt-btn" id="ptVerify"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Checking…' : 'Show my reports') + '</button>' +
         '<div style="display:flex;justify-content:space-between"><button class="pt-link" id="ptResend"' + (S.cool > 0 ? ' disabled style="opacity:.5"' : '') + '>' + (S.cool > 0 ? 'Send again in ' + S.cool + 's' : 'Send a new code') + '</button><button class="pt-link" id="ptBack">Change number</button></div>');
     } else {
-      h += msg() + appHtml();
+      h += (S.offline ? '<div class="pt-offline">Offline read-only view · encrypted on this device · last refreshed ' + esc(new Date(S.offlineAt || 0).toLocaleString()) + '</div>' : '') + msg() + appHtml();
     }
     h += '<div class="pt-foot">Powered by System Optix</div></div>' + (S.step === 'app' ? barHtml() : '');
     document.body.innerHTML = h; wire();
@@ -167,7 +267,7 @@
     function enter(id, fn) { var e = document.getElementById(id); if (e) e.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') fn(); }); }
     var lg = function () { var v = (document.getElementById('ptLab').value || '').trim().toLowerCase().replace(/[^a-z0-9-]/g, ''); if (v) location.hash = '#/portal/' + v; };
     on('ptLabGo', lg); enter('ptLab', lg);
-    on('ptOther', function () { lset(LLAB, '', false); S.lab = ''; S.info = null; location.hash = '#/portal'; });
+    on('ptOther', function () { clearOfflinePortal(); lset(LLAB, '', false); S.lab = ''; S.info = null; location.hash = '#/portal'; });
     var send = function () {
       var p = (document.getElementById('ptPhone').value || '').trim(); S.phone = p; S.err = ''; S.note = '';
       if (p.replace(/\D/g, '').length < 10) { S.err = 'Enter your 11-digit mobile number (for example 0300 1234567).'; paint(); return; }
@@ -184,7 +284,7 @@
     on('ptVerify', verify); enter('ptCode', verify);
     on('ptResend', function () { if (S.cool > 0) return; S.err = ''; S.note = 'A new code was requested.'; S.busy = true; api('request', { body: { lab: S.lab, phone: S.phone } }).then(function () { S.busy = false; S.cool = 30; tick(); paint(); }, function (e) { S.busy = false; S.err = e.message; S.note = ''; paint(); }); paint(); });
     on('ptBack', function () { S.step = 'phone'; S.err = ''; S.note = ''; paint(); });
-    on('ptOut', function () { if (S.doc) { A.logout(); return; } clear(); S.step = 'phone'; S.err = ''; S.note = ''; paint(); });
+    on('ptOut', function () { clearOfflinePortal(); if (S.doc) { A.logout(); return; } clear(); S.step = 'phone'; S.err = ''; S.note = ''; paint(); });
     on('ptRef', function () { S.data = null; paint(); if (S.doc) A.renderDoctorHome(); else load(); });
     on('ptPw', function () { S.pwOpen = true; S.pwMsg = ''; paint(); });
     on('ptPwCancel', function () { S.pwOpen = false; S.pwMsg = ''; paint(); });
@@ -197,6 +297,36 @@
         .then(function (j) { try { if (j.token && sess) { sess.token = j.token; localStorage.setItem('labpos_session', JSON.stringify(sess)); } } catch (e) {} S.pwOpen = false; S.pwMsg = 'Password changed.'; paint(); },
           function (e) { S.pwMsg = e.message; paint(); });
     });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-pay]'), function (b) {
+      b.addEventListener('click', function () { S.payInvoice = S.payInvoice === b.getAttribute('data-pay') ? '' : b.getAttribute('data-pay'); S.err = ''; paint(); });
+    });
+    on('ptPaySubmit', function () {
+      if (S.offline) { S.err = 'Connect to the internet before submitting a payment claim.'; paint(); return; }
+      var invoiceId = S.payInvoice, inv = (S.data && S.data.patient && S.data.patient.invoices || []).filter(function (x) { return String(x.id) === String(invoiceId); })[0];
+      var method = (document.getElementById('ptPayMethod') || {}).value || '', tid = (document.getElementById('ptPayTid') || {}).value.trim();
+      var senderName = (document.getElementById('ptPayName') || {}).value.trim(), senderNumber = (document.getElementById('ptPayPhone') || {}).value.trim();
+      var amount = Number((document.getElementById('ptPayAmount') || {}).value);
+      if (!inv || !method || !tid || !senderName || !senderNumber || !(amount > 0) || amount > (+inv.due || 0) + 0.009) {
+        S.err = 'Check the payment details and make sure the amount does not exceed the balance.'; paint(); return;
+      }
+      S.err = ''; S.note = ''; S.busy = true; paint();
+      api('payment-claim', { token: S.token, body: { invoiceId: invoiceId, method: method, tid: tid, senderName: senderName, senderNumber: senderNumber, amount: amount } }).then(function () {
+        S.busy = false; S.payInvoice = ''; S.note = 'Payment submitted for verification. Your balance will update after the lab confirms it.'; load();
+      }, function (e) { S.busy = false; S.err = e.message; paint(); });
+    });
+    on('ptApSubmit', function () {
+      if (S.offline) { S.err = 'Connect to the internet before requesting an appointment.'; paint(); return; }
+      var date = (document.getElementById('ptApDate') || {}).value || '';
+      var timeSlot = (document.getElementById('ptApSlot') || {}).value || '';
+      var serviceType = (document.getElementById('ptApType') || {}).value || '';
+      var note = (document.getElementById('ptApNote') || {}).value || '';
+      var patientId = (document.getElementById('ptApPatient') || {}).value || '';
+      if (!date) { S.err = 'Choose a preferred appointment date.'; paint(); return; }
+      S.err = ''; S.note = ''; S.busy = true; paint();
+      api('appointment', { token: S.token, body: { date: date, timeSlot: timeSlot, serviceType: serviceType, note: note, patientId: patientId } }).then(function () {
+        S.busy = false; S.note = 'Appointment requested. The lab will confirm the time.'; load();
+      }, function (e) { S.busy = false; S.err = e.message; paint(); });
+    });
     Array.prototype.forEach.call(document.querySelectorAll('[data-v]'), function (b) { b.addEventListener('click', function () { S.view = b.getAttribute('data-v'); S.q = ''; S.filt = 'all'; paint(); window.scrollTo(0, 0); }); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-role]'), function (b) { b.addEventListener('click', function () { S.role = b.getAttribute('data-role'); S.view = 'home'; S.q = ''; S.filt = 'all'; paint(); }); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-f]'), function (b) { b.addEventListener('click', function () { S.filt = b.getAttribute('data-f'); paint(); }); });
@@ -206,9 +336,27 @@
   var timer = null;
   function tick() { clearInterval(timer); timer = setInterval(function () { if (S.cool > 0) { S.cool--; var b = document.getElementById('ptResend'); if (b) { b.textContent = S.cool > 0 ? 'Send again in ' + S.cool + 's' : 'Send a new code'; if (S.cool === 0) { b.disabled = false; b.style.opacity = ''; } } } else clearInterval(timer); }, 1000); }
   function load() {
-    api('data', { token: S.token }).then(function (d) { S.data = d; S.err = ''; paint(); }, function (e) {
-      if (e.code === 'EXPIRED') { clear(); S.step = 'phone'; S.err = 'Your session ended. Please sign in again.'; } else { S.err = e.message; S.step = 'phone'; }
-      paint();
+    api('data', { token: S.token }).then(function (d) {
+      S.data = d; S.offline = false; S.offlineAt = 0; S.err = ''; paint();
+      saveOfflinePortal(d).then(function () {}, function (e) {
+        console.error('[portal] secure offline cache save failed:', e);
+        if (inApp) { S.note = 'Your reports loaded, but this device could not save an encrypted offline copy.'; paint(); }
+      });
+    }, function (e) {
+      if (e.code === 'EXPIRED') {
+        clearOfflinePortal(); clear(); S.step = 'phone'; S.err = 'Your session ended. Please sign in again.'; paint(); return;
+      }
+      loadOfflinePortal().then(function (d) {
+        if (d) {
+          S.data = d; S.offline = true; S.offlineAt = d._offlineCachedAt || 0;
+          S.err = ''; S.note = ''; S.step = 'app'; S.view = S.view || 'home'; paint();
+        } else {
+          S.err = e.message; S.step = 'phone'; paint();
+        }
+      }, function (cacheError) {
+        console.error('[portal] secure offline cache load failed:', cacheError);
+        S.err = cacheError.message || e.message; S.step = 'phone'; paint();
+      });
     });
   }
 
@@ -245,6 +393,15 @@
         api('verify', { body: { lab: slug, phone: tap.p, code: tap.c, remember: S.remember } }).then(function (j) { S.busy = false; S.token = j.token; S.step = 'app'; S.data = null; S.view = 'home'; S.role = j.patient ? 'patient' : 'doctor'; save(j.days); load(); paint(); },
           function (e) { S.busy = false; S.step = 'phone'; S.err = 'This link has expired or was already used. Enter your number to get a new code.'; paint(); });
       } else if (tk && i.enabled) load();
-    }, function (e) { S.info = { enabled: false }; S.err = e.message; paint(); });
+    }, function (e) {
+      if (tk && S.phone) {
+        S.info = { enabled: true, labName: 'Patient portal', tagline: 'Read-only offline view' };
+        S.step = 'app';
+        S.err = '';
+        load();
+        return;
+      }
+      S.info = { enabled: false }; S.err = e.message; paint();
+    });
   };
 })();

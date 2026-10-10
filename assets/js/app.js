@@ -34,6 +34,7 @@
     tube: '<path d="M8 2h8"/><path d="M9 2v16.5a3 3 0 0 0 6 0V2"/><path d="M9 11h6"/>',
     scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M11 8v8M15 8v8M18 8v8"/>',
     finance: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
     phone: '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/>'
   };
   function icon(name, size) {
@@ -47,6 +48,7 @@
     { key: 'branches', label: 'Branches', icon: 'box', route: '#/branches', color: '#0ea5e9' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
       sub: [{ key: 'new', label: 'Add Patient', icon: 'plus', route: '#/patients/new' }, { key: 'all', label: 'All Patients', icon: 'users', route: '#/patients' }] },
+    { key: 'appointments', label: 'Appointments', icon: 'calendar', route: '#/appointments', color: '#0ea5e9' },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
       sub: [{ key: 'tracking', label: 'Sample Tracking & Phlebotomy', icon: 'tube', route: '#/samples' },
         { key: 'stickers', label: 'Tube Stickers (50×25mm)', icon: 'scan', route: '#/samples/stickers' },
@@ -115,6 +117,7 @@
     panels:    ['admin', 'reception'],
     outsourced: ['admin', 'reception', 'technician'],
     patients:  ['admin', 'reception', 'technician'],
+    appointments: ['admin', 'reception'],
     tests:     ['admin', 'reception', 'technician'],
     packages:  ['admin', 'reception', 'technician'],
     doctors:   ['admin', 'reception'],
@@ -153,7 +156,7 @@
   }
   /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
      Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
-  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests Catalog'], ['packages', 'Health Packages & Deals'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['onlinepay', 'Online Payments'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
+  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['appointments', 'Appointments'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests Catalog'], ['packages', 'Health Packages & Deals'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['onlinepay', 'Online Payments'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
     ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Close Day (Cash Closing)'], ['profit', 'Profit & Loss Statement'], ['reports', 'Reports'], ['inventory', 'Inventory'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['sms', 'SIM Setting'], ['downloads', 'Downloads']];
   function roleDef(s) {
     s = s || session(); if (!s || s.role !== 'custom') return null;

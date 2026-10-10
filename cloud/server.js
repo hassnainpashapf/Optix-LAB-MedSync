@@ -533,7 +533,7 @@ async function main() {
       req.user.perms = def && Array.isArray(def.pages) ? def.pages : [];
       const any = (list) => list.some((k) => req.user.perms.indexOf(k) >= 0);
       const write = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
-      const WR = { patients: ['patients', 'invoices'], invoices: ['invoices', 'dues', 'patients', 'finance'], payments: ['invoices', 'dues', 'patients', 'finance'], results: ['results', 'invoices'], samples: ['samples', 'results', 'invoices', 'patients'],
+      const WR = { patients: ['patients', 'invoices'], appointments: ['appointments'], invoices: ['invoices', 'dues', 'patients', 'finance'], payments: ['invoices', 'dues', 'patients', 'finance'], results: ['results', 'invoices'], samples: ['samples', 'results', 'invoices', 'patients'],
         tests: ['tests'], doctors: ['doctors'], expenses: ['expenses', 'finance'], closings: ['finance'], stock_items: ['stock', 'results'], stock_moves: ['stock', 'results'], panels: ['panels'], ref_labs: ['outsourced'], outsourced: ['outsourced', 'results', 'invoices', 'patients'],
         wa_log: ['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], sms_outbox: ['sms', 'whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], email_log: ['email', 'results', 'invoices', 'doctors'], report_templates: ['results', 'reports'], report_schedules: ['results', 'reports'] };
       let deny = false;
@@ -1127,6 +1127,21 @@ async function main() {
           if (!x || !okTable(x.t) || !x.row || x.row.id == null) continue;
           const t = x.t, id = String(x.row.id);
           if ((t === 'users' || t === 'settings') && !admin) { skipped.push({ t, id, _u: x.row._u }); continue; }
+          if (t === 'appointments') {
+            const roleAllowed = admin || req.user.role === 'reception' ||
+              (req.user.role === 'custom' && (req.user.perms || []).indexOf('appointments') >= 0);
+            const before = await store.get(t, id), row = x.row;
+            const transitions = { requested: ['confirmed', 'rejected'], confirmed: ['completed', 'cancelled'] };
+            const mutable = ['status', 'updatedAt', 'updatedBy', '_u', '_s', '_d'];
+            const fields = before ? new Set(Object.keys(before).concat(Object.keys(row))) : new Set();
+            const identityChanged = before && Array.from(fields).some((key) =>
+              mutable.indexOf(key) < 0 && JSON.stringify(before[key]) !== JSON.stringify(row[key]));
+            if (!roleAllowed || !before || identityChanged ||
+                !(transitions[before.status] || []).includes(row.status)) {
+              skipped.push({ t, id, _u: row._u });
+              continue;
+            }
+          }
           /* the audit trail is append-only: only an admin's PC may add entries (create-if-absent), nobody can overwrite them */
           if (t === 'audit' && (!admin || await store.get('audit', id))) continue;
           const u = Math.min(+x.row._u || 0, maxU);
@@ -1145,6 +1160,7 @@ async function main() {
         }
         for (const d of body.deletes || []) {
           if (!d || !okTable(d.t) || d.id == null || d.t === 'audit') continue; /* audit entries can never be deleted through sync */
+          if (d.t === 'appointments') { skipped.push({ t: d.t, id: String(d.id), _u: d._u }); continue; }
           if ((d.t === 'users' || d.t === 'settings') && !admin) continue;
           const u = Math.min(+d._u || 0, maxU), ex = await store.get(d.t, String(d.id));
           if (ex && (+ex._u || 0) > u) continue;
@@ -1284,6 +1300,55 @@ async function main() {
         res.status(502).json({ error: mailer.friendlyError(e) });
       }
     });
+    app.post('/api/portal/appointment', async (req, res) => {
+      try {
+        const m = /^Bearer\s+(.+)$/i.exec(String(req.get('Authorization') || '')), t = m && readToken(PSECRET, m[1]);
+        if (!t || !t.lab || !/^\d{10}$/.test(String(t.ph))) return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        if (bump(prVer, req.ip, 3600000).n > 80) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        const lab = await saas.getLab(t.lab);
+        if (!lab || saas.effStatus(lab) === 'suspended') return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        const st = saas.storeFor(lab), set = (await st.get('settings', 'main')) || {};
+        if (!set.portalOn) return res.status(403).json({ error: 'The portal is switched off for this lab.' });
+        const b = req.body || {}, patients = (await st.all('patients')).filter((p) => pkey(p.phone) === t.ph || pkey(p.whatsapp) === t.ph);
+        const date = String(b.date || ''), timeSlot = String(b.timeSlot || ''), serviceType = String(b.serviceType || '');
+        const note = String(b.note || '').trim().slice(0, 300);
+        const today = new Date().toISOString().slice(0, 10), maxDate = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
+        const slots = ['09:00-11:00', '11:00-13:00', '14:00-16:00', '16:00-18:00'];
+        if (!patients.length) return res.status(403).json({ error: 'No patient profile is linked to this portal account.' });
+        const patientId = String(b.patientId || '');
+        const patient = patients.filter((p) => !patientId || String(p.id) === patientId)[0];
+        if (!patient) return res.status(403).json({ error: 'That patient profile is not linked to this portal account.' });
+        const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(date + 'T00:00:00.000Z') : null;
+        if (!parsedDate || Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date || date < today || date > maxDate ||
+            !slots.includes(timeSlot) || !['lab-visit', 'home-collection'].includes(serviceType)) {
+          return res.status(400).json({ error: 'Choose a valid date within the next 90 days, service, and time slot.' });
+        }
+        const result = await withLock('portal-appointment|' + lab.id + '|' + patient.id + '|' + date + '|' + timeSlot, async () => {
+          const all = await st.all('appointments');
+          if (all.some((a) => String(a.patientId) === String(patient.id) && a.date === date && a.timeSlot === timeSlot && ['requested', 'confirmed'].includes(a.status))) {
+            return { conflict: true };
+          }
+          const id = 'APT-' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
+          const appointment = {
+            id, patientId: patient.id, patientName: String(patient.name || '').slice(0, 100),
+            phone: String(patient.phone || patient.whatsapp || '').slice(0, 30),
+            date, timeSlot, serviceType, note, status: 'requested',
+            createdAt: new Date().toISOString(), createdBy: 'Patient Portal'
+          };
+          await st.put('appointments', appointment);
+          await auditLog(req, 'create', 'appointments', id, {
+            store: st, actor: { id: 'portal:' + t.ph, name: 'Patient Portal', role: 'patient' },
+            label: 'Appointment request for ' + String(patient.name || 'patient').slice(0, 80)
+          });
+          return { appointment };
+        });
+        if (result.conflict) return res.status(409).json({ error: 'You already have a request or confirmed appointment for that time. Choose another slot.' });
+        res.status(201).json({ ok: true, appointment: { id: result.appointment.id, status: result.appointment.status } });
+      } catch (e) {
+        console.error('[labpos-cloud] portal appointment request failed:', String(e.message || e).slice(0, 160));
+        res.status(500).json({ error: 'Could not submit the appointment request. Please try again.' });
+      }
+    });
 
     async function slackPost(url, text) {
       const ac = new AbortController(), to = setTimeout(() => ac.abort(), 8000);
@@ -1380,6 +1445,8 @@ async function main() {
     async function portalBuild(req, lab, st, set, w) {
       const invs = await st.all('invoices'), results = await st.all('results'), patById = {}; (await st.all('patients')).forEach((p) => { patById[p.id] = p; });
         const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
+        const allPayments = await st.all('payments'), claims = await st.all('onlinepay_claims');
+        const allAppointments = await st.all('appointments');
         const reportOf = (inv, forDoctor) => {
           const rs = byInv[inv.id] || [], items = Array.isArray(inv.items) ? inv.items : [], done = rs.length > 0 && items.every((it) => rs.some((r) => r.testId === it.testId && r.status === 'ready') || rs.some((r) => r.status === 'ready' && it.isPackage));
           const ready = rs.length > 0 && rs.every((r) => r.status === 'ready') && done, due = +inv.due || 0;
@@ -1391,7 +1458,41 @@ async function main() {
         const out = { ok: true, lab: { name: set.labName || lab.name }, patient: null, doctor: null };
         if (w.pats.length) {
           const ids = {}; w.pats.forEach((p) => { ids[p.id] = 1; });
-          out.patient = { names: w.pats.map((p) => p.name), reports: invs.filter((i) => ids[i.patientId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 200).map((i) => reportOf(i, false)) };
+          const mine = invs.filter((i) => ids[i.patientId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 200);
+          const invoiceIds = {}; mine.forEach((i) => { invoiceIds[i.id] = 1; });
+          const paymentMethods = [
+            { method: 'JazzCash', number: set.opJazzcashNo || '', title: set.opJazzcashTitle || '' },
+            { method: 'Easypaisa', number: set.opEasypaisaNo || '', title: set.opEasypaisaTitle || '' },
+            { method: 'Bank / Raast', number: set.opIban || set.opRaastId || '', title: set.opBankName || set.opRaastId || '' }
+          ].filter((x) => x.number);
+          out.patient = {
+            names: w.pats.map((p) => p.name),
+            profiles: w.pats.map((p) => ({ id: p.id, name: String(p.name || '').slice(0, 100) })),
+            reports: mine.map((i) => reportOf(i, false)),
+            invoices: mine.map((i) => {
+              const latestClaim = claims.filter((c) => String(c.invoiceId) === String(i.id)).sort((a, b) => (+b.createdAt || 0) - (+a.createdAt || 0))[0];
+              return {
+                id: i.id, no: i.no || i.id, date: i.createdAt, total: Math.round(+i.total || 0),
+                paid: Math.round(+i.paid || 0), due: Math.max(0, Math.round(+i.due || 0)),
+                status: i.status || ((+i.due || 0) > 0 ? 'unpaid' : 'paid'),
+                tests: (Array.isArray(i.items) ? i.items : []).map((x) => x.name || x.code || '').filter(Boolean).join(', ').slice(0, 200),
+                latestClaim: latestClaim ? {
+                  status: latestClaim.status, method: latestClaim.method || '',
+                  rejectReason: latestClaim.status === 'rejected' ? String(latestClaim.rejectReason || '').slice(0, 200) : ''
+                } : null
+              };
+            }),
+            payments: allPayments.filter((p) => invoiceIds[p.invoiceId]).map((p) => ({
+              invoiceId: p.invoiceId, amount: Math.round(+p.amount || 0), method: String(p.method || '').slice(0, 40), date: p.date || p.createdAt
+            })),
+            appointments: allAppointments.filter((a) => ids[a.patientId]).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))).slice(0, 50).map((a) => ({
+              id: a.id, date: a.date, timeSlot: a.timeSlot, serviceType: a.serviceType, status: a.status, note: a.note || ''
+            })),
+            paymentInfo: {
+              enabled: !!set.opEnabled, instructions: String(set.opInstructions || '').slice(0, 500),
+              methods: paymentMethods
+            }
+          };
         }
         if (w.docs.length) {
           const dids = {}; w.docs.forEach((d) => { dids[d.id] = d; });
@@ -1466,6 +1567,58 @@ async function main() {
         const st = saas.storeFor(lab), set = (await st.get('settings', 'main')) || {}; if (!set.portalOn) return res.status(403).json({ error: 'The portal is switched off for this lab.' });
         res.json(await portalBuild(req, lab, st, set, await whoIs(st, t.ph)));
       } catch (e) { res.status(500).json({ error: 'Could not load your reports. Please try again.' }); }
+    });
+    app.post('/api/portal/payment-claim', async (req, res) => {
+      try {
+        const m = /^Bearer\s+(.+)$/i.exec(String(req.get('Authorization') || '')), t = m && readToken(PSECRET, m[1]);
+        if (!t || !t.lab || !/^\d{10}$/.test(String(t.ph))) return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        if (bump(prVer, req.ip, 3600000).n > 80) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        const lab = await saas.getLab(t.lab);
+        if (!lab || saas.effStatus(lab) === 'suspended') return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        const st = saas.storeFor(lab), set = (await st.get('settings', 'main')) || {};
+        if (!set.portalOn) return res.status(403).json({ error: 'The portal is switched off for this lab.' });
+        if (!set.opEnabled) return res.status(403).json({ error: 'Online payment claims are not enabled by this lab.' });
+        const b = req.body || {}, invoiceId = String(b.invoiceId || '').slice(0, 64);
+        const method = String(b.method || '').trim(), tid = String(b.tid || '').trim().slice(0, 80);
+        const senderName = String(b.senderName || '').trim().slice(0, 80);
+        const senderDigits = String(b.senderNumber || '').replace(/\D/g, '').slice(-11);
+        const senderNumber = senderDigits.length === 10 ? '0' + senderDigits : senderDigits;
+        const amount = Math.round((Number(b.amount) || 0) * 100) / 100;
+        const configuredMethods = [];
+        if (set.opJazzcashNo) configuredMethods.push('JazzCash');
+        if (set.opEasypaisaNo) configuredMethods.push('Easypaisa');
+        if (set.opIban || set.opRaastId) configuredMethods.push('Bank / Raast');
+        if (!invoiceId || configuredMethods.indexOf(method) < 0 || !/^[A-Za-z0-9.-]{3,80}$/.test(tid) ||
+            !senderName || !/^0\d{10}$/.test(senderNumber) || !Number.isFinite(amount) || amount <= 0) {
+          return res.status(400).json({ error: 'Enter a valid payment method, transaction reference, sender details, and amount.' });
+        }
+        const patients = (await st.all('patients')).filter((p) => pkey(p.phone) === t.ph || pkey(p.whatsapp) === t.ph);
+        const owned = {}; patients.forEach((p) => { owned[p.id] = true; });
+        const inv = await st.get('invoices', invoiceId);
+        if (!inv || !owned[inv.patientId]) return res.status(404).json({ error: 'Invoice not found for this portal account.' });
+        const due = Math.round((Number(inv.due) || 0) * 100) / 100;
+        if (due <= 0) return res.status(409).json({ error: 'This invoice has no outstanding balance.' });
+        if (amount > due + 0.009) return res.status(400).json({ error: 'Payment amount cannot exceed the outstanding balance.' });
+        const duplicate = (await st.all('onlinepay_claims')).some((c) =>
+          String(c.invoiceId) === invoiceId && String(c.tid || '').toLowerCase() === tid.toLowerCase() && c.status === 'pending');
+        if (duplicate) return res.status(409).json({ error: 'This transaction reference is already awaiting verification.' });
+        const patient = patients.filter((p) => String(p.id) === String(inv.patientId))[0];
+        const claim = {
+          id: 'OPC-' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
+          invoiceId: inv.id, patientId: inv.patientId, patientName: patient ? patient.name : 'Patient',
+          method, tid, amount, senderName, senderNumber, status: 'pending', rejectReason: '',
+          createdAt: Date.now(), createdBy: 'Patient Portal'
+        };
+        await st.put('onlinepay_claims', claim);
+        await auditLog(req, 'create', 'onlinepay_claims', claim.id, {
+          store: st, actor: { id: 'portal:' + t.ph, name: 'Patient Portal', role: 'patient' },
+          label: 'Payment claim for ' + String(inv.no || inv.id).slice(0, 100)
+        });
+        res.status(201).json({ ok: true, status: 'pending' });
+      } catch (e) {
+        console.error('[labpos-cloud] portal payment claim failed:', String(e.message || e).slice(0, 160));
+        res.status(500).json({ error: 'Could not submit the payment claim. Please try again.' });
+      }
     });
 
     /* ---- a doctor who has a login (Settings -> Users & Roles): the same data as the portal, without any code step ---- */
@@ -1871,6 +2024,7 @@ async function main() {
     const store = req.store;
     const t = req.params.table;
     if (t === 'users' || t === 'settings') return res.status(400).json({ error: 'not allowed for ' + t });
+    if (t === 'appointments') return res.status(403).json({ error: 'Appointments can only be created through the patient portal.' });
     const rows = req.body && req.body.rows;
     if (!Array.isArray(rows) || rows.length > 2000) return res.status(400).json({ error: 'rows[] required (max 2000)' });
     try {
@@ -1905,6 +2059,7 @@ async function main() {
     const store = req.store;
     try {
       const t = req.params.table;
+      if (t === 'appointments') return res.status(403).json({ error: 'Appointments can only be created through the patient portal.' });
       const body = t === 'users' ? await prepUserBody(req, null) : req.body;
       const create = async () => {
         if (body && body.id != null && t !== 'settings' && await store.get(t, String(body.id))) return res.status(409).json({ error: 'id already exists', id: body.id });
@@ -1923,17 +2078,36 @@ async function main() {
       const body = t === 'users' ? await prepUserBody(req, true) : (req.body || {});
       const update = async () => {
         const before = await store.get(t, req.params.id);
+        if (t === 'appointments') {
+          if (!before) return res.status(404).json({ error: 'Appointment not found.' });
+          const transitions = { requested: ['confirmed', 'rejected'], confirmed: ['completed', 'cancelled'] };
+          const allowed = transitions[before.status] || [];
+          if (Object.keys(body).some((key) => key !== 'status') || allowed.indexOf(body.status) < 0) {
+            return res.status(409).json({ error: 'This appointment status change is not allowed.' });
+          }
+          const out = await store.patch(t, req.params.id, {
+            status: body.status,
+            updatedAt: new Date().toISOString(),
+            updatedBy: String(req.user.name || req.user.username || 'Lab staff').slice(0, 100)
+          });
+          await auditLog(req, 'update', t, req.params.id, {
+            label: auditLabel(t, out),
+            changes: auditDiff(before, out)
+          });
+          return res.json(out);
+        }
         if (!before) { const e = await limitErr(req, t, [Object.assign({}, body, { id: req.params.id })]); if (e) return res.status(402).json(e); }
         const out = await store.patch(t, req.params.id, body);
         const ch = auditDiff(before, out);
         if (ch.length) await auditLog(req, before ? 'update' : 'create', t, req.params.id, { label: auditLabel(t, out), changes: ch });
         res.json(t === 'users' ? stripUser(out) : out);
       };
-      if (t === 'users' || t === 'invoices') await withLock(lockKey(req), update); else await update();
+      if (t === 'users' || t === 'invoices' || t === 'appointments') await withLock(lockKey(req), update); else await update();
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
   app.delete('/api/:table/:id', tableGuard, async (req, res) => {
     const store = req.store;
+    if (req.params.table === 'appointments') return res.status(403).json({ error: 'Appointment records cannot be deleted.' });
     if (req.params.table === 'users' && req.params.id === req.user.id) return res.status(400).json({ error: 'You cannot delete your own account' });
     const gone = await store.get(req.params.table, req.params.id);
     await store.del(req.params.table, req.params.id);

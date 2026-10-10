@@ -10,6 +10,7 @@ rm -rf dist
 mkdir -p dist/app dist/superadmin
 cp -R site/. dist/
 cp index.html dist/app/
+cp offline-sw.js dist/app/
 cp -R assets dist/app/
 cp cloud/superadmin/index.html dist/superadmin/
 cp -R cloud/superadmin/assets dist/superadmin/

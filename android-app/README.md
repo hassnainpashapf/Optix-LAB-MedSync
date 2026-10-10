@@ -1,11 +1,22 @@
 # Optix LAB MedSync — Android app
 
 A Capacitor wrapper that opens the cloud web app (`https://optix-lab-medsync.pages.dev/app/`) full-screen like a native app,
-so it always shows the latest UI and uses the same cloud account/data as the web and desktop apps. When the phone is offline
-it shows `www/offline.html` ("No internet connection — Try again").
+so it uses the same cloud account/data as the web and desktop apps. The app shell is cached by a service worker after first
+online use. The authenticated patient portal can securely cache that patient's read-only portal view using the Android
+Keystore; API responses and staff/lab records are never cached by the service worker. Payment claims and appointment
+requests still require a connection. Staff editing and result entry do not work offline on Android.
 
 Because the UI is loaded from the cloud, **UI changes never require a new APK**. Rebuild only to change the icon/name/version
-or the native SMS-gateway plugin.
+or the native plugins.
+
+## Patient portal offline view
+
+The `@optix/offline-cache` plugin encrypts the latest authenticated patient portal response with an AES-GCM key held by
+the Android Keystore. The encrypted file is app-private and excluded from Android backups. The cache is scoped to the
+portal lab and phone number, expires after 30 days, and is removed when the portal user signs out or the portal session
+expires. In airplane mode, an already signed-in patient can view cached reports, invoices, payment history, and appointment
+requests. This is read-only; payment claims and appointment booking require internet access. Clearing app data or
+uninstalling the app removes the cache.
 
 ## SMS gateway (this phone sends the SMS)
 
@@ -26,7 +37,7 @@ battery usage to **Unrestricted** (Android Settings → Apps → Optix Lab → B
 ## Build (needs JDK 17+ + Android SDK 34)
 
 ```
-npm install            # installs @capacitor/* v7 + the local @optix/sms-gateway plugin
+npm install            # installs @capacitor/* v7 and the local native plugins
 npx cap add android    # first time only
 npx cap sync android   # picks up plugins/sms-gateway into the native project
 ```

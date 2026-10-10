@@ -1,0 +1,12 @@
+{
+  "name": "@optix/offline-cache",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android Keystore-backed encrypted cache for the authenticated Optix patient portal.",
+  "capacitor": {
+    "android": {
+      "src": "android"
+    }
+  },
+  "files": ["android/"]
+}

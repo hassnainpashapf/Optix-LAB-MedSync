@@ -19,6 +19,7 @@ const httpFetch = require('./http-fetch'); /* works on Node 16 (Windows 7/8 buil
 /* fields that point at another record: [table, field, targetTable] ('items[].testId' handled separately) */
 const REFS = [
   ['invoices', 'patientId', 'patients'], ['invoices', 'doctorId', 'doctors'],
+  ['appointments', 'patientId', 'patients'],
   ['payments', 'invoiceId', 'invoices'],
   ['results', 'invoiceId', 'invoices'], ['results', 'testId', 'tests'],
   ['patients', 'doctorId', 'doctors'], ['patients', 'panelId', 'panels'], ['invoices', 'panelId', 'panels'], ['outsourced', 'invoiceId', 'invoices'], ['outsourced', 'testId', 'tests'], ['outsourced', 'refLabId', 'ref_labs'], ['tests', 'refLabId', 'ref_labs'],
