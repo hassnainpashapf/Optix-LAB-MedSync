@@ -280,7 +280,7 @@ async function main() {
   app.use(express.json({ limit: '25mb' }));
   /* CORS (manual, no extra deps): the static frontend and phone QR scanners
      fetch /api/* and /r/* cross-origin */
-  const CORS_ALWAYS = ['https://optix-lab-medsync.pages.dev', 'https://labpos-api.150.230.52.29.sslip.io', 'https://pharmacy-pos.ellahabad.workers.dev', 'https://localhost', 'capacitor://localhost'];
+  const CORS_ALWAYS = ['https://optix-lab-medsync.pages.dev', 'https://labpos-api.150.230.52.29.sslip.io', 'https://pharmacy-pos.ellahabad.workers.dev', 'https://optix-suite.ellahabad.workers.dev', 'https://localhost', 'capacitor://localhost'];
   app.use((req, res, next) => {
     const origin = req.get('Origin');
     if (CORS_ORIGINS.length) {
