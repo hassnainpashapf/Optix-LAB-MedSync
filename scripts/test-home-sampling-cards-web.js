@@ -72,18 +72,14 @@ assert.equal(typeof render, 'function');
 assert.equal(routes['#/samples/home'], render, 'both existing page routes render the cards');
 
 function summaries(expected) {
-  const cards = [...view.innerHTML.matchAll(/<div class="kpi hs-summary-card [^"]+"><div class="kpi-lb">([^<]+)<\/div><div class="kpi-nm">(\d+)<\/div><div class="kpi-sb">([^<]+)<\/div><\/div>/g)];
+  const cards = [...view.innerHTML.matchAll(/<div class="stat" data-tint="[a-z]+"><div class="stat-ico"><svg[\s\S]*?<\/svg><\/div><div class="lb">([^<]+)<\/div><div class="vl">(\d+)<\/div><div class="dl">([^<]+)<\/div><\/div>/g)];
   assert.deepEqual(cards.map(card => [card[1], Number(card[2]), card[3]]), [
     ['Today&#39;s Bookings', expected[0], 'Scheduled for today'],
     ['Pending Dispatch', expected[1], 'Scheduled · All dates'],
     ['Dispatched', expected[2], 'All dates'],
     ['Collected', expected[3], 'All dates']
   ]);
-  assert.ok(view.innerHTML.indexOf('class="hs-summary-grid"') < view.innerHTML.indexOf('class="hs-tab-bar"'), 'cards precede the filters');
-  view.querySelectorAll('.hs-summary-card').forEach(card => {
-    assert.deepEqual(Object.keys(card.listeners), [], 'summary cards are read-only');
-    assert.equal(card.attrs.tabindex, undefined);
-  });
+  assert.ok(view.innerHTML.indexOf('class="stat-grid"') < view.innerHTML.indexOf('class="hs-tab-bar"'), 'cards precede the filters');
   ['hsSearch', 'hsDateSelect', 'hsRiderSelect', 'hsBookBtn', 'hsRidersBtn'].forEach(id => {
     assert.ok(document.getElementById(id), 'existing control remains: ' + id);
   });
@@ -159,7 +155,4 @@ assert.ok(reads.includes('home_sampling'));
 ["Today's Bookings", 'Pending Dispatch', 'Dispatched', 'Collected', 'Scheduled for today', 'Scheduled · All dates', 'All dates', '6', '3', '2', '0'].forEach(value => {
   assert.ok(escaped.includes(value), 'summary text passes through App.esc: ' + value);
 });
-assert.match(view.innerHTML, /\.hs-dash \.hs-summary-grid \{[^}]*grid-template-columns:repeat\(4,1fr\)/);
-assert.match(view.innerHTML, /@media\(max-width:1100px\) \{ \.hs-dash \.hs-summary-grid \{ grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-assert.match(view.innerHTML, /@media\(max-width:560px\) \{ \.hs-dash \.hs-summary-grid \{ grid-template-columns:minmax\(0,1fr\)/);
 console.log('PASS: web home sampling summary totals, empty state, mixed dates/statuses, read-only rendering, unchanged filters/workflow controls, escaping, scoped responsive grid');

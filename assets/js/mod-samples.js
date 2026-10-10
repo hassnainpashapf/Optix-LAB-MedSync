@@ -494,6 +494,19 @@
       '#view .smp-table td.actions .btn{flex:1 1 calc(50% - 8px)}.smp-thgrid{zoom:1.35}.smp-a4pg{zoom:.36}.smp-ld-cp{margin-left:0}.smp-scan-row .btn span{display:none}' +
     '}';
 
+  /* ---------- stat cards: same look as the main dashboard (.stat in app.css: tinted diagonal, icon chip, label, number, caption) ---------- */
+  var SVG_ATTR = ' viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+  var STAT_ICON = {
+    cal: '<svg' + SVG_ATTR + '><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>',
+    clock: '<svg' + SVG_ATTR + '><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    check: '<svg' + SVG_ATTR + '><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
+    box: '<svg' + SVG_ATTR + '><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>'
+  };
+  function statCard(tint, icon, label, value, sub) {
+    return '<div class="stat" data-tint="' + tint + '"><div class="stat-ico">' + icon + '</div>' +
+      '<div class="lb">' + label + '</div><div class="vl">' + value + '</div><div class="dl">' + sub + '</div></div>';
+  }
+
   /* ---------- KPI cards (computed from the GLOBAL UNFILTERED sample list) ---------- */
   function sampleKpis() {
     var all = [];
@@ -507,15 +520,12 @@
     var CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
     var FLASK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v6L4.5 18a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 8V2"/><path d="M8.5 2h7"/><path d="M7 15h10"/></svg>';
     var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>';
-    function kpi(cls, icon, label, num, sub) {
-      return '<div class="kpi ' + cls + '"><div class="kpi-ic">' + icon + '</div><div class="kpi-lb">' + label + '</div><div class="kpi-nm">' + num + '</div><div class="kpi-sb">' + sub + '</div></div>';
-    }
     var inProcess = (c.collected || 0) + (c.received || 0) + (c.processing || 0);
-    return '<div class="kpi-grid" id="spKpis">' +
-      kpi('t-navy', TUBE, 'TOTAL SAMPLES', all.length, 'all tubes') +
-      kpi('t-amber', CLOCK, 'TO COLLECT', c.pending, 'awaiting collection') +
-      kpi('t-blue', FLASK, 'IN PROCESS', inProcess, 'in lab & processing') +
-      kpi('t-green', CHECK, 'DONE', c.done, 'completed') +
+    return '<div class="stat-grid" id="spKpis">' +
+      statCard('brand', TUBE, 'Total Samples', all.length, 'all tubes') +
+      statCard('amber', CLOCK, 'To Collect', c.pending, 'awaiting collection') +
+      statCard('blue', FLASK, 'In Process', inProcess, 'in lab &amp; processing') +
+      statCard('green', CHECK, 'Done', c.done, 'completed') +
       '</div>';
   }
 
@@ -743,11 +753,11 @@
       var checkedCount = Object.keys(STK.checked).length;
 
       var kpiHtml =
-        '<div class="kpi-grid" style="margin-bottom:16px">' +
-          '<div class="kpi t-navy"><div class="kpi-ic">' + App.icon('file', 20) + '</div><div class="kpi-lb">TODAY\'S INVOICES</div><div class="kpi-nm">' + st.invoices + '</div><div class="kpi-sb">billed today</div></div>' +
-          '<div class="kpi t-blue"><div class="kpi-ic">' + App.icon('tube', 20) + '</div><div class="kpi-lb">TUBES TODAY</div><div class="kpi-nm">' + st.tubes + '</div><div class="kpi-sb">specimen tubes</div></div>' +
-          '<div class="kpi t-amber"><div class="kpi-ic">' + App.icon('clock', 20) + '</div><div class="kpi-lb">TO COLLECT</div><div class="kpi-nm">' + st.pending + '</div><div class="kpi-sb">awaiting collection</div></div>' +
-          '<div class="kpi t-green"><div class="kpi-ic">' + App.icon('check', 20) + '</div><div class="kpi-lb">COLLECTED / IN LAB</div><div class="kpi-nm">' + st.ready + '</div><div class="kpi-sb">tubes received</div></div>' +
+        '<div class="stat-grid">' +
+          statCard('brand', App.icon('file', 20), "Today's Invoices", st.invoices, 'billed today') +
+          statCard('blue', App.icon('tube', 20), 'Tubes Today', st.tubes, 'specimen tubes') +
+          statCard('amber', STAT_ICON.clock, 'To Collect', st.pending, 'awaiting collection') +
+          statCard('green', STAT_ICON.check, 'Collected / In Lab', st.ready, 'tubes received') +
         '</div>';
 
       var previewHtml = '';
@@ -1140,11 +1150,6 @@
     var html = ''
       + '<style>'
       + '.hs-dash { max-width: 1300px; margin: 0 auto; }'
-      + '.hs-dash .hs-summary-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:18px; align-items:stretch; }'
-      + '.hs-dash .hs-summary-card { min-width:0; min-height:128px; height:128px; padding:14px 16px; box-sizing:border-box; }'
-      + '.hs-dash .hs-summary-card .kpi-sb { white-space:normal; overflow-wrap:anywhere; }'
-      + '@media(max-width:1100px) { .hs-dash .hs-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }'
-      + '@media(max-width:560px) { .hs-dash .hs-summary-grid { grid-template-columns:minmax(0,1fr); gap:10px; } }'
       + '.hs-tab-bar { display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1.5px solid var(--bd); padding-bottom: 12px; margin-bottom: 16px; }'
       + '.hs-tab-btn { background: transparent; border: 1.5px solid transparent; border-radius: 8px; padding: 6px 14px; font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .15s; }'
       + '.hs-tab-btn:hover { background: #f1f5f9; color: var(--ink); }'
@@ -1154,18 +1159,14 @@
       + '.hs-badge-status { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .03em; display: inline-flex; align-items: center; gap: 4px; }'
       + '</style>'
       + '<div class="hs-dash">'
-      + '<div class="hs-summary-grid">'
+      + '<div class="stat-grid">'
       + [
-          { label: "Today's Bookings", value: todayBookings.length, subtitle: 'Scheduled for today', tint: 't-blue' },
-          { label: 'Pending Dispatch', value: pendingCount, subtitle: 'Scheduled · All dates', tint: 't-amber' },
-          { label: 'Dispatched', value: dispatchedCount, subtitle: 'All dates', tint: 't-navy' },
-          { label: 'Collected', value: collectedCount, subtitle: 'All dates', tint: 't-purple' }
+          { label: "Today's Bookings", value: todayBookings.length, subtitle: 'Scheduled for today', tint: 'blue', icon: STAT_ICON.cal },
+          { label: 'Pending Dispatch', value: pendingCount, subtitle: 'Scheduled · All dates', tint: 'amber', icon: STAT_ICON.clock },
+          { label: 'Dispatched', value: dispatchedCount, subtitle: 'All dates', tint: 'brand', icon: STAT_ICON.box },
+          { label: 'Collected', value: collectedCount, subtitle: 'All dates', tint: 'green', icon: STAT_ICON.check }
         ].map(function (card) {
-          return '<div class="kpi hs-summary-card ' + card.tint + '">'
-            + '<div class="kpi-lb">' + App.esc(card.label) + '</div>'
-            + '<div class="kpi-nm">' + App.esc(String(card.value)) + '</div>'
-            + '<div class="kpi-sb">' + App.esc(card.subtitle) + '</div>'
-            + '</div>';
+          return statCard(card.tint, card.icon, App.esc(card.label), App.esc(String(card.value)), App.esc(card.subtitle));
         }).join('')
       + '</div>'
 
