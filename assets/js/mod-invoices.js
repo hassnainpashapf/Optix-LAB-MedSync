@@ -1124,8 +1124,7 @@
       kpiCard(SC_ICONS.clock, 'red', 'Unpaid Invoices', String(pending.length - partial), 'no payment received') +
       kpiCard(SC_ICONS.cal, 'blue', 'Partial Invoices', String(partial), 'part payment received');
     view.innerHTML =
-      '<div class="card"><div class="card-h"><h2>Pending Invoices</h2><div class="sp"></div><a class="btn btn-sm btn-ghost" href="#/invoices">All Invoices</a></div><div class="card-b">' +
-        '<p style="color:var(--muted);margin:0 0 16px">Unpaid and partially paid invoices with a balance due. Oldest invoices appear first. Summary totals cover all pending invoices.</p>' +
+      '<div class="card"><div class="card-b">' +
         '<div class="stat-grid">' + stats + '</div>' +
         '<div class="toolbar" style="gap:8px;flex-wrap:wrap">' +
           '<input id="pi-q" class="input" style="flex:1;min-width:180px" aria-label="Search pending invoices" placeholder="Search invoice no, patient, phone..." value="' + App.esc(PF.q) + '">' +

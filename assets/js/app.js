@@ -52,8 +52,7 @@
         { key: 'stickers', label: 'Tube Stickers (50×25mm)', icon: 'scan', route: '#/samples/stickers' },
         { key: 'home', label: 'Home Sampling & Dispatch', icon: 'box', route: '#/samples/home' }] },
     { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9',
-      sub: [{ key: 'catalog', label: 'Item Catalog', icon: 'box', route: '#/inventory' }, { key: 'add', label: 'Add Item', icon: 'plus', route: '#/inventory/add' },
-        { key: 'pending', label: 'Low / Out of Stock', icon: 'alert', route: '#/inventory/pending' }, { key: 'alerts', label: 'Expiring / Expired', icon: 'alert', route: '#/inventory/alerts' }] },
+      sub: [{ key: 'catalog', label: 'Item Catalog', icon: 'box', route: '#/inventory' }, { key: 'add', label: 'Add Item', icon: 'plus', route: '#/inventory/add' }] },
     { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock', color: '#0ea5e9',
       sub: [{ key: 'moves', label: 'Movement History', icon: 'clipboard', route: '#/stock' }, { key: 'add', label: 'Add Stock', icon: 'plus', route: '#/stock/add' },
         { key: 'pending', label: 'Pending Stock', icon: 'box', route: '#/stock/pending' }, { key: 'orders', label: 'Purchase Orders', route: '#/stock/orders', icon: 'receipt' }, { key: 'alerts', label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' }] },
@@ -712,6 +711,23 @@
   }
 
   /* ---------------- shell ---------------- */
+  function sidebarNavKey(key) {
+    return key === 'inventory' || key === 'stock' ? 'inventory-stock' : key;
+  }
+  /* Presentation only: callers filter NAV by permissions/features before grouping.
+     Keep NAV and its route identities intact for routing, settings and access checks. */
+  function groupSidebarNav(visible) {
+    var grouped = [], stockGroup = null;
+    visible.forEach(function (n) {
+      if (sidebarNavKey(n.key) !== 'inventory-stock') { grouped.push(n); return; }
+      if (!stockGroup) {
+        stockGroup = { key: 'inventory-stock', label: 'Inventory & Stock', icon: 'box', route: n.route, color: n.color, sub: [] };
+        grouped.push(stockGroup);
+      }
+      stockGroup.sub = stockGroup.sub.concat(n.sub || []);
+    });
+    return grouped;
+  }
   function renderShell(activeKey) {
     var s = session();
     if (!s) return;
@@ -743,14 +759,16 @@
     var ORDER = ['dashboard', 'branches', 'patients', 'samples', 'inventory', 'stock', 'results', 'tests', 'packages', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'reports', 'audit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && (!App.featureOn || App.featureOn(n.key)) && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
+    visible = groupSidebarNav(visible);
+    var sidebarActiveKey = sidebarNavKey(activeKey);
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
     function itemHtml(n) {
       var subs = n.sub ? n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; }) : [];
       if (n.sub && subs.length >= 2) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
-        var open = n.key === activeKey;
+        var open = n.key === sidebarActiveKey;
         return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
-           '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" data-route="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-          '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span>' +
+           '<button type="button" class="nav-it nav-par' + (open ? ' active' : '') + '" data-nav="' + n.key + '" data-route="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+          '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + esc(n.label) + '</span>' +
           '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
            '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" title="' + esc(x.label) + '" aria-label="' + esc(x.label) + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '"><span class="nav-sub-ic">' + icon(x.icon || (x.danger ? 'alert' : n.icon) || 'file', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
       }
@@ -759,7 +777,7 @@
     }
     /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
        A new page only needs its key added to a folder below (a key that is in no folder simply shows at the bottom). */
-    var TOP = ['dashboard', 'branches', 'patients', 'samples', 'inventory', 'stock', 'results', 'tests', 'packages', 'invoices', 'reports'];
+    var TOP = ['dashboard', 'branches', 'patients', 'samples', 'inventory-stock', 'results', 'tests', 'packages', 'invoices', 'reports'];
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['outsourced', 'doctors'] },
       { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit'] },
@@ -934,6 +952,7 @@
     btn.setAttribute('aria-expanded', String(mobile ? document.body.classList.contains('side-open') : !document.body.classList.contains('side-collapsed')));
   }
   function markActive(key) {
+    key = sidebarNavKey(key);
     var links = document.querySelectorAll('.nav-it');
     for (var i = 0; i < links.length; i++) {
       links[i].classList.toggle('active', links[i].getAttribute('data-nav') === key);
@@ -942,7 +961,7 @@
     var h = (location.hash || '').split('?')[0], subs = document.querySelectorAll('.nav-sub-it');
     for (var j = 0; j < subs.length; j++) {
       var dh = subs[j].getAttribute('data-href');
-      var on = (dh === h) || (dh === '#/tests/regular' && h === '#/tests') || (dh === '#/stock' && h === '#/stock/moves') || (dh === '#/stock/alerts' && h === '#/inventory/alerts') || (dh === '#/stock/pending' && h === '#/inventory/pending') || (dh === '#/reports/tests' && (h === '#/reports' || h === '#/reports/all'));
+      var on = (dh === h) || (dh === '#/stock' && h === '#/stock/moves') || (dh === '#/stock/alerts' && h === '#/inventory/alerts') || (dh === '#/stock/pending' && h === '#/inventory/pending') || (dh === '#/reports/tests' && (h === '#/reports' || h === '#/reports/all'));
       subs[j].classList.toggle('on', on);
     }
     /* folders: the one holding the current page opens (the others keep whatever the user chose) */

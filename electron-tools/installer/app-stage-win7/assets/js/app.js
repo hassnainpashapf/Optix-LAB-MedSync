@@ -50,9 +50,9 @@
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
       sub: [{ key: 'tracking', label: 'Tracking', icon: 'tube', route: '#/samples' }, { key: 'stickers', label: 'Stickers', icon: 'scan', route: '#/samples/stickers' }, { key: 'home', label: 'Home Sampling', icon: 'steth', route: '#/samples/home' }] },
     { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9',
-      sub: [{ key: 'catalog', label: 'Catalog', icon: 'box', route: '#/inventory' }, { key: 'add', label: 'Add Item', icon: 'plus', route: '#/inventory/add' }, { key: 'lowout', label: 'Low / Out of Stock', icon: 'alert', route: '#/stock/pending' }, { key: 'expiring', label: 'Expiring Soon', icon: 'clock', route: '#/stock/alerts' }] },
+      sub: [{ key: 'catalog', label: 'Catalog', icon: 'box', route: '#/inventory' }, { key: 'add', label: 'Add Item', icon: 'plus', route: '#/inventory/add' }] },
     { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock', color: '#0ea5e9',
-      sub: [{ label: 'Movements', icon: 'box', route: '#/stock' }, { label: 'Pending Stock', icon: 'clipboard', route: '#/stock/pending' }, { label: 'Purchase Orders', icon: 'receipt', route: '#/stock/purchase-orders' }, { label: 'Add Stock', icon: 'plus', route: '#/stock/add' }] },
+      sub: [{ label: 'Movements', icon: 'box', route: '#/stock' }, { label: 'Pending Stock', icon: 'clipboard', route: '#/stock/pending' }, { label: 'Purchase Orders', icon: 'receipt', route: '#/stock/purchase-orders' }, { label: 'Add Stock', icon: 'plus', route: '#/stock/add' }, { label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' }] },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', icon: 'clipboard', route: '#/results' }, { key: 'ready', label: 'Ready Reports', icon: 'check', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', icon: 'file', route: '#/results/old' }] },
     { key: 'tests',     label: 'All Tests Catalog', icon: 'flask', route: '#/tests', color: '#14b8a6',
@@ -716,6 +716,20 @@
   }
 
   /* ---------------- shell ---------------- */
+  /* Presentation only: merge entries after their existing permission/feature checks. */
+  function groupStockNavigation(visible) {
+    var grouped = [], stockGroup = null;
+    visible.forEach(function (n) {
+      if (n.key !== 'inventory' && n.key !== 'stock') { grouped.push(n); return; }
+      if (!stockGroup) {
+        stockGroup = { key: n.key, label: 'Inventory & Stock', icon: 'box', route: n.route, keys: [], sub: [] };
+        grouped.push(stockGroup);
+      }
+      stockGroup.keys.push(n.key);
+      stockGroup.sub = stockGroup.sub.concat(n.sub || []);
+    });
+    return grouped;
+  }
   function renderShell(activeKey) {
     var s = session();
     if (!s) return;
@@ -747,16 +761,17 @@
     var ORDER = ['dashboard', 'patients', 'samples', 'inventory', 'stock', 'results', 'tests', 'packages', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'reports', 'audit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && (!App.featureOn || App.featureOn(n.key)) && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
+    visible = groupStockNavigation(visible);
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
     function itemHtml(n) {
       var subs = n.sub ? n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; }) : [];
       if (n.sub && subs.length >= 2) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
-        var open = n.key === activeKey;
+        var open = (n.keys || [n.key]).indexOf(activeKey) >= 0;
         return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
-          '<button type="button" class="nav-it nav-par' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-label="' + esc(n.label) + '" title="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
-          '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span>' +
+          '<button type="button" class="nav-it nav-par' + (open ? ' active' : '') + '" data-nav="' + n.key + '"' + (n.keys ? ' data-nav-keys="' + esc(n.keys.join(' ')) + '"' : '') + ' aria-label="' + esc(n.label) + '" title="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+          '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + esc(n.label) + '</span>' +
           '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
-          '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '" title="' + esc(x.label) + '"><span class="nav-sub-ic">' + icon(x.icon || n.icon || 'grid', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
+          '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '" title="' + esc(x.label) + '"><span class="nav-sub-ic">' + icon(x.icon || n.icon || 'grid', 16) + '</span><span class="nav-sub-lb">' + esc(x.label) + '</span></a>'; }).join('') + '</div></div>';
       }
       return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-label="' + esc(n.label) + '" title="' + esc(n.label) + '">' +
         '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span></a>';
@@ -923,7 +938,8 @@
   function markActive(key) {
     var links = document.querySelectorAll('.nav-it');
     for (var i = 0; i < links.length; i++) {
-      links[i].classList.toggle('active', links[i].getAttribute('data-nav') === key);
+      var keys = links[i].getAttribute('data-nav-keys');
+      links[i].classList.toggle('active', keys ? keys.split(' ').indexOf(key) >= 0 : links[i].getAttribute('data-nav') === key);
     }
     /* sub-menu: highlight the child that matches the current page and keep its group open */
     var h = (location.hash || '').split('?')[0], subs = document.querySelectorAll('.nav-sub-it');
@@ -942,9 +958,13 @@
     /* accordion: only the group that holds the current page stays open; moving to any other page closes the rest */
     var grps = document.querySelectorAll('.nav-grp');
     for (var k = 0; k < grps.length; k++) {
-      var gk = grps[k], hold = gk.getAttribute('data-grp') === key || !!gk.querySelector('.nav-sub-it.on');
+      var gk = grps[k], hold = gk.getAttribute('data-grp') === key || !!gk.querySelector('.nav-par.active, .nav-sub-it.on');
       gk.classList.toggle('open', hold);
-      var pk = gk.querySelector('.nav-par'); if (pk) pk.setAttribute('aria-expanded', hold ? 'true' : 'false');
+      var pk = gk.querySelector('.nav-par');
+      if (pk) {
+        pk.setAttribute('aria-expanded', hold ? 'true' : 'false');
+        if (pk.getAttribute('data-nav-keys')) pk.classList.toggle('active', hold);
+      }
     }
   }
   /* folders open / close on click and the choice is remembered on this device */

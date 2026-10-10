@@ -1044,6 +1044,7 @@
 
     /* KPI calculations */
     var todayBookings = bookings.filter(function (b) { return b.scheduledDate === todayStr; });
+    var pendingDispatchCount = bookings.filter(function (b) { return b.status === 'scheduled'; }).length;
     var dispatchedCount = bookings.filter(function (b) { return b.status === 'dispatched'; }).length;
     var collectedCount = bookings.filter(function (b) { return b.status === 'collected'; }).length;
     var receivedCount = bookings.filter(function (b) { return b.status === 'received_in_lab' && (b.scheduledDate === todayStr || (b.receivedAt && b.receivedAt.slice(0, 10) === todayStr)); }).length;
@@ -1079,9 +1080,9 @@
 
     var tabCounts = {
       all: bookings.length,
-      scheduled: bookings.filter(function (b) { return b.status === 'scheduled'; }).length,
-      dispatched: bookings.filter(function (b) { return b.status === 'dispatched'; }).length,
-      collected: bookings.filter(function (b) { return b.status === 'collected'; }).length,
+      scheduled: pendingDispatchCount,
+      dispatched: dispatchedCount,
+      collected: collectedCount,
       received_in_lab: bookings.filter(function (b) { return b.status === 'received_in_lab'; }).length,
       cancelled: bookings.filter(function (b) { return b.status === 'cancelled'; }).length
     };
@@ -1090,12 +1091,14 @@
       + '<style>'
       + '.hs-dash { max-width: 1300px; margin: 0 auto; }'
       + '.hs-head-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }'
-      + '.hs-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }'
-      + '.hs-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
-      + '.hs-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
-      + '.hs-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
-      + '.hs-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; }'
-      + '.hs-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
+      + '.hs-dash .hs-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }'
+      + '.hs-dash .hs-summary-card { min-width: 0; padding: 14px 18px; }'
+      + '.hs-dash .hs-kpi-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 6px; }'
+      + '.hs-dash .hs-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
+      + '.hs-dash .hs-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; }'
+      + '.hs-dash .hs-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
+      + '@media (max-width: 900px) { .hs-dash .hs-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }'
+      + '@media (max-width: 540px) { .hs-dash .hs-summary-grid { grid-template-columns: minmax(0, 1fr); } }'
       + '.hs-tab-bar { display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1.5px solid var(--bd); padding-bottom: 12px; margin-bottom: 16px; }'
       + '.hs-tab-btn { background: transparent; border: 1.5px solid transparent; border-radius: 8px; padding: 6px 14px; font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .15s; }'
       + '.hs-tab-btn:hover { background: #f1f5f9; color: var(--ink); }'
@@ -1106,31 +1109,21 @@
       + '</style>'
       + '<div class="hs-dash">'
 
-      /* 4 KPI Cards */
-      + '<div class="hs-stat-grid">'
-      +   '<div class="hs-kpi-card" style="border-left:4px solid #0284c7">'
-      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Today\'s Pickups</span><span style="font-size:17px">📅</span></div>'
-      +     '<div class="hs-kpi-val">' + todayBookings.length + ' <span style="font-size:14px;color:var(--muted);font-weight:600">scheduled</span></div>'
-      +     '<div class="hs-kpi-sub">' + bookings.length + ' all-time bookings</div>'
-      +   '</div>'
-
-      +   '<div class="hs-kpi-card" style="border-left:4px solid #0ea5e9">'
-      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Currently Dispatched</span><span style="font-size:17px">🛵</span></div>'
-      +     '<div class="hs-kpi-val" style="color:#0284c7">' + dispatchedCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">on field</span></div>'
-      +     '<div class="hs-kpi-sub">Phlebotomists on the road</div>'
-      +   '</div>'
-
-      +   '<div class="hs-kpi-card" style="border-left:4px solid #8b5cf6">'
-      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Samples Collected</span><span style="font-size:17px">🩸</span></div>'
-      +     '<div class="hs-kpi-val" style="color:#6d28d9">' + collectedCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">en route</span></div>'
-      +     '<div class="hs-kpi-sub">Specimens heading to lab</div>'
-      +   '</div>'
-
-      +   '<div class="hs-kpi-card" style="border-left:4px solid #16a34a">'
-      +     '<div class="hs-kpi-top"><span class="hs-kpi-lbl">Checked-in to Lab</span><span style="font-size:17px">🔬</span></div>'
-      +     '<div class="hs-kpi-val" style="color:#15803d">' + receivedCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">intake today</span></div>'
-      +     '<div class="hs-kpi-sub">Received &amp; ready for testing</div>'
-      +   '</div>'
+      /* Read-only totals remain independent of the table filters. */
+      + '<div class="hs-summary-grid">'
+      +   [
+            { label: "Today's Bookings", value: todayBookings.length, sub: 'Scheduled for today', color: '#0284c7', icon: '📅' },
+            { label: 'Pending Dispatch', value: pendingDispatchCount, sub: 'Scheduled — all dates', color: '#d97706', icon: '⏳' },
+            { label: 'Dispatched', value: dispatchedCount, sub: 'Dispatched — all dates', color: '#0ea5e9', icon: '🛵' },
+            { label: 'Collected', value: collectedCount, sub: 'Collected — all dates', color: '#8b5cf6', icon: '🩸' },
+            { label: 'Checked-in to Lab', value: receivedCount, sub: 'Received today', color: '#16a34a', icon: '🔬' }
+          ].map(function (card) {
+            return '<div class="card hs-summary-card" style="border-left:4px solid ' + card.color + '">'
+              + '<div class="hs-kpi-top"><span class="hs-kpi-lbl">' + App.esc(card.label) + '</span><span aria-hidden="true" style="font-size:17px">' + card.icon + '</span></div>'
+              + '<div class="hs-kpi-val">' + App.esc(String(card.value)) + '</div>'
+              + '<div class="hs-kpi-sub">' + App.esc(card.sub) + '</div>'
+              + '</div>';
+          }).join('')
       + '</div>'
 
       /* Action Buttons Below Cards */

@@ -831,12 +831,9 @@
 
     view.innerHTML =
       '<div class="card"><div class="card-b">' +
-        '<h2 style="margin:0 0 6px">Pending Invoices</h2>' +
-        '<p class="muted" style="margin:0 0 16px">Unpaid or partially paid invoices with a balance due. Lab results and online payment verification are tracked separately.</p>' +
         '<div class="stat-grid">' + stats + '</div>' +
         '<div class="toolbar" style="gap:8px;flex-wrap:wrap">' +
           '<input id="pending-q" class="input" type="search" aria-label="Search pending invoices" placeholder="Search invoice no, patient, phone, MR#..." value="' + App.esc(pendingQuery) + '" style="flex:1;min-width:180px">' +
-          '<a class="btn btn-ghost" href="#/invoices">All Invoices</a>' +
         '</div>' +
         '<div id="pending-count" class="muted" aria-live="polite" style="font-size:13px;margin-bottom:10px"></div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr>' +

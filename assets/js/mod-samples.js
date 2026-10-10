@@ -1093,11 +1093,11 @@
     var todayStr = App.today();
     var tomorrowStr = addDays(todayStr, 1);
 
-    /* KPI calculations */
+    /* Summary totals use all bookings, independent of table filters. */
     var todayBookings = bookings.filter(function (b) { return b.scheduledDate === todayStr; });
+    var pendingCount = bookings.filter(function (b) { return b.status === 'scheduled'; }).length;
     var dispatchedCount = bookings.filter(function (b) { return b.status === 'dispatched'; }).length;
     var collectedCount = bookings.filter(function (b) { return b.status === 'collected'; }).length;
-    var receivedCount = bookings.filter(function (b) { return b.status === 'received_in_lab' && (b.scheduledDate === todayStr || (b.receivedAt && b.receivedAt.slice(0, 10) === todayStr)); }).length;
 
     /* Filter bookings */
     var filtered = bookings.filter(function (b) {
@@ -1130,9 +1130,9 @@
 
     var tabCounts = {
       all: bookings.length,
-      scheduled: bookings.filter(function (b) { return b.status === 'scheduled'; }).length,
-      dispatched: bookings.filter(function (b) { return b.status === 'dispatched'; }).length,
-      collected: bookings.filter(function (b) { return b.status === 'collected'; }).length,
+      scheduled: pendingCount,
+      dispatched: dispatchedCount,
+      collected: collectedCount,
       received_in_lab: bookings.filter(function (b) { return b.status === 'received_in_lab'; }).length,
       cancelled: bookings.filter(function (b) { return b.status === 'cancelled'; }).length
     };
@@ -1140,6 +1140,11 @@
     var html = ''
       + '<style>'
       + '.hs-dash { max-width: 1300px; margin: 0 auto; }'
+      + '.hs-dash .hs-summary-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; margin-bottom:18px; }'
+      + '.hs-dash .hs-summary-card { min-width:0; min-height:104px; height:auto; }'
+      + '.hs-dash .hs-summary-card .kpi-sb { white-space:normal; overflow-wrap:anywhere; }'
+      + '@media(max-width:1100px) { .hs-dash .hs-summary-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }'
+      + '@media(max-width:560px) { .hs-dash .hs-summary-grid { grid-template-columns:minmax(0,1fr); gap:10px; } }'
       + '.hs-tab-bar { display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1.5px solid var(--bd); padding-bottom: 12px; margin-bottom: 16px; }'
       + '.hs-tab-btn { background: transparent; border: 1.5px solid transparent; border-radius: 8px; padding: 6px 14px; font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all .15s; }'
       + '.hs-tab-btn:hover { background: #f1f5f9; color: var(--ink); }'
@@ -1149,6 +1154,20 @@
       + '.hs-badge-status { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .03em; display: inline-flex; align-items: center; gap: 4px; }'
       + '</style>'
       + '<div class="hs-dash">'
+      + '<div class="hs-summary-grid">'
+      + [
+          { label: "Today's Bookings", value: todayBookings.length, subtitle: 'Scheduled for today', tint: 't-blue' },
+          { label: 'Pending Dispatch', value: pendingCount, subtitle: 'Scheduled · All dates', tint: 't-amber' },
+          { label: 'Dispatched', value: dispatchedCount, subtitle: 'All dates', tint: 't-navy' },
+          { label: 'Collected', value: collectedCount, subtitle: 'All dates', tint: 't-purple' }
+        ].map(function (card) {
+          return '<div class="kpi hs-summary-card ' + card.tint + '">'
+            + '<div class="kpi-lb">' + App.esc(card.label) + '</div>'
+            + '<div class="kpi-nm">' + App.esc(String(card.value)) + '</div>'
+            + '<div class="kpi-sb">' + App.esc(card.subtitle) + '</div>'
+            + '</div>';
+        }).join('')
+      + '</div>'
 
       /* Search & Filter Card with Integrated Status Pipeline Tabs */
       + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="padding:14px 16px">'

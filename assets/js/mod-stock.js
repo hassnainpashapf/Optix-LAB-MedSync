@@ -275,8 +275,8 @@
     var title = curTab === 'items' ? 'Inventory' : curTab === 'pending' ? 'Pending Stock' : curTab === 'alerts' ? 'Alerts & Expiry' : 'Stock Movement History';
 
     var h = '' +
-      /* Dashboard Header */
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">' +
+      /* Inventory uses the shell title; retain headings on other stock views. */
+      (curTab === 'items' ? '' : '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">' +
         '<div>' +
           '<h2 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);display:flex;align-items:center;gap:10px">' +
             '<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:#e0f2fe;color:#0284c7">' + App.icon('box', 22) + '</span>' +
@@ -284,13 +284,7 @@
           '</h2>' +
           '<div style="font-size:12.5px;color:var(--muted);margin-top:2px">Clinical laboratory reagents, test kits, vacutainers, consumables &amp; automated consumption tracking</div>' +
         '</div>' +
-        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">' +
-          (canEdit() ? '<button class="btn btn-primary" id="skRecvTop" style="display:inline-flex;align-items:center;gap:6px;font-weight:700">' + App.icon('plus', 16) + ' Receive Stock</button>' +
-            '<button class="btn btn-secondary" id="skMoveTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:700;display:inline-flex;align-items:center;gap:6px">🚚 Move / Use Stock</button>' +
-            '<button class="btn btn-secondary" id="skAddTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('plus', 16) + ' Add Item</button>' : '') +
-          '<button class="btn btn-ghost btn-sm" id="skCsvExport" style="background:#f8fafc;border:1px solid #cbd5e1;font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('download', 14) + ' Export CSV</button>' +
-        '</div>' +
-      '</div>' +
+      '</div>') +
 
       /* 4 Standardized Unified KPI Stat Cards (.kpi-grid + .kpi) */
       '<div class="kpi-grid" style="margin-bottom:18px">' +
@@ -320,7 +314,12 @@
         '</div>' +
       '</div>' +
 
-      '';
+      '<div class="sk-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px">' +
+        (canEdit() ? '<button class="btn btn-primary" id="skRecvTop" style="display:inline-flex;align-items:center;gap:6px;font-weight:700">' + App.icon('plus', 16) + ' Receive Stock</button>' +
+          '<button class="btn btn-secondary" id="skMoveTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:700;display:inline-flex;align-items:center;gap:6px">🚚 Move / Use Stock</button>' +
+          '<button class="btn btn-secondary" id="skAddTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('plus', 16) + ' Add Item</button>' : '') +
+        '<button class="btn btn-ghost btn-sm" id="skCsvExport" style="background:#f8fafc;border:1px solid #cbd5e1;font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('download', 14) + ' Export CSV</button>' +
+      '</div>';
 
     /* Tab 1: Inventory Stock Items */
     if (curTab === 'items') {
