@@ -6,6 +6,7 @@
 # Build command: npm run build      Output directory: dist      (no deploy command needed)
 set -e
 cd "$(dirname "$0")/.."
+node scripts/gen-ads-txt.mjs || true   # ads.txt only when a publisher id is set in site/assets/js/ads-config.js
 rm -rf dist
 mkdir -p dist/app dist/superadmin
 cp -R site/. dist/
