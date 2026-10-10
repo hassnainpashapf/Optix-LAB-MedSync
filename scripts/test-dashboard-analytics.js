@@ -56,10 +56,14 @@ function fixture() {
 for (const relPath of dashboardPaths) {
   const source = fs.readFileSync(path.join(root, relPath), 'utf8');
   const start = source.indexOf('    function reportPeriod(period) {');
-  const end = source.indexOf('    /* ---------- loading skeletons', start);
-  assert.ok(start >= 0 && end > start, relPath + ': analytics helper block was not found');
+  const helperStart = start >= 0 ? start : source.indexOf('  function reportPeriod(period) {');
+  const endMarker = relPath === 'assets/js/mod-dashboard.js'
+    ? "  App.route('/dashboard'"
+    : '    /* ---------- loading skeletons';
+  const end = source.indexOf(endMarker, helperStart);
+  assert.ok(helperStart >= 0 && end > helperStart, relPath + ': analytics helper block was not found');
   assert.ok(source.includes('id="dbAnalyticsPeriod"'), relPath + ': analytics period selector is missing');
-  assert.ok(source.includes('smartAnalyticsBody(periodSelect.value)'), relPath + ': period changes are not wired');
+  assert.match(source, /smartAnalyticsBody\(periodSelect\.value(?:,\s*showBranchMoney)?\)/, relPath + ': period changes are not wired');
 
   const data = fixture();
   const context = {
@@ -76,24 +80,24 @@ for (const relPath of dashboardPaths) {
       empty: message => '<empty>' + message + '</empty>'
     }
   };
-  vm.runInNewContext(source.slice(start, end) + '\nthis.renderAnalytics = smartAnalyticsBody;', context);
+  vm.runInNewContext(source.slice(helperStart, end) + '\nthis.renderAnalytics = smartAnalyticsBody;', context);
 
-  const html = context.renderAnalytics('30');
+  const html = context.renderAnalytics('30', true);
   assert.match(html, /Branch revenue &amp; dues/);
-  assert.match(html, /<strong>Alpha<\/strong>/);
-  assert.match(html, /<strong>Beta<\/strong>/);
-  assert.match(html, /<strong>Unassigned<\/strong>/);
+  assert.match(html, /<span class="db-smart-name">Alpha<\/span>/);
+  assert.match(html, /<span class="db-smart-name">Beta<\/span>/);
+  assert.match(html, /<span class="db-smart-name">Unassigned<\/span>/);
   assert.match(html, /Rs 100<\/td><td class="num">Rs 60<\/td><td class="num">Rs 40/);
   assert.match(html, /Rs 50<\/td><td class="num">Rs 0<\/td><td class="num">Rs 0/);
   assert.match(html, /Rs 0<\/td><td class="num">Rs 20<\/td><td class="num">Rs 20/);
-  assert.match(html, /<strong>Test One<\/strong><\/td><td class="num">2/);
-  assert.match(html, /<strong>Test Two<\/strong><\/td><td class="num">1/);
-  assert.doesNotMatch(context.renderAnalytics('all'), /<strong>Test Two<\/strong><\/td><td class="num">1/);
+  assert.match(html, /<span class="db-smart-name">Test One<\/span><\/td><td class="num">2/);
+  assert.match(html, /<span class="db-smart-name">Test Two<\/span><\/td><td class="num">1/);
+  assert.doesNotMatch(context.renderAnalytics('all', true), /<span class="db-smart-name">Test Two<\/span><\/td><td class="num">1/);
 
   context.showBranchMoney = false;
-  const limitedHtml = context.renderAnalytics('30');
+  const limitedHtml = context.renderAnalytics('30', false);
   assert.doesNotMatch(limitedHtml, /Branch revenue &amp; dues|Rs 100/);
-  assert.match(limitedHtml, /<strong>Test One<\/strong>/);
+  assert.match(limitedHtml, /<span class="db-smart-name">Test One<\/span>/);
 }
 
 for (const relPath of billingPaths) {

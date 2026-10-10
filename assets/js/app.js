@@ -45,7 +45,9 @@
   /* ---------------- nav + permissions ---------------- */
   var NAV = [
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
-    { key: 'branches', label: 'Branches', icon: 'box', route: '#/branches', color: '#0ea5e9' },
+    { key: 'branches', label: 'Branches', icon: 'box', route: '#/branches', color: '#0ea5e9',
+      sub: [{ key: 'manage', label: 'Manage Branches', icon: 'box', route: '#/branches', roles: ['admin'] },
+        { key: 'dashboard', label: 'Branch Dashboard', icon: 'chart', route: '#/branch-dashboard', roles: ['admin'] }] },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
       sub: [{ key: 'new', label: 'Add Patient', icon: 'plus', route: '#/patients/new' }, { key: 'all', label: 'All Patients', icon: 'users', route: '#/patients' }, { key: 'lists', label: 'Edit Patient Form', icon: 'gear', route: '#/patients/lists', roles: ['admin'] }] },
     { key: 'appointments', label: 'Appointments', icon: 'calendar', route: '#/appointments', color: '#0ea5e9' },
@@ -137,6 +139,7 @@
     audit:     ['admin'],
     subscription: ['admin'],
     branches: ['admin'],
+    'branch-dashboard': ['admin'],
     settings:  ['admin'],
     profile:   ['admin', 'reception', 'technician']
   };
@@ -716,7 +719,7 @@
 
   /* ---------------- shell ---------------- */
   function sidebarNavKey(key) {
-    return key === 'inventory' || key === 'stock' ? 'inventory-stock' : key;
+    return key === 'inventory' || key === 'stock' ? 'inventory-stock' : key === 'branch-dashboard' ? 'branches' : key;
   }
   /* Presentation only: callers filter NAV by permissions/features before grouping.
      Keep NAV and its route identities intact for routing, settings and access checks. */
@@ -858,6 +861,7 @@
                       _curHash === '#/patients/new' ? 'Add Patient' :
                       _curHash === '#/patients/lists' ? 'Edit Patient Form' :
                       _curHash === '#/stock/dashboard' ? 'Stock Dashboard' :
+                      _curHash === '#/branch-dashboard' ? 'Branch Dashboard' :
                       _curHash === '#/stock' ? 'Stock Movement History' :
                       _curHash === '#/stock/pending' ? 'Pending Stock' :
                       _curHash === '#/stock/alerts' ? 'Alerts & Expiry' :

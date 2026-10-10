@@ -43,6 +43,9 @@
   /* ---------------- nav + permissions ---------------- */
   var NAV = [
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
+    { key: 'branches', label: 'Branches', icon: 'box', route: '#/branches', color: '#0ea5e9',
+      sub: [{ key: 'manage', label: 'Manage Branches', icon: 'box', route: '#/branches', roles: ['admin'] },
+        { key: 'dashboard', label: 'Branch Dashboard', icon: 'chart', route: '#/branch-dashboard', roles: ['admin'] }] },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
       sub: [{ key: 'new', label: 'Add Patient', route: '#/patients/new' }, { key: 'all', label: 'All Patients', route: '#/patients' }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48' },
@@ -123,6 +126,8 @@
     sms:       ['admin', 'reception'],
     audit:     ['admin'],
     subscription: ['admin'],
+    branches: ['admin'],
+    'branch-dashboard': ['admin'],
     settings:  ['admin'],
     profile:   ['admin', 'reception', 'technician']
   };
@@ -137,6 +142,7 @@
     if (seg === 'trends') seg = 'reports';
     if (seg === 'signatures') seg = 'settings';
     if (seg === 'online-payments') seg = 'onlinepay';
+    if (seg === 'branch-dashboard') seg = 'branches';
     if (seg === 'digest') seg = 'whatsapp';
     if (seg === 'stock') seg = 'inventory';
     if (seg === 'close-day') seg = 'finance';
@@ -809,6 +815,7 @@
         '<a class="btn btn-sm tb-qab tb-classic tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>';
     var _curHash = (location.hash || '').split('?')[0];
     var _pageTitle = _curHash === '#/packages' ? 'Health Packages & Screening Deals Center' :
+                     _curHash === '#/branch-dashboard' ? 'Branch Dashboard' :
                      _curHash === '#/samples/stickers' ? 'Tube Stickers (50×25mm)' :
                      (_curHash === '#/reports/trends' || _curHash === '#/trends') ? 'Patient Trends & Delta' :
                      (navItem ? navItem.label : '');

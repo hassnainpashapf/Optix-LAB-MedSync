@@ -115,7 +115,7 @@
         .sort(function (a, b) { return b.count - a.count || a.name.localeCompare(b.name); }).slice(0, 10);
       var demandHtml = demandRows.length
         ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th class="num">Ordered</th></tr></thead><tbody>' +
-          demandRows.map(function (r) { return '<tr><td><strong>' + App.esc(r.name) + '</strong></td><td class="num">' + r.count + '</td></tr>'; }).join('') +
+          demandRows.map(function (r) { return '<tr><td><span class="db-smart-name">' + App.esc(r.name) + '</span></td><td class="num">' + r.count + '</td></tr>'; }).join('') +
           '</tbody></table></div>'
         : App.empty('No test orders in this period.');
       var branchHtml = '';
@@ -125,7 +125,7 @@
           .sort(function (a, b) { return b.billed - a.billed || a.name.localeCompare(b.name); });
         var branchTable = branchRows.length
           ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Branch</th><th class="num">Billed</th><th class="num">Collected</th><th class="num">Pending dues</th></tr></thead><tbody>' +
-            branchRows.map(function (r) { return '<tr><td><strong>' + App.esc(r.name) + '</strong><br><small class="muted">' + r.invoices + ' invoice' + (r.invoices === 1 ? '' : 's') + ' in period</small></td><td class="num">' + App.money(r.billed) + '</td><td class="num">' + App.money(r.collected) + '</td><td class="num">' + App.money(r.due) + '</td></tr>'; }).join('') +
+            branchRows.map(function (r) { return '<tr><td><span class="db-smart-name">' + App.esc(r.name) + '</span><br><small class="muted">' + r.invoices + ' invoice' + (r.invoices === 1 ? '' : 's') + ' in period</small></td><td class="num">' + App.money(r.billed) + '</td><td class="num">' + App.money(r.collected) + '</td><td class="num">' + App.money(r.due) + '</td></tr>'; }).join('') +
             '</tbody></table></div>'
           : App.empty('No invoices or payments in this period.');
         branchHtml = '<div class="db-smart-branch"><h3>Branch revenue &amp; dues</h3>' + branchTable +
@@ -421,7 +421,7 @@
     '.dbc-bar{transform-box:fill-box;transform-origin:bottom;animation:dbcGrow .7s cubic-bezier(.22,.8,.3,1) backwards}@keyframes dbcGrow{from{transform:scaleY(0)}}' +
     '.dbc-line{stroke-dasharray:100;animation:dbcDraw 1.1s .2s ease-out backwards}@keyframes dbcDraw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}' +
     '@media (prefers-reduced-motion:reduce){.dbc-bar,.dbc-line{animation:none}}' +
-    '.db-smart{margin-bottom:16px}.db-smart-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:20px}.db-smart-grid.db-smart-tests-only{grid-template-columns:1fr}.db-smart-grid h3{font-size:15px;margin:0 0 10px;font-weight:800}.db-smart-grid .tbl-wrap{max-height:360px;overflow:auto}.db-smart-branch .dbc-sub{margin-top:8px}' +
+    '.db-smart{margin-bottom:16px}.db-smart .card-h h3{font-weight:600!important}.db-smart-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:20px}.db-smart-grid.db-smart-tests-only{grid-template-columns:1fr}.db-smart-grid h3{font-size:15px;margin:0 0 10px;font-weight:600}.db-smart-grid .tbl-wrap{max-height:360px;overflow:auto}.db-smart-branch .dbc-sub{margin-top:8px}.db-smart-name{font-weight:500;color:var(--ink)}' +
     '@media(max-width:900px){.db-smart-grid{grid-template-columns:1fr}}' +
     '.db-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px}' +
     '@media(max-width:1000px){.db-grid{grid-template-columns:1fr}}' +

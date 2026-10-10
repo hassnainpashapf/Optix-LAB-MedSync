@@ -41,7 +41,7 @@ if ('serviceWorker' in navigator) {
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
    to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
-window.__ASSET_V = '225';
+window.__ASSET_V = '227';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
@@ -53,6 +53,7 @@ window.__LAZY_ROUTES = {
   '#/receipts': 'assets/js/mod-invoices.js',
   '#/dues': 'assets/js/mod-invoices.js',
   '#/online-payments': 'assets/js/mod-online-payments.js',
+  '#/branch-dashboard': 'assets/js/mod-branch-dashboard.js',
   '#/appointments': 'assets/js/mod-appointments.js',
   '#/panels': 'assets/js/mod-panels.js',
   '#/outsourced': 'assets/js/mod-outsourced.js',

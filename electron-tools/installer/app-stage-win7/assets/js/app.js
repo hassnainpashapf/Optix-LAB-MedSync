@@ -79,7 +79,9 @@
         { key: 'labs',     label: 'Lab Comparison', icon: 'chart', route: '#/reports/labs' }
       ] },
     { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads', color: '#06b6d4' },
-    { key: 'branches', label: 'Branches', icon: 'grid', route: '#/branches', color: '#2563eb', roles: ['admin'] },
+    { key: 'branches', label: 'Branches', icon: 'grid', route: '#/branches', color: '#2563eb', roles: ['admin'],
+      sub: [{ key: 'manage', label: 'Manage Branches', icon: 'grid', route: '#/branches', roles: ['admin'] },
+        { key: 'dashboard', label: 'Branch Dashboard', icon: 'chart', route: '#/branch-dashboard', roles: ['admin'] }] },
     { key: 'email',     label: 'Email',      icon: 'mail',      route: '#/email',     color: '#0ea5e9', cloudOnly: true,
       sub: [{ key: 'ready', label: 'Ready to send', icon: 'mail', route: '#/email' }, { key: 'log', label: 'Email log', icon: 'file', route: '#/email/log' }, { key: 'tpl', label: 'Templates & rules', icon: 'clipboard', route: '#/email/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', icon: 'gear', route: '#/email/settings', roles: ['admin'] }] },
     { key: 'whatsapp',  label: 'WhatsApp',   icon: 'chat',      route: '#/whatsapp',  color: '#22c55e',
@@ -146,6 +148,7 @@
     if (seg === 'trends') seg = 'reports';
     if (seg === 'signatures') seg = 'settings';
     if (seg === 'online-payments') seg = 'onlinepay';
+    if (seg === 'branch-dashboard') seg = 'branches';
     if (seg === 'digest') seg = 'whatsapp';
     if (seg === 'close-day') seg = 'finance';
     return seg || 'dashboard';
@@ -841,6 +844,7 @@
         '<a class="btn btn-sm tb-qab tb-classic tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>';
     var _curHash = (location.hash || '').split('?')[0];
     var _pageTitle = _curHash === '#/patients/new' ? 'Add Patient' :
+                     _curHash === '#/branch-dashboard' ? 'Branch Dashboard' :
                      _curHash === '#/packages' ? 'Health Packages & Screening Deals Center' :
                      _curHash === '#/invoices/pending' ? 'Pending Invoices' :
                      _curHash === '#/samples/stickers' ? 'Tube Stickers (50×25mm)' :
