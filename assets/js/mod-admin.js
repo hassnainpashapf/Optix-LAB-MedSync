@@ -2644,12 +2644,78 @@
           '</div>' +
         '</div>' +
 
+        '<!-- Panel 5: hosted gateway credentials -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">🔐</div>' +
+            '<div><h3 class="unifi-panel-title">Secure hosted checkout</h3>' +
+              '<p class="unifi-panel-desc">Connect your lab-owned JazzCash or Easypaisa merchant account. Credentials are encrypted on the server and never sent to patients.</p></div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<div id="pay-gateway-load" class="muted">Loading gateway settings…</div>' +
+            '<div id="pay-gateway-form" style="display:none">' +
+              '<div class="unifi-toggle-row"><div><b>JazzCash checkout</b><div class="muted" style="font-size:12px">Patients are redirected to JazzCash to pay the full invoice balance.</div></div>' +
+                '<label class="unifi-switch"><input type="checkbox" id="pg-jc-enabled"><span class="unifi-slider"></span></label></div>' +
+              '<div class="form-grid">' +
+                '<div><label class="label">Environment</label><select class="input" id="pg-jc-mode"><option value="sandbox">Sandbox / test</option><option value="live">Live</option></select></div>' +
+                '<div><label class="label">Merchant ID</label><input class="input" id="pg-jc-id" autocomplete="off"></div>' +
+                '<div><label class="label">Merchant password</label><input class="input" id="pg-jc-password" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved secret"></div>' +
+                '<div><label class="label">Integrity salt</label><input class="input" id="pg-jc-salt" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved secret"></div>' +
+              '</div>' +
+              '<div class="unifi-toggle-row" style="margin-top:18px"><div><b>Easypaisa checkout</b><div class="muted" style="font-size:12px">Payments are confirmed by querying Easypaisa from the server.</div></div>' +
+                '<label class="unifi-switch"><input type="checkbox" id="pg-ep-enabled"><span class="unifi-slider"></span></label></div>' +
+              '<div class="form-grid">' +
+                '<div><label class="label">Environment</label><select class="input" id="pg-ep-mode"><option value="sandbox">Sandbox / test</option><option value="live">Live</option></select></div>' +
+                '<div><label class="label">Store ID</label><input class="input" id="pg-ep-id" autocomplete="off"></div>' +
+                '<div style="grid-column:1/-1"><label class="label">Hash key</label><input class="input" id="pg-ep-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved secret"></div>' +
+              '</div>' +
+              '<div id="pay-gateway-callbacks" class="muted" style="font-size:12px;margin-top:14px"></div>' +
+            '</div>' +
+            '<div id="pay-gateway-error" style="color:var(--red);font-size:13px;margin-top:8px"></div>' +
+          '</div>' +
+        '</div>' +
+
         '<div class="unifi-save-bar">' +
           '<button class="btn btn-primary btn-lg" id="pay-save-btn" style="padding:10px 24px;font-weight:700">Save Payment Settings</button>' +
         '</div>' +
       '</div>';
 
     document.getElementById('setBody').innerHTML = html;
+
+    function gatewayRequest(method, body) {
+      var base = String(window.LABPOS_API || '').replace(/\/+$/, '');
+      if (!base || !DB.authHeaders) return Promise.reject(new Error('Connect to the cloud lab to configure hosted payment gateways.'));
+      var options = { method: method, headers: DB.authHeaders({ 'Content-Type': 'application/json' }) };
+      if (body) options.body = JSON.stringify(body);
+      return window.fetch(base + '/api/payment-gateway', options).then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          if (!response.ok) throw new Error(data.error || 'Could not load payment gateway settings.');
+          return data;
+        });
+      });
+    }
+    var gatewayState = null;
+    gatewayRequest('GET').then(function (data) {
+      gatewayState = data;
+      document.getElementById('pay-gateway-load').style.display = 'none';
+      document.getElementById('pay-gateway-form').style.display = '';
+      document.getElementById('pg-jc-enabled').checked = data.jazzcash.enabled;
+      document.getElementById('pg-jc-mode').value = data.jazzcash.mode;
+      document.getElementById('pg-jc-id').value = data.jazzcash.merchantId || '';
+      document.getElementById('pg-jc-password').placeholder = data.jazzcash.passwordSet ? 'Saved securely — leave blank to keep' : 'Merchant password';
+      document.getElementById('pg-jc-salt').placeholder = data.jazzcash.saltSet ? 'Saved securely — leave blank to keep' : 'Integrity salt';
+      document.getElementById('pg-ep-enabled').checked = data.easypaisa.enabled;
+      document.getElementById('pg-ep-mode').value = data.easypaisa.mode;
+      document.getElementById('pg-ep-id').value = data.easypaisa.storeId || '';
+      document.getElementById('pg-ep-key').placeholder = data.easypaisa.hashKeySet ? 'Saved securely — leave blank to keep' : 'Hash key';
+      document.getElementById('pay-gateway-callbacks').innerHTML =
+        'Configure these return URLs in the merchant portals: JazzCash return <code>' + App.esc(data.urls.jazzcashReturn) +
+        '</code>; Easypaisa customer return <code>' + App.esc(data.urls.easypaisaReturn) +
+        '</code>; Easypaisa IPN <code>' + App.esc(data.urls.easypaisaIpn) + '</code>.';
+    }, function (error) {
+      document.getElementById('pay-gateway-load').textContent = 'Hosted checkout settings are unavailable.';
+      document.getElementById('pay-gateway-error').textContent = error.message;
+    });
 
     document.getElementById('pay-save-btn').addEventListener('click', function () {
       DB.update('settings', 'main', {
@@ -2663,7 +2729,34 @@
         opRaastId: document.getElementById('pay-opRaastId').value.trim(),
         opInstructions: document.getElementById('pay-opInstructions').value.trim()
       });
-      App.toast('Payment settings saved.');
+      if (!gatewayState) { App.toast('Manual payment settings saved. Hosted gateway settings could not be loaded.', 'err'); return; }
+      gatewayRequest('PUT', {
+        jazzcash: {
+          enabled: document.getElementById('pg-jc-enabled').checked,
+          mode: document.getElementById('pg-jc-mode').value,
+          merchantId: document.getElementById('pg-jc-id').value.trim(),
+          password: document.getElementById('pg-jc-password').value,
+          salt: document.getElementById('pg-jc-salt').value
+        },
+        easypaisa: {
+          enabled: document.getElementById('pg-ep-enabled').checked,
+          mode: document.getElementById('pg-ep-mode').value,
+          storeId: document.getElementById('pg-ep-id').value.trim(),
+          hashKey: document.getElementById('pg-ep-key').value
+        }
+      }).then(function (data) {
+        gatewayState.ready = data.ready;
+        document.getElementById('pg-jc-password').value = '';
+        document.getElementById('pg-jc-salt').value = '';
+        document.getElementById('pg-ep-key').value = '';
+        document.getElementById('pg-jc-password').placeholder = 'Saved securely — leave blank to keep';
+        document.getElementById('pg-jc-salt').placeholder = 'Saved securely — leave blank to keep';
+        document.getElementById('pg-ep-key').placeholder = 'Saved securely — leave blank to keep';
+        App.toast('Payment and hosted gateway settings saved.');
+      }, function (error) {
+        document.getElementById('pay-gateway-error').textContent = error.message;
+        App.toast(error.message, 'err');
+      });
     });
   }
 

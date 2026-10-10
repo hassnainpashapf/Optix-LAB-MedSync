@@ -154,7 +154,7 @@
       return '<tr>' +
         '<td><a href="#/invoice/' + App.esc(c.invoiceId) + '" style="font-weight:700;color:var(--brand-d)">' + App.esc(inv ? inv.no : '—') + '</a></td>' +
         '<td>' + App.esc(c.patientName || 'Walk-in') + '</td>' +
-        '<td>' + App.esc(c.method || '—') + '</td>' +
+        '<td>' + App.esc(c.method || '—') + (c.gatewayReviewNote ? '<div style="font-size:11px;color:var(--muted);margin-top:3px">' + App.esc(c.gatewayReviewNote) + '</div>' : '') + '</td>' +
         '<td style="font-family:monospace;font-size:13px">' + App.esc(c.tid || '—') + '</td>' +
         '<td style="text-align:right;font-weight:700">' + App.money(c.amount) + '</td>' +
         '<td>' + (sender || '<span style="color:var(--muted)">—</span>') + '</td>' +

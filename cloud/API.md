@@ -143,6 +143,22 @@ Public: `GET /api/saas/plans` · `GET /api/saas/check-slug?slug=` · `POST /api/
 
 Signed-in lab: `GET /api/saas/me` (plan, status, usage, limits, payments) · `POST /api/saas/pay-request` (admin; manual JazzCash / Easypaisa / bank payment reference)
 
+### Patient invoice checkout
+
+Each lab configures its own JazzCash and/or Easypaisa merchant account in **Settings → Online Payments → Secure hosted checkout**.
+`GET|PUT /api/payment-gateway` are admin-only; merchant secrets are encrypted at rest and are never returned by `GET`.
+Keep the gateway in sandbox mode until its merchant account has been approved and its return/IPN URLs have been registered:
+
+- JazzCash return: `/api/portal/pay-return/jazzcash`
+- Easypaisa customer return: `/api/portal/pay-return/easypaisa/{txnRef}` (transaction reference is appended per checkout)
+- Easypaisa IPN: `/api/portal/pay-ipn/easypaisa`
+
+The patient portal exposes only configured methods. `POST /api/portal/pay` uses the patient portal bearer token and body
+`{ "invoiceId": "...", "gateway": "jazzcash" | "easypaisa" }`. The server verifies invoice ownership and current balance,
+creates a single in-progress checkout per invoice, and redirects the patient to the provider's hosted checkout. A payment is
+recorded against the invoice only after a signed JazzCash response or an Easypaisa transaction fetched from an approved
+Easypaisa host confirms the expected transaction reference, status, and amount. Browser return alone never marks an invoice paid.
+
 Operator (`X-Superadmin-Key`): `GET /api/saas/stats` · `GET|POST /api/saas/labs` · `PUT /api/saas/labs/:id` · `POST /api/saas/labs/:id/extend` · `POST /api/saas/labs/:id/reset-admin` · `DELETE /api/saas/labs/:id` (header `X-Confirm-Slug`) · `GET /api/saas/payments` · `POST /api/saas/payments/:id/approve|reject` · `GET|PUT /api/saas/settings`
 
 Status: `trial` → `expired` after the trial; `active` (paid) → `expired` 3 days after `paidUntil`; `suspended` by the operator. Expired labs are read-only (writes return 402 `EXPIRED`); plan limits return 402 `LIMIT_USERS` / `LIMIT_INVOICES`; a suspended lab cannot sign in (403).

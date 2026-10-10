@@ -14,19 +14,36 @@ async function testPatientBooking() {
     ptApNote: { value: 'Morning appointment' },
     ptApPatient: { value: '' }
   };
-  let submit, openAppointments, payload;
+  let submit, openAppointments, openBilling, openPayForm, startGatewayPayment, payload, paymentPayload, submittedForm;
   const submitButton = { addEventListener: (event, fn) => { if (event === 'click') submit = fn; } };
   const appointmentsTab = {
     getAttribute: (key) => key === 'data-v' ? 'appointments' : '',
     addEventListener: (event, fn) => { if (event === 'click') openAppointments = fn; }
   };
-  const body = { innerHTML: '', className: '' };
+  const billingTab = {
+    getAttribute: (key) => key === 'data-v' ? 'invoices' : '',
+    addEventListener: (event, fn) => { if (event === 'click') openBilling = fn; }
+  };
+  const gatewayButton = {
+    getAttribute: (key) => ({ 'data-pt-gateway': 'jazzcash', 'data-invoice': 'INV-1' }[key]),
+    addEventListener: (event, fn) => { if (event === 'click') startGatewayPayment = fn; }
+  };
+  const payToggleButton = {
+    getAttribute: (key) => key === 'data-pay' ? 'INV-1' : '',
+    addEventListener: (event, fn) => { if (event === 'click') openPayForm = fn; }
+  };
+  const body = { innerHTML: '', className: '', appendChild: (form) => { submittedForm = form; } };
   const document = {
     body,
     head: { appendChild() {} },
-    createElement: () => ({ id: '', textContent: '' }),
+    createElement: (tag) => ({
+      tag, children: [], appendChild(node) { this.children.push(node); },
+      submit() { submittedForm = this; }
+    }),
     getElementById: (id) => id === 'ptApSubmit' ? submitButton : (fields[id] || null),
-    querySelectorAll: (selector) => selector === '[data-v]' ? [appointmentsTab] : []
+    querySelectorAll: (selector) => selector === '[data-v]' ? [appointmentsTab, billingTab] :
+      (selector === '[data-pay]' ? [payToggleButton] :
+        (selector === '[data-pt-gateway]' ? [gatewayButton] : []))
   };
   const storage = new Map([['labpos_portal_ls', JSON.stringify({
     lab: 'demo', token: 'test-token', at: Date.now(), days: 1
@@ -42,8 +59,9 @@ async function testPatientBooking() {
     patient: {
       names: ['Test Patient'],
       profiles: [{ id: 'P1', name: 'Test Patient' }],
-      reports: [], invoices: [], payments: [], appointments: [],
-      paymentInfo: { methods: [] }
+      reports: [], invoices: [{ id: 'INV-1', no: '1001', date, total: 2500, paid: 0, due: 2500, tests: 'CBC' }],
+      payments: [], appointments: [],
+      paymentInfo: { enabled: true, methods: [], gateway: { jazzcash: true, easypaisa: false } }
     },
     doctor: null
   };
@@ -60,15 +78,23 @@ async function testPatientBooking() {
         payload = JSON.parse(options.body);
         return { ok: true, status: 201, json: async () => ({ ok: true }) };
       }
+      if (url.includes('/api/portal/pay')) {
+        paymentPayload = JSON.parse(options.body);
+        return { ok: true, status: 201, json: async () => ({
+          ok: true,
+          checkout: { method: 'POST', url: 'https://sandbox.jazzcash.com.pk/CustomerPortal/transactionmanagement/merchantform/', fields: { pp_TxnRefNo: 'INV-REF', pp_SecureHash: 'signed' } }
+        }) };
+      }
       if (url.includes('/api/portal/data')) return { ok: true, json: async () => patientData };
       throw new Error('Unexpected URL: ' + url);
     },
-    scrollTo() {}
+    scrollTo() {},
+    location: { href: '' }
   };
   const context = {
     window, document, navigator: { userAgent: '' }, localStorage, sessionStorage: localStorage,
     location: { hash: '#/portal/demo', href: 'https://example.test/app/#/portal/demo' },
-    history: { replaceState() {} }, Promise, Date, setInterval, clearInterval, console
+    history: { replaceState() {} }, Promise, Date, URL, setInterval, clearInterval, console
   };
   vm.runInNewContext(fs.readFileSync('assets/js/mod-portal.js', 'utf8'), context);
   window.App.renderPortal(context.location.hash);
@@ -85,6 +111,16 @@ async function testPatientBooking() {
     date, timeSlot: '09:00-11:00', serviceType: 'lab-visit',
     note: 'Morning appointment', patientId: ''
   });
+  openBilling();
+  openPayForm();
+  assert.match(body.innerHTML, /Pay securely online/);
+  assert.strictEqual(typeof startGatewayPayment, 'function');
+  startGatewayPayment();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(paymentPayload)), { invoiceId: 'INV-1', gateway: 'jazzcash' });
+  assert.strictEqual(submittedForm.method, 'POST');
+  assert.strictEqual(submittedForm.action, 'https://sandbox.jazzcash.com.pk/CustomerPortal/transactionmanagement/merchantform/');
+  assert.deepStrictEqual(submittedForm.children.map((input) => [input.name, input.value]), [['pp_TxnRefNo', 'INV-REF'], ['pp_SecureHash', 'signed']]);
 }
 
 async function testOfflinePortalAfterInfoFailure() {

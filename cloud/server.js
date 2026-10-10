@@ -248,6 +248,20 @@ async function main() {
   const mailKey = () => crypto.createHash('sha256').update('labpos-mail|' + SESSION_SECRET).digest();
   const encPw = (pw) => { const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', mailKey(), iv), ct = Buffer.concat([c.update(String(pw), 'utf8'), c.final()]); return 'v1:' + iv.toString('hex') + ':' + c.getAuthTag().toString('hex') + ':' + ct.toString('hex'); };
   const decPw = (e) => { try { const [v, iv, tag, ct] = String(e).split(':'); if (v !== 'v1') return ''; const d = crypto.createDecipheriv('aes-256-gcm', mailKey(), Buffer.from(iv, 'hex')); d.setAuthTag(Buffer.from(tag, 'hex')); return Buffer.concat([d.update(Buffer.from(ct, 'hex')), d.final()]).toString('utf8'); } catch (e2) { return ''; } };
+  const patientPayConfigKey = (labId) => 'patient_paygw:' + crypto.createHash('sha256').update(String(labId || 'main')).digest('hex').slice(0, 32);
+  async function patientPayConfig(labId) {
+    const saved = (await rawStore.getMeta(patientPayConfigKey(labId))) || {}, jc = saved.jazzcash || {}, ep = saved.easypaisa || {};
+    return {
+      jazzcash: { enabled: !!jc.enabled, mode: jc.mode === 'live' ? 'live' : 'sandbox', merchantId: jc.merchantId || '', password: jc.password ? decPw(jc.password) : '', salt: jc.salt ? decPw(jc.salt) : '' },
+      easypaisa: { enabled: !!ep.enabled, mode: ep.mode === 'live' ? 'live' : 'sandbox', storeId: ep.storeId || '', hashKey: ep.hashKey ? decPw(ep.hashKey) : '' },
+    };
+  }
+  const patientPayReady = (cfg) => ({
+    jazzcash: !!(cfg.jazzcash.enabled && cfg.jazzcash.merchantId && cfg.jazzcash.password && cfg.jazzcash.salt),
+    easypaisa: !!(cfg.easypaisa.enabled && cfg.easypaisa.storeId && cfg.easypaisa.hashKey)
+  });
+  const patientPayTxnKey = (txnRef) => 'patient_pay_txn:' + String(txnRef || '').replace(/[^A-Za-z0-9_-]/g, '');
+  const patientPayOpenKey = (labId, invoiceId) => 'patient_pay_open:' + crypto.createHash('sha256').update(String(labId || '') + '|' + String(invoiceId || '')).digest('hex').slice(0, 32);
   async function loadMailConfig() {
     try { const m = await rawStore.getMeta(MAIL_META); mailer.setConfig(m && m.host ? { host: m.host, port: m.port, secure: m.secure, user: m.user, from: m.from, pass: m.pass ? decPw(m.pass) : '' } : null); } catch (e) { /* env settings stay in effect */ }
   }
@@ -962,6 +976,60 @@ async function main() {
     });
     /* what the lab's Subscription page may offer */
     app.get('/api/saas/pay-options', needUser, async (req, res) => res.json(gwReady(await gwLoad())));
+    app.get('/api/payment-gateway', needAdmin, async (req, res) => {
+      const labId = req.lab ? req.lab.id : 'main', cfg = await patientPayConfig(labId), ready = patientPayReady(cfg);
+      res.json({
+        jazzcash: { enabled: cfg.jazzcash.enabled, mode: cfg.jazzcash.mode, merchantId: cfg.jazzcash.merchantId, passwordSet: !!cfg.jazzcash.password, saltSet: !!cfg.jazzcash.salt },
+        easypaisa: { enabled: cfg.easypaisa.enabled, mode: cfg.easypaisa.mode, storeId: cfg.easypaisa.storeId, hashKeySet: !!cfg.easypaisa.hashKey },
+        ready,
+        urls: {
+          jazzcashReturn: apiBase(req) + '/api/portal/pay-return/jazzcash',
+          easypaisaReturn: apiBase(req) + '/api/portal/pay-return/easypaisa/{txnRef}',
+          easypaisaIpn: apiBase(req) + '/api/portal/pay-ipn/easypaisa'
+        }
+      });
+    });
+    app.put('/api/payment-gateway', needAdmin, async (req, res) => {
+      try {
+        const labId = req.lab ? req.lab.id : 'main', key = patientPayConfigKey(labId);
+        const old = (await rawStore.getMeta(key)) || {}, b = req.body || {}, jb = b.jazzcash || {}, eb = b.easypaisa || {};
+        const ID = /^[A-Za-z0-9_.-]{3,60}$/;
+        const sec = (v, keep) => {
+          v = String(v == null ? '' : v);
+          if (!v) return keep || '';
+          if (v.length > 120) throw new Error('A gateway secret is too long');
+          return encPw(v);
+        };
+        const next = { jazzcash: Object.assign({}, old.jazzcash), easypaisa: Object.assign({}, old.easypaisa) };
+        if (b.jazzcash) {
+          const current = old.jazzcash || {};
+          const merchantId = String(jb.merchantId == null ? current.merchantId || '' : jb.merchantId).trim();
+          if (merchantId && !ID.test(merchantId)) throw new Error('JazzCash Merchant ID looks wrong');
+          next.jazzcash = {
+            enabled: !!jb.enabled, mode: jb.mode === 'live' ? 'live' : 'sandbox', merchantId,
+            password: sec(jb.password, current.password), salt: sec(jb.salt, current.salt)
+          };
+        }
+        if (b.easypaisa) {
+          const current = old.easypaisa || {};
+          const storeId = String(eb.storeId == null ? current.storeId || '' : eb.storeId).trim();
+          if (storeId && !ID.test(storeId)) throw new Error('Easypaisa Store ID looks wrong');
+          next.easypaisa = {
+            enabled: !!eb.enabled, mode: eb.mode === 'live' ? 'live' : 'sandbox', storeId,
+            hashKey: sec(eb.hashKey, current.hashKey)
+          };
+        }
+        const ready = patientPayReady({
+          jazzcash: Object.assign({}, next.jazzcash, { password: next.jazzcash.password ? decPw(next.jazzcash.password) : '', salt: next.jazzcash.salt ? decPw(next.jazzcash.salt) : '' }),
+          easypaisa: Object.assign({}, next.easypaisa, { hashKey: next.easypaisa.hashKey ? decPw(next.easypaisa.hashKey) : '' })
+        });
+        if (next.jazzcash.enabled && !ready.jazzcash) throw new Error('Enter the JazzCash merchant ID, password, and integrity salt before enabling checkout');
+        if (next.easypaisa.enabled && !ready.easypaisa) throw new Error('Enter the Easypaisa store ID and hash key before enabling checkout');
+        await rawStore.setMeta(key, next);
+        await auditLog(req, 'update', 'payment-gateway', labId, { label: 'Patient payment gateway settings updated' });
+        res.json({ ok: true, ready });
+      } catch (e) { res.status(400).json({ error: e.message }); }
+    });
     const appBack = (res, what) => res.redirect(302, APP_URL + '/app/#/subscription?pay=' + what);
     /* a verified "paid" report for a payment request: extend the subscription exactly once */
     async function onlinePaid(txnRef, gateway, amount) {
@@ -979,6 +1047,150 @@ async function main() {
         return { ok: true };
       } finally { payBusy.delete(p.id); }
     }
+    const patientPayBack = (res, tx, state) => {
+      const slug = String(tx && tx.labSlug || '').replace(/[^A-Za-z0-9-]/g, '');
+      return res.redirect(302, APP_URL + '/app/#/portal/' + slug + '?payment=' + encodeURIComponent(state));
+    };
+    async function patientPaymentReviewClaim(st, tx, amount, reason, req) {
+      const claims = await st.all('onlinepay_claims');
+      if (claims.some((c) => String(c.tid || '') === tx.txnRef)) return;
+      const patient = await st.get('patients', String(tx.patientId));
+      const claim = {
+        id: 'OPC-' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
+        invoiceId: tx.invoiceId, patientId: tx.patientId, patientName: String(patient && patient.name || 'Patient'),
+        method: tx.gateway === 'jazzcash' ? 'JazzCash' : 'Easypaisa', tid: tx.txnRef,
+        amount: Math.round((Number(amount) || 0) * 100) / 100, senderName: 'Gateway checkout', senderNumber: '',
+        status: 'pending', rejectReason: '', gatewayReviewNote: String(reason || '').slice(0, 180),
+        createdAt: Date.now(), createdBy: 'Patient Portal'
+      };
+      if (!(claim.amount > 0)) return;
+      await st.put('onlinepay_claims', claim);
+      await auditLog(req, 'create', 'onlinepay_claims', claim.id, {
+        store: st, actor: { id: 'portal:' + tx.phone, name: 'Patient Portal', role: 'patient' },
+        label: 'Gateway payment requires review (' + tx.txnRef + ')'
+      });
+    }
+    async function settlePatientPayment(txnRef, gateway, amount, req) {
+      const key = patientPayTxnKey(txnRef);
+      return withLock('patient-gateway-payment|' + key, async () => {
+        const tx = await rawStore.getMeta(key);
+        if (!tx || tx.gateway !== gateway) return { ok: false, why: 'unknown payment' };
+        if (tx.status === 'paid') return { ok: true, already: true, tx };
+        if (tx.status !== 'awaiting') return { ok: false, why: 'payment is ' + tx.status, tx };
+        const lab = await saas.getLab(tx.labId);
+        if (!lab) return { ok: false, why: 'lab not found', tx };
+        const st = saas.storeFor(lab), inv = await st.get('invoices', String(tx.invoiceId));
+        if (!inv || String(inv.patientId) !== String(tx.patientId)) {
+          tx.status = 'review'; tx.updatedAt = new Date().toISOString(); tx.reason = 'Invoice ownership changed';
+          await rawStore.setMeta(key, tx);
+          await rawStore.setMeta(patientPayOpenKey(tx.labId, tx.invoiceId), null);
+          return { ok: false, why: 'invoice unavailable', tx };
+        }
+        const checkoutExpired = !Number.isFinite(Date.parse(tx.createdAt)) || Date.now() - Date.parse(tx.createdAt) > 4 * 3600000;
+        const amountMismatch = Math.abs((+amount || 0) - (+tx.amount || 0)) > 0.009;
+        if (checkoutExpired || amountMismatch) {
+          tx.status = 'review'; tx.updatedAt = new Date().toISOString();
+          tx.reason = checkoutExpired ? 'Gateway confirmed a payment after checkout expiry' : 'Gateway amount mismatch';
+          await rawStore.setMeta(key, tx);
+          await rawStore.setMeta(patientPayOpenKey(tx.labId, tx.invoiceId), null);
+          await patientPaymentReviewClaim(st, tx, amount, tx.reason, req);
+          console.error('[labpos-cloud] patient payment requires review:', txnRef, tx.reason);
+          return { ok: false, why: tx.reason, tx };
+        }
+        const paymentId = 'GW-' + tx.txnRef;
+        await withLock('invoice-payment|' + tx.labId + '|' + tx.invoiceId, async () => {
+          const current = await st.get('invoices', String(tx.invoiceId));
+          if (!current || String(current.patientId) !== String(tx.patientId)) throw new Error('Invoice ownership changed');
+          const payments = await st.all('payments');
+          const existing = payments.find((p) => String(p.id) === paymentId);
+          if (!existing) {
+            const due = Math.round((Number(current.due) || 0) * 100) / 100;
+            if (due + 0.009 < Number(tx.amount)) {
+              tx.status = 'review'; tx.updatedAt = new Date().toISOString(); tx.reason = 'Invoice balance changed before payment confirmation';
+              await rawStore.setMeta(key, tx);
+              await patientPaymentReviewClaim(st, tx, amount, tx.reason, req);
+              return;
+            }
+            await st.put('payments', {
+              id: paymentId, invoiceId: current.id, amount: tx.amount, method: gateway === 'jazzcash' ? 'JazzCash (online)' : 'Easypaisa (online)',
+              date: new Date().toISOString(), note: 'Gateway transaction ' + tx.txnRef, createdBy: 'Patient Portal'
+            });
+          }
+          const refreshedPayments = await st.all('payments');
+          const paid = Math.round(refreshedPayments.filter((p) => String(p.invoiceId) === String(current.id)).reduce((sum, p) => sum + (Number(p.amount) || 0), 0) * 100) / 100;
+          const due = Math.max(0, Math.round((Number(current.total) - paid) * 100) / 100);
+          await st.put('invoices', Object.assign({}, current, { paid, due, status: due <= 0.009 ? 'paid' : (paid > 0 ? 'partial' : 'unpaid') }));
+        });
+        const latest = await rawStore.getMeta(key);
+        if (latest.status === 'review') {
+          await rawStore.setMeta(patientPayOpenKey(tx.labId, tx.invoiceId), null);
+          return { ok: false, why: latest.reason, tx: latest };
+        }
+        latest.status = 'paid'; latest.paidAt = new Date().toISOString(); latest.updatedAt = latest.paidAt;
+        await rawStore.setMeta(key, latest);
+        await rawStore.setMeta(patientPayOpenKey(tx.labId, tx.invoiceId), null);
+        await auditLog(req, 'gateway-payment', 'invoices', tx.invoiceId, {
+          store: st, actor: { id: 'portal:' + tx.phone, name: 'Patient Portal', role: 'patient' },
+          label: gateway + ' payment verified (' + tx.txnRef + ')'
+        });
+        return { ok: true, tx: latest };
+      });
+    }
+    app.post('/api/portal/pay-return/jazzcash', express.urlencoded({ extended: false, limit: '64kb' }), async (req, res) => {
+      const txnRef = String((req.body || {}).pp_TxnRefNo || ''), tx = await rawStore.getMeta(patientPayTxnKey(txnRef));
+      if (!tx || tx.gateway !== 'jazzcash') return res.status(400).send('Unknown payment');
+      try {
+        const cfg = (await patientPayConfig(tx.labId)).jazzcash, v = paygw.jcVerify(cfg, req.body || {});
+        if (!v.ok || v.txnRef !== tx.txnRef) return res.status(400).send('Payment signature could not be verified');
+        if (!v.paid) {
+          tx.status = 'failed'; tx.updatedAt = new Date().toISOString(); tx.reason = String(v.message || 'Payment was not completed').slice(0, 160);
+          await rawStore.setMeta(patientPayTxnKey(txnRef), tx);
+          await rawStore.setMeta(patientPayOpenKey(tx.labId, tx.invoiceId), null);
+          return patientPayBack(res, tx, 'failed');
+        }
+        const result = await settlePatientPayment(txnRef, 'jazzcash', v.amount, req);
+        return patientPayBack(res, tx, result.ok ? 'success' : 'pending');
+      } catch (e) {
+        console.error('[labpos-cloud] patient JazzCash return failed:', String(e.message || e).slice(0, 120));
+        return patientPayBack(res, tx, 'pending');
+      }
+    });
+    app.get('/api/portal/pay-return/easypaisa/:txnRef', async (req, res) => {
+      const txnRef = String(req.params.txnRef || ''), tx = await rawStore.getMeta(patientPayTxnKey(txnRef));
+      const token = String(req.query.auth_token || '');
+      if (!tx || tx.gateway !== 'easypaisa' || !token || token.length > 500) return res.status(400).send('Unknown payment');
+      try {
+        const cfg = (await patientPayConfig(tx.labId)).easypaisa;
+        return res.redirect(302, paygw.epConfirmUrl(cfg, token, apiBase(req) + '/api/portal/pay-final/easypaisa/' + encodeURIComponent(txnRef)));
+      } catch (e) { return patientPayBack(res, tx, 'pending'); }
+    });
+    app.get('/api/portal/pay-final/easypaisa/:txnRef', async (req, res) => {
+      const tx = await rawStore.getMeta(patientPayTxnKey(req.params.txnRef));
+      return tx ? patientPayBack(res, tx, 'pending') : res.status(404).send('Unknown payment');
+    });
+    const patientEasypaisaIpn = async (req, res) => {
+      try {
+        const url = String((req.query && req.query.url) || (req.body && req.body.url) || '');
+        if (!paygw.epIpnUrlOk(url)) return res.status(400).send('bad url');
+        const abort = new AbortController(), timeout = setTimeout(() => abort.abort(), 10000);
+        let result;
+        try {
+          const response = await fetch(url, { signal: abort.signal });
+          if (!response.ok) throw new Error('Gateway verification request failed');
+          result = paygw.epReadTxn(await response.json());
+        } finally { clearTimeout(timeout); }
+        const tx = await rawStore.getMeta(patientPayTxnKey(result.txnRef));
+        if (result.ok && result.paid && tx && tx.gateway === 'easypaisa') {
+          await settlePatientPayment(result.txnRef, 'easypaisa', result.amount, req);
+        }
+        return res.send('OK');
+      } catch (e) {
+        console.error('[labpos-cloud] patient Easypaisa IPN failed:', String(e.message || e).slice(0, 120));
+        return res.status(500).send('error');
+      }
+    };
+    app.get('/api/portal/pay-ipn/easypaisa', patientEasypaisaIpn);
+    app.post('/api/portal/pay-ipn/easypaisa', express.urlencoded({ extended: false, limit: '64kb' }), patientEasypaisaIpn);
     app.post('/api/saas/pay-online', needAdmin, async (req, res) => {
       try {
         const lab = req.lab || await saas.getLab('main'), b = req.body || {}, plans = await saas.getPlans();
@@ -1444,6 +1656,7 @@ async function main() {
 
     async function portalBuild(req, lab, st, set, w) {
       const invs = await st.all('invoices'), results = await st.all('results'), patById = {}; (await st.all('patients')).forEach((p) => { patById[p.id] = p; });
+        const gatewayReady = patientPayReady(await patientPayConfig(lab.id));
         const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
         const allPayments = await st.all('payments'), claims = await st.all('onlinepay_claims');
         const allAppointments = await st.all('appointments');
@@ -1490,7 +1703,7 @@ async function main() {
             })),
             paymentInfo: {
               enabled: !!set.opEnabled, instructions: String(set.opInstructions || '').slice(0, 500),
-              methods: paymentMethods
+              methods: paymentMethods, gateway: set.opEnabled ? gatewayReady : { jazzcash: false, easypaisa: false }
             }
           };
         }
@@ -1618,6 +1831,68 @@ async function main() {
       } catch (e) {
         console.error('[labpos-cloud] portal payment claim failed:', String(e.message || e).slice(0, 160));
         res.status(500).json({ error: 'Could not submit the payment claim. Please try again.' });
+      }
+    });
+    app.post('/api/portal/pay', async (req, res) => {
+      try {
+        const m = /^Bearer\s+(.+)$/i.exec(String(req.get('Authorization') || '')), t = m && readToken(PSECRET, m[1]);
+        if (!t || !t.lab || !/^\d{10}$/.test(String(t.ph))) return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        if (bump(prVer, req.ip, 3600000).n > 80) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        const lab = await saas.getLab(t.lab);
+        if (!lab || saas.effStatus(lab) === 'suspended') return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        const st = saas.storeFor(lab), set = (await st.get('settings', 'main')) || {};
+        if (!set.portalOn) return res.status(403).json({ error: 'The portal is switched off for this lab.' });
+        if (!set.opEnabled) return res.status(403).json({ error: 'Online payment is not enabled by this lab.' });
+        const b = req.body || {}, invoiceId = String(b.invoiceId || '').slice(0, 64), gateway = String(b.gateway || '');
+        if (!invoiceId || !['jazzcash', 'easypaisa'].includes(gateway)) return res.status(400).json({ error: 'Choose an invoice and a supported payment method.' });
+        const cfg = await patientPayConfig(lab.id), ready = patientPayReady(cfg);
+        if (!ready[gateway]) return res.status(400).json({ error: 'This payment method is not configured by the lab.' });
+        const patients = (await st.all('patients')).filter((p) => pkey(p.phone) === t.ph || pkey(p.whatsapp) === t.ph);
+        const patientIds = new Set(patients.map((p) => String(p.id)));
+        const create = await withLock('patient-pay-create|' + lab.id + '|' + invoiceId, async () => {
+          const inv = await st.get('invoices', invoiceId);
+          if (!inv || !patientIds.has(String(inv.patientId))) return { error: 'Invoice not found for this portal account.', status: 404 };
+          const amount = Math.round((Number(inv.due) || 0) * 100) / 100;
+          if (!(amount > 0)) return { error: 'This invoice has no outstanding balance.', status: 409 };
+          const openKey = patientPayOpenKey(lab.id, invoiceId), oldRef = await rawStore.getMeta(openKey);
+          if (oldRef) {
+            const old = await rawStore.getMeta(patientPayTxnKey(oldRef));
+            if (old && old.status === 'awaiting' && Date.now() - Date.parse(old.createdAt) < 3 * 3600000) {
+              return { error: 'A payment is already in progress for this invoice. Finish it or wait for it to expire.', status: 409 };
+            }
+            await rawStore.setMeta(openKey, null);
+          }
+          const recent = await rawStore.getMeta('patient_pay_count:' + lab.id + ':' + t.ph);
+          if (recent && recent.day === new Date().toISOString().slice(0, 10) && recent.count >= 10) return { error: 'Too many payment attempts today. Please try again tomorrow.', status: 429 };
+          const txnRef = 'INV' + Date.now() + crypto.randomBytes(4).toString('hex');
+          const tx = {
+            txnRef, labId: lab.id, labSlug: lab.slug, invoiceId: inv.id, invoiceNo: String(inv.no || inv.id).slice(0, 30),
+            patientId: inv.patientId, phone: t.ph, amount, gateway, status: 'awaiting', createdAt: new Date().toISOString()
+          };
+          await rawStore.setMeta(patientPayTxnKey(txnRef), tx);
+          await rawStore.setMeta(openKey, txnRef);
+          await rawStore.setMeta('patient_pay_count:' + lab.id + ':' + t.ph, {
+            day: new Date().toISOString().slice(0, 10), count: (recent && recent.day === new Date().toISOString().slice(0, 10) ? recent.count : 0) + 1
+          });
+          return { tx, patient: patients.find((p) => String(p.id) === String(inv.patientId)) };
+        });
+        if (create.error) return res.status(create.status).json({ error: create.error });
+        const tx = create.tx, email = String(create.patient && create.patient.email || '').slice(0, 200);
+        const checkoutOpts = {
+          txnRef: tx.txnRef, amount: tx.amount, billRef: tx.invoiceNo,
+          description: String((set.labName || lab.name) + ' invoice ' + tx.invoiceNo).slice(0, 100), email
+        };
+        const checkout = gateway === 'jazzcash'
+          ? paygw.jcCheckout(cfg.jazzcash, Object.assign(checkoutOpts, { returnUrl: apiBase(req) + '/api/portal/pay-return/jazzcash' }))
+          : paygw.epCheckout(cfg.easypaisa, Object.assign(checkoutOpts, { returnUrl: apiBase(req) + '/api/portal/pay-return/easypaisa/' + encodeURIComponent(tx.txnRef) }));
+        await auditLog(req, 'gateway-payment-start', 'invoices', tx.invoiceId, {
+          store: st, actor: { id: 'portal:' + t.ph, name: 'Patient Portal', role: 'patient' },
+          label: gateway + ' checkout started (' + tx.txnRef + ')'
+        });
+        res.status(201).json({ ok: true, gateway, checkout, amount: tx.amount });
+      } catch (e) {
+        console.error('[labpos-cloud] patient gateway checkout failed:', String(e.message || e).slice(0, 160));
+        res.status(500).json({ error: 'Could not start the payment. Please try again.' });
       }
     });
 

@@ -101,6 +101,14 @@
 
   function card(x) { return '<div class="pt-card">' + x + '</div>'; }
   function msg() { return (S.err ? '<div class="pt-err">' + esc(S.err) + '</div>' : '') + (S.note ? '<div class="pt-ok">' + esc(S.note) + '</div>' : ''); }
+  function paymentStatusMessage() {
+    var match = /[?&]payment=(success|pending|failed)/.exec(location.hash || '');
+    if (!match) return '';
+    try { history.replaceState(null, '', location.href.replace(/[?&]payment=(?:success|pending|failed)/, '')); } catch (e) {}
+    if (match[1] === 'success') return 'Gateway verified your payment and updated the invoice balance.';
+    if (match[1] === 'pending') return 'The gateway returned, but payment confirmation is still pending. Refresh Billing shortly; the balance changes only after verification.';
+    return 'The gateway did not complete the payment. Your invoice balance is unchanged.';
+  }
 
   function repHtml(r, doc) {
     var chip = r.status === 'ready' ? '<span class="pt-chip g">Ready</span>' : (r.status === 'locked' ? '<span class="pt-chip o">Balance pending</span>' : (r.status === 'preparing' ? '<span class="pt-chip n">Getting ready</span>' : '<span class="pt-chip n">Not ready yet</span>'));
@@ -158,8 +166,14 @@
   function paymentForm(inv, info) {
     if (S.offline) return '<div class="pt-payinfo">Payment claims need an internet connection. Your saved billing details are read-only offline.</div>';
     var methods = info.methods || [];
-    if (!methods.length) return '<div class="pt-payinfo">The lab has not added payment account details yet. Please contact the lab to pay.</div>';
-    return '<div class="pt-payinfo"><b>Pay the lab using one of these accounts</b><div class="pt-pay-grid">' + methods.map(function (m) {
+    var gw = info.gateway || {}, hosted = '';
+    if (gw.jazzcash || gw.easypaisa) {
+      hosted = '<div class="pt-payinfo"><b>Pay securely online</b><p class="pt-sub" style="margin:5px 0 8px">Your full outstanding balance will be paid through the lab\'s verified merchant account.</p>' +
+        (gw.jazzcash ? '<button class="pt-btn" type="button" data-pt-gateway="jazzcash" data-invoice="' + esc(inv.id) + '"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Opening checkout…' : 'Pay with JazzCash · ' + money(inv.due)) + '</button>' : '') +
+        (gw.easypaisa ? '<button class="pt-btn" type="button" data-pt-gateway="easypaisa" data-invoice="' + esc(inv.id) + '"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Opening checkout…' : 'Pay with Easypaisa · ' + money(inv.due)) + '</button>' : '') + '</div>';
+    }
+    if (!methods.length) return hosted || '<div class="pt-payinfo">The lab has not added payment account details yet. Please contact the lab to pay.</div>';
+    return hosted + '<div class="pt-payinfo"><b>Pay the lab using one of these accounts</b><div class="pt-pay-grid">' + methods.map(function (m) {
       return '<div class="pt-pay-method"><b>' + esc(m.method) + '</b><br>' + esc(m.number) + (m.title ? '<br>' + esc(m.title) : '') + '</div>';
     }).join('') + '</div>' + (info.instructions ? '<div style="margin-top:8px;white-space:pre-wrap">' + esc(info.instructions) + '</div>' : '') +
       '<div class="pt-pay-form"><label for="ptPayMethod">Payment method</label><select class="pt-in pt-s" id="ptPayMethod">' + methods.map(function (m) { return '<option value="' + esc(m.method) + '">' + esc(m.method) + '</option>'; }).join('') + '</select>' +
@@ -256,6 +270,8 @@
         '<button class="pt-btn" id="ptVerify"' + (S.busy ? ' disabled' : '') + '>' + (S.busy ? 'Checking…' : 'Show my reports') + '</button>' +
         '<div style="display:flex;justify-content:space-between"><button class="pt-link" id="ptResend"' + (S.cool > 0 ? ' disabled style="opacity:.5"' : '') + '>' + (S.cool > 0 ? 'Send again in ' + S.cool + 's' : 'Send a new code') + '</button><button class="pt-link" id="ptBack">Change number</button></div>');
     } else {
+      var gatewayNote = paymentStatusMessage();
+      if (gatewayNote) S.note = gatewayNote;
       h += (S.offline ? '<div class="pt-offline">Offline read-only view · encrypted on this device · last refreshed ' + esc(new Date(S.offlineAt || 0).toLocaleString()) + '</div>' : '') + msg() + appHtml();
     }
     h += '<div class="pt-foot">Powered by System Optix</div></div>' + (S.step === 'app' ? barHtml() : '');
@@ -313,6 +329,33 @@
       api('payment-claim', { token: S.token, body: { invoiceId: invoiceId, method: method, tid: tid, senderName: senderName, senderNumber: senderNumber, amount: amount } }).then(function () {
         S.busy = false; S.payInvoice = ''; S.note = 'Payment submitted for verification. Your balance will update after the lab confirms it.'; load();
       }, function (e) { S.busy = false; S.err = e.message; paint(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-pt-gateway]'), function (b) {
+      b.addEventListener('click', function () {
+        if (S.offline) { S.err = 'Connect to the internet before starting a payment.'; paint(); return; }
+        var gateway = b.getAttribute('data-pt-gateway'), invoiceId = b.getAttribute('data-invoice');
+        S.err = ''; S.busy = true; paint();
+        api('pay', { token: S.token, body: { invoiceId: invoiceId, gateway: gateway } }).then(function (result) {
+          S.busy = false;
+          var checkout = result.checkout || {}, target;
+          try { target = new URL(checkout.url); } catch (e) { S.err = 'The payment gateway returned an invalid checkout address.'; paint(); return; }
+          var allowed = gateway === 'jazzcash'
+            ? ['payments.jazzcash.com.pk', 'sandbox.jazzcash.com.pk']
+            : ['easypay.easypaisa.com.pk', 'easypaystg.easypaisa.com.pk'];
+          if (target.protocol !== 'https:' || allowed.indexOf(target.hostname) < 0) {
+            S.err = 'The payment gateway returned an untrusted checkout address.'; paint(); return;
+          }
+          if (checkout.method === 'POST' && checkout.fields && typeof checkout.fields === 'object') {
+            var form = document.createElement('form'); form.method = 'POST'; form.action = target.href;
+            Object.keys(checkout.fields).forEach(function (key) {
+              var input = document.createElement('input'); input.type = 'hidden'; input.name = key; input.value = String(checkout.fields[key]);
+              form.appendChild(input);
+            });
+            document.body.appendChild(form); form.submit();
+          } else if (checkout.method === 'GET') window.location.href = target.href;
+          else { S.err = 'The payment gateway response could not be used.'; paint(); }
+        }, function (e) { S.busy = false; S.err = e.message; paint(); });
+      });
     });
     on('ptApSubmit', function () {
       if (S.offline) { S.err = 'Connect to the internet before requesting an appointment.'; paint(); return; }
