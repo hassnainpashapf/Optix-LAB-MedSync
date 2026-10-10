@@ -1567,7 +1567,7 @@
       + '<div class="kpi t-navy">'
       +   '<div class="kpi-ic">' + App.icon('chart', 18) + '</div>'
       +   '<div class="kpi-lb">HISTORICAL READINGS</div>'
-      +   '<div class="kpi-nm">' + pts.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">readings</span></div>'
+      +   '<div class="kpi-nm">' + pts.length + '</div>'
       +   '<div class="kpi-sb">' + (pts.length > 1 ? 'From ' + App.d(basePt.t) + ' to ' + App.d(latestPt.t) : (pts.length ? '1 visit recorded' : '0 readings recorded')) + '</div>'
       + '</div>'
       + '<div class="kpi t-purple">'
@@ -1663,10 +1663,7 @@
       html += '<div class="card"><div class="card-b" style="text-align:center;padding:40px 20px">'
         + '<div style="font-size:42px;margin-bottom:12px">🧪</div>'
         + '<h3 style="margin:0 0 6px">No Numeric Lab Test Results Found</h3>'
-        + '<p class="muted" style="margin:0 0 16px;max-width:500px;margin-left:auto;margin-right:auto">'
-        + 'Patient <b>' + App.esc(curPat.name) + '</b> does not have finalized numeric test results yet. '
-        + 'When tests like Blood Sugar, CBC, Creatinine, Lipid Profile, or Electrolytes are finalized with numeric values in Lab Results, their multi-visit historical trend graphs and delta analyses will display here.'
-        + '</p>'
+        + '<p class="muted" style="margin:0 0 16px">No finalized numeric results for <b>' + App.esc(curPat.name) + '</b> yet.</p>'
         + '<div style="display:flex;justify-content:center;gap:10px">'
         + '<a href="#/results" class="btn btn-primary">Go to Lab Results &rarr;</a>'
         + '<a href="#/billing/' + App.esc(curPat.id) + '" class="btn btn-ghost">+ New Bill for Patient</a>'
@@ -1692,7 +1689,6 @@
       +   '</div>'
       + '</div>'
       + '<div class="card-b" style="padding:16px 20px">'
-      +   (pts.length === 1 ? '<p class="muted" style="margin:0 0 10px;font-size:12.5px">📌 Only 1 reading recorded so far. Continuous connection curves connect automatically across upcoming visits.</p>' : '')
       +   buildTrendSvg(selSeries, pts)
       + '</div></div>';
 
@@ -1752,7 +1748,7 @@
 
     html += '<div class="card" style="margin-bottom:20px">'
       + '<div class="card-h"><h3 style="margin:0">Delta Check &amp; Clinical Progress Log</h3>'
-      + '<span class="muted" style="font-size:12.5px">' + pts.length + ' chronologically recorded readings</span></div>'
+      + '</div>'
       + '<div class="card-b" style="padding:0">'
       +   '<div class="tbl-wrap"><table class="table"><thead><tr>'
       +     '<th>#</th><th>Visit Date</th><th>Invoice No</th><th>Result Value</th><th>Reference Range</th>'
@@ -1763,7 +1759,7 @@
     /* Multi-Parameter Health Overview Grid (Other parameters tested for this patient) */
     html += '<div class="card" style="margin-bottom:24px">'
       + '<div class="card-h"><h3 style="margin:0">Multi-Parameter Clinical Overview (' + series.length + ' Monitored Tests)</h3>'
-      + '<span class="muted" style="font-size:12.5px">Quick biometric summary across all tests finalized for ' + App.esc(curPat.name) + '</span></div>'
+      + '</div>'
       + '<div class="card-b">'
       +   '<div class="pt-param-grid">'
       +     series.map(function (m, i) {

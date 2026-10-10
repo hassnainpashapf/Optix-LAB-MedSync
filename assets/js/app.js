@@ -757,7 +757,7 @@
     var SEC = { dashboard: 'Overview', branches: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', inventory: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', packages: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
       invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', profit: 'Billing', reports: 'Insights', audit: 'Insights',
       whatsapp: 'Tools', sms: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'branches', 'patients', 'samples', 'results', 'inventory', 'stock', 'tests', 'packages', 'invoices', 'reports', 'audit', 'outsourced', 'doctors', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'branches', 'patients', 'samples', 'results', 'invoices', 'inventory', 'stock', 'tests', 'packages', 'reports', 'audit', 'outsourced', 'doctors', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && (!App.featureOn || App.featureOn(n.key)) && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     visible = groupSidebarNav(visible);
@@ -778,7 +778,7 @@
     }
     /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
        A new page only needs its key added to a folder below (a key that is in no folder simply shows at the bottom). */
-    var TOP = ['dashboard', 'branches', 'patients', 'samples', 'results', 'inventory-stock', 'tests', 'packages', 'invoices', 'reports'];
+    var TOP = ['dashboard', 'branches', 'patients', 'samples', 'results', 'invoices', 'inventory-stock', 'tests', 'packages', 'reports'];
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['outsourced', 'doctors'] },
       { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit'] },
