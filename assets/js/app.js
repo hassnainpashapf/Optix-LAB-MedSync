@@ -840,6 +840,10 @@
                       _curHash === '#/patients/new' ? 'Add Patient' :
                       _curHash === '#/patients/lists' ? 'Edit Patient Form' :
                       _curHash === '#/stock/dashboard' ? 'Stock Dashboard' :
+                      _curHash === '#/stock' ? 'Stock Movement History' :
+                      _curHash === '#/stock/pending' ? 'Pending Stock' :
+                      _curHash === '#/stock/alerts' ? 'Alerts & Expiry' :
+                      _curHash === '#/stock/orders' ? 'Purchase Orders' :
                      _curHash === '#/packages' ? 'Packages' :
                      _curHash === '#/notifications' ? 'Notifications' :
                      _curHash === '#/invoices/pending' ? 'Pending Invoices' :

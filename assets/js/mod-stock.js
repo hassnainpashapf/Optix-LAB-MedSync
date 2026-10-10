@@ -80,7 +80,14 @@
     var selectedId = F.poId || currentId;
     var po = orders.filter(function (o) { return o.id === selectedId; })[0];
     var editable = canEditOrders() && po && po.status === 'draft';
-    var h = '<h2>Purchase Orders</h2>' +
+    var poItems = po ? po.items : [], poQty = poItems.reduce(function (a, i) { return a + (+i.qty || 0); }, 0);
+    var poVendors = {}; poItems.forEach(function (i) { if (i.vendor) poVendors[i.vendor] = 1; });
+    var h = '<div class="stat-grid">' +
+        statCard('brand', App.icon('receipt', 18), 'Monthly Drafts', orders.length, 'saved purchase order drafts') +
+        statCard('amber', App.icon('box', 18), 'Items to Order', poItems.length, po ? 'in ' + esc(po.id) : 'no draft for this month yet') +
+        statCard('blue', App.icon('plus', 18), 'Total Order Quantity', num(poQty), 'units across all lines') +
+        statCard('green', App.icon('users', 18), 'Suppliers', Object.keys(poVendors).length, 'to order from') +
+      '</div>' +
       '<div class="sk-alert">One monthly draft is created on the first admin visit to Stock each local calendar month, using active low / out-of-stock items at that time. ' +
       'Nothing runs automatically while the app is closed; missed months are not backfilled. Drafts are never sent to suppliers and do not receive or move stock.</div>' +
       '<div class="card" style="margin-bottom:16px"><div class="sk-bar"><label for="skPoSelect">Draft history</label><select class="select grow" id="skPoSelect">' +
@@ -301,10 +308,7 @@
     };
 
     v.innerHTML = '' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">' +
-        '<div><h2 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);display:flex;align-items:center;gap:10px">' +
-          '<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:#e0f2fe;color:#0284c7">' + App.icon('grid', 22) + '</span>Stock Dashboard</h2>' +
-          '<div style="font-size:12.5px;color:var(--muted);margin-top:2px">Reagents, kits and consumables at a glance</div></div>' +
+      '<div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">' +
         (canEdit() ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="sdRecv">' + App.icon('plus', 16) + ' Receive Stock</button>' +
           '<button class="btn btn-ghost" id="sdUse" style="border:1.5px solid var(--bd,#cbd5e1)">🚚 Move / Use</button>' +
           '<button class="btn btn-ghost" id="sdAdd" style="border:1.5px solid var(--bd,#cbd5e1)">' + App.icon('plus', 16) + ' Add Item</button></div>' : '') +
@@ -359,15 +363,6 @@
 
     var h = '' +
       /* Inventory uses the shell title; retain headings on other stock views. */
-      (curTab === 'items' ? '' : '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">' +
-        '<div>' +
-          '<h2 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);display:flex;align-items:center;gap:10px">' +
-            '<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:#e0f2fe;color:#0284c7">' + App.icon('box', 22) + '</span>' +
-            title +
-          '</h2>' +
-          '<div style="font-size:12.5px;color:var(--muted);margin-top:2px">Clinical laboratory reagents, test kits, vacutainers, consumables &amp; automated consumption tracking</div>' +
-        '</div>' +
-      '</div>') +
 
       /* 4 stat cards — same look as the main dashboard (.stat in app.css) */
       '<div class="stat-grid">' +
@@ -386,13 +381,6 @@
 
     /* Tab 1: Inventory Stock Items */
     if (curTab === 'items') {
-      if (al.length) {
-        h += '<div class="sk-alert"><b>⚠️ Stock alerts needing immediate attention:</b><br>' + al.slice(0, 6).map(function (r) {
-          var bits = []; if (r.out) bits.push('<span style="color:#b91c1c;font-weight:800">out of stock</span>'); else if (r.low) bits.push('only ' + num(r.onHand) + ' ' + esc(r.item.unit || '') + ' left (reorder at ' + num(r.item.reorderLevel) + ')');
-          if (r.expired) bits.push('<span style="color:#b91c1c">' + num(r.expiredQty) + ' expired</span>'); if (r.soon) bits.push(num(r.soonQty) + ' expiring by ' + fdate(r.nearest));
-          return '• <b>' + esc(r.item.name) + '</b> — ' + bits.join(', ');
-        }).join('<br>') + (al.length > 6 ? '<br>…and <b>' + (al.length - 6) + ' more</b> in Alerts &amp; Expiry' : '') + '</div>';
-      }
 
       h += '<div class="card" style="margin-bottom:16px"><div class="sk-bar">' +
         '<input class="input grow" id="skQ" placeholder="Search item, category, vendor…" value="' + esc(F.q) + '">' +
