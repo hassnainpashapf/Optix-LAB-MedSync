@@ -21,6 +21,11 @@
     '@media(max-width:760px){.sk-bar{flex-wrap:wrap}.sk-bar .grow{flex:1 1 100%;min-width:0}}';
   function css() { if (document.getElementById('skCss')) return; var s = document.createElement('style'); s.id = 'skCss'; s.textContent = CSS; document.head.appendChild(s); }
 
+  var CLOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  /* stat card in the main dashboard's style (.stat / .stat-ico / .lb / .vl / .dl in app.css) */
+  function statCard(tint, icon, label, value, sub) {
+    return '<div class="stat" data-tint="' + tint + '"><div class="stat-ico">' + icon + '</div><div class="lb">' + label + '</div><div class="vl">' + value + '</div><div class="dl">' + sub + '</div></div>';
+  }
   function num(n) { n = Math.round((+n || 0) * 100) / 100; return String(n); }
   function fdate(d) { return d ? App.d(d) : '—'; }
   function canEdit() { var s = App.session(); return !!s && (s.role === 'admin' || s.role === 'technician' || (s.role === 'custom' && (App.canPage('stock') || App.canPage('inventory')))); }
@@ -251,10 +256,88 @@
     URL.revokeObjectURL(url);
   }
 
+  /* ---------- Stock dashboard (#/stock/dashboard): one-screen overview — totals, what needs attention, expiry watch, latest movements ---------- */
+  var MOVE_LABEL = { 'in': 'Received', out: 'Used', waste: 'Waste', adjust: 'Adjustment', transfer: 'Transfer' };
+  function renderStockDashboard(v) {
+    var S = App.stockState(), today = new Date().toISOString().slice(0, 10), weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+    var warn = new Date(Date.now() + S.warnDays * 86400000).toISOString().slice(0, 10);
+    var moves = (DB.all('stock_moves') || []).slice().sort(function (a, b) { return String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date)); });
+    var weekMoves = moves.filter(function (m) { return String(m.date || m.createdAt || '').slice(0, 10) >= weekAgo; });
+    var sum = function (arr) { return arr.reduce(function (a, m) { return a + Math.abs(+m.qty || 0); }, 0); };
+    var recvWeek = weekMoves.filter(function (m) { return m.type === 'in'; }).length;
+    var usedWeek = weekMoves.filter(function (m) { return m.type === 'out' || m.type === 'waste'; }).length;
+    var todayMoves = moves.filter(function (m) { return String(m.date || m.createdAt || '').slice(0, 10) === today; }).length;
+    var healthy = S.rows.filter(function (r) { return !(r.out || r.low || r.expired || r.soon); }).length;
+
+    var need = S.rows.filter(function (r) { return r.out || r.low; }).sort(function (a, b) { return (b.out - a.out) || (a.onHand - b.onHand); }).slice(0, 8);
+    var lots = [];
+    S.rows.forEach(function (r) { r.lots.forEach(function (l) { if (l.expiry && l.expiry <= warn) lots.push({ item: r.item, lot: l.lot, expiry: l.expiry, left: l.left }); }); });
+    lots.sort(function (a, b) { return a.expiry < b.expiry ? -1 : 1; });
+    lots = lots.slice(0, 8);
+    var recent = moves.slice(0, 8);
+    var unit = function (it) { return esc(it.unit || ''); };
+    var empty = function (t) { return '<div class="muted" style="text-align:center;padding:22px 12px">' + t + '</div>'; };
+
+    var needRows = need.length ? need.map(function (r) {
+      return '<tr><td><b>' + esc(r.item.name) + '</b><div class="sk-sub">' + esc(r.item.category || '') + '</div></td>' +
+        '<td style="white-space:nowrap">' + num(r.onHand) + ' ' + unit(r.item) + '<div class="sk-sub">reorder at ' + num(r.item.reorderLevel || 0) + '</div></td>' +
+        '<td>' + (r.out ? '<span class="sk-chip exp">Out of stock</span>' : '<span class="sk-chip soon">Low</span>') + '</td></tr>';
+    }).join('') : '<tr><td colspan="3">' + empty('Nothing is running low. 👍') + '</td></tr>';
+    var lotRows = lots.length ? lots.map(function (l) {
+      var dead = l.expiry < today;
+      return '<tr><td><b>' + esc(l.item.name) + '</b><div class="sk-sub">Lot ' + esc(l.lot || '—') + '</div></td>' +
+        '<td style="white-space:nowrap">' + num(l.left) + ' ' + unit(l.item) + '</td>' +
+        '<td style="white-space:nowrap">' + fdate(l.expiry) + '<div>' + (dead ? '<span class="sk-chip exp">Expired</span>' : '<span class="sk-chip soon">Expiring</span>') + '</div></td></tr>';
+    }).join('') : '<tr><td colspan="3">' + empty('No lots expiring within ' + S.warnDays + ' days.') + '</td></tr>';
+    var moveRows = recent.length ? recent.map(function (m) {
+      var it = DB.get('stock_items', m.itemId) || {}, q = +m.qty || 0;
+      return '<tr><td style="white-space:nowrap">' + fdate(m.date || m.createdAt) + '</td><td><b>' + esc(it.name || 'Deleted item') + '</b></td>' +
+        '<td>' + esc(MOVE_LABEL[m.type] || m.type || '') + '</td><td style="white-space:nowrap">' + (m.type === 'in' ? '+' : (m.type === 'out' || m.type === 'waste' ? '−' : '')) + num(Math.abs(q)) + ' ' + unit(it) + '</td>' +
+        '<td class="muted">' + esc(m.note || m.ref || '') + '</td><td class="muted">' + esc(m.by || '') + '</td></tr>';
+    }).join('') : '<tr><td colspan="6">' + empty('No stock movements yet.') + '</td></tr>';
+    var card = function (title, link, linkLabel, head, body) {
+      return '<div class="card"><div class="card-h" style="display:flex;justify-content:space-between;align-items:center"><h3>' + title + '</h3><a class="btn btn-ghost btn-sm" href="' + link + '">' + linkLabel + '</a></div>' +
+        '<div class="card-b" style="padding:0"><div class="tbl-wrap"><table class="table"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div></div></div>';
+    };
+
+    v.innerHTML = '' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">' +
+        '<div><h2 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);display:flex;align-items:center;gap:10px">' +
+          '<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:#e0f2fe;color:#0284c7">' + App.icon('grid', 22) + '</span>Stock Dashboard</h2>' +
+          '<div style="font-size:12.5px;color:var(--muted);margin-top:2px">Reagents, kits and consumables at a glance</div></div>' +
+        (canEdit() ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="sdRecv">' + App.icon('plus', 16) + ' Receive Stock</button>' +
+          '<button class="btn btn-ghost" id="sdUse" style="border:1.5px solid var(--bd,#cbd5e1)">🚚 Move / Use</button>' +
+          '<button class="btn btn-ghost" id="sdAdd" style="border:1.5px solid var(--bd,#cbd5e1)">' + App.icon('plus', 16) + ' Add Item</button></div>' : '') +
+      '</div>' +
+      '<div class="stat-grid">' +
+        statCard('brand', App.icon('box', 18), 'Total Inventory Items', S.rows.length, 'Tracked in lab catalog') +
+        statCard('amber', App.icon('alert', 18), 'Low / Out of Stock', S.low + S.out, S.out + ' out of stock • ' + S.low + ' low balance') +
+        statCard('blue', CLOCK_SVG, 'Expiring in ' + S.warnDays + ' days', S.soon, 'Reagent lots near expiry') +
+        statCard('red', App.icon('x', 18), 'Expired Lots', S.expired, 'Requires disposal / waste log') +
+      '</div>' +
+      '<div class="stat-grid">' +
+        statCard('green', App.icon('check', 18), 'Healthy Items', healthy, 'Well stocked, no expiry issue') +
+        statCard('blue', App.icon('plus', 18), 'Received · 7 days', recvWeek, 'stock-in entries') +
+        statCard('amber', App.icon('tube', 18), 'Used / Waste · 7 days', usedWeek, 'stock-out entries') +
+        statCard('brand', App.icon('clipboard', 18), 'Movements Today', todayMoves, 'stock entries logged today') +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:14px">' +
+        card('Needs Attention', '#/stock/pending', 'View all', '<th>Item</th><th>On hand</th><th>Status</th>', needRows) +
+        card('Expiry Watch', '#/stock/alerts', 'View all', '<th>Item</th><th>Qty left</th><th>Expiry</th>', lotRows) +
+      '</div>' +
+      card('Recent Movements', '#/stock', 'View all', '<th>Date</th><th>Item</th><th>Type</th><th>Quantity</th><th>Note / Ref</th><th>By</th>', moveRows);
+
+    var on = function (id, fn) { var el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+    on('sdRecv', function () { receive(''); });
+    on('sdUse', function () { useForm(''); });
+    on('sdAdd', function () { itemForm(null); });
+  }
+
   function render() {
     css();
     var v = document.getElementById('view'); if (!v) return;
     if (F.tab === 'orders') { renderPurchaseOrders(v); return; }
+    if (F.tab === 'dashboard') { renderStockDashboard(v); return; }
     var S = App.stockState();
     var q = F.q.toLowerCase();
     var rows = S.rows.filter(function (r) {
@@ -286,32 +369,12 @@
         '</div>' +
       '</div>') +
 
-      /* 4 Standardized Unified KPI Stat Cards (.kpi-grid + .kpi) */
-      '<div class="kpi-grid" style="margin-bottom:18px">' +
-        '<div class="kpi t-navy" style="border-left:4px solid #0284c7 !important">' +
-          '<div class="kpi-ic">' + App.icon('box', 18) + '</div>' +
-          '<div class="kpi-lb">TOTAL INVENTORY ITEMS</div>' +
-          '<div class="kpi-nm" style="color:#0284c7">' + S.rows.length + '</div>' +
-          '<div class="kpi-sb">Tracked in lab catalog</div>' +
-        '</div>' +
-        '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">' +
-          '<div class="kpi-ic">' + App.icon('alert', 18) + '</div>' +
-          '<div class="kpi-lb">LOW / OUT OF STOCK</div>' +
-          '<div class="kpi-nm" style="color:#d97706">' + (S.low + S.out) + '</div>' +
-          '<div class="kpi-sb">' + S.out + ' out of stock • ' + S.low + ' low balance</div>' +
-        '</div>' +
-        '<div class="kpi t-purple" style="border-left:4px solid #7c3aed !important">' +
-          '<div class="kpi-ic">' + App.icon('clock', 18) + '</div>' +
-          '<div class="kpi-lb">EXPIRING IN ' + S.warnDays + ' DAYS</div>' +
-          '<div class="kpi-nm" style="color:#7c3aed">' + S.soon + '</div>' +
-          '<div class="kpi-sb">Reagent lots near expiry</div>' +
-        '</div>' +
-        '<div class="kpi t-red" style="border-left:4px solid #dc2626 !important">' +
-          '<div class="kpi-ic">' + App.icon('x', 18) + '</div>' +
-          '<div class="kpi-lb">EXPIRED LOTS</div>' +
-          '<div class="kpi-nm" style="color:' + (S.expired > 0 ? '#dc2626' : 'var(--muted)') + '">' + S.expired + '</div>' +
-          '<div class="kpi-sb">Requires disposal / waste log</div>' +
-        '</div>' +
+      /* 4 stat cards — same look as the main dashboard (.stat in app.css) */
+      '<div class="stat-grid">' +
+        statCard('brand', App.icon('box', 18), 'Total Inventory Items', S.rows.length, 'Tracked in lab catalog') +
+        statCard('amber', App.icon('alert', 18), 'Low / Out of Stock', S.low + S.out, S.out + ' out of stock • ' + S.low + ' low balance') +
+        statCard('blue', CLOCK_SVG, 'Expiring in ' + S.warnDays + ' days', S.soon, 'Reagent lots near expiry') +
+        statCard('red', App.icon('x', 18), 'Expired Lots', S.expired, 'Requires disposal / waste log') +
       '</div>' +
 
       '<div class="sk-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px">' +
@@ -689,7 +752,7 @@
     }
     var isStock = location.hash.indexOf('#/stock') === 0;
     var tab = params && params.tab;
-    F.tab = tab === 'orders' || tab === 'pending' || tab === 'alerts' || tab === 'moves' || tab === 'items' ? tab : (isStock ? 'moves' : 'items');
+    F.tab = tab === 'orders' || tab === 'pending' || tab === 'alerts' || tab === 'moves' || tab === 'items' || (tab === 'dashboard' && isStock) ? tab : (isStock ? 'moves' : 'items');
     if (tab === 'add') F.tab = 'items';
     F.poId = '';
     if (isStock && canEditOrders()) {

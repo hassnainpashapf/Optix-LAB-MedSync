@@ -2015,6 +2015,8 @@
       return t.replace(/\s*-\s*/g, ' - ').replace(/\s*\/\s*/g, ' / ');
     }
 
+    /* same colours as the PDF: the lab name uses the Lab Profile name colour (else the accent colour), the tagline the accent colour */
+    var hdrAccent = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(String(s.accent || '').trim()) ? String(s.accent).trim() : '#1B1B6E';
     /* LEFT: logo + lab name side by side */
     var leftHtml =
       '<div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0">' +
@@ -2022,12 +2024,12 @@
           ? '<img src="' + (d && d._tpl ? '{{logo}}' : App.esc(s.logo)) + '" style="max-width:120px;max-height:72px;flex:none" alt="">'
           : '') +
         '<div style="min-width:0">' +
-          '<div style="margin:0;color:' + (/^#[0-9a-fA-F]{6}$/.test(s.labNameColor || '') ? s.labNameColor : '#000') + ';font-family:' + RPT.serif +
+          '<div style="margin:0;color:' + (/^#[0-9a-fA-F]{6}$/.test(s.labNameColor || '') ? s.labNameColor : hdrAccent) + ';font-family:' + RPT.serif +
             ';font-weight:700;font-size:1.7em;line-height:1.2">' +
             App.esc(labName) +
           '</div>' +
           ((showTagline && s.tagline)
-            ? '<div style="margin:4px 0 0;color:#000;font-family:' + RPT.serif +
+            ? '<div style="margin:4px 0 0;color:' + hdrAccent + ';font-family:' + RPT.serif +
                 ';font-style:italic;font-size:1.05em">' +
                 App.esc(s.tagline) +
               '</div>'
@@ -3107,8 +3109,8 @@
     try {
       var inv = invOf(invoiceId) || {}, base = '';
       try { base = String(window.LABPOS_API || '').replace(/\/+$/, ''); } catch (e) {}
-      var url = (inv.reportPdfKey && base && !(App.isNative && App.isNative()) && !(window.labposDesktop && window.labposDesktop.isDesktop)) ? base + '/r/' + inv.reportPdfKey : 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
-      var img = qrDataUrlFor(url);
+      var url = (inv.reportPdfKey && base && !(App.isNative && App.isNative()) && !(window.labposDesktop && window.labposDesktop.isDesktop)) ? base + '/r/' + inv.reportPdfKey : '';
+      var img = url ? qrDataUrlFor(url) : null;
       return img ? String(html).replace('data-qr="1"', 'data-qr="1" src="' + img + '"') : stripQrImg(html);
     } catch (e) { return stripQrImg(html); }
   }
@@ -3145,9 +3147,8 @@
       var jsOk = await App.ensureJsPDF();
       if (jsOk) {
         var url = await getReportPdfUrl(invoiceId, false, opts);
-        /* fallback: if backend upload fails or invoice unpaid, generate QR with invoice reference */
-        if (!url) url = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + invoiceId;
-        qrImg = qrDataUrlFor(url);
+        /* no live report link (invoice not fully paid, or the upload failed): print no QR rather than a link to the staff login page, which a patient's phone cannot open */
+        qrImg = url ? qrDataUrlFor(url) : null;
       }
     } catch (e) { qrImg = null; }
     var html = reportHtml(d, opts);
@@ -3211,8 +3212,7 @@
       var jsOk = await App.ensureJsPDF();
       if (jsOk) {
         var url = await getReportPdfUrl(newInvId);
-        if (!url) url = 'https://optix-lab-medsync.pages.dev/app/#/invoice/' + newInvId;
-        qrImg = qrDataUrlFor(url);
+        qrImg = url ? qrDataUrlFor(url) : null;
       }
     } catch (e) {}
     var html = reportHtml(dNew, opts);

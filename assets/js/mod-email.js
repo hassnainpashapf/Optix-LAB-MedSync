@@ -48,25 +48,25 @@
     var on = srv.email, auto = (st.emailAuto ? 'Patient ✓ ' : '') + (st.emailAutoDoctor ? 'Doctor ✓' : '') + ((!st.emailAuto && !st.emailAutoDoctor) ? 'Off' : '');
     var h = (on ? '' : '<div class="card" style="margin-bottom:14px;border-color:#f6c6c6;background:#fff6f6"><div class="card-b"><b style="color:#b91c1c">Email sending is not set up on this server yet.</b> <span class="muted">The system owner can set it up in the superadmin console (Email sender).</span></div></div>') +
       '<div class="kpi-grid" style="margin-bottom:18px">' +
-        '<div class="kpi t-green" style="border-left:4px solid #16a34a !important">' +
+        '<div class="kpi t-green">' +
           '<div class="kpi-ic">' + App.icon('check', 18) + '</div>' +
           '<div class="kpi-lb">SENT TODAY</div>' +
           '<div class="kpi-nm" style="color:#16a34a">' + sentToday + '</div>' +
           '<div class="kpi-sb">Delivered via Email</div>' +
         '</div>' +
-        '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">' +
+        '<div class="kpi t-amber">' +
           '<div class="kpi-ic">' + App.icon('clock', 18) + '</div>' +
           '<div class="kpi-lb">WAITING TO SEND</div>' +
           '<div class="kpi-nm" style="color:#d97706">' + waiting + '</div>' +
           '<div class="kpi-sb">' + (noAddr ? noAddr + ' without email' : 'Queued for dispatch') + '</div>' +
         '</div>' +
-        '<div class="kpi t-red" style="border-left:4px solid #dc2626 !important">' +
+        '<div class="kpi t-red">' +
           '<div class="kpi-ic">' + App.icon('alert', 18) + '</div>' +
           '<div class="kpi-lb">FAILED (ALL TIME)</div>' +
           '<div class="kpi-nm" style="color:' + (failed ? '#dc2626' : 'var(--muted)') + '">' + failed + '</div>' +
           '<div class="kpi-sb">Delivery failures</div>' +
         '</div>' +
-        '<div class="kpi t-blue" style="border-left:4px solid #2563eb !important">' +
+        '<div class="kpi t-blue">' +
           '<div class="kpi-ic">' + App.icon('mail', 18) + '</div>' +
           '<div class="kpi-lb">AUTO-SEND</div>' +
           '<div class="kpi-nm" style="color:#2563eb;font-size:18px">' + auto + '</div>' +

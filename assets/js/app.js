@@ -46,15 +46,15 @@
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
     { key: 'branches', label: 'Branches', icon: 'box', route: '#/branches', color: '#0ea5e9' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
-      sub: [{ key: 'new', label: 'Add Patient', icon: 'plus', route: '#/patients/new' }, { key: 'all', label: 'All Patients', icon: 'users', route: '#/patients' }] },
+      sub: [{ key: 'new', label: 'Add Patient', icon: 'plus', route: '#/patients/new' }, { key: 'all', label: 'All Patients', icon: 'users', route: '#/patients' }, { key: 'lists', label: 'Edit Patient Form', icon: 'gear', route: '#/patients/lists', roles: ['admin'] }] },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
       sub: [{ key: 'tracking', label: 'Sample Tracking & Phlebotomy', icon: 'tube', route: '#/samples' },
         { key: 'stickers', label: 'Tube Stickers (50×25mm)', icon: 'scan', route: '#/samples/stickers' },
         { key: 'home', label: 'Home Sampling & Dispatch', icon: 'box', route: '#/samples/home' }] },
     { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9',
       sub: [{ key: 'catalog', label: 'Item Catalog', icon: 'box', route: '#/inventory' }] },
-    { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock', color: '#0ea5e9',
-      sub: [{ key: 'moves', label: 'Movement History', icon: 'clipboard', route: '#/stock' }, { key: 'add', label: 'Add Stock', icon: 'plus', route: '#/stock/add' },
+    { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock/dashboard', color: '#0ea5e9',
+      sub: [{ key: 'dashboard', label: 'Stock Dashboard', icon: 'grid', route: '#/stock/dashboard' }, { key: 'moves', label: 'Movement History', icon: 'clipboard', route: '#/stock' }, { key: 'add', label: 'Add Stock', icon: 'plus', route: '#/stock/add' },
         { key: 'pending', label: 'Pending Stock', icon: 'box', route: '#/stock/pending' }, { key: 'orders', label: 'Purchase Orders', route: '#/stock/orders', icon: 'receipt' }, { key: 'alerts', label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' }] },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', icon: 'clipboard', route: '#/results' }, { key: 'ready', label: 'Ready Reports', icon: 'check', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', icon: 'file', route: '#/results/old' }] },
@@ -756,7 +756,7 @@
     var SEC = { dashboard: 'Overview', branches: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', inventory: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', packages: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
       invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', profit: 'Billing', reports: 'Insights', audit: 'Insights',
       whatsapp: 'Tools', sms: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'branches', 'patients', 'samples', 'inventory', 'stock', 'results', 'tests', 'packages', 'invoices', 'reports', 'audit', 'outsourced', 'doctors', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'branches', 'patients', 'samples', 'results', 'inventory', 'stock', 'tests', 'packages', 'invoices', 'reports', 'audit', 'outsourced', 'doctors', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && (!App.featureOn || App.featureOn(n.key)) && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     visible = groupSidebarNav(visible);
@@ -777,7 +777,7 @@
     }
     /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
        A new page only needs its key added to a folder below (a key that is in no folder simply shows at the bottom). */
-    var TOP = ['dashboard', 'branches', 'patients', 'samples', 'inventory-stock', 'results', 'tests', 'packages', 'invoices', 'reports'];
+    var TOP = ['dashboard', 'branches', 'patients', 'samples', 'results', 'inventory-stock', 'tests', 'packages', 'invoices', 'reports'];
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['outsourced', 'doctors'] },
       { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit'] },
@@ -838,6 +838,8 @@
                       _curHash === '#/inventory/pending' ? 'Low / Out of Stock' :
                       _curHash === '#/inventory/alerts' ? 'Expiring / Expired' :
                       _curHash === '#/patients/new' ? 'Add Patient' :
+                      _curHash === '#/patients/lists' ? 'Edit Patient Form' :
+                      _curHash === '#/stock/dashboard' ? 'Stock Dashboard' :
                      _curHash === '#/packages' ? 'Packages' :
                      _curHash === '#/notifications' ? 'Notifications' :
                      _curHash === '#/invoices/pending' ? 'Pending Invoices' :
