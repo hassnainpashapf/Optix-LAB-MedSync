@@ -1875,4 +1875,9 @@
 
   App.route('#/home-sampling', renderHomeSamplingDashboard);
   App.route('#/samples/home', renderHomeSamplingDashboard);
+  /* "All Bookings" menu item: the same dispatch centre, always opened on the All Bookings tab with the filters cleared */
+  App.route('#/samples/bookings', function () {
+    HS_FILTER.tab = 'all'; HS_FILTER.q = ''; HS_FILTER.date = 'all'; HS_FILTER.riderId = 'all';
+    renderHomeSamplingDashboard();
+  });
 })();

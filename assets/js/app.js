@@ -50,7 +50,8 @@
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
       sub: [{ key: 'tracking', label: 'Sample Tracking & Phlebotomy', icon: 'tube', route: '#/samples' },
         { key: 'stickers', label: 'Tube Stickers (50×25mm)', icon: 'scan', route: '#/samples/stickers' },
-        { key: 'home', label: 'Home Sampling & Dispatch', icon: 'box', route: '#/samples/home' }] },
+        { key: 'home', label: 'Home Sampling & Dispatch', icon: 'box', route: '#/samples/home' },
+        { key: 'bookings', label: 'All Bookings', icon: 'clipboard', route: '#/samples/bookings' }] },
     { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9',
       sub: [{ key: 'catalog', label: 'Item Catalog', icon: 'box', route: '#/inventory' }] },
     { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock/dashboard', color: '#0ea5e9',
@@ -848,6 +849,8 @@
                      _curHash === '#/notifications' ? 'Notifications' :
                      _curHash === '#/invoices/pending' ? 'Pending Invoices' :
                      _curHash === '#/samples/stickers' ? 'Tube Stickers (50×25mm)' :
+                     _curHash === '#/samples/bookings' ? 'All Bookings' :
+                     _curHash === '#/samples/home' ? 'Home Sampling & Dispatch' :
                      (_curHash === '#/reports/trends' || _curHash === '#/trends') ? 'Patient Trends & Delta' :
                      (navItem ? navItem.label : '');
     document.getElementById('topbar').innerHTML =
