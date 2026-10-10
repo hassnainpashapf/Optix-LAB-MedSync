@@ -756,7 +756,7 @@
     var SEC = { dashboard: 'Overview', branches: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', inventory: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', packages: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
       invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', profit: 'Billing', reports: 'Insights', audit: 'Insights',
       whatsapp: 'Tools', sms: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'branches', 'patients', 'samples', 'inventory', 'stock', 'results', 'tests', 'packages', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'reports', 'audit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'branches', 'patients', 'samples', 'inventory', 'stock', 'results', 'tests', 'packages', 'invoices', 'reports', 'audit', 'outsourced', 'doctors', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && (!App.featureOn || App.featureOn(n.key)) && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     visible = groupSidebarNav(visible);
@@ -781,11 +781,9 @@
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['outsourced', 'doctors'] },
       { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit'] },
-      { id: 'ins', label: 'Insights', icon: 'shield', keys: ['audit'] },
-      { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'sms', 'email', 'downloads'] },
-      { id: 'acc', label: 'Account', icon: 'gear', keys: ['subscription'] } /* one page = shown as the page itself, not a folder */
+      { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'sms', 'email', 'downloads'] }
     ];
-    var BOTTOM = ['settings']; /* always at the very bottom, outside any folder */
+    var BOTTOM = ['subscription', 'settings']; /* keep account areas at the end, matching the compact admin dashboard */
     var savedOpen = {}; try { savedOpen = JSON.parse(localStorage.getItem('labpos_navfolders') || '{}') || {}; } catch (e) { savedOpen = {}; }
     var byKey = {}; visible.forEach(function (n) { byKey[n.key] = n; });
     var placed = {}, items = '';

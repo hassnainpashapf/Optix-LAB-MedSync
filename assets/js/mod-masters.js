@@ -164,29 +164,32 @@ function renderTests() {
       '</div>' +
     '</div>';
   var chips = ['All'].concat(cats).map(function (c) {
-    return '<button type="button" class="btn btn-sm ' +
-      (testFilter.cat === c ? 'btn-primary' : 'btn-ghost') +
-      '" data-cat="' + App.esc(c) + '">' + App.esc(c) + '</button>';
-  }).join(' ');
+    var label = c === 'All' ? 'All' : c;
+    return '<button type="button" class="test-type-pill ' +
+      (testFilter.cat === c ? 'active' : '') +
+      '" data-cat="' + App.esc(c) + '">' + App.esc(label) + '</button>';
+  }).join('');
 
   view().innerHTML =
    '<p class="muted">' + (testCatalogMode === 'all' ? 'All Tests combines saved lab tests (including imported generic tests) with reusable generic templates shown below.' : 'Regular Tests shows saved tests used for routine booking. Reusable definitions are available under Generic Tests.') + '</p>' +
     statCards +
     '<div class="card"><div class="card-b">' +
-      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">' +
-        '<input id="t-q" class="input search" placeholder="Search code, name, category..." value="' + App.esc(testFilter.q) + '" style="max-width:280px">' +
-        '<select id="t-status" class="select" style="max-width:160px">' +
-          ['All', 'Active', 'Inactive'].map(function (s) {
-            return '<option' + (testFilter.status === s ? ' selected' : '') + '>' + s + '</option>';
-          }).join('') +
-        '</select>' +
-        (canEdit ? '<button type="button" class="btn" id="t-import" style="margin-left:8px;border:2px solid var(--bd)">📥 Import CSV</button>' : '') +
-        (canEdit ? '<button type="button" class="btn" id="t-bulkprice" style="margin-left:8px;border:2px solid var(--bd)">💰 Bulk Prices</button>' : '') +
-        (canEdit ? '' : '') +
-        (canEdit ? '<button type="button" class="btn btn-primary" id="t-add" style="margin-left:auto">+ Add Test</button>' : '') +
+      '<div class="test-menu-wrap">' +
+        '<div class="test-menu-row">' +
+          '<div class="test-search-shell">' +
+            '<input id="t-q" class="test-search" placeholder="Search code, name, category..." value="' + App.esc(testFilter.q) + '">' +
+          '</div>' +
+          '<button type="button" class="test-filter-pill" id="t-status-trigger" aria-label="Filter by status">' +
+            '<span>' + App.esc(testFilter.status || 'All') + '</span>' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>' +
+          '</button>' +
+          (canEdit ? '<button type="button" class="test-action-pill" id="t-import">📥 Import CSV</button>' : '') +
+          (canEdit ? '<button type="button" class="test-action-pill" id="t-bulkprice">💰 Bulk Prices</button>' : '') +
+          (canEdit ? '<button type="button" class="test-add-pill" id="t-add">+ Add Test</button>' : '') +
+        '</div>' +
+        '<div class="test-type-menu" id="t-chips">' + chips + '</div>' +
       '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="t-chips">' + chips + '</div>' +
-       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
+      '<div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Code</th><th>Test Name</th><th>Category</th><th>Sample</th><th>TAT</th>' +
         '<th style="text-align:right">Price</th><th>Status</th><th style="text-align:right">Actions</th>' +
       '</tr></thead><tbody id="t-rows"></tbody></table></div>' +
@@ -197,9 +200,16 @@ function renderTests() {
   qEl.addEventListener('input', function () { testFilter.q = qEl.value; drawTestRows(canEdit); });
   // keep focus while typing
   qEl.addEventListener('input', function () { qEl.focus(); });
-  document.getElementById('t-status').addEventListener('change', function (e) {
-    testFilter.status = e.target.value; drawTestRows(canEdit);
-  });
+  var statusTrigger = document.getElementById('t-status-trigger');
+  if (statusTrigger) {
+    statusTrigger.addEventListener('click', function () {
+      var order = ['All', 'Active', 'Inactive'];
+      var idx = order.indexOf(testFilter.status || 'All');
+      testFilter.status = order[(idx + 1) % order.length];
+      statusTrigger.querySelector('span').textContent = testFilter.status;
+      drawTestRows(canEdit);
+    });
+  }
   document.getElementById('t-chips').addEventListener('click', function (e) {
     var b = e.target.closest('[data-cat]'); if (!b) return;
     testFilter.cat = b.getAttribute('data-cat'); renderTests();
