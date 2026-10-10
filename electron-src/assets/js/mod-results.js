@@ -2385,8 +2385,8 @@
        date/time in Chughtai style ("22-Sep-2026 10:21") */
     var boxHtml = cols.map(function (c) {
       var bv = c.caseCode ? { code: c.caseCode, text: c.caseText } : (vn ? { code: vn.caseCode, text: vn.caseText } : null);
-      var bt = bv && bv.text ? String(bv.text).split(' - ') : [];
-      var bVal = String(bt[0] || '').replace(/^P\s*#\s*/i, '').trim();
+      /* the number with its day / month, as the PDF prints it: "05 - 09/10" */
+      var bVal = String((bv && bv.text) || '').replace(/^P\s*#\s*/i, '').trim();
       if (!bVal && vn && vn.cas) {
         var cn = +vn.cas;
         bVal = (cn < 10 ? '0' : '') + cn;
