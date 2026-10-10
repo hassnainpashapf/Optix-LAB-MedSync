@@ -1648,9 +1648,6 @@
       +     '</div>'
       +     '<div style="display:flex;gap:12px;margin-top:5px;font-size:12px;color:var(--muted);flex-wrap:wrap">'
       +       '<span>📞 ' + App.esc(curPat.phone || 'No phone') + '</span>'
-      +       '<span>🗓 Registered ' + App.esc(App.d(curPat.createdAt)) + '</span>'
-      +       '<span>🧾 ' + patInvs.length + ' Total Visits</span>'
-      +       '<span>🔬 ' + patReadyCount + ' Finalized Lab Reports</span>'
       +     '</div>'
       +   '</div>'
       +   '<div style="display:flex;gap:8px">'
@@ -1740,8 +1737,6 @@
         + '<td><span class="muted">' + App.esc(selSeries.ref || '—') + '</span></td>'
         + '<td>' + statusBadge + '</td>'
         + '<td>' + dTxt + '</td>'
-        + '<td>' + cTxt + '</td>'
-        + '<td>' + velFlag + '</td>'
         + '<td style="text-align:right"><button class="btn btn-ghost btn-sm" data-pt-inv="' + App.esc(q.invId || q.inv) + '">View Report</button></td>'
         + '</tr>';
     }).reverse().join('');
@@ -1752,7 +1747,7 @@
       + '<div class="card-b" style="padding:0">'
       +   '<div class="tbl-wrap"><table class="table"><thead><tr>'
       +     '<th>#</th><th>Visit Date</th><th>Invoice No</th><th>Result Value</th><th>Reference Range</th>'
-      +     '<th>Clinical Status</th><th>Delta (vs Prior)</th><th>Cumulative Δ</th><th>Velocity / Variance</th><th style="text-align:right">Action</th>'
+      +     '<th>Clinical Status</th><th>Change vs Prior</th><th style="text-align:right">Action</th>'
       +   '</tr></thead><tbody>' + deltaRowsHtml + '</tbody></table></div>'
       + '</div></div>';
 
