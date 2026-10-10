@@ -174,7 +174,7 @@ function renderTests() {
   view().innerHTML =
     (testCatalogMode === 'all' ? '<p class="muted">All Tests combines saved lab tests (including imported generic tests) with reusable generic templates shown below.</p>' : '') +
     /* the Generic page has its own Templates / Already in catalog / Not imported cards below, so the four catalog cards would be a second row */
-    (testCatalogMode === 'generic' ? '' : statCards) +
+    (testCatalogMode === 'generic' ? '<div id="generic-template-cards"></div>' : statCards) +
     (testCatalogMode === 'generic' ? '<h3>Saved Generic Tests</h3>' : '') +
     '<div class="card"><div class="card-b">' +
       '<div class="test-menu-wrap">' +
@@ -738,13 +738,16 @@ function renderGenericTemplates() {
   var saved = templates.filter(function (t) { return !!t.test; }).length;
   var box = document.getElementById('generic-template-browser');
   if (!box) return;
+  /* the three template cards sit at the top of the page, like the stat cards on the other catalog pages */
+  var cardsBox = document.getElementById('generic-template-cards');
+  if (cardsBox) cardsBox.innerHTML = '<div class="stat-grid">' +
+    cStat('blue', TICONS.flask, 'Templates', templates.length, 'Common report definitions') +
+    cStat('green', TICONS.check, 'Already in catalog', saved, 'Saved lab tests') +
+    cStat('amber', TICONS.box, 'Not imported', templates.length - saved, 'Unavailable for booking') +
+  '</div>';
   box.innerHTML =
     '<h3>Generic Test Templates</h3><p class="muted">Reusable common test templates. Import a template and set its price to create a real lab test before booking. Existing matching tests are reused without changing their prices or reports.</p>' +
-    '<div class="stat-grid" style="margin-bottom:18px">' +
-      tStat(TICONS.flask, 'blue', 'Templates', templates.length, 'Common report definitions') +
-      tStat(TICONS.check, 'green', 'Already in catalog', saved, 'Saved lab tests') +
-      tStat(TICONS.box, 'amber', 'Not imported', templates.length - saved, 'Unavailable for booking') +
-    '</div><div class="card"><div class="card-b">' +
+    '<div class="card"><div class="card-b">' +
       '<label class="label" for="gt-q">Find a template</label><input id="gt-q" class="input search" placeholder="Search templates…" value="' + App.esc(genericQuery) + '">' +
       '<div class="tbl-wrap"><table class="table"><thead><tr><th>Template</th><th>Parameters</th><th>Availability</th><th>Price</th><th>Actions</th></tr></thead><tbody id="gt-rows"></tbody></table></div></div></div>';
   function draw() {
