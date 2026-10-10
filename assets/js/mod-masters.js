@@ -173,7 +173,8 @@ function renderTests() {
 
   view().innerHTML =
     (testCatalogMode === 'all' ? '<p class="muted">All Tests combines saved lab tests (including imported generic tests) with reusable generic templates shown below.</p>' : '') +
-    statCards +
+    /* the Generic page has its own Templates / Already in catalog / Not imported cards below, so the four catalog cards would be a second row */
+    (testCatalogMode === 'generic' ? '' : statCards) +
     (testCatalogMode === 'generic' ? '<h3>Saved Generic Tests</h3>' : '') +
     '<div class="card"><div class="card-b">' +
       '<div class="test-menu-wrap">' +
