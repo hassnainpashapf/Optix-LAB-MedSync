@@ -200,6 +200,11 @@
     p = p || {};
     function val(k) { return App.esc(p[k] == null ? '' : p[k]); }
     function sel(v) { return p.gender === v ? ' selected' : ''; }
+    var branches = (DB.all('branches') || []).filter(function (b) { return b && b.is_active !== false; });
+    var regDefault = String(App.visitDefaults().regLocation || '').trim().toLowerCase();
+    var defaultBranch = branches.filter(function (b) {
+      return regDefault && [b.name, b.code].some(function (v) { return String(v || '').trim().toLowerCase() === regDefault; });
+    })[0];
     var bloods = ['', 'A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
     var docOpts = '<option value="">Self / Walk-in</option>' +
       DB.all('doctors').slice().sort(function (a, b) {
@@ -251,6 +256,7 @@
       '</div>' +
       (!p.id ? '<div class="form-row"><label class="label" for="ptf-destloc">Destination Location <span class="ptf-opt">(where the report is for)</span></label>' +
       '<input class="input" id="ptf-destloc" list="ptf-destloc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '">' + App.datalistHtml('ptf-destloc-dl', 'destLocation', App.visitDefaults().destLocation) + '</div>' +
+      (branches.length ? '<div class="form-row"><label class="label" for="ptf-branch">Branch</label><select class="select" id="ptf-branch"><option value="">Unassigned</option>' + branches.map(function (b) { return '<option value="' + App.esc(b.id) + '"' + (defaultBranch && defaultBranch.id === b.id ? ' selected' : '') + '>' + App.esc(b.name || b.code || b.id) + '</option>'; }).join('') + '</select></div>' : '') +
       '<div class="form-row"><label class="label" for="ptf-ref">Reference <span class="ptf-opt">(shown on the report)</span></label><select class="select" id="ptf-ref">' + App.optionsHtml('reference', App.listOptions('reference')[0] || '') + '</select></div>' : '') +
       '<div class="form-row"><label class="label" for="ptf-address">Address</label>' +
       '<textarea class="input" id="ptf-address" rows="2" maxlength="200" placeholder="Street, area, city">' + val('address') + '</textarea></div>' +
@@ -408,6 +414,7 @@
       var regISO = App.fromLocalInput(document.getElementById('ptf-regdate').value);
       var regLocEl = document.getElementById('ptf-regloc'), destLocEl = document.getElementById('ptf-destloc');
       var regLoc = regLocEl ? regLocEl.value.trim() : '', destLoc = destLocEl ? destLocEl.value.trim() : '', refEl = document.getElementById('ptf-ref'), refVal = refEl ? refEl.value : '';
+      var branchEl = document.getElementById('ptf-branch'), branchId = branchEl ? (branchEl.value || null) : null;
       var ok = true;
       setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-whatsapp', '');
       if (name.length < 2) { setErr('ptf-e-name', 'Please enter the full name.'); ok = false; }
@@ -457,7 +464,7 @@
               labNo: vn.labNo, caseNo: vn.caseNo,
               patientId: np.id, doctorId: null, items: items,
               subtotal: bTotal, discount: 0, total: bTotal, paid: pnl ? bTotal : 0, due: pnl ? 0 : bTotal,
-              status: pnl ? 'paid' : 'unpaid', panelId: pnl ? pnl.id : null, regLocation: regLoc, destLocation: destLoc, reference: refVal, createdAt: regISO, createdBy: ptUser()
+              status: pnl ? 'paid' : 'unpaid', panelId: pnl ? pnl.id : null, branchId: branchId, regLocation: regLoc, destLocation: destLoc, reference: refVal, createdAt: regISO, createdBy: ptUser()
             };
             var inv = DB.insert('invoices', invData);
             DB.update('invoices', inv.id, { no: inv.id });
