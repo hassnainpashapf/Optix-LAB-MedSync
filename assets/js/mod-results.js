@@ -267,7 +267,7 @@
      {lab} {patient} {doctor} {invoice} {date} {tests} {total} {due} {link} {linkline}
      {linkline} = "View / download: <link>" when a report link exists, otherwise "Please collect your report from the lab." */
   var WA_TPL = {
-    tplPatient: '*{lab}*\n\nAssalam-o-Alaikum {patient},\n\nYour laboratory report is ready.\n\n*Invoice:* {invoice} ({date})\n*Tests:* {tests}\n\n{linkline}\n\nThank you for choosing {lab}.',
+    tplPatient: '*{lab}*\n\nAssalam-o-Alaikum {patient},\n\nYour laboratory report is ready.\n\n*Invoice:* {invoice} ({date})\n*Tests:* {tests}\n*Bill Total:* {total}\n\n{linkline}\n\nThank you for choosing {lab}.',
     tplDoctor: '*{lab}*\n\nAssalam-o-Alaikum {doctor},\n\nThe laboratory report of your patient *{patient}* is ready.\n\n*Invoice:* {invoice} ({date})\n*Tests:* {tests}\n\n{linkline}\n\nWith regards,\n{lab}',
     tplDue: '*{lab}*\n\nAssalam-o-Alaikum {patient},\n\nYour laboratory report (invoice {invoice}) is ready.\nAn outstanding balance of *{due}* is pending. Please clear it at the lab and your report will be sent to you here automatically.\n\nThank you for your cooperation.'
   };
@@ -696,7 +696,7 @@
      own SIM card. Plain text, no markdown, no long links. */
 
   var SMS_TPL = {
-    tplPatient: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}, {date}) is ready. Tests: {tests}. Please collect it from the lab. Thank you.',
+    tplPatient: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}, {date}, Total {total}) is ready. Tests: {tests}. Please collect it from the lab. Thank you.',
     tplDoctor: '{lab}: Assalam-o-Alaikum {doctor}, the lab report of your patient {patient} (Invoice {invoice}) is ready. Thank you.',
     tplCritical: '{lab}: URGENT — critical result for {patient} (Invoice {invoice}): {test} = {value}. Please contact the lab immediately.',
     tplDue: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}) is ready. A balance of {due} is pending. Please clear it at the lab. Thank you.'
@@ -2093,9 +2093,9 @@
           ['Registration Date', dts(inv.createdAt)],
           ['Reporting Date', dts(d.maxReported)]
         ], [
-          ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address))]
+          ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address)), true]
         ], [
-          ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address))]
+          ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address)), true]
         ], [
           ['Reference', t(inv.reference, t(s.reference, 'Standard'))],
           ['Consultant', t((d.doc && d.doc.name), 'SELF')]
@@ -2110,7 +2110,7 @@
         return '<div style="display:grid;grid-template-columns:repeat(' + cells.length + ',minmax(0,1fr));gap:20px;break-inside:avoid;page-break-inside:avoid">' + cells.map(function (cell) {
           return '<div style="display:grid;grid-template-columns:140px 8px minmax(0,1fr);min-width:0;margin:2px 0;align-items:start">' +
             '<span style="font-weight:bold;overflow-wrap:anywhere">' + App.esc(cell[0]) + '</span><span>:</span>' +
-            '<span style="min-width:0;overflow-wrap:anywhere;white-space:pre-wrap">' + (cell[1] === '' ? '&nbsp;' : App.esc(cell[1])) + '</span></div>';
+            '<span style="min-width:0;overflow-wrap:anywhere;white-space:pre-wrap' + (cell[2] ? ';font-weight:bold' : '') + '">' + (cell[1] === '' ? '&nbsp;' : App.esc(cell[1])) + '</span></div>';
         }).join('') + '</div>';
       }).join('') + '</div>';
     }
@@ -2518,7 +2518,7 @@
     var note = test && (test.note || '');
     if (!note) return '';
     return '<div class="rpt-note" style="margin:8px 0 2px;font-size:0.88em;line-height:1.5;color:#000;' +
-      'page-break-inside:avoid">' +
+      'border:1px solid #000;border-radius:4px;padding:6px 10px;page-break-inside:avoid">' +
       '<strong>Note:</strong><br>' +
       App.esc(note) + '</div>';
   }
@@ -3572,8 +3572,8 @@
           var wrapped = cells.map(function (cell) {
             doc.setFont('helvetica', 'bold');
             var labels = doc.splitTextToSize(cell[0] + ':', VAL_OFF - 2);
-            doc.setFont('helvetica', 'normal');
-            return { labels: labels, values: doc.splitTextToSize(cell[1] || ' ', colW - VAL_OFF) };
+            doc.setFont('helvetica', cell[2] ? 'bold' : 'normal');
+            return { labels: labels, values: doc.splitTextToSize(cell[1] || ' ', colW - VAL_OFF), bold: !!cell[2] };
           });
           var count = wrapped.reduce(function (n, cell) { return Math.max(n, cell.labels.length, cell.values.length); }, 1);
           var rh = count * LH + ROW_PAD;
@@ -3587,7 +3587,7 @@
               var x = M + ci * (colW + GAP);
               doc.setFont('helvetica', 'bold');
               if (li < cell.labels.length) txt(cell.labels[li], x, y + 3.4);
-              doc.setFont('helvetica', 'normal');
+              doc.setFont('helvetica', cell.bold ? 'bold' : 'normal');
               if (li < cell.values.length) txt(cell.values[li], x + VAL_OFF, y + 3.4);
             });
             y += LH;
@@ -4014,8 +4014,21 @@
 
         // Optional test-level note.
         if (noteLines) {
-          bodyLines(['Note:'], 'bold', 9);
-          bodyLines(noteLines, 'normal', 8.5);
+          var noteH = (noteLines.length + 1) * 4.4 + 3;
+          if (noteH + 4 <= maxBodyY - M) {
+            /* boxed note, kept together on one page */
+            need(noteH + 3); y += 1.5;
+            var noteTop = y;
+            doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.rect(M, noteTop, CW, noteH);
+            doc.setTextColor(40, 40, 40); y += 1.5;
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(9); txt('Note:', M + 2, y + 4.4); y += 4.4;
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+            noteLines.forEach(function (ln) { txt(ln, M + 2, y + 4.4); y += 4.4; });
+            y = noteTop + noteH + 1;
+          } else {
+            bodyLines(['Note:'], 'bold', 9);
+            bodyLines(noteLines, 'normal', 8.5);
+          }
         }
         // Remarks (existing behavior).
         if (remLines) {

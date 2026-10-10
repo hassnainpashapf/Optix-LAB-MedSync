@@ -2559,7 +2559,7 @@
     var note = test && (test.note || '');
     if (!note) return '';
     return '<div class="rpt-note" style="margin:8px 0 2px;font-size:0.88em;line-height:1.5;color:#000;' +
-      'page-break-inside:avoid">' +
+      'border:1px solid #000;border-radius:4px;padding:6px 10px;page-break-inside:avoid">' +
       '<strong>Note:</strong><br>' +
       App.esc(note) + '</div>';
   }
@@ -4044,8 +4044,21 @@
 
         // Optional test-level note.
         if (noteLines) {
-          bodyLines(['Note:'], 'bold', 9);
-          bodyLines(noteLines, 'normal', 8.5);
+          var noteH = (noteLines.length + 1) * 4.4 + 3;
+          if (noteH + 4 <= maxBodyY - M) {
+            /* boxed note, kept together on one page */
+            need(noteH + 3); y += 1.5;
+            var noteTop = y;
+            doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.rect(M, noteTop, CW, noteH);
+            doc.setTextColor(40, 40, 40); y += 1.5;
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(9); txt('Note:', M + 2, y + 4.4); y += 4.4;
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
+            noteLines.forEach(function (ln) { txt(ln, M + 2, y + 4.4); y += 4.4; });
+            y = noteTop + noteH + 1;
+          } else {
+            bodyLines(['Note:'], 'bold', 9);
+            bodyLines(noteLines, 'normal', 8.5);
+          }
         }
         // Remarks (existing behavior).
         if (remLines) {
