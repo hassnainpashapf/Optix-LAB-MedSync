@@ -79,6 +79,11 @@
 
     var tests = DB.all('tests').filter(function (t) { return t.active !== false; });
     var doctors = DB.all('doctors');
+    var branches = (DB.all('branches') || []).filter(function (b) { return b && b.is_active !== false; });
+    var regDefault = String(App.visitDefaults().regLocation || '').trim().toLowerCase();
+    var defaultBranch = branches.filter(function (b) {
+      return regDefault && [b.name, b.code].some(function (v) { return String(v || '').trim().toLowerCase() === regDefault; });
+    })[0];
     var cats = ['All'];
     tests.forEach(function (t) { if (t.category && cats.indexOf(t.category) < 0) cats.push(t.category); });
 
@@ -238,6 +243,7 @@
       var billAt = App.fromLocalInput((document.getElementById('blRegDate') || {}).value), vn = App.nextVisitNos(billAt);
       var invData = {
         labNo: vn.labNo, caseNo: vn.caseNo,
+        branchId: (document.getElementById('blBranch') || {}).value || null,
         panelId: pn ? pn.id : null,
         reference: (document.getElementById('blRef') || {}).value || '',
         regLocation: (document.getElementById('blRegLoc') || {}).value ? document.getElementById('blRegLoc').value.trim() : '',
@@ -405,6 +411,7 @@
         '<div id="blCart" style="max-height:210px;overflow:auto"></div></div>' +
         '<div class="bl-sec"><label class="label" for="blRegDate">Registration date &amp; time</label><input class="input" id="blRegDate" type="datetime-local" value="' + App.toLocalInput() + '">' +
         '<div class="muted" style="font-size:11.5px;margin-top:3px">Filled in automatically. Change it if needed.</div>' +
+        (branches.length ? '<div style="margin-top:8px"><label class="label" for="blBranch">Branch</label><select class="select" id="blBranch"><option value="">Unassigned</option>' + branches.map(function (b) { return '<option value="' + App.esc(b.id) + '"' + (defaultBranch && defaultBranch.id === b.id ? ' selected' : '') + '>' + App.esc(b.name || b.code || b.id) + '</option>'; }).join('') + '</select></div>' : '') +
         '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px"><div><label class="label" for="blRegLoc">Registration location</label><input class="input" id="blRegLoc" list="blRegLoc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().regLocation) + '">' + App.datalistHtml('blRegLoc-dl', 'regLocation', App.visitDefaults().regLocation) + '</div>' +
         '<div><label class="label" for="blDestLoc">Destination location</label><input class="input" id="blDestLoc" list="blDestLoc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '">' + App.datalistHtml('blDestLoc-dl', 'destLocation', App.visitDefaults().destLocation) + '</div></div>' +
         '<div style="margin-top:8px"><label class="label" for="blRef">Reference <span class="muted" style="font-weight:400">(shown on the report)</span></label><select class="select" id="blRef">' + App.optionsHtml('reference', App.listOptions('reference')[0] || '') + '</select></div></div>' +

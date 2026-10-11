@@ -260,6 +260,7 @@
   }
   function showResult(kind, title, lines) {
     var r = document.getElementById('smpResult'); if (!r) return;
+    r.hidden = false;
     r.className = 'smp-result r-' + kind;
     r.innerHTML = '<span class="smp-res-ic">' + App.icon(kind === 'err' ? 'alert' : (kind === 'info' ? 'file' : 'check'), 22) + '</span>' +
       '<div class="smp-res-tx"><b>' + title + '</b>' + (lines || []).map(function (l) { return '<span>' + l + '</span>'; }).join('') + '</div>';
@@ -447,7 +448,7 @@
     '.smp-scan-in{flex:1;min-width:0}' +
     '.smp-scan-in .input{font-size:18px;font-weight:700;letter-spacing:.02em;padding:11px 14px;font-family:"Courier New",ui-monospace,monospace}' +
     '.smp-scan-in .input::placeholder{font-family:var(--font);font-weight:500;letter-spacing:0;font-size:15px}' +
-    '.smp-result{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:11px 14px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);color:var(--muted);font-size:13.5px}' +
+     '.smp-result{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:11px 14px;border-radius:12px;background:#f8fafc;border:1px solid var(--line);color:var(--muted);font-size:13.5px}.smp-result[hidden]{display:none}' +
     '.smp-result.r-ok{background:var(--green-soft);border-color:#bfe8d6;color:var(--ink)}.smp-result.r-ok .smp-res-ic{color:var(--green)}' +
     '.smp-result.r-err{background:var(--red-soft);border-color:#f6c6c6;color:var(--ink)}.smp-result.r-err .smp-res-ic{color:var(--red)}' +
     '.smp-result.r-info{background:var(--blue-soft);border-color:#c5d6fb;color:var(--ink)}.smp-result.r-info .smp-res-ic{color:var(--blue)}' +
@@ -493,6 +494,19 @@
       '#view .smp-table td.actions .btn{flex:1 1 calc(50% - 8px)}.smp-thgrid{zoom:1.35}.smp-a4pg{zoom:.36}.smp-ld-cp{margin-left:0}.smp-scan-row .btn span{display:none}' +
     '}';
 
+  /* ---------- stat cards: same look as the main dashboard (.stat in app.css: tinted diagonal, icon chip, label, number, caption) ---------- */
+  var SVG_ATTR = ' viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+  var STAT_ICON = {
+    cal: '<svg' + SVG_ATTR + '><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg>',
+    clock: '<svg' + SVG_ATTR + '><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+    check: '<svg' + SVG_ATTR + '><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>',
+    box: '<svg' + SVG_ATTR + '><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>'
+  };
+  function statCard(tint, icon, label, value, sub) {
+    return '<div class="stat" data-tint="' + tint + '"><div class="stat-ico">' + icon + '</div>' +
+      '<div class="lb">' + label + '</div><div class="vl">' + value + '</div><div class="dl">' + sub + '</div></div>';
+  }
+
   /* ---------- KPI cards (computed from the GLOBAL UNFILTERED sample list) ---------- */
   function sampleKpis() {
     var all = [];
@@ -506,15 +520,12 @@
     var CLOCK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
     var FLASK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v6L4.5 18a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 8V2"/><path d="M8.5 2h7"/><path d="M7 15h10"/></svg>';
     var CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>';
-    function kpi(cls, icon, label, num, sub) {
-      return '<div class="kpi ' + cls + '"><div class="kpi-ic">' + icon + '</div><div class="kpi-lb">' + label + '</div><div class="kpi-nm">' + num + '</div><div class="kpi-sb">' + sub + '</div></div>';
-    }
     var inProcess = (c.collected || 0) + (c.received || 0) + (c.processing || 0);
-    return '<div class="kpi-grid" id="spKpis">' +
-      kpi('t-navy', TUBE, 'TOTAL SAMPLES', all.length, 'all tubes') +
-      kpi('t-amber', CLOCK, 'TO COLLECT', c.pending, 'awaiting collection') +
-      kpi('t-blue', FLASK, 'IN PROCESS', inProcess, 'in lab & processing') +
-      kpi('t-green', CHECK, 'DONE', c.done, 'completed') +
+    return '<div class="stat-grid" id="spKpis">' +
+      statCard('brand', TUBE, 'Total Samples', all.length, 'all tubes') +
+      statCard('amber', CLOCK, 'To Collect', c.pending, 'awaiting collection') +
+      statCard('blue', FLASK, 'In Process', inProcess, 'in lab &amp; processing') +
+      statCard('green', CHECK, 'Done', c.done, 'completed') +
       '</div>';
   }
 
@@ -529,11 +540,6 @@
     var camSupport = typeof window.BarcodeDetector === 'function' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
 
     view.innerHTML = '<style>' + CSS + '</style>' +
-      '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px;flex-wrap:wrap">' +
-        '<a href="#/samples" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' + App.icon('tube', 15) + ' Sample Tracking &amp; Phlebotomy</a>' +
-        '<a href="#/samples/stickers" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('printer', 15) + ' Tube Stickers (50×25mm)</a>' +
-        '<a href="#/home-sampling" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">🛵 Home Sampling &amp; Dispatch</a>' +
-      '</div>' +
       sampleKpis() +
       '<div class="smp-scan" id="smpScanBox">' +
         '<div class="smp-scan-row">' +
@@ -542,8 +548,7 @@
           '<button class="btn btn-primary" id="smpGo" title="Apply scan">' + App.icon('check', 16) + '<span>Go</span></button>' +
           '<button class="btn" id="smpCam" hidden title="Scan with the device camera">' + App.icon('scan', 16) + '<span>Camera</span></button>' +
         '</div>' +
-        '<div class="smp-result" id="smpResult"><div class="smp-hint"><span>Each scan moves the tube one step:</span>' +
-          '<b>To collect</b><i>&rarr;</i><b>Collected</b><i>&rarr;</i><b>In lab</b><i>&rarr;</i><b>Processing</b><i>&rarr;</i><b>Done</b></div></div>' +
+         '<div class="smp-result" id="smpResult" hidden aria-live="polite"></div>' +
       '</div>' +
       '<div class="card"><div class="card-b">' +
         '<div class="smp-filters">' +
@@ -748,11 +753,11 @@
       var checkedCount = Object.keys(STK.checked).length;
 
       var kpiHtml =
-        '<div class="kpi-grid" style="margin-bottom:16px">' +
-          '<div class="kpi t-navy"><div class="kpi-ic">' + App.icon('file', 20) + '</div><div class="kpi-lb">TODAY\'S INVOICES</div><div class="kpi-nm">' + st.invoices + '</div><div class="kpi-sb">billed today</div></div>' +
-          '<div class="kpi t-blue"><div class="kpi-ic">' + App.icon('tube', 20) + '</div><div class="kpi-lb">TUBES TODAY</div><div class="kpi-nm">' + st.tubes + '</div><div class="kpi-sb">specimen tubes</div></div>' +
-          '<div class="kpi t-amber"><div class="kpi-ic">' + App.icon('clock', 20) + '</div><div class="kpi-lb">TO COLLECT</div><div class="kpi-nm">' + st.pending + '</div><div class="kpi-sb">awaiting collection</div></div>' +
-          '<div class="kpi t-green"><div class="kpi-ic">' + App.icon('check', 20) + '</div><div class="kpi-lb">COLLECTED / IN LAB</div><div class="kpi-nm">' + st.ready + '</div><div class="kpi-sb">tubes received</div></div>' +
+        '<div class="stat-grid">' +
+          statCard('brand', App.icon('file', 20), "Today's Invoices", st.invoices, 'billed today') +
+          statCard('blue', App.icon('tube', 20), 'Tubes Today', st.tubes, 'specimen tubes') +
+          statCard('amber', STAT_ICON.clock, 'To Collect', st.pending, 'awaiting collection') +
+          statCard('green', STAT_ICON.check, 'Collected / In Lab', st.ready, 'tubes received') +
         '</div>';
 
       var previewHtml = '';
@@ -858,11 +863,6 @@
 
       view.innerHTML =
         '<style>' + CSS + LABEL_CSS + STK_CSS + '</style>' +
-        '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px;flex-wrap:wrap">' +
-          '<a href="#/samples" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('tube', 15) + ' Sample Tracking &amp; Phlebotomy</a>' +
-          '<a href="#/samples/stickers" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' + App.icon('printer', 15) + ' Tube Stickers (50×25mm)</a>' +
-          '<a href="#/home-sampling" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">🛵 Home Sampling &amp; Dispatch</a>' +
-        '</div>' +
         kpiHtml +
         '<div class="stk-layout">' +
           '<div class="card"><div class="card-b">' +
@@ -1102,12 +1102,13 @@
 
     var todayStr = App.today();
     var tomorrowStr = addDays(todayStr, 1);
+    var listOnly = typeof location !== 'undefined' && String(location.hash).indexOf('#/samples/bookings') === 0;
 
-    /* KPI calculations */
+    /* Summary totals use all bookings, independent of table filters. */
     var todayBookings = bookings.filter(function (b) { return b.scheduledDate === todayStr; });
+    var pendingCount = bookings.filter(function (b) { return b.status === 'scheduled'; }).length;
     var dispatchedCount = bookings.filter(function (b) { return b.status === 'dispatched'; }).length;
     var collectedCount = bookings.filter(function (b) { return b.status === 'collected'; }).length;
-    var receivedCount = bookings.filter(function (b) { return b.status === 'received_in_lab' && (b.scheduledDate === todayStr || (b.receivedAt && b.receivedAt.slice(0, 10) === todayStr)); }).length;
 
     /* Filter bookings */
     var filtered = bookings.filter(function (b) {
@@ -1140,9 +1141,9 @@
 
     var tabCounts = {
       all: bookings.length,
-      scheduled: bookings.filter(function (b) { return b.status === 'scheduled'; }).length,
-      dispatched: bookings.filter(function (b) { return b.status === 'dispatched'; }).length,
-      collected: bookings.filter(function (b) { return b.status === 'collected'; }).length,
+      scheduled: pendingCount,
+      dispatched: dispatchedCount,
+      collected: collectedCount,
       received_in_lab: bookings.filter(function (b) { return b.status === 'received_in_lab'; }).length,
       cancelled: bookings.filter(function (b) { return b.status === 'cancelled'; }).length
     };
@@ -1159,13 +1160,21 @@
       + '.hs-badge-status { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .03em; display: inline-flex; align-items: center; gap: 4px; }'
       + '</style>'
       + '<div class="hs-dash">'
-
-      /* 3 Top Horizontal View Tabs */
-      + '<div style="display:flex;gap:8px;margin-bottom:16px;border-bottom:1px solid var(--bd,#e2e8f0);padding-bottom:10px;flex-wrap:wrap">'
-      +   '<a href="#/samples" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('tube', 15) + ' Sample Tracking &amp; Phlebotomy</a>'
-      +   '<a href="#/samples/stickers" class="btn btn-sm btn-secondary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink)">' + App.icon('printer', 15) + ' Tube Stickers (50×25mm)</a>'
-      +   '<a href="#/home-sampling" class="btn btn-sm btn-primary" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🛵 Home Sampling &amp; Dispatch</a>'
-      + '</div>'
+      + (listOnly ? '<div class="stat-grid">'
+          + statCard('brand', STAT_ICON.box, 'Total Bookings', tabCounts.all, 'all home collection bookings')
+          + statCard('amber', STAT_ICON.clock, 'Scheduled', tabCounts.scheduled, 'waiting for dispatch')
+          + statCard('green', STAT_ICON.check, 'Completed', (tabCounts.collected || 0) + (tabCounts.received_in_lab || 0), 'collected or received in lab')
+          + statCard('red', App.icon('x', 18), 'Cancelled', tabCounts.cancelled, 'bookings cancelled')
+          + '</div>' : '<div class="stat-grid">'
+      + [
+          { label: "Today's Bookings", value: todayBookings.length, subtitle: 'Scheduled for today', tint: 'blue', icon: STAT_ICON.cal },
+          { label: 'Pending Dispatch', value: pendingCount, subtitle: 'Scheduled · All dates', tint: 'amber', icon: STAT_ICON.clock },
+          { label: 'Dispatched', value: dispatchedCount, subtitle: 'All dates', tint: 'brand', icon: STAT_ICON.box },
+          { label: 'Collected', value: collectedCount, subtitle: 'All dates', tint: 'green', icon: STAT_ICON.check }
+        ].map(function (card) {
+          return statCard(card.tint, card.icon, App.esc(card.label), App.esc(String(card.value)), App.esc(card.subtitle));
+        }).join('')
+      + '</div>') /* All Bookings has its own booking-status cards; Home Sampling & Dispatch keeps today / dispatch cards */
 
       /* Search & Filter Card with Integrated Status Pipeline Tabs */
       + '<div class="card" style="margin-bottom:18px"><div class="card-b" style="padding:14px 16px">'
@@ -1872,5 +1881,9 @@
 
   App.route('#/home-sampling', renderHomeSamplingDashboard);
   App.route('#/samples/home', renderHomeSamplingDashboard);
+  /* "All Bookings" menu item: the same dispatch centre, always opened on the All Bookings tab with the filters cleared */
+  App.route('#/samples/bookings', function () {
+    HS_FILTER.tab = 'all'; HS_FILTER.q = ''; HS_FILTER.date = 'all'; HS_FILTER.riderId = 'all';
+    renderHomeSamplingDashboard();
+  });
 })();
-

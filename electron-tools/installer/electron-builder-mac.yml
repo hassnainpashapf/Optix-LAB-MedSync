@@ -1,0 +1,21 @@
+# Optix LAB MedSync macOS app (unsigned, ad-hoc) — electron-builder config used by build-mac.sh
+# Produces <output>/mac-arm64/ or <output>/mac/ "Optix LAB MedSync.app" (--dir); build-mac.sh then wraps it in a .dmg with hdiutil.
+appId: com.labpos.desktop
+productName: Optix LAB MedSync
+copyright: Copyright © Optix LAB MedSync
+electronVersion: 37.10.3
+
+directories:
+  app: ./app-stage
+  output: ../../dist-mac
+
+files:
+  - "**/*"
+  - "!**/*.map"
+
+asar: true
+
+mac:
+  target: dir
+  icon: icon.icns
+  identity: null

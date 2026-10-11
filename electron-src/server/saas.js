@@ -19,10 +19,10 @@ const GRACE_DAYS = 3;          /* after paidUntil, still fully usable for a few 
 const RESERVED = ['admin', 'api', 'app', 'www', 'superadmin', 'support', 'help', 'login', 'signup', 'demo', 'test', 'optix', 'system', 'root', 'static', 'assets'];
 
 const DEFAULT_PLANS = {
-  trial:      { name: 'Free Trial',   monthly: 0,    yearly: 0,     users: 5,  invoicesPerMonth: 500,  desc: 'Everything unlocked for 14 days' },
-  starter:    { name: 'Starter',      monthly: 2500, yearly: 25000, users: 3,  invoicesPerMonth: 300,  desc: 'Small collection centre' },
-  pro:        { name: 'Professional', monthly: 6000, yearly: 60000, users: 10, invoicesPerMonth: 3000, desc: 'Busy diagnostic lab' },
-  enterprise: { name: 'Enterprise',   monthly: 0,    yearly: 0,     users: 0,  invoicesPerMonth: 0,    desc: 'Chains & hospitals — unlimited, custom pricing' },
+  trial:      { name: 'Free Trial',   monthly: 0,    yearly: 0,     users: 5,  invoicesPerMonth: 500,  storageMb: 200,  desc: 'Everything unlocked for 14 days' },
+  starter:    { name: 'Starter',      monthly: 2500, yearly: 25000, users: 3,  invoicesPerMonth: 300,  storageMb: 500,  desc: 'Small collection centre' },
+  pro:        { name: 'Professional', monthly: 6000, yearly: 60000, users: 10, invoicesPerMonth: 3000, storageMb: 5000, desc: 'Busy diagnostic lab' },
+  enterprise: { name: 'Enterprise',   monthly: 0,    yearly: 0,     users: 0,  invoicesPerMonth: 0,    storageMb: 0,    desc: 'Chains & hospitals — unlimited, custom pricing' },
 };
 const DEFAULT_SETTINGS = {
   trialDays: 14,
@@ -30,6 +30,68 @@ const DEFAULT_SETTINGS = {
   payInstructions: 'Pay by JazzCash / Easypaisa / bank transfer, then submit the transaction ID here. Your plan is activated within a few hours.',
   payMethods: [], /* [{ name:'JazzCash', account:'03xx-xxxxxxx', title:'Account title' }] */
 };
+
+/* multi-branch: every lab may run up to this many branches by default (per-lab override lives on lab.maxBranches) */
+const DEFAULT_MAX_BRANCHES = 5;
+/* ONE account system for a suite of products (like a ManageEngine / Zoho suite): every product keeps its own website and backend; this hub
+   knows which products exist (the registry below, editable in the superadmin console), which ones a business has, and which a user may open.
+   'lab' is the product that hosts the hub today; it cannot be removed. */
+const PRODUCT_ICONS = ['flask', 'pill', 'cart', 'truck', 'users', 'chart', 'box', 'file'];
+const DEFAULT_PRODUCTS = [
+  { id: 'lab', name: 'Blood Test Lab', sub: 'Patients, tests, reports and invoices', color: '#0ea5a4', icon: 'flask', url: '', roles: [], host: true,
+    desc: 'Everything a diagnostic lab runs on: patient registration, a ready test catalog, result entry, printed and QR-verified reports, billing and dues, WhatsApp / SIM SMS / Email, branches and cloud backup.',
+    features: ['Patients, invoices, dues and daily cash closing', '5000+ tests with report templates and reference ranges', 'QR-verified reports sent by WhatsApp, SMS or Email', 'Roles, audit log and multi-branch control', 'Works offline on desktop and syncs to the cloud'],
+    site: 'https://optix-lab-medsync.pages.dev/',
+    downloads: [
+      { platform: 'windows', label: 'Windows 10 / 11 (64-bit)', url: 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-Setup-1.4.0-win10-11-x64.exe', note: 'Installer, about 100 MB' },
+      { platform: 'windows', label: 'Windows 7 / 8 (64-bit)', url: 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-Setup-1.4.0-win7-8-x64.exe', note: 'Installer, about 75 MB' },
+      { platform: 'mac', label: 'Mac (Apple chip)', url: 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-1.3.1-arm64.dmg.tar.gz', note: 'Version 1.3.1' },
+      { platform: 'mac', label: 'Mac (Intel)', url: 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-1.3.1-x64.dmg.tar.gz', note: 'Version 1.3.1' },
+      { platform: 'android', label: 'Android app', url: 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.1.0.apk', note: 'Version 2.1.0, also sends SMS from the phone SIM' }] },
+  { id: 'pharmacy', name: 'Pharmacy POS', sub: 'Medicines, stock and billing counter', color: '#2f6df6', icon: 'pill',
+    url: 'https://pharmacy-pos.ellahabad.workers.dev', host: false,
+    roles: [{ value: 'ADMIN', label: 'Admin' }, { value: 'MANAGER', label: 'Manager' }, { value: 'PHARMACIST', label: 'Pharmacist' }, { value: 'CASHIER', label: 'Cashier' }],
+    desc: 'A fast point of sale for pharmacies: barcode checkout, batch and expiry control, purchases and suppliers, returns, customer credit and loyalty, shifts and reports. Runs offline-first on the counter.',
+    features: ['Barcode billing with FEFO batch and expiry control', 'Purchases, suppliers, returns and stock audit', 'Customer ledger (udhar), loyalty and wholesale rates', 'Shift closing, accounting and reports', 'Messages to customers by WhatsApp, SMS or Email'],
+    site: 'https://pharmacy-pos.ellahabad.workers.dev/',
+    downloads: [{ platform: 'windows', label: 'Windows installer', url: 'https://github.com/hassnainpashapf/Pharmacy-POS/releases/download/v2.0.0/Optix-MedSync-Setup-2.0.0.exe', note: 'Version 2.0.0, about 120 MB' }] },
+  { id: 'hospital', name: 'Hospital Management', sub: 'Patients, doctors, billing and wards', color: '#0f766e', icon: 'users',
+    url: 'https://hospital.150.230.52.29.sslip.io/app', host: false,
+    roles: [{ value: 'SUPER_ADMIN', label: 'Super Admin' }, { value: 'DOCTOR', label: 'Doctor' }, { value: 'RECEPTIONIST', label: 'Receptionist' }, { value: 'ACCOUNTANT', label: 'Accountant' }, { value: 'PHARMACIST', label: 'Pharmacist' }],
+    desc: 'A hospital system with a workspace for every hospital: appointments and doctor calendars, patient records, billing and transactions, suppliers and stock, staff roles and an audit trail.',
+    features: ['No double-booked doctors, calendar and appointments', 'Patient records, vitals and reservations', 'Billing, transactions, suppliers and stock', 'Access by role, enforced on the server', 'Every change written to an audit log'],
+    site: 'https://hospital.150.230.52.29.sslip.io/', downloads: [] },
+];
+const PRODUCT_ID_RE = /^[a-z][a-z0-9-]{1,19}$/;
+/* validate / normalise an edited registry; throws a readable Error */
+function cleanProducts(list) {
+  if (!Array.isArray(list) || !list.length || list.length > 20) throw new Error('Give between 1 and 20 products.');
+  const seen = {}, out = list.map((p) => {
+    p = p || {};
+    const id = String(p.id || '').trim().toLowerCase();
+    if (!PRODUCT_ID_RE.test(id)) throw new Error('Product id "' + id + '" must be 2-20 letters / digits / dashes, starting with a letter.');
+    if (seen[id]) throw new Error('Product id "' + id + '" is used twice.'); seen[id] = 1;
+    const name = String(p.name || '').trim().slice(0, 40); if (!name) throw new Error('Product "' + id + '" needs a name.');
+    const color = /^#[0-9a-fA-F]{6}$/.test(String(p.color || '')) ? String(p.color).toLowerCase() : '#475569';
+    const url = String(p.url || '').trim().replace(/\/+$/, '').slice(0, 200);
+    if (id !== 'lab' && !/^https:\/\/[^\s/]+(\/[^\s]*)?$|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[^\s]*)?$/.test(url)) throw new Error('Product "' + id + '" needs its web address (https://...).');
+    const roles = (Array.isArray(p.roles) ? p.roles : []).slice(0, 10).map((r) => ({ value: String((r && r.value) || '').trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 30), label: String((r && r.label) || '').trim().slice(0, 40) }))
+      .filter((r) => r.value).map((r) => ({ value: r.value, label: r.label || r.value }));
+    const okUrl = (u) => /^https:\/\/[^\s/]+(\/[^\s]*)?$|^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/[^\s]*)?$/.test(u);
+    const features = (Array.isArray(p.features) ? p.features : []).map((x) => String(x || '').trim().slice(0, 90)).filter(Boolean).slice(0, 8);
+    const downloads = (Array.isArray(p.downloads) ? p.downloads : []).slice(0, 12).map((d) => ({ platform: ['windows', 'mac', 'android', 'ios', 'linux', 'web'].indexOf(d && d.platform) >= 0 ? d.platform : 'web', label: String((d && d.label) || '').trim().slice(0, 50), url: String((d && d.url) || '').trim().slice(0, 300), note: String((d && d.note) || '').trim().slice(0, 80) }))
+      .filter((d) => d.label || d.url).map((d) => { if (!d.label || !okUrl(d.url)) throw new Error('Each download of "' + id + '" needs a name and an https address.'); return d; });
+    const site = String(p.site || '').trim().slice(0, 200); if (site && !okUrl(site)) throw new Error('The website address of "' + id + '" must start with https://');
+    return { id, name, sub: String(p.sub || '').trim().slice(0, 80), color, icon: PRODUCT_ICONS.indexOf(p.icon) >= 0 ? p.icon : 'box', url: id === 'lab' ? '' : url, roles, host: id === 'lab',
+      desc: String(p.desc || '').trim().slice(0, 500), features, downloads, site };
+  });
+  if (!seen.lab) throw new Error('The lab product cannot be removed.');
+  return out;
+}
+/* per-module feature gating: keys mirror the app.js NAV; lab.features stores only explicit `false` overrides (absent = enabled) */
+const FEATURE_KEYS = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced',
+  'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'doctors', 'expenses', 'finance',
+  'reports', 'downloads', 'email', 'whatsapp', 'sms', 'audit', 'subscription', 'settings'];
 
 function slugify(s) {
   return String(s || '').toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30);
@@ -40,10 +102,41 @@ const USER_RE = /^[a-zA-Z0-9._-]{3,30}$/;
 
 function create(ctx) {
   const { raw, TABLES, hashPassword, defaultsFor } = ctx;
+  const fileBytes = typeof ctx.fileBytes === 'function' ? ctx.fileBytes : () => 0; /* bytes of report files a lab keeps on this server */
   const cache = { labs: null, stores: new Map() };
   const pendingSlugs = new Set(); /* slugs being created right now: reserved before the (slow) seeding so two signups cannot take the same one */
 
   /* ---------- settings / plans ---------- */
+  /* ---------- product registry (suite) ---------- */
+  let PRODUCT_LIST = DEFAULT_PRODUCTS.map((p) => Object.assign({}, p));
+  async function loadProducts() {
+    try { const v = await raw.getMeta('saas_products'); if (Array.isArray(v) && v.length) PRODUCT_LIST = cleanProducts(v); } catch (e) { /* keep the defaults */ }
+    return PRODUCT_LIST;
+  }
+  async function setProducts(list) { const c = cleanProducts(list); await raw.setMeta('saas_products', c); PRODUCT_LIST = c; return c; }
+  const getProducts = () => PRODUCT_LIST.map((p) => Object.assign({}, p));
+  const productIds = () => PRODUCT_LIST.map((p) => p.id);
+  /* what the apps may show about a product (the address stays on the server) */
+  const catalogFor = (ids) => PRODUCT_LIST.filter((p) => !ids || ids.indexOf(p.id) >= 0).map((p) => ({ id: p.id, name: p.name, sub: p.sub, color: p.color, icon: p.icon, roles: p.roles, host: !!p.host }));
+  const productById = (id) => PRODUCT_LIST.filter((p) => p.id === id)[0] || null;
+  function productsOf(lab) {
+    const ids = productIds(), p = lab && Array.isArray(lab.products) ? lab.products.filter((x) => ids.indexOf(x) >= 0) : [];
+    return p.length ? ids.filter((x) => p.indexOf(x) >= 0) : ['lab'];
+  }
+  /* the apps one user can open: what the business has, narrowed by user.apps. A user without an explicit list gets every product if they are
+     the admin, otherwise only the lab (so switching a product on never opens it to everyone). */
+  function appsFor(lab, user) {
+    const prod = productsOf(lab);
+    const want = user && Array.isArray(user.apps) ? user.apps : (user && user.role === 'admin' ? prod : ['lab']);
+    return prod.filter((x) => want.indexOf(x) >= 0);
+  }
+  /* the per-product roles a user holds: user.appRoles = { pharmacy: 'CASHIER' } (plus the older user.pharmacyRole) */
+  function appRolesOf(user) {
+    const r = Object.assign({}, user && user.appRoles && typeof user.appRoles === 'object' ? user.appRoles : {});
+    if (user && user.pharmacyRole && !r.pharmacy) r.pharmacy = user.pharmacyRole;
+    return r;
+  }
+
   async function getSettings() { return Object.assign({}, DEFAULT_SETTINGS, (await raw.getMeta('saas_settings')) || {}); }
   async function getPlans() {
     const o = (await raw.getMeta('saas_plans')) || {};
@@ -59,7 +152,7 @@ function create(ctx) {
     cache.labs = new Map(rows.map(r => [r.id, r]));
     return cache.labs;
   }
-  async function saveLab(l) { await raw.put(LABS_T, l); (await loadLabs()).set(l.id, l); return l; }
+  async function saveLab(l) { await raw.put(LABS_T, l); (await loadLabs()).set(l.id, l); return l; } /* raw.put stores the whole row: maxBranches / features survive the save */
   async function getLab(id) { return (await loadLabs()).get(id || 'main') || null; }
   async function findBySlug(slug) {
     slug = String(slug || '').trim().toLowerCase();
@@ -81,6 +174,7 @@ function create(ctx) {
   /* make sure the original deployment exists as tenant "main" (enterprise, never expires) */
   async function bootstrap(mainStore) {
     cache.stores.set('main', mainStore); /* ONE wrapStore per tenant: its sync cursor must stay strictly increasing */
+    await loadProducts();
     let main = await getLab('main');
     if (!main) {
       const st = (await mainStore.get('settings', 'main')) || {};
@@ -118,11 +212,27 @@ function create(ctx) {
       last = Math.max(last, +i._u || 0);
     }
     const patients = (await st.all('patients')).length;
-    return { users, invoicesThisMonth: invMonth, invoicesTotal: invoices.length, patients, lastActivity: last ? new Date(last).toISOString() : null };
+    return { users, invoicesThisMonth: invMonth, invoicesTotal: invoices.length, patients, storageBytes: +fileBytes(lab.id) || 0, lastActivity: last ? new Date(last).toISOString() : null };
   }
   async function limitsOf(lab) {
     const p = (await getPlans())[lab.plan] || DEFAULT_PLANS.starter;
-    return { users: lab.limitUsers != null ? lab.limitUsers : p.users, invoicesPerMonth: lab.limitInvoices != null ? lab.limitInvoices : p.invoicesPerMonth };
+    return { users: lab.limitUsers != null ? lab.limitUsers : p.users, invoicesPerMonth: lab.limitInvoices != null ? lab.limitInvoices : p.invoicesPerMonth,
+      maxBranches: lab.maxBranches != null ? lab.maxBranches : DEFAULT_MAX_BRANCHES,
+      storageMb: lab.limitStorageMb != null ? lab.limitStorageMb : (p.storageMb || 0) };
+  }
+  /* effective feature map: all-true defaults, then lab.features overrides (only `false` is stored; absent = enabled) */
+  function getFeatures(lab) {
+    const overrides = (lab && lab.features) || {};
+    const out = {};
+    for (const k of FEATURE_KEYS) out[k] = overrides[k] !== false;
+    return out;
+  }
+  async function setFeatures(lab, features) {
+    const overrides = {};
+    for (const k of FEATURE_KEYS) if (features && features[k] === false) overrides[k] = false;
+    lab.features = overrides;
+    await saveLab(lab);
+    return getFeatures(lab);
   }
   async function view(lab, withUsage) {
     const plans = await getPlans();
@@ -130,7 +240,8 @@ function create(ctx) {
       id: lab.id, slug: lab.slug, name: lab.name, ownerName: lab.ownerName || '', ownerEmail: lab.ownerEmail || '', phone: lab.phone || '',
       plan: lab.plan, planName: (plans[lab.plan] || {}).name || lab.plan, status: effStatus(lab), rawStatus: lab.status,
       trialEndsAt: lab.trialEndsAt || null, paidUntil: lab.paidUntil || null, daysLeft: daysLeft(lab), createdAt: lab.createdAt,
-      notes: lab.notes || '', legacy: !!lab.legacy, limits: await limitsOf(lab), history: lab.history || [],
+      notes: lab.notes || '', legacy: !!lab.legacy, limits: await limitsOf(lab), maxBranches: lab.maxBranches != null ? lab.maxBranches : DEFAULT_MAX_BRANCHES,
+      features: getFeatures(lab), history: lab.history || [], products: productsOf(lab), productInfo: catalogFor(productsOf(lab)),
     };
     if (withUsage) v.usage = await usageOf(lab);
     return v;
@@ -160,6 +271,7 @@ function create(ctx) {
       const id = 'l' + crypto.randomBytes(5).toString('hex');
       const now = new Date();
       const lab = { id, slug, prefix: id + '/', name: labName, ownerName, ownerEmail: email, phone, plan: 'trial', status: 'active',
+        maxBranches: DEFAULT_MAX_BRANCHES, features: {},
         trialEndsAt: new Date(now.getTime() + (+settings.trialDays || 14) * DAY).toISOString(), paidUntil: null,
         createdAt: now.toISOString(), history: [] };
       await addHistory(lab, 'Signed up — ' + (+settings.trialDays || 14) + '-day free trial', by || 'signup');
@@ -196,8 +308,8 @@ function create(ctx) {
     return new Date(base + (period === 'yearly' ? 365 : 30) * DAY).toISOString();
   }
 
-  return { LABS_T, PAY_T, DAY, DEFAULT_PLANS, getSettings, getPlans, loadLabs, saveLab, getLab, findBySlug, storeFor, bootstrap, effStatus, daysLeft,
-    usageOf, limitsOf, view, createLab, purgeLab, addPeriod, addHistory, slugify, SLUG_RE, RESERVED, raw };
+  return { LABS_T, PAY_T, DAY, DEFAULT_PLANS, FEATURE_KEYS, DEFAULT_MAX_BRANCHES, getSettings, getPlans, loadLabs, saveLab, getLab, findBySlug, storeFor, bootstrap, effStatus, daysLeft,
+    usageOf, limitsOf, view, createLab, purgeLab, addPeriod, addHistory, getFeatures, setFeatures, slugify, SLUG_RE, RESERVED, raw, productsOf, appsFor, appRolesOf, getProducts, setProducts, productIds, catalogFor, productById, loadProducts };
 }
 
-module.exports = { create, slugify, DEFAULT_PLANS, DEFAULT_SETTINGS };
+module.exports = { create, slugify, DEFAULT_PLANS, DEFAULT_SETTINGS, FEATURE_KEYS, DEFAULT_MAX_BRANCHES, DEFAULT_PRODUCTS, PRODUCT_ICONS, cleanProducts };

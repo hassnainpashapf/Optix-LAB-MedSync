@@ -188,8 +188,15 @@ async function main() {
   ];
   /* returns { test, params: bool, ranges: bool } — `test` is the same object when nothing changed */
   function withDefaults(t) {
-    let out = t, params = false, ranges = false;
+    let out = t, params = false, ranges = false; /* pre-existing ReferenceError fix: was using undeclared out/params/ranges */
     if ((!Array.isArray(out.params) || !out.params.length) && DEFAULT_PARAMS[out.code] && !out.isPackage) { out = Object.assign({}, out, { params: DEFAULT_PARAMS[out.code] }); params = true; }
+    if (out.code === 'TYPHI') {
+      let typhiDirty = false, patch = {};
+      if (!/typhoid/i.test(out.name || '')) { patch.name = 'Typhoid (IgG-IgM) / Typhidot'; typhiDirty = true; }
+      if (!Array.isArray(out.aliases) || !out.aliases.length) { patch.aliases = ['Typhoid', 'Typhoid (IgG-IgM)', 'Typhidot', 'Typhoid Rapid', 'Typhi']; typhiDirty = true; }
+      if (Array.isArray(out.params) && out.params.length === 2 && (out.params[0].name === 'IgG' || out.params[0].name === 'IgM')) { patch.params = DEFAULT_PARAMS['TYPHI']; typhiDirty = true; }
+      if (typhiDirty) { out = Object.assign({}, out, patch); params = true; }
+    }
     if (Array.isArray(out.params) && !out.isPackage) {
       let changed = false;
       const np = out.params.map((p) => {
@@ -232,7 +239,7 @@ async function main() {
   /* ---- SaaS: lab registry + per-lab isolated stores (cloud only; the desktop app is a single local lab) ---- */
   let saas = null;
   if (!DESKTOP) {
-    saas = saasMod.create({ raw: rawStore, TABLES, hashPassword, defaultsFor });
+    saas = saasMod.create({ raw: rawStore, TABLES, hashPassword, defaultsFor, fileBytes: (id) => pdfUsage().get(id) || 0 });
     await saas.bootstrap(store);
   }
 
@@ -241,6 +248,20 @@ async function main() {
   const mailKey = () => crypto.createHash('sha256').update('labpos-mail|' + SESSION_SECRET).digest();
   const encPw = (pw) => { const iv = crypto.randomBytes(12), c = crypto.createCipheriv('aes-256-gcm', mailKey(), iv), ct = Buffer.concat([c.update(String(pw), 'utf8'), c.final()]); return 'v1:' + iv.toString('hex') + ':' + c.getAuthTag().toString('hex') + ':' + ct.toString('hex'); };
   const decPw = (e) => { try { const [v, iv, tag, ct] = String(e).split(':'); if (v !== 'v1') return ''; const d = crypto.createDecipheriv('aes-256-gcm', mailKey(), Buffer.from(iv, 'hex')); d.setAuthTag(Buffer.from(tag, 'hex')); return Buffer.concat([d.update(Buffer.from(ct, 'hex')), d.final()]).toString('utf8'); } catch (e2) { return ''; } };
+  const patientPayConfigKey = (labId) => 'patient_paygw:' + crypto.createHash('sha256').update(String(labId || 'main')).digest('hex').slice(0, 32);
+  async function patientPayConfig(labId) {
+    const saved = (await rawStore.getMeta(patientPayConfigKey(labId))) || {}, jc = saved.jazzcash || {}, ep = saved.easypaisa || {};
+    return {
+      jazzcash: { enabled: !!jc.enabled, mode: jc.mode === 'live' ? 'live' : 'sandbox', merchantId: jc.merchantId || '', password: jc.password ? decPw(jc.password) : '', salt: jc.salt ? decPw(jc.salt) : '' },
+      easypaisa: { enabled: !!ep.enabled, mode: ep.mode === 'live' ? 'live' : 'sandbox', storeId: ep.storeId || '', hashKey: ep.hashKey ? decPw(ep.hashKey) : '' },
+    };
+  }
+  const patientPayReady = (cfg) => ({
+    jazzcash: !!(cfg.jazzcash.enabled && cfg.jazzcash.merchantId && cfg.jazzcash.password && cfg.jazzcash.salt),
+    easypaisa: !!(cfg.easypaisa.enabled && cfg.easypaisa.storeId && cfg.easypaisa.hashKey)
+  });
+  const patientPayTxnKey = (txnRef) => 'patient_pay_txn:' + String(txnRef || '').replace(/[^A-Za-z0-9_-]/g, '');
+  const patientPayOpenKey = (labId, invoiceId) => 'patient_pay_open:' + crypto.createHash('sha256').update(String(labId || '') + '|' + String(invoiceId || '')).digest('hex').slice(0, 32);
   async function loadMailConfig() {
     try { const m = await rawStore.getMeta(MAIL_META); mailer.setConfig(m && m.host ? { host: m.host, port: m.port, secure: m.secure, user: m.user, from: m.from, pass: m.pass ? decPw(m.pass) : '' } : null); } catch (e) { /* env settings stay in effect */ }
   }
@@ -248,6 +269,23 @@ async function main() {
 
   const REPORT_PDFS_DIR = path.join(DATA_DIR, 'report-pdfs');
   if (!fs.existsSync(REPORT_PDFS_DIR)) fs.mkdirSync(REPORT_PDFS_DIR, { recursive: true });
+  /* bytes of report PDFs per lab (a file with no .owner mark belongs to the default lab); counted from the folder and cached for a few seconds */
+  let pdfUsageCache = null;
+  function pdfUsage() {
+    if (pdfUsageCache && Date.now() - pdfUsageCache.at < 15000) return pdfUsageCache.map;
+    const map = new Map();
+    try {
+      for (const f of fs.readdirSync(REPORT_PDFS_DIR)) {
+        if (!/\.pdf$/.test(f)) continue;
+        let size = 0, owner = 'main';
+        try { size = fs.statSync(path.join(REPORT_PDFS_DIR, f)).size; } catch (e) { continue; }
+        try { owner = fs.readFileSync(path.join(REPORT_PDFS_DIR, f.replace(/\.pdf$/, '.owner')), 'utf8').trim() || 'main'; } catch (e) { /* default lab */ }
+        map.set(owner, (map.get(owner) || 0) + size);
+      }
+    } catch (e) { /* folder unreadable: report nothing */ }
+    pdfUsageCache = { at: Date.now(), map };
+    return map;
+  }
   const desktop = DESKTOP ? require('./desktop-sync').create({
     store, TABLES, cloudUrl: DESKTOP_CLOUD_URL, deviceId, reportDir: REPORT_PDFS_DIR,
     hashPassword, verifyPassword, isHashed,
@@ -259,11 +297,13 @@ async function main() {
   app.use(express.json({ limit: '25mb' }));
   /* CORS (manual, no extra deps): the static frontend and phone QR scanners
      fetch /api/* and /r/* cross-origin */
-  const CORS_ALWAYS = ['https://optix-lab-medsync.pages.dev', 'https://labpos-api.150.230.52.29.sslip.io'];
+  const CORS_ALWAYS = ['https://optix-lab-medsync.pages.dev', 'https://labpos-api.150.230.52.29.sslip.io', 'https://pharmacy-pos.ellahabad.workers.dev', 'https://optix-suite.ellahabad.workers.dev', 'https://localhost', 'capacitor://localhost'];
   app.use((req, res, next) => {
     const origin = req.get('Origin');
     if (CORS_ORIGINS.length) {
-      if (origin && (CORS_ORIGINS.includes(origin) || CORS_ALWAYS.includes(origin) || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin))) { /* + the desktop app's embedded page */ res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); }
+      /* every product in the suite registry may call this API from its own web address (so a new product needs no code change) */
+      const productOrigin = !!origin && !!saas && saas.getProducts().some((p) => { try { return !!p.url && new URL(p.url).origin === origin; } catch (e) { return false; } });
+      if (origin && (CORS_ORIGINS.includes(origin) || CORS_ALWAYS.includes(origin) || productOrigin || /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(origin))) { /* + the desktop app's embedded page */ res.setHeader('Access-Control-Allow-Origin', origin); res.setHeader('Vary', 'Origin'); }
     } else res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Superadmin-Key, X-Confirm-Slug, Authorization');
@@ -342,6 +382,7 @@ async function main() {
     await store.setMeta('labs', labs);
     res.json({ ok: true, targetVersion: labs[labId].targetVersion });
   });
+
   app.get('/api/labs', requireSuperadmin, async (req, res) => {
     const labs = await getLabs();
     const list = Object.keys(labs).map(id => Object.assign({ labId: id }, labs[id]));
@@ -388,6 +429,9 @@ async function main() {
   const DUMMY_HASH = hashPassword('not-a-real-password'); /* unknown user / lab costs the same scrypt time as a wrong password */
   /* a token stops working when the user's password changes, or the account is disabled (stolen-token revocation) */
   const pvOf = (u) => crypto.createHash('sha256').update(String(u.password || '') + '|' + (u.active === false ? '0' : '1')).digest('hex').slice(0, 12);
+  /* the apps a user may open plus what the app chooser needs to draw them (name, colour, icon, roles) */
+  const appPack = (lab, u) => { const apps = saas.appsFor(lab, u); return { apps, catalog: saas.catalogFor(apps) }; };
+  const userView = (u) => { const ar = saas.appRolesOf(u); return { id: u.id, name: u.name, username: u.username, email: u.email || undefined, role: u.role, roleId: u.roleId || undefined, appRoles: Object.keys(ar).length ? ar : undefined, pharmacyRole: ar.pharmacy || undefined }; };
   const BAD_LOGIN = 'Invalid Lab ID, username or password';
   app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body || {};
@@ -420,15 +464,15 @@ async function main() {
     if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This lab account is suspended. Please contact support.', code: 'SUSPENDED' });
     if (!isHashed(u.password)) await lstore.put('users', Object.assign({}, u, { password: hashPassword(password) }));
     const fresh = (await lstore.get('users', u.id)) || u;
-    const user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined };
+    const user = userView(u);
     await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username });
     const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(fresh), exp: Date.now() + TOKEN_TTL_MS });
-    res.json({ ok: true, user, token, lab: await saas.view(lab) });
+    res.json({ ok: true, user, token, lab: await saas.view(lab), ...appPack(lab, fresh) });
   });
 
   /* ---- audit trail: who created / changed / deleted what, and when. Written server-side only (clients cannot POST to
      /api/audit); passwords, logos and other binary fields are never stored. Kept 365 days per lab. ---- */
-  const AUDIT_SKIP = ['audit', 'wa_log', 'report_schedules', 'samples'];
+  const AUDIT_SKIP = ['audit', 'wa_log', 'sms_outbox', 'report_schedules', 'samples'];
   const AUDIT_HIDE = /^(password|logo|photo|signature|stamp|image|img|dataUri|token)$/i;
   const auditVal = (k, v) => {
     if (AUDIT_HIDE.test(k)) return '•••';
@@ -515,7 +559,7 @@ async function main() {
       let lab = null, ts = store;
       if (saas) { lab = await saas.getLab(t.lab || 'main'); ts = lab ? saas.storeFor(lab) : null; } /* tokens issued before SaaS belong to the default lab */
       const u = ts && await ts.get('users', t.uid); /* re-check: deleted/disabled users lose access immediately */
-      if (u && u.active !== false && (!t.pv || t.pv === pvOf(u))) { req.user = { id: u.id, role: u.role, name: u.name }; req.store = ts; req.lab = lab; }
+      if (u && u.active !== false && (!t.pv || t.pv === pvOf(u))) { req.user = { id: u.id, role: u.role, name: u.name, apps: saas ? saas.appsFor(lab, u) : ['lab'] }; req.store = ts; req.lab = lab; }
 
     }
     /* custom roles (made in Settings -> Users & Roles): the pages a role ticks decide what its users may change; this is enforced here, not just hidden in the app */
@@ -525,13 +569,14 @@ async function main() {
       req.user.perms = def && Array.isArray(def.pages) ? def.pages : [];
       const any = (list) => list.some((k) => req.user.perms.indexOf(k) >= 0);
       const write = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
-      const WR = { patients: ['patients', 'invoices'], invoices: ['invoices', 'dues', 'patients', 'finance'], payments: ['invoices', 'dues', 'patients', 'finance'], results: ['results', 'invoices'], samples: ['samples', 'results', 'invoices', 'patients'],
+      const WR = { patients: ['patients', 'invoices'], appointments: ['appointments'], invoices: ['invoices', 'dues', 'patients', 'finance'], payments: ['invoices', 'dues', 'patients', 'finance'], results: ['results', 'invoices'], samples: ['samples', 'results', 'invoices', 'patients'],
         tests: ['tests'], doctors: ['doctors'], expenses: ['expenses', 'finance'], closings: ['finance'], stock_items: ['stock', 'results'], stock_moves: ['stock', 'results'], panels: ['panels'], ref_labs: ['outsourced'], outsourced: ['outsourced', 'results', 'invoices', 'patients'],
-        wa_log: ['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], email_log: ['email', 'results', 'invoices', 'doctors'], report_templates: ['results', 'reports'], report_schedules: ['results', 'reports'] };
+        wa_log: ['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], sms_outbox: ['sms', 'whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], email_log: ['email', 'results', 'invoices', 'doctors'], report_templates: ['results', 'reports'], report_schedules: ['results', 'reports'] };
       let deny = false;
       const tm = /^\/([a-z_]+)(\/|$)/.exec(req.path);
       if (write && tm && req.path.indexOf('/auth/') !== 0 && WR[tm[1]] !== undefined) deny = !any(WR[tm[1]]);
       else if (write && /^\/(wa\/send|wa\/send-doc)/.test(req.path)) deny = !any(['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors']);
+      else if (write && /^\/(sms\/(queue|retry))/.test(req.path)) deny = !any(['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors']);
       else if (write && /^\/share\/(email|slack)/.test(req.path)) deny = !any(['email', 'results', 'invoices', 'doctors']);
       if (deny) return res.status(403).json({ error: 'Your role does not allow this. Ask the lab admin.', code: 'ROLE_DENIED' });
     }
@@ -648,7 +693,7 @@ async function main() {
     app.get('/api/saas/plans', async (req, res) => {
       const plans = await saas.getPlans();
       const out = {};
-      Object.keys(plans).forEach(k => { out[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'desc']); });
+      Object.keys(plans).forEach(k => { out[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'storageMb', 'desc']); });
       res.json({ plans: out, info: await publicPay() });
     });
     app.get('/api/saas/check-slug', async (req, res) => {
@@ -665,7 +710,7 @@ async function main() {
         const u = (await saas.storeFor(lab).all('users'))[0];
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         console.log('[labpos-cloud] saas: new lab signed up:', lab.slug, '<' + lab.ownerEmail + '>');
-        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab) });
+        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), ...appPack(lab, u) });
       } catch (e) { res.status(400).json({ error: e.message }); }
     });
 
@@ -728,7 +773,7 @@ async function main() {
         const u = (await saas.storeFor(lab).all('users'))[0];
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
         console.log('[labpos-cloud] saas: new lab signed up with Google:', lab.slug, '<' + lab.ownerEmail + '>');
-        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), google: { username, passwordSet: !!String(b.password || '') } });
+        res.json({ ok: true, user: { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined }, token, lab: await saas.view(lab), ...appPack(lab, u), google: { username, passwordSet: !!String(b.password || '') } });
       } catch (e) { res.status(e.status || 400).json({ error: e.message }); }
     });
     /* sign in with Google: with a Lab ID typed, any active user of that lab whose profile email is this Google email; without one,
@@ -766,18 +811,66 @@ async function main() {
         const lstore = saas.storeFor(lab), user = { id: u.id, name: u.name, role: u.role, roleId: u.roleId || undefined };
         await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username + ' (Google)' });
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
-        res.json({ ok: true, user, token, lab: await saas.view(lab) });
+        res.json({ ok: true, user, token, lab: await saas.view(lab), ...appPack(lab, u) });
       } catch (e) { res.status(e.status || 400).json({ error: e.message }); }
     });
 
     /* ---- signed-in lab: my subscription ---- */
+    /* ---- one login for both apps. After signing in on either site the person picks an app; moving to the other site uses a
+       one-time ticket (60 s, single use) that the other site swaps for its own token, so no password and no long-lived token
+       ever travels in a URL. The ticket only works for an app the user is allowed into. ---- */
+    const ssoTickets = new Map(), ssoHits = new Map();
+    app.post('/api/sso/ticket', needUser, (req, res) => {
+      const target = String((req.body || {}).app || ''), prod = saas.productById(target);
+      if (!prod || (req.user.apps || ['lab']).indexOf(target) < 0) return res.status(403).json({ error: 'You do not have access to this app.' });
+      const now = Date.now(); for (const [k, v] of ssoTickets) if (v.exp < now) ssoTickets.delete(k);
+      if (ssoTickets.size > 5000) return res.status(429).json({ error: 'Too many sign-in requests. Try again in a minute.' });
+      const ticket = crypto.randomBytes(24).toString('hex');
+      ssoTickets.set(ticket, { uid: req.user.id, lab: req.lab ? req.lab.id : 'main', app: target, exp: now + 60000 });
+      /* each product receives the ticket at <its address>/#/sso?ticket=... (the lab site lives under /app/) */
+      const base = prod.host ? APP_URL + '/app' : ((target === 'pharmacy' && process.env.PHARMACY_URL) ? process.env.PHARMACY_URL.replace(/\/+$/, '') : prod.url);
+      res.json({ ok: true, ticket, url: base + '/#/sso?ticket=' + ticket });
+    });
+    /* the public face of the suite (no sign-in): what the main Optix website shows about every product */
+    app.get('/api/suite/products', (req, res) => {
+      res.setHeader('Access-Control-Allow-Origin', '*'); res.setHeader('Cache-Control', 'public, max-age=60');
+      res.json({ suite: 'Optix Suite', hub: apiBase(req), products: saas.getProducts().map((p) => ({ id: p.id, name: p.name, sub: p.sub, color: p.color, icon: p.icon, desc: p.desc || '', features: p.features || [], downloads: p.downloads || [], site: p.site || '', url: p.host ? APP_URL + '/app/' : p.url, host: !!p.host })) });
+    });
+    /* the suite's product list: the superadmin adds / edits products here (name, colour, icon, web address, roles) */
+    app.get('/api/saas/products', requireSuperadmin, (req, res) => res.json({ products: saas.getProducts(), icons: saasMod.PRODUCT_ICONS }));
+    app.put('/api/saas/products', requireSuperadmin, async (req, res) => {
+      try { const list = await saas.setProducts((req.body || {}).products); console.log('[labpos-cloud] saas: product list updated (' + list.map((p) => p.id).join(', ') + ')'); res.json({ ok: true, products: list }); }
+      catch (e) { res.status(400).json({ error: e.message }); }
+    });
+    /* for a product's own backend: hand over a user's token and learn who it is, which business, and which apps they may open */
+    app.get('/api/auth/whoami', needUser, async (req, res) => {
+      const lab = req.lab || await saas.getLab('main'), u = await req.store.get('users', req.user.id) || {};
+      res.json({ ok: true, user: userView(u), lab: { id: lab.id, slug: lab.slug, name: lab.name, status: saas.effStatus(lab) }, apps: req.user.apps || ['lab'], catalog: saas.catalogFor(req.user.apps || ['lab']) });
+    });
+    app.post('/api/sso/exchange', async (req, res) => {
+      try {
+        if (bump(ssoHits, req.ip, 60000).n > 30) return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+        const ticket = String((req.body || {}).ticket || ''), rec = ssoTickets.get(ticket);
+        ssoTickets.delete(ticket); /* single use, whatever happens next */
+        if (!rec || rec.exp < Date.now()) return res.status(401).json({ error: 'This sign-in link has expired. Open the app again from your login.' });
+        const lab = await saas.getLab(rec.lab); if (!lab) return res.status(401).json({ error: 'Unknown business.' });
+        if (saas.effStatus(lab) === 'suspended') return res.status(403).json({ error: 'This account is suspended. Please contact support.', code: 'SUSPENDED' });
+        const lstore = saas.storeFor(lab), u = await lstore.get('users', rec.uid);
+        if (!u || u.active === false) return res.status(401).json({ error: 'This login is no longer active.' });
+        const apps = saas.appsFor(lab, u); if (apps.indexOf(rec.app) < 0) return res.status(403).json({ error: 'You do not have access to this app.' });
+        const user = userView(u);
+        await auditLog(req, 'login', 'auth', u.id, { store: lstore, actor: user, label: u.username + ' (via ' + rec.app + ')' });
+        const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
+        res.json({ ok: true, user, token, lab: await saas.view(lab), apps, catalog: saas.catalogFor(apps), app: rec.app });
+      } catch (e) { res.status(400).json({ error: e.message }); }
+    });
     app.get('/api/saas/me', needUser, async (req, res) => {
       const lab = req.lab || await saas.getLab('main');
       const pays = (await rawStore.all(saas.PAY_T)).filter(p => p.labId === lab.id).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
       const plans = await saas.getPlans(); const pl = {};
-      Object.keys(plans).forEach(k => { pl[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'desc']); });
+      Object.keys(plans).forEach(k => { pl[k] = clean(plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'storageMb', 'desc']); });
       const v = await saas.view(lab, true); delete v.history;
-      res.json({ lab: v, plans: pl, info: await publicPay(), online: gwReady(await gwLoad()), payments: pays.slice(0, 20).map(payView) });
+      res.json({ lab: v, apps: req.user.apps || ['lab'], catalog: saas.catalogFor(req.user.apps || ['lab']), plans: pl, info: await publicPay(), online: gwReady(await gwLoad()), payments: pays.slice(0, 20).map(payView) });
     });
     app.post('/api/saas/pay-request', needAdmin, async (req, res) => {
       try {
@@ -827,7 +920,25 @@ async function main() {
       if (b.plan !== undefined) { if (!plans[b.plan]) return res.status(400).json({ error: 'unknown plan' }); if (b.plan !== lab.plan) notes.push('Plan → ' + plans[b.plan].name); lab.plan = b.plan; }
       if (b.status !== undefined) { if (['active', 'suspended'].indexOf(b.status) < 0) return res.status(400).json({ error: 'status must be active or suspended' }); if (b.status !== lab.status) notes.push(b.status === 'suspended' ? 'Suspended' : 'Re-activated'); lab.status = b.status; }
       ['trialEndsAt', 'paidUntil'].forEach(k => { if (b[k] !== undefined) { lab[k] = b[k] ? new Date(b[k]).toISOString() : null; notes.push(k + ' → ' + (lab[k] ? lab[k].slice(0, 10) : 'none')); } });
-      ['limitUsers', 'limitInvoices'].forEach(k => { if (b[k] !== undefined) lab[k] = (b[k] === '' || b[k] === null) ? null : Math.max(0, +b[k] || 0); });
+      ['limitUsers', 'limitInvoices', 'limitStorageMb'].forEach(k => { if (b[k] !== undefined) lab[k] = (b[k] === '' || b[k] === null) ? null : Math.max(0, +b[k] || 0); });
+      if (b.maxBranches !== undefined) { const mb = Math.max(0, Math.floor(+b.maxBranches || 0)); if (mb !== lab.maxBranches) notes.push('maxBranches → ' + mb); lab.maxBranches = mb; }
+      if (b.features !== undefined && b.features !== null && typeof b.features === 'object') {
+        /* dashboard + settings are core routes and cannot be disabled for a lab */
+        if (b.features.dashboard === false || b.features.settings === false)
+          return res.status(400).json({ error: 'dashboard and settings cannot be disabled' });
+        const FEATURE_KEYS = ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'doctors', 'expenses', 'finance', 'reports', 'downloads', 'email', 'whatsapp', 'sms', 'audit', 'subscription', 'settings'];
+        lab.features = Object.assign({}, lab.features);
+        let touched = 0;
+        for (const k of FEATURE_KEYS) if (typeof b.features[k] === 'boolean') { lab.features[k] = b.features[k]; touched++; }
+        if (touched) notes.push('features updated');
+      }
+      if (b.products !== undefined) {
+        const ids = saas.productIds();
+        if (!Array.isArray(b.products) || !b.products.length || b.products.some((x) => ids.indexOf(x) < 0)) return res.status(400).json({ error: 'products must be a non-empty list of: ' + ids.join(', ') });
+        const np = ids.filter((x) => b.products.indexOf(x) >= 0);
+        if (np.join() !== saas.productsOf(lab).join()) notes.push('Products → ' + np.join(' + '));
+        lab.products = np;
+      }
       ['name', 'notes', 'ownerName', 'ownerEmail', 'phone'].forEach(k => { if (typeof b[k] === 'string') lab[k] = b[k].slice(0, 300); });
       if (notes.length) await saas.addHistory(lab, notes.join('; '), 'operator');
       await saas.saveLab(lab);
@@ -863,10 +974,15 @@ async function main() {
           if (o === lab.id) { fs.rmSync(path.join(REPORT_PDFS_DIR, f), { force: true }); fs.rmSync(path.join(REPORT_PDFS_DIR, f.replace(/\.owner$/, '.pdf')), { force: true }); }
         }
       } catch (e) { /* best effort */ }
+      pdfUsageCache = null;
       await rawStore.del(saas.LABS_T, lab.id); (await saas.loadLabs()).delete(lab.id);
       for (const p of await rawStore.all(saas.PAY_T)) if (p.labId === lab.id) await rawStore.del(saas.PAY_T, p.id);
       console.log('[labpos-cloud] saas: lab deleted:', lab.slug);
       res.json({ ok: true });
+    });
+    app.get('/api/saas/labs/:id/branches', requireSuperadmin, async (req, res) => {
+      const lab = await saas.getLab(req.params.id); if (!lab) return res.status(404).json({ error: 'unknown lab' });
+      res.json(await saas.storeFor(lab).all('branches'));
     });
     app.get('/api/saas/payments', requireSuperadmin, async (req, res) => {
       let rows = await rawStore.all(saas.PAY_T);
@@ -938,6 +1054,60 @@ async function main() {
     });
     /* what the lab's Subscription page may offer */
     app.get('/api/saas/pay-options', needUser, async (req, res) => res.json(gwReady(await gwLoad())));
+    app.get('/api/payment-gateway', needAdmin, async (req, res) => {
+      const labId = req.lab ? req.lab.id : 'main', cfg = await patientPayConfig(labId), ready = patientPayReady(cfg);
+      res.json({
+        jazzcash: { enabled: cfg.jazzcash.enabled, mode: cfg.jazzcash.mode, merchantId: cfg.jazzcash.merchantId, passwordSet: !!cfg.jazzcash.password, saltSet: !!cfg.jazzcash.salt },
+        easypaisa: { enabled: cfg.easypaisa.enabled, mode: cfg.easypaisa.mode, storeId: cfg.easypaisa.storeId, hashKeySet: !!cfg.easypaisa.hashKey },
+        ready,
+        urls: {
+          jazzcashReturn: apiBase(req) + '/api/portal/pay-return/jazzcash',
+          easypaisaReturn: apiBase(req) + '/api/portal/pay-return/easypaisa/{txnRef}',
+          easypaisaIpn: apiBase(req) + '/api/portal/pay-ipn/easypaisa'
+        }
+      });
+    });
+    app.put('/api/payment-gateway', needAdmin, async (req, res) => {
+      try {
+        const labId = req.lab ? req.lab.id : 'main', key = patientPayConfigKey(labId);
+        const old = (await rawStore.getMeta(key)) || {}, b = req.body || {}, jb = b.jazzcash || {}, eb = b.easypaisa || {};
+        const ID = /^[A-Za-z0-9_.-]{3,60}$/;
+        const sec = (v, keep) => {
+          v = String(v == null ? '' : v);
+          if (!v) return keep || '';
+          if (v.length > 120) throw new Error('A gateway secret is too long');
+          return encPw(v);
+        };
+        const next = { jazzcash: Object.assign({}, old.jazzcash), easypaisa: Object.assign({}, old.easypaisa) };
+        if (b.jazzcash) {
+          const current = old.jazzcash || {};
+          const merchantId = String(jb.merchantId == null ? current.merchantId || '' : jb.merchantId).trim();
+          if (merchantId && !ID.test(merchantId)) throw new Error('JazzCash Merchant ID looks wrong');
+          next.jazzcash = {
+            enabled: !!jb.enabled, mode: jb.mode === 'live' ? 'live' : 'sandbox', merchantId,
+            password: sec(jb.password, current.password), salt: sec(jb.salt, current.salt)
+          };
+        }
+        if (b.easypaisa) {
+          const current = old.easypaisa || {};
+          const storeId = String(eb.storeId == null ? current.storeId || '' : eb.storeId).trim();
+          if (storeId && !ID.test(storeId)) throw new Error('Easypaisa Store ID looks wrong');
+          next.easypaisa = {
+            enabled: !!eb.enabled, mode: eb.mode === 'live' ? 'live' : 'sandbox', storeId,
+            hashKey: sec(eb.hashKey, current.hashKey)
+          };
+        }
+        const ready = patientPayReady({
+          jazzcash: Object.assign({}, next.jazzcash, { password: next.jazzcash.password ? decPw(next.jazzcash.password) : '', salt: next.jazzcash.salt ? decPw(next.jazzcash.salt) : '' }),
+          easypaisa: Object.assign({}, next.easypaisa, { hashKey: next.easypaisa.hashKey ? decPw(next.easypaisa.hashKey) : '' })
+        });
+        if (next.jazzcash.enabled && !ready.jazzcash) throw new Error('Enter the JazzCash merchant ID, password, and integrity salt before enabling checkout');
+        if (next.easypaisa.enabled && !ready.easypaisa) throw new Error('Enter the Easypaisa store ID and hash key before enabling checkout');
+        await rawStore.setMeta(key, next);
+        await auditLog(req, 'update', 'payment-gateway', labId, { label: 'Patient payment gateway settings updated' });
+        res.json({ ok: true, ready });
+      } catch (e) { res.status(400).json({ error: e.message }); }
+    });
     const appBack = (res, what) => res.redirect(302, APP_URL + '/app/#/subscription?pay=' + what);
     /* a verified "paid" report for a payment request: extend the subscription exactly once */
     async function onlinePaid(txnRef, gateway, amount) {
@@ -955,6 +1125,150 @@ async function main() {
         return { ok: true };
       } finally { payBusy.delete(p.id); }
     }
+    const patientPayBack = (res, tx, state) => {
+      const slug = String(tx && tx.labSlug || '').replace(/[^A-Za-z0-9-]/g, '');
+      return res.redirect(302, APP_URL + '/app/#/portal/' + slug + '?payment=' + encodeURIComponent(state));
+    };
+    async function patientPaymentReviewClaim(st, tx, amount, reason, req) {
+      const claims = await st.all('onlinepay_claims');
+      if (claims.some((c) => String(c.tid || '') === tx.txnRef)) return;
+      const patient = await st.get('patients', String(tx.patientId));
+      const claim = {
+        id: 'OPC-' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
+        invoiceId: tx.invoiceId, patientId: tx.patientId, patientName: String(patient && patient.name || 'Patient'),
+        method: tx.gateway === 'jazzcash' ? 'JazzCash' : 'Easypaisa', tid: tx.txnRef,
+        amount: Math.round((Number(amount) || 0) * 100) / 100, senderName: 'Gateway checkout', senderNumber: '',
+        status: 'pending', rejectReason: '', gatewayReviewNote: String(reason || '').slice(0, 180),
+        createdAt: Date.now(), createdBy: 'Patient Portal'
+      };
+      if (!(claim.amount > 0)) return;
+      await st.put('onlinepay_claims', claim);
+      await auditLog(req, 'create', 'onlinepay_claims', claim.id, {
+        store: st, actor: { id: 'portal:' + tx.phone, name: 'Patient Portal', role: 'patient' },
+        label: 'Gateway payment requires review (' + tx.txnRef + ')'
+      });
+    }
+    async function settlePatientPayment(txnRef, gateway, amount, req) {
+      const key = patientPayTxnKey(txnRef);
+      return withLock('patient-gateway-payment|' + key, async () => {
+        const tx = await rawStore.getMeta(key);
+        if (!tx || tx.gateway !== gateway) return { ok: false, why: 'unknown payment' };
+        if (tx.status === 'paid') return { ok: true, already: true, tx };
+        if (tx.status !== 'awaiting') return { ok: false, why: 'payment is ' + tx.status, tx };
+        const lab = await saas.getLab(tx.labId);
+        if (!lab) return { ok: false, why: 'lab not found', tx };
+        const st = saas.storeFor(lab), inv = await st.get('invoices', String(tx.invoiceId));
+        if (!inv || String(inv.patientId) !== String(tx.patientId)) {
+          tx.status = 'review'; tx.updatedAt = new Date().toISOString(); tx.reason = 'Invoice ownership changed';
+          await rawStore.setMeta(key, tx);
+          await rawStore.setMeta(patientPayOpenKey(tx.labId, tx.invoiceId), null);
+          return { ok: false, why: 'invoice unavailable', tx };
+        }
+        const checkoutExpired = !Number.isFinite(Date.parse(tx.createdAt)) || Date.now() - Date.parse(tx.createdAt) > 4 * 3600000;
+        const amountMismatch = Math.abs((+amount || 0) - (+tx.amount || 0)) > 0.009;
+        if (checkoutExpired || amountMismatch) {
+          tx.status = 'review'; tx.updatedAt = new Date().toISOString();
+          tx.reason = checkoutExpired ? 'Gateway confirmed a payment after checkout expiry' : 'Gateway amount mismatch';
+          await rawStore.setMeta(key, tx);
+          await rawStore.setMeta(patientPayOpenKey(tx.labId, tx.invoiceId), null);
+          await patientPaymentReviewClaim(st, tx, amount, tx.reason, req);
+          console.error('[labpos-cloud] patient payment requires review:', txnRef, tx.reason);
+          return { ok: false, why: tx.reason, tx };
+        }
+        const paymentId = 'GW-' + tx.txnRef;
+        await withLock('invoice-payment|' + tx.labId + '|' + tx.invoiceId, async () => {
+          const current = await st.get('invoices', String(tx.invoiceId));
+          if (!current || String(current.patientId) !== String(tx.patientId)) throw new Error('Invoice ownership changed');
+          const payments = await st.all('payments');
+          const existing = payments.find((p) => String(p.id) === paymentId);
+          if (!existing) {
+            const due = Math.round((Number(current.due) || 0) * 100) / 100;
+            if (due + 0.009 < Number(tx.amount)) {
+              tx.status = 'review'; tx.updatedAt = new Date().toISOString(); tx.reason = 'Invoice balance changed before payment confirmation';
+              await rawStore.setMeta(key, tx);
+              await patientPaymentReviewClaim(st, tx, amount, tx.reason, req);
+              return;
+            }
+            await st.put('payments', {
+              id: paymentId, invoiceId: current.id, amount: tx.amount, method: gateway === 'jazzcash' ? 'JazzCash (online)' : 'Easypaisa (online)',
+              date: new Date().toISOString(), note: 'Gateway transaction ' + tx.txnRef, createdBy: 'Patient Portal'
+            });
+          }
+          const refreshedPayments = await st.all('payments');
+          const paid = Math.round(refreshedPayments.filter((p) => String(p.invoiceId) === String(current.id)).reduce((sum, p) => sum + (Number(p.amount) || 0), 0) * 100) / 100;
+          const due = Math.max(0, Math.round((Number(current.total) - paid) * 100) / 100);
+          await st.put('invoices', Object.assign({}, current, { paid, due, status: due <= 0.009 ? 'paid' : (paid > 0 ? 'partial' : 'unpaid') }));
+        });
+        const latest = await rawStore.getMeta(key);
+        if (latest.status === 'review') {
+          await rawStore.setMeta(patientPayOpenKey(tx.labId, tx.invoiceId), null);
+          return { ok: false, why: latest.reason, tx: latest };
+        }
+        latest.status = 'paid'; latest.paidAt = new Date().toISOString(); latest.updatedAt = latest.paidAt;
+        await rawStore.setMeta(key, latest);
+        await rawStore.setMeta(patientPayOpenKey(tx.labId, tx.invoiceId), null);
+        await auditLog(req, 'gateway-payment', 'invoices', tx.invoiceId, {
+          store: st, actor: { id: 'portal:' + tx.phone, name: 'Patient Portal', role: 'patient' },
+          label: gateway + ' payment verified (' + tx.txnRef + ')'
+        });
+        return { ok: true, tx: latest };
+      });
+    }
+    app.post('/api/portal/pay-return/jazzcash', express.urlencoded({ extended: false, limit: '64kb' }), async (req, res) => {
+      const txnRef = String((req.body || {}).pp_TxnRefNo || ''), tx = await rawStore.getMeta(patientPayTxnKey(txnRef));
+      if (!tx || tx.gateway !== 'jazzcash') return res.status(400).send('Unknown payment');
+      try {
+        const cfg = (await patientPayConfig(tx.labId)).jazzcash, v = paygw.jcVerify(cfg, req.body || {});
+        if (!v.ok || v.txnRef !== tx.txnRef) return res.status(400).send('Payment signature could not be verified');
+        if (!v.paid) {
+          tx.status = 'failed'; tx.updatedAt = new Date().toISOString(); tx.reason = String(v.message || 'Payment was not completed').slice(0, 160);
+          await rawStore.setMeta(patientPayTxnKey(txnRef), tx);
+          await rawStore.setMeta(patientPayOpenKey(tx.labId, tx.invoiceId), null);
+          return patientPayBack(res, tx, 'failed');
+        }
+        const result = await settlePatientPayment(txnRef, 'jazzcash', v.amount, req);
+        return patientPayBack(res, tx, result.ok ? 'success' : 'pending');
+      } catch (e) {
+        console.error('[labpos-cloud] patient JazzCash return failed:', String(e.message || e).slice(0, 120));
+        return patientPayBack(res, tx, 'pending');
+      }
+    });
+    app.get('/api/portal/pay-return/easypaisa/:txnRef', async (req, res) => {
+      const txnRef = String(req.params.txnRef || ''), tx = await rawStore.getMeta(patientPayTxnKey(txnRef));
+      const token = String(req.query.auth_token || '');
+      if (!tx || tx.gateway !== 'easypaisa' || !token || token.length > 500) return res.status(400).send('Unknown payment');
+      try {
+        const cfg = (await patientPayConfig(tx.labId)).easypaisa;
+        return res.redirect(302, paygw.epConfirmUrl(cfg, token, apiBase(req) + '/api/portal/pay-final/easypaisa/' + encodeURIComponent(txnRef)));
+      } catch (e) { return patientPayBack(res, tx, 'pending'); }
+    });
+    app.get('/api/portal/pay-final/easypaisa/:txnRef', async (req, res) => {
+      const tx = await rawStore.getMeta(patientPayTxnKey(req.params.txnRef));
+      return tx ? patientPayBack(res, tx, 'pending') : res.status(404).send('Unknown payment');
+    });
+    const patientEasypaisaIpn = async (req, res) => {
+      try {
+        const url = String((req.query && req.query.url) || (req.body && req.body.url) || '');
+        if (!paygw.epIpnUrlOk(url)) return res.status(400).send('bad url');
+        const abort = new AbortController(), timeout = setTimeout(() => abort.abort(), 10000);
+        let result;
+        try {
+          const response = await fetch(url, { signal: abort.signal });
+          if (!response.ok) throw new Error('Gateway verification request failed');
+          result = paygw.epReadTxn(await response.json());
+        } finally { clearTimeout(timeout); }
+        const tx = await rawStore.getMeta(patientPayTxnKey(result.txnRef));
+        if (result.ok && result.paid && tx && tx.gateway === 'easypaisa') {
+          await settlePatientPayment(result.txnRef, 'easypaisa', result.amount, req);
+        }
+        return res.send('OK');
+      } catch (e) {
+        console.error('[labpos-cloud] patient Easypaisa IPN failed:', String(e.message || e).slice(0, 120));
+        return res.status(500).send('error');
+      }
+    };
+    app.get('/api/portal/pay-ipn/easypaisa', patientEasypaisaIpn);
+    app.post('/api/portal/pay-ipn/easypaisa', express.urlencoded({ extended: false, limit: '64kb' }), patientEasypaisaIpn);
     app.post('/api/saas/pay-online', needAdmin, async (req, res) => {
       try {
         const lab = req.lab || await saas.getLab('main'), b = req.body || {}, plans = await saas.getPlans();
@@ -1062,7 +1376,7 @@ async function main() {
       }
       if (b.plans && typeof b.plans === 'object') {
         const cur = (await rawStore.getMeta('saas_plans')) || {};
-        Object.keys(saas.DEFAULT_PLANS).forEach(k => { if (b.plans[k]) cur[k] = Object.assign({}, cur[k] || {}, clean(b.plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'desc'])); });
+        Object.keys(saas.DEFAULT_PLANS).forEach(k => { if (b.plans[k]) cur[k] = Object.assign({}, cur[k] || {}, clean(b.plans[k], ['name', 'monthly', 'yearly', 'users', 'invoicesPerMonth', 'storageMb', 'desc'])); });
         await rawStore.setMeta('saas_plans', cur);
       }
       res.json({ ok: true, settings: await saas.getSettings(), plans: await saas.getPlans() });
@@ -1103,6 +1417,21 @@ async function main() {
           if (!x || !okTable(x.t) || !x.row || x.row.id == null) continue;
           const t = x.t, id = String(x.row.id);
           if ((t === 'users' || t === 'settings') && !admin) { skipped.push({ t, id, _u: x.row._u }); continue; }
+          if (t === 'appointments') {
+            const roleAllowed = admin || req.user.role === 'reception' ||
+              (req.user.role === 'custom' && (req.user.perms || []).indexOf('appointments') >= 0);
+            const before = await store.get(t, id), row = x.row;
+            const transitions = { requested: ['confirmed', 'rejected'], confirmed: ['completed', 'cancelled'] };
+            const mutable = ['status', 'updatedAt', 'updatedBy', '_u', '_s', '_d'];
+            const fields = before ? new Set(Object.keys(before).concat(Object.keys(row))) : new Set();
+            const identityChanged = before && Array.from(fields).some((key) =>
+              mutable.indexOf(key) < 0 && JSON.stringify(before[key]) !== JSON.stringify(row[key]));
+            if (!roleAllowed || !before || identityChanged ||
+                !(transitions[before.status] || []).includes(row.status)) {
+              skipped.push({ t, id, _u: row._u });
+              continue;
+            }
+          }
           /* the audit trail is append-only: only an admin's PC may add entries (create-if-absent), nobody can overwrite them */
           if (t === 'audit' && (!admin || await store.get('audit', id))) continue;
           const u = Math.min(+x.row._u || 0, maxU);
@@ -1121,6 +1450,7 @@ async function main() {
         }
         for (const d of body.deletes || []) {
           if (!d || !okTable(d.t) || d.id == null || d.t === 'audit') continue; /* audit entries can never be deleted through sync */
+          if (d.t === 'appointments') { skipped.push({ t: d.t, id: String(d.id), _u: d._u }); continue; }
           if ((d.t === 'users' || d.t === 'settings') && !admin) continue;
           const u = Math.min(+d._u || 0, maxU), ex = await store.get(d.t, String(d.id));
           if (ex && (+ex._u || 0) > u) continue;
@@ -1167,7 +1497,15 @@ async function main() {
       /* one lab can never overwrite another lab's PDF: each key remembers its owner (files from before SaaS belong to the default lab) */
       const fpdf = path.join(REPORT_PDFS_DIR, key + '.pdf'), fown = path.join(REPORT_PDFS_DIR, key + '.owner'), me = req.lab ? req.lab.id : 'main';
       if (fs.existsSync(fpdf) && (fs.existsSync(fown) ? fs.readFileSync(fown, 'utf8').trim() : 'main') !== me) return res.status(409).json({ error: 'key already in use' });
-      fs.writeFileSync(fpdf, buf);
+      if (saas && req.lab) { /* storage quota of the plan: new bytes minus what this key already holds */
+        const lim = (await saas.limitsOf(req.lab)).storageMb;
+        if (lim) {
+          pdfUsageCache = null;
+          let had = 0; try { had = fs.statSync(fpdf).size; } catch (e) { /* new file */ }
+          if (((pdfUsage().get(me) || 0) - had + buf.length) > lim * 1048576) return res.status(413).json({ error: 'Report storage (' + lim + ' MB) of your plan is full. Upgrade the plan or ask support for more space.', code: 'LIMIT_STORAGE' });
+        }
+      }
+      fs.writeFileSync(fpdf, buf); pdfUsageCache = null;
       if (!DESKTOP) fs.writeFileSync(fown, me);
       if (DESKTOP) desktop.onPdfSaved(key); /* uploaded to the cloud as soon as a session is available */
       res.json({ ok: true, key, url: (DESKTOP ? DESKTOP_CLOUD_URL : (PUBLIC_API_URL || (req.protocol + '://' + req.get('host')))) + '/r/' + key });
@@ -1212,6 +1550,23 @@ async function main() {
         await auditLog(req, 'email-report', 'report', b.key, { label: kind + ' ' + maskEmail(to) + (invNo ? ' (' + invNo + ')' : '') });
         res.json({ ok: true });
       } catch (e) { console.error('[labpos-cloud] report email failed:', String((e && e.message) || e).slice(0, 200)); res.status(502).json({ error: mailer.friendlyError(e) }); }
+    });
+
+    /* a plain message by email through the business's shared mailbox: used by the Pharmacy POS (and any other app on this account) */
+    app.post('/api/mail/send', needUser, async (req, res) => {
+      try {
+        if (!mailer.configured()) return res.status(503).json({ error: 'Email sending is not set up on this server yet. Ask the system owner to set it up.' });
+        const b = req.body || {}, to = String(b.to || '').trim(), lid = req.lab ? req.lab.id : 'main';
+        const subject = clean1(b.subject, 150), text = String(b.text || '').trim();
+        if (!EMAIL_OK.test(to) || to.length > 120 || /[,;\s]/.test(to)) return res.status(400).json({ error: 'Enter one valid email address' });
+        if (!subject || !text || text.length > 4000) return res.status(400).json({ error: 'The subject or message is empty, or the message is too long' });
+        if (bump(shareUser, req.user.id + '|' + lid, 60000).n > 6) return res.status(429).json({ error: 'Too many emails in a minute. Please wait a moment.' });
+        if (bump(shareLab, lid, 86400000).n > EMAILS_PER_DAY) return res.status(429).json({ error: 'Your business reached today\'s limit of ' + EMAILS_PER_DAY + ' emails. It resets in 24 hours.' });
+        const st = (await req.store.get('settings', 'main')) || {}, labName = clean1(st.labName || (req.lab && req.lab.name) || 'Your business', 80);
+        await mailer.send({ to, subject, text, fromName: labName + ' (via Optix Medical Sync)', replyTo: EMAIL_OK.test(String(st.email || '')) ? String(st.email).trim() : undefined });
+        await auditLog(req, 'email-message', 'message', '', { label: maskEmail(to) + ' — ' + subject.slice(0, 60) });
+        res.json({ ok: true });
+      } catch (e) { console.error('[labpos-cloud] email failed:', String((e && e.message) || e).slice(0, 200)); res.status(502).json({ error: mailer.friendlyError(e) }); }
     });
 
     app.post('/api/backup/email', needAdmin, async (req, res) => {
@@ -1260,6 +1615,55 @@ async function main() {
         res.status(502).json({ error: mailer.friendlyError(e) });
       }
     });
+    app.post('/api/portal/appointment', async (req, res) => {
+      try {
+        const m = /^Bearer\s+(.+)$/i.exec(String(req.get('Authorization') || '')), t = m && readToken(PSECRET, m[1]);
+        if (!t || !t.lab || !/^\d{10}$/.test(String(t.ph))) return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        if (bump(prVer, req.ip, 3600000).n > 80) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        const lab = await saas.getLab(t.lab);
+        if (!lab || saas.effStatus(lab) === 'suspended') return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        const st = saas.storeFor(lab), set = (await st.get('settings', 'main')) || {};
+        if (!set.portalOn) return res.status(403).json({ error: 'The portal is switched off for this lab.' });
+        const b = req.body || {}, patients = (await st.all('patients')).filter((p) => pkey(p.phone) === t.ph || pkey(p.whatsapp) === t.ph);
+        const date = String(b.date || ''), timeSlot = String(b.timeSlot || ''), serviceType = String(b.serviceType || '');
+        const note = String(b.note || '').trim().slice(0, 300);
+        const today = new Date().toISOString().slice(0, 10), maxDate = new Date(Date.now() + 90 * 86400000).toISOString().slice(0, 10);
+        const slots = ['09:00-11:00', '11:00-13:00', '14:00-16:00', '16:00-18:00'];
+        if (!patients.length) return res.status(403).json({ error: 'No patient profile is linked to this portal account.' });
+        const patientId = String(b.patientId || '');
+        const patient = patients.filter((p) => !patientId || String(p.id) === patientId)[0];
+        if (!patient) return res.status(403).json({ error: 'That patient profile is not linked to this portal account.' });
+        const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(date + 'T00:00:00.000Z') : null;
+        if (!parsedDate || Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date || date < today || date > maxDate ||
+            !slots.includes(timeSlot) || !['lab-visit', 'home-collection'].includes(serviceType)) {
+          return res.status(400).json({ error: 'Choose a valid date within the next 90 days, service, and time slot.' });
+        }
+        const result = await withLock('portal-appointment|' + lab.id + '|' + patient.id + '|' + date + '|' + timeSlot, async () => {
+          const all = await st.all('appointments');
+          if (all.some((a) => String(a.patientId) === String(patient.id) && a.date === date && a.timeSlot === timeSlot && ['requested', 'confirmed'].includes(a.status))) {
+            return { conflict: true };
+          }
+          const id = 'APT-' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex');
+          const appointment = {
+            id, patientId: patient.id, patientName: String(patient.name || '').slice(0, 100),
+            phone: String(patient.phone || patient.whatsapp || '').slice(0, 30),
+            date, timeSlot, serviceType, note, status: 'requested',
+            createdAt: new Date().toISOString(), createdBy: 'Patient Portal'
+          };
+          await st.put('appointments', appointment);
+          await auditLog(req, 'create', 'appointments', id, {
+            store: st, actor: { id: 'portal:' + t.ph, name: 'Patient Portal', role: 'patient' },
+            label: 'Appointment request for ' + String(patient.name || 'patient').slice(0, 80)
+          });
+          return { appointment };
+        });
+        if (result.conflict) return res.status(409).json({ error: 'You already have a request or confirmed appointment for that time. Choose another slot.' });
+        res.status(201).json({ ok: true, appointment: { id: result.appointment.id, status: result.appointment.status } });
+      } catch (e) {
+        console.error('[labpos-cloud] portal appointment request failed:', String(e.message || e).slice(0, 160));
+        res.status(500).json({ error: 'Could not submit the appointment request. Please try again.' });
+      }
+    });
 
     async function slackPost(url, text) {
       const ac = new AbortController(), to = setTimeout(() => ac.abort(), 8000);
@@ -1295,7 +1699,7 @@ async function main() {
     app.post('/api/share/slack', needUser, async (req, res) => {
       try {
         const m = (await req.store.getMeta('slack')) || {}, b = req.body || {}, lid = req.lab ? req.lab.id : 'main';
-        if (!m.webhook) return res.status(400).json({ error: 'Slack is not set up. Add the webhook URL in Settings → Email & Slack.' });
+        if (!m.webhook) return res.status(400).json({ error: 'Slack is not set up. Add the webhook URL in Tools → Email → Settings.' });
         if (!ownPdf(req, b.key)) return res.status(404).json({ error: 'The report PDF was not found. Open the report again and retry.' });
         if (bump(slackHits, lid, 3600000).n > 200) return res.status(429).json({ error: 'Too many Slack messages this hour.' });
         const st = (await req.store.get('settings', 'main')) || {};
@@ -1355,7 +1759,10 @@ async function main() {
 
     async function portalBuild(req, lab, st, set, w) {
       const invs = await st.all('invoices'), results = await st.all('results'), patById = {}; (await st.all('patients')).forEach((p) => { patById[p.id] = p; });
+        const gatewayReady = patientPayReady(await patientPayConfig(lab.id));
         const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
+        const allPayments = await st.all('payments'), claims = await st.all('onlinepay_claims');
+        const allAppointments = await st.all('appointments');
         const reportOf = (inv, forDoctor) => {
           const rs = byInv[inv.id] || [], items = Array.isArray(inv.items) ? inv.items : [], done = rs.length > 0 && items.every((it) => rs.some((r) => r.testId === it.testId && r.status === 'ready') || rs.some((r) => r.status === 'ready' && it.isPackage));
           const ready = rs.length > 0 && rs.every((r) => r.status === 'ready') && done, due = +inv.due || 0;
@@ -1367,7 +1774,41 @@ async function main() {
         const out = { ok: true, lab: { name: set.labName || lab.name }, patient: null, doctor: null };
         if (w.pats.length) {
           const ids = {}; w.pats.forEach((p) => { ids[p.id] = 1; });
-          out.patient = { names: w.pats.map((p) => p.name), reports: invs.filter((i) => ids[i.patientId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 200).map((i) => reportOf(i, false)) };
+          const mine = invs.filter((i) => ids[i.patientId]).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))).slice(0, 200);
+          const invoiceIds = {}; mine.forEach((i) => { invoiceIds[i.id] = 1; });
+          const paymentMethods = [
+            { method: 'JazzCash', number: set.opJazzcashNo || '', title: set.opJazzcashTitle || '' },
+            { method: 'Easypaisa', number: set.opEasypaisaNo || '', title: set.opEasypaisaTitle || '' },
+            { method: 'Bank / Raast', number: set.opIban || set.opRaastId || '', title: set.opBankName || set.opRaastId || '' }
+          ].filter((x) => x.number);
+          out.patient = {
+            names: w.pats.map((p) => p.name),
+            profiles: w.pats.map((p) => ({ id: p.id, name: String(p.name || '').slice(0, 100) })),
+            reports: mine.map((i) => reportOf(i, false)),
+            invoices: mine.map((i) => {
+              const latestClaim = claims.filter((c) => String(c.invoiceId) === String(i.id)).sort((a, b) => (+b.createdAt || 0) - (+a.createdAt || 0))[0];
+              return {
+                id: i.id, no: i.no || i.id, date: i.createdAt, total: Math.round(+i.total || 0),
+                paid: Math.round(+i.paid || 0), due: Math.max(0, Math.round(+i.due || 0)),
+                status: i.status || ((+i.due || 0) > 0 ? 'unpaid' : 'paid'),
+                tests: (Array.isArray(i.items) ? i.items : []).map((x) => x.name || x.code || '').filter(Boolean).join(', ').slice(0, 200),
+                latestClaim: latestClaim ? {
+                  status: latestClaim.status, method: latestClaim.method || '',
+                  rejectReason: latestClaim.status === 'rejected' ? String(latestClaim.rejectReason || '').slice(0, 200) : ''
+                } : null
+              };
+            }),
+            payments: allPayments.filter((p) => invoiceIds[p.invoiceId]).map((p) => ({
+              invoiceId: p.invoiceId, amount: Math.round(+p.amount || 0), method: String(p.method || '').slice(0, 40), date: p.date || p.createdAt
+            })),
+            appointments: allAppointments.filter((a) => ids[a.patientId]).sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || ''))).slice(0, 50).map((a) => ({
+              id: a.id, date: a.date, timeSlot: a.timeSlot, serviceType: a.serviceType, status: a.status, note: a.note || ''
+            })),
+            paymentInfo: {
+              enabled: !!set.opEnabled, instructions: String(set.opInstructions || '').slice(0, 500),
+              methods: paymentMethods, gateway: set.opEnabled ? gatewayReady : { jazzcash: false, easypaisa: false }
+            }
+          };
         }
         if (w.docs.length) {
           const dids = {}; w.docs.forEach((d) => { dids[d.id] = d; });
@@ -1443,6 +1884,120 @@ async function main() {
         res.json(await portalBuild(req, lab, st, set, await whoIs(st, t.ph)));
       } catch (e) { res.status(500).json({ error: 'Could not load your reports. Please try again.' }); }
     });
+    app.post('/api/portal/payment-claim', async (req, res) => {
+      try {
+        const m = /^Bearer\s+(.+)$/i.exec(String(req.get('Authorization') || '')), t = m && readToken(PSECRET, m[1]);
+        if (!t || !t.lab || !/^\d{10}$/.test(String(t.ph))) return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        if (bump(prVer, req.ip, 3600000).n > 80) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        const lab = await saas.getLab(t.lab);
+        if (!lab || saas.effStatus(lab) === 'suspended') return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        const st = saas.storeFor(lab), set = (await st.get('settings', 'main')) || {};
+        if (!set.portalOn) return res.status(403).json({ error: 'The portal is switched off for this lab.' });
+        if (!set.opEnabled) return res.status(403).json({ error: 'Online payment claims are not enabled by this lab.' });
+        const b = req.body || {}, invoiceId = String(b.invoiceId || '').slice(0, 64);
+        const method = String(b.method || '').trim(), tid = String(b.tid || '').trim().slice(0, 80);
+        const senderName = String(b.senderName || '').trim().slice(0, 80);
+        const senderDigits = String(b.senderNumber || '').replace(/\D/g, '').slice(-11);
+        const senderNumber = senderDigits.length === 10 ? '0' + senderDigits : senderDigits;
+        const amount = Math.round((Number(b.amount) || 0) * 100) / 100;
+        const configuredMethods = [];
+        if (set.opJazzcashNo) configuredMethods.push('JazzCash');
+        if (set.opEasypaisaNo) configuredMethods.push('Easypaisa');
+        if (set.opIban || set.opRaastId) configuredMethods.push('Bank / Raast');
+        if (!invoiceId || configuredMethods.indexOf(method) < 0 || !/^[A-Za-z0-9.-]{3,80}$/.test(tid) ||
+            !senderName || !/^0\d{10}$/.test(senderNumber) || !Number.isFinite(amount) || amount <= 0) {
+          return res.status(400).json({ error: 'Enter a valid payment method, transaction reference, sender details, and amount.' });
+        }
+        const patients = (await st.all('patients')).filter((p) => pkey(p.phone) === t.ph || pkey(p.whatsapp) === t.ph);
+        const owned = {}; patients.forEach((p) => { owned[p.id] = true; });
+        const inv = await st.get('invoices', invoiceId);
+        if (!inv || !owned[inv.patientId]) return res.status(404).json({ error: 'Invoice not found for this portal account.' });
+        const due = Math.round((Number(inv.due) || 0) * 100) / 100;
+        if (due <= 0) return res.status(409).json({ error: 'This invoice has no outstanding balance.' });
+        if (amount > due + 0.009) return res.status(400).json({ error: 'Payment amount cannot exceed the outstanding balance.' });
+        const duplicate = (await st.all('onlinepay_claims')).some((c) =>
+          String(c.invoiceId) === invoiceId && String(c.tid || '').toLowerCase() === tid.toLowerCase() && c.status === 'pending');
+        if (duplicate) return res.status(409).json({ error: 'This transaction reference is already awaiting verification.' });
+        const patient = patients.filter((p) => String(p.id) === String(inv.patientId))[0];
+        const claim = {
+          id: 'OPC-' + Date.now().toString(36) + crypto.randomBytes(4).toString('hex'),
+          invoiceId: inv.id, patientId: inv.patientId, patientName: patient ? patient.name : 'Patient',
+          method, tid, amount, senderName, senderNumber, status: 'pending', rejectReason: '',
+          createdAt: Date.now(), createdBy: 'Patient Portal'
+        };
+        await st.put('onlinepay_claims', claim);
+        await auditLog(req, 'create', 'onlinepay_claims', claim.id, {
+          store: st, actor: { id: 'portal:' + t.ph, name: 'Patient Portal', role: 'patient' },
+          label: 'Payment claim for ' + String(inv.no || inv.id).slice(0, 100)
+        });
+        res.status(201).json({ ok: true, status: 'pending' });
+      } catch (e) {
+        console.error('[labpos-cloud] portal payment claim failed:', String(e.message || e).slice(0, 160));
+        res.status(500).json({ error: 'Could not submit the payment claim. Please try again.' });
+      }
+    });
+    app.post('/api/portal/pay', async (req, res) => {
+      try {
+        const m = /^Bearer\s+(.+)$/i.exec(String(req.get('Authorization') || '')), t = m && readToken(PSECRET, m[1]);
+        if (!t || !t.lab || !/^\d{10}$/.test(String(t.ph))) return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        if (bump(prVer, req.ip, 3600000).n > 80) return res.status(429).json({ error: 'Too many requests. Please try again later.' });
+        const lab = await saas.getLab(t.lab);
+        if (!lab || saas.effStatus(lab) === 'suspended') return res.status(401).json({ error: 'Your session expired. Please sign in again.', code: 'EXPIRED' });
+        const st = saas.storeFor(lab), set = (await st.get('settings', 'main')) || {};
+        if (!set.portalOn) return res.status(403).json({ error: 'The portal is switched off for this lab.' });
+        if (!set.opEnabled) return res.status(403).json({ error: 'Online payment is not enabled by this lab.' });
+        const b = req.body || {}, invoiceId = String(b.invoiceId || '').slice(0, 64), gateway = String(b.gateway || '');
+        if (!invoiceId || !['jazzcash', 'easypaisa'].includes(gateway)) return res.status(400).json({ error: 'Choose an invoice and a supported payment method.' });
+        const cfg = await patientPayConfig(lab.id), ready = patientPayReady(cfg);
+        if (!ready[gateway]) return res.status(400).json({ error: 'This payment method is not configured by the lab.' });
+        const patients = (await st.all('patients')).filter((p) => pkey(p.phone) === t.ph || pkey(p.whatsapp) === t.ph);
+        const patientIds = new Set(patients.map((p) => String(p.id)));
+        const create = await withLock('patient-pay-create|' + lab.id + '|' + invoiceId, async () => {
+          const inv = await st.get('invoices', invoiceId);
+          if (!inv || !patientIds.has(String(inv.patientId))) return { error: 'Invoice not found for this portal account.', status: 404 };
+          const amount = Math.round((Number(inv.due) || 0) * 100) / 100;
+          if (!(amount > 0)) return { error: 'This invoice has no outstanding balance.', status: 409 };
+          const openKey = patientPayOpenKey(lab.id, invoiceId), oldRef = await rawStore.getMeta(openKey);
+          if (oldRef) {
+            const old = await rawStore.getMeta(patientPayTxnKey(oldRef));
+            if (old && old.status === 'awaiting' && Date.now() - Date.parse(old.createdAt) < 3 * 3600000) {
+              return { error: 'A payment is already in progress for this invoice. Finish it or wait for it to expire.', status: 409 };
+            }
+            await rawStore.setMeta(openKey, null);
+          }
+          const recent = await rawStore.getMeta('patient_pay_count:' + lab.id + ':' + t.ph);
+          if (recent && recent.day === new Date().toISOString().slice(0, 10) && recent.count >= 10) return { error: 'Too many payment attempts today. Please try again tomorrow.', status: 429 };
+          const txnRef = 'INV' + Date.now() + crypto.randomBytes(4).toString('hex');
+          const tx = {
+            txnRef, labId: lab.id, labSlug: lab.slug, invoiceId: inv.id, invoiceNo: String(inv.no || inv.id).slice(0, 30),
+            patientId: inv.patientId, phone: t.ph, amount, gateway, status: 'awaiting', createdAt: new Date().toISOString()
+          };
+          await rawStore.setMeta(patientPayTxnKey(txnRef), tx);
+          await rawStore.setMeta(openKey, txnRef);
+          await rawStore.setMeta('patient_pay_count:' + lab.id + ':' + t.ph, {
+            day: new Date().toISOString().slice(0, 10), count: (recent && recent.day === new Date().toISOString().slice(0, 10) ? recent.count : 0) + 1
+          });
+          return { tx, patient: patients.find((p) => String(p.id) === String(inv.patientId)) };
+        });
+        if (create.error) return res.status(create.status).json({ error: create.error });
+        const tx = create.tx, email = String(create.patient && create.patient.email || '').slice(0, 200);
+        const checkoutOpts = {
+          txnRef: tx.txnRef, amount: tx.amount, billRef: tx.invoiceNo,
+          description: String((set.labName || lab.name) + ' invoice ' + tx.invoiceNo).slice(0, 100), email
+        };
+        const checkout = gateway === 'jazzcash'
+          ? paygw.jcCheckout(cfg.jazzcash, Object.assign(checkoutOpts, { returnUrl: apiBase(req) + '/api/portal/pay-return/jazzcash' }))
+          : paygw.epCheckout(cfg.easypaisa, Object.assign(checkoutOpts, { returnUrl: apiBase(req) + '/api/portal/pay-return/easypaisa/' + encodeURIComponent(tx.txnRef) }));
+        await auditLog(req, 'gateway-payment-start', 'invoices', tx.invoiceId, {
+          store: st, actor: { id: 'portal:' + t.ph, name: 'Patient Portal', role: 'patient' },
+          label: gateway + ' checkout started (' + tx.txnRef + ')'
+        });
+        res.status(201).json({ ok: true, gateway, checkout, amount: tx.amount });
+      } catch (e) {
+        console.error('[labpos-cloud] patient gateway checkout failed:', String(e.message || e).slice(0, 160));
+        res.status(500).json({ error: 'Could not start the payment. Please try again.' });
+      }
+    });
 
     /* ---- a doctor who has a login (Settings -> Users & Roles): the same data as the portal, without any code step ---- */
     app.get('/api/doctor/me', needUser, async (req, res) => {
@@ -1500,6 +2055,147 @@ async function main() {
     setTimeout(async () => { try { const ids = []; for (const l of (await saas.loadLabs(true)).values()) ids.push(l.id); await waGw.boot(ids); } catch (e) { /* the gateway is optional */ } }, 5000);
   }
 
+
+  /* ---- SMS via SIM: server-side outbox. The lab's own Android app (com.optix.labmedsync,
+     on the phone that holds the SIM) polls /api/sms/pending about every minute, sends each
+     message with Android's SmsManager, and reports the result to /api/sms/report.
+     No third-party gateway, no API keys, no tunnels. ---- */
+  const smsUser = new Map(); /* per-user rate-limit buckets */
+  const smsNorm = (num) => { let d = String(num || '').replace(/\D/g, ''); while (d.indexOf('00') === 0) d = d.slice(2); if (d.charAt(0) === '0') d = '92' + d.slice(1); return d; };
+  const smsLabCfg = async (store) => {
+    try { const s = await store.get('settings', 'main') || {}; return Object.assign({ enabled: false, simNumber: '' }, s.sms || {}); }
+    catch (e) { return {}; }
+  };
+  const smsRowId = () => 'SMS' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2, 6).toUpperCase();
+  /* phone-gateway state (kv row, like wa_log: not a generic table) */
+  const smsGwGet = async (store) => { try { return (await store.get('sms_gw', 'state')) || {}; } catch (e) { return {}; } };
+  const smsGwSet = async (store, p) => {
+    try { const cur = (await store.get('sms_gw', 'state')) || {}; await store.put('sms_gw', Object.assign({}, cur, p, { id: 'state' })); }
+    catch (e) { /* state is best-effort */ }
+  };
+
+  /* queue one SMS for delivery through the lab's SIM */
+  app.post('/api/sms/queue', needUser, async (req, res) => {
+    try {
+      if (bump(smsUser, req.user.id, 60000).n > 30) return res.status(429).json({ error: 'Too many SMS queued in a minute. Please wait a moment.' });
+      const b = req.body || {};
+      const to = smsNorm(b.to);
+      if (!to || to.length < 10) return res.status(400).json({ error: 'The phone number does not look right' });
+      const text = String(b.text || '').trim();
+      if (!text || text.length > 1000) return res.status(400).json({ error: 'The message is empty or too long' });
+      const kind = ['report', 'due', 'critical', 'test', 'message'].indexOf(b.kind) >= 0 ? b.kind : 'report';
+      const toRole = b.toRole === 'doctor' ? 'doctor' : 'patient';
+      const store = req.store;
+      /* idempotency: never queue the same report/due SMS twice for an invoice */
+      if ((kind === 'report' || kind === 'due') && b.invoiceId) {
+        const dup = (await store.all('sms_outbox')).some((r) => r && r.kind === kind && String(r.invoiceId) === String(b.invoiceId) && r.toRole === toRole &&
+          ['pending', 'sending', 'sent', 'delivered'].indexOf(r.status) >= 0);
+        if (dup) return res.json({ ok: true, duplicate: true });
+      }
+      const row = { id: smsRowId(), to, text, kind, invoiceId: b.invoiceId || null, invoiceNo: String(b.invoiceNo || ''),
+        toName: String(b.toName || ''), toRole, source: String(b.source || '').replace(/[^a-z-]/gi, '').slice(0, 20), status: 'pending', attempts: 0, error: '',
+        ts: new Date().toISOString(), sentAt: '', deliveredAt: '', gatewayId: '' };
+      await store.put('sms_outbox', row);
+      res.json({ ok: true, id: row.id });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* re-queue failed messages (one id, or all=true) */
+  app.post('/api/sms/retry', needUser, async (req, res) => {
+    try {
+      const b = req.body || {}, store = req.store;
+      let n = 0;
+      if (b.id) {
+        const r = await store.get('sms_outbox', String(b.id));
+        if (r && r.status === 'failed') { await store.patch('sms_outbox', r.id, { status: 'pending', attempts: 0, error: '' }); n = 1; }
+      } else if (b.all) {
+        const rows = await store.all('sms_outbox');
+        for (const r of rows) if (r && r.status === 'failed') { await store.patch('sms_outbox', r.id, { status: 'pending', attempts: 0, error: '' }); n++; }
+      }
+      res.json({ ok: true, requeued: n });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* recent outbox rows for the SMS log UIs */
+  app.get('/api/sms/log', needUser, async (req, res) => {
+    try {
+      const q = req.query || {};
+      let rows = await req.store.all('sms_outbox');
+      if (q.invoiceId) rows = rows.filter((r) => String(r.invoiceId) === String(q.invoiceId));
+      if (q.status) rows = rows.filter((r) => r.status === q.status);
+      rows.sort((a, b) => (a.ts < b.ts ? 1 : (a.ts > b.ts ? -1 : 0)));
+      const lim = Math.max(1, Math.min(+q.limit || 200, 1000));
+      res.json({ ok: true, rows: rows.slice(0, lim) });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* gateway + queue health for the settings page */
+  app.get('/api/sms/status', needUser, async (req, res) => {
+    try {
+      const cfg = await smsLabCfg(req.store);
+      const rows = await req.store.all('sms_outbox');
+      const pending = rows.filter((r) => r && (r.status === 'pending' || r.status === 'sending')).length;
+      const failed = rows.filter((r) => r && r.status === 'failed').length;
+      const gw = await smsGwGet(req.store);
+      res.json({ ok: true, enabled: !!cfg.enabled, simNumber: cfg.simNumber || '', pending, failed,
+        lastPoll: gw.lastPoll || '', lastSentAt: gw.lastSentAt || '', sentCount: gw.sentCount || 0 });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* phone poll: the lab's Android app calls this ~every minute with its lab login
+     token. Claims up to 20 pending rows (marked 'sending' so a second device will
+     not double-send; stale claims older than 10 minutes are released). */
+  app.get('/api/sms/pending', needUser, async (req, res) => {
+    try {
+      const store = req.store, now = Date.now(), out = [];
+      const rows = await store.all('sms_outbox');
+      for (const r of rows) {
+        if (r && r.status === 'sending' && now - new Date(r.claimedAt || 0).getTime() > 10 * 60 * 1000)
+          await store.patch('sms_outbox', r.id, { status: 'pending', claimedAt: '' });
+      }
+      const fresh = (await store.all('sms_outbox')).filter((r) => r && r.status === 'pending').slice(0, 20);
+      const ts = new Date().toISOString();
+      for (const r of fresh) {
+        /* re-read before claiming: a concurrent poll may have claimed it first */
+        const cur = await store.get('sms_outbox', r.id);
+        if (!cur || cur.status !== 'pending') continue;
+        await store.patch('sms_outbox', r.id, { status: 'sending', claimedAt: ts });
+        out.push({ id: r.id, to: r.to, text: r.text });
+      }
+      await smsGwSet(store, { lastPoll: ts });
+      res.json({ ok: true, rows: out });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* phone report: the app POSTs { id, status: sent|delivered|failed, error? }
+     after trying each message. */
+  app.post('/api/sms/report', needUser, async (req, res) => {
+    try {
+      const b = req.body || {}, store = req.store;
+      const row = b.id ? await store.get('sms_outbox', String(b.id)) : null;
+      if (!row) return res.status(404).json({ error: 'unknown message' });
+      const st = String(b.status || '').toLowerCase(), now = new Date().toISOString(), patch = {};
+      /* idempotent: never move a row backwards out of a terminal state */
+      if (row.status === 'delivered') return res.json({ ok: true });
+      if (st === 'delivered') { patch.status = 'delivered'; patch.deliveredAt = now; }
+      else if (st === 'sent') {
+        if (row.status === 'sent') return res.json({ ok: true }); /* already counted */
+        patch.status = 'sent'; patch.sentAt = now;
+      }
+      else if (st === 'failed') { patch.status = 'failed'; patch.error = String(b.error || 'send failed').slice(0, 200); }
+      else return res.status(400).json({ error: 'bad status' });
+      await store.patch('sms_outbox', row.id, patch);
+      if (st === 'sent' || st === 'delivered') {
+        const gw = await smsGwGet(store);
+        await smsGwSet(store, { lastSentAt: now, sentCount: (gw.sentCount || 0) + 1 });
+      }
+      res.json({ ok: true });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+
+
+
   /* QR target: a phone-friendly, app-like viewer (sharp pinch-zoom, share/download). Scripts and the desktop
      updater ask for the raw PDF with ?raw=1 or without an HTML Accept header. */
   let viewerHtml = null;
@@ -1512,7 +2208,17 @@ async function main() {
     const key = req.params.key || '';
     if (!REPORT_KEY_RE.test(key)) return res.status(400).json({ error: 'invalid key' });
     const file = path.join(REPORT_PDFS_DIR, key + '.pdf');
-    if (!fs.existsSync(file) && !(DESKTOP && await desktop.fetchPdf(key))) return res.status(404).json({ error: 'not found' });
+    if (!fs.existsSync(file) && !(DESKTOP && await desktop.fetchPdf(key))) {
+      /* a patient who scanned a QR sees a readable page, not raw JSON */
+      if (/text\/html/.test(req.get('Accept') || '')) {
+        return res.status(404).type('html').send('<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Report not available</title></head>' +
+          '<body style="margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#f1f5f9;display:grid;place-items:center;min-height:100vh;padding:24px;box-sizing:border-box">' +
+          '<div style="max-width:420px;background:#fff;border-radius:16px;padding:28px 24px;text-align:center;box-shadow:0 8px 30px rgba(15,23,42,.08)">' +
+          '<h1 style="font-size:20px;margin:0 0 10px;color:#131845">This report is not available yet</h1>' +
+          '<p style="margin:0;color:#475569;line-height:1.6;font-size:15px">The link may be incomplete, or the report is still being prepared. Please contact the laboratory and they will share it with you.</p></div></body></html>');
+      }
+      return res.status(404).json({ error: 'not found' });
+    }
     if (viewerHtml && !req.query.raw && /text\/html/.test(req.get('Accept') || '')) {
       return res.type('html').send(viewerHtml);
     }
@@ -1569,8 +2275,8 @@ async function main() {
     if (!okTable(req.params.table)) return res.status(404).json({ error: 'unknown table' });
     if (req.params.table === 'audit') return res.status(403).json({ error: 'audit log is read-only (use GET /api/audit)' });
     if (!req.user) return res.status(401).json({ error: 'auth required' });
+    if (req.user.apps && req.user.apps.indexOf('lab') < 0) return res.status(403).json({ error: 'Your account does not have access to the lab app.', code: 'NO_LAB_APP' });
     const t = req.params.table, admin = req.user.role === 'admin';
-    if (t === 'branches' && !admin) return res.status(403).json({ error: 'admin only' });
     if (t === 'settings' && req.method !== 'GET' && !admin) return res.status(403).json({ error: 'admin only' });
     if (t === 'users' && req.method !== 'GET' && !admin) {
       /* staff may only edit their own profile (never role/active) */
@@ -1587,8 +2293,27 @@ async function main() {
       const dup = (await req.store.all('users')).some((u) => u.id !== (b.id != null ? String(b.id) : req.params.id) && String(u.username).toLowerCase() === b.username.toLowerCase());
       if (dup) throw new Error('This username is already taken');
     }
-    if (req.user.role !== 'admin') { delete b.doctorId; delete b.roleId; }
+    if (req.user.role !== 'admin') { delete b.doctorId; delete b.roleId; delete b.apps; delete b.pharmacyRole; delete b.appRoles; }
     else {
+      if (b.apps !== undefined) {
+        const allow = saas ? saas.productsOf(req.lab) : ['lab'];
+        if (!Array.isArray(b.apps)) throw new Error('apps must be a list');
+        b.apps = b.apps.filter((x, i, a) => typeof x === 'string' && a.indexOf(x) === i);
+        if (!b.apps.length || b.apps.some((x) => allow.indexOf(x) < 0)) throw new Error('Choose at least one app, and only apps your business has.');
+      }
+      /* roles inside other products: { pharmacy: 'CASHIER' }. Only products the business has, and (when the product lists its roles) only those roles. */
+      if (b.pharmacyRole !== undefined) { b.appRoles = Object.assign({}, b.appRoles || {}, b.pharmacyRole ? { pharmacy: b.pharmacyRole } : {}); delete b.pharmacyRole; }
+      if (b.appRoles !== undefined) {
+        const have = saas ? saas.productsOf(req.lab) : ['lab'], clean = {};
+        if (b.appRoles && typeof b.appRoles === 'object') for (const k of Object.keys(b.appRoles)) {
+          const v = b.appRoles[k]; if (v === null || v === '') continue;
+          const pr = saas && saas.productById(k);
+          if (!pr || have.indexOf(k) < 0) throw new Error('Unknown app "' + k + '" for this business.');
+          if (pr.roles.length && !pr.roles.some((r) => r.value === v)) throw new Error('Unknown ' + pr.name + ' role');
+          clean[k] = String(v).slice(0, 30);
+        }
+        b.appRoles = clean;
+      }
       const ROLES = ['admin', 'reception', 'technician', 'doctor', 'custom'];
       if (b.role !== undefined && ROLES.indexOf(b.role) < 0) throw new Error('Unknown role');
       const before = existing ? ((await req.store.get('users', String(req.params.id))) || {}) : {};
@@ -1624,16 +2349,110 @@ async function main() {
     const stats = { total: rows.length };
     res.json({ total: rows.length, rows: rows.slice(off, off + lim).map((r) => { const c = Object.assign({}, r); delete c._o; delete c._c; delete c._u; delete c._s; return c; }), users, tables: Object.keys(tables).sort(), stats });
   });
+  /* ---- branch management (multi-branch labs): dedicated CRUD with per-lab branch-limit enforcement.
+     Registered BEFORE the generic /api/:table routes below — /api/:table would otherwise swallow /api/branches. */
+  const BRANCH_FIELDS = ['id', 'name', 'code', 'address', 'phone', 'manager_name', 'is_active', 'created_at'];
+  const branchView = (r) => { const o = {}; BRANCH_FIELDS.forEach((f) => { o[f] = r ? r[f] : undefined; }); return o; };
+  const branchLimit = async (req) => {
+    if (saas && req.lab) return (await saas.limitsOf(req.lab)).maxBranches; /* saas.js: lab.maxBranches, default 5 */
+    return req.lab && req.lab.maxBranches != null ? req.lab.maxBranches : 5;
+  };
+  app.get('/api/branches', needUser, async (req, res) => {
+    const rows = (await req.store.all('branches') || []).map(branchView);
+    rows.sort((a, b) => String(a.created_at || '') < String(b.created_at || '') ? -1 : (String(a.created_at || '') > String(b.created_at || '') ? 1 : 0));
+    res.json(rows);
+  });
+  app.post('/api/branches', needAdmin, async (req, res) => {
+    try {
+      const b = req.body || {};
+      if (!b.name || !String(b.name).trim()) return res.status(400).json({ error: 'Branch name is required' });
+      const maxB = await branchLimit(req);
+      const active = (await req.store.all('branches') || []).filter((r) => r && r.is_active !== false).length;
+      if (active >= maxB) return res.status(403).json({ error: 'Branch limit reached (' + active + ' of ' + maxB + ' branches). Ask your superadmin to raise the limit.' });
+      /* prefer the client-generated id (web DB assigns one before POSTing, keeps local/server in sync);
+         fall back to server-generated; 409 on collision like the generic table handler */
+      let id = (b.id && String(b.id).trim()) || ('B' + crypto.randomBytes(5).toString('hex'));
+      if (await req.store.get('branches', id)) return res.status(409).json({ error: 'Branch already exists' });
+      const row = { id, name: String(b.name).trim(), code: b.code ? String(b.code).trim() : '', address: b.address ? String(b.address) : '',
+        phone: b.phone ? String(b.phone) : '', manager_name: b.manager_name ? String(b.manager_name) : '',
+        is_active: true, created_at: new Date().toISOString() };
+      await req.store.put('branches', row);
+      res.status(201).json(branchView(row));
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+  app.put('/api/branches/:id', needAdmin, async (req, res) => {
+    try {
+      const cur = await req.store.get('branches', req.params.id);
+      if (!cur) return res.status(404).json({ error: 'branch not found' });
+      const b = req.body || {};
+      /* reactivating a branch consumes a slot: enforce the limit like creation does */
+      if (b.is_active === true && cur.is_active === false) {
+        const lab = req.lab || {};
+        const maxB = lab.maxBranches != null ? lab.maxBranches : 5;
+        const active = (await req.store.all('branches')).filter(x => x && x.is_active !== false).length;
+        if (active >= maxB) return res.status(403).json({ error: 'Branch limit reached (' + active + ' of ' + maxB + ' branches). Ask your superadmin to raise the limit.' });
+      }
+      const next = Object.assign({}, cur, { id: cur.id, created_at: cur.created_at });
+      ['name', 'code', 'address', 'phone', 'manager_name'].forEach((f) => { if (b[f] !== undefined) next[f] = String(b[f]).trim(); });
+      if (b.is_active !== undefined) next.is_active = !!b.is_active;
+      await req.store.put('branches', next);
+      res.json(branchView(next));
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+  app.delete('/api/branches/:id', needAdmin, async (req, res) => {
+    try {
+      const cur = await req.store.get('branches', req.params.id);
+      if (!cur) return res.status(404).json({ error: 'branch not found' });
+      await req.store.del('branches', req.params.id);
+      res.json({ ok: true });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+  /* ---- signed-in lab: effective limits + feature flags for this lab (read-only; any authenticated role) ---- */
+  app.get('/api/lab/features', needUser, async (req, res) => {
+    const lab = req.lab || {};
+    const maxBranches = lab.maxBranches != null ? lab.maxBranches : 5;
+    const branchesUsed = (await req.store.all('branches')).filter(b => b && b.is_active !== false).length;
+    let features;
+    if (saas && typeof saas.getFeatures === 'function') {
+      features = await saas.getFeatures(lab);
+    } else {
+      /* all 24 keys mirror the app.js NAV; lab.features stores only explicit overrides (absent = enabled) */
+      features = {};
+      const ov = (lab.features && typeof lab.features === 'object') ? lab.features : {};
+      ['dashboard', 'patients', 'samples', 'inventory', 'results', 'tests', 'packages', 'outsourced',
+       'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'doctors', 'expenses', 'finance',
+       'reports', 'downloads', 'email', 'whatsapp', 'sms', 'audit', 'subscription', 'settings']
+        .forEach(k => { features[k] = ov[k] !== false; });
+    }
+    res.json({ maxBranches, branchesUsed, features });
+  });
+
   /* batched upsert (imports / bulk price updates). users + settings keep their dedicated, guarded routes */
   app.post('/api/bulk/:table', tableGuard, async (req, res) => {
     const store = req.store;
     const t = req.params.table;
     if (t === 'users' || t === 'settings') return res.status(400).json({ error: 'not allowed for ' + t });
+    if (t === 'appointments') return res.status(403).json({ error: 'Appointments can only be created through the patient portal.' });
     const rows = req.body && req.body.rows;
     if (!Array.isArray(rows) || rows.length > 2000) return res.status(400).json({ error: 'rows[] required (max 2000)' });
     try {
       let n = 0;
       if (t === 'invoices') { const e = await withLock(lockKey(req), () => limitErr(req, t, rows)); if (e) return res.status(402).json(e); }
+      if (t === 'branches') {
+        /* branch limit applies to bulk upserts too: count rows that would become newly active */
+        const lab = req.lab || {};
+        const maxB = lab.maxBranches != null ? lab.maxBranches : 5;
+        const existing = await store.all('branches');
+        const activeNow = existing.filter(x => x && x.is_active !== false).length;
+        let newActive = 0;
+        for (const r of rows) {
+          if (!r || r.id == null) continue;
+          const cur = existing.find(x => x && x.id === r.id);
+          if (r.is_active !== false && (!cur || cur.is_active === false)) newActive++;
+        }
+        if (activeNow + newActive > maxB)
+          return res.status(403).json({ error: 'Branch limit reached (' + activeNow + ' of ' + maxB + ' branches). Ask your superadmin to raise the limit.' });
+      }
       for (const r of rows) { if (r && r.id != null) { await store.put(t, r); n++; } }
       if (n && ['tests', 'invoices', 'patients', 'doctors', 'expenses', 'payments', 'results'].indexOf(t) >= 0) await auditLog(req, 'bulk', t, '', { label: n + ' ' + t + ' saved in one batch' });
       res.json({ ok: true, saved: n });
@@ -1648,6 +2467,7 @@ async function main() {
     const store = req.store;
     try {
       const t = req.params.table;
+      if (t === 'appointments') return res.status(403).json({ error: 'Appointments can only be created through the patient portal.' });
       const body = t === 'users' ? await prepUserBody(req, null) : req.body;
       const create = async () => {
         if (body && body.id != null && t !== 'settings' && await store.get(t, String(body.id))) return res.status(409).json({ error: 'id already exists', id: body.id });
@@ -1666,17 +2486,36 @@ async function main() {
       const body = t === 'users' ? await prepUserBody(req, true) : (req.body || {});
       const update = async () => {
         const before = await store.get(t, req.params.id);
+        if (t === 'appointments') {
+          if (!before) return res.status(404).json({ error: 'Appointment not found.' });
+          const transitions = { requested: ['confirmed', 'rejected'], confirmed: ['completed', 'cancelled'] };
+          const allowed = transitions[before.status] || [];
+          if (Object.keys(body).some((key) => key !== 'status') || allowed.indexOf(body.status) < 0) {
+            return res.status(409).json({ error: 'This appointment status change is not allowed.' });
+          }
+          const out = await store.patch(t, req.params.id, {
+            status: body.status,
+            updatedAt: new Date().toISOString(),
+            updatedBy: String(req.user.name || req.user.username || 'Lab staff').slice(0, 100)
+          });
+          await auditLog(req, 'update', t, req.params.id, {
+            label: auditLabel(t, out),
+            changes: auditDiff(before, out)
+          });
+          return res.json(out);
+        }
         if (!before) { const e = await limitErr(req, t, [Object.assign({}, body, { id: req.params.id })]); if (e) return res.status(402).json(e); }
         const out = await store.patch(t, req.params.id, body);
         const ch = auditDiff(before, out);
         if (ch.length) await auditLog(req, before ? 'update' : 'create', t, req.params.id, { label: auditLabel(t, out), changes: ch });
         res.json(t === 'users' ? stripUser(out) : out);
       };
-      if (t === 'users' || t === 'invoices') await withLock(lockKey(req), update); else await update();
+      if (t === 'users' || t === 'invoices' || t === 'appointments') await withLock(lockKey(req), update); else await update();
     } catch (e) { res.status(400).json({ error: e.message }); }
   });
   app.delete('/api/:table/:id', tableGuard, async (req, res) => {
     const store = req.store;
+    if (req.params.table === 'appointments') return res.status(403).json({ error: 'Appointment records cannot be deleted.' });
     if (req.params.table === 'users' && req.params.id === req.user.id) return res.status(400).json({ error: 'You cannot delete your own account' });
     const gone = await store.get(req.params.table, req.params.id);
     await store.del(req.params.table, req.params.id);

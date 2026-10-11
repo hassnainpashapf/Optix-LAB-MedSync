@@ -5,16 +5,16 @@
   var GH = 'https://labpos-api.150.230.52.29.sslip.io/releases/';
   var DMG_URL = GH + 'Optix-LAB-MedSync-1.3.1-arm64.dmg.tar.gz';
   /* TODO(parent): replace with the real published APK URL */
-  var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.0.2.apk';
+  var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.1.0.apk';
 
   /* 6 distinct installer binaries (Windows 11 and Windows 10 64-bit share one) */
   var WIN_OPTS = [
-    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win10-11-x64.exe' },
-    { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win10-x86.exe' },
-    { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win7-8-x64.exe' },
-    { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win7-8-x86.exe' },
-    { os: 'Windows 7',       arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win7-8-x64.exe' },
-    { os: 'Windows 7',       arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.3.1-win7-8-x86.exe' }
+    { os: 'Windows 11 / 10', arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win10-11-x64.exe' },
+    { os: 'Windows 10',      arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win10-x86.exe' },
+    { os: 'Windows 8.1',     arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win7-8-x64.exe' },
+    { os: 'Windows 8.1',     arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win7-8-x86.exe' },
+    { os: 'Windows 7',       arch: '64-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win7-8-x64.exe' },
+    { os: 'Windows 7',       arch: '32-bit', file: 'Optix-LAB-MedSync-Setup-1.4.0-win7-8-x86.exe' }
   ];
   var WIN_SIZE = '~100 MB';
 
@@ -47,7 +47,7 @@
     }).join('');
     return '<div class="card dl-card">' +
       '<div class="card-h"><div class="dl-ico">' + ICO.win + '</div>' +
-      '<div><h3>Windows</h3><p class="dl-ver">Windows 7, 8.1, 10, 11 &middot; Version 1.3.1 (cloud sync)</p></div></div>' +
+      '<div><h3>Windows</h3><p class="dl-ver">Windows 7, 8.1, 10, 11 &middot; Version 1.4.0 (cloud sync)</p></div></div>' +
       '<div class="card-b">' +
       '<button type="button" class="btn btn-primary dl-btn dl-win-toggle">' + ICO.dl +
         '<span class="dl-win-toggle-tx">Choose your Windows version</span>' + ICO.chev + '</button>' +
@@ -173,7 +173,7 @@
       ]
     }) +
     dlCard({
-      title: 'Android APK', version: '2.0.2', size: '~3 MB', file: 'APK', url: APK_URL, icon: ICO.android,
+      title: 'Android APK', version: '2.1.0', size: '~3 MB', file: 'APK', url: APK_URL, icon: ICO.android,
       note: ICO.check + '<span>Install the <b>Optix LAB MedSync</b> mobile app on your Android phone. It opens like an app and uses the same cloud account and data (internet needed).</span>',
       steps: [
         'Download the <b>.apk</b> file on your Android phone.',

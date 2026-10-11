@@ -50,7 +50,8 @@
     list: _svgA('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'),
     cash: _svgA('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'),
     trend: _svgA('<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>'),
-    flask: _svgA('<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/>')
+    flask: _svgA('<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/>'),
+    alert: _svgA('<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')
   };
   function admStat(icon, tint, label, value, sub, raw, isMoney, vlStyle, fullTint) {
     var countAttrs = (typeof raw === 'number' && isFinite(raw))
@@ -560,7 +561,7 @@
       } });
     }
     /* ---- report templates (worker 8): saved {type,from,to,preset} presets ---- */
-    var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This month', lastMonth: 'Last month', custom: 'Custom range' };
+    var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This Month', lastMonth: 'Last Month', custom: 'Custom Range' };
     var REP_TYPE_LBL = { tests: 'Tests', finance: 'Finance', dues: 'Dues', patients: 'Patients', labs: 'Labs' };
     function repTplList() { return DB.all('report_templates') || []; }
     function repTplDesc(t) {
@@ -857,16 +858,17 @@
         + '<div><div class="stat-num">' + val + '</div><div class="stat-lbl">' + label + '</div></div></div>';
     }
 
+    var presetOptions = Object.keys(REP_PRESET_LBL).map(function (p) {
+      return '<option value="' + p + '"' + (rep.preset === p ? ' selected' : '') + '>' + REP_PRESET_LBL[p] + '</option>';
+    }).join('');
     var filterCard = ''
-      + '<div class="card" id="repFilters"><div class="card-b">'
-      +     '<div class="rep-date-controls">'
-      +       '<label class="rep-control-label" for="repPreset">Dates:</label>'
-      +       '<select class="select" id="repPreset">' + schedOpts(REP_PRESET_LBL, rep.preset) + '</select>'
-      +       '<input class="input" type="date" id="repFrom" aria-label="From date" value="' + App.esc(from) + '">'
-      +       '<span class="rep-date-separator" aria-hidden="true">–</span>'
-      +       '<input class="input" type="date" id="repTo" aria-label="To date" value="' + App.esc(to) + '">'
+      + '<div class="card rep-control-card"><div class="card-b rep-control-row">'
+      +     '<div class="rep-control-group rep-dates">'
+      +       '<label class="rep-control-field" for="repPreset">Period<select class="select" id="repPreset">' + presetOptions + '</select></label>'
+      +       '<label class="rep-control-field" for="repFrom">From<input class="input" type="date" id="repFrom" value="' + App.esc(from) + '"></label>'
+      +       '<label class="rep-control-field" for="repTo">To<input class="input" type="date" id="repTo" value="' + App.esc(to) + '"></label>'
       +     '</div>'
-      +     '<div class="rep-actions">'
+      +     '<div class="rep-control-group rep-actions">'
       +       '<button class="btn btn-ghost btn-sm" id="repCsv">' + DL_ICON + ' Export CSV</button>'
       +       '<button class="btn btn-ghost btn-sm" id="repBuilder">🛠 Builder</button>'
       +       '<button class="btn btn-ghost btn-sm" id="repSchedBtn">⏰ Schedules</button>'
@@ -1044,13 +1046,13 @@
       var opts = '<option value="">-- select template --</option>' + tpls.map(function (t) {
         return '<option value="' + App.esc(String(t.id)) + '">' + App.esc(t.name) + ' — ' + App.esc(repTplDesc(t)) + '</option>';
       }).join('');
-      return '<div class="card" id="repTemplates"><div class="card-b">'
-        + '<label class="rep-control-label" for="repTplSel">Report Templates:</label>'
-        + '<div class="rep-template-apply">'
+      return '<div class="card rep-control-card"><div class="card-b rep-control-row">'
+        + '<label class="rep-control-title" for="repTplSel">Report Templates:</label>'
+        + '<div class="rep-control-group rep-template-apply">'
         + '<select class="select" id="repTplSel">' + opts + '</select>'
         + '<button type="button" class="btn btn-sm btn-primary" id="tplApply">Apply</button>'
         + '<button type="button" class="btn btn-sm btn-ghost" id="tplDel">Delete</button>'
-        + '</div><div class="rep-template-save">'
+        + '</div><div class="rep-control-group rep-template-save">'
         + '<input class="input" id="repTplName" aria-label="Template name" placeholder="Template name…">'
         + '<button type="button" class="btn btn-sm btn-ghost" id="tplSave">💾 Save current</button>'
         + '</div></div></div>';
@@ -1115,8 +1117,9 @@
       + '<style>' + ADM_STAT_CSS + '</style>'
       + repKpis
       + filterCard
+      + repSlotTemplates
       + (showFinance ? cmpCard : '')
-      + repSlotSchedules + repSlotBuilder + (showFinance ? repSlotTemplates : '')
+      + repSlotSchedules + repSlotBuilder
       + (showFinance ? (finSumCard + finCallout) : '')
       + (showDues ? duesCard : '')
       + (showPatients ? finCard : '')
@@ -1179,7 +1182,11 @@
     var tplApp = document.getElementById('tplApply'); if (tplApp) tplApp.addEventListener('click', repTplApply);
     var tplDl = document.getElementById('tplDel'); if (tplDl) tplDl.addEventListener('click', repTplDel);
     var tplSv = document.getElementById('tplSave'); if (tplSv) tplSv.addEventListener('click', repTplSave);
-    var rfPreset = document.getElementById('repPreset'); if (rfPreset) rfPreset.addEventListener('change', function (e) { setPreset(e.target.value); });
+    var rfPreset = document.getElementById('repPreset');
+    if (rfPreset) rfPreset.addEventListener('change', function (e) {
+      setPreset(e.target.value);
+      document.getElementById('repPreset').focus();
+    });
     var rBld = document.getElementById('repBuilder'); if (rBld) rBld.addEventListener('click', function () { openBuilder(); });
     document.getElementById('repCsv').addEventListener('click', function () {
       try {
@@ -1442,8 +1449,7 @@
     }
 
     if (!curPat) {
-      var emptyHtml = '<div class="page-head"><div><h1>📈 Patient Historical Trend &amp; Delta Analysis Center</h1>'
-        + '<p class="muted">Track multi-visit biometric trajectories, evaluate delta variations, and monitor patient health recovery over time.</p></div></div>'
+      var emptyHtml = '<div class="page-head"><div><h1>📈 Patient Historical Trend &amp; Delta Analysis Center</h1></div></div>'
         + '<div class="card"><div class="card-b">' + App.empty('No patients registered in the system yet. Register patients and enter lab results to see trend charts.') + '</div></div>';
       document.getElementById('view').innerHTML = emptyHtml;
       return;
@@ -1508,21 +1514,42 @@
       ? '<span class="badge" style="background:' + latestSevCol + '18;color:' + latestSevCol + ';font-weight:800;border:1px solid ' + latestSevCol + '44">' + (latestPt.dir === 'high' ? '↑ HIGH' : '↓ LOW') + (latestPt.sev === 'critical' ? ' · CRITICAL' : '') + '</span>'
       : '<span class="badge" style="background:#16a34a18;color:#16a34a;font-weight:700;border:1px solid #16a34a44">Normal</span>') : '—';
 
+    /* Determine unified KPI themes */
+    var latestCardTheme = 't-green';
+    if (latestPt) {
+      if (latestPt.sev === 'critical') latestCardTheme = 't-red';
+      else if (latestPt.sev === 'moderate' || latestPt.sev === 'mild') latestCardTheme = 't-amber';
+      else if (latestPt.sev === 'ok' || !latestPt.sev) latestCardTheme = 't-green';
+    } else {
+      latestCardTheme = 't-navy';
+    }
+
+    var deltaCardTheme = 't-blue';
+    if (selSeries && basePt && latestPt) {
+      var dLatest = App.outDist ? App.outDist(selSeries, latestPt.v) : 0;
+      var dBase = App.outDist ? App.outDist(selSeries, basePt.v) : 0;
+      if (dLatest === 0) {
+        deltaCardTheme = 't-green';
+      } else if (dLatest < dBase) {
+        deltaCardTheme = 't-green';
+      } else if (dLatest > dBase) {
+        deltaCardTheme = 't-red';
+      } else {
+        deltaCardTheme = 't-amber';
+      }
+    } else {
+      deltaCardTheme = 't-blue';
+    }
+
     /* Build HTML */
     var html = ''
       + '<style>'
       + '.pt-trend-dash { max-width: 1300px; margin: 0 auto; }'
-      + '.pt-card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 14px; }'
-      + '.pt-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
-      + '.pt-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
-      + '.pt-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
-      + '.pt-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; font-variant-numeric: tabular-nums; }'
-      + '.pt-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
       + '.pt-pat-banner { display: flex; align-items: center; gap: 16px; background: #fff; border: 1.5px solid var(--bd); border-radius: 14px; padding: 14px 18px; margin-bottom: 18px; flex-wrap: wrap; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
-      + '.pt-avatar-circle { width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: #fff; display: grid; place-items: center; font-size: 19px; font-weight: 800; flex: 0 0 50px; }'
+      + '.pt-avatar-circle { width: 48px; height: 48px; border-radius: 50%; background: var(--brand-grad); color: #fff; display: grid; place-items: center; font-size: 18px; font-weight: 800; flex: 0 0 48px; box-shadow: 0 4px 12px rgba(19,24,69,.25); }'
       + '.pt-param-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }'
-      + '.pt-param-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 12px; padding: 14px 16px; transition: border-color .15s, box-shadow .15s; }'
-      + '.pt-param-card:hover { border-color: #3b82f6; box-shadow: 0 3px 10px rgba(59,130,246,.08); }'
+      + '.pt-param-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 14px; padding: 14px 16px; transition: border-color .15s, box-shadow .15s; }'
+      + '.pt-param-card:hover { border-color: var(--brand); box-shadow: 0 4px 14px rgba(19,24,69,.08); }'
       + '@media print { .sidebar, .topbar, .pt-head-bar .btn, .pt-filter-box, .no-print { display: none !important; } .main { padding: 0 !important; } }'
       + '</style>'
       + '<div class="pt-trend-dash">';
@@ -1535,41 +1562,41 @@
       ? (deltaSign + (Math.round(Math.abs(baseDelta) * 100) / 100) + ' ' + selSeries.unit + ' (' + (baseDeltaPct >= 0 ? '+' : '') + (Math.round(baseDeltaPct * 10) / 10) + '%)')
       : '—';
 
-    /* 1. 4 KPI Stat Cards directly at top */
-    html += '<div class="pt-card-grid">'
-      + '<div class="pt-kpi-card" style="border-left:4px solid #3b82f6">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Historical Readings</span><span style="font-size:16px">📊</span></div>'
-      +   '<div class="pt-kpi-val">' + pts.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">readings</span></div>'
-      +   '<div class="pt-kpi-sub">' + (pts.length > 1 ? 'From ' + App.d(basePt.t) + ' to ' + App.d(latestPt.t) : (pts.length ? '1 visit recorded' : '0 readings recorded')) + '</div>'
+    /* 1. 4 Unified KPI Stat Cards (.kpi-grid + .kpi) */
+    html += '<div class="kpi-grid" style="margin-bottom:18px">'
+      + '<div class="kpi t-navy">'
+      +   '<div class="kpi-ic">' + App.icon('chart', 18) + '</div>'
+      +   '<div class="kpi-lb">HISTORICAL READINGS</div>'
+      +   '<div class="kpi-nm">' + pts.length + '</div>'
+      +   '<div class="kpi-sb">' + (pts.length > 1 ? 'From ' + App.d(basePt.t) + ' to ' + App.d(latestPt.t) : (pts.length ? '1 visit recorded' : '0 readings recorded')) + '</div>'
       + '</div>'
-      + '<div class="pt-kpi-card" style="border-left:4px solid #8b5cf6">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Baseline (Initial) Reading</span><span style="font-size:16px">🏷️</span></div>'
-      +   '<div class="pt-kpi-val">' + App.esc(baselineValText) + '</div>'
-      +   '<div class="pt-kpi-sub">' + (basePt ? App.d(basePt.t) + ' (' + App.esc(basePt.inv) + ')' : '—') + '</div>'
+      + '<div class="kpi t-purple">'
+      +   '<div class="kpi-ic">' + App.icon('flask', 18) + '</div>'
+      +   '<div class="kpi-lb">BASELINE (INITIAL) READING</div>'
+      +   '<div class="kpi-nm">' + App.esc(baselineValText) + '</div>'
+      +   '<div class="kpi-sb">' + (basePt ? App.d(basePt.t) + ' (' + App.esc(basePt.inv) + ')' : 'No baseline data') + '</div>'
       + '</div>'
-      + '<div class="pt-kpi-card" style="border-left:4px solid ' + latestSevCol + '">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Latest (Current) Reading</span>' + latestSevBadge + '</div>'
-      +   '<div class="pt-kpi-val" style="color:' + latestSevCol + '">' + App.esc(latestValText) + '</div>'
-      +   '<div class="pt-kpi-sub">' + (latestPt ? 'Tested on ' + App.d(latestPt.t) + ' (' + App.esc(latestPt.inv) + ')' : '—') + '</div>'
+      + '<div class="kpi ' + latestCardTheme + '">'
+      +   '<div class="kpi-ic">' + App.icon('clipboard', 18) + '</div>'
+      +   '<div class="kpi-lb">LATEST (CURRENT) READING</div>'
+      +   '<div class="kpi-nm" style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
+      +     '<span>' + App.esc(latestValText) + '</span>'
+      +     (latestSevBadge !== '—' ? latestSevBadge : '')
+      +   '</div>'
+      +   '<div class="kpi-sb">' + (latestPt ? 'Tested on ' + App.d(latestPt.t) + ' (' + App.esc(latestPt.inv) + ')' : 'No readings recorded') + '</div>'
       + '</div>'
-      + '<div class="pt-kpi-card" style="border-left:4px solid ' + dirColor + '">'
-      +   '<div class="pt-kpi-top"><span class="pt-kpi-lbl">Net Delta from Baseline</span><span style="font-size:16px">📈</span></div>'
-      +   '<div class="pt-kpi-val" style="color:' + dirColor + ';font-size:18px">' + App.esc(deltaValText) + '</div>'
-      +   '<div class="pt-kpi-sub" style="color:' + dirColor + ';font-weight:600">' + App.esc(dirNote) + '</div>'
+      + '<div class="kpi ' + deltaCardTheme + '">'
+      +   '<div class="kpi-ic"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 16 6-6 4 4 8-8"/><path d="M14 6h7v7"/></svg></div>'
+      +   '<div class="kpi-lb">NET DELTA FROM BASELINE</div>'
+      +   '<div class="kpi-nm" style="font-size:' + (deltaValText.length > 20 ? '17px' : '20px') + '">' + App.esc(deltaValText) + '</div>'
+      +   '<div class="kpi-sb" title="' + App.esc(dirNote) + '">' + App.esc(dirNote) + '</div>'
       + '</div>'
       + '</div>'
 
-      /* 2. Action buttons row below cards */
-      + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap" class="no-print">'
-      +   '<button class="btn btn-ghost btn-sm" id="ptRefreshBtn">🔄 Refresh</button>'
-      +   '<button class="btn btn-ghost btn-sm" id="ptCsvBtn">📥 Export CSV</button>'
-      +   '<button class="btn btn-primary btn-sm" id="ptPrintBtn">' + PRINT_ICON + ' Print Trend Report</button>'
-      + '</div>'
-
-      /* 3. Patient & Parameter Selector Controls (Below cards) */
+      /* 2. Patient & Parameter Selector Controls with Actions (Inside toolbar card) */
       + '<div class="card pt-filter-box" style="margin-bottom:18px"><div class="card-b" style="padding:14px 16px">'
-      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-      +     '<div style="flex:1;min-width:260px">'
+      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">'
+      +     '<div style="flex:1;min-width:240px">'
       +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Select Patient</label>'
       +       '<select class="select" id="ptPatSelect" style="font-weight:600;width:100%">'
       +         allPatients.map(function (p) {
@@ -1581,7 +1608,7 @@
                 }).join('')
       +       '</select>'
       +     '</div>'
-      +     '<div style="flex:1;min-width:240px">'
+      +     '<div style="flex:1;min-width:220px">'
       +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Biometric Parameter</label>'
       +       '<select class="select" id="ptParamSelect" style="font-weight:600;width:100%"' + (!series.length ? ' disabled' : '') + '>'
       +         (series.length ? series.map(function (m, i) {
@@ -1592,14 +1619,19 @@
                 }).join('') : '<option value="">No numeric parameters reported</option>')
       +       '</select>'
       +     '</div>'
-      +     '<div style="min-width:160px">'
+      +     '<div style="min-width:150px">'
       +       '<label class="label" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted)">Visits Range</label>'
-      +       '<select class="select" id="ptRangeSelect" style="font-weight:600">'
+      +       '<select class="select" id="ptRangeSelect" style="font-weight:600;width:100%">'
       +         '<option value="all"' + (trendsState.visitLimit === 'all' ? ' selected' : '') + '>All Historical Visits</option>'
       +         '<option value="last3"' + (trendsState.visitLimit === 'last3' ? ' selected' : '') + '>Last 3 Visits</option>'
       +         '<option value="last5"' + (trendsState.visitLimit === 'last5' ? ' selected' : '') + '>Last 5 Visits</option>'
       +         '<option value="last10"' + (trendsState.visitLimit === 'last10' ? ' selected' : '') + '>Last 10 Visits</option>'
       +       '</select>'
+      +     '</div>'
+      +     '<div style="display:flex;gap:6px;align-items:center;margin-left:auto;flex-wrap:wrap" class="no-print">'
+      +       '<button class="btn btn-ghost btn-sm" id="ptRefreshBtn" style="height:36px">🔄 Refresh</button>'
+      +       '<button class="btn btn-ghost btn-sm" id="ptCsvBtn" style="height:36px">📥 Export CSV</button>'
+      +       '<button class="btn btn-primary btn-sm" id="ptPrintBtn" style="height:36px">' + PRINT_ICON + ' Print Trend Report</button>'
       +     '</div>'
       +   '</div>'
       + '</div></div>'
@@ -1616,9 +1648,6 @@
       +     '</div>'
       +     '<div style="display:flex;gap:12px;margin-top:5px;font-size:12px;color:var(--muted);flex-wrap:wrap">'
       +       '<span>📞 ' + App.esc(curPat.phone || 'No phone') + '</span>'
-      +       '<span>🗓 Registered ' + App.esc(App.d(curPat.createdAt)) + '</span>'
-      +       '<span>🧾 ' + patInvs.length + ' Total Visits</span>'
-      +       '<span>🔬 ' + patReadyCount + ' Finalized Lab Reports</span>'
       +     '</div>'
       +   '</div>'
       +   '<div style="display:flex;gap:8px">'
@@ -1631,10 +1660,7 @@
       html += '<div class="card"><div class="card-b" style="text-align:center;padding:40px 20px">'
         + '<div style="font-size:42px;margin-bottom:12px">🧪</div>'
         + '<h3 style="margin:0 0 6px">No Numeric Lab Test Results Found</h3>'
-        + '<p class="muted" style="margin:0 0 16px;max-width:500px;margin-left:auto;margin-right:auto">'
-        + 'Patient <b>' + App.esc(curPat.name) + '</b> does not have finalized numeric test results yet. '
-        + 'When tests like Blood Sugar, CBC, Creatinine, Lipid Profile, or Electrolytes are finalized with numeric values in Lab Results, their multi-visit historical trend graphs and delta analyses will display here.'
-        + '</p>'
+        + '<p class="muted" style="margin:0 0 16px">No finalized numeric results for <b>' + App.esc(curPat.name) + '</b> yet.</p>'
         + '<div style="display:flex;justify-content:center;gap:10px">'
         + '<a href="#/results" class="btn btn-primary">Go to Lab Results &rarr;</a>'
         + '<a href="#/billing/' + App.esc(curPat.id) + '" class="btn btn-ghost">+ New Bill for Patient</a>'
@@ -1660,7 +1686,6 @@
       +   '</div>'
       + '</div>'
       + '<div class="card-b" style="padding:16px 20px">'
-      +   (pts.length === 1 ? '<p class="muted" style="margin:0 0 10px;font-size:12.5px">📌 Only 1 reading recorded so far. Continuous connection curves connect automatically across upcoming visits.</p>' : '')
       +   buildTrendSvg(selSeries, pts)
       + '</div></div>';
 
@@ -1712,26 +1737,24 @@
         + '<td><span class="muted">' + App.esc(selSeries.ref || '—') + '</span></td>'
         + '<td>' + statusBadge + '</td>'
         + '<td>' + dTxt + '</td>'
-        + '<td>' + cTxt + '</td>'
-        + '<td>' + velFlag + '</td>'
         + '<td style="text-align:right"><button class="btn btn-ghost btn-sm" data-pt-inv="' + App.esc(q.invId || q.inv) + '">View Report</button></td>'
         + '</tr>';
     }).reverse().join('');
 
     html += '<div class="card" style="margin-bottom:20px">'
       + '<div class="card-h"><h3 style="margin:0">Delta Check &amp; Clinical Progress Log</h3>'
-      + '<span class="muted" style="font-size:12.5px">' + pts.length + ' chronologically recorded readings</span></div>'
+      + '</div>'
       + '<div class="card-b" style="padding:0">'
       +   '<div class="tbl-wrap"><table class="table"><thead><tr>'
       +     '<th>#</th><th>Visit Date</th><th>Invoice No</th><th>Result Value</th><th>Reference Range</th>'
-      +     '<th>Clinical Status</th><th>Delta (vs Prior)</th><th>Cumulative Δ</th><th>Velocity / Variance</th><th style="text-align:right">Action</th>'
+      +     '<th>Clinical Status</th><th>Change vs Prior</th><th style="text-align:right">Action</th>'
       +   '</tr></thead><tbody>' + deltaRowsHtml + '</tbody></table></div>'
       + '</div></div>';
 
     /* Multi-Parameter Health Overview Grid (Other parameters tested for this patient) */
     html += '<div class="card" style="margin-bottom:24px">'
       + '<div class="card-h"><h3 style="margin:0">Multi-Parameter Clinical Overview (' + series.length + ' Monitored Tests)</h3>'
-      + '<span class="muted" style="font-size:12.5px">Quick biometric summary across all tests finalized for ' + App.esc(curPat.name) + '</span></div>'
+      + '</div>'
       + '<div class="card-b">'
       +   '<div class="pt-param-grid">'
       +     series.map(function (m, i) {
@@ -1743,13 +1766,13 @@
               var mDeltaPct = (mBase && mBase.v !== 0) ? ((mDelta / Math.abs(mBase.v)) * 100) : 0;
               var mSev = mLatest ? (COL_SEV[mLatest.sev || 'ok'] || '#16a34a') : '#16a34a';
 
-              return '<div class="pt-param-card"' + (isCurrent ? ' style="border-color:#3b82f6;background:#f8faff"' : '') + '>'
+              return '<div class="pt-param-card"' + (isCurrent ? ' style="border-color:var(--brand);background:#f8fafc;box-shadow:0 0 0 2px rgba(19,24,69,.12)"' : '') + '>'
                 + '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">'
                 +   '<strong style="font-size:14px;color:var(--ink)">' + App.esc(m.name) + '</strong>'
                 +   (isCurrent ? '<span class="badge b-ready">Active</span>' : '<span class="badge b-pending">' + mPts.length + ' visits</span>')
                 + '</div>'
                 + '<div class="muted" style="font-size:11.5px;margin-bottom:8px">Normal: ' + App.esc(m.ref || '—') + ' ' + App.esc(m.unit) + '</div>'
-                + '<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;margin-bottom:10px">'
+                + '<div style="display:flex;justify-content:space-between;align-items:center;background:#fff;border:1px solid var(--bd);border-radius:10px;padding:8px 10px;margin-bottom:10px">'
                 +   '<div><div class="muted" style="font-size:10px;text-transform:uppercase">Baseline</div><div style="font-size:13px;font-weight:700">' + App.esc(mBase ? mBase.raw : '—') + '</div></div>'
                 +   '<div style="font-size:14px;color:var(--muted)">→</div>'
                 +   '<div><div class="muted" style="font-size:10px;text-transform:uppercase">Latest</div><div style="font-size:14px;font-weight:800;color:' + mSev + '">' + App.esc(mLatest ? mLatest.raw : '—') + '</div></div>'
@@ -1922,20 +1945,74 @@
      SETTINGS  (#/settings) — admin only
      Tabs: Lab Profile | My Account | Users | Backup | Danger Zone
      ============================================================ */
+  var UNIFI_SET_CSS =
+    '.unifi-shell{background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px -4px rgba(15,23,42,.06);margin-bottom:24px}' +
+    '.unifi-top-bar{padding:18px 24px 14px;border-bottom:1px solid #e2e8f0;background:#ffffff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}' +
+    '.unifi-top-title{font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:8px}' +
+    '.unifi-top-title>svg,.unifi-tab-btn>svg{display:block;flex:none}' +
+    '.unifi-top-desc{font-size:12.5px;color:#64748b;margin:3px 0 0}' +
+    '.unifi-tab-strip{display:flex;gap:6px;overflow-x:auto;padding:12px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;scrollbar-width:thin}' +
+    '.unifi-tab-strip::-webkit-scrollbar{height:4px}' +
+    '.unifi-tab-strip::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}' +
+    '.unifi-tab-btn{display:inline-flex;align-items:center;gap:7px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;color:#475569;background:#ffffff;border:1px solid #e2e8f0;text-decoration:none;white-space:nowrap;transition:all .15s ease}' +
+    '.unifi-tab-btn:hover{background:#f1f5f9;color:#0f172a;border-color:#cbd5e1}' +
+    '.unifi-tab-btn.active{background:#0f172a;color:#ffffff;border-color:#0f172a;box-shadow:0 2px 8px rgba(15,23,42,.15)}' +
+    '.unifi-tab-btn.unifi-danger{color:#dc2626}' +
+    '.unifi-tab-btn.unifi-danger:hover{background:#fef2f2;border-color:#fca5a5}' +
+    '.unifi-tab-btn.unifi-danger.active{background:#dc2626;color:#ffffff;border-color:#dc2626}' +
+    '.unifi-canvas{padding:24px;flex:1}' +
+    '.unifi-panel{background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,23,42,.03);overflow:hidden;transition:border-color .15s}' +
+    '.unifi-panel:hover{border-color:#cbd5e1}' +
+    '.unifi-panel-header{padding:14px 18px;border-bottom:1px solid #f1f5f9;background:#fafbfc;display:flex;align-items:center;gap:12px}' +
+    '.unifi-panel-icon{font-size:18px;width:32px;height:32px;border-radius:8px;background:#ffffff;border:1px solid #e2e8f0;display:grid;place-items:center;flex:none;box-shadow:0 1px 2px rgba(0,0,0,.04)}' +
+    '.unifi-panel-title{font-size:14.5px;font-weight:800;color:#0f172a;margin:0}' +
+    '.unifi-panel-desc{font-size:12px;color:#64748b;margin:2px 0 0}' +
+    '.unifi-panel-body{padding:18px}' +
+    '.unifi-switch{position:relative;display:inline-block;width:42px;height:24px;flex:none}' +
+    '.unifi-switch input{opacity:0;width:0;height:0}' +
+    '.unifi-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background-color:#cbd5e1;transition:.2s;border-radius:24px}' +
+    '.unifi-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:white;transition:.2s;border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,.2)}' +
+    '.unifi-switch input:checked + .unifi-slider{background-color:#0f172a}' +
+    '.unifi-switch input:checked + .unifi-slider:before{transform:translateX(18px)}' +
+    '.unifi-toggle-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;margin-bottom:8px;gap:14px}' +
+    '.unifi-save-bar{margin-top:20px;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid #e2e8f0}';
+
   var settingsTab = 'profile';
 
   function renderSettings() {
     if (role() !== 'admin') return denied();
-    /* Settings sections are represented by the sidebar and topbar; keep the
-       content card focused on the active form instead of repeating the title. */
-    var html = '<div class="card"><div class="card-b"><div id="setBody"></div></div></div>';
+    var tabs = [
+      { id: 'profile', sec: 'GENERAL', label: 'Lab Profile', desc: 'Identity, logo, contact & branches', icon: 'flask' },
+      { id: 'payments', sec: 'GENERAL', label: 'Online Payments', desc: 'JazzCash, Easypaisa, Bank & Raast', icon: 'card' },
+      { id: 'account', sec: 'GENERAL', label: 'My Account', desc: 'Admin credentials & password', icon: 'users' },
+      { id: 'users', sec: 'GENERAL', label: 'Users & Roles', desc: 'Staff accounts & permissions', icon: 'shield' },
+
+      { id: 'templates', sec: 'REPORTS & PRINTING', label: 'Report Templates', desc: 'Presets, normal ranges & tests', icon: 'file' },
+      { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: 'check' },
+
+      { id: 'portal', sec: 'AUTOMATION & PORTAL', label: 'Patient Portal', desc: 'Online verification & QR access', icon: 'lock' },
+
+      { id: 'backup', sec: 'SYSTEM', label: 'Backup & Cloud Sync', desc: 'Automated backups & export', icon: 'download' },
+      { id: 'danger', sec: 'SYSTEM', label: 'Danger Zone', desc: 'Factory reset & data purge', icon: 'alert', isDanger: true }
+    ];
+
+    var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
+
+    var html =
+      '<style>' + UNIFI_SET_CSS + '</style>' +
+      '<div class="unifi-shell">' +
+        '<div class="unifi-canvas">' +
+          '<div id="setBody"></div>' +
+        '</div>' +
+      '</div>';
+
     document.getElementById('view').innerHTML = html;
+
     if (settingsTab === 'profile') renderSetProfile();
+    else if (settingsTab === 'payments') renderSetPayments();
     else if (settingsTab === 'account') renderSetAccount();
     else if (settingsTab === 'templates') renderSetTemplates();
     else if (settingsTab === 'signatures') renderSetSignatures();
-    else if (settingsTab === 'whatsapp') renderSetWhatsapp();
-    else if (settingsTab === 'sharing') renderSetSharing();
     else if (settingsTab === 'portal') renderSetPortal();
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
@@ -1945,7 +2022,7 @@
 
   /* deep-link into the WhatsApp settings tab (used by report-view send buttons
      when the WhatsApp API is not configured yet) */
-  App.openWaSettingsTab = function () { App.nav('#/settings/whatsapp'); };
+  App.openWaSettingsTab = function () { App.nav('#/whatsapp/settings'); };
 
   /* ---- Lab Profile ---- */
   function renderSetProfile() {
@@ -1979,91 +2056,210 @@
       '@media(max-width:1100px){.sp-layout{grid-template-columns:1fr}.sp-preview{position:static}}' +
       '</style>' +
       '<div class="sp-layout">' +
-      '<div class="sp-form"><div class="form-grid">'
-      + '<div><label class="label">Lab Name *</label><input class="input" id="spName" value="' + App.esc(s.labName || '') + '"></div>'
-      + '<div><label class="label">Tagline</label><input class="input" id="spTag" value="' + App.esc(s.tagline || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Address</label><input class="input" id="spAddr" value="' + App.esc(s.address || '') + '"></div>'
-      + '<div><label class="label">Phone</label><input class="input" id="spPhone" value="' + App.esc(s.phone || '') + '"></div>'
-      + '<div><label class="label">Email</label><input class="input" id="spEmail" value="' + App.esc(s.email || '') + '"></div>'
-      + '<div><label class="label">Invoice Prefix *</label><input class="input" id="spPref" value="' + App.esc(s.invoicePrefix || 'INV') + '" style="max-width:140px"></div>'
-      + '<div><label class="label">Font</label><select class="select" id="spFont">'
-      + '<option value="inter"' + ((!s.font || s.font === 'inter') ? ' selected' : '') + '>Inter (Default)</option>'
-      + '<option value="jakarta"' + (s.font === 'jakarta' ? ' selected' : '') + '>Plus Jakarta Sans</option>'
-      + '<option value="roboto"' + (s.font === 'roboto' ? ' selected' : '') + '>Roboto</option>'
-      + '<option value="poppins"' + (s.font === 'poppins' ? ' selected' : '') + '>Poppins</option>'
-      + '<option value="opensans"' + (s.font === 'opensans' ? ' selected' : '') + '>Open Sans</option>'
-      + '<option value="lato"' + (s.font === 'lato' ? ' selected' : '') + '>Lato</option>'
-      + '<option value="montserrat"' + (s.font === 'montserrat' ? ' selected' : '') + '>Montserrat</option>'
-      + '</select></div>'
-      + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Sample Tracking</div></div>'
-      + '<div style="grid-column:1/-1"><label class="check" for="spReqSmp" style="align-items:flex-start"><input type="checkbox" id="spReqSmp"' + (s.requireSampleCollected ? ' checked' : '') + ' style="margin-top:2px">'
-      + '<span>Require sample to be collected before result entry<span class="muted" style="display:block;font-weight:500;font-size:12px;margin-top:2px">When ON, results cannot be entered for a test whose sample tube is still &ldquo;To collect&rdquo; or was rejected (Samples page). Default OFF &mdash; the Lab Results page only shows a warning.</span></span></label></div>'
-      + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Report Appearance</div></div>'
-      + '<div><label class="label">Report Title</label><input class="input" id="spReportTitle" placeholder="e.g. LABORATORY REPORT" value="' + App.esc(s.reportTitle || '') + '"></div>'
-      + '<div><label class="label">Accent Color</label><input type="color" id="spAccent" value="' + App.esc(s.accent || '#1b1b6e') + '" style="width:56px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer"></div>'
-      + '<div><label class="label">Lab Name Color</label><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-      + '<input type="color" id="spNameColor" value="' + App.esc(s.labNameColor || '#000000') + '" data-touched="' + (s.labNameColor ? '1' : '') + '" style="width:56px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer">'
-      + ['#000000', '#131845', '#1d4ed8', '#047857', '#9f1239', '#b45309'].map(function (c) { return '<button type="button" class="spNameSw" data-c="' + c + '" title="' + c + '" style="width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #cbd5e1;background:' + c + ';cursor:pointer;padding:0"></button>'; }).join('')
-      + '<button type="button" class="btn btn-ghost btn-sm" id="spNameReset">Reset</button></div>'
-      + '<div class="muted" style="font-size:12px;margin-top:4px">Colour of the lab name at the top of reports and receipts. Default: black.</div></div>'
-      + '<div><label class="label">Report Font Size</label><select class="select" id="spFontSize">'
-      + '<option value="small"' + (s.reportFontSize === 'small' ? ' selected' : '') + '>Small</option>'
-      + '<option value="medium"' + ((!s.reportFontSize || s.reportFontSize === 'medium') ? ' selected' : '') + '>Medium</option>'
-      + '<option value="large"' + (s.reportFontSize === 'large' ? ' selected' : '') + '>Large</option>'
-      + '</select></div>'
-      + '<div><label class="label" for="spShowQr">Show QR Code</label><input type="checkbox" id="spShowQr"' + (s.showQr === false ? '' : ' checked') + ' style="width:20px;height:20px;accent-color:var(--brand)"></div>'
-      + '<div><label class="label" for="spShowTagline">Show Tagline</label><input type="checkbox" id="spShowTagline"' + (s.showTagline === false ? '' : ' checked') + ' style="width:20px;height:20px;accent-color:var(--brand)"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Report / Receipt Footer Note</label><input class="input" id="spFoot" value="' + App.esc(s.footerNote || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Lab Logo</label>'
-      + '<div style="display:flex;align-items:center;gap:14px">'
-      + '<img id="spLogoPrev" src="' + App.esc(s.logo || '') + '" alt="Lab logo" style="width:64px;height:64px;border-radius:12px;object-fit:cover;border:1px solid #e3ecf7;background:#f4f7fc;flex:none"' + (s.logo ? '' : ' hidden') + '>'
-      + '<div><input type="file" id="spLogo" accept="image/*">'
-      + '<div class="muted" style="font-size:12px;margin-top:6px">Shown on the login page, sidebar and print headers.</div></div>'
-      + '<button class="btn btn-ghost" type="button" id="spLogoRm"' + (s.logo ? '' : ' hidden') + '>Remove</button>'
-      + '</div></div>'
-      + '<div><label class="label">Website</label><input class="input" id="spWeb" placeholder="www.example.com" value="' + App.esc(s.website || '') + '"></div>'
-      + '<div><label class="label">Call Center Phone</label><input class="input" id="spCall" value="' + App.esc(s.callCenter || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Head Office</label><input class="input" id="spHead" placeholder="Head Office address" value="' + App.esc(s.headOffice || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Main Lab</label><input class="input" id="spMainLab" placeholder="Main Lab address" value="' + App.esc(s.mainLab || '') + '"></div>'
-      + '<div><label class="label">Main Lab Phone</label><input class="input" id="spMainPhone" value="' + App.esc(s.mainLabPhone || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Verification Note</label><textarea class="input" id="spVerNote" rows="2" maxlength="500">' + App.esc(s.verNote || 'Electronically verified report. No signatures necessary.') + '</textarea></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Signatory Doctors <span class="muted" style="font-weight:400">(shown on lab reports)</span></label>'
-      + '<div id="spSigList"></div>'
-      + '<button class="btn btn-ghost" type="button" id="spSigAdd" style="margin-top:8px">+ Add Signatory</button></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Header text <span class="muted" style="font-weight:400">(shown under the lab name on every report — type anything, e.g. address, phone, timings)</span></label>'
-      + '<textarea class="input" id="spHeadText" rows="3" maxlength="600" placeholder="Type the text you want in the report header">' + App.esc(s.headerText || '') + '</textarea></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Footer text <span class="muted" style="font-weight:400">(shown at the bottom of every report — e.g. thanks note, branch address, complaint number)</span></label>'
-      + '<textarea class="input" id="spFootText" rows="3" maxlength="600" placeholder="Type the text you want in the report footer">' + App.esc(s.footerText || '') + '</textarea></div>'
-      + '<details style="grid-column:1/-1"><summary style="cursor:pointer;font-weight:700;color:var(--muted)">Advanced: edit the full header / footer as HTML (most labs do not need this)</summary><div class="form-grid" style="margin-top:10px">'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Header <span class="muted" style="font-weight:400">(this is your current header — edit anything you want; <code>{{logo}}</code> <code>{{qr}}</code> <code>{{lab_barcode}}</code> <code>{{lab_no}}</code> (INV #) <code>{{case_number_barcode}}</code> <code>{{case_number}}</code> (P #) are filled in for every report)</span></label>'
-      + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spHeadSample">Load Sample</button>'
-      + '<button type="button" class="btn btn-ghost btn-sm" id="spHeadClear">Reset to automatic</button></div>'
-      + '<textarea class="input" id="spHeadHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic header">' + App.esc(s.headerHtml || '') + '</textarea></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Custom Report Footer <span class="muted" style="font-weight:400">(this is your current footer — edit anything you want)</span></label>'
-      + '<div style="display:flex;gap:8px;margin-bottom:6px"><button type="button" class="btn btn-ghost btn-sm" id="spFootSample">Load Sample</button>'
-      + '<button type="button" class="btn btn-ghost btn-sm" id="spFootClear">Reset to automatic</button></div>'
-      + '<textarea class="input" id="spFootHtml" rows="9" spellcheck="false" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea></div>'
-      + '</div></details>'
-      + '<div style="grid-column:1/-1;margin-top:4px"><div style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:8px">Online Payments</div></div>'
-      + '<div style="grid-column:1/-1"><label class="check" for="opEnabled" style="align-items:flex-start"><input type="checkbox" id="opEnabled"' + (s.opEnabled ? ' checked' : '') + ' style="margin-top:2px;width:20px;height:20px;accent-color:var(--brand)">'
-      + '<span>Enable online payments<span class="muted" style="display:block;font-weight:500;font-size:12px;margin-top:2px">When ON, patients are shown the payment options below and can share their transaction ID after paying.</span></span></label></div>'
-      + '<div><label class="label">JazzCash number</label><input class="input" id="opJazzcashNo" placeholder="e.g. 0300-1234567" value="' + App.esc(s.opJazzcashNo || '') + '"></div>'
-      + '<div><label class="label">JazzCash account title</label><input class="input" id="opJazzcashTitle" value="' + App.esc(s.opJazzcashTitle || '') + '"></div>'
-      + '<div><label class="label">Easypaisa number</label><input class="input" id="opEasypaisaNo" placeholder="e.g. 0300-1234567" value="' + App.esc(s.opEasypaisaNo || '') + '"></div>'
-      + '<div><label class="label">Easypaisa account title</label><input class="input" id="opEasypaisaTitle" value="' + App.esc(s.opEasypaisaTitle || '') + '"></div>'
-      + '<div><label class="label">Bank name</label><input class="input" id="opBankName" value="' + App.esc(s.opBankName || '') + '"></div>'
-      + '<div><label class="label">IBAN</label><input class="input" id="opIban" placeholder="PK36XXXX0000000000000000" value="' + App.esc(s.opIban || '') + '"></div>'
-      + '<div><label class="label">Raast ID</label><input class="input" id="opRaastId" value="' + App.esc(s.opRaastId || '') + '"></div>'
-      + '<div style="grid-column:1/-1"><label class="label">Instructions shown to patients</label><textarea class="input" id="opInstructions" rows="2" maxlength="500" placeholder="Send payment and share the TID">' + App.esc(s.opInstructions || '') + '</textarea></div>'
-      + '</div>'
-      + '<div style="margin-top:18px;display:flex;gap:10px"><button class="btn btn-primary" id="spSave">Save Profile</button>' +
-        '<button class="btn btn-ghost" id="spPreviewBtn">👁 Preview Report</button></div>'
-      + '</div>'
-      + '<div class="sp-preview">'
-      + '<div class="sp-preview-head"><h3>Print Preview</h3><span class="muted" style="font-size:12px">Live — updates as you type</span></div>'
-      + '<div class="sp-preview-doc" id="spPreviewDoc"><div class="muted" style="padding:40px 20px;text-align:center">Loading preview…</div></div>'
-      + '</div>'
-      + '</div>';
+      '<div class="sp-form">' +
+
+      '<!-- Panel 1: Identity & Branding -->' +
+      '<div class="unifi-panel">' +
+        '<div class="unifi-panel-header">' +
+          '<div class="unifi-panel-icon">🏢</div>' +
+          '<div>' +
+            '<h3 class="unifi-panel-title">Identity &amp; Branding</h3>' +
+            '<p class="unifi-panel-desc">Primary laboratory name, tagline, branding logo and invoice prefix.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="unifi-panel-body">' +
+          '<div class="form-grid">' +
+            '<div><label class="label">Lab Name *</label><input class="input" id="spName" value="' + App.esc(s.labName || '') + '"></div>' +
+            '<div><label class="label">Tagline</label><input class="input" id="spTag" value="' + App.esc(s.tagline || '') + '"></div>' +
+            '<div><label class="label">Invoice Prefix *</label><input class="input" id="spPref" value="' + App.esc(s.invoicePrefix || 'INV') + '" style="max-width:140px"></div>' +
+            '<div><label class="label">Website</label><input class="input" id="spWeb" placeholder="www.example.com" value="' + App.esc(s.website || '') + '"></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Laboratory Logo</label>' +
+              '<div style="display:flex;align-items:center;gap:14px;background:#f8fafc;padding:12px;border:1px dashed #cbd5e1;border-radius:10px">' +
+                '<img id="spLogoPrev" src="' + App.esc(s.logo || '') + '" alt="Lab logo" style="width:60px;height:60px;border-radius:10px;object-fit:cover;border:1px solid #cbd5e1;background:#fff;flex:none"' + (s.logo ? '' : ' hidden') + '>' +
+                '<div style="flex:1"><input type="file" id="spLogo" accept="image/*">' +
+                  '<div class="muted" style="font-size:12px;margin-top:4px">Shown on login page, sidebar, POS receipts and test report headers.</div></div>' +
+                '<button class="btn btn-ghost btn-sm" type="button" id="spLogoRm" style="color:var(--red)"' + (s.logo ? '' : ' hidden') + '>Remove</button>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Panel 2: Contact Information & Branches -->' +
+      '<div class="unifi-panel">' +
+        '<div class="unifi-panel-header">' +
+          '<div class="unifi-panel-icon">📍</div>' +
+          '<div>' +
+            '<h3 class="unifi-panel-title">Contact &amp; Branch Locations</h3>' +
+            '<p class="unifi-panel-desc">Addresses, phone numbers, call center and main lab branch info.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="unifi-panel-body">' +
+          '<div class="form-grid">' +
+            '<div style="grid-column:1/-1"><label class="label">Primary Address</label><input class="input" id="spAddr" value="' + App.esc(s.address || '') + '"></div>' +
+            '<div><label class="label">Primary Phone</label><input class="input" id="spPhone" value="' + App.esc(s.phone || '') + '"></div>' +
+            '<div><label class="label">Official Email</label><input class="input" id="spEmail" value="' + App.esc(s.email || '') + '"></div>' +
+            '<div><label class="label">Call Center Phone (24/7)</label><input class="input" id="spCall" value="' + App.esc(s.callCenter || '') + '"></div>' +
+            '<div><label class="label">Main Lab Phone</label><input class="input" id="spMainPhone" value="' + App.esc(s.mainLabPhone || '') + '"></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Main Lab Branch Address</label><input class="input" id="spMainLab" placeholder="Main Lab address" value="' + App.esc(s.mainLab || '') + '"></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Head Office Address</label><input class="input" id="spHead" placeholder="Head Office address" value="' + App.esc(s.headOffice || '') + '"></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Panel 3: Report Appearance & Typography -->' +
+      '<div class="unifi-panel">' +
+        '<div class="unifi-panel-header">' +
+          '<div class="unifi-panel-icon">🎨</div>' +
+          '<div>' +
+            '<h3 class="unifi-panel-title">Report Appearance &amp; Typography</h3>' +
+            '<p class="unifi-panel-desc">Fonts, accent colors, titles, and layout options for patient reports.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="unifi-panel-body">' +
+          '<div class="form-grid">' +
+            '<div><label class="label">Report Title</label><input class="input" id="spReportTitle" placeholder="e.g. LABORATORY REPORT" value="' + App.esc(s.reportTitle || '') + '"></div>' +
+            '<div><label class="label">Font Family</label><select class="select" id="spFont">' +
+              '<option value="inter"' + ((!s.font || s.font === 'inter') ? ' selected' : '') + '>Inter (Default)</option>' +
+              '<option value="jakarta"' + (s.font === 'jakarta' ? ' selected' : '') + '>Plus Jakarta Sans</option>' +
+              '<option value="roboto"' + (s.font === 'roboto' ? ' selected' : '') + '>Roboto</option>' +
+              '<option value="poppins"' + (s.font === 'poppins' ? ' selected' : '') + '>Poppins</option>' +
+              '<option value="opensans"' + (s.font === 'opensans' ? ' selected' : '') + '>Open Sans</option>' +
+              '<option value="lato"' + (s.font === 'lato' ? ' selected' : '') + '>Lato</option>' +
+              '<option value="montserrat"' + (s.font === 'montserrat' ? ' selected' : '') + '>Montserrat</option>' +
+            '</select></div>' +
+            '<div><label class="label">Report Font Size</label><select class="select" id="spFontSize">' +
+              '<option value="small"' + (s.reportFontSize === 'small' ? ' selected' : '') + '>Small</option>' +
+              '<option value="medium"' + ((!s.reportFontSize || s.reportFontSize === 'medium') ? ' selected' : '') + '>Medium</option>' +
+              '<option value="large"' + (s.reportFontSize === 'large' ? ' selected' : '') + '>Large</option>' +
+            '</select></div>' +
+            '<div><label class="label">Accent Theme Color</label><div style="display:flex;align-items:center;gap:8px">' +
+              '<input type="color" id="spAccent" value="' + App.esc(s.accent || '#1b1b6e') + '" style="width:52px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer">' +
+              '<span class="muted" style="font-size:12px">Table headers &amp; branding</span></div></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Lab Name Color</label><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+              '<input type="color" id="spNameColor" value="' + App.esc(s.labNameColor || '#000000') + '" data-touched="' + (s.labNameColor ? '1' : '') + '" style="width:52px;height:36px;padding:3px;border:1px solid #dfe6f2;border-radius:8px;background:#fff;cursor:pointer">' +
+              ['#000000', '#131845', '#1d4ed8', '#047857', '#9f1239', '#b45309'].map(function (c) { return '<button type="button" class="spNameSw" data-c="' + c + '" title="' + c + '" style="width:26px;height:26px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #cbd5e1;background:' + c + ';cursor:pointer;padding:0"></button>'; }).join('') +
+              '<button type="button" class="btn btn-ghost btn-sm" id="spNameReset">Reset</button></div>' +
+              '<div class="muted" style="font-size:12px;margin-top:4px">Colour of the lab name at the top of reports and receipts. Default: black.</div></div>' +
+          '</div>' +
+
+          '<div style="margin-top:16px">' +
+            '<div class="unifi-toggle-row">' +
+              '<div><div style="font-weight:700;font-size:13.5px">Show QR Code on Reports</div>' +
+                '<div class="muted" style="font-size:12px">Print QR code for digital result verification.</div></div>' +
+              '<label class="unifi-switch"><input type="checkbox" id="spShowQr"' + (s.showQr === false ? '' : ' checked') + '><span class="unifi-slider"></span></label>' +
+            '</div>' +
+            '<div class="unifi-toggle-row">' +
+              '<div><div style="font-weight:700;font-size:13.5px">Show Tagline in Header</div>' +
+                '<div class="muted" style="font-size:12px">Display lab tagline underneath the main laboratory title.</div></div>' +
+              '<label class="unifi-switch"><input type="checkbox" id="spShowTagline"' + (s.showTagline === false ? '' : ' checked') + '><span class="unifi-slider"></span></label>' +
+            '</div>' +
+            '<div class="unifi-toggle-row">' +
+              '<div><div style="font-weight:700;font-size:13.5px">Require Sample Collection Before Result Entry</div>' +
+                '<div class="muted" style="font-size:12px">Results cannot be entered if specimen tube is not yet marked collected or was rejected.</div></div>' +
+              '<label class="unifi-switch"><input type="checkbox" id="spReqSmp"' + (s.requireSampleCollected ? ' checked' : '') + '><span class="unifi-slider"></span></label>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Panel 4: Report Notices & Disclaimers -->' +
+      '<div class="unifi-panel">' +
+        '<div class="unifi-panel-header">' +
+          '<div class="unifi-panel-icon">📝</div>' +
+          '<div>' +
+            '<h3 class="unifi-panel-title">Report Notices &amp; Verification Clause</h3>' +
+            '<p class="unifi-panel-desc">Custom header lines, footer notices, and electronic verification note.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="unifi-panel-body">' +
+          '<div class="form-grid">' +
+            '<div style="grid-column:1/-1"><label class="label">Header Sub-text <span class="muted" style="font-weight:400">(shown under lab name on every report)</span></label>' +
+              '<textarea class="input" id="spHeadText" rows="2" maxlength="600" placeholder="Type text shown under lab name...">' + App.esc(s.headerText || '') + '</textarea></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Footer Notice <span class="muted" style="font-weight:400">(shown at bottom of every report)</span></label>' +
+              '<textarea class="input" id="spFootText" rows="2" maxlength="600" placeholder="e.g. Please consult your physician with clinical findings...">' + App.esc(s.footerText || '') + '</textarea></div>' +
+            '<div style="grid-column:1/-1"><label class="label">Verification Note</label>' +
+              '<textarea class="input" id="spVerNote" rows="2" maxlength="500">' + App.esc(s.verNote || 'Electronically verified report. No signatures necessary.') + '</textarea></div>' +
+            '<div style="grid-column:1/-1"><label class="label">POS Slip / Receipt Footer Note</label>' +
+              '<input class="input" id="spFoot" value="' + App.esc(s.footerNote || '') + '" placeholder="Printed at the bottom of 80mm slips"></div>' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Panel 5: Signatory Doctors -->' +
+      '<div class="unifi-panel">' +
+        '<div class="unifi-panel-header">' +
+          '<div class="unifi-panel-icon">👨‍⚕️</div>' +
+          '<div>' +
+            '<h3 class="unifi-panel-title">Signatory Doctors &amp; Consultants</h3>' +
+            '<p class="unifi-panel-desc">Consultant pathologists and lab technologists printed in report footers.</p>' +
+          '</div>' +
+        '</div>' +
+        '<div class="unifi-panel-body">' +
+          '<div id="spSigList"></div>' +
+          '<button class="btn btn-ghost btn-sm" type="button" id="spSigAdd" style="margin-top:10px">+ Add Signatory Doctor</button>' +
+        '</div>' +
+      '</div>' +
+
+      '<!-- Panel 6: Advanced Custom HTML Templates -->' +
+      '<div class="unifi-panel">' +
+        '<details>' +
+          '<summary style="padding:14px 18px;cursor:pointer;font-weight:700;color:var(--brand-d);display:flex;align-items:center;gap:8px">' +
+            '<span>⚙️ Advanced: Custom Report Header &amp; Footer HTML</span>' +
+            '<span class="muted" style="font-size:12px;font-weight:400">(Optional — edit raw print HTML)</span>' +
+          '</summary>' +
+          '<div class="unifi-panel-body" style="border-top:1px solid #f1f5f9">' +
+            '<div class="form-grid">' +
+              '<div style="grid-column:1/-1">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+                  '<label class="label" style="margin:0">Custom Header HTML <code>{{logo}} {{qr}} {{lab_no}}</code></label>' +
+                  '<div style="display:flex;gap:6px">' +
+                    '<button type="button" class="btn btn-ghost btn-xs" id="spHeadSample">Load Sample</button>' +
+                    '<button type="button" class="btn btn-ghost btn-xs" id="spHeadClear">Reset</button>' +
+                  '</div>' +
+                '</div>' +
+                '<textarea class="input" id="spHeadHtml" rows="7" spellcheck="false" style="font-family:monospace;font-size:12px" placeholder="Leave empty for automatic header">' + App.esc(s.headerHtml || '') + '</textarea>' +
+              '</div>' +
+              '<div style="grid-column:1/-1">' +
+                '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+                  '<label class="label" style="margin:0">Custom Footer HTML</label>' +
+                  '<div style="display:flex;gap:6px">' +
+                    '<button type="button" class="btn btn-ghost btn-xs" id="spFootSample">Load Sample</button>' +
+                    '<button type="button" class="btn btn-ghost btn-xs" id="spFootClear">Reset</button>' +
+                  '</div>' +
+                '</div>' +
+                '<textarea class="input" id="spFootHtml" rows="7" spellcheck="false" style="font-family:monospace;font-size:12px" placeholder="Leave empty for automatic footer">' + App.esc(s.footerHtml || '') + '</textarea>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</details>' +
+      '</div>' +
+
+      '<!-- Panel 7: Quick Shortcut to Online Payments -->' +
+      '<div class="unifi-panel" style="background:#f0fdf4;border-color:#bbf7d0">' +
+        '<div class="unifi-panel-body" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">' +
+          '<div style="display:flex;align-items:center;gap:12px">' +
+            '<span style="font-size:24px">💳</span>' +
+            '<div>' +
+              '<div style="font-weight:700;color:#166534">Online Payments &amp; Raast QR</div>' +
+              '<div style="font-size:12.5px;color:#15803d">Manage JazzCash, Easypaisa, Bank accounts and patient QR instructions.</div>' +
+            '</div>' +
+          '</div>' +
+          '<a href="#/settings/payments" class="btn btn-sm btn-primary" style="background:#16a34a;border:none">Configure Payments &rarr;</a>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="unifi-save-bar">' +
+        '<button class="btn btn-primary" id="spSave" style="padding:10px 24px;font-weight:700">Save Lab Profile</button>' +
+        '<button class="btn btn-ghost" id="spPreviewBtn">👁 Full Page Preview</button>' +
+      '</div>' +
+      '</div>' +
+
+      '<div class="sp-preview">' +
+        '<div class="sp-preview-head"><h3>Live Print Preview</h3><span class="muted" style="font-size:12px">Updates in real time</span></div>' +
+        '<div class="sp-preview-doc" id="spPreviewDoc"><div class="muted" style="padding:40px 20px;text-align:center">Loading preview…</div></div>' +
+      '</div>' +
+      '</div>';
     document.getElementById('setBody').innerHTML = html;
     /* lab logo upload: downscale to max 256px PNG, keep in memory until Save */
     var _logoData = s.logo || '';
@@ -2280,15 +2476,15 @@
         reportFontSize: document.getElementById('spFontSize').value,
         headerHtml: (document.getElementById('spHeadHtml').value === _tplHead ? '' : document.getElementById('spHeadHtml').value.trim()),
         footerHtml: (document.getElementById('spFootHtml').value === _tplFoot ? '' : document.getElementById('spFootHtml').value.trim()),
-        opEnabled: document.getElementById('opEnabled').checked,
-        opJazzcashNo: document.getElementById('opJazzcashNo').value.trim(),
-        opJazzcashTitle: document.getElementById('opJazzcashTitle').value.trim(),
-        opEasypaisaNo: document.getElementById('opEasypaisaNo').value.trim(),
-        opEasypaisaTitle: document.getElementById('opEasypaisaTitle').value.trim(),
-        opBankName: document.getElementById('opBankName').value.trim(),
-        opIban: document.getElementById('opIban').value.trim(),
-        opRaastId: document.getElementById('opRaastId').value.trim(),
-        opInstructions: document.getElementById('opInstructions').value.trim()
+        opEnabled: document.getElementById('opEnabled') ? document.getElementById('opEnabled').checked : !!(DB.get('settings', 'main') || {}).opEnabled,
+        opJazzcashNo: document.getElementById('opJazzcashNo') ? document.getElementById('opJazzcashNo').value.trim() : ((DB.get('settings', 'main') || {}).opJazzcashNo || ''),
+        opJazzcashTitle: document.getElementById('opJazzcashTitle') ? document.getElementById('opJazzcashTitle').value.trim() : ((DB.get('settings', 'main') || {}).opJazzcashTitle || ''),
+        opEasypaisaNo: document.getElementById('opEasypaisaNo') ? document.getElementById('opEasypaisaNo').value.trim() : ((DB.get('settings', 'main') || {}).opEasypaisaNo || ''),
+        opEasypaisaTitle: document.getElementById('opEasypaisaTitle') ? document.getElementById('opEasypaisaTitle').value.trim() : ((DB.get('settings', 'main') || {}).opEasypaisaTitle || ''),
+        opBankName: document.getElementById('opBankName') ? document.getElementById('opBankName').value.trim() : ((DB.get('settings', 'main') || {}).opBankName || ''),
+        opIban: document.getElementById('opIban') ? document.getElementById('opIban').value.trim() : ((DB.get('settings', 'main') || {}).opIban || ''),
+        opRaastId: document.getElementById('opRaastId') ? document.getElementById('opRaastId').value.trim() : ((DB.get('settings', 'main') || {}).opRaastId || ''),
+        opInstructions: document.getElementById('opInstructions') ? document.getElementById('opInstructions').value.trim() : ((DB.get('settings', 'main') || {}).opInstructions || '')
       });
       App.toast('Report form saved.');
       if (App.renderShell) App.renderShell();
@@ -2367,6 +2563,201 @@
     }
     // logo changes also refresh the preview
     _paintPreview();
+  }
+
+  /* ---- Online Payments & Banking (UniFi OS) ---- */
+  function renderSetPayments() {
+    var s = DB.get('settings', 'main') || {};
+    var html =
+      '<div class="unifi-card-group" style="max-width:820px">' +
+        '<!-- Panel 1: Online Payments Activation -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">⚡</div>' +
+            '<div>' +
+              '<h3 class="unifi-panel-title">Online Payment Collection</h3>' +
+              '<p class="unifi-panel-desc">Enable digital payment methods and account details on patient invoices.</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<div class="unifi-toggle-row">' +
+              '<div>' +
+                '<div style="font-weight:700;font-size:14px">Accept Online Payments (JazzCash, Easypaisa, Raast)</div>' +
+                '<div class="muted" style="font-size:12px">When enabled, invoices with remaining due show payment instructions and TID verification.</div>' +
+              '</div>' +
+              '<label class="unifi-switch">' +
+                '<input type="checkbox" id="pay-opEnabled"' + (s.opEnabled ? ' checked' : '') + '>' +
+                '<span class="unifi-slider"></span>' +
+              '</label>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<!-- Panel 2: Mobile Wallets -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">📱</div>' +
+            '<div>' +
+              '<h3 class="unifi-panel-title">Mobile Wallets (JazzCash &amp; Easypaisa)</h3>' +
+              '<p class="unifi-panel-desc">Account numbers and verified titles shown to patients.</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<div class="form-grid">' +
+              '<div><label class="label">JazzCash Mobile Number</label><input class="input" id="pay-opJazzcashNo" placeholder="e.g. 0300-1234567" value="' + App.esc(s.opJazzcashNo || '') + '"></div>' +
+              '<div><label class="label">JazzCash Account Title</label><input class="input" id="pay-opJazzcashTitle" placeholder="e.g. Optix Diagnostics" value="' + App.esc(s.opJazzcashTitle || '') + '"></div>' +
+              '<div><label class="label">Easypaisa Mobile Number</label><input class="input" id="pay-opEasypaisaNo" placeholder="e.g. 0345-1234567" value="' + App.esc(s.opEasypaisaNo || '') + '"></div>' +
+              '<div><label class="label">Easypaisa Account Title</label><input class="input" id="pay-opEasypaisaTitle" placeholder="e.g. Optix Diagnostics" value="' + App.esc(s.opEasypaisaTitle || '') + '"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<!-- Panel 3: Bank Transfer & Raast -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">🏦</div>' +
+            '<div>' +
+              '<h3 class="unifi-panel-title">Direct Bank Transfer &amp; Raast ID</h3>' +
+              '<p class="unifi-panel-desc">Bank account IBAN and Raast ID for instant settlements.</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<div class="form-grid">' +
+              '<div><label class="label">Bank Name</label><input class="input" id="pay-opBankName" placeholder="e.g. Meezan Bank, HBL..." value="' + App.esc(s.opBankName || '') + '"></div>' +
+              '<div><label class="label">IBAN / Account Number</label><input class="input mono" id="pay-opIban" placeholder="PK36XXXX0000000000000000" value="' + App.esc(s.opIban || '') + '"></div>' +
+              '<div style="grid-column:1/-1"><label class="label">Raast ID / Registered Mobile Number</label><input class="input" id="pay-opRaastId" placeholder="e.g. 03001234567 or email" value="' + App.esc(s.opRaastId || '') + '"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        '<!-- Panel 4: Patient Payment Instructions -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">📋</div>' +
+            '<div>' +
+              '<h3 class="unifi-panel-title">Instructions Displayed to Patients</h3>' +
+              '<p class="unifi-panel-desc">Notice shown on invoices, receipts and WhatsApp payment requests.</p>' +
+            '</div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<textarea class="input" id="pay-opInstructions" rows="3" maxlength="500" placeholder="Please send payment to any account above and share the Transaction ID (TID) to confirm.">' + App.esc(s.opInstructions || '') + '</textarea>' +
+          '</div>' +
+        '</div>' +
+
+        '<!-- Panel 5: hosted gateway credentials -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">🔐</div>' +
+            '<div><h3 class="unifi-panel-title">Secure hosted checkout</h3>' +
+              '<p class="unifi-panel-desc">Connect your lab-owned JazzCash or Easypaisa merchant account. Credentials are encrypted on the server and never sent to patients.</p></div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<div id="pay-gateway-load" class="muted">Loading gateway settings…</div>' +
+            '<div id="pay-gateway-form" style="display:none">' +
+              '<div class="unifi-toggle-row"><div><b>JazzCash checkout</b><div class="muted" style="font-size:12px">Patients are redirected to JazzCash to pay the full invoice balance.</div></div>' +
+                '<label class="unifi-switch"><input type="checkbox" id="pg-jc-enabled"><span class="unifi-slider"></span></label></div>' +
+              '<div class="form-grid">' +
+                '<div><label class="label">Environment</label><select class="input" id="pg-jc-mode"><option value="sandbox">Sandbox / test</option><option value="live">Live</option></select></div>' +
+                '<div><label class="label">Merchant ID</label><input class="input" id="pg-jc-id" autocomplete="off"></div>' +
+                '<div><label class="label">Merchant password</label><input class="input" id="pg-jc-password" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved secret"></div>' +
+                '<div><label class="label">Integrity salt</label><input class="input" id="pg-jc-salt" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved secret"></div>' +
+              '</div>' +
+              '<div class="unifi-toggle-row" style="margin-top:18px"><div><b>Easypaisa checkout</b><div class="muted" style="font-size:12px">Payments are confirmed by querying Easypaisa from the server.</div></div>' +
+                '<label class="unifi-switch"><input type="checkbox" id="pg-ep-enabled"><span class="unifi-slider"></span></label></div>' +
+              '<div class="form-grid">' +
+                '<div><label class="label">Environment</label><select class="input" id="pg-ep-mode"><option value="sandbox">Sandbox / test</option><option value="live">Live</option></select></div>' +
+                '<div><label class="label">Store ID</label><input class="input" id="pg-ep-id" autocomplete="off"></div>' +
+                '<div style="grid-column:1/-1"><label class="label">Hash key</label><input class="input" id="pg-ep-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved secret"></div>' +
+              '</div>' +
+              '<div id="pay-gateway-callbacks" class="muted" style="font-size:12px;margin-top:14px"></div>' +
+            '</div>' +
+            '<div id="pay-gateway-error" style="color:var(--red);font-size:13px;margin-top:8px"></div>' +
+          '</div>' +
+        '</div>' +
+
+        '<div class="unifi-save-bar">' +
+          '<button class="btn btn-primary btn-lg" id="pay-save-btn" style="padding:10px 24px;font-weight:700">Save Payment Settings</button>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById('setBody').innerHTML = html;
+
+    function gatewayRequest(method, body) {
+      var base = String(window.LABPOS_API || '').replace(/\/+$/, '');
+      if (!base || !DB.authHeaders) return Promise.reject(new Error('Connect to the cloud lab to configure hosted payment gateways.'));
+      var options = { method: method, headers: DB.authHeaders({ 'Content-Type': 'application/json' }) };
+      if (body) options.body = JSON.stringify(body);
+      return window.fetch(base + '/api/payment-gateway', options).then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          if (!response.ok) throw new Error(data.error || 'Could not load payment gateway settings.');
+          return data;
+        });
+      });
+    }
+    var gatewayState = null;
+    gatewayRequest('GET').then(function (data) {
+      gatewayState = data;
+      document.getElementById('pay-gateway-load').style.display = 'none';
+      document.getElementById('pay-gateway-form').style.display = '';
+      document.getElementById('pg-jc-enabled').checked = data.jazzcash.enabled;
+      document.getElementById('pg-jc-mode').value = data.jazzcash.mode;
+      document.getElementById('pg-jc-id').value = data.jazzcash.merchantId || '';
+      document.getElementById('pg-jc-password').placeholder = data.jazzcash.passwordSet ? 'Saved securely — leave blank to keep' : 'Merchant password';
+      document.getElementById('pg-jc-salt').placeholder = data.jazzcash.saltSet ? 'Saved securely — leave blank to keep' : 'Integrity salt';
+      document.getElementById('pg-ep-enabled').checked = data.easypaisa.enabled;
+      document.getElementById('pg-ep-mode').value = data.easypaisa.mode;
+      document.getElementById('pg-ep-id').value = data.easypaisa.storeId || '';
+      document.getElementById('pg-ep-key').placeholder = data.easypaisa.hashKeySet ? 'Saved securely — leave blank to keep' : 'Hash key';
+      document.getElementById('pay-gateway-callbacks').innerHTML =
+        'Configure these return URLs in the merchant portals: JazzCash return <code>' + App.esc(data.urls.jazzcashReturn) +
+        '</code>; Easypaisa customer return <code>' + App.esc(data.urls.easypaisaReturn) +
+        '</code>; Easypaisa IPN <code>' + App.esc(data.urls.easypaisaIpn) + '</code>.';
+    }, function (error) {
+      document.getElementById('pay-gateway-load').textContent = 'Hosted checkout settings are unavailable.';
+      document.getElementById('pay-gateway-error').textContent = error.message;
+    });
+
+    document.getElementById('pay-save-btn').addEventListener('click', function () {
+      DB.update('settings', 'main', {
+        opEnabled: document.getElementById('pay-opEnabled').checked,
+        opJazzcashNo: document.getElementById('pay-opJazzcashNo').value.trim(),
+        opJazzcashTitle: document.getElementById('pay-opJazzcashTitle').value.trim(),
+        opEasypaisaNo: document.getElementById('pay-opEasypaisaNo').value.trim(),
+        opEasypaisaTitle: document.getElementById('pay-opEasypaisaTitle').value.trim(),
+        opBankName: document.getElementById('pay-opBankName').value.trim(),
+        opIban: document.getElementById('pay-opIban').value.trim(),
+        opRaastId: document.getElementById('pay-opRaastId').value.trim(),
+        opInstructions: document.getElementById('pay-opInstructions').value.trim()
+      });
+      if (!gatewayState) { App.toast('Manual payment settings saved. Hosted gateway settings could not be loaded.', 'err'); return; }
+      gatewayRequest('PUT', {
+        jazzcash: {
+          enabled: document.getElementById('pg-jc-enabled').checked,
+          mode: document.getElementById('pg-jc-mode').value,
+          merchantId: document.getElementById('pg-jc-id').value.trim(),
+          password: document.getElementById('pg-jc-password').value,
+          salt: document.getElementById('pg-jc-salt').value
+        },
+        easypaisa: {
+          enabled: document.getElementById('pg-ep-enabled').checked,
+          mode: document.getElementById('pg-ep-mode').value,
+          storeId: document.getElementById('pg-ep-id').value.trim(),
+          hashKey: document.getElementById('pg-ep-key').value
+        }
+      }).then(function (data) {
+        gatewayState.ready = data.ready;
+        document.getElementById('pg-jc-password').value = '';
+        document.getElementById('pg-jc-salt').value = '';
+        document.getElementById('pg-ep-key').value = '';
+        document.getElementById('pg-jc-password').placeholder = 'Saved securely — leave blank to keep';
+        document.getElementById('pg-jc-salt').placeholder = 'Saved securely — leave blank to keep';
+        document.getElementById('pg-ep-key').placeholder = 'Saved securely — leave blank to keep';
+        App.toast('Payment and hosted gateway settings saved.');
+      }, function (error) {
+        document.getElementById('pay-gateway-error').textContent = error.message;
+        App.toast(error.message, 'err');
+      });
+    });
   }
 
   /* ---- My Account — change own details, photo, username, password ---- */
@@ -2661,65 +3052,6 @@
     paint(tests[0].id);
   }
 
-  /* ---- WhatsApp API (admin only) ---- */
-  function waDefaults() {
-    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true, autoReceipt: false, autoDueReminder: false, dueReminderDay: 1, autoOwnerSummary: false, ownerSummaryHour: 21, ownerNumber: '', autoFeedback: false, googleReviewUrl: '', autoRetest: false };
-  }
-  /* ---- Link the lab's own WhatsApp number with a QR code (the server then sends from it) ---- */
-  function wireGateway() {
-    var box = document.getElementById('waGwBox'); if (!box) return;
-    if (!(DB.isCloud && DB.isCloud()) || (window.labposDesktop && window.labposDesktop.isDesktop)) { box.remove(); return; }
-    var timer = null, last = '';
-    function setCfg(patch) { var st = DB.get('settings', 'main') || {}, ww = Object.assign(waDefaults(), st.whatsapp || {}); Object.assign(ww, patch); st.whatsapp = ww; DB.update('settings', 'main', st); }
-    function qrImg(str) { try { var q = qrcode(0, 'L'); q.addData(str); q.make(); return q.createDataURL(5, 4); } catch (e) { return ''; } }
-    function draw(st) {
-      var sig = JSON.stringify([st.state, st.qr, st.number, st.err]); if (sig === last) return; last = sig;
-      var w = (DB.get('settings', 'main') || {}).whatsapp || {};
-      var head = '<div class="card wa-card" style="margin-bottom:16px"><div class="card-h"><h3>Connect your WhatsApp number</h3><span class="badge ' + (st.state === 'open' ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.state === 'open' ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">';
-      var body = '';
-      if (st.enabled === false) body = '<p class="muted" style="margin:0">Linking a WhatsApp number is not available on this server.</p>';
-      else if (st.state === 'open') {
-        body = '<p style="margin-top:0">Connected: <b>+' + App.esc(st.number) + '</b>. These messages are now sent from this number:</p>' +
-          '<ul style="margin:0 0 12px;padding-left:18px;line-height:1.75;font-size:13.5px"><li><b>Report ready</b> to the patient (and, if switched on below, the referring doctor)</li><li><b>Balance pending</b> note to the patient</li><li><b>Critical result</b> alert to the referring doctor and your lab number</li><li><b>Sign-in code and link</b> when a patient or doctor opens the reports portal</li><li><b>Doctor statements</b>, when you press Send on WhatsApp</li></ul>' +
-          '<div style="margin:0 0 12px"><label class="label" for="gwGap">Sending speed (protects your number from being blocked)</label><select class="select" id="gwGap" style="max-width:380px">' +
-          [[30, 'One message every 30 seconds'], [60, 'One message every minute (recommended)'], [120, 'One message every 2 minutes'], [300, 'One message every 5 minutes']].map(function (o) { return '<option value="' + o[0] + '"' + ((+w.gapSeconds || 60) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
-          '<div class="muted" style="font-size:12.5px;margin-top:5px">When many reports are sent together they wait in a line and leave one by one. <b>Sign-in codes and critical alerts are never delayed.</b></div></div>' +
-          '<p class="muted" style="margin:0 0 12px;font-size:13px">You can change the wording in <b>WhatsApp → Templates &amp; rules</b>. Messages go only to people with a phone number saved in your records.</p>' +
-          '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="gwTest">Send a test message to this number</button><button class="btn btn-ghost" id="gwOff" style="margin-left:auto;color:#b91c1c">Disconnect</button></div><p class="muted" id="gwMsg" style="margin:10px 0 0;font-size:13px"></p>';
-      } else if (st.state === 'qr' && st.qr) {
-        body = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start"><img alt="QR" style="width:230px;height:230px;border:1px solid var(--line);border-radius:12px;padding:6px;background:#fff" src="' + qrImg(st.qr) + '">' +
-          '<ol style="margin:0;padding-left:18px;line-height:1.9;font-size:14px;flex:1;min-width:210px"><li>Open <b>WhatsApp</b> on the lab\'s phone</li><li>Tap <b>Settings → Linked devices</b></li><li>Tap <b>Link a device</b> and scan this code</li></ol></div><p class="muted" style="margin:10px 0 0;font-size:13px">Waiting for the scan… the code refreshes by itself.</p>';
-      } else if (st.state === 'connecting') {
-        body = '<p class="muted" style="margin:0">Connecting to WhatsApp…</p>';
-      } else {
-        body = '<p class="muted" style="margin-top:0">Link <b>your lab\'s own WhatsApp number</b> by scanning a QR code, just like WhatsApp Web. After that, report links and sign-in codes go out from your number automatically. No paid API needed.</p>' +
-          '<div style="background:#fff8e6;border:1px solid #f0d9a0;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.55;margin-bottom:12px"><b>Please note:</b> this works like WhatsApp Web, it is not the official WhatsApp Business API. Use a <b>separate number kept for the lab</b>, message only your own patients, and avoid bulk or promotional messages, otherwise WhatsApp can block the number.</div>' +
-          (st.err ? '<p style="color:#b45309;margin:0 0 10px;font-size:13.5px">' + App.esc(st.err) + '</p>' : '') + '<button class="btn btn-primary" id="gwOn">Link my WhatsApp number</button>';
-      }
-      box.innerHTML = head + body + '</div></div>';
-      var on = document.getElementById('gwOn'); if (on) on.addEventListener('click', function () { on.disabled = true; last = ''; DB.waGw('POST', 'connect', {}).then(function (s) { draw(s); poll(); }, function (e) { on.disabled = false; App.toast(e.message, 'err'); }); });
-      var gp = document.getElementById('gwGap'); if (gp) gp.addEventListener('change', function () { setCfg({ gapSeconds: +gp.value }); App.toast('Sending speed saved: one message every ' + (+gp.value >= 60 ? (gp.value / 60) + ' min' : gp.value + ' seconds')); });
-      var test = document.getElementById('gwTest'); if (test) test.addEventListener('click', function () { test.disabled = true; DB.waGw('POST', 'send', { to: st.number, text: '*' + ((DB.get('settings', 'main') || {}).labName || 'Your lab') + '*\n\nThis is a test message. Your WhatsApp number is linked and ready to send reports.' }).then(function () { document.getElementById('gwMsg').textContent = 'Sent! Check WhatsApp (it may appear in "Message yourself").'; test.disabled = false; }, function (e) { document.getElementById('gwMsg').textContent = e.message; document.getElementById('gwMsg').style.color = '#b91c1c'; test.disabled = false; }); });
-      var off = document.getElementById('gwOff'); if (off) off.addEventListener('click', function () { App.confirm('Disconnect this WhatsApp number? Reports will stop going out on WhatsApp until you link a number again.').then(function (ok) { if (!ok) return; DB.waGw('POST', 'disconnect', {}).then(function () { setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' }); last = ''; draw({ enabled: true, state: 'idle', qr: '', number: '', err: '' }); }, function (e) { App.toast(e.message, 'err'); }); }); });
-    }
-    function poll() {
-      clearInterval(timer);
-      timer = setInterval(function () {
-        if (!document.getElementById('waGwBox')) { clearInterval(timer); return; }
-        DB.waGw('GET', 'status').then(function (st) {
-          var w = (DB.get('settings', 'main') || {}).whatsapp || {};
-          if (st.state === 'open' && (w.provider !== 'gateway' || w.gatewayNumber !== st.number)) { setCfg({ provider: 'gateway', gatewayNumber: st.number, labNumber: w.labNumber || st.number }); App.toast('WhatsApp number linked'); }
-          draw(st); if (st.state === 'open' || st.state === 'idle' || st.state === 'loggedout') clearInterval(timer);
-        }, function () {});
-      }, 2000);
-    }
-    DB.waGw('GET', 'status').then(function (st) {
-      var w = (DB.get('settings', 'main') || {}).whatsapp || {};
-      if (st.state === 'open' && (w.provider !== 'gateway' || w.gatewayNumber !== st.number)) setCfg({ provider: 'gateway', gatewayNumber: st.number, labNumber: w.labNumber || st.number });
-      if (st.state === 'loggedout' && w.provider === 'gateway') setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' });
-      draw(st); if (st.state === 'qr' || st.state === 'connecting') poll();
-    }, function (e) { box.innerHTML = ''; });
-  }
 
   /* ==========================================================================
      DEDICATED DASHBOARD: PATHOLOGIST & RADIOLOGIST DIGITAL SIGNATURES (#/settings/signatures)
@@ -3272,7 +3604,7 @@
         '<div id="ptBody" style="margin-top:14px;' + (s.portalOn ? '' : 'opacity:.55') + '">' +
         '<label class="label">Link to share (put it on invoices, WhatsApp, or print the QR)</label><div style="display:flex;gap:8px"><input class="input" id="ptLink" readonly value="' + App.esc(link) + '"><button class="btn" id="ptCopy">Copy</button></div>' +
         '<div id="ptQr" style="margin:12px 0"></div>' +
-        '<div style="background:#f6f8fd;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.6"><b>How the code is sent:</b> ' + (waOn ? 'on <b>WhatsApp</b>, from your lab\'s WhatsApp number (the one set up in Settings → WhatsApp).' : '<span style="color:#b45309">your WhatsApp is not set up yet, so codes go <b>by email</b> to people who have an email address on file. Set up Settings → WhatsApp for the best experience.</span>') +
+        '<div style="background:#f6f8fd;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.6"><b>How the code is sent:</b> ' + (waOn ? 'on <b>WhatsApp</b>, from your lab\'s WhatsApp number (the one set up in Tools → WhatsApp → Settings).' : '<span style="color:#b45309">your WhatsApp is not set up yet, so codes go <b>by email</b> to people who have an email address on file. Set up Tools → WhatsApp → Settings for the best experience.</span>') +
         '<br>Make sure patients\' and doctors\' <b>phone numbers</b> are saved correctly; that is how they are recognised.</div>' +
         '<div style="margin-top:16px"><b>Reports ready for the portal:</b> ' + withPdf + ' of ' + ready + ' finished reports<div class="muted" style="font-size:12.5px;margin:4px 0 8px">New reports are prepared automatically. Use the button for the older ones.</div>' +
         '<button class="btn btn-primary" id="ptPrep"' + (ready > withPdf ? '' : ' disabled') + '>Prepare ' + (ready - withPdf) + ' older report' + (ready - withPdf === 1 ? '' : 's') + '</button> <span class="muted" id="ptProg" style="font-size:13px"></span></div></div></div></div>';
@@ -3288,303 +3620,161 @@
     }, function (e) { box.innerHTML = '<p style="color:#b91c1c">' + App.esc(e.message) + '</p>'; });
   }
 
-  /* ---- Email & Slack: how finished reports leave the lab besides WhatsApp ---- */
-  function renderSetSharing() {
-    var s = DB.get('settings', 'main') || {}, box = document.getElementById('setBody');
-    var cloud = !!(DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop);
-    if (!cloud) { box.innerHTML = '<p class="muted">Email and Slack sharing work in the web / Android app (cloud). Open your lab in the browser to use them.</p>'; return; }
-    box.innerHTML = '<p class="muted">Loading…</p>';
-    DB.share('GET', 'status').then(function (st) {
-      var tail = st.slackTail ? '…' + App.esc(st.slackTail) : '';
-      box.innerHTML =
-        '<div class="card" style="max-width:720px"><div class="card-h"><h3>Email reports</h3><span class="badge ' + (st.email ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.email ? 'ON' : 'NOT SET UP') + '</span></div><div class="card-b">' +
-        (st.email
-          ? '<p class="muted" style="margin-top:0">Open any report and press <b>Email Patient</b> or <b>Email Doctor</b>. The PDF is attached, with a link to open it on a phone. Mail shows your lab\'s name as the sender' + (s.email ? ' and replies go to <b>' + App.esc(s.email) + '</b>' : '') + '. Limit: <b>' + st.perDay + ' report emails per day</b> for your lab.</p>' +
-            (s.email ? '' : '<p style="color:#b45309;font-size:13px">Tip: add your lab\'s <b>Email</b> in Edit Report Form, so patients can reply to you.</p>')
-          : '<p class="muted" style="margin-top:0">Email sending is not set up on this server yet. The system owner can set it up in the superadmin console (Email sender).</p>') +
-        (st.email ? '<div style="margin:12px 0 4px;display:grid;gap:8px"><label class="check" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="emAutoPat"' + (s.emailAuto ? ' checked' : '') + '> Email every report to the <b>patient</b> automatically when it is ready</label>' +
-          '<label class="check" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="emAutoDoc"' + (s.emailAutoDoctor ? ' checked' : '') + '> Also email it to the <b>referring doctor</b></label>' +
-          '<span class="muted" style="font-size:12.5px">Only patients / doctors who have an email address on file get it. A report with an unpaid balance waits until it is paid (same rule as WhatsApp).</span></div>' : '') +
-        '<p class="muted" style="font-size:12.5px;margin-bottom:0">Patient and doctor email addresses are saved on their records (Patients, Doctors).</p></div></div>' +
-        '<div class="card" style="max-width:720px;margin-top:14px"><div class="card-h"><h3>Slack</h3><span class="badge ' + (st.slack ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.slack ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">' +
-        '<p class="muted" style="margin-top:0">Post a message with the report link to a Slack channel (for your team or a doctor group). Only the patient name, invoice number, test names and the report link are sent.</p>' +
-        '<ol class="muted" style="margin:0 0 12px 18px;padding:0;line-height:1.8;font-size:13px"><li>Open <b>api.slack.com/apps</b> → <b>Create New App</b> → From scratch → pick your workspace.</li><li><b>Incoming Webhooks</b> → turn it <b>On</b> → <b>Add New Webhook to Workspace</b> → choose the channel.</li><li>Copy the <b>Webhook URL</b> (starts with <code>https://hooks.slack.com/services/</code>) and paste it here.</li></ol>' +
-        '<label class="label" for="skUrl">Webhook URL</label><input class="input" id="skUrl" autocomplete="off" placeholder="' + (st.slack ? 'saved (' + tail + ') — paste a new one to replace it' : 'https://hooks.slack.com/services/…') + '">' +
-        '<label class="check" style="margin-top:12px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="skAuto"' + (st.slackAuto ? ' checked' : '') + '> Post to Slack automatically when a report becomes ready</label>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-primary" id="skSave">Save</button>' +
-        (st.slack ? '<button class="btn" id="skTest">Send test message</button><button class="btn btn-ghost" id="skClear" style="margin-left:auto">Remove</button>' : '') + '</div>' +
-        '<p class="muted" id="skMsg" style="margin:10px 0 0;font-size:13px"></p></div></div>';
-      var ea = document.getElementById('emAutoPat'), ed = document.getElementById('emAutoDoc');
-      if (ea) ea.addEventListener('change', function () { DB.update('settings', 'main', { emailAuto: ea.checked }); App.toast(ea.checked ? 'Automatic email to patients is ON' : 'Automatic email to patients is OFF'); });
-      if (ed) ed.addEventListener('change', function () { DB.update('settings', 'main', { emailAutoDoctor: ed.checked }); App.toast(ed.checked ? 'Automatic email to doctors is ON' : 'Automatic email to doctors is OFF'); });
-      var msg = function (t, bad) { var e = document.getElementById('skMsg'); if (e) { e.textContent = t; e.style.color = bad ? '#b91c1c' : '#047857'; } };
-      document.getElementById('skSave').addEventListener('click', function () {
-        var url = document.getElementById('skUrl').value.trim(), auto = document.getElementById('skAuto').checked;
-        if (!url && !st.slack) { msg('Paste the Slack webhook URL first.', true); return; }
-        DB.share('PUT', 'slack', { webhook: url || undefined, auto: auto }).then(function () { if (App.shareStatus) App.shareStatus(true); App.toast('Slack settings saved.'); renderSetSharing(); }, function (e) { msg(e.message, true); });
-      });
-      var t = document.getElementById('skTest'); if (t) t.addEventListener('click', function () {
-        t.disabled = true; msg('Sending…');
-        DB.share('POST', 'slack/test', {}).then(function () { t.disabled = false; msg('Sent! Check your Slack channel.'); }, function (e) { t.disabled = false; msg(e.message, true); });
-      });
-      var c = document.getElementById('skClear'); if (c) c.addEventListener('click', function () {
-        App.confirm('Disconnect Slack?').then(function (ok) { if (!ok) return; DB.share('PUT', 'slack', { clear: true }).then(function () { if (App.shareStatus) App.shareStatus(true); renderSetSharing(); }, function (e) { msg(e.message, true); }); });
-      });
-    }, function (e) { box.innerHTML = '<p style="color:#b91c1c">' + App.esc(e.message) + '</p>'; });
-  }
 
-  function renderSetWhatsapp() {
-    var s = DB.get('settings', 'main') || {};
-    var w = Object.assign(waDefaults(), s.whatsapp || {});
-    var autoPat = w.autoPatient !== false;   /* default ON */
-    var autoDoc = w.autoDoctor === true;     /* default OFF */
-    var autoCrit = w.autoCritical !== false; /* default ON */
 
-    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    var hours = [18, 19, 20, 21, 22, 23].map(function (h) {
-      return '<option value="' + h + '"' + ((+w.ownerSummaryHour || 21) === h ? ' selected' : '') + '>' + (h - 12) + ':00 PM</option>';
-    }).join('');
 
-    function rowSwitch(id, checked, title, desc, badge, extra) {
-      return '<div class="wa-row-item">'
-        + '<div class="wa-row-content">'
-        + '  <div class="wa-row-title">'
-        + '    <span>' + title + '</span>'
-        +      (badge ? (' ' + badge) : '')
-        + '  </div>'
-        + '  <p class="wa-row-desc">' + desc + '</p>'
-        +    (extra ? ('<div class="wa-sub-box">' + extra + '</div>') : '')
+
+
+  function renderBranches() {
+    if (role() !== 'admin') return denied();
+    document.getElementById('view').innerHTML = '<div class="stat-grid" id="branchStats"></div><div class="card"><div class="card-b" id="branchBody"></div></div>';
+    var body = document.getElementById('branchBody');
+    body.innerHTML = '<p class="muted">Loading branches…</p>';
+
+    /* GET /api/lab/features -> { maxBranches, branchesUsed }. Never throws;
+       falls back to { maxBranches: null, branchesUsed: null } offline. */
+    function fetchBranchFeatures(cb) {
+      var done = function (max, used) { cb({ maxBranches: max, branchesUsed: used }); };
+      try {
+        var base = String(window.LABPOS_API || '').replace(/\/+$/, '');
+        if (!base || !window.fetch || !DB.authHeaders) return done(null, null);
+        window.fetch(base + '/api/lab/features', { headers: DB.authHeaders({ 'Content-Type': 'application/json' }) })
+          .then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (j) {
+            var max = j && j.maxBranches, used = j && j.branchesUsed;
+            done(typeof max === 'number' ? max : null, typeof used === 'number' ? used : null);
+          }, function () { done(null, null); });
+      } catch (e) { done(null, null); }
+    }
+
+    /* Re-fetch usage and repaint the standalone page. */
+    function refresh() { renderBranches(); }
+
+    function paint(feat) {
+      var branches = DB.all('branches').slice().sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); });
+      var localUsed = branches.filter(function (b) { return b.is_active; }).length;
+      var used = (feat.branchesUsed != null) ? feat.branchesUsed : localUsed;
+      var max = (feat.maxBranches != null) ? feat.maxBranches : Infinity;
+      var limitReached = used >= max;
+      var usageText = max === Infinity
+        ? used + ' of unlimited branches used'
+        : used + ' of ' + max + ' branches used';
+
+      document.getElementById('branchStats').innerHTML =
+        admStat(AICONS.list, 'blue', 'Total Branches', branches.length, 'registered locations', branches.length, false) +
+        admStat(AICONS.flask, 'green', 'Active Branches', localUsed, 'currently operating', localUsed, false) +
+        admStat(AICONS.alert, 'red', 'Inactive Branches', branches.length - localUsed, 'not currently operating', branches.length - localUsed, false) +
+        admStat(AICONS.cal, 'amber', 'Available Slots', max === Infinity ? 'Unlimited' : Math.max(0, max - used), usageText, null, false);
+      var html = '<div class="toolbar" style="margin-bottom:12px;align-items:center">'
+        + '<div><h2 style="margin:0;font-size:20px">Manage Branches</h2><div class="muted" style="font-size:12.5px;margin-top:2px">' + App.esc(usageText) + '</div></div>'
+        + '<button class="btn btn-primary btn-sm" id="bAdd" style="margin-left:auto"' + (limitReached ? ' disabled' : '') + '>+ Add Branch</button></div>'
+        + (limitReached ? '<p class="muted" style="font-size:12.5px;margin:-6px 0 12px">You are using all ' + max + ' branch slots on your plan. Ask support to raise your branch limit.</p>' : '')
+        + '<div class="tbl-wrap"><table class="table"><thead><tr>'
+        + '<th>Name</th><th>Code</th><th>Address</th><th>Phone</th><th>Manager</th><th>Status</th><th style="text-align:right">Actions</th>'
+        + '</tr></thead><tbody>';
+      if (!branches.length) {
+        html += '<tr><td colspan="7" style="text-align:center;padding:26px 10px">'
+          + '<div style="font-size:15px;font-weight:600">No branches yet</div>'
+          + '<div class="muted" style="font-size:13px;margin-top:4px">Add your first branch with the <b>+ Add Branch</b> button above.</div>'
+          + '</td></tr>';
+      }
+      branches.forEach(function (b) {
+        var active = !!b.is_active;
+        html += '<tr>'
+          + '<td><strong>' + App.esc(b.name || '') + '</strong></td>'
+          + '<td>' + App.esc(b.code || '') + '</td>'
+          + '<td>' + App.esc(b.address || '—') + '</td>'
+          + '<td>' + App.esc(b.phone || '—') + '</td>'
+          + '<td>' + App.esc(b.manager_name || '—') + '</td>'
+          + '<td>' + (active ? '<span class="badge b-paid">Active</span>' : '<span class="badge b-unpaid">Inactive</span>') + '</td>'
+          + '<td style="text-align:right;white-space:nowrap" class="actions">'
+          + '<button class="btn btn-ghost btn-sm" data-bedit="' + App.esc(b.id) + '">Edit</button> '
+          + '<button class="btn btn-ghost btn-sm" data-btoggle="' + App.esc(b.id) + '">' + (active ? 'Deactivate' : 'Activate') + '</button> '
+          + '<button class="btn btn-ghost btn-sm" data-bdel="' + App.esc(b.id) + '" style="color:#b91c1c">Delete</button>'
+          + '</td></tr>';
+      });
+      html += '</tbody></table></div>';
+      body.innerHTML = html;
+
+      var addBtn = document.getElementById('bAdd');
+      if (addBtn && !limitReached) addBtn.addEventListener('click', function () { openBranchModal(null, max); });
+
+      document.querySelectorAll('[data-bedit]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openBranchModal(DB.get('branches', btn.getAttribute('data-bedit')), max); });
+      });
+      document.querySelectorAll('[data-btoggle]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var b = DB.get('branches', btn.getAttribute('data-btoggle'));
+          if (!b) return;
+          if (b.is_active) {
+            var others = DB.all('branches').filter(function (x) { return x.is_active && x.id !== b.id; });
+            if (!others.length) return App.toast('Cannot deactivate the last active branch. Add or activate another branch first.', 'err');
+          }
+          App.confirm((b.is_active ? 'Deactivate' : 'Activate') + ' branch "' + b.name + '"?').then(function (ok) {
+            if (!ok) return;
+            DB.update('branches', b.id, { is_active: !b.is_active });
+            App.toast('Branch ' + (b.is_active ? 'deactivated' : 'activated') + '.');
+            refresh();
+          });
+        });
+      });
+      document.querySelectorAll('[data-bdel]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var b = DB.get('branches', btn.getAttribute('data-bdel'));
+          if (!b) return;
+          App.confirm('Permanently delete branch "' + b.name + '"? This cannot be undone.').then(function (ok) {
+            if (!ok) return;
+            DB.remove('branches', b.id);
+            App.toast('Branch deleted.');
+            refresh();
+          });
+        });
+      });
+    }
+
+    /* add / edit modal (mirrors openUserModal) */
+    function openBranchModal(b, max) {
+      var isEdit = !!b;
+      b = b || { name: '', code: '', address: '', phone: '', manager_name: '' };
+      var form = '<div class="form-grid">'
+        + '<div><label class="label">Branch name *</label><input class="input" id="bfName" maxlength="60" placeholder="e.g. Main Branch" value="' + App.esc(b.name || '') + '"></div>'
+        + '<div><label class="label">Branch code</label><input class="input" id="bfCode" maxlength="20" placeholder="e.g. BR-01" value="' + App.esc(b.code || '') + '"' + (isEdit ? ' disabled' : '') + '></div>'
+        + '<div style="grid-column:1/-1"><label class="label">Address</label><input class="input" id="bfAddr" maxlength="140" placeholder="Street, city" value="' + App.esc(b.address || '') + '"></div>'
+        + '<div><label class="label">Phone</label><input class="input" id="bfPhone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + App.esc(b.phone || '') + '"></div>'
+        + '<div><label class="label">Manager name</label><input class="input" id="bfMgr" maxlength="60" placeholder="Branch manager" value="' + App.esc(b.manager_name || '') + '"></div>'
         + '</div>'
-        + '<label class="wa-switch" title="Toggle ' + App.esc(title) + '">'
-        + '  <input type="checkbox" id="' + id + '"' + (checked ? ' checked' : '') + '>'
-        + '  <span class="wa-slider"></span>'
-        + '</label>'
-        + '</div>';
-    }
-
-    var html =
-      '<style>'
-      + '.wa-set-wrap{max-width:820px;margin:0}'
-      + '.wa-set-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;background:linear-gradient(135deg,#f0fdf4 0%,#e6f7ec 100%);border:1.5px solid #bbf7d0;border-radius:14px;margin-bottom:18px}'
-      + '.wa-set-head-left{display:flex;align-items:center;gap:14px}'
-      + '.wa-brand-ico{width:46px;height:46px;border-radius:12px;background:#25D366;color:#fff;display:grid;place-items:center;box-shadow:0 4px 14px rgba(37,211,102,.35);flex:none}'
-      + '.wa-set-title{font-size:18px;font-weight:800;color:#14532d;margin:0 0 3px}'
-      + '.wa-set-sub{font-size:13px;color:#166534;margin:0}'
-      + '.wa-card{margin-bottom:16px;border-radius:14px;box-shadow:0 1px 4px rgba(15,30,46,.04)}'
-      + '.wa-card .card-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px}'
-      + '.wa-card-title-group{display:flex;align-items:center;gap:9px}'
-      + '.wa-card-ic{font-size:16px}'
-      + '.wa-row-item{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--line2)}'
-      + '.wa-row-item:first-of-type{border-top:none;padding-top:2px}'
-      + '.wa-row-content{flex:1;min-width:0}'
-      + '.wa-row-title{font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;margin-bottom:2px}'
-      + '.wa-row-desc{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}'
-      + '.wa-sub-box{margin-top:10px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px}'
-      + '.wa-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer;margin-top:2px}'
-      + '.wa-switch input{opacity:0;width:0;height:0;position:absolute}'
-      + '.wa-slider{position:absolute;inset:0;background-color:#cbd5e1;border-radius:99px;transition:.2s ease}'
-      + '.wa-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:#fff;border-radius:50%;transition:.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.25)}'
-      + '.wa-switch input:checked + .wa-slider{background-color:#16a34a}'
-      + '.wa-switch input:checked + .wa-slider:before{transform:translateX(20px)}'
-      + '.wa-badge-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700}'
-      + '.wa-badge-alert{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}'
-      + '.wa-badge-green{background:#dcfce7;color:#15803d;border:1px solid #86efac}'
-      + '.wa-action-bar{display:flex;align-items:center;gap:14px;margin-top:20px;padding:16px 20px;background:#f8fafc;border:1px solid var(--line);border-radius:14px;flex-wrap:wrap}'
-      + '@media(max-width:640px){.wa-set-head{flex-direction:column;align-items:flex-start}.wa-row-item{flex-direction:column-reverse;align-items:flex-end;gap:8px}}'
-      + '</style>'
-      + '<div class="wa-set-wrap">'
-      + '<div class="wa-set-head">'
-      + '  <div class="wa-set-head-left">'
-      + '    <div class="wa-brand-ico">'
-      + '      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 0 1 2.4 5.83c0 4.54-3.7 8.24-8.24 8.24-1.44 0-2.86-.38-4.12-1.1l-.3-.17-3.12.82.83-3.04-.19-.31a8.16 8.16 0 0 1-1.25-4.44c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.87.85-.87 2.08s.89 2.41 1.01 2.58c.13.17 1.76 2.68 4.26 3.76.6.26 1.06.41 1.42.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3"/></svg>'
-      + '    </div>'
-      + '    <div>'
-      + '      <h2 class="wa-set-title">WhatsApp Automation &amp; Alerts</h2>'
-      + '      <p class="wa-set-sub">Deliver reports, billing receipts, dues reminders and critical clinical alerts automatically.</p>'
-      + '    </div>'
-      + '  </div>'
-      + '  <div>'
-      + '    <a href="#/whatsapp" class="btn btn-sm btn-ghost" style="font-weight:700">Open WhatsApp Center &rarr;</a>'
-      + '  </div>'
-      + '</div>'
-      + '<div id="waGwBox"></div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">📱</span><h3 style="margin:0">Lab WhatsApp Number</h3></div>'
-      + '    <span class="badge ' + (w.labNumber ? 'b-ready' : 'b-pending') + '">' + (w.labNumber ? 'NUMBER SET' : 'NOT SET') + '</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      + '    <p class="muted" style="font-size:13px;margin:0 0 10px">This number represents your lab on WhatsApp — printed on bills and invoices, and used as the sender contact.</p>'
-      + '    <div style="display:flex;gap:10px;align-items:center;max-width:440px">'
-      + '      <input class="input" id="waLabNum" placeholder="e.g. 0300-1234567 or 923001234567" value="' + App.esc(w.labNumber || '') + '" style="font-size:14px;font-weight:600">'
-      + '      <button class="btn btn-primary" id="waLabNumSave" type="button" style="flex:none">Save</button>'
-      + '    </div>'
-      + '  </div>'
-      + '</div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">👤</span><h3 style="margin:0">Patient Automated Messages</h3></div>'
-      + '    <span class="muted" style="font-size:12.5px">Sent to patient\'s mobile number</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      +     rowSwitch('waAutoPatient', autoPat, 'Auto-send Report when Ready', 'Automatically send the PDF report download link to the patient on WhatsApp as soon as all test results are ready and finalized.', '<span class="wa-badge-pill wa-badge-green">Instant</span>')
-      +     rowSwitch('waAutoReceipt', w.autoReceipt === true, 'Billing Receipt on Registration', 'A few minutes after an invoice is created, send the patient an instant digital receipt with invoice no., total billed, amount paid, and balance.')
-      +     rowSwitch('waAutoDue', w.autoDueReminder === true, 'Weekly Outstanding Balance Reminder', 'Send a polite weekly balance reminder with the remaining amount to patients who have unpaid dues (sent at most 4 times per invoice).', '',
-              '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><label class="label" for="waDueDay" style="margin:0">Send weekly on:</label><select class="select" id="waDueDay" style="max-width:180px">' + days.map(function (d, i) { return '<option value="' + i + '"' + ((+w.dueReminderDay === i) ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></div>')
-      + '  </div>'
-      + '</div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">🚨</span><h3 style="margin:0">Doctor &amp; Emergency Clinical Alerts</h3></div>'
-      + '    <span class="muted" style="font-size:12.5px">Clinical safety &amp; referral sharing</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      +     rowSwitch('waAutoCritical', autoCrit, 'Critical Value Panic Alerts', 'When a recorded test result is far outside the safe biological limit, immediately alert the referring doctor and your lab number.', '<span class="wa-badge-pill wa-badge-alert">Urgent Safety</span>')
-      +     rowSwitch('waAutoDoctor', autoDoc, 'Auto-send Report to Referring Doctor', 'Automatically send a digital copy of the finalized test report to the patient\'s referring doctor on WhatsApp.')
-      + '  </div>'
-      + '</div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">📈</span><h3 style="margin:0">Owner Summary &amp; Patient Retention</h3></div>'
-      + '    <span class="muted" style="font-size:12.5px">Business intelligence &amp; follow-ups</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      +     rowSwitch('waAutoOwner', w.autoOwnerSummary === true, 'Daily Business Summary to Owner', 'Every evening, receive an automated WhatsApp report of today\'s total patients, total billing, cash collected, and outstanding dues.', '',
-              '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end"><div><label class="label" for="waOwnerHour" style="margin-bottom:3px">Delivery Time</label><select class="select" id="waOwnerHour">' + hours + '</select></div>'
-              + '<div style="flex:1;min-width:200px"><label class="label" for="waOwnerNum" style="margin-bottom:3px">Owner WhatsApp Number</label><input class="input" id="waOwnerNum" placeholder="Leave blank to use lab number above" value="' + App.esc(w.ownerNumber || '') + '"></div>'
-              + '<button class="btn btn-ghost btn-sm" id="waOwnerTest" type="button" style="font-weight:600">Send Today\'s Summary Now</button></div>')
-      +     rowSwitch('waAutoFeedback', w.autoFeedback === true, 'Feedback &amp; Google 5-Star Review Request', 'A day after a fully paid report, thank the patient and invite them to leave a review on your Google Maps profile.', '',
-              '<div><label class="label" for="waReviewUrl" style="margin-bottom:3px">Google Review Link <span class="muted" style="font-weight:400">(e.g. https://g.page/r/...)</span></label><input class="input" id="waReviewUrl" placeholder="https://g.page/r/..." value="' + App.esc(w.googleReviewUrl || '') + '"></div>')
-      +     rowSwitch('waAutoRetest', w.autoRetest === true, 'Periodic Repeat-Test Reminder', 'Remind chronic patients a few days before a test is due again (e.g. HbA1c after 3 months, Lipid after 6 months).', '',
-              '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="waRetestFill" type="button" style="font-weight:600">Auto-fill common repeat days on tests</button><span class="muted" id="waRetestMsg" style="font-size:12.5px"></span></div>')
-      + '  </div>'
-      + '</div>'
-      + '<div class="wa-action-bar">'
-      + '  <button class="btn btn-primary" id="waSaveAll" type="button" style="padding:10px 24px;font-weight:700;font-size:14px;background:#16a34a;border-color:#16a34a">'
-      + '    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;vertical-align:middle"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save WhatsApp Settings'
-      + '  </button>'
-      + '  <span class="muted" style="font-size:12.5px">Switches auto-save immediately on toggle. Delivery schedules are in Pakistan Standard Time (PKT).</span>'
-      + '</div>'
-      + '</div>';
-
-    document.getElementById('setBody').innerHTML = html;
-    wireGateway();
-
-    function saveAllWhatsApp(notify) {
-      var g = function (id) { return document.getElementById(id); };
-      var st = DB.get('settings', 'main') || {};
-      var ww = Object.assign(waDefaults(), st.whatsapp || {});
-
-      var labNumEl = g('waLabNum');
-      if (labNumEl) ww.labNumber = labNumEl.value.trim();
-
-      var apEl = g('waAutoPatient'); if (apEl) ww.autoPatient = apEl.checked;
-      var adEl = g('waAutoDoctor'); if (adEl) ww.autoDoctor = adEl.checked;
-      var acEl = g('waAutoCritical'); if (acEl) ww.autoCritical = acEl.checked;
-
-      var arEl = g('waAutoReceipt'); if (arEl) ww.autoReceipt = arEl.checked;
-      var aduEl = g('waAutoDue'); if (aduEl) ww.autoDueReminder = aduEl.checked;
-      var ddEl = g('waDueDay'); if (ddEl) ww.dueReminderDay = +ddEl.value;
-
-      var aoEl = g('waAutoOwner'); if (aoEl) ww.autoOwnerSummary = aoEl.checked;
-      var ohEl = g('waOwnerHour'); if (ohEl) ww.ownerSummaryHour = +ohEl.value;
-      var onEl = g('waOwnerNum'); if (onEl) ww.ownerNumber = onEl.value.trim();
-
-      var afEl = g('waAutoFeedback'); if (afEl) ww.autoFeedback = afEl.checked;
-      var ruEl = g('waReviewUrl');
-      if (ruEl) {
-        var rUrl = ruEl.value.trim();
-        if (rUrl && !/^https:\/\//i.test(rUrl)) {
-          App.toast('Google review link must start with https://', 'err');
-          return false;
-        }
-        ww.googleReviewUrl = rUrl;
-      }
-
-      var atEl = g('waAutoRetest'); if (atEl) ww.autoRetest = atEl.checked;
-
-      st.whatsapp = ww;
-      DB.update('settings', 'main', st);
-      if (notify !== false) App.toast('WhatsApp settings saved successfully!');
-      return true;
-    }
-
-    var saveBtn = document.getElementById('waSaveAll');
-    if (saveBtn) saveBtn.addEventListener('click', function () { saveAllWhatsApp(true); });
-
-    var labNumBtn = document.getElementById('waLabNumSave');
-    if (labNumBtn) labNumBtn.addEventListener('click', function () { saveAllWhatsApp(true); });
-
-    ['waAutoPatient', 'waAutoDoctor', 'waAutoCritical', 'waAutoReceipt', 'waAutoDue', 'waAutoOwner', 'waAutoFeedback', 'waAutoRetest'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', function () {
-          if (saveAllWhatsApp(false)) {
-            App.toast((this.checked ? 'Switched ON' : 'Switched OFF') + ' — saved');
-          }
-        });
-      }
-    });
-
-    ['waDueDay', 'waOwnerHour'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', function () {
-          saveAllWhatsApp(false);
-        });
-      }
-    });
-
-    var ownerTestBtn = document.getElementById('waOwnerTest');
-    if (ownerTestBtn) {
-      ownerTestBtn.addEventListener('click', function () {
-        var b = this;
-        if (!saveAllWhatsApp(false)) return;
-        b.disabled = true;
-        DB.waGw('POST', 'auto/test', {}).then(function () {
-          b.disabled = false;
-          App.toast('Summary sent to owner number');
-        }, function (e) {
-          b.disabled = false;
-          App.toast(e && e.message ? e.message : 'Could not send — is WhatsApp connected?');
-        });
-      });
-    }
-
-    var retestFillBtn = document.getElementById('waRetestFill');
-    if (retestFillBtn) {
-      retestFillBtn.addEventListener('click', function () {
-        var rules = [
-          [/hba1c|glycosylated|glycated/i, 90],
-          [/lipid|cholesterol/i, 180],
-          [/tsh|thyroid|\bt3\b|\bt4\b/i, 180],
-          [/vitamin\s*d|25.?oh/i, 180],
-          [/vitamin\s*b.?12|b12/i, 180],
-          [/ferritin|iron/i, 180],
-          [/\bhb\b|cbc|complete blood/i, 0],
-          [/creatinine|urea|kft|rft|renal/i, 180],
-          [/lft|liver|alt|sgpt/i, 180],
-          [/psa/i, 365]
-        ];
-        var n = 0;
-        DB.all('tests').forEach(function (t) {
-          if (+t.retestDays > 0 || t.isPackage) return;
-          for (var i = 0; i < rules.length; i++) {
-            if (rules[i][1] && rules[i][0].test(t.name || '')) {
-              DB.update('tests', t.id, Object.assign({}, t, { retestDays: rules[i][1] }));
-              n++;
-              break;
+        + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">'
+        + '<button class="btn btn-ghost" id="bfCancel">Cancel</button>'
+        + '<button class="btn btn-primary" id="bfSave">' + (isEdit ? 'Save Changes' : 'Add Branch') + '</button></div>';
+      App.modal(isEdit ? 'Edit Branch' : 'Add Branch', form, {
+        onOpen: function (ov, close) {
+          document.getElementById('bfCancel').addEventListener('click', close);
+          document.getElementById('bfSave').addEventListener('click', function () {
+            var name = document.getElementById('bfName').value.trim();
+            var code = document.getElementById('bfCode').value.trim();
+            var addr = document.getElementById('bfAddr').value.trim();
+            var phone = document.getElementById('bfPhone').value.trim();
+            var mgr = document.getElementById('bfMgr').value.trim();
+            if (!name) return App.toast('Branch name is required.', 'err');
+            if (isEdit) {
+              DB.update('branches', b.id, { name: name, address: addr, phone: phone, manager_name: mgr });
+              App.toast('Branch updated.');
+            } else {
+              if (max !== Infinity && DB.all('branches').length >= max) return App.toast('Branch limit reached. Ask support to raise your branch limit.', 'err');
+              var dup = code && DB.all('branches').some(function (x) { return String(x.code || '').toLowerCase() === code.toLowerCase(); });
+              if (dup) return App.toast('A branch with this code already exists.', 'err');
+              DB.insert('branches', { name: name, code: code, address: addr, phone: phone, manager_name: mgr, is_active: true });
+              App.toast('Branch added.');
             }
-          }
-        });
-        var msgEl = document.getElementById('waRetestMsg');
-        if (msgEl) {
-          msgEl.textContent = n ? (n + ' test(s) updated (HbA1c 3 months; lipid, thyroid, vit D/B12, kidney, liver 6 months).') : 'Nothing to change — matching tests already have repeat days.';
+            close();
+            refresh();
+          });
         }
       });
     }
-  }
 
+    fetchBranchFeatures(function (feat) { if (document.getElementById('branchBody') === body) paint(feat); });
+  }
 
   /* ---- Dropdown Lists: the admin edits the choices that appear in forms ---- */
   function renderSetLists() {
@@ -3778,6 +3968,33 @@
     } });
   }
 
+  /* One login for the whole suite: which apps this person may open, and their role inside each (the list comes from the product registry) */
+  function appAccessHtml(u, isEdit, me) {
+    var info = (me && me.productInfo && me.productInfo.length) ? me.productInfo : (me && me.products ? me.products.map(function (id) { return { id: id, name: id, roles: [] }; }) : []);
+    if (info.length < 2) return '';
+    var ids = info.map(function (p) { return p.id; });
+    var have = Array.isArray(u.apps) ? u.apps : (isEdit && u.role === 'admin' ? ids : ['lab']);
+    var roles = Object.assign({}, u.pharmacyRole ? { pharmacy: u.pharmacyRole } : {}, u.appRoles || {});
+    return '<div id="ufAppBox" style="margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:10px 12px"><label class="label" style="margin-bottom:6px">Can open</label>'
+      + info.map(function (p) {
+        var on = have.indexOf(p.id) >= 0, rl = (p.roles || []);
+        return '<div class="ufAppRow" data-app="' + App.esc(p.id) + '" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:3px 0">'
+          + '<label style="display:inline-flex;align-items:center;gap:7px;font-weight:600;cursor:pointer;min-width:190px"><input type="checkbox" class="ufApp" value="' + App.esc(p.id) + '"' + (on ? ' checked' : '') + '> ' + App.esc(p.name) + '</label>'
+          + (rl.length ? '<select class="select ufAppRole" data-app="' + App.esc(p.id) + '" style="width:auto;min-width:190px;' + (on ? '' : 'display:none') + '" title="Role inside ' + App.esc(p.name) + '"><option value="">Role: automatic</option>'
+            + rl.map(function (r) { return '<option value="' + App.esc(r.value) + '"' + (roles[p.id] === r.value ? ' selected' : '') + '>' + App.esc(r.label) + '</option>'; }).join('') + '</select>' : '')
+          + '</div>';
+      }).join('')
+      + '<div class="muted" style="font-size:12px;margin-top:8px">Someone with two or more apps sees a card for each after signing in; with one app they go straight to it.</div></div>';
+  }
+  function readAppAccess() {
+    var box = document.getElementById('ufAppBox'); if (!box) return null;
+    var apps = [], appRoles = {};
+    Array.prototype.forEach.call(box.querySelectorAll('.ufApp'), function (c) {
+      if (!c.checked) return; apps.push(c.value);
+      var sel = box.querySelector('.ufAppRole[data-app="' + c.value + '"]'); if (sel && sel.value) appRoles[c.value] = sel.value;
+    });
+    return { apps: apps, appRoles: appRoles };
+  }
   function openUserModal(u, presetRole) {
     var isEdit = !!u;
     var me = sess();
@@ -3795,6 +4012,7 @@
       + allDocs.map(function (d) { return '<option value="' + App.esc(d.id) + '"' + (u.doctorId === d.id ? ' selected' : '') + '>' + App.esc(d.name) + (d.clinic ? ' — ' + App.esc(d.clinic) : '') + '</option>'; }).join('')
       + '</select></div>'
       + '</div>'
+      + appAccessHtml(u, isEdit, me)
       + '<p class="muted" id="ufRoleNote" style="font-size:12.5px;margin:10px 0 0"></p>'
       + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:18px">'
       + (isEdit && (!me || u.id !== me.userId) ? '<button class="btn btn-ghost btn-sm" id="ufDelete" type="button" style="margin-right:auto;color:#b91c1c">Delete User</button>' : '')
@@ -3825,6 +4043,7 @@
           document.getElementById('ufRoleNote').textContent = roleNote[rv.indexOf('c:') === 0 ? 'custom' : rv] || '';
         }
         document.getElementById('ufRole').addEventListener('change', syncRole);
+        Array.prototype.forEach.call(document.querySelectorAll('.ufApp'), function (c) { c.addEventListener('change', function () { var sel = document.querySelector('.ufAppRole[data-app="' + c.value + '"]'); if (sel) sel.style.display = c.checked ? '' : 'none'; }); });
         document.getElementById('ufDoc').addEventListener('change', function () { var d = DB.get('doctors', this.value), n = document.getElementById('ufName'); if (d && !n.value.trim()) n.value = d.name; });
         syncRole();
         document.getElementById('ufSave').addEventListener('click', function () {
@@ -3835,8 +4054,12 @@
           if (!name) return App.toast('Name is required.', 'err');
           if (!username) return App.toast('Username is required.', 'err');
           if (roleV === 'doctor' && !docId) return App.toast('Choose which doctor this login is for.', 'err');
+          var acc = roleV === 'doctor' ? null : readAppAccess();
+          if (acc && !acc.apps.length) return App.toast('Tick at least one app this person can open.', 'err');
           if (isEdit) {
-            DB.update('users', u.id, roleV === 'doctor' ? { name: name, role: roleV, doctorId: docId, roleId: null } : { name: name, role: roleV, doctorId: null, roleId: roleId });
+            var upd = roleV === 'doctor' ? { name: name, role: roleV, doctorId: docId, roleId: null } : { name: name, role: roleV, doctorId: null, roleId: roleId };
+            if (acc) { upd.apps = acc.apps; upd.appRoles = acc.appRoles; }
+            DB.update('users', u.id, upd);
             App.toast('User updated.');
           } else {
             var pass = document.getElementById('ufPass').value;
@@ -3846,6 +4069,7 @@
             if (dup) return App.toast('Username already exists.', 'err');
             if (roleV !== 'doctor' && App.limitHit && App.limitHit('users')) return;
             var rec = { name: name, username: username, password: pass, role: roleV, active: true }; if (roleV === 'doctor') rec.doctorId = docId; if (roleV === 'custom') rec.roleId = roleId;
+            if (acc) { rec.apps = acc.apps; if (Object.keys(acc.appRoles).length) rec.appRoles = acc.appRoles; }
             DB.insert('users', rec);
             App.toast(roleV === 'doctor' ? 'Doctor login created. Give him the Lab ID, this username and the password.' : 'User added.');
           }
@@ -4221,15 +4445,16 @@
     });
   }
 
-  var SET_TABS = ['profile', 'account', 'templates', 'signatures', 'whatsapp', 'sharing', 'portal', 'users', 'backup', 'danger'];
-  /* Dropdown Lists live under Patients now (#/patients/lists); the old Settings address still works */
+  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'portal', 'users', 'backup', 'danger'];
+  /* Edit Patient Form (the dropdown choices used in patient and bill forms) lives under Patients; the old Settings address still works */
   App.route('#/patients/lists', function () {
     if (role() !== 'admin') return denied();
-    document.getElementById('view').innerHTML = '<div class="page-head"><div><h1>Edit Patient Form</h1><p class="muted" style="margin:2px 0 0">The choices (dropdown menus) in your patient and bill forms: registration and destination location, reference, blood group, referred-by doctors and more.</p></div></div><div class="card"><div class="card-b"><div id="setBody"></div></div></div>';
+    document.getElementById('view').innerHTML = '<div class="card"><div class="card-b"><div id="setBody"></div></div></div>';
     renderSetLists();
   });
   App.route('#/settings/lists', function () { App.nav('#/patients/lists'); });
   App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });
+  App.route('#/branches', renderBranches);
   App.route('#/settings/branches', function () { App.nav('#/branches'); });
   App.route('#/settings/:tab', function (p) { settingsTab = (p && SET_TABS.indexOf(p.tab) >= 0) ? p.tab : 'profile'; renderSettings(); });
   App.route('#/signatures', function () { App.nav('#/settings/signatures'); });

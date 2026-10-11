@@ -1,5 +1,5 @@
 /* Optix Medical Sync — Invoices & Dues module
-   Routes: #/invoices, #/invoice/:id, #/dues
+   Routes: #/invoices, #/invoices/pending, #/invoice/:id, #/dues
    Depends on: DB (db.js), App (app.js) as specified in SPEC.md */
 (function () {
   'use strict';
@@ -1037,9 +1037,9 @@
         ivIsTech ? 'invoices with dues' : 'yet to collect');
 
     view.innerHTML =
+      SC_STYLE +
+      '<div class="stat-grid">' + invStats + '</div>' +
       '<div class="card"><div class="card-b">' +
-        SC_STYLE +
-        '<div class="stat-grid">' + invStats + '</div>' +
         '<div class="toolbar" style="margin:0 0 12px;gap:8px;flex-wrap:nowrap">' +
           '<input id="f-q" class="input" style="flex:1;min-width:0;width:auto;padding:8px 12px;font-size:13px" placeholder="Search invoice no, patient, phone..." value="' + App.esc(F.q) + '">' +
           '<select id="f-date" class="select" style="width:auto;flex:0 0 auto;padding:8px 10px;font-size:13px">' +
@@ -1102,6 +1102,72 @@
     document.getElementById('f-q').addEventListener('input', function (e) { F.q = e.target.value; update(); });
     document.getElementById('f-date').addEventListener('change', function (e) { F.date = e.target.value; update(); });
     document.getElementById('f-status').addEventListener('change', function (e) { F.status = e.target.value; update(); });
+    update();
+  }
+
+  /* ---------- route: #/invoices/pending ---------- */
+  var PF = { q: '', date: '', status: 'all' };
+  function pendingStatus(inv) { return Number(inv.paid) > 0 ? 'partial' : 'unpaid'; }
+
+  function renderPendingInvoices() {
+    setRefresh(renderPendingInvoices);
+    var view = document.getElementById('view');
+    var hideMoney = scIsTech();
+    /* The balance is authoritative, regardless of result/claim status or a stale invoice status. */
+    var pending = DB.all('invoices').filter(function (inv) { return Number(inv.due) > 0; })
+      .sort(function (a, b) { return new Date(a.createdAt) - new Date(b.createdAt); });
+    var outstanding = pending.reduce(function (sum, inv) { return sum + Number(inv.due); }, 0);
+    var partial = pending.filter(function (inv) { return pendingStatus(inv) === 'partial'; }).length;
+    var stats =
+      kpiCard(SC_ICONS.doc, 'brand', 'Pending Invoices', String(pending.length), 'all invoices with a balance due') +
+      kpiCard(SC_ICONS.cash, 'amber', 'Outstanding Amount', hideMoney ? 'Hidden' : App.money(outstanding), hideMoney ? 'restricted by your role' : 'total balance to collect') +
+      kpiCard(SC_ICONS.clock, 'red', 'Unpaid Invoices', String(pending.length - partial), 'no payment received') +
+      kpiCard(SC_ICONS.cal, 'blue', 'Partial Invoices', String(partial), 'part payment received');
+    view.innerHTML =
+      '<div class="stat-grid">' + stats + '</div>' +
+      '<div class="card"><div class="card-b">' +
+        '<div class="toolbar" style="gap:8px;flex-wrap:wrap">' +
+          '<input id="pi-q" class="input" style="flex:1;min-width:180px" aria-label="Search pending invoices" placeholder="Search invoice no, patient, phone..." value="' + App.esc(PF.q) + '">' +
+          '<input id="pi-date" class="input" type="date" style="width:auto" aria-label="Invoice date" value="' + App.esc(PF.date) + '">' +
+          '<select id="pi-status" class="select" style="width:auto" aria-label="Payment status"><option value="all">All pending statuses</option>' +
+            '<option value="unpaid"' + (PF.status === 'unpaid' ? ' selected' : '') + '>Unpaid</option>' +
+            '<option value="partial"' + (PF.status === 'partial' ? ' selected' : '') + '>Partial</option></select>' +
+          '<button id="pi-clear" class="btn btn-ghost">Clear filters</button>' +
+        '</div><div id="pi-count" role="status" style="color:var(--muted);font-size:13px;margin-bottom:10px"></div>' +
+        '<div class="tbl-wrap"><table class="table"><thead><tr><th>Invoice No</th><th>Date</th><th>Patient</th><th>Status</th>' +
+          (hideMoney ? '' : '<th style="text-align:right">Due</th>') + '<th>Actions</th></tr></thead><tbody id="pi-rows"></tbody></table></div>' +
+      '</div></div>';
+
+    function update() {
+      var q = PF.q.trim().toLowerCase();
+      var list = pending.filter(function (inv) {
+        var p = patientOf(inv);
+        var hay = [inv.no, inv.id, p ? p.name : 'Walk-in', p && p.phone].join(' ').toLowerCase();
+        return (!q || hay.indexOf(q) !== -1) && (!PF.date || dayKey(inv.createdAt) === PF.date) &&
+          (PF.status === 'all' || pendingStatus(inv) === PF.status);
+      });
+      document.getElementById('pi-count').textContent = list.length + ' of ' + pending.length + ' pending invoice(s)';
+      document.getElementById('pi-rows').innerHTML = list.length ? list.map(function (inv) {
+        var p = patientOf(inv), href = '#/invoice/' + App.esc(inv.id);
+        return '<tr><td><a href="' + href + '" style="font-weight:700;color:var(--brand-d)">' + App.esc(inv.no || inv.id) + '</a></td>' +
+          '<td>' + App.d(inv.createdAt) + '</td><td>' + App.esc(p ? p.name : 'Walk-in') +
+            (p && p.phone ? '<div style="font-size:12px;color:var(--muted)">' + App.esc(p.phone) + '</div>' : '') + '</td>' +
+          '<td>' + App.badge(pendingStatus(inv)) + '</td>' +
+          (hideMoney ? '' : '<td style="text-align:right;font-weight:800;color:var(--red)">' + App.money(inv.due) + '</td>') +
+          '<td class="actions"><a class="btn btn-sm btn-ghost" href="' + href + '">View</a>' +
+          (hideMoney ? '' : ' <button class="btn btn-sm btn-primary" data-collect="' + App.esc(inv.id) + '">Collect</button>') + '</td></tr>';
+      }).join('') : '<tr><td colspan="' + (hideMoney ? 5 : 6) + '">' +
+        App.empty(pending.length ? 'No pending invoices match these filters. Clear filters to see all pending invoices.' : 'No pending invoices. There are no outstanding balances to collect.') + '</td></tr>';
+      view.querySelectorAll('[data-collect]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openPaymentModal(btn.getAttribute('data-collect')); });
+      });
+    }
+    document.getElementById('pi-q').addEventListener('input', function (e) { PF.q = e.target.value; update(); });
+    document.getElementById('pi-date').addEventListener('change', function (e) { PF.date = e.target.value; update(); });
+    document.getElementById('pi-status').addEventListener('change', function (e) { PF.status = e.target.value; update(); });
+    document.getElementById('pi-clear').addEventListener('click', function () {
+      PF = { q: '', date: '', status: 'all' }; renderPendingInvoices();
+    });
     update();
   }
 
@@ -1680,6 +1746,7 @@
   /* the barcode drawing lives in the results module; load it ahead so printing never has to wait */
   if (!App.barcodeHtml && App.loadScript) App.loadScript('assets/js/mod-results.js').catch(function () {});
   App.route('#/invoices', renderInvoices);
+  App.route('#/invoices/pending', renderPendingInvoices);
   App.route('#/invoice/:id', renderInvoiceDetail);
   App.route('#/dues', renderDues);
   App.route('#/discounts', renderDiscounts);

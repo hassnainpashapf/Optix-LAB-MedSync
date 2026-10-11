@@ -103,7 +103,7 @@
     var p = s.panel;
     function go() {
       var cfg = App.wa.cfg();
-      if (!App.wa.ready(cfg)) { App.toast('WhatsApp is not set up yet (Settings → WhatsApp)', 'err'); return; }
+      if (!App.wa.ready(cfg)) { App.toast('WhatsApp is not set up yet (Tools → WhatsApp → Settings)', 'err'); return; }
       var to = App.wa.phone(p.whatsapp || p.phone); if (!to) { App.toast('No WhatsApp / phone number saved for this client', 'err'); return; }
       App.toast('Preparing the statement…', 'info');
       Promise.resolve(App.ensureJsPDF ? App.ensureJsPDF() : true).then(function () {
@@ -288,8 +288,11 @@
       stat('To collect', rs(owed), 'across all clients', 'amber', ICONS.scale) +
       stat('Over credit limit', overLimit, overLimit ? 'needs recovery' : 'within limits', 'red', ICONS.alert) +
       '</div>' +
-      '<div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button class="btn btn-primary" id="pnNew">+ Add client</button></div>' +
-      '<div class="card"><div class="card-b"><input class="input search" id="pnSearch" placeholder="Search client…" value="' + esc(q) + '" style="max-width:340px;margin-bottom:12px">' +
+      '<div class="card"><div class="card-b">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">' +
+      '<input class="input search" id="pnSearch" placeholder="Search client…" value="' + esc(q) + '" style="max-width:340px;flex:1 1 240px">' +
+      '<button class="btn btn-primary" id="pnNew">+ Add client</button>' +
+      '</div>' +
       (shown.length ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Client</th><th>Rates</th><th style="text-align:right">This month</th><th style="text-align:right">Outstanding</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + shown.map(function (r) {
         var p = r.p, rr = (p.rates || []).length, lim = +p.creditLimit > 0;
         return '<tr' + (p.active === false ? ' style="opacity:.55"' : '') + '><td><strong>' + esc(p.name) + '</strong>' + (p.active === false ? ' <span class="badge b-unpaid">inactive</span>' : '') + '<div class="muted" style="font-size:12px">' + esc([p.contact, p.phone].filter(Boolean).join(' · ')) + '</div></td>' +

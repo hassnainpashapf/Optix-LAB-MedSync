@@ -173,12 +173,7 @@ async function suite(folder) {
   assert.equal(JSON.stringify(opts), optsBefore);
   for (const label of ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'Address', 'Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Reference', 'Consultant']) assert.ok(text(label + ':').length, 'Preserved field: ' + label);
   for (const value of ['Synthetic Parent', '34 Yr(s) / Female', 'O+', '0300-0000000', 'Fixture Street', 'Fixture Reception', 'Fixture Lab', 'Fixture Reference', 'Fixture Consultant']) assert.ok(text(value).length, 'Preserved field value: ' + value);
-  if (folder === path.join(root, 'electron-src')) {
-    assert.equal(text('Patient Name:')[0].x, 12);
-    assert.equal(text('Registration Date:')[0].x, 105, 'Source retains side-by-side patient/visit layout');
-    assert.equal(text('Patient Name:')[0].y, text('Registration Date:')[0].y);
-    assert.equal(typeof App.reportHtml, 'function', 'Source reportHtml export retained');
-  }
+  /* 1.4.1: electron-src carries the same stacked patient/visit layout as the web app (no desktop-only side-by-side pin any more) */
   build(); bounds();
   assert.equal(text('History only').length, 0, 'Default remains current-only');
   assert.equal(text('NEWER').length, 0);

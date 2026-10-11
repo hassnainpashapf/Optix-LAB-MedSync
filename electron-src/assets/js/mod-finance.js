@@ -358,8 +358,7 @@
     if (!row && !fig.prev) {
       openingBox = '<div class="card"><div class="card-b"><div class="fn-lockbox">' +
         '<div style="flex:1;min-width:200px"><label class="label" for="fnOpening">Opening cash in drawer (Rs)</label>' +
-        '<div class="fn-note" style="margin-top:2px">No earlier closing exists, so there is nothing to carry forward. ' +
-        (admin ? 'Enter the cash already in the drawer at the start of this day.' : 'Only an admin can set the starting balance.') + '</div></div>' +
+        '<div class="fn-note" style="margin-top:2px">' + (admin ? 'First day: enter the cash already in the drawer.' : 'Only an admin can set the starting balance.') + '</div></div>' +
         '<input class="input" id="fnOpening" type="number" min="0" step="any" inputmode="decimal" style="width:160px;text-align:right" value="' + esc(S.opening) + '" placeholder="0"' + (admin ? '' : ' disabled') + '></div></div></div>';
     }
 
@@ -372,7 +371,7 @@
         '<td class="num">' + money(amt) + (rf ? '<div class="fn-neg" style="font-size:11.5px">− ' + money(rf) + ' refunded</div>' : '') + '</td></tr>';
     }).join('');
     var recvTotal = r2(sum(Object.keys(V.breakdown), function (k) { return +V.breakdown[k] || 0; }));
-    if (!mRows) mRows = '<tr><td colspan="3">' + App.empty('No payments recorded on this date.') + '</td></tr>';
+    if (!mRows) mRows = '<tr><td colspan="3" class="muted" style="text-align:center;padding:14px">No payments on this date.</td></tr>';
     else mRows += '<tr class="fn-tot"><td>Total received</td><td class="num">' + fig.pays.length + '</td><td class="num">' + money(recvTotal) + '</td></tr>' +
       (V.refunds ? '<tr class="fn-tot"><td>Net collected (after refunds)</td><td></td><td class="num">' + money(r2(recvTotal - V.refunds)) + '</td></tr>' : '');
     var methodCard = '<div class="card"><div class="card-h"><h3>Collections by payment method</h3></div><div class="card-b flush"><div class="tbl-wrap"><table class="table"><thead><tr>' +
@@ -394,7 +393,7 @@
         '<td><span class="badge ' + (cash ? 'b-teal' : 'b-info') + '" style="font-size:11px">' + (cash ? 'Cash' : esc(e.method || e.paidFrom)) + '</span></td>' +
         '<td class="num">' + money(e.amount) + '</td></tr>';
     }).join('');
-    if (!expRows) expRows = '<tr><td colspan="4">' + App.empty('No expenses on this date.') + '</td></tr>';
+    if (!expRows) expRows = '<tr><td colspan="4" class="muted" style="text-align:center;padding:14px">No expenses on this date.</td></tr>';
     var expCard = '<div class="card"><div class="card-h"><h3>Expenses paid</h3><span class="sp"></span><a class="btn btn-ghost btn-sm" href="#/expenses">Open Expenses</a></div>' +
       '<div class="card-b flush"><div class="tbl-wrap"><table class="table"><thead><tr><th>Title</th><th>Category</th><th>Paid from</th><th style="text-align:right">Amount</th></tr></thead><tbody>' + expRows + '</tbody></table></div></div></div>';
 
@@ -457,17 +456,11 @@
         '<td class="actions" style="white-space:nowrap"><button class="btn btn-ghost btn-sm" data-view="' + esc(c.date) + '">View</button> ' +
         '<button class="btn btn-ghost btn-sm" data-hprint="' + esc(c.date) + '">Print</button></td></tr>';
     }).join('');
-    if (!hRows) hRows = '<tr><td colspan="9">' + App.empty('No closed days in this period yet.') + '</td></tr>';
+    if (!hRows) hRows = '<tr><td colspan="9" class="muted" style="text-align:center;padding:14px">No closed days in this period yet.</td></tr>';
     var histCard = '<div class="card"><div class="card-h"><h3>Closing history</h3><span class="sp"></span>' +
       '<input class="input" type="month" id="fnHistMonth" value="' + esc(hm) + '" style="width:auto;min-width:150px">' +
       '<button class="btn btn-ghost btn-sm" id="fnHistAll">All</button>' +
       '<button class="btn btn-sm" id="fnHistCsv">' + App.icon('download', 14) + ' Export CSV</button></div><div class="card-b">' +
-      '<div class="fn-hist-sum">' +
-      '<div class="fn-hs"><small>Days closed</small><b>' + hist.length + '</b></div>' +
-      '<div class="fn-hs"><small>Cash collected</small><b>' + money(hs.cashIn) + '</b></div>' +
-      '<div class="fn-hs"><small>Total short</small><b class="' + (hs.short ? 'fn-neg' : 'fn-zero') + '">' + money(hs.short) + '</b></div>' +
-      '<div class="fn-hs"><small>Total over</small><b class="' + (hs.over ? 'fn-pos' : 'fn-zero') + '">' + money(hs.over) + '</b></div>' +
-      '<div class="fn-hs"><small>Net difference</small><b class="' + (hs.net < 0 ? 'fn-neg' : (hs.net > 0 ? 'fn-pos' : 'fn-zero')) + '">' + sgnMoney(hs.net) + '</b></div></div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr><th>Date</th><th style="text-align:right">Opening</th><th style="text-align:right">Cash in</th><th style="text-align:right">Cash out</th>' +
       '<th style="text-align:right">Expected</th><th style="text-align:right">Counted</th><th style="text-align:right">Difference</th><th>Closed by</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + hRows + '</tbody></table></div></div></div>';
 

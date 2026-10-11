@@ -30,9 +30,9 @@ function lastModal() {
 function monthKey(d) { d = new Date(d); return d.getFullYear() * 12 + d.getMonth(); }
 function currentMonthKey() { return monthKey(new Date()); }
 
-function categories() {
+function categories(source) {
   var s = {};
-  DB.all('tests').forEach(function (t) { if (t.category) s[t.category] = 1; });
+  (source || DB.all('tests')).forEach(function (t) { if (t.category) s[t.category] = 1; });
   return Object.keys(s).sort();
 }
 
@@ -43,6 +43,15 @@ var TICONS = {
   tag: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.2"/></svg>',
   box: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3.3 8.3L12 13l8.7-4.7"/><path d="M12 13v9"/></svg>'
 };
+
+/* catalog / packages stat card — the main dashboard's look (.stat / .stat-ico / .lb / .vl / .dl in app.css); `attrs` adds id / click / title */
+function cStat(tint, icon, label, value, sub, attrs) {
+  return '<div class="stat" data-tint="' + tint + '"' + (attrs || '') + '>' +
+    '<div class="stat-ico">' + icon + '</div>' +
+    '<div class="lb">' + label + '</div>' +
+    '<div class="vl">' + value + '</div>' +
+    '<div class="dl">' + sub + '</div></div>';
+}
 
 /* dashboard-style stat card — reuses global .stat classes from app.css */
 function tStat(icon, tint, label, value, sub) {
@@ -113,7 +122,6 @@ function doctorInvoiceCount(id) {
 
 /* filter state (module-level so it survives re-render) */
 var testFilter = { q: '', cat: 'All', status: 'All' };
-var catalogType = 'all';
 var testCatalogMode = 'all';
 var testSelection = {};
 var testSelectionMode = null;
@@ -121,21 +129,6 @@ var testSelectionSession = null;
 var testSelectionRevision = 0;
 var testMovePending = false;
 var testVisibleRows = [];
-function catalogTests() {
-  return DB.all('tests').filter(function (t) {
-    return catalogType === 'all' || (t.type === 'generic' ? 'generic' : 'regular') === catalogType;
-  });
-}
-function openCatalog(type) {
-  catalogType = type;
-  if (testSelectionMode !== type) {
-    testSelection = {};
-    testSelectionMode = type;
-  }
-  testCatalogMode = type;
-  testFilter = { q: '', cat: 'All', status: 'All' };
-  renderTests();
-}
 var docFilter = { q: '' };
 
 /* ============================================================
@@ -145,69 +138,88 @@ var docFilter = { q: '' };
 function renderTests() {
   var r = sessionRole();
   var cust = (r === 'custom' && App.canPage('tests'));
-  if (r !== 'admin' && r !== 'technician' && !cust) { deny(); return; }
+  if (r !== 'admin' && r !== 'reception' && r !== 'technician' && !cust) { deny(); return; }
   var canEdit = (r === 'admin' || cust);
 
-  var allT = catalogTests();
-  var cats = allT.map(function (t) { return t.category; }).filter(function (c, i, a) { return c && a.indexOf(c) === i; }).sort();
+  var hash = (location.hash || '').split('?')[0];
+  var nextMode = hash === '#/tests/generic' ? 'generic' : hash === '#/tests/regular' ? 'regular' : 'all';
+  if (testSelectionMode !== nextMode) {
+    testSelection = {};
+    testSelectionMode = nextMode;
+    testFilter = { q: '', cat: 'All', status: 'All' };
+  }
+  testCatalogMode = nextMode;
+  var allT = DB.all('tests');
+  var displayT = allT.filter(function (t) { return testCatalogMode === 'all' || (t.type === 'generic' ? 'generic' : 'regular') === testCatalogMode; });
+  var cats = categories(displayT);
   /* filter by selected category for stat cards */
-  var fT = testFilter.cat === 'All' ? allT : allT.filter(function (t) { return t.category === testFilter.cat; });
+  var fT = testFilter.cat === 'All' ? displayT : displayT.filter(function (t) { return t.category === testFilter.cat; });
   var nActive = fT.filter(function (t) { return t.active !== false; }).length;
   var nPkg = fT.filter(function (t) { return t.isPackage; }).length;
   var catLbl = testFilter.cat === 'All' ? 'in catalog' : 'in ' + testFilter.cat;
   var statCards =
-    tStat(TICONS.flask, 'blue', 'Total Tests', fT.length, catLbl) +
-    tStat(TICONS.check, 'green', 'Active Tests', nActive, testFilter.cat === 'All' ? 'available for booking' : 'active in ' + testFilter.cat) +
-    tStat(TICONS.tag, 'amber', 'Categories', cats.length, 'test categories') +
-    tStat(TICONS.box, 'brand', 'Packages', nPkg, 'bundled offers');
+    '<div class="stat-grid">' +
+      cStat('brand', App.icon('flask', 18), 'Total Tests', fT.length, App.esc(catLbl)) +
+      cStat('green', App.icon('check', 18), 'Active Tests', nActive, testFilter.cat === 'All' ? 'Available for booking' : 'Active in ' + App.esc(testFilter.cat)) +
+      cStat('amber', App.icon('scan', 18), 'Categories', cats.length, 'Organized test groups') +
+      cStat('blue', App.icon('box', 18), 'Health Packages', nPkg, 'Screening packages &rarr;', ' style="cursor:pointer" onclick="location.hash=\'#/packages\'" title="View Health Packages"') +
+    '</div>';
   var chips = ['All'].concat(cats).map(function (c) {
-    return '<button type="button" class="btn btn-sm ' +
-      (testFilter.cat === c ? 'btn-primary' : 'btn-ghost') +
-      '" data-cat="' + App.esc(c) + '">' + App.esc(c) + '</button>';
-  }).join(' ');
+    var label = c === 'All' ? 'All' : c;
+    return '<button type="button" class="test-type-pill ' +
+      (testFilter.cat === c ? 'active' : '') +
+      '" data-cat="' + App.esc(c) + '">' + App.esc(label) + '</button>';
+  }).join('');
 
   view().innerHTML =
-    '<div class="page-head"><h1>' + (catalogType === 'generic' ? 'Generic Tests' : catalogType === 'regular' ? 'Regular Tests' : 'All Tests Catalog') + '</h1></div>' +
-    '<div class="stat-grid">' + statCards + '</div>' +
-    (catalogType === 'generic' ? genericTemplatesHTML(canEdit) : '') +
+    (testCatalogMode === 'all' ? '<p class="muted" style="margin:0 0 12px">All Tests combines saved lab tests (including imported generic tests) with reusable generic templates shown below.</p>' : '') +
+    /* the Generic page has its own Templates / Already in catalog / Not imported cards below, so the four catalog cards would be a second row */
+    (testCatalogMode === 'generic' ? '<div id="generic-template-cards"></div>' : statCards) +
+    (testCatalogMode === 'generic' ? '<h3>Saved Generic Tests</h3>' : '') +
     '<div class="card"><div class="card-b">' +
-      '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px">' +
-        '<input id="t-q" class="input search" placeholder="Search code, name, category..." value="' + App.esc(testFilter.q) + '" style="max-width:280px">' +
-        '<select id="t-status" class="select" style="max-width:160px">' +
-          ['All', 'Active', 'Inactive'].map(function (s) {
-            return '<option' + (testFilter.status === s ? ' selected' : '') + '>' + s + '</option>';
-          }).join('') +
-        '</select>' +
-        (testCatalogMode === 'all' && canEdit ?
-          '<span style="display:inline-flex;gap:8px;align-items:center;margin-left:8px" id="t-classify-controls">' +
-            '<button type="button" class="btn btn-ghost" id="t-move-generic" disabled>Move to Generic</button>' +
-            '<button type="button" class="btn btn-ghost" id="t-move-regular" disabled>Move to Regular</button>' +
-          '</span>' : '') +
-        (canEdit ? '<button type="button" class="btn" id="t-import" style="margin-left:8px;border:2px solid var(--bd)">📥 Import CSV</button>' : '') +
-        (canEdit ? '<button type="button" class="btn" id="t-bulkprice" style="margin-left:8px;border:2px solid var(--bd)">💰 Bulk Prices</button>' : '') +
-        (canEdit ? '' : '') +
-        (canEdit ? '<button type="button" class="btn btn-primary" id="t-add" style="margin-left:auto">+ Add Test</button>' : '') +
+      '<div class="test-menu-wrap">' +
+        '<div class="test-menu-row">' +
+          '<div class="test-search-shell">' +
+            '<input id="t-q" class="test-search" placeholder="Search code, name, category..." value="' + App.esc(testFilter.q) + '">' +
+          '</div>' +
+          '<button type="button" class="test-filter-pill" id="t-status-trigger" aria-label="Filter by status">' +
+            '<span>' + App.esc(testFilter.status || 'All') + '</span>' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>' +
+          '</button>' +
+          (testCatalogMode === 'all' && canEdit ?
+            '<span class="test-classify-group" id="t-classify-controls">' +
+              '<button type="button" class="test-action-pill secondary" id="t-move-generic" disabled>Move to Generic</button>' +
+              '<button type="button" class="test-action-pill secondary" id="t-move-regular" disabled>Move to Regular</button>' +
+            '</span>' : '') +
+          (canEdit ? '<button type="button" class="test-action-pill" id="t-import">📥 Import CSV</button>' : '') +
+          (canEdit ? '<button type="button" class="test-action-pill" id="t-bulkprice">💰 Bulk Prices</button>' : '') +
+          (canEdit ? '<button type="button" class="test-add-pill" id="t-add">+ Add Test</button>' : '') +
+        '</div>' +
+        '<div class="test-type-menu" id="t-chips">' + chips + '</div>' +
       '</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="t-chips">' + chips + '</div>' +
-        '<div class="tbl-wrap"><table class="table"><thead><tr>' +
+      '<div class="tbl-wrap"><table class="table"><thead><tr>' +
         (testCatalogMode === 'all' && canEdit ? '<th style="width:34px"><input type="checkbox" id="t-select-all" title="Select all shown"></th>' : '') +
         '<th>Code</th><th>Test Name</th><th>Category</th><th>Sample</th><th>TAT</th>' +
         '<th style="text-align:right">Price</th><th>Status</th><th style="text-align:right">Actions</th>' +
       '</tr></thead><tbody id="t-rows"></tbody></table></div>' +
-    '</div></div>';
+    '</div></div>' +
+    (testCatalogMode === 'generic' ? '<div id="generic-template-browser"></div>' : '') +
+    (testCatalogMode === 'all' ? '<div class="card"><div class="card-h"><div><h3>Generic test templates</h3><div class="muted" style="font-size:12px;margin-top:2px">Reusable definitions that can be imported into the saved catalog</div></div><a class="btn btn-ghost btn-sm" href="#/tests/generic">Open Generic Tests</a></div><div class="card-b"><div class="muted">' + genericTemplates().length + ' templates · ' + genericTemplates().filter(function (t) { return !!t.test; }).length + ' already saved as catalog tests · ' + genericTemplates().filter(function (t) { return !t.test; }).length + ' available to add</div></div></div>' : '');
 
   var qEl = document.getElementById('t-q');
-  var tplBox = document.getElementById('generic-templates');
-  if (tplBox && canEdit) tplBox.addEventListener('click', function (e) {
-    var b = e.target.closest('[data-template-import]');
-    if (b) importGenericTemplate(b.getAttribute('data-template-import'));
-  });
   qEl.addEventListener('input', function () { testFilter.q = qEl.value; drawTestRows(canEdit); });
   // keep focus while typing
   qEl.addEventListener('input', function () { qEl.focus(); });
-  document.getElementById('t-status').addEventListener('change', function (e) {
-    testFilter.status = e.target.value; drawTestRows(canEdit);
-  });
+  var statusTrigger = document.getElementById('t-status-trigger');
+  if (statusTrigger) {
+    statusTrigger.addEventListener('click', function () {
+      var order = ['All', 'Active', 'Inactive'];
+      var idx = order.indexOf(testFilter.status || 'All');
+      testFilter.status = order[(idx + 1) % order.length];
+      statusTrigger.querySelector('span').textContent = testFilter.status;
+      drawTestRows(canEdit);
+    });
+  }
   document.getElementById('t-chips').addEventListener('click', function (e) {
     var b = e.target.closest('[data-cat]'); if (!b) return;
     testFilter.cat = b.getAttribute('data-cat'); renderTests();
@@ -264,7 +276,7 @@ function renderTests() {
               name: name, category: cat || 'General', price: price,
               sampleType: ciSample >= 0 ? (cols[ciSample] || 'Blood') : 'Blood',
               tat: ciTat >= 0 ? (cols[ciTat] || 'Same day') : 'Same day',
-              active: true, type: catalogType === 'generic' ? 'generic' : 'regular', params: []
+              active: true, type: testCatalogMode === 'generic' ? 'generic' : 'regular', params: []
             });
             existing[name.toLowerCase()] = 1;
             added++;
@@ -312,31 +324,39 @@ function renderTests() {
   });
 
   drawTestRows(canEdit);
+  if (testCatalogMode === 'generic') renderGenericTemplates();
+}
+
+function visibleTestRows() {
+  var q = testFilter.q.trim().toLowerCase();
+  return DB.all('tests').slice().sort(function (a, b) {
+    return String(a.code || '').localeCompare(String(b.code || ''));
+  }).filter(function (t) {
+    if (testCatalogMode !== 'all' && (t.type === 'generic' ? 'generic' : 'regular') !== testCatalogMode) return false;
+    if (testFilter.cat !== 'All' && t.category !== testFilter.cat) return false;
+    if (testFilter.status === 'Active' && t.active === false) return false;
+    if (testFilter.status === 'Inactive' && t.active !== false) return false;
+    if (q) {
+      var h = ((t.code || '') + ' ' + (t.name || '') + ' ' + (t.category || '') + (t.aliases ? (' ' + t.aliases.join(' ')) : '')).toLowerCase();
+      if (h.indexOf(q) < 0) return false;
+    }
+    return true;
+  });
 }
 
 function drawTestRows(canEdit) {
   var tb = document.getElementById('t-rows');
   if (!tb) return;
-  var q = testFilter.q.trim().toLowerCase();
   testSelectionRevision++;
   var session = localStorage.getItem('labpos_session');
   if (session !== testSelectionSession) testSelection = {};
   testSelectionSession = session;
-  var rows = catalogTests().slice().sort(function (a, b) {
-    return String(a.code || '').localeCompare(String(b.code || ''));
-  }).filter(function (t) {
-    if (testFilter.cat !== 'All' && t.category !== testFilter.cat) return false;
-    if (testFilter.status === 'Active' && !t.active) return false;
-    if (testFilter.status === 'Inactive' && t.active) return false;
-    if (q) {
-      var h = ((t.code || '') + ' ' + (t.name || '') + ' ' + (t.category || '')).toLowerCase();
-      if (h.indexOf(q) < 0) return false;
-    }
-    return true;
-  });
+  var rows = visibleTestRows();
   testVisibleRows = rows;
 
-  /* Keep selection limited to tests still visible under the current filter. */
+  /* Keep selection across redraws, but never retain a record hidden by the
+     current route/filter. This also prevents a later move from touching an
+     unselected or filtered-out test. */
   var visibleIds = {};
   rows.forEach(function (t) { visibleIds[String(t.id)] = true; });
   Object.keys(testSelection).forEach(function (id) {
@@ -366,22 +386,24 @@ function drawTestRows(canEdit) {
     htmlParts.push('<tr class="dept-head"><td colspan="' + colCount + '" style="background:' + (isUncat ? '#fef3c7' : 'var(--brand-soft)') + ';font-weight:800;padding:10px 12px;color:' + (isUncat ? '#92400e' : 'var(--brand)') + ';border-left:4px solid ' + (isUncat ? '#f59e0b' : 'var(--brand)') + '">' +
       '📁 ' + App.esc(cat) + ' <span class="muted" style="font-weight:400">(' + groups[cat].length + ' test' + (groups[cat].length === 1 ? '' : 's') + ')</span></td></tr>');
     groups[cat].forEach(function (t) {
-      var status = t.active
+      var status = t.active !== false
         ? '<span class="badge b-ready">Active</span>'
         : '<span class="badge b-unpaid">Inactive</span>';
-      var acts = canEdit
+      var canBook = App.canPage('patients') && App.canPage('billing');
+      var acts = (canEdit || canBook)
         ? '<div class="actions">' +
-          '<button type="button" class="btn btn-primary btn-sm" data-book="' + App.esc(t.id) + '">Book</button>' +
+          (canBook ? '<button type="button" class="btn btn-primary btn-sm" data-book="' + App.esc(t.id) + '"' + (t.active === false ? ' disabled' : '') + '>Book</button>' : '') +
+          (canEdit ?
           '<button type="button" class="btn btn-ghost btn-sm" data-edit="' + App.esc(t.id) + '">Edit</button>' +
           '<button type="button" class="btn btn-ghost btn-sm" data-toggle="' + App.esc(t.id) + '">' +
-            (t.active ? 'Deactivate' : 'Activate') + '</button>' +
-          '<button type="button" class="btn btn-ghost btn-sm" data-del="' + App.esc(t.id) + '" title="Delete">✕</button>' +
+            (t.active !== false ? 'Deactivate' : 'Activate') + '</button>' +
+          '<button type="button" class="btn btn-ghost btn-sm" data-del="' + App.esc(t.id) + '" title="Delete">✕</button>' : '') +
           '</div>'
         : '<span class="muted">—</span>';
       htmlParts.push('<tr>' +
         (classify ? '<td><input type="checkbox" class="t-test-select" data-test-select="' + App.esc(t.id) + '"' + (testSelection[String(t.id)] ? ' checked' : '') + '></td>' : '') +
         '<td><strong>' + App.esc(t.code || '') + '</strong></td>' +
-        '<td>' + App.esc(t.name || '') + (testCatalogMode === 'all' ? (t.type === 'generic' ? ' <span class="badge b-ready">Generic</span>' : ' <span class="badge b-ready">Regular</span>') : '') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
+        '<td>' + App.esc(t.name || '') + (t.type === 'generic' ? ' <span class="badge b-ready">Generic</span>' : ' <span class="badge b-ready">Regular</span>') + (t.isPackage ? ' <span class="badge b-ready">Package</span>' : '') +
           (t.isPackage && t.includes ? '<div style="font-size:11.5px;color:var(--muted)">' + t.includes.length + ' tests included</div>' : '') +
           '<div style="margin-top:4px"><span class="badge" style="background:var(--brand-soft);color:var(--brand);font-size:11px">📁 ' + App.esc(t.category || 'Uncategorized') + '</span></div></td>' +
         '<td>' + App.esc(t.category || '') + '</td>' +
@@ -406,14 +428,13 @@ function drawTestRows(canEdit) {
     });
   }
 
-  if (!canEdit) return;
   tb.querySelectorAll('[data-book]').forEach(function (b) {
     b.addEventListener('click', function () {
-      sessionStorage.setItem('labpos_pretest', b.getAttribute('data-book'));
-      App.nav('#/patients');
-      App.toast('Select a patient, then use “+ New Bill” to order this test', 'info');
+      bookCatalogTest(b.getAttribute('data-book'));
     });
   });
+  syncTestClassificationControls(rows, classify);
+  if (!canEdit) return;
   tb.querySelectorAll('[data-edit]').forEach(function (b) {
     b.addEventListener('click', function () {
       var t = DB.get('tests', b.getAttribute('data-edit'));
@@ -424,8 +445,8 @@ function drawTestRows(canEdit) {
     b.addEventListener('click', function () {
       var t = DB.get('tests', b.getAttribute('data-toggle'));
       if (!t) return;
-      DB.update('tests', t.id, { active: !t.active });
-      App.toast(t.active ? 'Test deactivated.' : 'Test activated.');
+      DB.update('tests', t.id, { active: t.active === false });
+      App.toast(t.active !== false ? 'Test deactivated.' : 'Test activated.');
       renderTests();
     });
   });
@@ -445,7 +466,6 @@ function drawTestRows(canEdit) {
       });
     });
   });
-  syncTestClassificationControls(rows, classify);
 }
 
 function selectedTestIds() {
@@ -463,6 +483,7 @@ function syncTestClassificationControls(rows, classify) {
   if (selectAll) {
     selectAll.checked = !!rows.length && rows.every(function (t) { return !!testSelection[String(t.id)]; });
     selectAll.indeterminate = !!ids.length && !selectAll.checked;
+    // Replace the handler on redraw; never retain a previous filter's rows.
     if (!selectAll._classificationBound) {
       selectAll.addEventListener('change', function () {
         testSelection = {};
@@ -494,8 +515,8 @@ function moveSelectedTests(targetType) {
   var session = testSelectionSession, revision = testSelectionRevision;
   var table = document.getElementById('t-rows'), hash = location.hash;
   testMovePending = true;
-  syncTestClassificationControls(catalogTests(), true);
-  Promise.resolve().then(function () {
+  syncTestClassificationControls(visibleTestRows(), true);
+  return Promise.resolve().then(function () {
     return App.confirm('Move ' + ids.length + ' selected test' + (ids.length === 1 ? '' : 's') + ' to ' + label + '?');
   }).then(function (ok) {
     if (!ok) return;
@@ -505,11 +526,12 @@ function moveSelectedTests(targetType) {
       return;
     }
     var visible = {};
-    testVisibleRows.forEach(function (t) { visible[String(t.id)] = true; });
+    visibleTestRows().forEach(function (t) { visible[String(t.id)] = true; });
     var updated = 0, unconfirmed = 0;
     ids.forEach(function (id) {
       try {
         if (!visible[id] || !canClassifyTests() || session !== localStorage.getItem('labpos_session')) { unconfirmed++; return; }
+        // Only classification changes. Template keys remain provenance.
         var result = DB.update('tests', id, { type: targetType });
         if (!result || result.type !== targetType) { unconfirmed++; return; }
         updated++;
@@ -661,49 +683,99 @@ var TEST_TEMPLATES = {
   ]
 };
 
-/* Templates are definitions only. Import creates a real catalog test; existing
-   records and prices are never overwritten or reclassified. */
-function genericMatch(name, code) {
-  var norm = function (v) { return String(v || '').trim().toLowerCase(); };
+/* Templates never enter invoices directly. A matching saved test keeps its
+   identity, prices, report parameters and existing type unchanged. */
+var TEMPLATE_CODES = {
+  'CBC': 'CBC', 'Lipid Profile': 'LIPID', 'Liver Function (LFT)': 'LFT',
+  'Kidney Function (RFT)': 'RFT', 'Thyroid Profile': 'TFT', 'HbA1c': 'HBA1C',
+  'Urine Complete Examination': 'URE', 'Hepatitis B (HBsAg)': 'HBSAG',
+  'Hepatitis C (Anti-HCV)': 'AHCV', 'HIV (Anti-HIV)': 'HIV',
+  'Widal Test': 'WIDAL', 'Vitamin D': 'VITD', 'Vitamin B12': 'B12', 'Coagulation (PT/INR)': 'PTINR'
+};
+function catalogIdentity(value) { return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function templateCode(key) { return TEMPLATE_CODES[key] || ('GEN-' + key.toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/-$/, '')); }
+function templateTest(key) {
+  var name = catalogIdentity(key), code = catalogIdentity(templateCode(key));
   return DB.all('tests').filter(function (t) {
-    return t.genericTemplate === name || norm(t.name) === norm(name) || norm(t.code) === norm(code) || norm(t.code) === norm(name);
-  })[0];
+    return t.templateKey === key || catalogIdentity(t.name) === name || catalogIdentity(t.code) === code;
+  })[0] || null;
 }
-function genericCode(name) { return 'GEN-' + (Object.keys(TEST_TEMPLATES).indexOf(name) + 1); }
-function genericTemplatesHTML(canEdit) {
-  return '<div class="card"><div class="card-h"><h3>Generic Test Templates</h3></div><div class="card-b" id="generic-templates">' +
-    '<p class="muted">Import a template to make it available for patient orders. Imported tests start at Rs 0; review prices and reference ranges before use.</p>' +
-    '<div class="tbl-wrap"><table class="table"><thead><tr><th>Template</th><th>Parameters</th><th>Action</th></tr></thead><tbody>' +
-    Object.keys(TEST_TEMPLATES).map(function (name) {
-      var existing = genericMatch(name, genericCode(name));
-      return '<tr><td>' + App.esc(name) + '</td><td>' + TEST_TEMPLATES[name].length + '</td><td>' +
-        (existing ? '<span class="muted">Already in catalog (' + (existing.type === 'generic' ? 'Generic' : 'Regular') + ')</span>' : canEdit ?
-          '<button type="button" class="btn btn-ghost btn-sm" data-template-import="' + App.esc(name) + '">Import</button>' : '<span class="muted">Admin can import</span>') + '</td></tr>';
-    }).join('') + '</tbody></table></div></div></div>';
+function genericTemplates() {
+  return Object.keys(TEST_TEMPLATES).map(function (key) {
+    return { key: key, name: key, code: templateCode(key), parameterCount: TEST_TEMPLATES[key].length, test: templateTest(key) };
+  });
 }
-function importGenericTemplate(name) {
-  var r = sessionRole();
-  if (r !== 'admin' && !(r === 'custom' && App.canPage('tests'))) { deny(); return; }
-  if (!Object.prototype.hasOwnProperty.call(TEST_TEMPLATES, name)) return;
-  var code = genericCode(name);
-  if (genericMatch(name, code)) { App.toast('This template already exists in the catalog.', 'info'); renderTests(); return; }
-  try {
-    var t = DB.insert('tests', {
-      code: code, name: name, type: 'generic', genericTemplate: name,
-      category: 'General', price: 0, active: true, isPackage: false,
-      sampleType: name.indexOf('Urine') === 0 ? 'Urine' : 'Blood', tat: 'Same day',
-      params: JSON.parse(JSON.stringify(TEST_TEMPLATES[name]))
-    });
-    if (!t || !t.id || !DB.get('tests', t.id)) throw new Error('Test was not saved');
-    App.toast('Generic test imported. Review its price and parameters using Edit.');
-    renderTests();
-  } catch (e) { App.toast('Import failed: ' + e.message, 'err'); }
+/* Patient picker loads this module on demand, sharing the exact template source. */
+App.testCatalog = { templates: genericTemplates };
+
+function bookCatalogTest(id) {
+  var t = DB.get('tests', id);
+  if (!t || t.active === false) { App.toast('This test is unavailable for booking.', 'err'); return; }
+  if (!App.canPage('patients') || !App.canPage('billing')) { App.toast('You do not have permission to book tests.', 'err'); return; }
+  sessionStorage.setItem('labpos_pretest', t.id);
+  App.nav('#/patients');
+  App.toast('Select a patient, then use “+ New Bill” to order this test', 'info');
+}
+function refreshTestCatalog() {
+  if ((location.hash || '').split('?')[0] === '#/tests/generic') renderGenericTests();
+  else renderTests();
+}
+function importGenericTemplate(key) {
+  if (sessionRole() !== 'admin') { App.toast('Only an administrator can import templates.', 'err'); return; }
+  if (!Object.prototype.hasOwnProperty.call(TEST_TEMPLATES, key)) return;
+  if (templateTest(key)) { App.toast('This template already has a saved test. Use the existing test.', 'info'); renderGenericTests(); return; }
+  testModal({ name: key, code: templateCode(key), category: '', price: '',
+    sampleType: key === 'Urine Complete Examination' ? 'Urine' : 'Blood',
+    tat: 'Same day', active: true, type: 'generic', templateKey: key,
+    params: JSON.parse(JSON.stringify(TEST_TEMPLATES[key])) });
+}
+var genericQuery = '';
+function renderGenericTests() {
+  renderTests();
+}
+function renderGenericTemplates() {
+  var templates = genericTemplates(), admin = sessionRole() === 'admin';
+  var saved = templates.filter(function (t) { return !!t.test; }).length;
+  var box = document.getElementById('generic-template-browser');
+  if (!box) return;
+  /* the three template cards sit at the top of the page, like the stat cards on the other catalog pages */
+  var cardsBox = document.getElementById('generic-template-cards');
+  if (cardsBox) cardsBox.innerHTML = '<div class="stat-grid">' +
+    cStat('blue', TICONS.flask, 'Templates', templates.length, 'Common report definitions') +
+    cStat('green', TICONS.check, 'Already in catalog', saved, 'Saved lab tests') +
+    cStat('amber', TICONS.box, 'Not imported', templates.length - saved, 'Unavailable for booking') +
+  '</div>';
+  box.innerHTML =
+    '<h3>Generic Test Templates</h3><p class="muted">Reusable common test templates. Import a template and set its price to create a real lab test before booking. Existing matching tests are reused without changing their prices or reports.</p>' +
+    '<div class="card"><div class="card-b">' +
+      '<label class="label" for="gt-q">Find a template</label><input id="gt-q" class="input search" placeholder="Search templates…" value="' + App.esc(genericQuery) + '">' +
+      '<div class="tbl-wrap"><table class="table"><thead><tr><th>Template</th><th>Parameters</th><th>Availability</th><th>Price</th><th>Actions</th></tr></thead><tbody id="gt-rows"></tbody></table></div></div></div>';
+  function draw() {
+    var q = genericQuery.trim().toLowerCase(), rows = genericTemplates().filter(function (t) { return t.name.toLowerCase().indexOf(q) !== -1; });
+    box.querySelector('#gt-rows').innerHTML = rows.map(function (tpl) {
+      var t = tpl.test, status = t ? ((t.active === false ? 'Inactive' : 'Available') + ' · ' + (t.type === 'generic' ? 'Generic' : 'Regular') + ' test') : 'Not imported — unavailable';
+      var actions = t ? ((t.active !== false && App.canPage('patients') && App.canPage('billing') ? '<button type="button" class="btn btn-primary btn-sm" data-gbook="' + App.esc(t.id) + '">Book</button> ' : '') +
+        (admin ? '<button type="button" class="btn btn-ghost btn-sm" data-gedit="' + App.esc(t.id) + '">Edit saved test</button>' : '')) :
+        (admin ? '<button type="button" class="btn btn-primary btn-sm" data-gimport="' + App.esc(tpl.key) + '">Add to catalog</button>' : '<span class="muted">Ask an administrator to import</span>');
+      return '<tr><td><strong>' + App.esc(tpl.name) + '</strong>' + (t ? '<div class="muted">' + App.esc(t.code + ' — ' + t.name) + '</div>' : '') +
+        '</td><td>' + tpl.parameterCount + '</td><td>' + App.esc(status) + '</td><td>' + (t ? App.money(+t.price || 0) : '—') + '</td><td>' + actions + '</td></tr>';
+    }).join('') || '<tr><td colspan="5">' + App.empty('No templates found.') + '</td></tr>';
+  }
+  box.querySelector('#gt-q').addEventListener('input', function (e) { genericQuery = e.target.value; draw(); });
+  box.querySelector('#gt-rows').addEventListener('click', function (e) {
+    var btn = e.target.closest('button'); if (!btn) return;
+    if (btn.hasAttribute('data-gimport')) importGenericTemplate(btn.getAttribute('data-gimport'));
+    if (btn.hasAttribute('data-gbook')) bookCatalogTest(btn.getAttribute('data-gbook'));
+    if (admin && btn.hasAttribute('data-gedit')) { var t = DB.get('tests', btn.getAttribute('data-gedit')); if (t) testModal(t); }
+  });
+  draw();
 }
 
 /* ---------- bulk price update ---------- */
 function _bulkFilteredTests() {
   var q = (testFilter.q || '').trim().toLowerCase();
-  return catalogTests().filter(function (t) {
+  return DB.all('tests').filter(function (t) {
+    if (testCatalogMode !== 'all' && (t.type === 'generic' ? 'generic' : 'regular') !== testCatalogMode) return false;
     if (testFilter.cat !== 'All' && t.category !== testFilter.cat) return false;
     if (testFilter.status === 'Active' && !t.active) return false;
     if (testFilter.status === 'Inactive' && t.active) return false;
@@ -719,7 +791,7 @@ function bulkPriceModal() {
   var cats = categories().sort();
   var scopeNote = (testFilter.cat !== 'All' || testFilter.status !== 'All' || (testFilter.q || '').trim())
     ? 'Note: only tests matching your current filters will be updated.'
-    : 'This will apply to all tests in the current catalog view.';
+    : 'This will apply to ALL tests in the catalog.';
 
   var body =
     '<div style="display:flex;flex-direction:column;gap:14px">' +
@@ -773,7 +845,7 @@ function bulkPriceModal() {
       var md = mode();
       if (md === 'category') {
         var cat = m.querySelector('#bp-cat').value;
-        return catalogTests().filter(function (t) { return t.category === cat; }).length;
+        return DB.all('tests').filter(function (t) { return t.category === cat; }).length;
       }
       return _bulkFilteredTests().length;
     }
@@ -815,7 +887,7 @@ function bulkPriceModal() {
         var updated = 0;
         try {
           if (md === 'category') {
-            catalogTests().forEach(function (t) {
+            DB.all('tests').forEach(function (t) {
               if (t.category !== cat) return;
               t.price = Math.round(newPrice);
               DB.put('tests', t);
@@ -845,8 +917,8 @@ function bulkPriceModal() {
 }
 
 function testModal(t) {
-  var isNew = !t;
-  t = t || { code: '', name: '', category: '', price: '', type: catalogType === 'generic' ? 'generic' : 'regular', sampleType: 'Blood', tat: 'Same day', active: true, params: [] };
+  var isNew = !t || !t.id;
+  t = t || { code: '', name: '', category: '', price: '', sampleType: 'Blood', tat: 'Same day', active: true, params: [] };
   var cats = categories();
   var sampleOpts = App.optionsHtml('sampleType', t.sampleType || '');
 
@@ -860,9 +932,14 @@ function testModal(t) {
       '<div><label class="label">Price (Rs) *</label><input id="tm-price" class="input" type="number" min="0" step="1" value="' + App.esc(String(t.price === '' ? '' : t.price)) + '" required></div>' +
       '<div><label class="label">Sample Type</label><select id="tm-sample" class="select">' + sampleOpts + '</select></div>' +
       '<div><label class="label">Turnaround Time</label><input id="tm-tat" class="input" value="' + App.esc(t.tat || '') + '" placeholder="e.g. Same day"></div>' +
+      '<div><label class="label">Test Type</label><select id="tm-type" class="select" title="Move this test between the Regular and Generic catalogs">' +
+        '<option value="regular"' + ((t.type || (testCatalogMode === 'generic' ? 'generic' : 'regular')) === 'generic' ? '' : ' selected') + '>Regular Test</option>' +
+        '<option value="generic"' + ((t.type || (testCatalogMode === 'generic' ? 'generic' : 'regular')) === 'generic' ? ' selected' : '') + '>Generic Test</option></select></div>' +
       '<div><label class="label">Status</label><label style="display:flex;align-items:center;gap:8px;font-weight:600"><input id="tm-active" type="checkbox"' + (t.active ? ' checked' : '') + '> Active</label></div>' +
       '<div><label class="label">Remind to repeat after (days)</label><input id="tm-retest" class="input" type="number" min="0" step="1" value="' + App.esc(t.retestDays ? String(t.retestDays) : '') + '" placeholder="e.g. 90 (optional)"><div class="muted" style="font-size:12px;margin-top:3px">Used by WhatsApp &rarr; Automatic messages &rarr; repeat-test reminder.</div></div>' +
     '</div>' +
+    '<div style="margin-top:14px"><label class="label">Report Note <span class="muted" style="font-weight:500">(optional — printed in a box under this test on the report)</span></label>' +
+      '<textarea id="tm-note" class="input" rows="2" placeholder="e.g. Fasting sample is preferred." style="width:100%">' + App.esc(t.note || '') + '</textarea></div>' +
     '<div style="margin-top:14px"><label class="label">Report Parameters</label>' +
       '<div style="display:flex;gap:8px;margin-bottom:10px">' +
         '<select class="select" id="tm-tpl" style="flex:1"><option value="">Load template…</option>' +
@@ -952,6 +1029,10 @@ function testModal(t) {
 
     m.querySelector('#tm-form').addEventListener('submit', function (e) {
       e.preventDefault();
+      if (isNew && t.templateKey) {
+        if (sessionRole() !== 'admin') { App.toast('Only an administrator can import templates.', 'err'); return; }
+        if (templateTest(t.templateKey)) { App.toast('A matching test already exists; no duplicate was added.', 'err'); return; }
+      }
       var code = m.querySelector('#tm-code').value.trim();
       var name = m.querySelector('#tm-name').value.trim();
       var category = m.querySelector('#tm-cat').value.trim();
@@ -962,6 +1043,9 @@ function testModal(t) {
         return x.id !== t.id && String(x.code || '').toLowerCase() === code.toLowerCase();
       });
       if (dup) { App.toast('A test with this code already exists.', 'err'); return; }
+      if (isNew && t.templateKey && DB.all('tests').some(function (x) { return catalogIdentity(x.name) === catalogIdentity(name) || catalogIdentity(x.code) === catalogIdentity(code); })) {
+        App.toast('A test with this name or code already exists; use that saved test.', 'err'); return;
+      }
       if (m.querySelector('#tm-out').checked && !m.querySelector('#tm-reflab').value) { App.toast('Choose the reference lab for an outsourced test (add one in Outsourced → Reference labs first).', 'err'); return; }
       var params = [];
       rowsBox.querySelectorAll('.tm-prow').forEach(function (row) {
@@ -981,11 +1065,12 @@ function testModal(t) {
       var consumes = [];
       Array.prototype.forEach.call(m.querySelectorAll('.tm-crow'), function (r) { var q = +r.querySelector('.tm-cq').value, id = r.querySelector('.tm-ci').value; if (id && q > 0) consumes.push({ itemId: id, qty: q }); });
       var data = {
-        type: t.type === 'generic' ? 'generic' : 'regular',
         code: code, name: name, category: category, price: price, consumes: consumes,
+        type: m.querySelector('#tm-type').value === 'generic' ? 'generic' : 'regular',
         sampleType: m.querySelector('#tm-sample').value,
         tat: m.querySelector('#tm-tat').value.trim() || 'Same day',
         retestDays: Math.max(0, parseInt(m.querySelector('#tm-retest').value, 10) || 0),
+        note: m.querySelector('#tm-note').value.trim(),
         outsourced: m.querySelector('#tm-out').checked,
         outsourcedAt: m.querySelector('#tm-out').checked ? (t.outsourced && t.outsourcedAt ? t.outsourcedAt : new Date().toISOString()) : (t.outsourcedAt || ''),
         refLabId: m.querySelector('#tm-out').checked ? m.querySelector('#tm-reflab').value : '',
@@ -996,11 +1081,12 @@ function testModal(t) {
         isPackage: isPkgEl.checked,
         includes: isPkgEl.checked ? Object.keys(picked).filter(function (id) { return picked[id]; }) : []
       };
+      if (t.templateKey) data.templateKey = t.templateKey;
       if (data.isPackage && !data.includes.length) { App.toast('Select at least one test for the package.', 'err'); return; }
       if (isNew) { DB.insert('tests', data); App.toast('Test added.'); }
-      else { DB.update('tests', t.id, data); App.toast('Test updated.'); }
+      else { DB.update('tests', t.id, data); App.toast(data.type !== (t.type === 'generic' ? 'generic' : 'regular') ? 'Test updated and moved to ' + (data.type === 'generic' ? 'Generic' : 'Regular') + ' tests.' : 'Test updated.'); }
       close();
-      renderTests();
+      refreshTestCatalog();
     });
   }});
 }
@@ -1050,9 +1136,11 @@ function renderDoctors() {
     '<style>' + DOC_STAT_CSS + '</style>' +
     '<div class="stat-grid">' + docStats + '</div>' +
     '<div class="card"><div class="card-b">' +
-      '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px"><input id="d-q" class="input search" placeholder="Search name, clinic, phone..." value="' + App.esc(docFilter.q) + '" style="max-width:280px">' +
-      '<button type="button" class="btn btn-ghost" id="d-stmt" style="margin-left:auto">Monthly statements</button>' +
-      '<button type="button" class="btn btn-primary" id="d-add">+ Add Doctor</button></div>' +
+      '<div style="display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap"><input id="d-q" class="input search" placeholder="Search name, clinic, phone..." value="' + App.esc(docFilter.q) + '" style="max-width:280px">' +
+      '<div style="margin-left:auto;display:flex;gap:8px;align-items:center">' +
+        '<button type="button" class="btn btn-secondary" id="d-stmt" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)">' + App.icon('file', 15) + ' Monthly Statements</button>' +
+        '<button type="button" class="btn btn-primary" id="d-add">+ Add Doctor</button>' +
+      '</div></div>' +
       '<div class="tbl-wrap"><table class="table"><thead><tr>' +
         '<th>Doctor</th><th>Clinic</th><th>Phone</th><th style="text-align:right">Commission %</th>' +
         '<th style="text-align:right">Referred (this month)</th><th style="text-align:right">Commission Due (month)</th>' +
@@ -1324,68 +1412,30 @@ function renderPackages() {
     + '<style>'
     + '.pkg-dash { max-width: 1300px; margin: 0 auto; }'
     + '.pkg-head-bar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }'
-    + '.pkg-stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 20px; }'
-    + '.pkg-kpi-card { background: #fff; border-radius: 14px; border: 1.5px solid var(--bd); padding: 14px 18px; position: relative; overflow: hidden; box-shadow: 0 1px 4px rgba(15,23,42,.04); }'
-    + '.pkg-kpi-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }'
-    + '.pkg-kpi-lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }'
-    + '.pkg-kpi-val { font-size: 22px; font-weight: 800; color: var(--ink); line-height: 1.2; margin-bottom: 4px; }'
-    + '.pkg-kpi-sub { font-size: 11.5px; color: var(--muted); font-weight: 500; }'
     + '.pkg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 18px; margin-bottom: 24px; }'
-    + '.pkg-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(15,23,42,.04); transition: transform .15s, box-shadow .15s; }'
-    + '.pkg-card:hover { border-color: #0ea5e9; box-shadow: 0 4px 16px rgba(14,165,233,.12); transform: translateY(-2px); }'
-    + '.pkg-badge-deal { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; letter-spacing: .05em; }'
-    + '.pkg-inc-tag { display: inline-flex; align-items: center; gap: 4px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 3px 7px; font-size: 12px; margin: 3px 4px 3px 0; color: #334155; }'
-    + '.pkg-price-bar { background: #f0fdf4; border: 1px dashed #86efac; border-radius: 10px; padding: 10px 14px; margin: 14px 0 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }'
+    + '.pkg-card { background: #fff; border: 1.5px solid var(--bd); border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 8px rgba(15,23,42,.04); transition: transform .18s, box-shadow .18s, border-color .18s; position: relative; overflow: hidden; }'
+    + '.pkg-card:hover { border-color: #38bdf8; box-shadow: 0 8px 24px rgba(14,165,233,.12); transform: translateY(-2px); }'
+    + '.pkg-card.is-inactive { opacity: .68; background: #f8fafc; border-style: dashed; }'
+    + '.pkg-card.is-inactive:hover { opacity: .9; transform: none; }'
+    + '.pkg-badge-deal { font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: .05em; display: inline-flex; align-items: center; gap: 4px; }'
+    + '.pkg-inc-tag { display: inline-flex; align-items: center; gap: 4px; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; padding: 4px 8px; font-size: 11.5px; font-weight: 600; margin: 3px 4px 3px 0; color: #334155; transition: background .12s; }'
+    + '.pkg-inc-tag:hover { background: #e2e8f0; }'
+    + '.pkg-price-bar { background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); border: 1.5px solid #86efac; border-radius: 12px; padding: 12px 14px; margin: 14px 0 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }'
     + '</style>'
     + '<div class="pkg-dash">'
 
-    /* Header */
-    + '<div class="pkg-head-bar">'
-    +   '<div>'
-    +     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">'
-    +       '<a href="#/tests" class="btn btn-ghost btn-sm" style="padding:4px 8px;font-size:12px">← Tests Catalog</a>'
-    +       '<span style="font-size:12px;color:var(--muted)">/ Laboratory</span>'
-    +     '</div>'
-    +     '<h1 style="margin:0;font-size:23px;font-weight:800;color:var(--ink);letter-spacing:-.01em">🎁 Health Packages &amp; Screening Deals Center</h1>'
-    +     '<p class="muted" style="margin:4px 0 0;font-size:13px">Create promotional test bundles, configure discounted full-body screening panels, and generate 1-click bills &amp; counter flyers.</p>'
-    +   '</div>'
-    +   '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-    +     '<button class="btn btn-ghost btn-sm" id="pkgSeedBtn">⚡ Quick Seed Premier Deals</button>'
-    +     '<button class="btn btn-primary btn-sm" id="pkgAddBtn">+ Create Health Package</button>'
-    +   '</div>'
-    + '</div>'
-
-    /* 4 Stat KPI Cards */
-    + '<div class="pkg-stat-grid">'
-    +   '<div class="pkg-kpi-card" style="border-left:4px solid #0ea5e9">'
-    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Active Health Packages</span><span style="font-size:17px">🎁</span></div>'
-    +     '<div class="pkg-kpi-val">' + activePkgs.length + ' <span style="font-size:14px;color:var(--muted);font-weight:600">deals</span></div>'
-    +     '<div class="pkg-kpi-sub">' + pkgs.length + ' total packages configured</div>'
-    +   '</div>'
-
-    +   '<div class="pkg-kpi-card" style="border-left:4px solid #10b981">'
-    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Diagnostic Tests Covered</span><span style="font-size:17px">🔬</span></div>'
-    +     '<div class="pkg-kpi-val">' + coveredCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">tests</span></div>'
-    +     '<div class="pkg-kpi-sub">Included across active bundles</div>'
-    +   '</div>'
-
-    +   '<div class="pkg-kpi-card" style="border-left:4px solid #f59e0b">'
-    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Average Patient Savings</span><span style="font-size:17px">🏷️</span></div>'
-    +     '<div class="pkg-kpi-val" style="color:#b45309">~' + avgSavingsPct + '% <span style="font-size:14px;color:var(--muted);font-weight:600">OFF</span></div>'
-    +     '<div class="pkg-kpi-sub">Bundle discount vs individual tests</div>'
-    +   '</div>'
-
-    +   '<div class="pkg-kpi-card" style="border-left:4px solid #8b5cf6">'
-    +     '<div class="pkg-kpi-top"><span class="pkg-kpi-lbl">Package Billings</span><span style="font-size:17px">🧾</span></div>'
-    +     '<div class="pkg-kpi-val">' + pkgBilledCount + ' <span style="font-size:14px;color:var(--muted);font-weight:600">orders</span></div>'
-    +     '<div class="pkg-kpi-sub">Total times booked in patient invoices</div>'
-    +   '</div>'
+    /* 4 stat cards — same look as the main dashboard */
+    + '<div class="stat-grid">'
+    +   cStat('brand', App.icon('box', 18), 'Total Health Packages', pkgs.length, activePkgs.length + ' currently active deals', ' id="kpiPkgAll" style="cursor:pointer" title="Click to view all packages"')
+    +   cStat('green', App.icon('check', 18), 'Active Promotions', activePkgs.length, 'Available on billing counter', ' id="kpiPkgActive" style="cursor:pointer" title="Click to filter active deals"')
+    +   cStat('amber', App.icon('coins', 18), 'Average Patient Savings', (avgSavingsPct > 0 ? '~' + avgSavingsPct + '%' : '0%'), coveredCount + ' tests covered across deals')
+    +   cStat('blue', App.icon('file', 18), 'Package Billings', pkgBilledCount, 'Booked in patient invoices')
     + '</div>'
 
     /* Filter Toolbar */
     + '<div class="card" style="margin-bottom:20px"><div class="card-b" style="padding:12px 16px">'
     +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-    +     '<input class="input search" id="pkgSearch" placeholder="Search package name, code, or included test..." value="' + App.esc(pkgFilter.q) + '" style="max-width:320px">'
+    +     '<input class="input search" id="pkgSearch" placeholder="Search package name, code, or included test..." value="' + App.esc(pkgFilter.q) + '" style="max-width:300px;flex:1 1 220px">'
     +     '<div style="display:flex;gap:8px;align-items:center">'
     +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">Category:</span>'
     +       '<select class="select" id="pkgCatSelect" style="width:auto;padding:5px 10px;font-size:13px">'
@@ -1403,7 +1453,11 @@ function renderPackages() {
     +         '<option value="inactive"' + (pkgFilter.status === 'inactive' ? ' selected' : '') + '>Inactive Only</option>'
     +       '</select>'
     +     '</div>'
-    +     '<button class="btn btn-ghost btn-sm" id="pkgResetFilter" style="margin-left:auto">Clear Filters</button>'
+    +     '<div style="display:flex;gap:8px;align-items:center;margin-left:auto;flex-wrap:wrap">'
+    +       '<button class="btn btn-ghost btn-sm" id="pkgResetFilter">Clear Filters</button>'
+    +       '<button class="btn btn-ghost btn-sm" id="pkgSeedBtn">⚡ Quick Seed Premier Deals</button>'
+    +       '<button class="btn btn-primary btn-sm" id="pkgAddBtn">+ Create Health Package</button>'
+    +     '</div>'
     +   '</div>'
     + '</div></div>';
 
@@ -1425,8 +1479,18 @@ function renderPackages() {
   }
 
   /* Render Package Cards */
+  var THEMES = [
+    { border: '#0284c7', bg: '#f0f9ff', tagBg: '#e0f2fe', tagColor: '#0369a1', badgeBg: '#e0f2fe', badgeColor: '#0284c7', badgeBd: '#bae6fd', btnBg: '#0284c7' }, // Sky Blue
+    { border: '#16a34a', bg: '#f0fdf4', tagBg: '#dcfce7', tagColor: '#15803d', badgeBg: '#dcfce7', badgeColor: '#15803d', badgeBd: '#bbf7d0', btnBg: '#16a34a' }, // Emerald Green
+    { border: '#7c3aed', bg: '#faf5ff', tagBg: '#f3e8ff', tagColor: '#6b21a8', badgeBg: '#f3e8ff', badgeColor: '#7c3aed', badgeBd: '#e9d5ff', btnBg: '#7c3aed' }, // Purple
+    { border: '#ea580c', bg: '#fff7ed', tagBg: '#ffedd5', tagColor: '#9a3412', badgeBg: '#ffedd5', badgeColor: '#c2410c', badgeBd: '#fed7aa', btnBg: '#ea580c' }, // Amber Orange
+    { border: '#e11d48', bg: '#fff1f2', tagBg: '#ffe4e6', tagColor: '#9f1239', badgeBg: '#ffe4e6', badgeColor: '#e11d48', badgeBd: '#fecdd3', btnBg: '#e11d48' }, // Rose Pink
+    { border: '#0d9488', bg: '#f0fdfa', tagBg: '#ccfbf1', tagColor: '#115e59', badgeBg: '#ccfbf1', badgeColor: '#0d9488', badgeBd: '#99f6e4', btnBg: '#0d9488' }  // Teal
+  ];
+
   html += '<div class="pkg-grid">';
-  filtered.forEach(function (pkg) {
+  filtered.forEach(function (pkg, pIdx) {
+    var c = THEMES[pIdx % THEMES.length];
     var regSum = 0;
     var incTests = (pkg.includes || []).map(function (tid) {
       var it = testMap[tid];
@@ -1439,38 +1503,40 @@ function renderPackages() {
     var savingsPct = regSum > 0 ? Math.round((savings / regSum) * 100) : 0;
 
     var badgeText = pkg.dealBadge || 'SPECIAL DEAL';
-    var badgeStyle = 'background:#fef3c7;color:#b45309;border:1px solid #fde68a';
-    if (/best/i.test(badgeText)) badgeStyle = 'background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5';
-    else if (/exec/i.test(badgeText)) badgeStyle = 'background:#f3e8ff;color:#7e22ce;border:1px solid #d8b4fe';
-    else if (/pop/i.test(badgeText)) badgeStyle = 'background:#e0f2fe;color:#0369a1;border:1px solid #bae6fd';
+    var badgeIcon = '🏷️';
+    if (/best/i.test(badgeText)) badgeIcon = '🔥';
+    else if (/exec|vip/i.test(badgeText)) badgeIcon = '👑';
+    else if (/pop|star/i.test(badgeText)) badgeIcon = '⭐';
+    else if (/screen|health/i.test(badgeText)) badgeIcon = '💚';
 
-    html += '<div class="pkg-card">'
+    html += '<div class="pkg-card' + (pkg.active === false ? ' is-inactive' : '') + '" style="border-top:4px solid ' + c.border + ';box-shadow:0 3px 12px rgba(15,23,42,.06);' + (pkg.active === false ? 'border-top-style:dashed;' : '') + '">'
       + '<div>'
       /* Card Header */
-      +   '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px">'
-      +     '<span class="pkg-badge-deal" style="' + badgeStyle + '">' + App.esc(badgeText) + '</span>'
-      +     '<button class="btn btn-ghost btn-sm" style="padding:2px 8px;font-size:11px" data-pkg-toggle="' + App.esc(pkg.id) + '">'
-      +       (pkg.active !== false ? '🟢 Active' : '⚪ Inactive')
+      +   '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px">'
+      +     '<span class="pkg-badge-deal" style="background:' + c.badgeBg + ';color:' + c.badgeColor + ';border:1.5px solid ' + c.badgeBd + '">' + badgeIcon + ' ' + App.esc(badgeText) + '</span>'
+      +     '<button class="btn btn-ghost btn-sm" style="padding:3px 10px;font-size:11.5px;border-radius:20px;font-weight:700;' + (pkg.active !== false ? 'background:#ecfdf5;color:#15803d;border:1px solid #a7f3d0' : 'background:#f1f5f9;color:#64748b;border:1px solid #cbd5e1') + '" data-pkg-toggle="' + App.esc(pkg.id) + '">'
+      +       (pkg.active !== false ? '● Active' : '○ Inactive')
       +     '</button>'
       +   '</div>'
 
       /* Name & Code */
-      +   '<h3 style="margin:0 0 4px;font-size:17px;font-weight:800;color:var(--ink)">' + App.esc(pkg.name) + '</h3>'
-      +   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-      +     '<span class="mono" style="font-size:12px;font-weight:700;color:var(--muted)">' + App.esc(pkg.code) + '</span>'
-      +     (pkg.category ? '<span class="badge" style="background:#f1f5f9;color:#475569;font-size:11px">' + App.esc(pkg.category) + '</span>' : '')
+      +   '<h3 style="margin:0 0 6px;font-size:17.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em;line-height:1.25">' + App.esc(pkg.name) + '</h3>'
+      +   '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">'
+      +     '<span class="mono" style="font-size:12px;font-weight:700;color:' + c.tagColor + ';background:' + c.tagBg + ';padding:2px 8px;border-radius:6px;border:1px solid ' + c.border + '33">' + App.esc(pkg.code) + '</span>'
+      +     (pkg.category ? '<span style="font-size:11.5px;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;padding:2px 8px;border-radius:6px;font-weight:600">📁 ' + App.esc(pkg.category) + '</span>' : '')
+      +     '<span style="font-size:11.5px;color:var(--muted);margin-left:auto;font-weight:600">' + incTests.length + ' tests included</span>'
       +   '</div>'
 
       /* Preparation Instructions */
-      +   (pkg.prepNote ? '<div style="background:#f8fafc;border-left:3px solid #0ea5e9;padding:6px 10px;border-radius:4px;font-size:11.5px;color:#334155;margin-bottom:10px">🍽️ ' + App.esc(pkg.prepNote) + '</div>' : '')
+      +   (pkg.prepNote ? '<div style="background:' + c.bg + ';border:1px solid ' + c.border + '33;border-left:3.5px solid ' + c.border + ';padding:7px 11px;border-radius:8px;font-size:11.5px;color:' + c.tagColor + ';font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span>ℹ️</span><span>' + App.esc(pkg.prepNote) + '</span></div>' : '')
 
       /* Included Tests List */
       +   '<div style="margin-bottom:12px">'
-      +     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);margin-bottom:6px">' + incTests.length + ' Included Diagnostic Tests:</div>'
-      +     '<div style="max-height:120px;overflow-y:auto;padding-right:4px">'
+      +     '<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted);letter-spacing:.04em;margin-bottom:6px">Included Diagnostic Tests:</div>'
+      +     '<div style="max-height:115px;overflow-y:auto;padding-right:4px">'
       +       incTests.map(function (it) {
                 return '<span class="pkg-inc-tag" title="' + App.esc(it.name) + ' (' + App.money(+it.price || 0) + ')">'
-                  + App.esc(it.code || it.name) + ' <span style="color:var(--muted);font-size:11px">(' + App.money(+it.price || 0) + ')</span>'
+                  + App.esc(it.code || it.name) + ' <span style="color:var(--muted);font-size:11px;font-weight:500">(' + App.money(+it.price || 0) + ')</span>'
                   + '</span>';
               }).join('')
       +     '</div>'
@@ -1479,20 +1545,20 @@ function renderPackages() {
 
       /* Price & Savings Bar */
       + '<div>'
-      +   '<div class="pkg-price-bar">'
+      +   '<div class="pkg-price-bar" style="background:linear-gradient(135deg, ' + c.bg + ' 0%, #ffffff 100%);border:1.5px solid ' + c.border + '44">'
       +     '<div>'
-      +       '<div style="font-size:11px;color:#64748b;text-decoration:line-through">Catalog Sum: ' + App.money(regSum) + '</div>'
-      +       '<div style="font-size:20px;font-weight:800;color:#15803d;line-height:1.2">' + App.money(dealPrice) + '</div>'
+      +       '<div style="font-size:11px;color:#64748b;font-weight:600;text-decoration:line-through">Catalog Sum: ' + App.money(regSum) + '</div>'
+      +       '<div style="font-size:23px;font-weight:900;color:' + c.border + ';line-height:1.15;letter-spacing:-.02em">' + App.money(dealPrice) + '</div>'
       +     '</div>'
-      +     (savings > 0 ? '<span class="badge" style="background:#16a34a;color:#fff;font-weight:800;font-size:12px;padding:4px 8px">SAVE ' + App.money(savings) + ' (' + savingsPct + '% OFF)</span>' : '')
+      +     (savings > 0 ? '<div style="background:' + c.border + ';color:#ffffff;font-weight:800;font-size:12px;padding:5px 11px;border-radius:8px;box-shadow:0 2px 8px ' + c.border + '44;letter-spacing:.02em;text-align:right">SAVE ' + App.money(savings) + '<br><span style="font-size:10.5px;opacity:.9;font-weight:700">(' + savingsPct + '% OFF)</span></div>' : '')
       +   '</div>'
 
       /* Action Buttons */
-      +   '<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      +     '<button class="btn btn-primary btn-sm" style="flex:1" data-pkg-bill="' + App.esc(pkg.id) + '">🧾 Quick Bill Deal</button>'
-      +     '<button class="btn btn-ghost btn-sm" data-pkg-flyer="' + App.esc(pkg.id) + '" title="Print Counter Flyer">🖨️ Flyer</button>'
-      +     '<button class="btn btn-ghost btn-sm" data-pkg-edit="' + App.esc(pkg.id) + '">Edit</button>'
-      +     '<button class="btn btn-ghost btn-sm" data-pkg-del="' + App.esc(pkg.id) + '" style="color:var(--red)">Delete</button>'
+      +   '<div style="display:flex;gap:7px;align-items:center">'
+      +     '<button class="btn btn-sm" style="flex:1;font-weight:700;background:' + c.btnBg + ';color:#ffffff;border:none;box-shadow:0 2px 6px ' + c.border + '44" data-pkg-bill="' + App.esc(pkg.id) + '">🧾 Quick Bill Deal</button>'
+      +     '<button class="btn btn-ghost btn-sm" data-pkg-flyer="' + App.esc(pkg.id) + '" title="Print Counter Flyer" style="border:1px solid var(--bd)">🖨️ Flyer</button>'
+      +     '<button class="btn btn-ghost btn-sm" data-pkg-edit="' + App.esc(pkg.id) + '" style="border:1px solid var(--bd)">Edit</button>'
+      +     '<button class="btn btn-ghost btn-sm" data-pkg-del="' + App.esc(pkg.id) + '" style="color:var(--red);border:1px solid var(--bd)">Delete</button>'
       +   '</div>'
       + '</div>'
 
@@ -1535,6 +1601,26 @@ function renderPackages() {
     if (resetBtn) {
       resetBtn.addEventListener('click', function () {
         pkgFilter = { q: '', cat: 'all', status: 'all' };
+        renderPackages();
+      });
+    }
+
+    /* KPI Click Filters */
+    var kAll = document.getElementById('kpiPkgAll');
+    if (kAll) {
+      kAll.addEventListener('click', function () {
+        pkgFilter.status = 'all';
+        var sel = document.getElementById('pkgStatusSelect');
+        if (sel) sel.value = 'all';
+        renderPackages();
+      });
+    }
+    var kAct = document.getElementById('kpiPkgActive');
+    if (kAct) {
+      kAct.addEventListener('click', function () {
+        pkgFilter.status = 'active';
+        var sel = document.getElementById('pkgStatusSelect');
+        if (sel) sel.value = 'active';
         renderPackages();
       });
     }
@@ -2054,9 +2140,9 @@ function seedPremierPackages() {
 
 /* ---------- register routes ---------- */
 
-App.route('/tests', function () { openCatalog('all'); });
-App.route('/tests/regular', function () { openCatalog('regular'); });
-App.route('/tests/generic', function () { openCatalog('generic'); });
+App.route('/tests', renderTests);
+App.route('/tests/regular', renderTests);
+App.route('/tests/generic', renderGenericTests);
 App.route('/doctors', renderDoctors);
 App.route('/packages', renderPackages);
 App.route('#/packages', renderPackages);
