@@ -291,14 +291,14 @@
           '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Sign In</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
           '<div class="lg-alt">' +
             (showLabId && !desk ? '<div class="lg-google" id="lgGoogle" hidden><div class="lg-gbtn" id="lgGBtn"></div></div>' : '') +
-            '<nav class="lg-alt-links">' +
+            (desk ? '' : ('<nav class="lg-alt-links">' +
               (showLabId ? '<a href="' + signupHref + '"' + signupAttr + '>Start free trial</a><i>·</i>' : '') +
               (showLabId ? '<a id="lgPortal" href="' + (desk ? WEB + '/app/#/portal' : '#/portal') + '"' + signupAttr + '>Patient / doctor reports</a><i>·</i>' : '') +
               (desk
                 ? '<a href="' + WEB + '/superadmin/" target="_blank" rel="noopener">Superadmin</a><i>·</i>'
                 : '<a href="/superadmin/">Superadmin</a><i>·</i>') +
               '<a href="' + WEB + '/"' + (desk ? ' target="_blank" rel="noopener"' : '') + '>Back to website</a>' +
-            '</nav>' +
+'</nav>')) +
           '</div>' +
         '</form>' +
         '<p class="login-foot"><span class="lg-secure">' + ic('shield', 13) + (desk ? 'Desktop app &middot; works offline, syncs when online' : 'Secure, encrypted sign-in') + '</span>Powered by System Optix</p>' +
