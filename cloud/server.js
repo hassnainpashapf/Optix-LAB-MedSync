@@ -1371,7 +1371,7 @@ async function main() {
         const cur = await saas.getSettings(), s = b.settings;
         const next = Object.assign({}, cur, clean(s, ['trialDays', 'supportPhone', 'supportEmail', 'supportWhatsapp', 'payInstructions']));
         if (Array.isArray(s.payMethods)) next.payMethods = s.payMethods.slice(0, 8).map(m => clean(m, ['name', 'account', 'title']));
-        next.trialDays = Math.max(1, Math.min(90, +next.trialDays || 14));
+        next.trialDays = Math.max(1, Math.min(90, +next.trialDays || 15));
         await rawStore.setMeta('saas_settings', next);
       }
       if (b.plans && typeof b.plans === 'object') {

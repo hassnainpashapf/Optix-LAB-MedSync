@@ -2112,7 +2112,7 @@ function settingsViewHtml() {
     '<div class="grid-2 settings-2">' +
     '<div class="card"><div class="card-h"><h3>Trial &amp; support</h3></div><div class="card-b">' +
     '<div style="max-width:200px"><label class="label" for="stTrial">Trial length (days)</label>' +
-    '<input class="input" type="number" min="1" max="90" id="stTrial" value="' + esc(s.trialDays == null ? 14 : s.trialDays) + '"></div>' +
+    '<input class="input" type="number" min="1" max="90" id="stTrial" value="' + esc(s.trialDays == null ? 15 : s.trialDays) + '"></div>' +
     '<p class="hint" style="margin:4px 0 14px">Applies to new sign-ups (1-90 days).</p>' +
     '<div class="fgrid"><div><label class="label" for="stPhone">Support phone</label><input class="input" id="stPhone" value="' + esc(s.supportPhone) + '" placeholder="0300-1234567"></div>' +
     '<div><label class="label" for="stWa">Support WhatsApp</label><input class="input" id="stWa" value="' + esc(s.supportWhatsapp) + '" placeholder="0300-1234567"></div>' +

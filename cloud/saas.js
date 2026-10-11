@@ -19,13 +19,13 @@ const GRACE_DAYS = 3;          /* after paidUntil, still fully usable for a few 
 const RESERVED = ['admin', 'api', 'app', 'www', 'superadmin', 'support', 'help', 'login', 'signup', 'demo', 'test', 'optix', 'system', 'root', 'static', 'assets'];
 
 const DEFAULT_PLANS = {
-  trial:      { name: 'Free Trial',   monthly: 0,    yearly: 0,     users: 5,  invoicesPerMonth: 500,  storageMb: 200,  desc: 'Everything unlocked for 14 days' },
+  trial:      { name: 'Free Trial',   monthly: 0,    yearly: 0,     users: 5,  invoicesPerMonth: 500,  storageMb: 200,  desc: 'Everything unlocked for 15 days' },
   starter:    { name: 'Starter',      monthly: 2500, yearly: 25000, users: 3,  invoicesPerMonth: 300,  storageMb: 500,  desc: 'Small collection centre' },
   pro:        { name: 'Professional', monthly: 6000, yearly: 60000, users: 10, invoicesPerMonth: 3000, storageMb: 5000, desc: 'Busy diagnostic lab' },
   enterprise: { name: 'Enterprise',   monthly: 0,    yearly: 0,     users: 0,  invoicesPerMonth: 0,    storageMb: 0,    desc: 'Chains & hospitals — unlimited, custom pricing' },
 };
 const DEFAULT_SETTINGS = {
-  trialDays: 14,
+  trialDays: 15,
   supportPhone: '', supportEmail: '', supportWhatsapp: '',
   payInstructions: 'Pay by JazzCash / Easypaisa / bank transfer, then submit the transaction ID here. Your plan is activated within a few hours.',
   payMethods: [], /* [{ name:'JazzCash', account:'03xx-xxxxxxx', title:'Account title' }] */
@@ -272,9 +272,9 @@ function create(ctx) {
       const now = new Date();
       const lab = { id, slug, prefix: id + '/', name: labName, ownerName, ownerEmail: email, phone, plan: 'trial', status: 'active',
         maxBranches: DEFAULT_MAX_BRANCHES, features: {},
-        trialEndsAt: new Date(now.getTime() + (+settings.trialDays || 14) * DAY).toISOString(), paidUntil: null,
+        trialEndsAt: new Date(now.getTime() + (+settings.trialDays || 15) * DAY).toISOString(), paidUntil: null,
         createdAt: now.toISOString(), history: [] };
-      await addHistory(lab, 'Signed up — ' + (+settings.trialDays || 14) + '-day free trial', by || 'signup');
+      await addHistory(lab, 'Signed up — ' + (+settings.trialDays || 15) + '-day free trial', by || 'signup');
       /* starter data: the standard test list (with normal ranges), an admin account, branding — no demo patients/invoices */
       const seed = JSON.parse(fs.readFileSync(path.join(__dirname, 'seed.json'), 'utf8'));
       const tests = (seed.tests || []).map(t => Object.assign({}, t));

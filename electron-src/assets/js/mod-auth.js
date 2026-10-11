@@ -51,7 +51,7 @@
       ? 'Start your lab<br><span id="lgRot">in under a minute.</span>'
       : 'Your lab,<br><span id="lgRot">always in sync.</span>';
     var lead = mode === 'signup'
-      ? '14-day free trial. No credit card. Your data stays yours &mdash; on desktop, web and mobile.'
+      ? '15-day free trial. No credit card. Your data stays yours &mdash; on desktop, web and mobile.'
       : 'Patients, billing, results and reports &mdash; on desktop, web and mobile.';
     return '<aside class="lg-brand" aria-hidden="true">' +
       '<div class="lg-orbs"><i></i><i></i><i></i><i></i></div><div class="lg-grid"></div>' +
@@ -325,10 +325,10 @@
         if (ex && ex.code === 'NO_LAB') { /* no lab for this Google account yet: offer to make one in one click */
           var er = document.getElementById('loginErr'), mk = document.createElement('button');
           mk.type = 'button'; mk.id = 'lgMakeLab'; mk.className = 'btn btn-primary btn-block'; mk.style.margin = '8px 0 4px';
-          mk.textContent = 'Create my free 14-day trial lab with this Google account';
+          mk.textContent = 'Create my free 15-day trial lab with this Google account';
           mk.onclick = function () {
             mk.disabled = true; mk.textContent = 'Creating your lab…';
-            googleSignup(cred, {}).catch(function (e2) { mk.disabled = false; mk.textContent = 'Create my free 14-day trial lab with this Google account'; showErr((e2 && e2.message) || 'Could not create the lab. Please try again.'); });
+            googleSignup(cred, {}).catch(function (e2) { mk.disabled = false; mk.textContent = 'Create my free 15-day trial lab with this Google account'; showErr((e2 && e2.message) || 'Could not create the lab. Please try again.'); });
           };
           er.parentNode.insertBefore(mk, er.nextSibling);
         }
@@ -396,7 +396,7 @@
         '<form class="login-card lg-card lg-wide" id="suForm" autocomplete="off">' +
           '<div class="login-logo lg-sm"><span class="login-mark">' + icon('flask', 28) + '</span></div>' +
           '<h2>Create your lab account</h2>' +
-          '<p class="login-sub">Free for 14 days &mdash; no credit card needed</p>' +
+          '<p class="login-sub">Free for 15 days &mdash; no credit card needed</p>' +
           '<div class="login-err" id="loginErr" hidden></div>' +
           field('suLab', 'building', 'Lab / clinic name', { ph: 'e.g. Al Shifa Diagnostics', max: 60, focus: true }) +
           '<div class="lg-two">' + field('suOwner', 'user', 'Your name', { ph: 'Owner / manager', max: 60 }) + field('suPhone', 'phone', 'Phone', { ph: '03xx-xxxxxxx', max: 20, opt: true }) + '</div>' +

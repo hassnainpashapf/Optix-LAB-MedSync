@@ -13,7 +13,7 @@
       pro:        { name: 'Professional', monthly: 6000, yearly: 60000, users: 10, invoicesPerMonth: 3000, desc: 'Busy diagnostic lab' },
       enterprise: { name: 'Enterprise',   monthly: 0,     yearly: 0,     users: 0,  invoicesPerMonth: 0,    desc: 'Chains & hospitals' }
     },
-    info: { trialDays: 14, supportPhone: '', supportEmail: '', supportWhatsapp: '' }
+    info: { trialDays: 15, supportPhone: '', supportEmail: '', supportWhatsapp: '' }
   };
 
   var state = { plans: clone(FALLBACK.plans), info: clone(FALLBACK.info), period: 'monthly' };
