@@ -3572,7 +3572,10 @@
           doc.setFont('helvetica', 'bold');
           var labels = doc.splitTextToSize(cell[0], c.colon - c.x - 0.8);
           doc.setFont('helvetica', cell[2] ? 'bold' : 'normal');
-          var values = doc.splitTextToSize(cell[1] || ' ', c.right - c.colon - COLON_W);
+          // The built-in PDF font cannot shape Urdu/Arabic (pre-existing): such glyph runs
+          // render ~2x wider than jsPDF measures, so wrap them earlier to stay in the column.
+          var vw = c.right - c.colon - COLON_W, vtxt = cell[1] || ' ';
+          var values = doc.splitTextToSize(vtxt, /[^\u0000-\u00ff]/.test(vtxt) ? vw / 2 : vw);
           return { labels: labels, values: values, bold: !!cell[2], n: Math.max(labels.length, values.length, 1) };
         });
         c.height = c.wrapped.reduce(function (h, w) { return h + w.n * LH + ROW_PAD; }, 0);
