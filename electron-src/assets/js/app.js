@@ -59,7 +59,7 @@
     { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock/dashboard', color: '#0ea5e9',
       sub: [{ key: 'dashboard', label: 'Stock Dashboard', icon: 'grid', route: '#/stock/dashboard' }, { key: 'moves', label: 'Movement History', icon: 'clipboard', route: '#/stock' }, { key: 'add', label: 'Add Stock', icon: 'plus', route: '#/stock/add' },
         { key: 'pending', label: 'Pending Stock', icon: 'box', route: '#/stock/pending' }, { key: 'orders', label: 'Purchase Orders', route: '#/stock/orders', icon: 'receipt' }, { key: 'alerts', label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' },
-        { key: 'usage', label: 'Tube & Consumable Usage', icon: 'tube', route: '#/stock/usage' }, { key: 'mapping', label: 'Tube Mapping', icon: 'gear', route: '#/stock/mapping' }] },
+        { key: 'usage', label: 'Tube Usage', icon: 'tube', route: '#/stock/usage' }, { key: 'mapping', label: 'Tube Mapping', icon: 'gear', route: '#/stock/mapping' }] },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', icon: 'clipboard', route: '#/results' }, { key: 'ready', label: 'Ready Reports', icon: 'check', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', icon: 'file', route: '#/results/old' }] },
     { key: 'tests',     label: 'All Tests Catalog', icon: 'flask', route: '#/tests', color: '#14b8a6',

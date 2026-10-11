@@ -13,6 +13,7 @@
     '.sk-bar .grow{flex:1 1 auto;min-width:200px;width:auto}' +
     '.sk-bar .select{flex:0 0 auto;width:auto;max-width:100%}' +
     '.sk-bar .btn{flex:0 0 auto;white-space:nowrap}' +
+    '.sk-bar input[type=date]{flex:0 0 160px;width:160px}.sk-bar .sk-spacer{flex:1 1 auto}' +
     '.sk-chip{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:99px;white-space:nowrap;margin:1px 4px 1px 0}' +
     '.sk-chip.ok{background:#e6f7f0;color:#047857}.sk-chip.low{background:#fff4e0;color:#b45309}.sk-chip.out{background:#fdecec;color:#b91c1c}.sk-chip.exp{background:#fdecec;color:#b91c1c}.sk-chip.soon{background:#fff4e0;color:#b45309}.sk-chip.trf{background:#e0f2fe;color:#0284c7}' +
     '.sk-alert{border:1px solid #f0d9a0;background:#fff8e6;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13.5px;line-height:1.7}' +
@@ -340,6 +341,7 @@
   /* ---------- tubes -> stock: Tube Mapping (#/stock/mapping) and Tube & Consumable Usage (#/stock/usage) ----------
      Each tube a billed invoice creates uses the stock item its tube type is linked to (see Samples in samples-core.js).
      Mapping lives in settings.main.tubeStock = { '<tube type>': { itemId, qty } }; only an admin can save it (settings are admin-only on the server). */
+  var AUTO_LOCK = '<span class="sk-sub" title="Automatic entry. It is reversed by deleting the bill or rejecting the tube, not by deleting this line.">auto</span>';
   function isAdmin() { return (App.session() || {}).role === 'admin'; }
   function tubeLinks() { try { return (window.Samples && Samples.tubeMap()) || {}; } catch (e) { return {}; } }
   function tubesOfItem(itemId) { var m = tubeLinks(); return Object.keys(m).filter(function (k) { return m[k] && m[k].itemId === itemId; }); }
@@ -422,9 +424,9 @@
       '<label for="skUPreset">Period</label><select class="select" id="skUPreset">' + preset('today', 'Today') + preset('week', 'Last 7 days') + preset('month', 'This month') + preset('30', 'Last 30 days') + preset('custom', 'Custom range') + '</select>' +
       '<input class="input" type="date" id="skUFrom" aria-label="From" value="' + esc(R.from) + '"' + (F.uPreset === 'custom' ? '' : ' disabled') + '>' +
       '<input class="input" type="date" id="skUTo" aria-label="To" value="' + esc(R.to) + '"' + (F.uPreset === 'custom' ? '' : ' disabled') + '>' +
-      '<a class="btn btn-ghost" href="#/stock/mapping">Tube Mapping</a></div></div>';
+      '<span class="sk-spacer"></span><a class="btn btn-ghost" href="#/stock/mapping">Tube Mapping</a></div></div>';
     h += '<div class="stat-grid">' +
-      statCard('brand', App.icon('tube', 18), 'Tubes made', U.totalTubes, esc(R.from === R.to ? R.from : R.from + ' to ' + R.to)) +
+      statCard('brand', App.icon('tube', 18), 'Tubes made', U.totalTubes, esc(R.from === R.to ? App.d(R.from) : App.d(R.from) + ' – ' + App.d(R.to))) +
       statCard('blue', App.icon('box', 18), 'Stock units used', num(U.units), 'automatically, net of returns') +
       statCard('amber', App.icon('alert', 18), 'Linked items low / out', low, 'used in this period') +
       statCard(U.unlinked || U.short ? 'red' : 'green', App.icon(U.unlinked || U.short ? 'x' : 'check', 18), U.short ? 'Stock shortfall' : 'Tube types not linked', U.short ? num(U.short) : U.unlinked, U.short ? 'units billed with no stock left' : (U.unlinked ? 'tubes are made but nothing is deducted' : 'every tube type in use is linked')) +
@@ -593,7 +595,7 @@
             '<td class="sk-sub">' + esc([m.lot ? 'Lot: ' + m.lot : '', m.expiry ? 'Exp: ' + fdate(m.expiry) : ''].filter(Boolean).join(' • ') || '—') + '</td>' +
             '<td class="sk-sub">' + esc(m.note || m.ref || '—') + '</td>' +
             '<td class="sk-sub">' + esc(m.by || '—') + '</td>' +
-            '<td class="actions" style="text-align:right">' + (canEdit() ? '<button class="btn btn-ghost btn-sm" data-delmv="' + esc(m.id) + '" title="Delete this entry (undo)">✕</button>' : '') + '</td></tr>';
+            '<td class="actions" style="text-align:right">' + (canEdit() ? (m.auto ? AUTO_LOCK : '<button class="btn btn-ghost btn-sm" data-delmv="' + esc(m.id) + '" title="Delete this entry (undo)">✕</button>') : '') + '</td></tr>';
         }).join('') : '<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">No stock movements found.</td></tr>') +
       '</tbody></table></div></div>';
     }
@@ -844,11 +846,11 @@
     App.modal('History — ' + esc(it.name),
       (mv.length ? '<div style="max-height:56vh;overflow:auto"><table class="sk-h"><thead><tr><th>Date</th><th>What</th><th>Qty</th><th>Lot / expiry</th><th>Note</th>' + (canEdit() ? '<th></th>' : '') + '</tr></thead><tbody>' +
         mv.slice(0, 200).map(function (m) {
-          var t = MT[m.type] || [m.type, 'soon'], q = (m.type === 'in' || (m.type === 'adjust' && m.qty >= 0) ? '+' : '−') + num(Math.abs(m.qty));
+          var t = m.auto ? (m.type === 'out' ? ['Auto used', 'soon'] : ['Auto return', 'ok']) : (MT[m.type] || [m.type, 'soon']), q = (m.type === 'in' || (m.type === 'adjust' && m.qty >= 0) ? '+' : '−') + num(Math.abs(m.qty));
           var destLine = m.dest ? '<div style="color:#0284c7;font-weight:700;font-size:11.5px">↳ To ' + esc(m.dest) + '</div>' : '';
           return '<tr><td>' + fdate(m.date) + '</td><td><span class="sk-chip ' + t[1] + '">' + t[0] + '</span>' + destLine + '</td><td><b>' + q + '</b> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
             '<td class="sk-sub">' + esc([m.lot, m.expiry ? 'exp ' + fdate(m.expiry) : ''].filter(Boolean).join(' · ') || '—') + '</td><td class="sk-sub">' + esc(m.note || m.ref || '') + '</td>' +
-            (canEdit() ? '<td><button class="btn btn-ghost btn-sm" data-delmv="' + esc(m.id) + '" title="Delete this entry (undo)">✕</button></td>' : '') + '</tr>';
+            (canEdit() ? '<td>' + (m.auto ? AUTO_LOCK : '<button class="btn btn-ghost btn-sm" data-delmv="' + esc(m.id) + '" title="Delete this entry (undo)">✕</button>') + '</td>' : '') + '</tr>';
         }).join('') + '</tbody></table></div>' : App.empty('No movements yet')) +
       '<div class="actions" style="margin-top:14px"><button class="btn btn-primary" id="hsClose">Close</button></div>',
       { wide: true, onOpen: function (ov, close) {

@@ -140,7 +140,7 @@ function suite(base) {
   assert.equal(onHand('SI-SER'), 0, 'clamped at 0, never negative');
   let m1 = autoMoves()[0];
   assert.equal(m1.qty, 1); assert.equal(m1.short, 1); assert.match(m1.note, /shortfall 1/);
-  assert.ok(toasts.some(t => /Serum tubes is out of stock — billed anyway, 1 pcs\(s\) not deducted/.test(t)), 'non-blocking shortfall notice: ' + toasts.join('|'));
+  assert.ok(toasts.some(t => /Serum tubes is out of stock — billed anyway, 1 pcs not deducted/.test(t)), 'non-blocking shortfall notice: ' + toasts.join('|'));
   made = S.createForInvoice(inv('INV-4', 't-lft'));      // nothing left at all
   assert.equal(made.length, 1); assert.equal(onHand('SI-SER'), 0);
   const m2 = autoMoves()[1]; assert.equal(m2.qty, 0); assert.equal(m2.short, 2);

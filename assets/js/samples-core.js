@@ -261,7 +261,7 @@
           if (anyLink() && !seen['u' + r.tube]) { seen['u' + r.tube] = 1; msgs.push('No stock item linked for ' + r.tube + ' tubes — set it in Stock → Tube Mapping'); }
           return;
         }
-        if (r.short > 0 && !seen['s' + r.item.id]) { seen['s' + r.item.id] = 1; msgs.push(r.item.name + ' is out of stock — billed anyway, ' + r.short + ' ' + (r.item.unit || 'unit') + '(s) not deducted'); }
+        if (r.short > 0 && !seen['s' + r.item.id]) { seen['s' + r.item.id] = 1; msgs.push(r.item.name + ' is out of stock — billed anyway, ' + r.short + ' ' + (r.item.unit || 'unit') + ' not deducted'); }
       });
       var last = {};
       (results || []).forEach(function (r) { if (r && r.linked && r.left != null) last[r.item.id] = r; });

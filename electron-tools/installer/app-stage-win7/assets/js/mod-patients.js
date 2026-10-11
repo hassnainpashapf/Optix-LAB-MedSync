@@ -44,6 +44,7 @@
     '.ptf-phone-wrap{display:flex;align-items:center;gap:8px}' +
     '.ptf-phone-wrap .input{flex:1;min-width:0}' +
     '.ptf-phone-wrap .wa-btn{flex:0 0 auto}' +
+    '.pt-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;margin-top:6px;font-size:13px;color:var(--muted)}' +
     '</style>';
   function waNumber(phone) {
     return App.normWa(phone); /* shared helper (app.js) */
