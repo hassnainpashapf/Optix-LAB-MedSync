@@ -748,6 +748,15 @@ async function main() {
     });
     /* start a free trial with a Google account: the lab name + Lab ID come from the form, the owner name + email from Google.
        The username defaults to the part of the email before @; the password is the typed one, or random (set one later via "Forgot password?"). */
+    /* a product's own sign-up / sign-in with Google: the hub checks the Google credential and says who it is (verified Gmail + name).
+       Nothing else happens here, no account is created or opened; the product decides what to do with a verified identity. */
+    app.post('/api/auth/google-verify', async (req, res) => {
+      try {
+        if (hot(ipFails, req.ip, 60)) return res.status(429).json({ error: 'Too many attempts. Try again in a few minutes.' });
+        const g = await verifyGoogle((req.body || {}).credential);
+        res.json({ ok: true, email: g.email, name: g.name });
+      } catch (e) { bump(ipFails, req.ip, 15 * 60 * 1000); res.status(e.status || 400).json({ error: e.message }); }
+    });
     app.post('/api/saas/google-signup', async (req, res) => {
       try {
         if (bump(signupHits, req.ip, 3600000).n > (+process.env.SAAS_SIGNUPS_PER_HOUR || 5)) return res.status(429).json({ error: 'Too many sign-ups from this network. Please try again later.' });
@@ -769,6 +778,11 @@ async function main() {
             catch (e) { lastErr = e; if (!/already taken/i.test(e.message)) throw e; }
           }
           if (!lab) throw lastErr || new Error('Could not pick a free Lab ID. Please type one and try again.');
+        }
+        /* the apps this new business starts with: the lab only unless the sign-up form (the suite site) asked for others; only registry products count */
+        if (Array.isArray(b.products) && b.products.length) {
+          const wanted = saas.productIds().filter((id) => b.products.indexOf(id) >= 0);
+          if (wanted.length) { lab.products = wanted; await saas.saveLab(lab); }
         }
         const u = (await saas.storeFor(lab).all('users'))[0];
         const token = signToken(SESSION_SECRET, { uid: u.id, role: u.role, lab: lab.id, pv: pvOf(u), exp: Date.now() + TOKEN_TTL_MS });
