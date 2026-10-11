@@ -13,7 +13,7 @@ for (const base of ['', 'electron-tools/installer/app-stage-win7']) {
   const stock = nav.find(item => item.key === 'stock');
   /* 1.4.1: the desktop app (electron-src and its staged copy) ships the same navigation as the web app */
   const expectedInventory = ['#/inventory'];
-  const expectedStockRoutes = ['#/stock/dashboard', '#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts'];
+  const expectedStockRoutes = ['#/stock/dashboard', '#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts', '#/stock/usage', '#/stock/mapping'];
   assert.deepEqual(Array.from(inventory.sub, item => item.route), expectedInventory);
   const routes = Array.from(stock.sub, item => item.route);
   for (const route of expectedStockRoutes) {
@@ -54,7 +54,7 @@ vm.runInContext(`
 `, context, { filename: 'app.js:stock-sidebar' });
 const originalNav = JSON.stringify(context.NAV);
 const inventoryRoutes = ['#/inventory'];
-const stockRoutes = ['#/stock/dashboard', '#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts'];
+const stockRoutes = ['#/stock/dashboard', '#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts', '#/stock/usage', '#/stock/mapping'];
 
 // Tiny DOM built from production HTML, with the APIs used by markActive.
 function node(tag) {

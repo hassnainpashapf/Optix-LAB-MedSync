@@ -44,6 +44,7 @@
     '.ptf-phone-wrap{display:flex;align-items:center;gap:8px}' +
     '.ptf-phone-wrap .input{flex:1;min-width:0}' +
     '.ptf-phone-wrap .wa-btn{flex:0 0 auto}' +
+    '.pt-meta{display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;margin-top:6px;font-size:13px;color:var(--muted)}' +
     '</style>';
   function waNumber(phone) {
     return App.normWa(phone); /* shared helper (app.js) */
@@ -196,6 +197,14 @@
       '<div class="form-row"><label class="label" for="ptf-panelref">Employee / student ID <span class="ptf-opt">(optional)</span></label>' +
       '<input class="input" id="ptf-panelref" maxlength="40" value="' + App.esc((p && p.panelRef) || '') + '"></div></div>';
   }
+  /* CNIC: 13 digits shown as 00000-0000000-0. cnicDigits strips everything but digits; cnicFormat re-inserts the dashes as you type. */
+  function cnicDigits(v) { return String(v == null ? '' : v).replace(/\D/g, '').slice(0, 13); }
+  function cnicFormat(v) {
+    var d = cnicDigits(v);
+    return d.length > 12 ? d.slice(0, 5) + '-' + d.slice(5, 12) + '-' + d.slice(12) : (d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d);
+  }
+  /* Blood group is required on every staff patient form: a real group, never blank / "Unknown" */
+  function isRealBlood(v) { v = String(v == null ? '' : v).trim(); return !!v && !/^(unknown|select.*|n\/?a|none|-+)$/i.test(v); }
   function formHTML(p) {
     p = p || {};
     function val(k) { return App.esc(p[k] == null ? '' : p[k]); }
@@ -235,15 +244,18 @@
       '<div class="form-2col">' +
       '<div class="form-row"><label class="label" for="ptf-dob">Date of Birth</label>' +
       '<input class="input" id="ptf-dob" type="date" value="' + val('dob') + '"></div>' +
-      '<div class="form-row"><label class="label" for="ptf-blood">Blood Group</label>' +
+      '<div class="form-row"><label class="label" for="ptf-blood">Blood Group *</label>' +
       '<select class="select" id="ptf-blood">' +
-      App.optionsHtml('bloodGroup', p.blood || '', 'Select…') +
-      '</select></div>' +
+      App.optionsHtml('bloodGroup', isRealBlood(p.blood) ? p.blood : '', 'Select blood group') +
+      '</select><div class="f-err" id="ptf-e-blood"></div></div>' +
       '</div>' +
       '<div class="form-row"><label class="label" for="ptf-whatsapp">Mobile / WhatsApp No.</label>' +
       '<div class="ptf-phone-wrap"><input class="input" id="ptf-whatsapp" maxlength="20" placeholder="e.g. 0300-1234567" value="' + (p.whatsapp || p.phone ? App.esc(p.whatsapp || p.phone) : '') + '">' +
       '<span id="ptf-wa2">' + waBtn(waTarget(p), 'Chat on WhatsApp') + '</span></div>' +
       '<div class="f-err" id="ptf-e-whatsapp"></div></div>' +
+      '<div class="form-row"><label class="label" for="ptf-cnic">CNIC <span style="font-weight:500;color:var(--muted);text-transform:none;letter-spacing:0;font-size:10px">(optional)</span></label>' +
+      '<input class="input" id="ptf-cnic" inputmode="numeric" autocomplete="off" maxlength="15" placeholder="00000-0000000-0" value="' + App.esc(cnicDigits(p.cnic).length === 13 ? cnicFormat(p.cnic) : (p.cnic || '')) + '">' +
+      '<div class="f-err" id="ptf-e-cnic"></div></div>' +
       '<div class="form-row"><label class="label" for="ptf-doctor">Consultant</label>' +
       '<select class="select" id="ptf-doctor">' + docOpts + '</select></div>' +
       panelFieldHTML(p) +
@@ -287,6 +299,15 @@
         checkDuplicate();
       });
     }
+    /* CNIC: dashes are added while typing (00000-0000000-0); pasting with dashes or spaces works too */
+    var cnicInput = document.getElementById('ptf-cnic');
+    if (cnicInput) cnicInput.addEventListener('input', function () {
+      var f = cnicFormat(cnicInput.value);
+      if (f !== cnicInput.value) cnicInput.value = f;
+      setErr('ptf-e-cnic', '');
+    });
+    var bloodInput = document.getElementById('ptf-blood');
+    if (bloodInput) bloodInput.addEventListener('change', function () { if (isRealBlood(bloodInput.value)) setErr('ptf-e-blood', ''); });
     // duplicate detection: warn if the phone number matches an existing patient
     var dupWarn = document.createElement('div');
     dupWarn.id = 'ptf-dupwarn';
@@ -408,6 +429,7 @@
       var father = document.getElementById('ptf-father').value.trim();
       var dob = document.getElementById('ptf-dob').value;
       var blood = document.getElementById('ptf-blood').value;
+      var cnicEl = document.getElementById('ptf-cnic'), cnicRaw = cnicEl ? cnicEl.value.trim() : '';
       var doctorId = document.getElementById('ptf-doctor').value || null;
       var panelEl = document.getElementById('ptf-panel'), panelId = panelEl ? (panelEl.value || null) : null, panelRef = panelEl ? document.getElementById('ptf-panelref').value.trim() : '';
       var notes = document.getElementById('ptf-notes').value.trim();
@@ -416,13 +438,19 @@
       var regLoc = regLocEl ? regLocEl.value.trim() : '', destLoc = destLocEl ? destLocEl.value.trim() : '', refEl = document.getElementById('ptf-ref'), refVal = refEl ? refEl.value : '';
       var branchEl = document.getElementById('ptf-branch'), branchId = branchEl ? (branchEl.value || null) : null;
       var ok = true;
-      setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-whatsapp', '');
-      if (name.length < 2) { setErr('ptf-e-name', 'Please enter the full name.'); ok = false; }
+      var firstBad = null;
+      function bad(field, errId, msg) { setErr(errId, msg); ok = false; if (!firstBad) firstBad = document.getElementById(field); }
+      setErr('ptf-e-name', ''); setErr('ptf-e-age', ''); setErr('ptf-e-gender', ''); setErr('ptf-e-whatsapp', ''); setErr('ptf-e-blood', ''); setErr('ptf-e-cnic', '');
+      if (name.length < 2) bad('ptf-name', 'ptf-e-name', 'Please enter the full name.');
       var age = parseInt(ageRaw, 10);
-      if (!ageRaw || isNaN(age) || age < 1 || age > 120) { setErr('ptf-e-age', 'Enter a valid age (1–120).'); ok = false; }
-      if (!gender) { setErr('ptf-e-gender', 'Please select gender.'); ok = false; }
-      if (num && !/^[+\d][\d\s\-()]{5,19}$/.test(num)) { setErr('ptf-e-whatsapp', 'Enter a valid mobile number.'); ok = false; }
-      if (!ok) return;
+      if (!ageRaw || isNaN(age) || age < 1 || age > 120) bad('ptf-age', 'ptf-e-age', 'Enter a valid age (1–120).');
+      if (!gender) bad('ptf-gender', 'ptf-e-gender', 'Please select gender.');
+      if (!isRealBlood(blood)) bad('ptf-blood', 'ptf-e-blood', 'Please select the blood group.');
+      if (num && !/^[+\d][\d\s\-()]{5,19}$/.test(num)) bad('ptf-whatsapp', 'ptf-e-whatsapp', 'Enter a valid mobile number.');
+      /* CNIC is optional; when filled it needs 13 digits (an unchanged old value is left alone) */
+      var cnic = cnicDigits(cnicRaw).length === 13 ? cnicFormat(cnicRaw) : cnicRaw;
+      if (cnicRaw && cnicDigits(cnicRaw).length !== 13 && !(existing && existing.id && cnicRaw === String(existing.cnic || ''))) bad('ptf-cnic', 'ptf-e-cnic', 'CNIC must have 13 digits (00000-0000000-0).');
+      if (!ok) { if (firstBad && firstBad.focus) firstBad.focus(); return; }
       if (tList) {
         var selected = tList.querySelectorAll('.ptf-tchk:checked');
         for (var si = 0; si < selected.length; si++) {
@@ -433,6 +461,7 @@
       var data = { name: name, age: age, gender: gender, address: address,
         father: father, dob: dob,
         blood: blood, doctorId: doctorId, notes: notes };
+      if (cnicEl) data.cnic = cnic;
       /* one number serves WhatsApp, reports and the patient portal; an existing patient's numbers are only touched when the box was changed */
       if (!(existing && existing.id) || num !== String(existing.whatsapp || existing.phone || '')) { data.phone = num; data.whatsapp = num; }
       if (panelEl) { data.panelId = panelId; data.panelRef = panelRef; }
@@ -548,6 +577,7 @@
       if (!q) return true;
       return (p.name || '').toLowerCase().indexOf(q) > -1 ||
         (p.phone || '').toLowerCase().indexOf(q) > -1 ||
+        (p.cnic || '').toLowerCase().indexOf(q) > -1 ||
         (p.id || '').toLowerCase().indexOf(q) > -1;
     });
     var withDue = all.filter(function (p) { return patientStats(p).due > 0; }).length;
@@ -695,6 +725,7 @@
       (p.father ? '<span>👤 ' + App.esc(p.father) + '</span>' : '') +
       (p.dob ? '<span>🎂 ' + App.esc(p.dob) + '</span>' : '') +
       (p.blood ? '<span>🩸 ' + App.esc(p.blood) + '</span>' : '') +
+      (p.cnic ? '<span>🪪 ' + App.esc(p.cnic) + '</span>' : '') +
       (p.whatsapp ? '<span>💬 ' + App.esc(p.whatsapp) + ' ' + waBtn(p.whatsapp, 'Chat on WhatsApp') + '</span>' : '') +
       (p.email ? '<span>📧 ' + App.esc(p.email) + '</span>' : '') +
       '<span>👨‍⚕️ ' + App.esc(docName) + '</span>' +

@@ -86,15 +86,14 @@ async function suite(folder) {
       const phone = text('Phone', page), address = text('Address', page);
       const footer = text('Electronically verified report. No signatures necessary.', page);
       assert.ok(patient && visit && phone && address && footer, 'Full identity and footer on page ' + page);
-      if (!shown) assert.ok(!label, 'Empty CNIC row is hidden on page ' + page);
-      else {
-        assert.ok(label && label.x === 12, 'CNIC label in the left column on page ' + page);
-        const rendered = receipt.text.find(t => t.page === page && t.y === label.y && Math.abs(t.x - (COLON + 3)) < 0.01);
-        assert.equal(rendered && rendered.value.trim(), String(value).trim(), 'CNIC PDF value');
-        assert.ok(receipt.text.some(t => t.page === page && t.value === ':' && t.y === label.y && Math.abs(t.x - COLON) < 0.01), 'CNIC colon aligned');
-        assert.ok(label.y > phone.y && label.y < address.y, 'CNIC sits after Phone and before Address');
-        assert.ok(label.y < footer.y - 3 && label.y > patient.y);
-      }
+      /* the CNIC row is ALWAYS printed (left column, after Phone, before Address); an empty one has nothing after the ":" */
+      assert.ok(label && label.x === 12, 'CNIC label in the left column on page ' + page);
+      assert.ok(receipt.text.some(t => t.page === page && t.value === ':' && t.y === label.y && Math.abs(t.x - COLON) < 0.01), 'CNIC colon aligned');
+      assert.ok(label.y > phone.y && label.y < address.y, 'CNIC sits after Phone and before Address');
+      assert.ok(label.y < footer.y - 3 && label.y > patient.y);
+      const rendered = receipt.text.find(t => t.page === page && t.y === label.y && Math.abs(t.x - (COLON + 3)) < 0.01);
+      if (shown) assert.equal(rendered && rendered.value.trim(), String(value).trim(), 'CNIC PDF value');
+      else assert.ok(!rendered || rendered.value.trim() === '', 'Empty CNIC prints nothing after the colon');
       assert.ok(patient.x === 12 && visit.x === 105 && patient.y === visit.y, 'Identity left, visit right, top-aligned');
       const rule = receipt.lines.filter(l => l.page === page && l.x1 === 12 && l.x2 === 198 && l.y1 > patient.y && l.y1 < footer.y - 3 && l.y1 < (receipt.text.find(t => t.page === page && /^Analyte \d+$/.test(t.value)) || { y: Infinity }).y);
       assert.equal(rule.length, 1, 'One closing rule, no divider');
@@ -116,14 +115,13 @@ async function suite(folder) {
     const html = App.testHtml(data), grid = App.testGrid(data);
     assert.ok(html.includes(grid), 'Actual printable HTML includes identity grid');
     const expected = value == null ? '' : String(value).trim();
-    const names = ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'Address', 'Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Reference', 'Consultant'];
-    if (!expected) {
-      assert.ok(!grid.includes('CNIC'), 'Empty CNIC row hidden in HTML');
-    } else {
-      assert.equal((grid.match(/>CNIC</g) || []).length, 1);
-      const patientCol = grid.slice(grid.indexOf('class="rpt-info-patient"'), grid.indexOf('class="rpt-info-visit"'));
-      assert.ok(patientCol.indexOf('>Phone<') < patientCol.indexOf('>CNIC<') && patientCol.indexOf('>CNIC<') < patientCol.indexOf('>Address<'), 'HTML: CNIC after Phone, before Address');
-      const field = grid.slice(grid.indexOf('>CNIC<'), grid.indexOf('</div>', grid.indexOf('>CNIC<')));
+    const names = ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'CNIC', 'Address', 'Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Reference', 'Consultant'];
+    assert.equal((grid.match(/>CNIC</g) || []).length, 1, 'CNIC row always present');
+    const patientCol = grid.slice(grid.indexOf('class="rpt-info-patient"'), grid.indexOf('class="rpt-info-visit"'));
+    assert.ok(patientCol.indexOf('>Phone<') < patientCol.indexOf('>CNIC<') && patientCol.indexOf('>CNIC<') < patientCol.indexOf('>Address<'), 'HTML: CNIC after Phone, before Address');
+    const field = grid.slice(grid.indexOf('>CNIC<'), grid.indexOf('</div>', grid.indexOf('>CNIC<')));
+    if (!expected) assert.ok(field.includes('&nbsp;'), 'Empty CNIC shows an empty value after the colon');
+    else {
       assert.ok(field.includes(esc(expected)), 'Escaped HTML CNIC');
       if (expected.includes('<')) assert.ok(!grid.includes(expected), 'CNIC cannot inject HTML');
     }
@@ -166,7 +164,7 @@ async function suite(folder) {
     }
   }
 
-  console.log('PASS: ' + (path.relative(root, folder) || 'web') + ' CNIC: populated (after Phone) / hidden when empty / escaped HTML, actual multi-page PDF bounds and identity layout, QR upload, immutable records and SMS/WhatsApp exclusion.');
+  console.log('PASS: ' + (path.relative(root, folder) || 'web') + ' CNIC: populated and empty (row always printed after Phone) / escaped HTML, actual multi-page PDF bounds and identity layout, QR upload, immutable records and SMS/WhatsApp exclusion.');
 }
 
 (async () => {

@@ -9,7 +9,7 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const { jsPDF } = require(path.join(root, 'assets/vendor/jspdf.umd.min.js'));
 const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const identityLabels = ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'Address'];
+const identityLabels = ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'CNIC', 'Address'];
 const visitLabels = ['Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Reference', 'Consultant'];
 let tables, pdf;
 const App = {
@@ -146,7 +146,7 @@ assert.match(visitHtml, /<hr[^>]+width:100%/);
 assert.match(patientHtml, /Patient &lt;One&gt;/);
 assert.match(patientHtml, /overflow-wrap:anywhere/);
 assert.match(visitHtml, /overflow-wrap:anywhere/);
-assert.ok(!patientHtml.includes('CNIC'), 'Empty CNIC row is hidden');
+assert.ok(patientHtml.includes('>CNIC<'), 'CNIC row is always shown, even when the patient has none');
 assert.ok(html.indexOf('Blood Analysis') > visitStart);
 checkSections();
 assert.ok(first('Hemoglobin').y > label('Consultant', RX).y);
@@ -195,13 +195,13 @@ assert.ok(pdf.doc.getNumberOfPages() > 1);
 for (let page = 1; page <= pdf.doc.getNumberOfPages(); page++) checkSections(page);
 checkPageBounds();
 
-// CNIC row appears after Phone and before Address only when the patient has a CNIC.
+// CNIC row sits after Phone and before Address, filled or empty.
+assert.ok(label('CNIC', LX).y > label('Phone', LX).y && label('CNIC', LX).y < label('Address', LX).y, 'PDF: empty CNIC row between Phone and Address');
 fixture();
 tables.patients[0].cnic = '35202-1234567-1';
 html = render();
-const withCnic = identityLabels.slice(0, 5).concat('CNIC', 'Address');
-assert.deepEqual(labelsIn(html.slice(html.indexOf('class="rpt-info-patient"'), html.indexOf('class="rpt-info-visit"'))), withCnic, 'HTML: CNIC between Phone and Address');
-checkSections(1, { left: withCnic, right: visitLabels });
+assert.deepEqual(labelsIn(html.slice(html.indexOf('class="rpt-info-patient"'), html.indexOf('class="rpt-info-visit"'))), identityLabels, 'HTML: CNIC between Phone and Address');
+checkSections(1, { left: identityLabels, right: visitLabels });
 first('35202-1234567-1');
 assert.ok(label('CNIC', LX).y > label('Phone', LX).y && label('CNIC', LX).y < label('Address', LX).y, 'PDF: CNIC between Phone and Address');
 
@@ -251,4 +251,4 @@ for (const text of regionLines) {
 }
 first('14.2', pdf.doc.getNumberOfPages());
 checkPageBounds();
-console.log('PASS: HTML/PDF two-column label|colon|value block, no divider + one closing rule, CNIC only when present, unchanged fields/fallbacks, long locations, multi-page headers, oversized-field pagination, bounds and data immutability.');
+console.log('PASS: HTML/PDF two-column label|colon|value block, no divider + one closing rule, CNIC row always shown, unchanged fields/fallbacks, long locations, multi-page headers, oversized-field pagination, bounds and data immutability.');

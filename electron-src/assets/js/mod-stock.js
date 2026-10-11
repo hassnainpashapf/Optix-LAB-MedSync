@@ -5,7 +5,7 @@
 (function () {
   'use strict';
   var esc = App.esc;
-  var F = { q: '', show: 'all', tab: 'items', moveType: 'all', mq: '' };
+  var F = { q: '', show: 'all', tab: 'items', moveType: 'all', mq: '', uPreset: 'month', uFrom: '', uTo: '' };
   var UNITS = ['tests', 'kit', 'vial', 'bottle', 'box', 'pack', 'pcs', 'ml', 'L', 'g'];
 
   var CSS = '' +
@@ -13,6 +13,7 @@
     '.sk-bar .grow{flex:1 1 auto;min-width:200px;width:auto}' +
     '.sk-bar .select{flex:0 0 auto;width:auto;max-width:100%}' +
     '.sk-bar .btn{flex:0 0 auto;white-space:nowrap}' +
+    '.sk-bar input[type=date]{flex:0 0 160px;width:160px}.sk-bar .sk-spacer{flex:1 1 auto}' +
     '.sk-chip{display:inline-block;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:99px;white-space:nowrap;margin:1px 4px 1px 0}' +
     '.sk-chip.ok{background:#e6f7f0;color:#047857}.sk-chip.low{background:#fff4e0;color:#b45309}.sk-chip.out{background:#fdecec;color:#b91c1c}.sk-chip.exp{background:#fdecec;color:#b91c1c}.sk-chip.soon{background:#fff4e0;color:#b45309}.sk-chip.trf{background:#e0f2fe;color:#0284c7}' +
     '.sk-alert{border:1px solid #f0d9a0;background:#fff8e6;border-radius:12px;padding:12px 16px;margin-bottom:16px;font-size:13.5px;line-height:1.7}' +
@@ -337,11 +338,143 @@
     on('sdAdd', function () { itemForm(null); });
   }
 
+  /* ---------- tubes -> stock: Tube Mapping (#/stock/mapping) and Tube & Consumable Usage (#/stock/usage) ----------
+     Each tube a billed invoice creates uses the stock item its tube type is linked to (see Samples in samples-core.js).
+     Mapping lives in settings.main.tubeStock = { '<tube type>': { itemId, qty } }; only an admin can save it (settings are admin-only on the server). */
+  var AUTO_LOCK = '<span class="sk-sub" title="Automatic entry. It is reversed by deleting the bill or rejecting the tube, not by deleting this line.">auto</span>';
+  function isAdmin() { return (App.session() || {}).role === 'admin'; }
+  function tubeLinks() { try { return (window.Samples && Samples.tubeMap()) || {}; } catch (e) { return {}; } }
+  function tubesOfItem(itemId) { var m = tubeLinks(); return Object.keys(m).filter(function (k) { return m[k] && m[k].itemId === itemId; }); }
+  function autoNote(itemId) {
+    var t = tubesOfItem(itemId);
+    return t.length ? '<div class="sk-sub" style="margin-top:2px">Used automatically by ' + esc(t.join(', ')) + ' · <a href="#/stock/usage">usage</a></div>' : '';
+  }
+  function dotOf(tube) { return window.Samples ? Samples.tubeDot(tube) : ''; }
+  function ymd(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function usageRange() {
+    var now = new Date(), t = ymd(now), p = F.uPreset;
+    if (p === 'custom') return { from: F.uFrom || t, to: F.uTo || t };
+    if (p === 'today') return { from: t, to: t };
+    if (p === 'week') return { from: ymd(new Date(now.getTime() - 6 * 86400000)), to: t };
+    if (p === '30') return { from: ymd(new Date(now.getTime() - 29 * 86400000)), to: t };
+    return { from: t.slice(0, 8) + '01', to: t };
+  }
+  function suggestItem(tube, items) {
+    var rx = { 'EDTA (Lavender)': /edta|lavender/i, 'Serum (Red/Gold)': /serum|clot activator|yellow|gold/i, 'Fluoride (Grey)': /fluoride|grey|gray/i, 'Citrate (Blue)': /citrate|light blue/i,
+      'Urine container': /urine.*(contain|cup)|specimen collection/i, 'Stool container': /stool/i, 'Swab': /swab/i }[tube];
+    if (!rx) return '';
+    var hit = items.filter(function (i) { return rx.test(i.name); })[0];
+    return hit ? hit.id : '';
+  }
+  function renderMapping(v) {
+    var items = (DB.all('stock_items') || []).filter(function (i) { return i.active !== false; }).sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    var map = tubeLinks(), S = App.stockState(), rowOf = {}; S.rows.forEach(function (r) { rowOf[r.item.id] = r; });
+    var can = isAdmin(), tubes = window.Samples ? Samples.TUBES : [];
+    var linked = tubes.filter(function (t) { return map[t] && map[t].itemId; }).length;
+    var h = '<div class="sk-alert">Every tube made for a billed invoice (Lavender, Serum, Grey …) can take its units from a stock item automatically. ' +
+      'Link each tube type below and set how many units one tube uses. Only <b>new</b> tubes are counted, a tube type left unlinked deducts nothing, ' +
+      'and stock never goes below 0 — if it runs out the shortfall is logged and billing carries on. A deleted bill or a rejected tube gives its units back. ' +
+      'Extra reagents per test are set on the test itself (Tests → edit → “Stock used per test”).</div>' +
+      '<div class="card"><div class="card-h"><h3 style="margin:0">Tube mapping</h3><span class="muted">' + linked + ' of ' + tubes.length + ' tube types linked</span></div>' +
+      (items.length ? '' : '<div class="card-b"><div class="sk-alert" style="margin:0">There are no stock items yet. <a href="#/inventory">Add items</a> (for example “EDTA tubes”) first, then link them here.</div></div>') +
+      '<div class="tbl-wrap"><table class="table"><thead><tr><th>Tube type</th><th>Uses stock item</th><th style="width:150px">Units per tube</th><th>On hand</th><th>Status</th></tr></thead><tbody>' +
+      tubes.map(function (t, i) {
+        var c = map[t] || {}, r = c.itemId ? rowOf[c.itemId] : null;
+        return '<tr><td><span class="sk-name">' + dotOf(t) + ' ' + esc(t) + '</span></td>' +
+          '<td><select class="select" data-map-item="' + i + '" aria-label="Stock item for ' + esc(t) + '"' + (can ? '' : ' disabled') + '><option value="">— Not linked —</option>' +
+          items.map(function (it) { return '<option value="' + esc(it.id) + '"' + (c.itemId === it.id ? ' selected' : '') + '>' + esc(it.name) + ' (' + esc(it.unit || '') + ')</option>'; }).join('') + '</select></td>' +
+          '<td><input class="input" type="number" min="0.001" step="any" style="width:110px" data-map-qty="' + i + '" aria-label="Units per ' + esc(t) + ' tube" value="' + esc(+c.qty > 0 ? c.qty : 1) + '"' + (can ? '' : ' disabled') + '></td>' +
+          '<td>' + (r ? '<span class="sk-num">' + num(r.onHand) + '</span> <span class="sk-sub">' + esc(r.item.unit || '') + '</span>' : '<span class="muted">—</span>') + '</td>' +
+          '<td>' + (r ? statusChips(r) : '<span class="sk-chip soon">Not linked</span>') + '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div class="card-b" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
+      (can ? '<button class="btn btn-primary" id="skMapSave">Save tube mapping</button><button class="btn btn-ghost" id="skMapSuggest">Suggest links</button>' : '<span class="sk-sub">Only an admin can change the mapping.</span>') +
+      '<a class="btn btn-ghost" href="#/stock/usage" style="margin-left:auto">See tube &amp; consumable usage →</a></div></div>';
+    v.innerHTML = h;
+    var on = function (id, fn) { var el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+    on('skMapSuggest', function () {
+      var n = 0;
+      tubes.forEach(function (t, i) {
+        var sel = v.querySelector('[data-map-item="' + i + '"]'); if (!sel || sel.value) return;
+        var id = suggestItem(t, items); if (id) { sel.value = id; n++; }
+      });
+      App.toast(n ? n + ' link(s) suggested — check them, then Save.' : 'No matching stock items found. Pick them by hand.', n ? 'info' : 'err');
+    });
+    on('skMapSave', function () {
+      var out = {}, bad = false;
+      tubes.forEach(function (t, i) {
+        var id = v.querySelector('[data-map-item="' + i + '"]').value, q = +v.querySelector('[data-map-qty="' + i + '"]').value;
+        if (!id) return;
+        if (!(q > 0)) { bad = true; return; }
+        out[t] = { itemId: id, qty: Math.round(q * 1000) / 1000 };
+      });
+      if (bad) { App.toast('Units per tube must be more than 0.', 'err'); return; }
+      try { DB.update('settings', 'main', { tubeStock: out }); } catch (e) { App.toast('Could not save the mapping. Please retry.', 'err'); return; }
+      App.toast(Object.keys(out).length ? 'Tube mapping saved — new tubes now deduct stock automatically.' : 'Tube mapping cleared — nothing is deducted automatically.');
+      render();
+    });
+  }
+
+  function renderUsage(v) {
+    var R = usageRange(), U = window.Samples ? Samples.usage(R.from, R.to) : { tubes: [], items: [], totalTubes: 0, units: 0, short: 0, unlinked: 0 };
+    var links = tubesOfItemsCount();
+    var low = U.items.filter(function (r) { return r.low || r.out; }).length;
+    var preset = function (k, label) { return '<option value="' + k + '"' + (F.uPreset === k ? ' selected' : '') + '>' + label + '</option>'; };
+    var h = '<div class="card" style="margin-bottom:16px"><div class="sk-bar">' +
+      '<label for="skUPreset">Period</label><select class="select" id="skUPreset">' + preset('today', 'Today') + preset('week', 'Last 7 days') + preset('month', 'This month') + preset('30', 'Last 30 days') + preset('custom', 'Custom range') + '</select>' +
+      '<input class="input" type="date" id="skUFrom" aria-label="From" value="' + esc(R.from) + '"' + (F.uPreset === 'custom' ? '' : ' disabled') + '>' +
+      '<input class="input" type="date" id="skUTo" aria-label="To" value="' + esc(R.to) + '"' + (F.uPreset === 'custom' ? '' : ' disabled') + '>' +
+      '<span class="sk-spacer"></span><a class="btn btn-ghost" href="#/stock/mapping">Tube Mapping</a></div></div>';
+    h += '<div class="stat-grid">' +
+      statCard('brand', App.icon('tube', 18), 'Tubes made', U.totalTubes, esc(R.from === R.to ? App.d(R.from) : App.d(R.from) + ' – ' + App.d(R.to))) +
+      statCard('blue', App.icon('box', 18), 'Stock units used', num(U.units), 'automatically, net of returns') +
+      statCard('amber', App.icon('alert', 18), 'Linked items low / out', low, 'used in this period') +
+      statCard(U.unlinked || U.short ? 'red' : 'green', App.icon(U.unlinked || U.short ? 'x' : 'check', 18), U.short ? 'Stock shortfall' : 'Tube types not linked', U.short ? num(U.short) : U.unlinked, U.short ? 'units billed with no stock left' : (U.unlinked ? 'tubes are made but nothing is deducted' : 'every tube type in use is linked')) +
+      '</div>';
+    if (!links) h += '<div class="sk-alert">Automatic deduction is <b>off</b>: no tube type is linked to a stock item yet, so the counts below are only counts. ' +
+      '<a href="#/stock/mapping"><b>Set it up in Stock → Tube Mapping</b></a>.</div>';
+    h += '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3 style="margin:0">Tubes by type</h3></div><div class="tbl-wrap"><table class="table"><thead><tr><th>Tube type</th><th>Tubes</th><th>Tests</th><th>Stock item</th><th>Per tube</th><th>Units used</th><th>Remaining</th><th>Status</th></tr></thead><tbody>' +
+      (U.tubes.length ? U.tubes.map(function (r) {
+        return '<tr><td><span class="sk-name">' + dotOf(r.tube) + ' ' + esc(r.tube) + '</span></td><td><b class="sk-num">' + r.tubes + '</b></td><td class="muted">' + r.tests + '</td>' +
+          (r.linked ? '<td>' + esc(r.itemName) + '</td><td class="muted">' + num(r.perTube) + ' ' + esc(r.unit) + '</td><td><b class="sk-num">' + num(r.used) + '</b>' + (r.short ? ' <span class="sk-chip out" title="Billed with less stock than needed">short ' + num(r.short) + '</span>' : '') + '</td>' +
+            '<td>' + (r.onHand == null ? '—' : '<span class="sk-num">' + num(r.onHand) + '</span> <span class="sk-sub">' + esc(r.unit) + '</span>') + '</td>' +
+            '<td>' + (r.out ? '<span class="sk-chip out">Out of stock</span>' : r.low ? '<span class="sk-chip low">Low stock</span>' : '<span class="sk-chip ok">OK</span>') + '</td>'
+          : '<td colspan="3" class="muted">Not linked — nothing deducted</td><td></td><td><a href="#/stock/mapping" class="sk-chip soon" style="text-decoration:none">Link it</a></td>') + '</tr>';
+      }).join('') : '<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">No tubes were made in this period.</td></tr>') + '</tbody></table></div></div>';
+    h += '<div class="card"><div class="card-h"><h3 style="margin:0">Stock used automatically</h3></div><div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>For tubes</th><th>Used</th><th>Returned</th><th>Net</th><th>On hand now</th><th>Status</th><th style="text-align:right"></th></tr></thead><tbody>' +
+      (U.items.length ? U.items.map(function (r) {
+        var it = r.item;
+        return '<tr><td><div class="sk-name">' + esc(it.name) + '</div></td><td class="sk-sub">' + esc(r.tubes.join(', ') || '—') + '</td>' +
+          '<td>' + num(r.used) + '</td><td class="muted">' + (r.returned ? '+' + num(r.returned) : '—') + '</td><td><b class="sk-num">' + num(r.net) + '</b> <span class="sk-sub">' + esc(it.unit || '') + '</span>' + (r.short ? ' <span class="sk-chip out">short ' + num(r.short) + '</span>' : '') + '</td>' +
+          '<td>' + (r.onHand == null ? '—' : '<span class="sk-num">' + num(r.onHand) + '</span>') + '</td>' +
+          '<td>' + (r.out ? '<span class="sk-chip out">Out of stock</span>' : r.low ? '<span class="sk-chip low">Low stock</span>' : '<span class="sk-chip ok">OK</span>') + '</td>' +
+          '<td class="actions" style="text-align:right">' + (canEdit() && r.onHand != null ? '<button class="btn btn-primary btn-sm" data-recv="' + esc(it.id) + '">Receive</button>' : '') + '<button class="btn btn-ghost btn-sm" data-hist="' + esc(it.id) + '">History</button></td></tr>';
+      }).join('') : '<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">No automatic stock use in this period.</td></tr>') + '</tbody></table></div></div>';
+    v.innerHTML = h;
+    var on = function (id, ev, fn) { var el = document.getElementById(id); if (el) el.addEventListener(ev, fn); };
+    on('skUPreset', 'change', function (e) { F.uPreset = e.target.value; if (F.uPreset === 'custom' && !F.uFrom) { F.uFrom = R.from; F.uTo = R.to; } render(); });
+    on('skUFrom', 'change', function (e) { F.uFrom = e.target.value; render(); });
+    on('skUTo', 'change', function (e) { F.uTo = e.target.value; render(); });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-hist]'), function (b) { b.addEventListener('click', function () { history(b.getAttribute('data-hist')); }); });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-recv]'), function (b) { b.addEventListener('click', function () { receive(b.getAttribute('data-recv')); }); });
+  }
+  function tubesOfItemsCount() { var m = tubeLinks(); return Object.keys(m).filter(function (k) { return m[k] && m[k].itemId; }).length; }
+
+  /* low-stock lists: tell when some of these items are used up automatically by tubes, with a link to the usage page */
+  function autoBanner(rows) {
+    var n = rows.filter(function (r) { return tubesOfItem(r.item.id).length; });
+    if (!n.length) return '';
+    return '<div class="sk-alert">' + n.map(function (r) { return '<b>' + esc(r.item.name) + '</b>'; }).join(', ') + (n.length === 1 ? ' is' : ' are') + ' used automatically when tubes are made for bills. ' +
+      '<a href="#/stock/usage"><b>See Tube &amp; Consumable Usage →</b></a></div>';
+  }
+
   function render() {
     css();
     var v = document.getElementById('view'); if (!v) return;
     if (F.tab === 'orders') { renderPurchaseOrders(v); return; }
     if (F.tab === 'dashboard') { renderStockDashboard(v); return; }
+    if (F.tab === 'usage') { renderUsage(v); return; }
+    if (F.tab === 'mapping') { renderMapping(v); return; }
     var S = App.stockState();
     var q = F.q.toLowerCase();
     var rows = S.rows.filter(function (r) {
@@ -403,7 +536,7 @@
         h += '<div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>On hand</th><th>Reorder at</th><th>Nearest expiry</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody>' +
           (rows.length ? rows.map(function (r) {
             var it = r.item;
-            return '<tr><td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc([it.category, it.vendor].filter(Boolean).join(' · ')) + '</div></td>' +
+            return '<tr><td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc([it.category, it.vendor].filter(Boolean).join(' · ')) + '</div>' + autoNote(it.id) + '</td>' +
               '<td><span class="sk-num">' + num(r.onHand) + '</span> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
               '<td class="muted">' + (+it.reorderLevel ? num(it.reorderLevel) : '—') + '</td>' +
               '<td class="muted">' + fdate(r.nearest) + '</td><td>' + statusChips(r) + '</td>' +
@@ -452,7 +585,7 @@
       h += '<div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Quantity</th><th>Lot &amp; Expiry</th><th>Note / Ref</th><th>Recorded by</th><th style="text-align:right"></th></tr></thead><tbody>' +
         (filteredMoves.length ? filteredMoves.slice(0, 300).map(function (m) {
           var it = DB.get('stock_items', m.itemId) || { name: 'Unknown item', unit: '' };
-          var t = MT[m.type] || [m.type, 'soon'];
+          var t = m.auto ? (m.type === 'out' ? ['Auto used', 'soon'] : ['Auto return', 'ok']) : (MT[m.type] || [m.type, 'soon']);
           var qStr = (m.type === 'in' || (m.type === 'adjust' && m.qty >= 0) ? '+' : '−') + num(Math.abs(m.qty));
           var destLine = m.dest ? '<div style="color:#0284c7;font-weight:700;font-size:12px">↳ To ' + esc(m.dest) + '</div>' : '';
           return '<tr><td><span style="font-weight:600">' + fdate(m.date) + '</span></td>' +
@@ -462,16 +595,16 @@
             '<td class="sk-sub">' + esc([m.lot ? 'Lot: ' + m.lot : '', m.expiry ? 'Exp: ' + fdate(m.expiry) : ''].filter(Boolean).join(' • ') || '—') + '</td>' +
             '<td class="sk-sub">' + esc(m.note || m.ref || '—') + '</td>' +
             '<td class="sk-sub">' + esc(m.by || '—') + '</td>' +
-            '<td class="actions" style="text-align:right">' + (canEdit() ? '<button class="btn btn-ghost btn-sm" data-delmv="' + esc(m.id) + '" title="Delete this entry (undo)">✕</button>' : '') + '</td></tr>';
+            '<td class="actions" style="text-align:right">' + (canEdit() ? (m.auto ? AUTO_LOCK : '<button class="btn btn-ghost btn-sm" data-delmv="' + esc(m.id) + '" title="Delete this entry (undo)">✕</button>') : '') + '</td></tr>';
         }).join('') : '<tr><td colspan="8" class="muted" style="text-align:center;padding:24px">No stock movements found.</td></tr>') +
       '</tbody></table></div></div>';
     }
 
     /* Low and out-of-stock reorder list; expiry alerts remain separate. */
     else if (curTab === 'pending') {
-      h += '<div class="card"><div class="card-h"><h3 style="margin:0">Low / Out of Stock — Reorder List</h3></div>' +
+      h += autoBanner(pending) + '<div class="card"><div class="card-h"><h3 style="margin:0">Low / Out of Stock — Reorder List</h3></div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>On hand</th><th>Reorder at</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody>' +
-        (pending.length ? pending.map(function (r) { var it = r.item; return '<tr><td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc([it.category, it.vendor].filter(Boolean).join(' · ')) + '</div></td>' +
+        (pending.length ? pending.map(function (r) { var it = r.item; return '<tr><td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc([it.category, it.vendor].filter(Boolean).join(' · ')) + '</div>' + autoNote(it.id) + '</td>' +
           '<td><b>' + num(r.onHand) + '</b> ' + esc(it.unit || '') + '</td><td>' + num(it.reorderLevel) + '</td><td>' + statusChips(r) + '</td><td class="actions" style="text-align:right">' +
           (canEdit() ? '<button class="btn btn-primary btn-sm" data-recv="' + esc(it.id) + '">Receive Stock</button>' : '') + '<button class="btn btn-ghost btn-sm" data-hist="' + esc(it.id) + '">History</button></td></tr>'; }).join('') :
           '<tr><td colspan="5" style="text-align:center;padding:24px">No low or out-of-stock items. Add inventory items and set reorder levels to track pending stock.</td></tr>') + '</tbody></table></div></div>';
@@ -479,11 +612,11 @@
 
     /* Tab 3: Reorder & Expiry Alerts */
     else if (curTab === 'alerts') {
-      h += '<div class="card"><div class="card-h"><h3 style="margin:0">🚨 Items Requiring Action (Low Stock, Expirations &amp; Out of Stock)</h3></div>' +
+      h += autoBanner(al) + '<div class="card"><div class="card-h"><h3 style="margin:0">🚨 Items Requiring Action (Low Stock, Expirations &amp; Out of Stock)</h3></div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>On hand</th><th>Reorder level</th><th>Nearest expiry</th><th>Alert status</th><th style="text-align:right">Actions</th></tr></thead><tbody>' +
         (al.length ? al.map(function (r) {
           var it = r.item;
-          return '<tr><td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc([it.category, it.vendor].filter(Boolean).join(' · ')) + '</div></td>' +
+          return '<tr><td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc([it.category, it.vendor].filter(Boolean).join(' · ')) + '</div>' + autoNote(it.id) + '</td>' +
             '<td><span class="sk-num" style="color:' + (r.out ? '#dc2626' : (r.low ? '#d97706' : 'inherit')) + '">' + num(r.onHand) + '</span> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
             '<td class="muted">' + (+it.reorderLevel ? num(it.reorderLevel) : '—') + '</td>' +
             '<td class="muted" style="color:' + (r.expired ? '#dc2626' : (r.soon ? '#d97706' : 'inherit')) + '">' + fdate(r.nearest) + '</td>' +
@@ -713,11 +846,11 @@
     App.modal('History — ' + esc(it.name),
       (mv.length ? '<div style="max-height:56vh;overflow:auto"><table class="sk-h"><thead><tr><th>Date</th><th>What</th><th>Qty</th><th>Lot / expiry</th><th>Note</th>' + (canEdit() ? '<th></th>' : '') + '</tr></thead><tbody>' +
         mv.slice(0, 200).map(function (m) {
-          var t = MT[m.type] || [m.type, 'soon'], q = (m.type === 'in' || (m.type === 'adjust' && m.qty >= 0) ? '+' : '−') + num(Math.abs(m.qty));
+          var t = m.auto ? (m.type === 'out' ? ['Auto used', 'soon'] : ['Auto return', 'ok']) : (MT[m.type] || [m.type, 'soon']), q = (m.type === 'in' || (m.type === 'adjust' && m.qty >= 0) ? '+' : '−') + num(Math.abs(m.qty));
           var destLine = m.dest ? '<div style="color:#0284c7;font-weight:700;font-size:11.5px">↳ To ' + esc(m.dest) + '</div>' : '';
           return '<tr><td>' + fdate(m.date) + '</td><td><span class="sk-chip ' + t[1] + '">' + t[0] + '</span>' + destLine + '</td><td><b>' + q + '</b> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
             '<td class="sk-sub">' + esc([m.lot, m.expiry ? 'exp ' + fdate(m.expiry) : ''].filter(Boolean).join(' · ') || '—') + '</td><td class="sk-sub">' + esc(m.note || m.ref || '') + '</td>' +
-            (canEdit() ? '<td><button class="btn btn-ghost btn-sm" data-delmv="' + esc(m.id) + '" title="Delete this entry (undo)">✕</button></td>' : '') + '</tr>';
+            (canEdit() ? '<td>' + (m.auto ? AUTO_LOCK : '<button class="btn btn-ghost btn-sm" data-delmv="' + esc(m.id) + '" title="Delete this entry (undo)">✕</button>') + '</td>' : '') + '</tr>';
         }).join('') + '</tbody></table></div>' : App.empty('No movements yet')) +
       '<div class="actions" style="margin-top:14px"><button class="btn btn-primary" id="hsClose">Close</button></div>',
       { wide: true, onOpen: function (ov, close) {
@@ -740,7 +873,7 @@
     }
     var isStock = location.hash.indexOf('#/stock') === 0;
     var tab = params && params.tab;
-    F.tab = tab === 'orders' || tab === 'pending' || tab === 'alerts' || tab === 'moves' || tab === 'items' || (tab === 'dashboard' && isStock) ? tab : (isStock ? 'moves' : 'items');
+    F.tab = tab === 'orders' || tab === 'pending' || tab === 'alerts' || tab === 'moves' || tab === 'items' || (isStock && (tab === 'dashboard' || tab === 'usage' || tab === 'mapping')) ? tab : (isStock ? 'moves' : 'items');
     if (tab === 'add') F.tab = 'items';
     F.poId = '';
     if (isStock && canEditOrders()) {
