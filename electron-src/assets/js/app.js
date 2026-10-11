@@ -58,7 +58,8 @@
       sub: [{ key: 'catalog', label: 'Item Catalog', icon: 'box', route: '#/inventory' }] },
     { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock/dashboard', color: '#0ea5e9',
       sub: [{ key: 'dashboard', label: 'Stock Dashboard', icon: 'grid', route: '#/stock/dashboard' }, { key: 'moves', label: 'Movement History', icon: 'clipboard', route: '#/stock' }, { key: 'add', label: 'Add Stock', icon: 'plus', route: '#/stock/add' },
-        { key: 'pending', label: 'Pending Stock', icon: 'box', route: '#/stock/pending' }, { key: 'orders', label: 'Purchase Orders', route: '#/stock/orders', icon: 'receipt' }, { key: 'alerts', label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' }] },
+        { key: 'pending', label: 'Pending Stock', icon: 'box', route: '#/stock/pending' }, { key: 'orders', label: 'Purchase Orders', route: '#/stock/orders', icon: 'receipt' }, { key: 'alerts', label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' },
+        { key: 'usage', label: 'Tube & Consumable Usage', icon: 'tube', route: '#/stock/usage' }, { key: 'mapping', label: 'Tube Mapping', icon: 'gear', route: '#/stock/mapping' }] },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', icon: 'clipboard', route: '#/results' }, { key: 'ready', label: 'Ready Reports', icon: 'check', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', icon: 'file', route: '#/results/old' }] },
     { key: 'tests',     label: 'All Tests Catalog', icon: 'flask', route: '#/tests', color: '#14b8a6',
@@ -872,6 +873,8 @@
                       _curHash === '#/stock/pending' ? 'Pending Stock' :
                       _curHash === '#/stock/alerts' ? 'Alerts & Expiry' :
                       _curHash === '#/stock/orders' ? 'Purchase Orders' :
+                      _curHash === '#/stock/usage' ? 'Tube & Consumable Usage' :
+                      _curHash === '#/stock/mapping' ? 'Tube Mapping' :
                      _curHash === '#/packages' ? 'Packages' :
                      _curHash === '#/notifications' ? 'Notifications' :
                      _curHash === '#/invoices/pending' ? 'Pending Invoices' :
@@ -1438,6 +1441,7 @@
     var l = s.formLists && Array.isArray(s.formLists[key]) ? s.formLists[key] : (LIST_DEFAULTS[key] || []), out = [], seen = {};
     l.forEach(function (x) { x = String(x == null ? '' : x).trim(); if (x && !seen[x.toLowerCase()]) { seen[x.toLowerCase()] = 1; out.push(x); } });
     if (key === 'paymentMethod' && !seen['cash']) out.unshift('Cash');
+    if (key === 'bloodGroup' && !out.length) out = LIST_DEFAULTS.bloodGroup.slice();   /* blood group is required on the patient form: an emptied list falls back to the standard eight */
     if (key === 'sampleType') {
       (LIST_DEFAULTS.sampleType || []).forEach(function (x) {
         if (!seen[x.toLowerCase()]) { seen[x.toLowerCase()] = 1; out.push(x); }

@@ -570,7 +570,7 @@ async function main() {
       const any = (list) => list.some((k) => req.user.perms.indexOf(k) >= 0);
       const write = !['GET', 'HEAD', 'OPTIONS'].includes(req.method);
       const WR = { patients: ['patients', 'invoices'], appointments: ['appointments'], invoices: ['invoices', 'dues', 'patients', 'finance'], payments: ['invoices', 'dues', 'patients', 'finance'], results: ['results', 'invoices'], samples: ['samples', 'results', 'invoices', 'patients'],
-        tests: ['tests'], doctors: ['doctors'], expenses: ['expenses', 'finance'], closings: ['finance'], stock_items: ['stock', 'results'], stock_moves: ['stock', 'results'], panels: ['panels'], ref_labs: ['outsourced'], outsourced: ['outsourced', 'results', 'invoices', 'patients'],
+        tests: ['tests'], doctors: ['doctors'], expenses: ['expenses', 'finance'], closings: ['finance'], stock_items: ['stock', 'results'], stock_moves: ['stock', 'results', 'samples', 'invoices', 'patients'], panels: ['panels'], ref_labs: ['outsourced'], outsourced: ['outsourced', 'results', 'invoices', 'patients'],
         wa_log: ['whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], sms_outbox: ['sms', 'whatsapp', 'results', 'invoices', 'dues', 'patients', 'doctors'], email_log: ['email', 'results', 'invoices', 'doctors'], report_templates: ['results', 'reports'], report_schedules: ['results', 'reports'] };
       let deny = false;
       const tm = /^\/([a-z_]+)(\/|$)/.exec(req.path);
