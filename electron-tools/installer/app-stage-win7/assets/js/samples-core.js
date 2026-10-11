@@ -119,14 +119,14 @@
     if (st === 'stool' || /\bstool\b|faec|fecal|occult blood|\bova\b|parasite|h\.? ?pylori ag/.test(all3)) return 'Stool container';
     if (st === 'swab' || /\bswab\b|throat|nasal|nasopharyn|covid|vaginal|wound|\bpus\b/.test(all3)) return 'Swab';
     if (st === 'urine' || /\burine\b|\burinary\b|urinalysis|\b24 ?h(ou)?r\b/.test(all3)) return 'Urine container';
-    if (/\bpt\b|\binr\b|aptt|\bptt\b|d-?dimer|fibrinogen|coagulation|clotting|bleeding time|protein [cs]\b|antithrombin/.test(name + ' ' + cat)) return 'Citrate (Blue)';
-    if (/hba1c|glycated|glycosylated|hemoglobin a1c/.test(name)) return 'EDTA (Lavender)';
+    if (/citrat/.test(st) || /\bpt\b|\binr\b|aptt|\bptt\b|d-?dimer|fibrinogen|coagulation|clotting|bleeding time|protein [cs]\b|antithrombin/.test(name + ' ' + cat)) return 'Citrate (Blue)';
+    if (/\bedta\b/.test(st) || /hba1c|glycated|glycosylated|hemoglobin a1c/.test(name)) return 'EDTA (Lavender)';
     if (/glucose|\bfbs\b|\brbs\b|\bppbs\b|\bogtt\b|\bgtt\b|\bsugar\b|lactate|\bbsr\b|\bbsf\b|\bbsp\b/.test(name)) return 'Fluoride (Grey)';
     if (/hematolog|haematolog/.test(cat) ||
         /\bcbc\b|complete blood|\bhb\b|hemoglobin|haemoglobin|platelet|\besr\b|reticul|blood group|abo|\brh\b|blood picture|peripheral|cross.?match|malaria|\bmp\b|hematocrit|\bpcv\b|\btlc\b|\bdlc\b|differential|coombs|g6pd|electrophoresis|\bcd4\b|viral load|\bpcr\b|sickle|\bhb ?a/.test(name)) return 'EDTA (Lavender)';
     if (/culture|biopsy|histopath|cytolog|fnac|semen|sputum|csf|fluid|aspirate|\bbone marrow\b/.test(all3)) return 'Other';
-    if (/biochem|serolog|hormon|lipid|immunolog|cardiac|tumor|tumour|vitamin|iron|allerg|drug|thyroid|liver|renal|kidney|electrolyte|diabet|enzyme|protein|marker|antibod|antigen|hepatitis|widal|typhi|dengue|elisa|serum|plasma/.test(all3)) return 'Serum (Red/Gold)';
-    if (st === 'blood' || st === 'serum' || st === 'plasma') return 'Serum (Red/Gold)';
+    if (/clot/.test(st) || /biochem|serolog|hormon|lipid|immunolog|cardiac|tumor|tumour|vitamin|iron|allerg|drug|thyroid|liver|renal|kidney|electrolyte|diabet|enzyme|protein|marker|antibod|antigen|hepatitis|widal|typhi|dengue|elisa|serum|plasma/.test(all3)) return 'Serum (Red/Gold)';
+    if (st === 'blood' || st === 'whole blood' || st === 'serum' || st === 'plasma') return 'Serum (Red/Gold)';
     return 'Other';
   }
 

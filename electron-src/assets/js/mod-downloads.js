@@ -5,7 +5,7 @@
   var GH = 'https://labpos-api.150.230.52.29.sslip.io/releases/';
   var DMG_URL = GH + 'Optix-LAB-MedSync-1.3.1-arm64.dmg.tar.gz';
   /* TODO(parent): replace with the real published APK URL */
-  var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.0.2.apk';
+  var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.1.0.apk';
 
   /* 6 distinct installer binaries (Windows 11 and Windows 10 64-bit share one) */
   var WIN_OPTS = [
@@ -173,7 +173,7 @@
       ]
     }) +
     dlCard({
-      title: 'Android APK', version: '2.0.2', size: '~3 MB', file: 'APK', url: APK_URL, icon: ICO.android,
+      title: 'Android APK', version: '2.1.0', size: '~3 MB', file: 'APK', url: APK_URL, icon: ICO.android,
       note: ICO.check + '<span>Install the <b>Optix LAB MedSync</b> mobile app on your Android phone. It opens like an app and uses the same cloud account and data (internet needed).</span>',
       steps: [
         'Download the <b>.apk</b> file on your Android phone.',

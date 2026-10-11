@@ -1,0 +1,13 @@
+/* ==========================================================================
+   Optix Medical Sync: Pharmacy (Optix MedSync) design tokens.
+   The whole Optix family uses the Pharmacy POS design: Plus Jakarta Sans, soft #f2f5f9 canvas, navy ink,
+   blue #2f6df6 actions, teal/green accents, white cards with a 1px #e2e8f1 border, very large radii, soft shadows.
+   LIGHT ONLY: no dark mode, no toggle, no prefers-color-scheme.
+   ========================================================================== */
+:root {
+  color-scheme: only light;
+  --font: 'Plus Jakarta Sans', Inter, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --navy: #1b2a4a; --text: #3c4761; --muted: #8b94a7; --line: #e2e8f1;
+  --blue: #2f6df6; --blue-d: #1f4fd1; --teal: #38a89d; --green: #22c55e; --purple: #8b5cf6; --orange: #f59e0b;
+  --bg: #f2f5f9; --card: #ffffff;
+}

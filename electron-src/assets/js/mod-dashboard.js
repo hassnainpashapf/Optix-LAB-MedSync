@@ -43,6 +43,97 @@
     var s = session();
     var role = s.role || 'admin';
     var isTech = role === 'technician' || (App.hideMoney && App.hideMoney());
+    var showBranchMoney = !isTech && (!App.canPage || App.canPage('finance'));
+
+    function reportPeriod(period) {
+      if (period === 'all') return { from: '' };
+      var days = period === '90' ? 90 : 30, d = new Date();
+      d.setDate(d.getDate() - days + 1);
+      return { from: d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2) };
+    }
+    function smartAnalyticsBody(period) {
+      var todayKey = App.today(), range = reportPeriod(period);
+      var branches = DB.all('branches') || [], branchById = {}, branchByLabel = {};
+      var rows = {}, invoiceBranch = {}, invoiceById = {};
+      branches.forEach(function (b) {
+        if (!b || !b.id) return;
+        branchById[b.id] = b;
+        [b.name, b.code].forEach(function (label) {
+          var k = String(label || '').trim().toLowerCase();
+          if (k) branchByLabel[k] = b.id;
+        });
+        rows[b.id] = { id: b.id, name: b.name || b.code || b.id, billed: 0, collected: 0, due: 0, invoices: 0, activity: 0 };
+      });
+      rows.__unassigned = { id: '__unassigned', name: 'Unassigned', billed: 0, collected: 0, due: 0, invoices: 0, activity: 0 };
+      function rowForInvoice(inv) {
+        var branchId = inv.branchId && branchById[inv.branchId] ? inv.branchId : null;
+        if (!branchId) {
+          var loc = String(inv.regLocation || '').trim().toLowerCase();
+          branchId = branchByLabel[loc] || null;
+        }
+        if (!branchId) branchId = '__unassigned';
+        return rows[branchId] || rows.__unassigned;
+      }
+      function inPeriod(value) {
+        var key = dayKey(value);
+        return !!key && (!range.from || key >= range.from) && key <= todayKey;
+      }
+      var invoices = DB.all('invoices') || [];
+      invoices.forEach(function (inv) {
+        if (!inv || !inv.id) return;
+        invoiceById[inv.id] = inv;
+        var row = rowForInvoice(inv);
+        invoiceBranch[inv.id] = row.id;
+        row.activity++;
+        row.due += Math.max(0, +inv.due || 0);
+        if (inPeriod(inv.createdAt)) {
+          row.billed += +inv.total || 0;
+          row.invoices++;
+        }
+      });
+      if (showBranchMoney) {
+        (DB.all('payments') || []).forEach(function (payment) {
+          var inv = payment && invoiceById[payment.invoiceId];
+          if (!inv || !inPeriod(payment.date)) return;
+          var row = rows[invoiceBranch[inv.id]] || rows.__unassigned;
+          row.collected += +payment.amount || 0;
+        });
+      }
+      var demand = {};
+      invoices.forEach(function (inv) {
+        if (!inv || !inPeriod(inv.createdAt)) return;
+        (inv.items || []).forEach(function (item) {
+          var ids = item.isPackage && item.includes && item.includes.length ? item.includes : [item.testId || ''];
+          ids.forEach(function (testId) {
+            var test = testId && DB.get('tests', testId), key = testId || item.code || item.name || 'unknown';
+            if (!demand[key]) demand[key] = { name: (test && test.name) || item.name || 'Unnamed test', count: 0 };
+            demand[key].count++;
+          });
+        });
+      });
+      var demandRows = Object.keys(demand).map(function (k) { return demand[k]; })
+        .sort(function (a, b) { return b.count - a.count || a.name.localeCompare(b.name); }).slice(0, 10);
+      var demandHtml = demandRows.length
+        ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th class="num">Ordered</th></tr></thead><tbody>' +
+          demandRows.map(function (r) { return '<tr><td><strong>' + App.esc(r.name) + '</strong></td><td class="num">' + r.count + '</td></tr>'; }).join('') +
+          '</tbody></table></div>'
+        : App.empty('No test orders in this period.');
+      var branchHtml = '';
+      if (showBranchMoney) {
+        var branchRows = Object.keys(rows).map(function (k) { return rows[k]; })
+          .filter(function (r) { return r.activity > 0; })
+          .sort(function (a, b) { return b.billed - a.billed || a.name.localeCompare(b.name); });
+        var branchTable = branchRows.length
+          ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Branch</th><th class="num">Billed</th><th class="num">Collected</th><th class="num">Pending dues</th></tr></thead><tbody>' +
+            branchRows.map(function (r) { return '<tr><td><strong>' + App.esc(r.name) + '</strong><br><small class="muted">' + r.invoices + ' invoice' + (r.invoices === 1 ? '' : 's') + ' in period</small></td><td class="num">' + App.money(r.billed) + '</td><td class="num">' + App.money(r.collected) + '</td><td class="num">' + App.money(r.due) + '</td></tr>'; }).join('') +
+            '</tbody></table></div>'
+          : App.empty('No invoices or payments in this period.');
+        branchHtml = '<div class="db-smart-branch"><h3>Branch revenue &amp; dues</h3>' + branchTable +
+          '<div class="dbc-sub">Billed and collected follow the selected period. Pending dues include all currently open invoices.</div></div>';
+      }
+      return '<div class="db-smart-grid' + (showBranchMoney ? '' : ' db-smart-tests-only') + '">' + branchHtml +
+        '<div><h3>Test demand</h3>' + demandHtml + '</div></div>';
+    }
 
     /* ---------- loading skeletons (CSS-only shimmer, shown while content computes) ---------- */
     var SKEL_CSS =
@@ -150,15 +241,17 @@
         statCard(ICONS.users, 'brand', 'Total Patients', String(patients.length), monthPatients + ' new this month', patients.length, false);
     }
 
-    // ---- quick-access cards — 6 shortcuts ----
+    // ---- quick-access cards ----
     var quickCss =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 6 : 7) + ',1fr);gap:12px;margin-bottom:14px;align-items:stretch}' +
-    '.dbq-card{display:flex;flex-direction:column;height:100%;transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
-    '.dbq-card .card-b{padding:10px 12px!important;flex:1;display:flex;align-items:center;gap:12px;box-sizing:border-box}' +
-    '.dbq-card b{font-size:13px!important}.dbq-card small{font-size:11px!important}' +
-    '@media(max-width:1200px){.dbw-grid{grid-template-columns:repeat(3,1fr)}}' +
-    '@media(max-width:900px){.dbw-grid{grid-template-columns:1fr}}' +
+    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 7 : 8) + ',minmax(0,1fr));gap:8px;margin-bottom:12px;align-items:stretch}' +
+    '.dbq-card{display:flex;flex-direction:column;height:100%;min-height:78px;transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
+    '.dbq-card .card-b{padding:8px 6px!important;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;gap:4px!important;box-sizing:border-box}' +
+    '.dbq-card .card-b>span:first-child{width:28px!important;height:28px!important;border-radius:8px!important}.dbq-card .card-b>span:first-child svg{width:16px;height:16px}' +
+    '.dbq-card .card-b>span:last-child{width:100%;min-width:0;overflow-wrap:break-word}' +
+    '.dbq-card b{display:block;font-size:12px!important;line-height:1.3!important}.dbq-card br{display:none}.dbq-card small{font-size:10px!important;line-height:1.25!important;display:block;margin-top:2px}' +
+    '@media(max-width:1180px){.dbw-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}' +
+    '@media(max-width:900px){.dbw-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}' +
     '</style>';
     var quickAccess =
     '<div class="dbw-grid">' +
@@ -166,6 +259,11 @@
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
           '<span style="width:44px;height:44px;border-radius:12px;background:#22c55e1a;color:#22c55e;display:grid;place-items:center;flex:none">' + App.icon('users', 22) + '</span>' +
           '<span><b style="font-size:15px;color:var(--ink)">Patients</b><br><small style="color:var(--muted)">Manage patient records</small></span>' +
+        '</div></a>' +
+      '<a href="#/samples/home" class="card dbq-card" style="text-decoration:none">' +
+        '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
+          '<span style="width:44px;height:44px;border-radius:12px;background:#06b6d41a;color:#0891b2;display:grid;place-items:center;flex:none">' + App.icon('box', 22) + '</span>' +
+          '<span><b style="font-size:15px;color:var(--ink)">Home Sampling &amp; Dispatch</b><br><small style="color:var(--muted)">Book and track home collections</small></span>' +
         '</div></a>' +
       '<a href="#/results" class="card dbq-card" style="text-decoration:none">' +
         '<div class="card-b" style="display:flex;align-items:center;gap:12px">' +
@@ -296,6 +394,9 @@
     chartB = bigCard('Tests &amp; Invoices', 'Last 7 days', chip('Tests ordered', sum(tests7), '#7c3aed') + chip('Invoices', sum(inv7), '#ea580c') + chip('Today', tests7[6] + ' tests'),
       chartSvg({ label: 'Tests ordered and invoices per day', bars: [{ name: 'Invoices', data: inv7, color: '#fdba74' }], line: { name: 'Tests ordered', data: tests7, color: '#7c3aed' } }), legend([['Invoices', '#fdba74'], ['Tests ordered', '#7c3aed']]), isTech ? null : ['#/invoices', 'Invoices']);
     var chartsHtml = '<div class="db-charts">' + chartA + chartB + '</div>';
+    var smartHtml = '<div class="card db-smart"><div class="card-h"><div><h3>Smart Dashboard</h3><div class="dbc-sub">Branch performance and most-ordered tests</div></div>' +
+      '<select class="select" id="dbAnalyticsPeriod" aria-label="Analytics period" style="max-width:150px;margin-left:auto"><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="all">All time</option></select></div>' +
+      '<div class="card-b" id="dbSmartBody">' + smartAnalyticsBody('30') + '</div></div>';
 
     return '<div class="db-page">' +
     '<style>' +
@@ -320,6 +421,8 @@
     '.dbc-bar{transform-box:fill-box;transform-origin:bottom;animation:dbcGrow .7s cubic-bezier(.22,.8,.3,1) backwards}@keyframes dbcGrow{from{transform:scaleY(0)}}' +
     '.dbc-line{stroke-dasharray:100;animation:dbcDraw 1.1s .2s ease-out backwards}@keyframes dbcDraw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}' +
     '@media (prefers-reduced-motion:reduce){.dbc-bar,.dbc-line{animation:none}}' +
+    '.db-smart{margin-bottom:16px}.db-smart-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:20px}.db-smart-grid.db-smart-tests-only{grid-template-columns:1fr}.db-smart-grid h3{font-size:15px;margin:0 0 10px;font-weight:800}.db-smart-grid .tbl-wrap{max-height:360px;overflow:auto}.db-smart-branch .dbc-sub{margin-top:8px}' +
+    '@media(max-width:900px){.db-smart-grid{grid-template-columns:1fr}}' +
     '.db-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px}' +
     '@media(max-width:1000px){.db-grid{grid-template-columns:1fr}}' +
     '.db-grid .card-h h3{font-size:16.5px;font-weight:700;letter-spacing:-.01em}' +
@@ -330,26 +433,15 @@
 
     quickCss + quickAccess +
 
-    critCard() + stockCard() + chartsHtml +
+     critCard() + smartHtml + chartsHtml +
     '<div class="db-grid">' + patCard + pendCard + '</div>' +
     '</div>';
     } /* end buildDashboard */
 
-    /* low / expiring stock: one line with a link, only when something needs attention */
-    function stockCard() {
-      try {
-        var me = App.session(); if (!me || (me.role !== 'admin' && me.role !== 'technician' && !(me.role === 'custom' && (App.canPage('stock') || App.canPage('inventory')))) || !App.stockState) return '';
-        var S = App.stockState(); if (!S.alerts) return '';
-        var bits = [];
-        if (S.out) bits.push('<b>' + S.out + '</b> out of stock'); if (S.low) bits.push('<b>' + S.low + '</b> running low');
-        if (S.expired) bits.push('<b>' + S.expired + '</b> expired'); if (S.soon) bits.push('<b>' + S.soon + '</b> expiring within ' + S.warnDays + ' days');
-        return '<a href="#/inventory" style="display:flex;align-items:center;gap:12px;background:#fff8e6;border:1px solid #f0d9a0;border-radius:14px;padding:12px 16px;margin-bottom:16px;color:#7a4b00;text-decoration:none">' +
-          '<span style="font-size:20px">📦</span><span style="flex:1"><b>Stock needs attention:</b> ' + bits.join(' · ') + '</span><span style="font-weight:800">Open Inventory &amp; Stock →</span></a>';
-      } catch (e) { return ''; }
-    }
-
     /* Critical results nobody has acknowledged yet (set when a result far outside the normal range is saved) */
     function critCard() {
+      var me = App.session();
+      if (!me || ['admin', 'technician'].indexOf(me.role) === -1 || !App.canPage('results') || (App.featureOn && !App.featureOn('results'))) return '';
       var crits = DB.all('results').filter(function (r) { return r.critical && r.critical.length && !r.criticalAck; })
         .sort(function (a, b) { return String(b.reportedAt || '').localeCompare(String(a.reportedAt || '')); });
       if (!crits.length) return '';
@@ -367,7 +459,10 @@
     function wireCrit(v) {
       v.querySelectorAll('[data-ack]').forEach(function (b) {
         b.addEventListener('click', function () {
+          var me = App.session();
+          if (!me || ['admin', 'technician'].indexOf(me.role) === -1 || !App.canPage('results') || (App.featureOn && !App.featureOn('results'))) return;
           DB.update('results', b.getAttribute('data-ack'), { criticalAck: { by: (session() || {}).name || 'user', at: new Date().toISOString() } });
+          if (App.notifications) App.notifications.refresh();
           v.innerHTML = buildDashboard(); wireCrit(v); scheduleCountUp();
         });
       });
@@ -379,6 +474,11 @@
       if (!v || !v.querySelector('[data-db-skel]')) return; /* user navigated away */
       v.innerHTML = buildDashboard();
       wireCrit(v);
+      var periodSelect = v.querySelector('#dbAnalyticsPeriod');
+      if (periodSelect) periodSelect.addEventListener('change', function () {
+        var body = v.querySelector('#dbSmartBody');
+        if (body) body.innerHTML = smartAnalyticsBody(periodSelect.value);
+      });
       scheduleCountUp();
     }, 120);
 

@@ -61,7 +61,7 @@
 
   function planFeatures(k, p) {
     var f = [lim(p.users) + (p.users ? ' staff users' : ' staff users'), lim(p.invoicesPerMonth) + (p.invoicesPerMonth ? ' invoices / month' : ' invoices'),
-      'Unlimited patients & reports', 'WhatsApp reports + critical alerts', 'Offline desktop app + Android + Web'];
+      (p.storageMb ? (p.storageMb >= 1000 ? (p.storageMb / 1000) + ' GB' : p.storageMb + ' MB') : 'Unlimited') + ' report storage', 'Unlimited patients & reports', 'WhatsApp reports + critical alerts', 'Offline desktop app + Android + Web'];
     if (k === 'enterprise') f.push('Priority support & onboarding');
     return f;
   }
@@ -106,6 +106,7 @@
     h += '<div class="sb-use">' +
       usageCard('Staff users', L.usage.users, L.limits.users) +
       usageCard('Invoices this month', L.usage.invoicesThisMonth, L.limits.invoicesPerMonth) +
+      usageCard('Report storage (MB)', Math.round((L.usage.storageBytes || 0) / 104857.6) / 10, L.limits.storageMb || 0) +
       '<div class="card sb-u"><div class="sb-k">Patients</div><b>' + L.usage.patients + '</b><div class="sb-meta">' + L.usage.invoicesTotal + ' invoices in total</div></div></div>';
 
     var ks = ['starter', 'pro', 'enterprise'];

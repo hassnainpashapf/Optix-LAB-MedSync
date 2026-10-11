@@ -13,8 +13,8 @@ const cnic = '35202-1234567-1';
 
 async function suite(folder) {
   const { jsPDF } = require(path.join(folder, 'assets/vendor/jspdf.umd.min.js'));
-  const desktopSource = folder === path.join(root, 'electron-src');
-  const staged = folder === path.join(root, 'electron-tools/installer/app-stage-win7');
+  const desktopSource = false; /* 1.4.1: the desktop app ships the same report layout as the web app */
+  const staged = false; /* the staged desktop copy is rebuilt from electron-src, which now matches the web app */
   let tables, receipt, uploads = [], prints = [], toasts = [];
   function RecordingPdf(options) {
     const doc = new jsPDF(options);

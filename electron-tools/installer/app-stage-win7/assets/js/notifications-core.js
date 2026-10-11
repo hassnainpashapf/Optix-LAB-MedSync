@@ -1,136 +1,138 @@
-/* Shared notification monitor: current lab cache only, one timer per signed-in shell.
-   Dashboard is lazy; observing an alert never acknowledges it or changes its source. */
+/* In-app alerts. One controller survives shell replacements; no OS permissions or network writes. */
 (function () {
   'use strict';
-  var A = window.App;
-  if (!A || A.notifications) return;
-  var timer = null, identity = '', previous = null, audio = null, unlocked = false;
-  var snapshot = { items: [], error: false }, muteKey = 'labpos_notifications_muted';
-  function allowed(key) { return A.canPage(key) && (!A.featureOn || A.featureOn(key)); }
-  function active() { return !!A.session() && allowed('notifications') && !/^#\/(portal|login|signup|forgot|reset)/.test(location.hash); }
-  function muted() { try { return localStorage.getItem(muteKey) === '1'; } catch (e) { return false; } }
-  function collect() {
-    var items = [];
-    if (!active()) return items;
-    function add(id, severity, title, detail, href, category) {
-      items.push({ id: id, severity: severity, title: title, detail: detail, href: href, category: category });
-    }
-    if (allowed('results')) {
-      DB.all('results').forEach(function (r) {
-        if (!r.critical || !r.critical.length || r.criticalAck) return;
-        var test = DB.get('tests', r.testId) || {}, invoice = DB.get('invoices', r.invoiceId) || {};
-        add('critical:' + r.id, 'critical', 'Unacknowledged critical result',
-          (invoice.no || r.invoiceId || 'Report') + ' · ' + (test.name || r.testId || 'Lab result') + ' · ' + r.critical.map(function (c) { return c.name + ': ' + c.value + (c.unit ? ' ' + c.unit : ''); }).join('; '),
-          '#/results/ready', 'Results');
-      });
-    }
-    var stockRoute = allowed('inventory') ? '#/inventory/alerts' : (allowed('stock') ? '#/stock/alerts' : '');
-    if (stockRoute && A.stockState) {
-      A.stockState().rows.forEach(function (r) {
-        var name = r.item.name || 'Stock item', id = r.item.id;
-        if (r.out) add('stock:out:' + id, 'high', 'Out of stock: ' + name, 'Replenish this item.', stockRoute, 'Stock');
-        else if (r.low) add('stock:low:' + id, 'normal', 'Low stock: ' + name, r.onHand + ' ' + (r.item.unit || 'units') + ' remaining; reorder level ' + r.item.reorderLevel + '.', stockRoute, 'Stock');
-        var expiryRoute = stockRoute;
-        if (r.expired) add('stock:expired:' + id, 'high', 'Expired stock: ' + name, r.expiredQty + ' ' + (r.item.unit || 'units') + ' expired. Review and remove unusable stock.', expiryRoute, 'Stock');
-        if (r.soon) add('stock:soon:' + id, 'normal', 'Stock expiring soon: ' + name, r.soonQty + ' ' + (r.item.unit || 'units') + ' within the configured expiry warning window.', expiryRoute, 'Stock');
-      });
-    }
-    // The verification destination displays amounts, so money-hidden roles cannot receive its alerts.
-    if (allowed('onlinepay') && !A.hideMoney()) {
-      DB.all('onlinepay_claims').forEach(function (c) {
-        if (c.status === 'pending') add('claim:' + c.id, 'normal', 'Online payment awaiting verification',
-          A.money(c.amount) + ' · ' + (c.patientName || 'Payment claim'), '#/online-payments', 'Payments');
-      });
-    }
-    if (allowed('invoices')) {
-      var hide = A.hideMoney();
-      DB.all('invoices').forEach(function (inv) {
-        if (Number(inv.due) > 0) add('invoice:' + inv.id, 'normal', 'Pending invoice: ' + (inv.no || inv.id),
-          hide ? 'Payment pending · amounts hidden for your role.' : A.money(inv.due) + ' outstanding.',
-          '#/invoice/' + encodeURIComponent(inv.id), 'Invoices');
-      });
-    }
-    var rank = { critical: 0, high: 1, normal: 2 };
-    return items.sort(function (a, b) { return rank[a.severity] - rank[b.severity] || a.id.localeCompare(b.id); });
+  if (App.notifications) return;
+  var timer = null, scope = '', seen = Object.create(null), baseline = false, alerts = [], audio = null;
+  var muteKey = 'labpos_notifications_muted', muted = false, active = false;
+  try { muted = localStorage.getItem(muteKey) === '1'; } catch (e) {}
+  function allowed(key) { return App.canPage(key) && (!App.featureOn || App.featureOn(key)); }
+  function permissions() {
+    var s = App.session();
+    if (!s || !App.can('notifications', s.role)) return null;
+    if ((!DB.isCloud || !DB.isCloud()) && DB.currentLabId && DB.currentLabId() !== s.labId) return null;
+    return { session: s, critical: ['admin', 'technician'].indexOf(s.role) !== -1 && allowed('results'),
+      stock: allowed('stock'), payments: allowed('onlinepay') && !App.hideMoney() };
   }
-  function contextKey() {
-    var s = A.session() || {};
-    return JSON.stringify([s.labId, s.lab, s.userId, s.role, s.roleId, s.loginAt,
-      A.roleDef ? A.roleDef(s) : null, A.labFeatures]);
+  function collect(p) {
+    p = p || permissions();
+    if (!p) return [];
+    var out = [], ids = Object.create(null);
+    function add(a) { if (!ids[a.id]) { ids[a.id] = true; out.push(a); } }
+    if (p.critical) (DB.all('results') || []).forEach(function (r) {
+      if (!r.id || !Array.isArray(r.critical) || !r.critical.length || r.criticalAck) return;
+      var test = DB.get('tests', r.testId) || {};
+      add({ id: 'critical:' + r.id, severity: 'critical', title: 'Critical lab result',
+        detail: 'Result ' + r.id + ' · ' + (test.name || r.testId || 'Lab test') + ' · ' + r.critical.map(function (c) { return c.name + ': ' + c.value + (c.unit ? ' ' + c.unit : ''); }).join('; '),
+        href: allowed('dashboard') ? '#/dashboard' : '#/results/ready', action: allowed('dashboard') ? 'Review & acknowledge' : 'Review results', timestamp: r.reportedAt || r.createdAt || '',
+        signature: 'critical:' + r.id + ':' + (r.reportedAt || '') + ':' + JSON.stringify(r.critical) });
+    });
+    if (p.stock && App.stockState) (App.stockState().rows || []).forEach(function (r) {
+      if (!r.item || !r.item.id || r.item.active === false || !(r.out || r.low || r.expired || r.soon)) return;
+      var bits = [];
+      if (r.out) bits.push('Out of stock'); else if (r.low) bits.push('Low stock');
+      if (r.expired) bits.push('Expired stock');
+      if (r.soon) bits.push('Expiring soon');
+      add({ id: 'stock:' + r.item.id, severity: r.out || r.expired ? 'high' : 'warning', title: r.item.name || 'Stock item',
+        detail: bits.join(' · '), href: '#/stock/alerts', action: 'Review stock', timestamp: r.item.updatedAt || r.item.createdAt || '',
+        signature: 'stock:' + r.item.id + ':' + !!r.out + ':' + !!r.expired });
+    });
+    if (p.payments) (DB.all('onlinepay_claims') || []).forEach(function (c) {
+      if (!c.id || c.status !== 'pending') return;
+      add({ id: 'payment:' + c.id, severity: 'warning', title: 'Payment claim awaiting verification',
+        detail: 'Claim ' + c.id + ' · ' + App.money(c.amount), href: '#/online-payments', action: 'Review payment', timestamp: c.createdAt || c.updatedAt || c.date || '', signature: 'payment:' + c.id });
+    });
+    var rank = { critical: 0, high: 1, warning: 2 };
+    return out.sort(function (a, b) { return rank[a.severity] - rank[b.severity] || a.id.localeCompare(b.id); });
   }
+  function urgent(a) { return a.severity === 'critical' || a.severity === 'high'; }
   function paint() {
-    var bell = document.getElementById('notificationBell'), count = document.getElementById('notificationCount');
-    var urgent = snapshot.items.some(function (a) { return a.severity === 'critical' || a.severity === 'high'; });
-    var label = snapshot.error ? 'Notifications unavailable — open to retry' : 'Notifications: ' + snapshot.items.length + ' actionable alerts' + (urgent ? ', urgent alerts need attention' : '');
-    if (bell) { bell.hidden = !active(); bell.setAttribute('aria-label', label); bell.setAttribute('title', label); }
-    if (count) { count.hidden = !snapshot.error && !snapshot.items.length; count.textContent = snapshot.error ? '!' : (snapshot.items.length > 99 ? '99+' : String(snapshot.items.length)); count.className = 'notification-count' + (urgent ? ' urgent' : ''); }
-    if (A.paintNotifications && location.hash.split('?')[0] === '#/notifications') A.paintNotifications(snapshot);
+    var b = document.getElementById('notificationBell'), count = document.getElementById('notificationCount');
+    if (b) {
+      b.classList.toggle('has-urgent', alerts.some(urgent));
+      b.setAttribute('aria-label', 'Notifications: ' + alerts.length + ' actionable alert' + (alerts.length === 1 ? '' : 's'));
+      b.title = alerts.length + ' actionable alert' + (alerts.length === 1 ? '' : 's');
+    }
+    if (count) { count.hidden = !alerts.length; count.textContent = alerts.length > 99 ? '99+' : String(alerts.length); }
+    if (App.renderNotifications && (location.hash || '').split('?')[0] === '#/notifications') App.renderNotifications(alerts);
   }
-  function chirp() {
-    if (!unlocked || muted() || !audio || audio.state !== 'running' || document.hidden) return;
+  function unlock(e) {
+    if (!active || muted || !e || !e.isTrusted || !permissions()) return;
     try {
-      var oscillator = audio.createOscillator(), gain = audio.createGain(), t = audio.currentTime;
-      oscillator.type = 'sine'; oscillator.frequency.setValueAtTime(880, t);
-      gain.gain.setValueAtTime(0.0001, t); gain.gain.exponentialRampToValueAtTime(0.08, t + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
-      oscillator.connect(gain); gain.connect(audio.destination);
-      oscillator.onended = function () { oscillator.disconnect(); gain.disconnect(); };
-      oscillator.start(t); oscillator.stop(t + 0.22);
-    } catch (e) { /* Audio is optional; visual alerts remain available. */ }
+      var Ctor = window.AudioContext || window.webkitAudioContext;
+      if (!Ctor) return;
+      if (!audio) audio = new Ctor();
+      if (audio.state === 'suspended') { var pending = audio.resume(); if (pending && pending.catch) pending.catch(function () {}); }
+    } catch (err) { /* Browser may block audio; visual alerts remain available. */ }
   }
-  function refresh(silent) {
-    if (!active()) { stop(); paint(); return snapshot; }
-    var key = contextKey();
-    if (key !== identity) { stop(); identity = key; }
+  function sound() {
+    if (muted || !audio || audio.state !== 'running' || document.hidden) return;
     try {
-      var items = collect(), next = Object.create(null), fresh = false;
-      items.forEach(function (a) {
-        if (a.severity !== 'critical' && a.severity !== 'high') return;
-        next[a.id] = true;
-        if (previous && !previous[a.id]) fresh = true;
-      });
-      previous = next;
-      snapshot = { items: items, error: false };
-      if (fresh && !silent) chirp();
-    } catch (e) { snapshot = { items: [], error: true }; }
+      var osc = audio.createOscillator(), gain = audio.createGain(), now = audio.currentTime;
+      osc.type = 'sine'; osc.frequency.setValueAtTime(880, now);
+      gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(0.12, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.connect(gain); gain.connect(audio.destination);
+      osc.onended = function () { osc.disconnect(); gain.disconnect(); };
+      osc.start(now); osc.stop(now + 0.32);
+    } catch (e) { /* No retries/queued sounds after autoplay failure. */ }
+  }
+  function refresh() {
+    if (!active) return;
+    var p = permissions();
+    if (!p || /^#\/(portal|login|signup|forgot|reset)/.test(location.hash || '')) { stop(); return; }
+    var key = [p.session.labId, p.session.userId, p.session.role, p.session.roleId || '', p.critical, p.stock, p.payments].join('|');
+    if (key !== scope) { scope = key; baseline = false; seen = Object.create(null); }
+    try { alerts = collect(p); } catch (e) { alerts = []; paint(); return; }
+    var fresh = false;
+    alerts.filter(urgent).forEach(function (a) { if (baseline && !seen[a.signature]) fresh = true; seen[a.signature] = true; });
+    baseline = true;
+    // Consume new identities even while muted/blocked: a later gesture must not replay old alerts.
+    if (fresh) sound();
     paint();
-    return snapshot;
   }
-  function gesture(e) {
-    if (!e.isTrusted || !active()) return;
-    if (unlocked && audio && audio.state === 'running') return;
-    refresh(true); // anything present before audio activation is the silent baseline
-    if (muted()) return;
-    try {
-      var Audio = window.AudioContext || window.webkitAudioContext;
-      if (!Audio) return;
-      if (!audio) audio = new Audio();
-      unlocked = true;
-      if (audio.state === 'suspended') { var p = audio.resume(); if (p && p.catch) p.catch(function () {}); }
-    } catch (e2) { unlocked = false; }
+  function click(e) {
+    var button = e.target && e.target.closest ? e.target.closest('[data-notification-mute]') : null;
+    if (button) {
+      refresh(); muted = !muted;
+      try { localStorage.setItem(muteKey, muted ? '1' : '0'); } catch (err) {}
+      if (muted && audio) closeAudio();
+      paint();
+    }
+    unlock(e);
+  }
+  function storage(e) {
+    if (e.key === muteKey) { muted = e.newValue === '1'; if (muted) closeAudio(); paint(); }
+    else if (e.key === 'labpos_session') stop(); // Another tab changed identity; never reuse its predecessor's data snapshot.
+  }
+  function closeAudio() {
+    var old = audio; audio = null;
+    if (old) try { var pending = old.close(); if (pending && pending.catch) pending.catch(function () {}); } catch (e) {}
   }
   function start() {
-    if (!active()) { stop(); paint(); return; }
+    if (!permissions()) { stop(); return; }
+    if (!active) {
+      active = true;
+      document.addEventListener('click', click);
+      document.addEventListener('keydown', unlock);
+      document.addEventListener('visibilitychange', refresh);
+      window.addEventListener('storage', storage);
+      timer = setInterval(function () { if (!document.hidden) refresh(); }, 5000);
+    }
     refresh();
-    if (timer !== null) return;
-    timer = setInterval(function () { if (!document.hidden) { refresh(); if (active() && timer === null) start(); } }, 15000);
-    document.addEventListener('click', gesture);
-    document.addEventListener('keydown', gesture);
   }
   function stop() {
+    active = false;
     if (timer !== null) clearInterval(timer);
-    timer = null; identity = ''; previous = null; unlocked = false;
-    snapshot = { items: [], error: false };
-    document.removeEventListener('click', gesture);
-    document.removeEventListener('keydown', gesture);
-    if (audio) { try { var p = audio.close(); if (p && p.catch) p.catch(function () {}); } catch (e) {} audio = null; }
-  }
-  function setMuted(value) {
-    try { localStorage.setItem(muteKey, value ? '1' : '0'); } catch (e) {}
-    refresh(true);
+    timer = null; scope = ''; baseline = false; seen = Object.create(null); alerts = [];
+    document.removeEventListener('click', click);
+    document.removeEventListener('keydown', unlock);
+    document.removeEventListener('visibilitychange', refresh);
+    window.removeEventListener('storage', storage);
+    closeAudio();
+    paint();
   }
   window.addEventListener('pagehide', stop);
   window.addEventListener('pageshow', function () { if (document.getElementById('notificationBell')) start(); });
-  window.addEventListener('storage', function () { if (document.getElementById('notificationBell')) start(); });
-  A.notifications = { start: start, stop: stop, refresh: refresh, collect: collect, muted: muted, setMuted: setMuted, allowed: allowed };
+  App.notifications = { start: start, stop: stop, refresh: refresh, collect: collect,
+    isMuted: function () { return muted; }, soundAvailable: function () { return !!(audio && audio.state === 'running'); } };
 })();

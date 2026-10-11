@@ -33,8 +33,8 @@
     mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>',
     tube: '<path d="M8 2h8"/><path d="M9 2v16.5a3 3 0 0 0 6 0V2"/><path d="M9 11h6"/>',
     scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M11 8v8M15 8v8M18 8v8"/>',
-    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     finance: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
     phone: '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/>'
   };
   function icon(name, size) {
@@ -45,14 +45,20 @@
   /* ---------------- nav + permissions ---------------- */
   var NAV = [
     { key: 'dashboard', label: 'Dashboard',  icon: 'grid',      route: '#/dashboard', color: '#3b82f6' },
+    { key: 'branches', label: 'Branches', icon: 'box', route: '#/branches', color: '#0ea5e9' },
     { key: 'patients',  label: 'Patients',   icon: 'users',     route: '#/patients',  color: '#22c55e',
-      sub: [{ key: 'new', label: 'Add Patient', icon: 'plus', route: '#/patients/new' }, { key: 'all', label: 'All Patients', icon: 'users', route: '#/patients' }] },
+      sub: [{ key: 'new', label: 'Add Patient', icon: 'plus', route: '#/patients/new' }, { key: 'all', label: 'All Patients', icon: 'users', route: '#/patients' }, { key: 'lists', label: 'Edit Patient Form', icon: 'gear', route: '#/patients/lists', roles: ['admin'] }] },
+    { key: 'appointments', label: 'Appointments', icon: 'calendar', route: '#/appointments', color: '#0ea5e9' },
     { key: 'samples',   label: 'Samples',    icon: 'tube',      route: '#/samples',   color: '#e11d48',
-      sub: [{ key: 'tracking', label: 'Tracking', icon: 'tube', route: '#/samples' }, { key: 'stickers', label: 'Stickers', icon: 'scan', route: '#/samples/stickers' }, { key: 'home', label: 'Home Sampling', icon: 'steth', route: '#/samples/home' }] },
+      sub: [{ key: 'tracking', label: 'Sample Tracking & Phlebotomy', icon: 'tube', route: '#/samples' },
+        { key: 'stickers', label: 'Tube Stickers (50×25mm)', icon: 'scan', route: '#/samples/stickers' },
+        { key: 'home', label: 'Home Sampling & Dispatch', icon: 'box', route: '#/samples/home' },
+        { key: 'bookings', label: 'All Bookings', icon: 'clipboard', route: '#/samples/bookings' }] },
     { key: 'inventory', label: 'Inventory', icon: 'box', route: '#/inventory', color: '#0ea5e9',
-      sub: [{ key: 'catalog', label: 'Catalog', icon: 'box', route: '#/inventory' }, { key: 'add', label: 'Add Item', icon: 'plus', route: '#/inventory/add' }] },
-    { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock', color: '#0ea5e9',
-      sub: [{ label: 'Movements', icon: 'box', route: '#/stock' }, { label: 'Pending Stock', icon: 'clipboard', route: '#/stock/pending' }, { label: 'Purchase Orders', icon: 'receipt', route: '#/stock/purchase-orders' }, { label: 'Add Stock', icon: 'plus', route: '#/stock/add' }, { label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' }] },
+      sub: [{ key: 'catalog', label: 'Item Catalog', icon: 'box', route: '#/inventory' }] },
+    { key: 'stock', label: 'Stock', icon: 'tube', route: '#/stock/dashboard', color: '#0ea5e9',
+      sub: [{ key: 'dashboard', label: 'Stock Dashboard', icon: 'grid', route: '#/stock/dashboard' }, { key: 'moves', label: 'Movement History', icon: 'clipboard', route: '#/stock' }, { key: 'add', label: 'Add Stock', icon: 'plus', route: '#/stock/add' },
+        { key: 'pending', label: 'Pending Stock', icon: 'box', route: '#/stock/pending' }, { key: 'orders', label: 'Purchase Orders', route: '#/stock/orders', icon: 'receipt' }, { key: 'alerts', label: 'Alerts & Expiry', icon: 'alert', route: '#/stock/alerts' }] },
     { key: 'results',   label: 'Lab Results',icon: 'clipboard', route: '#/results',   color: '#8b5cf6',
       sub: [{ key: 'pending', label: 'Pending Entry', icon: 'clipboard', route: '#/results' }, { key: 'ready', label: 'Ready Reports', icon: 'check', route: '#/results/ready' }, { key: 'old', label: 'Old Reports', icon: 'file', route: '#/results/old' }] },
     { key: 'tests',     label: 'All Tests Catalog', icon: 'flask', route: '#/tests', color: '#14b8a6',
@@ -60,7 +66,7 @@
     { key: 'packages',  label: 'Health Packages & Deals', icon: 'box', route: '#/packages', color: '#06b6d4' },
     { key: 'outsourced', label: 'Outsourced', icon: 'scan',     route: '#/outsourced', color: '#d946ef' },
     { key: 'invoices',  label: 'Invoices',   icon: 'file',      route: '#/invoices',  color: '#f97316',
-      sub: [{ key: 'all', label: 'All', icon: 'file', route: '#/invoices' }, { key: 'pending', label: 'Pending', icon: 'wallet', route: '#/invoices/pending' }, { key: 'thermal', label: 'POS Slips', icon: 'printer', route: '#/receipts' }] },
+      sub: [{ key: 'all', label: 'All Invoices', icon: 'file', route: '#/invoices' }, { key: 'pending', label: 'Pending Invoices', icon: 'wallet', route: '#/invoices/pending' }, { key: 'thermal', label: 'POS Slips', icon: 'printer', route: '#/receipts' }] },
     { key: 'dues',      label: 'Dues',       icon: 'wallet',    route: '#/dues',      color: '#ef4444' },
     { key: 'discounts', label: 'Discounts',  icon: 'coins',     route: '#/discounts', color: '#f59e0b' },
     { key: 'onlinepay', label: 'Online Payments', icon: 'card', route: '#/online-payments', color: '#10b981' },
@@ -71,21 +77,20 @@
     { key: 'profit',    label: 'Profit & Loss', icon: 'chart',  route: '#/finance/profit', color: '#10b981', roles: ['admin'] },
     { key: 'reports',   label: 'Reports',    icon: 'chart',     route: '#/reports/tests',   color: '#6366f1',
       sub: [
-        { key: 'tests',    label: 'Test Reports', icon: 'flask', route: '#/reports/tests' },
+        { key: 'tests',    label: 'Test Reports',     icon: 'flask', route: '#/reports/tests' },
         { key: 'trends',   label: 'Patient Trends & Delta', icon: 'chart', route: '#/reports/trends' },
-        { key: 'finance',  label: 'Finance Reports', icon: 'finance', route: '#/reports/finance' },
-        { key: 'dues',     label: 'Dues Aging', icon: 'wallet', route: '#/reports/dues' },
-        { key: 'patients', label: 'Patient Reports', icon: 'users', route: '#/reports/patients' },
-        { key: 'labs',     label: 'Lab Comparison', icon: 'chart', route: '#/reports/labs' }
+        { key: 'finance',  label: 'Finance Reports',  icon: 'finance', route: '#/reports/finance' },
+        { key: 'dues',     label: 'Dues Aging',       icon: 'wallet', route: '#/reports/dues' },
+        { key: 'patients', label: 'Patient Reports',  icon: 'users', route: '#/reports/patients' },
+        { key: 'labs',     label: 'Lab Comparison',   icon: 'chart', route: '#/reports/labs' }
       ] },
     { key: 'downloads', label: 'Downloads',  icon: 'download',  route: '#/downloads', color: '#06b6d4' },
-    { key: 'branches', label: 'Branches', icon: 'grid', route: '#/branches', color: '#2563eb', roles: ['admin'] },
     { key: 'email',     label: 'Email',      icon: 'mail',      route: '#/email',     color: '#0ea5e9', cloudOnly: true,
-      sub: [{ key: 'ready', label: 'Ready to send', icon: 'mail', route: '#/email' }, { key: 'log', label: 'Email log', icon: 'file', route: '#/email/log' }, { key: 'tpl', label: 'Templates & rules', icon: 'clipboard', route: '#/email/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', icon: 'gear', route: '#/email/settings', roles: ['admin'] }] },
+      sub: [{ key: 'ready', label: 'Ready to send', icon: 'mail', route: '#/email' }, { key: 'log', label: 'Email log', icon: 'clipboard', route: '#/email/log' }, { key: 'tpl', label: 'Templates & rules', icon: 'file', route: '#/email/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', icon: 'gear', route: '#/email/settings', roles: ['admin'] }] },
     { key: 'whatsapp',  label: 'WhatsApp',   icon: 'chat',      route: '#/whatsapp',  color: '#22c55e',
-      sub: [{ key: 'ready', label: 'Ready to send', icon: 'chat', route: '#/whatsapp' }, { key: 'log', label: 'Message log', icon: 'file', route: '#/whatsapp/log' }, { key: 'digest', label: '🌙 Owner Night Digest', icon: 'chart', route: '#/whatsapp/digest' }, { key: 'tpl', label: 'Templates & rules', icon: 'clipboard', route: '#/whatsapp/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', icon: 'gear', route: '#/whatsapp/settings', roles: ['admin'] }] },
+      sub: [{ key: 'ready', label: 'Ready to send', icon: 'chat', route: '#/whatsapp' }, { key: 'log', label: 'Message log', icon: 'clipboard', route: '#/whatsapp/log' }, { key: 'digest', label: '🌙 Owner Night Digest', icon: 'bell', route: '#/whatsapp/digest' }, { key: 'tpl', label: 'Templates & rules', icon: 'file', route: '#/whatsapp/templates', roles: ['admin'] }, { key: 'settings', label: 'Settings', icon: 'gear', route: '#/whatsapp/settings', roles: ['admin'] }] },
     { key: 'sms',       label: 'SIM Setting', icon: 'phone',     route: '#/sms',       color: '#8b5cf6',
-      sub: [{ key: 'settings', label: 'SIM Setting', icon: 'phone', route: '#/sms' }, { key: 'log', label: 'SMS log', icon: 'file', route: '#/sms/log' }] },
+      sub: [{ key: 'settings', label: 'SIM Setting', icon: 'phone', route: '#/sms' }, { key: 'log', label: 'SMS log', icon: 'clipboard', route: '#/sms/log' }] },
     { key: 'audit',     label: 'Audit Log',  icon: 'shield',    route: '#/audit',     color: '#0ea5e9' },
     { key: 'subscription', label: 'Subscription', icon: 'card',  route: '#/subscription', color: '#f59e0b', saas: true },
     { key: 'settings',  label: 'Settings',   icon: 'gear',      route: '#/settings',  color: '#64748b',
@@ -104,7 +109,6 @@
   ];
   var PERMS = {
     dashboard: ['admin', 'reception', 'technician'],
-    notifications: ['admin', 'reception', 'technician'],
     billing:   ['admin', 'reception'],
     invoices:  ['admin', 'reception'],
     dues:      ['admin', 'reception'],
@@ -114,6 +118,7 @@
     panels:    ['admin', 'reception'],
     outsourced: ['admin', 'reception', 'technician'],
     patients:  ['admin', 'reception', 'technician'],
+    appointments: ['admin', 'reception'],
     tests:     ['admin', 'reception', 'technician'],
     packages:  ['admin', 'reception', 'technician'],
     doctors:   ['admin', 'reception'],
@@ -131,8 +136,8 @@
     sms:       ['admin', 'reception'],
     audit:     ['admin'],
     subscription: ['admin'],
-    settings:  ['admin'],
     branches: ['admin'],
+    settings:  ['admin'],
     profile:   ['admin', 'reception', 'technician']
   };
   function routeKey(path) {
@@ -152,7 +157,7 @@
   }
   /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
      Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
-  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests Catalog'], ['packages', 'Health Packages & Deals'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['onlinepay', 'Online Payments'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
+  var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['appointments', 'Appointments'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests Catalog'], ['packages', 'Health Packages & Deals'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['onlinepay', 'Online Payments'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
     ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Close Day (Cash Closing)'], ['profit', 'Profit & Loss Statement'], ['reports', 'Reports'], ['inventory', 'Inventory'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['sms', 'SIM Setting'], ['downloads', 'Downloads']];
   function roleDef(s) {
     s = s || session(); if (!s || s.role !== 'custom') return null;
@@ -162,12 +167,12 @@
     return { id: '', name: 'No role', pages: [], money: false };
   }
   function can(key, role) {
+    if (key === 'notifications') return ['admin', 'reception', 'technician', 'custom'].indexOf(role) !== -1;
     if (role === 'custom') {
       var d = roleDef(); if (!d) return false;
-      if (key === 'profile' || key === 'notifications') return true;
+      if (key === 'profile') return true;
       if (key === 'billing') key = 'invoices';
-      if (key === 'stock' && (d.pages || []).indexOf('inventory') !== -1) return true;
-      return (d.pages || []).indexOf(key) !== -1;
+      return (d.pages || []).indexOf(key) !== -1 || (key === 'stock' && (d.pages || []).indexOf('inventory') !== -1);
     }
     return (PERMS[key] || []).indexOf(role) !== -1;
   }
@@ -185,7 +190,7 @@
     } catch (e) { return null; }
   }
   function logout() {
-    if (window.App && App.notifications) App.notifications.stop();
+    if (App.notifications) App.notifications.stop();
     var wasCloud = false;
     try { wasCloud = !!(window.DB && DB.isCloud && DB.isCloud()); } catch (e) {}
     localStorage.removeItem(SKEY);
@@ -528,7 +533,7 @@
   function render() {
     var hash = location.hash || '';
     var s = session();
-    if (window.App && App.notifications && (!s || !can('notifications', s.role) || /^#\/(portal|forgot|reset)/.test(hash))) App.notifications.stop();
+    if (App.notifications && (!s || s.role === 'doctor' || /^#\/(portal|login|signup|forgot|reset)/.test(hash))) App.notifications.stop();
     /* multi-branch: fetch the lab's feature map once per session, before any nav renders.
        Fail-open and never awaited: a dead server must not block login or the first render. */
     if (s && window.App && App.loadLabFeatures && App.__lfLab !== s.labId) {
@@ -566,6 +571,16 @@
       if (window.App && App[rf]) App[rf](); else location.hash = '#/login';
       return;
     }
+    /* one login for the Lab and the Pharmacy POS: arriving from the other site, and the "where do you want to go" chooser */
+    if (hash.indexOf('#/sso') === 0) { if (App.ssoLanding) App.ssoLanding(hash); return; }
+    if (s && s.apps && s.apps.length) {
+      var _chose = ''; try { _chose = sessionStorage.getItem('labpos_chose') || ''; } catch (e) {}
+      var _entry = hash === '#/dashboard' || hash === '' || hash === '#';
+      if (hash === '#/apps' || (s.apps.indexOf('lab') < 0) || (s.apps.length > 1 && !_chose && _entry)) {
+        if (hash !== '#/apps') { location.hash = '#/apps'; return; }
+        if (App.renderApps) App.renderApps(); return;
+      }
+    } else if (hash === '#/apps') { location.hash = s ? '#/dashboard' : '#/login'; return; }
     /* auth guard */
     if (!s && hash !== '#/login' && hash !== '#/signup') { location.hash = '#/login'; return; }
     if (s && (hash === '#/login' || hash === '#/signup' || hash === '' || hash === '#')) { location.hash = '#/dashboard'; return; }
@@ -584,12 +599,6 @@
       toast(flagOff ? 'This feature is not enabled for your lab' : 'You do not have access to this section', 'err');
       if (hash !== '#/dashboard') location.hash = '#/dashboard';
       return;
-    }
-
-    /* Monthly drafts run only on an authenticated visit, after selecting the lab store. */
-    if (s.role === 'admin' && App.ensureMonthlyPurchaseOrder) {
-      try { App.ensureMonthlyPurchaseOrder(); }
-      catch (poError) { toast('Could not save the monthly purchase order. Please retry your visit.', 'err'); }
     }
 
     /* match route */
@@ -716,16 +725,19 @@
   }
 
   /* ---------------- shell ---------------- */
-  /* Presentation only: merge entries after their existing permission/feature checks. */
-  function groupStockNavigation(visible) {
+  function sidebarNavKey(key) {
+    return key === 'inventory' || key === 'stock' ? 'inventory-stock' : key;
+  }
+  /* Presentation only: callers filter NAV by permissions/features before grouping.
+     Keep NAV and its route identities intact for routing, settings and access checks. */
+  function groupSidebarNav(visible) {
     var grouped = [], stockGroup = null;
     visible.forEach(function (n) {
-      if (n.key !== 'inventory' && n.key !== 'stock') { grouped.push(n); return; }
+      if (sidebarNavKey(n.key) !== 'inventory-stock') { grouped.push(n); return; }
       if (!stockGroup) {
-        stockGroup = { key: n.key, label: 'Inventory & Stock', icon: 'box', route: n.route, keys: [], sub: [] };
+        stockGroup = { key: 'inventory-stock', label: 'Inventory & Stock', icon: 'box', route: n.route, color: n.color, sub: [] };
         grouped.push(stockGroup);
       }
-      stockGroup.keys.push(n.key);
       stockGroup.sub = stockGroup.sub.concat(n.sub || []);
     });
     return grouped;
@@ -755,62 +767,75 @@
     try { st = window.DB.get('settings', 'main') || {}; } catch (e) {}
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     /* grouped, professional sidebar: section labels, one icon style, active state on the left */
-    var SEC = { dashboard: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', inventory: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', packages: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
+    var SEC = { dashboard: 'Overview', branches: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', inventory: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', packages: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
       invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', profit: 'Billing', reports: 'Insights', audit: 'Insights',
-      whatsapp: 'Tools', sms: 'Tools', email: 'Tools', downloads: 'Tools', branches: 'Overview', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'patients', 'samples', 'inventory', 'stock', 'results', 'tests', 'packages', 'outsourced', 'doctors', 'invoices', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'reports', 'audit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
+      whatsapp: 'Tools', sms: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
+    var ORDER = ['dashboard', 'branches', 'patients', 'samples', 'results', 'invoices', 'inventory', 'stock', 'tests', 'packages', 'reports', 'audit', 'outsourced', 'doctors', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && (!App.featureOn || App.featureOn(n.key)) && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
-    visible = groupStockNavigation(visible);
+    visible = groupSidebarNav(visible);
+    var sidebarActiveKey = sidebarNavKey(activeKey);
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
     function itemHtml(n) {
       var subs = n.sub ? n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; }) : [];
       if (n.sub && subs.length >= 2) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
-        var open = (n.keys || [n.key]).indexOf(activeKey) >= 0;
+        var open = n.key === sidebarActiveKey;
         return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
-          '<button type="button" class="nav-it nav-par' + (open ? ' active' : '') + '" data-nav="' + n.key + '"' + (n.keys ? ' data-nav-keys="' + esc(n.keys.join(' ')) + '"' : '') + ' aria-label="' + esc(n.label) + '" title="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+           '<button type="button" class="nav-it nav-par' + (open ? ' active' : '') + '" data-nav="' + n.key + '" data-route="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + esc(n.label) + '</span>' +
           '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
-          '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '" title="' + esc(x.label) + '"><span class="nav-sub-ic">' + icon(x.icon || n.icon || 'grid', 16) + '</span><span class="nav-sub-lb">' + esc(x.label) + '</span></a>'; }).join('') + '</div></div>';
+           '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" title="' + esc(x.label) + '" aria-label="' + esc(x.label) + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '"><span class="nav-sub-ic">' + icon(x.icon || (x.danger ? 'alert' : n.icon) || 'file', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
       }
-      return '<a href="' + n.route + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '" aria-label="' + esc(n.label) + '" title="' + esc(n.label) + '">' +
+       return '<a href="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
         '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span></a>';
     }
     /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
        A new page only needs its key added to a folder below (a key that is in no folder simply shows at the bottom). */
-    var TOP = ['dashboard', 'branches', 'patients', 'samples', 'inventory', 'stock', 'results', 'tests', 'packages', 'invoices', 'reports'];
+    /* The menu is grouped under category headings (Overview, Laboratory, ...); pages that belong together and are used less often live in folders.
+       A key that is in no section simply shows at the bottom. */
+    var SECTIONS = [
+      { label: 'Overview', keys: ['dashboard', 'branches'] },
+      { label: 'Laboratory', keys: ['patients', 'appointments', 'samples', 'results', 'invoices', 'inventory-stock', 'tests', 'packages', 'folder:lab'] },
+      { label: 'Finance', keys: ['folder:acct'] },
+      { label: 'Insights', keys: ['reports', 'audit'] },
+      { label: 'Communication', keys: ['folder:tools'] },
+      { label: 'Account', keys: ['subscription', 'settings'] }
+    ];
     var FOLDERS = [
       { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['outsourced', 'doctors'] },
       { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit'] },
-      { id: 'ins', label: 'Insights', icon: 'shield', keys: ['audit'] },
-      { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'sms', 'email', 'downloads'] },
-      { id: 'acc', label: 'Account', icon: 'gear', keys: ['subscription'] } /* one page = shown as the page itself, not a folder */
+      { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'sms', 'email', 'downloads'] }
     ];
-    var BOTTOM = ['settings']; /* always at the very bottom, outside any folder */
     var savedOpen = {}; try { savedOpen = JSON.parse(localStorage.getItem('labpos_navfolders') || '{}') || {}; } catch (e) { savedOpen = {}; }
     var byKey = {}; visible.forEach(function (n) { byKey[n.key] = n; });
     var placed = {}, items = '';
-    TOP.forEach(function (k) { if (byKey[k]) { items += itemHtml(byKey[k]); placed[k] = 1; } });
-    FOLDERS.forEach(function (f) {
+    function folderHtml(f) {
       var inside = f.keys.filter(function (k) { return byKey[k]; });
       inside.forEach(function (k) { placed[k] = 1; });
-      if (!inside.length) return;
-      if (inside.length === 1) { items += itemHtml(byKey[inside[0]]); return; } /* a folder with one page is just that page */
+      if (!inside.length) return '';
+      if (inside.length === 1) return itemHtml(byKey[inside[0]]); /* a folder with one page is just that page */
       var holds = inside.indexOf(activeKey) >= 0, open = holds || !!savedOpen[f.id];
-        items += '<div class="nav-fold' + (open ? ' open' : '') + (holds ? ' has-active' : '') + '" data-fold="' + f.id + '">' +
-        '<button type="button" class="nav-it nav-fh" aria-label="' + esc(f.label) + '" title="' + esc(f.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="nav-ic">' + icon(f.icon, 20) + '</span><span class="nav-lb">' + f.label + '</span>' +
+      return '<div class="nav-fold' + (open ? ' open' : '') + (holds ? ' has-active' : '') + '" data-fold="' + f.id + '">' +
+         '<button type="button" class="nav-it nav-fh" data-route="' + (byKey[inside[0]] ? byKey[inside[0]].route : '#/dashboard') + '" title="' + esc(f.label) + '" aria-label="' + esc(f.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="nav-ic">' + icon(f.icon, 20) + '</span><span class="nav-lb">' + f.label + '</span>' +
         '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
         '<div class="nav-fb">' + inside.map(function (k) { return itemHtml(byKey[k]); }).join('') + '</div></div>';
+    }
+    SECTIONS.forEach(function (sec) {
+      var html = '';
+      sec.keys.forEach(function (k) {
+        if (k.indexOf('folder:') === 0) { html += folderHtml(FOLDERS.filter(function (f) { return 'folder:' + f.id === k; })[0]); return; }
+        if (byKey[k]) { html += itemHtml(byKey[k]); placed[k] = 1; }
+      });
+      if (html) items += '<div class="nav-sec2">' + sec.label + '</div>' + html;
     });
-    visible.forEach(function (n) { if (!placed[n.key] && BOTTOM.indexOf(n.key) < 0) items += itemHtml(n); });
-    BOTTOM.forEach(function (k) { if (byKey[k]) items += itemHtml(byKey[k]); });
+    visible.forEach(function (n) { if (!placed[n.key]) items += itemHtml(n); });
     /* current user record (for profile photo in avatar & sidebar) */
     var _me = null;
     try { _me = window.DB.get('users', s.userId); } catch (e) {}
     var _avatarInner = (_me && _me.photo) ? '<img src="' + _me.photo + '" alt="">' : esc((s.name || 'U').charAt(0).toUpperCase());
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
-      '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Sync') + '</b><small>Medical Management</small></span>' +
+       '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Sync') + '</b></span>' +
       '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
       '<nav class="nav">' + items + '</nav>' +
       '<div class="side-foot"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a>' +
@@ -819,12 +844,7 @@
     document.getElementById('sideLogout').addEventListener('click', logout);
     paintSidePlan();
     /* topbar */
-    var navItem = activeKey === 'notifications' ? { label: 'Notifications' } : NAV.filter(function (n) { return n.key === activeKey; })[0];
-    /* time-aware greeting for the header */
-    var _gh = new Date().getHours();
-    var _greet = _gh < 12 ? 'Good morning' : (_gh < 17 ? 'Good afternoon' : 'Good evening');
-    var _greetName = s.name ? ', ' + s.name : '';
-    var _longDate = new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
     /* quick actions — role-aware; technicians get read-only shortcuts */
     var isTech = (s.role === 'technician');
     var tbQa = s.role === 'custom'
@@ -833,25 +853,36 @@
       : isTech
       ? '<a class="btn btn-sm tb-qab tb-classic" href="#/results">' + icon('clipboard', 14) + '<span class="tb-qa-t">Lab Results</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/tests">' + icon('flask', 14) + '<span class="tb-qa-t">View Tests</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/packages" title="Health Packages &amp; Screening Deals Center"><span style="font-size:14px">🎁</span><span class="tb-qa-t">Health Packages</span></a>'
+         '<a class="btn btn-sm tb-qab tb-classic" href="#/packages">' + icon('box', 14) + '<span class="tb-qa-t">Packages</span></a>'
       : '<a class="btn btn-sm tb-qab tb-classic" href="#/patients/new">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/packages" title="Health Packages &amp; Screening Deals Center"><span style="font-size:14px">🎁</span><span class="tb-qa-t">Health Packages</span></a>' +
+         '<a class="btn btn-sm tb-qab tb-classic" href="#/packages">' + icon('box', 14) + '<span class="tb-qa-t">Packages</span></a>' +
         '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses">' + icon('wallet', 14) + '<span class="tb-qa-t">Add Expense</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/finance">' + icon('finance', 14) + '<span class="tb-qa-t">Close Day</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>';
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/finance">' + icon('finance', 14) + '<span class="tb-qa-t">Close Day</span></a>';
     var _curHash = (location.hash || '').split('?')[0];
-    var _pageTitle = _curHash === '#/patients/new' ? 'Add Patient' :
-                     _curHash === '#/packages' ? 'Health Packages & Screening Deals Center' :
+     var _pageTitle = _curHash === '#/tests' ? 'All Tests' :
+                      _curHash === '#/tests/regular' ? 'Regular Tests' :
+                      _curHash === '#/tests/generic' ? 'Generic Tests' :
+                      _curHash === '#/inventory/add' ? 'Add Item' :
+                      _curHash === '#/inventory/pending' ? 'Low / Out of Stock' :
+                      _curHash === '#/inventory/alerts' ? 'Expiring / Expired' :
+                      _curHash === '#/patients/new' ? 'Add Patient' :
+                      _curHash === '#/patients/lists' ? 'Edit Patient Form' :
+                      _curHash === '#/stock/dashboard' ? 'Stock Dashboard' :
+                      _curHash === '#/stock' ? 'Stock Movement History' :
+                      _curHash === '#/stock/pending' ? 'Pending Stock' :
+                      _curHash === '#/stock/alerts' ? 'Alerts & Expiry' :
+                      _curHash === '#/stock/orders' ? 'Purchase Orders' :
+                     _curHash === '#/packages' ? 'Packages' :
+                     _curHash === '#/notifications' ? 'Notifications' :
                      _curHash === '#/invoices/pending' ? 'Pending Invoices' :
                      _curHash === '#/samples/stickers' ? 'Tube Stickers (50×25mm)' :
+                     _curHash === '#/samples/bookings' ? 'All Bookings' :
+                     _curHash === '#/samples/home' ? 'Home Sampling & Dispatch' :
                      (_curHash === '#/reports/trends' || _curHash === '#/trends') ? 'Patient Trends & Delta' :
                      (navItem ? navItem.label : '');
     document.getElementById('topbar').innerHTML =
       '<style>' +
       '.tb-acct{position:relative;flex:none}' +
-      '.notification-bell{position:relative;flex:none;display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:36px;border:1px solid var(--line);border-radius:10px;color:var(--ink);background:var(--card,#fff)}' +
-      '.notification-count{position:absolute;top:-7px;right:-7px;background:#475569;color:#fff;border-radius:20px;min-width:18px;padding:1px 4px;text-align:center;font-size:10px;font-weight:800;border:2px solid var(--card,#fff)}' +
-      '.notification-count.urgent{background:#dc2626}.notification-count[hidden],.notification-bell[hidden]{display:none}' +
       '.tb-div{width:1px;align-self:stretch;background:var(--line);margin:3px 0}' +
       '.tb-avatar{width:36px;height:36px;border-radius:50%;border:2px solid #fff;background:var(--brand-grad);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(19,24,69,.35);transition:transform .15s,box-shadow .15s;padding:0}' +
       '.tb-avatar:hover{transform:scale(1.07);box-shadow:0 3px 12px rgba(19,24,69,.5)}' +
@@ -870,7 +901,8 @@
       '.tb-qa .tb-classic{background:#fff;border:1px solid var(--bd);color:#131845;font-weight:600;box-shadow:none}' +
       '.tb-qa .tb-classic:hover{background:#ebf4f8;border-color:#8fa0c0;color:#131845;transform:none}' +
       '.tb-qa .tb-classic svg{color:#131845;flex:none}' +
-      '.tb-qa .tb-icon{padding:7px;border-radius:10px;min-width:34px;justify-content:center}' +
+      '.tb-qa .tb-icon,.tb-alert-actions .tb-icon{padding:7px;border-radius:10px;min-width:34px;justify-content:center}' +
+      '.tb-alert-actions{display:flex;align-items:center;gap:8px}.tb-bell{position:relative}.tb-bell-count{position:absolute;top:-7px;right:-7px;min-width:18px;padding:2px 4px;border-radius:20px;background:#131845;color:#fff;font-size:10px;line-height:14px;text-align:center}.tb-bell-count[hidden]{display:none}.tb-bell.has-urgent{color:#b91c1c;border-color:#fca5a5;background:#fff5f5}.tb-bell.has-urgent .tb-bell-count{background:#b91c1c}' +
       '@media(max-width:640px){.tb-qa .tb-qa-t{display:none}.tb-qa{gap:6px}.tb-qa .tb-qab{padding:7px 9px}}' +
       '.tb-greet{display:flex;flex-direction:column;justify-content:center;line-height:1.3;min-width:0;margin-right:2px}' +
       '.tb-greet b{font-size:14.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}' +
@@ -879,15 +911,16 @@
       '@media (max-width:900px){.tb-qa .tb-qa-t{display:none}}' +
       '@media (max-width:640px){.tb-qa{display:none}}' +
       '</style>' +
-      '<button class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Toggle navigation sidebar" title="Toggle navigation sidebar (Ctrl+B)">' + icon('menu', 18) + '</button>' +
-      (activeKey === 'dashboard' ? '<div class="tb-greet"><b>' + esc(_greet + _greetName) + '</b><span>' + esc(_longDate) + '</span></div>' : '') +
-      '<h1 class="page-title"' + (activeKey === 'dashboard' ? ' hidden' : '') + '>' + esc(_pageTitle) + '</h1>' +
-      '<div class="top-right"><div class="tb-qa">' + tbQa + '</div></div>' +
-      (can('notifications', s.role) && App.featureOn('notifications') ? '<a class="notification-bell" id="notificationBell" href="#/notifications" aria-label="Notifications" title="Notifications">' + icon('bell', 19) + '<span class="notification-count" id="notificationCount" hidden></span></a>' : '') +
+       '<button type="button" class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false" title="Toggle navigation">' + icon('menu', 18) + '</button>' +
+       '<h1 class="page-title">' + esc(activeKey === 'dashboard' ? 'Dashboard' : _pageTitle) + '</h1>' +
+      '<div class="top-right"><div class="tb-qa">' + tbQa + '</div><div class="tb-alert-actions">' +
+      (can('downloads', s.role) ? '<a class="btn btn-sm tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>' : '') +
+      '<a class="btn btn-sm tb-icon tb-bell" id="notificationBell" href="#/notifications" title="Notifications" aria-label="Notifications">' + icon('bell', 18) + '<span id="notificationCount" class="tb-bell-count" hidden></span></a></div></div>' +
       '<div class="tb-acct">' +
       '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + _avatarInner + '</button>' +
       '<div class="tb-menu" id="userMenu" hidden>' +
       '<div class="tb-menu-head"><b>' + esc(s.name) + '</b>' + (s.role === 'custom' ? '<span class="badge b-ready">' + esc(roleLabel(s)) + '</span>' : badge(s.role)) + '</div>' +
+      ((s.apps && s.apps.length > 1) ? '<a class="tb-menu-it" href="#/apps">' + icon('grid', 16) + '<span>Switch app</span></a>' : '') +
       '<a class="tb-menu-it" href="#/profile">' + icon('gear', 16) + '<span>Settings</span></a>' +
       '<a class="tb-menu-it" href="#/profile">' + icon('lock', 16) + '<span>Change Password</span></a>' +
       '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
@@ -918,34 +951,52 @@
         });
       }
     })();
-    /* (#navToggle itself is handled by the delegated listener in index.html; a second handler here toggled it twice = menu never opened) */
-    /* mobile drawer: close on nav tap, close button, backdrop tap, Escape (delegated once) */
+    syncNavToggle();
+    /* One delegated controller handles desktop collapse and the mobile drawer. */
     if (!window.__sideDrawerWired) {
       window.__sideDrawerWired = true;
       document.addEventListener('click', function (e) {
-        if (!document.body.classList.contains('side-open')) return;
         var t = e.target;
         if (!t || !t.closest) return;
-        if (t.closest('#sideClose') || t.closest('#sidebar .nav-it:not(.nav-par):not(.nav-fh)') || t.closest('#sidebar .nav-sub-it')) { document.body.classList.remove('side-open'); return; }
+        if (t.closest('#navToggle')) {
+          if (window.matchMedia('(max-width:900px)').matches) document.body.classList.toggle('side-open');
+          else document.body.classList.toggle('side-collapsed');
+          syncNavToggle();
+          return;
+        }
+        if (!document.body.classList.contains('side-open')) return;
+        if (t.closest('#sideClose') || t.closest('#sidebar .nav-it:not(.nav-par):not(.nav-fh)') || t.closest('#sidebar .nav-sub-it')) { document.body.classList.remove('side-open'); syncNavToggle(); return; }
         if (t.closest('#sidebar') || t.closest('#navToggle')) return;
         document.body.classList.remove('side-open');
+        syncNavToggle();
       });
       document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') document.body.classList.remove('side-open');
+        if (e.key === 'Escape') { document.body.classList.remove('side-open'); syncNavToggle(); }
+      });
+      window.addEventListener('resize', function () {
+        if (!window.matchMedia('(max-width:900px)').matches) document.body.classList.remove('side-open');
+        else document.body.classList.remove('side-collapsed');
+        syncNavToggle();
       });
     }
   }
+  function syncNavToggle() {
+    var btn = document.getElementById('navToggle');
+    if (!btn) return;
+    var mobile = window.matchMedia('(max-width:900px)').matches;
+    btn.setAttribute('aria-expanded', String(mobile ? document.body.classList.contains('side-open') : !document.body.classList.contains('side-collapsed')));
+  }
   function markActive(key) {
+    key = sidebarNavKey(key);
     var links = document.querySelectorAll('.nav-it');
     for (var i = 0; i < links.length; i++) {
-      var keys = links[i].getAttribute('data-nav-keys');
-      links[i].classList.toggle('active', keys ? keys.split(' ').indexOf(key) >= 0 : links[i].getAttribute('data-nav') === key);
+      links[i].classList.toggle('active', links[i].getAttribute('data-nav') === key);
     }
     /* sub-menu: highlight the child that matches the current page and keep its group open */
     var h = (location.hash || '').split('?')[0], subs = document.querySelectorAll('.nav-sub-it');
     for (var j = 0; j < subs.length; j++) {
       var dh = subs[j].getAttribute('data-href');
-      var on = (dh === h) || (dh === '#/samples/home' && h === '#/home-sampling') || (dh === '#/reports/tests' && (h === '#/reports' || h === '#/reports/all')) || (dh === '#/stock/pending' && (h === '#/inventory/low-out' || h === '#/inventory/pending')) || (dh === '#/stock/alerts' && (h === '#/inventory/expiring' || h === '#/inventory/alerts'));
+      var on = (dh === h) || (dh === '#/stock' && h === '#/stock/moves') || (dh === '#/stock/alerts' && h === '#/inventory/alerts') || (dh === '#/stock/pending' && h === '#/inventory/pending') || (dh === '#/reports/tests' && (h === '#/reports' || h === '#/reports/all'));
       subs[j].classList.toggle('on', on);
     }
     /* folders: the one holding the current page opens (the others keep whatever the user chose) */
@@ -958,13 +1009,9 @@
     /* accordion: only the group that holds the current page stays open; moving to any other page closes the rest */
     var grps = document.querySelectorAll('.nav-grp');
     for (var k = 0; k < grps.length; k++) {
-      var gk = grps[k], hold = gk.getAttribute('data-grp') === key || !!gk.querySelector('.nav-par.active, .nav-sub-it.on');
+      var gk = grps[k], hold = gk.getAttribute('data-grp') === key || !!gk.querySelector('.nav-sub-it.on');
       gk.classList.toggle('open', hold);
-      var pk = gk.querySelector('.nav-par');
-      if (pk) {
-        pk.setAttribute('aria-expanded', hold ? 'true' : 'false');
-        if (pk.getAttribute('data-nav-keys')) pk.classList.toggle('active', hold);
-      }
+      var pk = gk.querySelector('.nav-par'); if (pk) pk.setAttribute('aria-expanded', hold ? 'true' : 'false');
     }
   }
   /* folders open / close on click and the choice is remembered on this device */
@@ -1075,6 +1122,7 @@
   App.featureOn = function (key) {
     var f = App.labFeatures;
     if (!f || !f.features) return true;
+    if (key === 'stock') key = 'inventory';
     if (key === 'profit') return f.features.profit !== false && f.features.finance !== false;
     return f.features[key] !== false;
   };
@@ -1221,26 +1269,11 @@
       toast(window.__loginNote || 'Your session expired. Please sign in again.', 'err');
       setTimeout(logout, 1200);
     };
-    /* new CRITICAL results saved on another PC/phone: alert here too (toast + browser notification when allowed) */
-    var _critSeen = null;
-    function critWatch() {
-      try {
-        var list = DB.all('results').filter(function (r) { return r.critical && r.critical.length && !r.criticalAck; });
-        var ids = list.map(function (r) { return r.id; });
-        var fresh = _critSeen === null ? [] : list.filter(function (r) { return _critSeen.indexOf(r.id) < 0; });
-        _critSeen = ids;
-        if (!fresh.length) return;
-        var msg = '🚨 ' + fresh.length + ' new critical result' + (fresh.length > 1 ? 's' : '') + ' — open the Dashboard';
-        toast(msg, 'err');
-        if (window.Notification && Notification.permission === 'granted') { try { new Notification('Critical result', { body: msg }); } catch (e) {} }
-      } catch (e) {}
-    }
-    window.__critWatch = critWatch;
+    /* Notification aggregation owns alert/sound deduplication; this remains the shared cloud-data refresh. */
     setInterval(function () {
       if (document.hidden || !session() || !DB.isRemote || !DB.isRemote() || !DB.isCloud || !DB.isCloud()) return;
-      DB.refresh().then(function (ok) { if (ok) critWatch(); });
+      DB.refresh().then(function (ok) { if (ok && App.notifications) App.notifications.refresh(); });
     }, 30000);
-    setInterval(function () { if (_critSeen === null && session() && DB.isRemote && DB.isRemote()) critWatch(); }, 5000); /* baseline once signed in */
   }
   function boot() {
     if (boot.done) return;
@@ -1492,55 +1525,6 @@
     c.alerts = rows.filter(function (r) { return r.out || r.low || r.soon || r.expired; }).length;
     return c;
   };
-  /* Monthly purchase orders are settings snapshots, never inventory movements. */
-  App.stockPurchaseMonth = function (date) {
-    var d = date || new Date();
-    return d.getFullYear() + '-' + pad2(d.getMonth() + 1);
-  };
-  App.canEditPurchaseOrders = function () {
-    var s = App.session();
-    return !!s && s.role === 'admin' && App.canPage('stock') && App.featureOn('stock');
-  };
-  App.stockPurchaseOrders = function () {
-    var settings = DB.get('settings', 'main') || {};
-    return Array.isArray(settings.stockPurchaseOrders) ? settings.stockPurchaseOrders : [];
-  };
-  App.ensureMonthlyPurchaseOrder = function (date) {
-    if (!App.canEditPurchaseOrders()) return null;
-    var now = date || new Date(), month = App.stockPurchaseMonth(now), id = 'PO-' + month;
-    var orders = App.stockPurchaseOrders();
-    var existing = orders.filter(function (po) { return po.id === id || po.month === month; })[0];
-    if (existing) return existing;
-    var seen = {};
-    var items = App.stockState().rows.filter(function (r) {
-      if (!r.item || r.item.active === false || !(r.low || r.out) || seen[r.item.id]) return false;
-      seen[r.item.id] = true; return true;
-    }).map(function (r) {
-      var onHand = +r.onHand || 0, reorderLevel = +r.item.reorderLevel || 0;
-      return { itemId: r.item.id, name: r.item.name || '', vendor: r.item.vendor || '', unit: r.item.unit || '',
-        onHand: onHand, reorderLevel: reorderLevel, qty: Math.max(1, Math.ceil(reorderLevel - onHand)) };
-    });
-    var order = { id: id, month: month, status: 'draft', createdAt: now.toISOString(), createdBy: App.session().name || '', items: items };
-    // Keep an empty draft too: it records that this month was already evaluated.
-    DB.update('settings', 'main', { stockPurchaseOrders: orders.concat([order]) });
-    return order;
-  };
-  App.editPurchaseOrderItem = function (orderId, itemId, qty) {
-    if (!App.canEditPurchaseOrders()) throw new Error('Only administrators can edit purchase orders.');
-    if (qty !== null && (typeof qty !== 'number' || !isFinite(qty) || qty < 1 || Math.floor(qty) !== qty)) {
-      throw new Error('Enter a positive whole-number quantity.');
-    }
-    var orders = App.stockPurchaseOrders();
-    var order = orders.filter(function (po) { return po.id === orderId; })[0];
-    if (!order || order.status !== 'draft') throw new Error('This purchase order is not an editable draft.');
-    if (!(order.items || []).some(function (it) { return it.itemId === itemId; })) throw new Error('This item is no longer in the draft.');
-    var updated = Object.assign({}, order, { updatedAt: new Date().toISOString(), items: order.items.filter(function (it) {
-      return qty !== null || it.itemId !== itemId;
-    }).map(function (it) { return it.itemId === itemId ? Object.assign({}, it, { qty: qty }) : it; }) });
-    DB.update('settings', 'main', { stockPurchaseOrders: orders.map(function (po) { return po.id === orderId ? updated : po; }) });
-    return updated;
-  };
-
   /* a finished result uses the stock its test is set up to use (Tests -> edit -> "Stock used per test"); once per invoice + test */
   App.stockConsume = function (invoiceId, testId) {
     try {

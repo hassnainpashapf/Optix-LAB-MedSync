@@ -50,7 +50,8 @@
     list: _svgA('<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>'),
     cash: _svgA('<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'),
     trend: _svgA('<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>'),
-    flask: _svgA('<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/>')
+    flask: _svgA('<path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21.5h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 14h9"/>'),
+    alert: _svgA('<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>')
   };
   function admStat(icon, tint, label, value, sub, raw, isMoney, vlStyle, fullTint) {
     var countAttrs = (typeof raw === 'number' && isFinite(raw))
@@ -560,7 +561,7 @@
       } });
     }
     /* ---- report templates (worker 8): saved {type,from,to,preset} presets ---- */
-    var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This month', lastMonth: 'Last month', custom: 'Custom range' };
+    var REP_PRESET_LBL = { today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days', last30: 'Last 30 days', thisMonth: 'This Month', lastMonth: 'Last Month', custom: 'Custom Range' };
     var REP_TYPE_LBL = { tests: 'Tests', finance: 'Finance', dues: 'Dues', patients: 'Patients', labs: 'Labs' };
     function repTplList() { return DB.all('report_templates') || []; }
     function repTplDesc(t) {
@@ -857,35 +858,22 @@
         + '<div><div class="stat-num">' + val + '</div><div class="stat-lbl">' + label + '</div></div></div>';
     }
 
-    function presetBtn(p, label) {
-      return '<button class="btn ' + (rep.preset === p ? 'btn-primary' : 'btn-ghost') + ' btn-sm" data-preset="' + p + '" style="font-weight:600">'
-        + label + '</button>';
-    }
+    var presetOptions = Object.keys(REP_PRESET_LBL).map(function (p) {
+      return '<option value="' + p + '"' + (rep.preset === p ? ' selected' : '') + '>' + REP_PRESET_LBL[p] + '</option>';
+    }).join('');
     var filterCard = ''
-      + '<div class="card" style="margin-bottom:18px"><div class="card-b">'
-      +   '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">'
-      +     '<div style="display:flex;gap:8px;align-items:center">'
-      +       '<span style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em">Dates:</span>'
-      +       '<input class="input" type="date" id="repFrom" value="' + App.esc(from) + '" style="width:auto;padding:6px 10px;font-size:13px">'
-      +       '<span style="color:var(--muted);font-weight:700">–</span>'
-      +       '<input class="input" type="date" id="repTo" value="' + App.esc(to) + '" style="width:auto;padding:6px 10px;font-size:13px">'
+      + '<div class="card rep-control-card"><div class="card-b rep-control-row">'
+      +     '<div class="rep-control-group rep-dates">'
+      +       '<label class="rep-control-field" for="repPreset">Period<select class="select" id="repPreset">' + presetOptions + '</select></label>'
+      +       '<label class="rep-control-field" for="repFrom">From<input class="input" type="date" id="repFrom" value="' + App.esc(from) + '"></label>'
+      +       '<label class="rep-control-field" for="repTo">To<input class="input" type="date" id="repTo" value="' + App.esc(to) + '"></label>'
       +     '</div>'
-      +     '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">'
-      +       presetBtn('today', 'Today')
-      +       presetBtn('yesterday', 'Yesterday')
-      +       presetBtn('last7', 'Last 7 days')
-      +       presetBtn('last30', 'Last 30 days')
-      +       presetBtn('thisMonth', 'This Month')
-      +       presetBtn('lastMonth', 'Last Month')
-      +       (rep.preset === 'custom' ? '<span class="muted" style="font-size:12px;font-weight:600">Custom range</span>' : '')
-      +     '</div>'
-      +     '<div style="display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;align-items:center">'
+      +     '<div class="rep-control-group rep-actions">'
       +       '<button class="btn btn-ghost btn-sm" id="repCsv">' + DL_ICON + ' Export CSV</button>'
       +       '<button class="btn btn-ghost btn-sm" id="repBuilder">🛠 Builder</button>'
       +       '<button class="btn btn-ghost btn-sm" id="repSchedBtn">⏰ Schedules</button>'
       +       '<button class="btn btn-primary btn-sm" id="repPrint">' + PRINT_ICON + ' Print Report</button>'
       +     '</div>'
-      +   '</div>'
       + '</div></div>';
 
     /* ---- Finalized Patient Reports archive ----
@@ -1058,14 +1046,16 @@
       var opts = '<option value="">-- select template --</option>' + tpls.map(function (t) {
         return '<option value="' + App.esc(String(t.id)) + '">' + App.esc(t.name) + ' — ' + App.esc(repTplDesc(t)) + '</option>';
       }).join('');
-      return '<div class="card" style="margin-bottom:16px"><div class="card-b" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-        + '<span style="font-weight:700;margin-right:8px">Report Templates:</span>'
-        + '<select class="input" id="repTplSel" style="max-width:320px">' + opts + '</select>'
+      return '<div class="card rep-control-card"><div class="card-b rep-control-row">'
+        + '<label class="rep-control-title" for="repTplSel">Report Templates:</label>'
+        + '<div class="rep-control-group rep-template-apply">'
+        + '<select class="select" id="repTplSel">' + opts + '</select>'
         + '<button type="button" class="btn btn-sm btn-primary" id="tplApply">Apply</button>'
         + '<button type="button" class="btn btn-sm btn-ghost" id="tplDel">Delete</button>'
-        + '<input class="input" id="repTplName" placeholder="Template name…" style="max-width:220px">'
+        + '</div><div class="rep-control-group rep-template-save">'
+        + '<input class="input" id="repTplName" aria-label="Template name" placeholder="Template name…">'
         + '<button type="button" class="btn btn-sm btn-ghost" id="tplSave">💾 Save current</button>'
-        + '</div></div>';
+        + '</div></div></div>';
     })();
     var repSlotLabs = (rep.type === 'labs') ? labsCardHtml : '';
 
@@ -1192,8 +1182,10 @@
     var tplApp = document.getElementById('tplApply'); if (tplApp) tplApp.addEventListener('click', repTplApply);
     var tplDl = document.getElementById('tplDel'); if (tplDl) tplDl.addEventListener('click', repTplDel);
     var tplSv = document.getElementById('tplSave'); if (tplSv) tplSv.addEventListener('click', repTplSave);
-    document.querySelectorAll('[data-preset]').forEach(function (b) {
-      b.addEventListener('click', function () { setPreset(b.getAttribute('data-preset')); });
+    var rfPreset = document.getElementById('repPreset');
+    if (rfPreset) rfPreset.addEventListener('change', function (e) {
+      setPreset(e.target.value);
+      document.getElementById('repPreset').focus();
     });
     var rBld = document.getElementById('repBuilder'); if (rBld) rBld.addEventListener('click', function () { openBuilder(); });
     document.getElementById('repCsv').addEventListener('click', function () {
@@ -1457,8 +1449,7 @@
     }
 
     if (!curPat) {
-      var emptyHtml = '<div class="page-head"><div><h1>📈 Patient Historical Trend &amp; Delta Analysis Center</h1>'
-        + '<p class="muted">Track multi-visit biometric trajectories, evaluate delta variations, and monitor patient health recovery over time.</p></div></div>'
+      var emptyHtml = '<div class="page-head"><div><h1>📈 Patient Historical Trend &amp; Delta Analysis Center</h1></div></div>'
         + '<div class="card"><div class="card-b">' + App.empty('No patients registered in the system yet. Register patients and enter lab results to see trend charts.') + '</div></div>';
       document.getElementById('view').innerHTML = emptyHtml;
       return;
@@ -1576,7 +1567,7 @@
       + '<div class="kpi t-navy">'
       +   '<div class="kpi-ic">' + App.icon('chart', 18) + '</div>'
       +   '<div class="kpi-lb">HISTORICAL READINGS</div>'
-      +   '<div class="kpi-nm">' + pts.length + ' <span style="font-size:14px;font-weight:600;color:var(--muted)">readings</span></div>'
+      +   '<div class="kpi-nm">' + pts.length + '</div>'
       +   '<div class="kpi-sb">' + (pts.length > 1 ? 'From ' + App.d(basePt.t) + ' to ' + App.d(latestPt.t) : (pts.length ? '1 visit recorded' : '0 readings recorded')) + '</div>'
       + '</div>'
       + '<div class="kpi t-purple">'
@@ -1657,9 +1648,6 @@
       +     '</div>'
       +     '<div style="display:flex;gap:12px;margin-top:5px;font-size:12px;color:var(--muted);flex-wrap:wrap">'
       +       '<span>📞 ' + App.esc(curPat.phone || 'No phone') + '</span>'
-      +       '<span>🗓 Registered ' + App.esc(App.d(curPat.createdAt)) + '</span>'
-      +       '<span>🧾 ' + patInvs.length + ' Total Visits</span>'
-      +       '<span>🔬 ' + patReadyCount + ' Finalized Lab Reports</span>'
       +     '</div>'
       +   '</div>'
       +   '<div style="display:flex;gap:8px">'
@@ -1672,10 +1660,7 @@
       html += '<div class="card"><div class="card-b" style="text-align:center;padding:40px 20px">'
         + '<div style="font-size:42px;margin-bottom:12px">🧪</div>'
         + '<h3 style="margin:0 0 6px">No Numeric Lab Test Results Found</h3>'
-        + '<p class="muted" style="margin:0 0 16px;max-width:500px;margin-left:auto;margin-right:auto">'
-        + 'Patient <b>' + App.esc(curPat.name) + '</b> does not have finalized numeric test results yet. '
-        + 'When tests like Blood Sugar, CBC, Creatinine, Lipid Profile, or Electrolytes are finalized with numeric values in Lab Results, their multi-visit historical trend graphs and delta analyses will display here.'
-        + '</p>'
+        + '<p class="muted" style="margin:0 0 16px">No finalized numeric results for <b>' + App.esc(curPat.name) + '</b> yet.</p>'
         + '<div style="display:flex;justify-content:center;gap:10px">'
         + '<a href="#/results" class="btn btn-primary">Go to Lab Results &rarr;</a>'
         + '<a href="#/billing/' + App.esc(curPat.id) + '" class="btn btn-ghost">+ New Bill for Patient</a>'
@@ -1701,7 +1686,6 @@
       +   '</div>'
       + '</div>'
       + '<div class="card-b" style="padding:16px 20px">'
-      +   (pts.length === 1 ? '<p class="muted" style="margin:0 0 10px;font-size:12.5px">📌 Only 1 reading recorded so far. Continuous connection curves connect automatically across upcoming visits.</p>' : '')
       +   buildTrendSvg(selSeries, pts)
       + '</div></div>';
 
@@ -1753,26 +1737,24 @@
         + '<td><span class="muted">' + App.esc(selSeries.ref || '—') + '</span></td>'
         + '<td>' + statusBadge + '</td>'
         + '<td>' + dTxt + '</td>'
-        + '<td>' + cTxt + '</td>'
-        + '<td>' + velFlag + '</td>'
         + '<td style="text-align:right"><button class="btn btn-ghost btn-sm" data-pt-inv="' + App.esc(q.invId || q.inv) + '">View Report</button></td>'
         + '</tr>';
     }).reverse().join('');
 
     html += '<div class="card" style="margin-bottom:20px">'
       + '<div class="card-h"><h3 style="margin:0">Delta Check &amp; Clinical Progress Log</h3>'
-      + '<span class="muted" style="font-size:12.5px">' + pts.length + ' chronologically recorded readings</span></div>'
+      + '</div>'
       + '<div class="card-b" style="padding:0">'
       +   '<div class="tbl-wrap"><table class="table"><thead><tr>'
       +     '<th>#</th><th>Visit Date</th><th>Invoice No</th><th>Result Value</th><th>Reference Range</th>'
-      +     '<th>Clinical Status</th><th>Delta (vs Prior)</th><th>Cumulative Δ</th><th>Velocity / Variance</th><th style="text-align:right">Action</th>'
+      +     '<th>Clinical Status</th><th>Change vs Prior</th><th style="text-align:right">Action</th>'
       +   '</tr></thead><tbody>' + deltaRowsHtml + '</tbody></table></div>'
       + '</div></div>';
 
     /* Multi-Parameter Health Overview Grid (Other parameters tested for this patient) */
     html += '<div class="card" style="margin-bottom:24px">'
       + '<div class="card-h"><h3 style="margin:0">Multi-Parameter Clinical Overview (' + series.length + ' Monitored Tests)</h3>'
-      + '<span class="muted" style="font-size:12.5px">Quick biometric summary across all tests finalized for ' + App.esc(curPat.name) + '</span></div>'
+      + '</div>'
       + '<div class="card-b">'
       +   '<div class="pt-param-grid">'
       +     series.map(function (m, i) {
@@ -1967,6 +1949,7 @@
     '.unifi-shell{background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;overflow:hidden;box-shadow:0 4px 20px -4px rgba(15,23,42,.06);margin-bottom:24px}' +
     '.unifi-top-bar{padding:18px 24px 14px;border-bottom:1px solid #e2e8f0;background:#ffffff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}' +
     '.unifi-top-title{font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-.02em;margin:0;display:flex;align-items:center;gap:8px}' +
+    '.unifi-top-title>svg,.unifi-tab-btn>svg{display:block;flex:none}' +
     '.unifi-top-desc{font-size:12.5px;color:#64748b;margin:3px 0 0}' +
     '.unifi-tab-strip{display:flex;gap:6px;overflow-x:auto;padding:12px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;scrollbar-width:thin}' +
     '.unifi-tab-strip::-webkit-scrollbar{height:4px}' +
@@ -1999,58 +1982,25 @@
   function renderSettings() {
     if (role() !== 'admin') return denied();
     var tabs = [
-      { id: 'profile', sec: 'GENERAL', label: 'Lab Profile', desc: 'Identity, logo, contact & branches', icon: '🏢' },
-      { id: 'payments', sec: 'GENERAL', label: 'Online Payments', desc: 'JazzCash, Easypaisa, Bank & Raast', icon: '💳' },
-      { id: 'account', sec: 'GENERAL', label: 'My Account', desc: 'Admin credentials & password', icon: '👤' },
-      { id: 'users', sec: 'GENERAL', label: 'Users & Roles', desc: 'Staff accounts & permissions', icon: '👥' },
+      { id: 'profile', sec: 'GENERAL', label: 'Lab Profile', desc: 'Identity, logo, contact & branches', icon: 'flask' },
+      { id: 'payments', sec: 'GENERAL', label: 'Online Payments', desc: 'JazzCash, Easypaisa, Bank & Raast', icon: 'card' },
+      { id: 'account', sec: 'GENERAL', label: 'My Account', desc: 'Admin credentials & password', icon: 'users' },
+      { id: 'users', sec: 'GENERAL', label: 'Users & Roles', desc: 'Staff accounts & permissions', icon: 'shield' },
 
-      { id: 'templates', sec: 'REPORTS & PRINTING', label: 'Report Templates', desc: 'Presets, normal ranges & tests', icon: '📄' },
-      { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: '🖋️' },
+      { id: 'templates', sec: 'REPORTS & PRINTING', label: 'Report Templates', desc: 'Presets, normal ranges & tests', icon: 'file' },
+      { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: 'check' },
 
-      { id: 'whatsapp', sec: 'AUTOMATION & PORTAL', label: 'WhatsApp Automation', desc: 'Auto-send reports on payment', icon: '💬' },
-      { id: 'sms', sec: 'AUTOMATION & PORTAL', label: 'SIM Setting', desc: 'Send SMS from your SIM card', icon: '📲' },
-      { id: 'sharing', sec: 'AUTOMATION & PORTAL', label: 'Email & Slack', desc: 'Notifications & webhook alerts', icon: '✉️' },
-      { id: 'portal', sec: 'AUTOMATION & PORTAL', label: 'Patient Portal', desc: 'Online verification & QR access', icon: '🌐' },
+      { id: 'portal', sec: 'AUTOMATION & PORTAL', label: 'Patient Portal', desc: 'Online verification & QR access', icon: 'lock' },
 
-      { id: 'backup', sec: 'SYSTEM', label: 'Backup & Cloud Sync', desc: 'Automated backups & export', icon: '💾' },
-      { id: 'danger', sec: 'SYSTEM', label: 'Danger Zone', desc: 'Factory reset & data purge', icon: '⚠️', isDanger: true }
+      { id: 'backup', sec: 'SYSTEM', label: 'Backup & Cloud Sync', desc: 'Automated backups & export', icon: 'download' },
+      { id: 'danger', sec: 'SYSTEM', label: 'Danger Zone', desc: 'Factory reset & data purge', icon: 'alert', isDanger: true }
     ];
 
     var cur = tabs.filter(function (t) { return t.id === settingsTab; })[0] || tabs[0];
 
-    var tabsHtml = tabs.map(function (t) {
-      var isAct = t.id === cur.id;
-      return '<a href="#/settings/' + t.id + '" class="unifi-tab-btn' + (isAct ? ' active' : '') + (t.isDanger ? ' unifi-danger' : '') + '">'
-        + '<span>' + t.icon + '</span>'
-        + '<span>' + App.esc(t.label) + '</span>'
-        + '</a>';
-    }).join('');
-
     var html =
       '<style>' + UNIFI_SET_CSS + '</style>' +
       '<div class="unifi-shell">' +
-        '<!-- Top Header Bar -->' +
-        '<div class="unifi-top-bar">' +
-          '<div>' +
-            '<h2 class="unifi-top-title">' +
-              '<span>' + cur.icon + '</span>' +
-              '<span>' + App.esc(cur.label) + '</span>' +
-            '</h2>' +
-            '<p class="unifi-top-desc">' + App.esc(cur.desc) + '</p>' +
-          '</div>' +
-          '<div>' +
-            '<span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#f1f5f9;color:#475569">' +
-              '<span style="width:7px;height:7px;border-radius:50%;background:#10b981;display:inline-block"></span> ' + App.esc(cur.sec) +
-            '</span>' +
-          '</div>' +
-        '</div>' +
-
-        '<!-- Horizontal Tab Navigation Bar -->' +
-        '<div class="unifi-tab-strip">' +
-          tabsHtml +
-        '</div>' +
-
-        '<!-- Settings Content Canvas -->' +
         '<div class="unifi-canvas">' +
           '<div id="setBody"></div>' +
         '</div>' +
@@ -2063,9 +2013,6 @@
     else if (settingsTab === 'account') renderSetAccount();
     else if (settingsTab === 'templates') renderSetTemplates();
     else if (settingsTab === 'signatures') renderSetSignatures();
-    else if (settingsTab === 'whatsapp') renderSetWhatsapp();
-    else if (settingsTab === 'sms') renderSetSms();
-    else if (settingsTab === 'sharing') renderSetSharing();
     else if (settingsTab === 'portal') renderSetPortal();
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
@@ -2075,7 +2022,7 @@
 
   /* deep-link into the WhatsApp settings tab (used by report-view send buttons
      when the WhatsApp API is not configured yet) */
-  App.openWaSettingsTab = function () { App.nav('#/settings/whatsapp'); };
+  App.openWaSettingsTab = function () { App.nav('#/whatsapp/settings'); };
 
   /* ---- Lab Profile ---- */
   function renderSetProfile() {
@@ -2697,12 +2644,78 @@
           '</div>' +
         '</div>' +
 
+        '<!-- Panel 5: hosted gateway credentials -->' +
+        '<div class="unifi-panel">' +
+          '<div class="unifi-panel-header">' +
+            '<div class="unifi-panel-icon">🔐</div>' +
+            '<div><h3 class="unifi-panel-title">Secure hosted checkout</h3>' +
+              '<p class="unifi-panel-desc">Connect your lab-owned JazzCash or Easypaisa merchant account. Credentials are encrypted on the server and never sent to patients.</p></div>' +
+          '</div>' +
+          '<div class="unifi-panel-body">' +
+            '<div id="pay-gateway-load" class="muted">Loading gateway settings…</div>' +
+            '<div id="pay-gateway-form" style="display:none">' +
+              '<div class="unifi-toggle-row"><div><b>JazzCash checkout</b><div class="muted" style="font-size:12px">Patients are redirected to JazzCash to pay the full invoice balance.</div></div>' +
+                '<label class="unifi-switch"><input type="checkbox" id="pg-jc-enabled"><span class="unifi-slider"></span></label></div>' +
+              '<div class="form-grid">' +
+                '<div><label class="label">Environment</label><select class="input" id="pg-jc-mode"><option value="sandbox">Sandbox / test</option><option value="live">Live</option></select></div>' +
+                '<div><label class="label">Merchant ID</label><input class="input" id="pg-jc-id" autocomplete="off"></div>' +
+                '<div><label class="label">Merchant password</label><input class="input" id="pg-jc-password" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved secret"></div>' +
+                '<div><label class="label">Integrity salt</label><input class="input" id="pg-jc-salt" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved secret"></div>' +
+              '</div>' +
+              '<div class="unifi-toggle-row" style="margin-top:18px"><div><b>Easypaisa checkout</b><div class="muted" style="font-size:12px">Payments are confirmed by querying Easypaisa from the server.</div></div>' +
+                '<label class="unifi-switch"><input type="checkbox" id="pg-ep-enabled"><span class="unifi-slider"></span></label></div>' +
+              '<div class="form-grid">' +
+                '<div><label class="label">Environment</label><select class="input" id="pg-ep-mode"><option value="sandbox">Sandbox / test</option><option value="live">Live</option></select></div>' +
+                '<div><label class="label">Store ID</label><input class="input" id="pg-ep-id" autocomplete="off"></div>' +
+                '<div style="grid-column:1/-1"><label class="label">Hash key</label><input class="input" id="pg-ep-key" type="password" autocomplete="new-password" placeholder="Leave blank to keep saved secret"></div>' +
+              '</div>' +
+              '<div id="pay-gateway-callbacks" class="muted" style="font-size:12px;margin-top:14px"></div>' +
+            '</div>' +
+            '<div id="pay-gateway-error" style="color:var(--red);font-size:13px;margin-top:8px"></div>' +
+          '</div>' +
+        '</div>' +
+
         '<div class="unifi-save-bar">' +
           '<button class="btn btn-primary btn-lg" id="pay-save-btn" style="padding:10px 24px;font-weight:700">Save Payment Settings</button>' +
         '</div>' +
       '</div>';
 
     document.getElementById('setBody').innerHTML = html;
+
+    function gatewayRequest(method, body) {
+      var base = String(window.LABPOS_API || '').replace(/\/+$/, '');
+      if (!base || !DB.authHeaders) return Promise.reject(new Error('Connect to the cloud lab to configure hosted payment gateways.'));
+      var options = { method: method, headers: DB.authHeaders({ 'Content-Type': 'application/json' }) };
+      if (body) options.body = JSON.stringify(body);
+      return window.fetch(base + '/api/payment-gateway', options).then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (data) {
+          if (!response.ok) throw new Error(data.error || 'Could not load payment gateway settings.');
+          return data;
+        });
+      });
+    }
+    var gatewayState = null;
+    gatewayRequest('GET').then(function (data) {
+      gatewayState = data;
+      document.getElementById('pay-gateway-load').style.display = 'none';
+      document.getElementById('pay-gateway-form').style.display = '';
+      document.getElementById('pg-jc-enabled').checked = data.jazzcash.enabled;
+      document.getElementById('pg-jc-mode').value = data.jazzcash.mode;
+      document.getElementById('pg-jc-id').value = data.jazzcash.merchantId || '';
+      document.getElementById('pg-jc-password').placeholder = data.jazzcash.passwordSet ? 'Saved securely — leave blank to keep' : 'Merchant password';
+      document.getElementById('pg-jc-salt').placeholder = data.jazzcash.saltSet ? 'Saved securely — leave blank to keep' : 'Integrity salt';
+      document.getElementById('pg-ep-enabled').checked = data.easypaisa.enabled;
+      document.getElementById('pg-ep-mode').value = data.easypaisa.mode;
+      document.getElementById('pg-ep-id').value = data.easypaisa.storeId || '';
+      document.getElementById('pg-ep-key').placeholder = data.easypaisa.hashKeySet ? 'Saved securely — leave blank to keep' : 'Hash key';
+      document.getElementById('pay-gateway-callbacks').innerHTML =
+        'Configure these return URLs in the merchant portals: JazzCash return <code>' + App.esc(data.urls.jazzcashReturn) +
+        '</code>; Easypaisa customer return <code>' + App.esc(data.urls.easypaisaReturn) +
+        '</code>; Easypaisa IPN <code>' + App.esc(data.urls.easypaisaIpn) + '</code>.';
+    }, function (error) {
+      document.getElementById('pay-gateway-load').textContent = 'Hosted checkout settings are unavailable.';
+      document.getElementById('pay-gateway-error').textContent = error.message;
+    });
 
     document.getElementById('pay-save-btn').addEventListener('click', function () {
       DB.update('settings', 'main', {
@@ -2716,7 +2729,34 @@
         opRaastId: document.getElementById('pay-opRaastId').value.trim(),
         opInstructions: document.getElementById('pay-opInstructions').value.trim()
       });
-      App.toast('Payment settings saved.');
+      if (!gatewayState) { App.toast('Manual payment settings saved. Hosted gateway settings could not be loaded.', 'err'); return; }
+      gatewayRequest('PUT', {
+        jazzcash: {
+          enabled: document.getElementById('pg-jc-enabled').checked,
+          mode: document.getElementById('pg-jc-mode').value,
+          merchantId: document.getElementById('pg-jc-id').value.trim(),
+          password: document.getElementById('pg-jc-password').value,
+          salt: document.getElementById('pg-jc-salt').value
+        },
+        easypaisa: {
+          enabled: document.getElementById('pg-ep-enabled').checked,
+          mode: document.getElementById('pg-ep-mode').value,
+          storeId: document.getElementById('pg-ep-id').value.trim(),
+          hashKey: document.getElementById('pg-ep-key').value
+        }
+      }).then(function (data) {
+        gatewayState.ready = data.ready;
+        document.getElementById('pg-jc-password').value = '';
+        document.getElementById('pg-jc-salt').value = '';
+        document.getElementById('pg-ep-key').value = '';
+        document.getElementById('pg-jc-password').placeholder = 'Saved securely — leave blank to keep';
+        document.getElementById('pg-jc-salt').placeholder = 'Saved securely — leave blank to keep';
+        document.getElementById('pg-ep-key').placeholder = 'Saved securely — leave blank to keep';
+        App.toast('Payment and hosted gateway settings saved.');
+      }, function (error) {
+        document.getElementById('pay-gateway-error').textContent = error.message;
+        App.toast(error.message, 'err');
+      });
     });
   }
 
@@ -3012,65 +3052,6 @@
     paint(tests[0].id);
   }
 
-  /* ---- WhatsApp API (admin only) ---- */
-  function waDefaults() {
-    return { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true, autoReceipt: false, autoDueReminder: false, dueReminderDay: 1, autoOwnerSummary: false, ownerSummaryHour: 21, ownerNumber: '', autoFeedback: false, googleReviewUrl: '', autoRetest: false };
-  }
-  /* ---- Link the lab's own WhatsApp number with a QR code (the server then sends from it) ---- */
-  function wireGateway() {
-    var box = document.getElementById('waGwBox'); if (!box) return;
-    if (!(DB.isCloud && DB.isCloud()) || (window.labposDesktop && window.labposDesktop.isDesktop)) { box.remove(); return; }
-    var timer = null, last = '';
-    function setCfg(patch) { var st = DB.get('settings', 'main') || {}, ww = Object.assign(waDefaults(), st.whatsapp || {}); Object.assign(ww, patch); st.whatsapp = ww; DB.update('settings', 'main', st); }
-    function qrImg(str) { try { var q = qrcode(0, 'L'); q.addData(str); q.make(); return q.createDataURL(5, 4); } catch (e) { return ''; } }
-    function draw(st) {
-      var sig = JSON.stringify([st.state, st.qr, st.number, st.err]); if (sig === last) return; last = sig;
-      var w = (DB.get('settings', 'main') || {}).whatsapp || {};
-      var head = '<div class="card wa-card" style="margin-bottom:16px"><div class="card-h"><h3>Connect your WhatsApp number</h3><span class="badge ' + (st.state === 'open' ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.state === 'open' ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">';
-      var body = '';
-      if (st.enabled === false) body = '<p class="muted" style="margin:0">Linking a WhatsApp number is not available on this server.</p>';
-      else if (st.state === 'open') {
-        body = '<p style="margin-top:0">Connected: <b>+' + App.esc(st.number) + '</b>. These messages are now sent from this number:</p>' +
-          '<ul style="margin:0 0 12px;padding-left:18px;line-height:1.75;font-size:13.5px"><li><b>Report ready</b> to the patient (and, if switched on below, the referring doctor)</li><li><b>Balance pending</b> note to the patient</li><li><b>Critical result</b> alert to the referring doctor and your lab number</li><li><b>Sign-in code and link</b> when a patient or doctor opens the reports portal</li><li><b>Doctor statements</b>, when you press Send on WhatsApp</li></ul>' +
-          '<div style="margin:0 0 12px"><label class="label" for="gwGap">Sending speed (protects your number from being blocked)</label><select class="select" id="gwGap" style="max-width:380px">' +
-          [[30, 'One message every 30 seconds'], [60, 'One message every minute (recommended)'], [120, 'One message every 2 minutes'], [300, 'One message every 5 minutes']].map(function (o) { return '<option value="' + o[0] + '"' + ((+w.gapSeconds || 60) === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>' +
-          '<div class="muted" style="font-size:12.5px;margin-top:5px">When many reports are sent together they wait in a line and leave one by one. <b>Sign-in codes and critical alerts are never delayed.</b></div></div>' +
-          '<p class="muted" style="margin:0 0 12px;font-size:13px">You can change the wording in <b>WhatsApp → Templates &amp; rules</b>. Messages go only to people with a phone number saved in your records.</p>' +
-          '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="gwTest">Send a test message to this number</button><button class="btn btn-ghost" id="gwOff" style="margin-left:auto;color:#b91c1c">Disconnect</button></div><p class="muted" id="gwMsg" style="margin:10px 0 0;font-size:13px"></p>';
-      } else if (st.state === 'qr' && st.qr) {
-        body = '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start"><img alt="QR" style="width:230px;height:230px;border:1px solid var(--line);border-radius:12px;padding:6px;background:#fff" src="' + qrImg(st.qr) + '">' +
-          '<ol style="margin:0;padding-left:18px;line-height:1.9;font-size:14px;flex:1;min-width:210px"><li>Open <b>WhatsApp</b> on the lab\'s phone</li><li>Tap <b>Settings → Linked devices</b></li><li>Tap <b>Link a device</b> and scan this code</li></ol></div><p class="muted" style="margin:10px 0 0;font-size:13px">Waiting for the scan… the code refreshes by itself.</p>';
-      } else if (st.state === 'connecting') {
-        body = '<p class="muted" style="margin:0">Connecting to WhatsApp…</p>';
-      } else {
-        body = '<p class="muted" style="margin-top:0">Link <b>your lab\'s own WhatsApp number</b> by scanning a QR code, just like WhatsApp Web. After that, report links and sign-in codes go out from your number automatically. No paid API needed.</p>' +
-          '<div style="background:#fff8e6;border:1px solid #f0d9a0;border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.55;margin-bottom:12px"><b>Please note:</b> this works like WhatsApp Web, it is not the official WhatsApp Business API. Use a <b>separate number kept for the lab</b>, message only your own patients, and avoid bulk or promotional messages, otherwise WhatsApp can block the number.</div>' +
-          (st.err ? '<p style="color:#b45309;margin:0 0 10px;font-size:13.5px">' + App.esc(st.err) + '</p>' : '') + '<button class="btn btn-primary" id="gwOn">Link my WhatsApp number</button>';
-      }
-      box.innerHTML = head + body + '</div></div>';
-      var on = document.getElementById('gwOn'); if (on) on.addEventListener('click', function () { on.disabled = true; last = ''; DB.waGw('POST', 'connect', {}).then(function (s) { draw(s); poll(); }, function (e) { on.disabled = false; App.toast(e.message, 'err'); }); });
-      var gp = document.getElementById('gwGap'); if (gp) gp.addEventListener('change', function () { setCfg({ gapSeconds: +gp.value }); App.toast('Sending speed saved: one message every ' + (+gp.value >= 60 ? (gp.value / 60) + ' min' : gp.value + ' seconds')); });
-      var test = document.getElementById('gwTest'); if (test) test.addEventListener('click', function () { test.disabled = true; DB.waGw('POST', 'send', { to: st.number, text: '*' + ((DB.get('settings', 'main') || {}).labName || 'Your lab') + '*\n\nThis is a test message. Your WhatsApp number is linked and ready to send reports.' }).then(function () { document.getElementById('gwMsg').textContent = 'Sent! Check WhatsApp (it may appear in "Message yourself").'; test.disabled = false; }, function (e) { document.getElementById('gwMsg').textContent = e.message; document.getElementById('gwMsg').style.color = '#b91c1c'; test.disabled = false; }); });
-      var off = document.getElementById('gwOff'); if (off) off.addEventListener('click', function () { App.confirm('Disconnect this WhatsApp number? Reports will stop going out on WhatsApp until you link a number again.').then(function (ok) { if (!ok) return; DB.waGw('POST', 'disconnect', {}).then(function () { setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' }); last = ''; draw({ enabled: true, state: 'idle', qr: '', number: '', err: '' }); }, function (e) { App.toast(e.message, 'err'); }); }); });
-    }
-    function poll() {
-      clearInterval(timer);
-      timer = setInterval(function () {
-        if (!document.getElementById('waGwBox')) { clearInterval(timer); return; }
-        DB.waGw('GET', 'status').then(function (st) {
-          var w = (DB.get('settings', 'main') || {}).whatsapp || {};
-          if (st.state === 'open' && (w.provider !== 'gateway' || w.gatewayNumber !== st.number)) { setCfg({ provider: 'gateway', gatewayNumber: st.number, labNumber: w.labNumber || st.number }); App.toast('WhatsApp number linked'); }
-          draw(st); if (st.state === 'open' || st.state === 'idle' || st.state === 'loggedout') clearInterval(timer);
-        }, function () {});
-      }, 2000);
-    }
-    DB.waGw('GET', 'status').then(function (st) {
-      var w = (DB.get('settings', 'main') || {}).whatsapp || {};
-      if (st.state === 'open' && (w.provider !== 'gateway' || w.gatewayNumber !== st.number)) setCfg({ provider: 'gateway', gatewayNumber: st.number, labNumber: w.labNumber || st.number });
-      if (st.state === 'loggedout' && w.provider === 'gateway') setCfg({ provider: (w.instanceId && w.token) ? 'ultramsg' : '', gatewayNumber: '' });
-      draw(st); if (st.state === 'qr' || st.state === 'connecting') poll();
-    }, function (e) { box.innerHTML = ''; });
-  }
 
   /* ==========================================================================
      DEDICATED DASHBOARD: PATHOLOGIST & RADIOLOGIST DIGITAL SIGNATURES (#/settings/signatures)
@@ -3623,7 +3604,7 @@
         '<div id="ptBody" style="margin-top:14px;' + (s.portalOn ? '' : 'opacity:.55') + '">' +
         '<label class="label">Link to share (put it on invoices, WhatsApp, or print the QR)</label><div style="display:flex;gap:8px"><input class="input" id="ptLink" readonly value="' + App.esc(link) + '"><button class="btn" id="ptCopy">Copy</button></div>' +
         '<div id="ptQr" style="margin:12px 0"></div>' +
-        '<div style="background:#f6f8fd;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.6"><b>How the code is sent:</b> ' + (waOn ? 'on <b>WhatsApp</b>, from your lab\'s WhatsApp number (the one set up in Settings → WhatsApp).' : '<span style="color:#b45309">your WhatsApp is not set up yet, so codes go <b>by email</b> to people who have an email address on file. Set up Settings → WhatsApp for the best experience.</span>') +
+        '<div style="background:#f6f8fd;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.6"><b>How the code is sent:</b> ' + (waOn ? 'on <b>WhatsApp</b>, from your lab\'s WhatsApp number (the one set up in Tools → WhatsApp → Settings).' : '<span style="color:#b45309">your WhatsApp is not set up yet, so codes go <b>by email</b> to people who have an email address on file. Set up Tools → WhatsApp → Settings for the best experience.</span>') +
         '<br>Make sure patients\' and doctors\' <b>phone numbers</b> are saved correctly; that is how they are recognised.</div>' +
         '<div style="margin-top:16px"><b>Reports ready for the portal:</b> ' + withPdf + ' of ' + ready + ' finished reports<div class="muted" style="font-size:12.5px;margin:4px 0 8px">New reports are prepared automatically. Use the button for the older ones.</div>' +
         '<button class="btn btn-primary" id="ptPrep"' + (ready > withPdf ? '' : ' disabled') + '>Prepare ' + (ready - withPdf) + ' older report' + (ready - withPdf === 1 ? '' : 's') + '</button> <span class="muted" id="ptProg" style="font-size:13px"></span></div></div></div></div>';
@@ -3639,569 +3620,161 @@
     }, function (e) { box.innerHTML = '<p style="color:#b91c1c">' + App.esc(e.message) + '</p>'; });
   }
 
-  /* ---- Email & Slack: how finished reports leave the lab besides WhatsApp ---- */
-  function renderSetSharing() {
-    var s = DB.get('settings', 'main') || {}, box = document.getElementById('setBody');
-    var cloud = !!(DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop);
-    if (!cloud) { box.innerHTML = '<p class="muted">Email and Slack sharing work in the web / Android app (cloud). Open your lab in the browser to use them.</p>'; return; }
-    box.innerHTML = '<p class="muted">Loading…</p>';
-    DB.share('GET', 'status').then(function (st) {
-      var tail = st.slackTail ? '…' + App.esc(st.slackTail) : '';
-      box.innerHTML =
-        '<div class="card" style="max-width:720px"><div class="card-h"><h3>Email reports</h3><span class="badge ' + (st.email ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.email ? 'ON' : 'NOT SET UP') + '</span></div><div class="card-b">' +
-        (st.email
-          ? '<p class="muted" style="margin-top:0">Open any report and press <b>Email Patient</b> or <b>Email Doctor</b>. The PDF is attached, with a link to open it on a phone. Mail shows your lab\'s name as the sender' + (s.email ? ' and replies go to <b>' + App.esc(s.email) + '</b>' : '') + '. Limit: <b>' + st.perDay + ' report emails per day</b> for your lab.</p>' +
-            (s.email ? '' : '<p style="color:#b45309;font-size:13px">Tip: add your lab\'s <b>Email</b> in Edit Report Form, so patients can reply to you.</p>')
-          : '<p class="muted" style="margin-top:0">Email sending is not set up on this server yet. The system owner can set it up in the superadmin console (Email sender).</p>') +
-        (st.email ? '<div style="margin:12px 0 4px;display:grid;gap:8px"><label class="check" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="emAutoPat"' + (s.emailAuto ? ' checked' : '') + '> Email every report to the <b>patient</b> automatically when it is ready</label>' +
-          '<label class="check" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="emAutoDoc"' + (s.emailAutoDoctor ? ' checked' : '') + '> Also email it to the <b>referring doctor</b></label>' +
-          '<span class="muted" style="font-size:12.5px">Only patients / doctors who have an email address on file get it. A report with an unpaid balance waits until it is paid (same rule as WhatsApp).</span></div>' : '') +
-        '<p class="muted" style="font-size:12.5px;margin-bottom:0">Patient and doctor email addresses are saved on their records (Patients, Doctors).</p></div></div>' +
-        '<div class="card" style="max-width:720px;margin-top:14px"><div class="card-h"><h3>Slack</h3><span class="badge ' + (st.slack ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.slack ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">' +
-        '<p class="muted" style="margin-top:0">Post a message with the report link to a Slack channel (for your team or a doctor group). Only the patient name, invoice number, test names and the report link are sent.</p>' +
-        '<ol class="muted" style="margin:0 0 12px 18px;padding:0;line-height:1.8;font-size:13px"><li>Open <b>api.slack.com/apps</b> → <b>Create New App</b> → From scratch → pick your workspace.</li><li><b>Incoming Webhooks</b> → turn it <b>On</b> → <b>Add New Webhook to Workspace</b> → choose the channel.</li><li>Copy the <b>Webhook URL</b> (starts with <code>https://hooks.slack.com/services/</code>) and paste it here.</li></ol>' +
-        '<label class="label" for="skUrl">Webhook URL</label><input class="input" id="skUrl" autocomplete="off" placeholder="' + (st.slack ? 'saved (' + tail + ') — paste a new one to replace it' : 'https://hooks.slack.com/services/…') + '">' +
-        '<label class="check" style="margin-top:12px;display:flex;gap:8px;align-items:center"><input type="checkbox" id="skAuto"' + (st.slackAuto ? ' checked' : '') + '> Post to Slack automatically when a report becomes ready</label>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px"><button class="btn btn-primary" id="skSave">Save</button>' +
-        (st.slack ? '<button class="btn" id="skTest">Send test message</button><button class="btn btn-ghost" id="skClear" style="margin-left:auto">Remove</button>' : '') + '</div>' +
-        '<p class="muted" id="skMsg" style="margin:10px 0 0;font-size:13px"></p></div></div>';
-      var ea = document.getElementById('emAutoPat'), ed = document.getElementById('emAutoDoc');
-      if (ea) ea.addEventListener('change', function () { DB.update('settings', 'main', { emailAuto: ea.checked }); App.toast(ea.checked ? 'Automatic email to patients is ON' : 'Automatic email to patients is OFF'); });
-      if (ed) ed.addEventListener('change', function () { DB.update('settings', 'main', { emailAutoDoctor: ed.checked }); App.toast(ed.checked ? 'Automatic email to doctors is ON' : 'Automatic email to doctors is OFF'); });
-      var msg = function (t, bad) { var e = document.getElementById('skMsg'); if (e) { e.textContent = t; e.style.color = bad ? '#b91c1c' : '#047857'; } };
-      document.getElementById('skSave').addEventListener('click', function () {
-        var url = document.getElementById('skUrl').value.trim(), auto = document.getElementById('skAuto').checked;
-        if (!url && !st.slack) { msg('Paste the Slack webhook URL first.', true); return; }
-        DB.share('PUT', 'slack', { webhook: url || undefined, auto: auto }).then(function () { if (App.shareStatus) App.shareStatus(true); App.toast('Slack settings saved.'); renderSetSharing(); }, function (e) { msg(e.message, true); });
-      });
-      var t = document.getElementById('skTest'); if (t) t.addEventListener('click', function () {
-        t.disabled = true; msg('Sending…');
-        DB.share('POST', 'slack/test', {}).then(function () { t.disabled = false; msg('Sent! Check your Slack channel.'); }, function (e) { t.disabled = false; msg(e.message, true); });
-      });
-      var c = document.getElementById('skClear'); if (c) c.addEventListener('click', function () {
-        App.confirm('Disconnect Slack?').then(function (ok) { if (!ok) return; DB.share('PUT', 'slack', { clear: true }).then(function () { if (App.shareStatus) App.shareStatus(true); renderSetSharing(); }, function (e) { msg(e.message, true); }); });
-      });
-    }, function (e) { box.innerHTML = '<p style="color:#b91c1c">' + App.esc(e.message) + '</p>'; });
-  }
 
-  function renderSetWhatsapp() {
-    var s = DB.get('settings', 'main') || {};
-    var w = Object.assign(waDefaults(), s.whatsapp || {});
-    var autoPat = w.autoPatient !== false;   /* default ON */
-    var autoDoc = w.autoDoctor === true;     /* default OFF */
-    var autoCrit = w.autoCritical !== false; /* default ON */
 
-    var days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    var hours = [18, 19, 20, 21, 22, 23].map(function (h) {
-      return '<option value="' + h + '"' + ((+w.ownerSummaryHour || 21) === h ? ' selected' : '') + '>' + (h - 12) + ':00 PM</option>';
-    }).join('');
 
-    function rowSwitch(id, checked, title, desc, badge, extra) {
-      return '<div class="wa-row-item">'
-        + '<div class="wa-row-content">'
-        + '  <div class="wa-row-title">'
-        + '    <span>' + title + '</span>'
-        +      (badge ? (' ' + badge) : '')
-        + '  </div>'
-        + '  <p class="wa-row-desc">' + desc + '</p>'
-        +    (extra ? ('<div class="wa-sub-box">' + extra + '</div>') : '')
-        + '</div>'
-        + '<label class="wa-switch" title="Toggle ' + App.esc(title) + '">'
-        + '  <input type="checkbox" id="' + id + '"' + (checked ? ' checked' : '') + '>'
-        + '  <span class="wa-slider"></span>'
-        + '</label>'
-        + '</div>';
+
+
+  function renderBranches() {
+    if (role() !== 'admin') return denied();
+    document.getElementById('view').innerHTML = '<div class="stat-grid" id="branchStats"></div><div class="card"><div class="card-b" id="branchBody"></div></div>';
+    var body = document.getElementById('branchBody');
+    body.innerHTML = '<p class="muted">Loading branches…</p>';
+
+    /* GET /api/lab/features -> { maxBranches, branchesUsed }. Never throws;
+       falls back to { maxBranches: null, branchesUsed: null } offline. */
+    function fetchBranchFeatures(cb) {
+      var done = function (max, used) { cb({ maxBranches: max, branchesUsed: used }); };
+      try {
+        var base = String(window.LABPOS_API || '').replace(/\/+$/, '');
+        if (!base || !window.fetch || !DB.authHeaders) return done(null, null);
+        window.fetch(base + '/api/lab/features', { headers: DB.authHeaders({ 'Content-Type': 'application/json' }) })
+          .then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (j) {
+            var max = j && j.maxBranches, used = j && j.branchesUsed;
+            done(typeof max === 'number' ? max : null, typeof used === 'number' ? used : null);
+          }, function () { done(null, null); });
+      } catch (e) { done(null, null); }
     }
 
-    var html =
-      '<style>'
-      + '.wa-set-wrap{max-width:820px;margin:0}'
-      + '.wa-set-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 22px;background:linear-gradient(135deg,#f0fdf4 0%,#e6f7ec 100%);border:1.5px solid #bbf7d0;border-radius:14px;margin-bottom:18px}'
-      + '.wa-set-head-left{display:flex;align-items:center;gap:14px}'
-      + '.wa-brand-ico{width:46px;height:46px;border-radius:12px;background:#25D366;color:#fff;display:grid;place-items:center;box-shadow:0 4px 14px rgba(37,211,102,.35);flex:none}'
-      + '.wa-set-title{font-size:18px;font-weight:800;color:#14532d;margin:0 0 3px}'
-      + '.wa-set-sub{font-size:13px;color:#166534;margin:0}'
-      + '.wa-card{margin-bottom:16px;border-radius:14px;box-shadow:0 1px 4px rgba(15,30,46,.04)}'
-      + '.wa-card .card-h{display:flex;align-items:center;justify-content:space-between;padding:14px 18px}'
-      + '.wa-card-title-group{display:flex;align-items:center;gap:9px}'
-      + '.wa-card-ic{font-size:16px}'
-      + '.wa-row-item{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 0;border-top:1px solid var(--line2)}'
-      + '.wa-row-item:first-of-type{border-top:none;padding-top:2px}'
-      + '.wa-row-content{flex:1;min-width:0}'
-      + '.wa-row-title{font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:8px;margin-bottom:2px}'
-      + '.wa-row-desc{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}'
-      + '.wa-sub-box{margin-top:10px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px}'
-      + '.wa-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer;margin-top:2px}'
-      + '.wa-switch input{opacity:0;width:0;height:0;position:absolute}'
-      + '.wa-slider{position:absolute;inset:0;background-color:#cbd5e1;border-radius:99px;transition:.2s ease}'
-      + '.wa-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:#fff;border-radius:50%;transition:.2s ease;box-shadow:0 1px 3px rgba(0,0,0,0.25)}'
-      + '.wa-switch input:checked + .wa-slider{background-color:#16a34a}'
-      + '.wa-switch input:checked + .wa-slider:before{transform:translateX(20px)}'
-      + '.wa-badge-pill{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700}'
-      + '.wa-badge-alert{background:#fee2e2;color:#b91c1c;border:1px solid #fca5a5}'
-      + '.wa-badge-green{background:#dcfce7;color:#15803d;border:1px solid #86efac}'
-      + '.wa-action-bar{display:flex;align-items:center;gap:14px;margin-top:20px;padding:16px 20px;background:#f8fafc;border:1px solid var(--line);border-radius:14px;flex-wrap:wrap}'
-      + '@media(max-width:640px){.wa-set-head{flex-direction:column;align-items:flex-start}.wa-row-item{flex-direction:column-reverse;align-items:flex-end;gap:8px}}'
-      + '</style>'
-      + '<div class="wa-set-wrap">'
-      + '<div class="wa-set-head">'
-      + '  <div class="wa-set-head-left">'
-      + '    <div class="wa-brand-ico">'
-      + '      <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor"><path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0 0 12.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 0 1 2.4 5.83c0 4.54-3.7 8.24-8.24 8.24-1.44 0-2.86-.38-4.12-1.1l-.3-.17-3.12.82.83-3.04-.19-.31a8.16 8.16 0 0 1-1.25-4.44c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.25-.13-1.47-.72-1.7-.81-.23-.08-.39-.13-.56.13-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.13-1.06-.39-2.02-1.25-.75-.67-1.26-1.5-1.4-1.75-.15-.25-.02-.39.11-.51.11-.11.25-.29.38-.44.13-.14.17-.25.25-.42.08-.17.04-.31-.02-.44-.06-.13-.56-1.35-.77-1.85-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.44.06-.67.31-.23.25-.87.85-.87 2.08s.89 2.41 1.01 2.58c.13.17 1.76 2.68 4.26 3.76.6.26 1.06.41 1.42.53.6.19 1.15.16 1.58.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.15-1.18-.06-.11-.23-.17-.48-.3"/></svg>'
-      + '    </div>'
-      + '    <div>'
-      + '      <h2 class="wa-set-title">WhatsApp Automation &amp; Alerts</h2>'
-      + '      <p class="wa-set-sub">Deliver reports, billing receipts, dues reminders and critical clinical alerts automatically.</p>'
-      + '    </div>'
-      + '  </div>'
-      + '  <div>'
-      + '    <a href="#/whatsapp" class="btn btn-sm btn-ghost" style="font-weight:700">Open WhatsApp Center &rarr;</a>'
-      + '  </div>'
-      + '</div>'
-      + '<div id="waGwBox"></div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">📱</span><h3 style="margin:0">Lab WhatsApp Number</h3></div>'
-      + '    <span class="badge ' + (w.labNumber ? 'b-ready' : 'b-pending') + '">' + (w.labNumber ? 'NUMBER SET' : 'NOT SET') + '</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      + '    <p class="muted" style="font-size:13px;margin:0 0 10px">This number represents your lab on WhatsApp — printed on bills and invoices, and used as the sender contact.</p>'
-      + '    <div style="display:flex;gap:10px;align-items:center;max-width:440px">'
-      + '      <input class="input" id="waLabNum" placeholder="e.g. 0300-1234567 or 923001234567" value="' + App.esc(w.labNumber || '') + '" style="font-size:14px;font-weight:600">'
-      + '      <button class="btn btn-primary" id="waLabNumSave" type="button" style="flex:none">Save</button>'
-      + '    </div>'
-      + '  </div>'
-      + '</div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">👤</span><h3 style="margin:0">Patient Automated Messages</h3></div>'
-      + '    <span class="muted" style="font-size:12.5px">Sent to patient\'s mobile number</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      +     rowSwitch('waAutoPatient', autoPat, 'Auto-send Report when Ready', 'Automatically send the PDF report download link to the patient on WhatsApp as soon as all test results are ready and finalized.', '<span class="wa-badge-pill wa-badge-green">Instant</span>')
-      +     rowSwitch('waAutoReceipt', w.autoReceipt === true, 'Billing Receipt on Registration', 'A few minutes after an invoice is created, send the patient an instant digital receipt with invoice no., total billed, amount paid, and balance.')
-      +     rowSwitch('waAutoDue', w.autoDueReminder === true, 'Weekly Outstanding Balance Reminder', 'Send a polite weekly balance reminder with the remaining amount to patients who have unpaid dues (sent at most 4 times per invoice).', '',
-              '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><label class="label" for="waDueDay" style="margin:0">Send weekly on:</label><select class="select" id="waDueDay" style="max-width:180px">' + days.map(function (d, i) { return '<option value="' + i + '"' + ((+w.dueReminderDay === i) ? ' selected' : '') + '>' + d + '</option>'; }).join('') + '</select></div>')
-      + '  </div>'
-      + '</div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">🚨</span><h3 style="margin:0">Doctor &amp; Emergency Clinical Alerts</h3></div>'
-      + '    <span class="muted" style="font-size:12.5px">Clinical safety &amp; referral sharing</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      +     rowSwitch('waAutoCritical', autoCrit, 'Critical Value Panic Alerts', 'When a recorded test result is far outside the safe biological limit, immediately alert the referring doctor and your lab number.', '<span class="wa-badge-pill wa-badge-alert">Urgent Safety</span>')
-      +     rowSwitch('waAutoDoctor', autoDoc, 'Auto-send Report to Referring Doctor', 'Automatically send a digital copy of the finalized test report to the patient\'s referring doctor on WhatsApp.')
-      + '  </div>'
-      + '</div>'
-      + '<div class="card wa-card">'
-      + '  <div class="card-h">'
-      + '    <div class="wa-card-title-group"><span class="wa-card-ic">📈</span><h3 style="margin:0">Owner Summary &amp; Patient Retention</h3></div>'
-      + '    <span class="muted" style="font-size:12.5px">Business intelligence &amp; follow-ups</span>'
-      + '  </div>'
-      + '  <div class="card-b">'
-      +     rowSwitch('waAutoOwner', w.autoOwnerSummary === true, 'Daily Business Summary to Owner', 'Every evening, receive an automated WhatsApp report of today\'s total patients, total billing, cash collected, and outstanding dues.', '',
-              '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end"><div><label class="label" for="waOwnerHour" style="margin-bottom:3px">Delivery Time</label><select class="select" id="waOwnerHour">' + hours + '</select></div>'
-              + '<div style="flex:1;min-width:200px"><label class="label" for="waOwnerNum" style="margin-bottom:3px">Owner WhatsApp Number</label><input class="input" id="waOwnerNum" placeholder="Leave blank to use lab number above" value="' + App.esc(w.ownerNumber || '') + '"></div>'
-              + '<button class="btn btn-ghost btn-sm" id="waOwnerTest" type="button" style="font-weight:600">Send Today\'s Summary Now</button></div>')
-      +     rowSwitch('waAutoFeedback', w.autoFeedback === true, 'Feedback &amp; Google 5-Star Review Request', 'A day after a fully paid report, thank the patient and invite them to leave a review on your Google Maps profile.', '',
-              '<div><label class="label" for="waReviewUrl" style="margin-bottom:3px">Google Review Link <span class="muted" style="font-weight:400">(e.g. https://g.page/r/...)</span></label><input class="input" id="waReviewUrl" placeholder="https://g.page/r/..." value="' + App.esc(w.googleReviewUrl || '') + '"></div>')
-      +     rowSwitch('waAutoRetest', w.autoRetest === true, 'Periodic Repeat-Test Reminder', 'Remind chronic patients a few days before a test is due again (e.g. HbA1c after 3 months, Lipid after 6 months).', '',
-              '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn btn-ghost btn-sm" id="waRetestFill" type="button" style="font-weight:600">Auto-fill common repeat days on tests</button><span class="muted" id="waRetestMsg" style="font-size:12.5px"></span></div>')
-      + '  </div>'
-      + '</div>'
-      + '<div class="wa-action-bar">'
-      + '  <button class="btn btn-primary" id="waSaveAll" type="button" style="padding:10px 24px;font-weight:700;font-size:14px;background:#16a34a;border-color:#16a34a">'
-      + '    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px;vertical-align:middle"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>Save WhatsApp Settings'
-      + '  </button>'
-      + '  <span class="muted" style="font-size:12.5px">Switches auto-save immediately on toggle. Delivery schedules are in Pakistan Standard Time (PKT).</span>'
-      + '</div>'
-      + '</div>';
+    /* Re-fetch usage and repaint the standalone page. */
+    function refresh() { renderBranches(); }
 
-    document.getElementById('setBody').innerHTML = html;
-    wireGateway();
+    function paint(feat) {
+      var branches = DB.all('branches').slice().sort(function (a, b) { return String(a.name || '').localeCompare(String(b.name || '')); });
+      var localUsed = branches.filter(function (b) { return b.is_active; }).length;
+      var used = (feat.branchesUsed != null) ? feat.branchesUsed : localUsed;
+      var max = (feat.maxBranches != null) ? feat.maxBranches : Infinity;
+      var limitReached = used >= max;
+      var usageText = max === Infinity
+        ? used + ' of unlimited branches used'
+        : used + ' of ' + max + ' branches used';
 
-    function saveAllWhatsApp(notify) {
-      var g = function (id) { return document.getElementById(id); };
-      var st = DB.get('settings', 'main') || {};
-      var ww = Object.assign(waDefaults(), st.whatsapp || {});
-
-      var labNumEl = g('waLabNum');
-      if (labNumEl) ww.labNumber = labNumEl.value.trim();
-
-      var apEl = g('waAutoPatient'); if (apEl) ww.autoPatient = apEl.checked;
-      var adEl = g('waAutoDoctor'); if (adEl) ww.autoDoctor = adEl.checked;
-      var acEl = g('waAutoCritical'); if (acEl) ww.autoCritical = acEl.checked;
-
-      var arEl = g('waAutoReceipt'); if (arEl) ww.autoReceipt = arEl.checked;
-      var aduEl = g('waAutoDue'); if (aduEl) ww.autoDueReminder = aduEl.checked;
-      var ddEl = g('waDueDay'); if (ddEl) ww.dueReminderDay = +ddEl.value;
-
-      var aoEl = g('waAutoOwner'); if (aoEl) ww.autoOwnerSummary = aoEl.checked;
-      var ohEl = g('waOwnerHour'); if (ohEl) ww.ownerSummaryHour = +ohEl.value;
-      var onEl = g('waOwnerNum'); if (onEl) ww.ownerNumber = onEl.value.trim();
-
-      var afEl = g('waAutoFeedback'); if (afEl) ww.autoFeedback = afEl.checked;
-      var ruEl = g('waReviewUrl');
-      if (ruEl) {
-        var rUrl = ruEl.value.trim();
-        if (rUrl && !/^https:\/\//i.test(rUrl)) {
-          App.toast('Google review link must start with https://', 'err');
-          return false;
-        }
-        ww.googleReviewUrl = rUrl;
+      document.getElementById('branchStats').innerHTML =
+        admStat(AICONS.list, 'blue', 'Total Branches', branches.length, 'registered locations', branches.length, false) +
+        admStat(AICONS.flask, 'green', 'Active Branches', localUsed, 'currently operating', localUsed, false) +
+        admStat(AICONS.alert, 'red', 'Inactive Branches', branches.length - localUsed, 'not currently operating', branches.length - localUsed, false) +
+        admStat(AICONS.cal, 'amber', 'Available Slots', max === Infinity ? 'Unlimited' : Math.max(0, max - used), usageText, null, false);
+      var html = '<div class="toolbar" style="margin-bottom:12px;align-items:center">'
+        + '<div><h2 style="margin:0;font-size:20px">Manage Branches</h2><div class="muted" style="font-size:12.5px;margin-top:2px">' + App.esc(usageText) + '</div></div>'
+        + '<button class="btn btn-primary btn-sm" id="bAdd" style="margin-left:auto"' + (limitReached ? ' disabled' : '') + '>+ Add Branch</button></div>'
+        + (limitReached ? '<p class="muted" style="font-size:12.5px;margin:-6px 0 12px">You are using all ' + max + ' branch slots on your plan. Ask support to raise your branch limit.</p>' : '')
+        + '<div class="tbl-wrap"><table class="table"><thead><tr>'
+        + '<th>Name</th><th>Code</th><th>Address</th><th>Phone</th><th>Manager</th><th>Status</th><th style="text-align:right">Actions</th>'
+        + '</tr></thead><tbody>';
+      if (!branches.length) {
+        html += '<tr><td colspan="7" style="text-align:center;padding:26px 10px">'
+          + '<div style="font-size:15px;font-weight:600">No branches yet</div>'
+          + '<div class="muted" style="font-size:13px;margin-top:4px">Add your first branch with the <b>+ Add Branch</b> button above.</div>'
+          + '</td></tr>';
       }
-
-      var atEl = g('waAutoRetest'); if (atEl) ww.autoRetest = atEl.checked;
-
-      st.whatsapp = ww;
-      DB.update('settings', 'main', st);
-      if (notify !== false) App.toast('WhatsApp settings saved successfully!');
-      return true;
-    }
-
-    var saveBtn = document.getElementById('waSaveAll');
-    if (saveBtn) saveBtn.addEventListener('click', function () { saveAllWhatsApp(true); });
-
-    var labNumBtn = document.getElementById('waLabNumSave');
-    if (labNumBtn) labNumBtn.addEventListener('click', function () { saveAllWhatsApp(true); });
-
-    ['waAutoPatient', 'waAutoDoctor', 'waAutoCritical', 'waAutoReceipt', 'waAutoDue', 'waAutoOwner', 'waAutoFeedback', 'waAutoRetest'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', function () {
-          if (saveAllWhatsApp(false)) {
-            App.toast((this.checked ? 'Switched ON' : 'Switched OFF') + ' — saved');
-          }
-        });
-      }
-    });
-
-    ['waDueDay', 'waOwnerHour'].forEach(function (id) {
-      var el = document.getElementById(id);
-      if (el) {
-        el.addEventListener('change', function () {
-          saveAllWhatsApp(false);
-        });
-      }
-    });
-
-    var ownerTestBtn = document.getElementById('waOwnerTest');
-    if (ownerTestBtn) {
-      ownerTestBtn.addEventListener('click', function () {
-        var b = this;
-        if (!saveAllWhatsApp(false)) return;
-        b.disabled = true;
-        DB.waGw('POST', 'auto/test', {}).then(function () {
-          b.disabled = false;
-          App.toast('Summary sent to owner number');
-        }, function (e) {
-          b.disabled = false;
-          App.toast(e && e.message ? e.message : 'Could not send — is WhatsApp connected?');
-        });
+      branches.forEach(function (b) {
+        var active = !!b.is_active;
+        html += '<tr>'
+          + '<td><strong>' + App.esc(b.name || '') + '</strong></td>'
+          + '<td>' + App.esc(b.code || '') + '</td>'
+          + '<td>' + App.esc(b.address || '—') + '</td>'
+          + '<td>' + App.esc(b.phone || '—') + '</td>'
+          + '<td>' + App.esc(b.manager_name || '—') + '</td>'
+          + '<td>' + (active ? '<span class="badge b-paid">Active</span>' : '<span class="badge b-unpaid">Inactive</span>') + '</td>'
+          + '<td style="text-align:right;white-space:nowrap" class="actions">'
+          + '<button class="btn btn-ghost btn-sm" data-bedit="' + App.esc(b.id) + '">Edit</button> '
+          + '<button class="btn btn-ghost btn-sm" data-btoggle="' + App.esc(b.id) + '">' + (active ? 'Deactivate' : 'Activate') + '</button> '
+          + '<button class="btn btn-ghost btn-sm" data-bdel="' + App.esc(b.id) + '" style="color:#b91c1c">Delete</button>'
+          + '</td></tr>';
       });
-    }
+      html += '</tbody></table></div>';
+      body.innerHTML = html;
 
-    var retestFillBtn = document.getElementById('waRetestFill');
-    if (retestFillBtn) {
-      retestFillBtn.addEventListener('click', function () {
-        var rules = [
-          [/hba1c|glycosylated|glycated/i, 90],
-          [/lipid|cholesterol/i, 180],
-          [/tsh|thyroid|\bt3\b|\bt4\b/i, 180],
-          [/vitamin\s*d|25.?oh/i, 180],
-          [/vitamin\s*b.?12|b12/i, 180],
-          [/ferritin|iron/i, 180],
-          [/\bhb\b|cbc|complete blood/i, 0],
-          [/creatinine|urea|kft|rft|renal/i, 180],
-          [/lft|liver|alt|sgpt/i, 180],
-          [/psa/i, 365]
-        ];
-        var n = 0;
-        DB.all('tests').forEach(function (t) {
-          if (+t.retestDays > 0 || t.isPackage) return;
-          for (var i = 0; i < rules.length; i++) {
-            if (rules[i][1] && rules[i][0].test(t.name || '')) {
-              DB.update('tests', t.id, Object.assign({}, t, { retestDays: rules[i][1] }));
-              n++;
-              break;
-            }
-          }
-        });
-        var msgEl = document.getElementById('waRetestMsg');
-        if (msgEl) {
-          msgEl.textContent = n ? (n + ' test(s) updated (HbA1c 3 months; lipid, thyroid, vit D/B12, kidney, liver 6 months).') : 'Nothing to change — matching tests already have repeat days.';
-        }
+      var addBtn = document.getElementById('bAdd');
+      if (addBtn && !limitReached) addBtn.addEventListener('click', function () { openBranchModal(null, max); });
+
+      document.querySelectorAll('[data-bedit]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openBranchModal(DB.get('branches', btn.getAttribute('data-bedit')), max); });
       });
-    }
-  }
-
-
-
-  /* ---- SIM Setting (server outbox -> the lab's own phone app sends from the SIM) ---- */
-  function smsDefaults() {
-    return {
-      enabled: false, simNumber: '',
-      autoPatient: true, autoDoctor: false, autoCritical: true,
-      tplPatient: '', tplDoctor: '', tplCritical: '', tplDue: ''
-    };
-  }
-  function smsCfg() {
-    try { var s = DB.get('settings', 'main') || {}; return Object.assign(smsDefaults(), s.sms || {}); }
-    catch (e) { return smsDefaults(); }
-  }
-  function smsTplDefaults() {
-    return {
-      tplPatient: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}, {date}) is ready. Tests: {tests}. Please collect it from the lab. Thank you.',
-      tplDoctor: '{lab}: Assalam-o-Alaikum {doctor}, the lab report of your patient {patient} (Invoice {invoice}) is ready. Thank you.',
-      tplCritical: '{lab}: URGENT — critical result for {patient} (Invoice {invoice}): {test} = {value}. Please contact the lab immediately.',
-      tplDue: '{lab}: Assalam-o-Alaikum {patient}, your lab report (Invoice {invoice}) is ready. A balance of {due} is pending. Please clear it at the lab. Thank you.'
-    };
-  }
-  function smsTplText(kind) {
-    var c = smsCfg(), t = smsTplDefaults();
-    var custom = (c[kind] || '').trim();
-    return custom || t[kind] || '';
-  }
-
-  function renderSetSms() {
-    var s = DB.get('settings', 'main') || {};
-    var c = Object.assign(smsDefaults(), s.sms || {});
-    var t = smsTplDefaults();
-
-    function rowSwitch(id, checked, title, desc) {
-      return '<div class="wa-row-item">'
-        + '<div class="wa-row-content">'
-        + '  <div class="wa-row-title"><span>' + title + '</span></div>'
-        + '  <p class="wa-row-desc">' + desc + '</p>'
-        + '</div>'
-        + '<label class="wa-switch" title="Toggle ' + App.esc(title) + '">'
-        + '  <input type="checkbox" id="' + id + '"' + (checked ? ' checked' : '') + '>'
-        + '  <span class="wa-slider"></span>'
-        + '</label>'
-        + '</div>';
-    }
-
-    function smsLogRow(r) {
-      var st = String(r.status || 'pending');
-      var badge = st === 'sent' || st === 'delivered'
-        ? '<span class="badge b-ready">' + App.esc(st.toUpperCase()) + '</span>'
-        : st === 'failed'
-          ? '<span class="badge b-pending" style="background:#fee2e2;color:#b91c1c;border-color:#fca5a5">' + App.esc(st.toUpperCase()) + '</span>'
-          : '<span class="badge b-pending">' + App.esc(st.toUpperCase()) + '</span>';
-      var retry = (st === 'failed') ? ' <button class="btn btn-sm btn-ghost" data-sms-retry="' + App.esc(r.id) + '">Retry</button>' : '';
-      var when = ''; try { when = App.dt(r.ts); } catch (e) { when = String(r.ts || ''); }
-      return '<tr><td style="white-space:nowrap">' + App.esc(when) + '</td>' +
-        '<td>' + App.esc(r.to || '') + '<div class="muted" style="font-size:11px">' + App.esc(r.toName || '') + '</div></td>' +
-        '<td>' + App.esc(r.kind || '') + '</td>' +
-        '<td>' + App.esc(r.invoiceNo || r.invoiceId || '') + '</td>' +
-        '<td>' + badge + (r.error ? '<div class="muted" style="font-size:11px;max-width:220px">' + App.esc(String(r.error).slice(0, 120)) + '</div>' : '') + retry + '</td></tr>';
-    }
-    function paintSmsLog(rows) {
-      var tb = document.getElementById('smsLogBody'); if (!tb) return;
-      tb.innerHTML = (rows && rows.length)
-        ? rows.map(smsLogRow).join('')
-        : '<tr><td colspan="5" class="muted" style="text-align:center;padding:18px">No SMS sent yet.</td></tr>';
-      tb.querySelectorAll('[data-sms-retry]').forEach(function (btn) {
+      document.querySelectorAll('[data-btoggle]').forEach(function (btn) {
         btn.addEventListener('click', function () {
-          var id = btn.getAttribute('data-sms-retry');
-          DB.smsApi('POST', 'retry', { id: id }).then(function () { App.toast('Re-queued'); loadSmsLog(); }, function (e) { App.toast((e && e.message) || 'Retry failed', 'err'); });
+          var b = DB.get('branches', btn.getAttribute('data-btoggle'));
+          if (!b) return;
+          if (b.is_active) {
+            var others = DB.all('branches').filter(function (x) { return x.is_active && x.id !== b.id; });
+            if (!others.length) return App.toast('Cannot deactivate the last active branch. Add or activate another branch first.', 'err');
+          }
+          App.confirm((b.is_active ? 'Deactivate' : 'Activate') + ' branch "' + b.name + '"?').then(function (ok) {
+            if (!ok) return;
+            DB.update('branches', b.id, { is_active: !b.is_active });
+            App.toast('Branch ' + (b.is_active ? 'deactivated' : 'activated') + '.');
+            refresh();
+          });
+        });
+      });
+      document.querySelectorAll('[data-bdel]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var b = DB.get('branches', btn.getAttribute('data-bdel'));
+          if (!b) return;
+          App.confirm('Permanently delete branch "' + b.name + '"? This cannot be undone.').then(function (ok) {
+            if (!ok) return;
+            DB.remove('branches', b.id);
+            App.toast('Branch deleted.');
+            refresh();
+          });
         });
       });
     }
-    function loadSmsLog() {
-      var tb = document.getElementById('smsLogBody'); if (!tb) return;
-      tb.innerHTML = '<tr><td colspan="5" class="muted" style="text-align:center;padding:18px">Loading…</td></tr>';
-      DB.smsApi('GET', 'log?limit=100', undefined).then(
-        function (j) { paintSmsLog((j && j.rows) || []); },
-        function () { paintSmsLog([]); }
-      );
-    }
 
-    /* phone gateway card: only inside the native Android app */
-    var gw = (window.App && App.smsGw && App.smsGw.available()) ? App.smsGw : null;
-    var gwCard;
-    if (gw) {
-      gwCard = '<div class="card sms-card"><div class="card-h"><h3>Phone gateway</h3><span class="muted" style="font-size:12px">this phone sends the SMS</span></div>'
-        + '<div class="card-b">'
-        + rowSwitch('smsGwOn', false, 'SMS Gateway', 'When ON, this phone checks the server every minute and sends queued SMS from your SIM.')
-        + '<div id="smsGwStatus" class="muted" style="font-size:12px;margin-top:6px">Checking gateway status…</div>'
-        + '<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-sm" id="smsGwPerm">Allow SMS permission</button></div>'
-        + '<p class="muted" style="font-size:12px;margin:8px 0 0">For reliable sending, set this app\u2019s battery usage to <b>Unrestricted</b> (Android Settings → Apps → Optix Lab → Battery).</p>'
-        + '</div></div>';
-    } else {
-      gwCard = '<div class="card sms-card"><div class="card-b">'
-        + '<p class="muted" style="font-size:13px;margin:0">\U0001F4F2 SMS messages go out from <b>your own mobile phone</b> through the Optix lab app — no extra app or setup needed. Open this page in the app on the phone that holds the SIM and switch the gateway ON there.</p>'
-        + '</div></div>';
-    }
-
-    var html = '<style>'
-      + '.sms-set-wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:14px}'
-      + '.sms-set-head{padding:6px 2px}'
-      + '.sms-set-title{font-size:20px;font-weight:800;margin:0}'
-      + '.sms-set-sub{color:var(--mut);font-size:13px;margin:4px 0 0}'
-      + '.sms-brand-ico{width:44px;height:44px;border-radius:12px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}'
-      + '.sms-card .card-b{display:flex;flex-direction:column;gap:10px}'
-      + '.sms-field label{display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--mut)}'
-      + '.sms-field input,.sms-field textarea,.sms-field select{width:100%;padding:9px 10px;border:1px solid var(--line2);border-radius:8px;font-size:14px;background:var(--bg)}'
-      + '.sms-field textarea{min-height:64px;resize:vertical}'
-      + '.sms-hint{font-size:12px;color:var(--mut)}'
-      + '.sms-log-table{width:100%;border-collapse:collapse;font-size:13px}'
-      + '.sms-log-table th{text-align:left;font-size:11px;text-transform:uppercase;color:var(--mut);padding:8px 10px;border-bottom:1px solid var(--line2)}'
-      + '.sms-log-table td{padding:8px 10px;border-bottom:1px solid var(--line2);vertical-align:top}'
-      + '</style>'
-      + '<div class="sms-set-wrap">'
-      + '<div class="sms-set-head">'
-      + '  <div style="display:flex;align-items:center;gap:14px"><div class="sms-brand-ico">\U0001F4F2</div>'
-      + '  <div><h2 class="sms-set-title">SIM Setting</h2>'
-      + '  <p class="sms-set-sub">Send report alerts as plain SMS from your own SIM card — the Optix app on your phone does the sending.</p></div></div>'
-      + '</div>'
-
-      + '<div class="card sms-card"><div class="card-h"><h3>SIM Setting</h3><span id="smsConnBadge"></span></div><div class="card-b">'
-      + rowSwitch('smsEnabled', !!c.enabled, 'Enable SMS', 'Queue SMS messages whenever reports are ready or alerts fire — just like WhatsApp.')
-      + '<div class="sms-field"><label>SIM / mobile number</label><input id="smsSimNumber" placeholder="0300-1234567" value="' + App.esc(c.simNumber || '') + '">'
-      + '<div class="sms-hint">The number patients will see the SMS coming from — the SIM in your phone.</div></div>'
-      + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn btn-ghost" id="smsTestSend">Send test SMS</button><span id="smsTestMsg" class="sms-hint"></span></div>'
-      + '</div></div>'
-
-      + gwCard
-
-      + '<div class="card sms-card"><div class="card-h"><h3>Automatic SMS</h3></div><div class="card-b">'
-      + rowSwitch('smsAutoPatient', !!c.autoPatient, 'Report ready \u2192 patient', 'Automatically SMS the patient when their full report is ready (same moment WhatsApp would send).')
-      + rowSwitch('smsAutoDoctor', !!c.autoDoctor, 'Report ready \u2192 referring doctor', 'Automatically SMS the referring doctor when the report is ready.')
-      + rowSwitch('smsAutoCritical', !!c.autoCritical, 'Critical result alerts', 'Immediately SMS the referring doctor and the lab number on critical values.')
-      + '</div></div>'
-
-      + '<div class="card sms-card"><div class="card-h"><h3>Message templates</h3></div><div class="card-b">'
-      + '<div class="sms-hint" style="margin-bottom:2px">Plain text. Placeholders: {lab} {patient} {doctor} {invoice} {date} {tests} {total} {due}. Leave blank to use the default.</div>'
-      + '<div class="sms-field"><label>Report ready — patient</label><textarea id="smsTplPatient" placeholder="' + App.esc(t.tplPatient) + '">' + App.esc(c.tplPatient || '') + '</textarea></div>'
-      + '<div class="sms-field"><label>Report ready — doctor</label><textarea id="smsTplDoctor" placeholder="' + App.esc(t.tplDoctor) + '">' + App.esc(c.tplDoctor || '') + '</textarea></div>'
-      + '<div class="sms-field"><label>Critical alert</label><textarea id="smsTplCritical" placeholder="' + App.esc(t.tplCritical) + '">' + App.esc(c.tplCritical || '') + '</textarea></div>'
-      + '<div class="sms-field"><label>Balance pending — patient</label><textarea id="smsTplDue" placeholder="' + App.esc(t.tplDue) + '">' + App.esc(c.tplDue || '') + '</textarea></div>'
-      + '</div></div>'
-
-      + '<div class="card sms-card"><div class="card-h"><h3>SMS log</h3><button class="btn btn-sm btn-ghost" id="smsRetryAll">Retry all failed</button></div>'
-      + '<div class="card-b" style="overflow-x:auto"><table class="sms-log-table"><thead><tr><th>When</th><th>To</th><th>Type</th><th>Invoice</th><th>Status</th></tr></thead>'
-      + '<tbody id="smsLogBody"><tr><td colspan="5" class="muted" style="text-align:center;padding:18px">Loading…</td></tr></tbody></table></div></div>'
-
-      + '<div style="margin:4px 0 18px"><button class="btn btn-primary" id="smsSaveAll" style="padding:10px 26px;font-weight:700">Save SMS settings</button></div>'
-      + '</div>';
-
-    document.getElementById('view').innerHTML = html;
-
-    function g(id) { return document.getElementById(id); }
-    function collect() {
-      var st = DB.get('settings', 'main') || {}, sc = Object.assign(smsDefaults(), st.sms || {});
-      sc.enabled = !!(g('smsEnabled') && g('smsEnabled').checked);
-      if (g('smsSimNumber')) sc.simNumber = g('smsSimNumber').value.trim();
-      if (g('smsAutoPatient')) sc.autoPatient = g('smsAutoPatient').checked;
-      if (g('smsAutoDoctor')) sc.autoDoctor = g('smsAutoDoctor').checked;
-      if (g('smsAutoCritical')) sc.autoCritical = g('smsAutoCritical').checked;
-      if (g('smsTplPatient')) sc.tplPatient = g('smsTplPatient').value.trim();
-      if (g('smsTplDoctor')) sc.tplDoctor = g('smsTplDoctor').value.trim();
-      if (g('smsTplCritical')) sc.tplCritical = g('smsTplCritical').value.trim();
-      if (g('smsTplDue')) sc.tplDue = g('smsTplDue').value.trim();
-      return sc;
-    }
-    function saveSms(notify) {
-      var st = DB.get('settings', 'main') || {};
-      st.sms = collect();
-      DB.update('settings', 'main', st);
-      if (notify !== false) App.toast('SMS settings saved');
-      return true;
-    }
-
-    var saveBtn = g('smsSaveAll');
-    if (saveBtn) saveBtn.addEventListener('click', function () { saveSms(true); refreshSmsStatus(); });
-    ['smsEnabled', 'smsAutoPatient', 'smsAutoDoctor', 'smsAutoCritical'].forEach(function (id) {
-      var el = g(id);
-      if (el) el.addEventListener('change', function () { if (saveSms(false)) App.toast((this.checked ? 'Switched ON' : 'Switched OFF') + ' \u2014 saved'); });
-    });
-    var simInput = g('smsSimNumber');
-    if (simInput) simInput.addEventListener('change', function () { saveSms(false); });
-    ['smsTplPatient', 'smsTplDoctor', 'smsTplCritical', 'smsTplDue'].forEach(function (id) {
-      var el = g(id);
-      if (el) el.addEventListener('change', function () { saveSms(false); });
-    });
-
-    function setBadge(ok, txt) {
-      var b = g('smsConnBadge'); if (!b) return;
-      b.innerHTML = '<span class="badge ' + (ok ? 'b-ready' : 'b-pending') + '">' + App.esc(txt) + '</span>';
-    }
-    function refreshSmsStatus() {
-      setBadge(false, 'CHECKING\u2026');
-      DB.smsApi('GET', 'status', undefined).then(function (j) {
-        if (j && j.ok) {
-          var bits = [j.enabled ? 'ON' : 'OFF'];
-          if (j.pending) bits.push(j.pending + ' QUEUED');
-          if (j.failed) bits.push(j.failed + ' FAILED');
-          if (j.lastPoll) { try { bits.push('PHONE SEEN ' + App.dt(j.lastPoll)); } catch (e) { /* keep going */ } }
-          setBadge(!!j.enabled, bits.join(' \u00B7 '));
-        } else setBadge(false, 'ERROR');
-      }, function () { setBadge(false, 'SERVER UNREACHABLE'); });
-    }
-    refreshSmsStatus();
-
-    var tsBtn = g('smsTestSend');
-    if (tsBtn) tsBtn.addEventListener('click', function () {
-      var b = this; saveSms(false); b.disabled = true;
-      var msgEl = g('smsTestMsg'); if (msgEl) msgEl.textContent = 'Queueing test SMS…';
-      var sc = collect();
-      if (!sc.simNumber) { b.disabled = false; if (msgEl) msgEl.textContent = 'Enter your SIM number above first.'; return; }
-      var labName = (DB.get('settings', 'main') || {}).labName || 'Optix Medical Sync';
-      DB.smsApi('POST', 'queue', { to: sc.simNumber, text: labName + ': test SMS from your lab. If you received this on your phone, SMS sending works.', kind: 'test' }).then(function (j) {
-        b.disabled = false;
-        if (msgEl) msgEl.textContent = j && j.ok ? 'Test SMS queued. Your phone will send it within a minute (gateway must be ON in the app).' : 'Could not queue the test SMS.';
-        loadSmsLog(); refreshSmsStatus();
-      }, function (e) {
-        b.disabled = false;
-        if (msgEl) msgEl.textContent = 'Failed: ' + (e && e.message ? e.message : 'server unreachable');
-      });
-    });
-
-    /* phone gateway card wiring (native app only) */
-    function paintGwStatus() {
-      var el = g('smsGwStatus'); if (!el || !gw) return;
-      gw.status().then(function (st) {
-        var sw = g('smsGwOn'); if (sw) sw.checked = !!st.enabled;
-        var bits = [st.enabled ? 'Gateway is ON' : 'Gateway is OFF'];
-        if (st.lastPoll) { try { bits.push('last check ' + App.dt(st.lastPoll)); } catch (e) { bits.push('last check ' + String(st.lastPoll)); } }
-        if (st.sentCount) bits.push(st.sentCount + ' sent');
-        if (!st.permission) bits.push('SMS permission not granted');
-        el.textContent = bits.join(' \u00B7 ');
-      }, function () { el.textContent = 'Could not read gateway status.'; });
-    }
-    if (gw) {
-      paintGwStatus();
-      var gwSw = g('smsGwOn');
-      if (gwSw) gwSw.addEventListener('change', function () {
-        var on = gwSw.checked;
-        gw.setEnabled(on).then(function () {
-          App.toast(on ? 'SMS Gateway ON \u2014 this phone will now send queued SMS' : 'SMS Gateway OFF');
-          paintGwStatus();
-        }, function (e) {
-          gwSw.checked = !on;
-          App.toast((e && e.message) || 'Could not change gateway state', 'err');
-        });
-      });
-      var permBtn = g('smsGwPerm');
-      if (permBtn) permBtn.addEventListener('click', function () {
-        gw.requestPermission().then(function (r) {
-          var ok = !!(r && r.granted);
-          App.toast(ok ? 'SMS permission granted' : 'SMS permission was not granted \u2014 the gateway cannot send without it.', ok ? undefined : 'err');
-          paintGwStatus();
-        }, function (e) { App.toast((e && e.message) || 'Permission request failed', 'err'); });
+    /* add / edit modal (mirrors openUserModal) */
+    function openBranchModal(b, max) {
+      var isEdit = !!b;
+      b = b || { name: '', code: '', address: '', phone: '', manager_name: '' };
+      var form = '<div class="form-grid">'
+        + '<div><label class="label">Branch name *</label><input class="input" id="bfName" maxlength="60" placeholder="e.g. Main Branch" value="' + App.esc(b.name || '') + '"></div>'
+        + '<div><label class="label">Branch code</label><input class="input" id="bfCode" maxlength="20" placeholder="e.g. BR-01" value="' + App.esc(b.code || '') + '"' + (isEdit ? ' disabled' : '') + '></div>'
+        + '<div style="grid-column:1/-1"><label class="label">Address</label><input class="input" id="bfAddr" maxlength="140" placeholder="Street, city" value="' + App.esc(b.address || '') + '"></div>'
+        + '<div><label class="label">Phone</label><input class="input" id="bfPhone" maxlength="20" placeholder="e.g. 0300-1234567" value="' + App.esc(b.phone || '') + '"></div>'
+        + '<div><label class="label">Manager name</label><input class="input" id="bfMgr" maxlength="60" placeholder="Branch manager" value="' + App.esc(b.manager_name || '') + '"></div>'
+        + '</div>'
+        + '<div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">'
+        + '<button class="btn btn-ghost" id="bfCancel">Cancel</button>'
+        + '<button class="btn btn-primary" id="bfSave">' + (isEdit ? 'Save Changes' : 'Add Branch') + '</button></div>';
+      App.modal(isEdit ? 'Edit Branch' : 'Add Branch', form, {
+        onOpen: function (ov, close) {
+          document.getElementById('bfCancel').addEventListener('click', close);
+          document.getElementById('bfSave').addEventListener('click', function () {
+            var name = document.getElementById('bfName').value.trim();
+            var code = document.getElementById('bfCode').value.trim();
+            var addr = document.getElementById('bfAddr').value.trim();
+            var phone = document.getElementById('bfPhone').value.trim();
+            var mgr = document.getElementById('bfMgr').value.trim();
+            if (!name) return App.toast('Branch name is required.', 'err');
+            if (isEdit) {
+              DB.update('branches', b.id, { name: name, address: addr, phone: phone, manager_name: mgr });
+              App.toast('Branch updated.');
+            } else {
+              if (max !== Infinity && DB.all('branches').length >= max) return App.toast('Branch limit reached. Ask support to raise your branch limit.', 'err');
+              var dup = code && DB.all('branches').some(function (x) { return String(x.code || '').toLowerCase() === code.toLowerCase(); });
+              if (dup) return App.toast('A branch with this code already exists.', 'err');
+              DB.insert('branches', { name: name, code: code, address: addr, phone: phone, manager_name: mgr, is_active: true });
+              App.toast('Branch added.');
+            }
+            close();
+            refresh();
+          });
+        }
       });
     }
 
-    loadSmsLog();
-    var raBtn = g('smsRetryAll');
-    if (raBtn) raBtn.addEventListener('click', function () {
-      DB.smsApi('POST', 'retry', { all: true }).then(function (j) { App.toast('Re-queued ' + ((j && j.requeued) || 0) + ' message(s)'); loadSmsLog(); }, function (e) { App.toast((e && e.message) || 'Retry failed', 'err'); });
-    });
+    fetchBranchFeatures(function (feat) { if (document.getElementById('branchBody') === body) paint(feat); });
   }
-
-  App.openSmsSettingsTab = function () { App.nav('#/settings/sms'); };
 
   /* ---- Dropdown Lists: the admin edits the choices that appear in forms ---- */
   function renderSetLists() {
@@ -4395,6 +3968,33 @@
     } });
   }
 
+  /* One login for the whole suite: which apps this person may open, and their role inside each (the list comes from the product registry) */
+  function appAccessHtml(u, isEdit, me) {
+    var info = (me && me.productInfo && me.productInfo.length) ? me.productInfo : (me && me.products ? me.products.map(function (id) { return { id: id, name: id, roles: [] }; }) : []);
+    if (info.length < 2) return '';
+    var ids = info.map(function (p) { return p.id; });
+    var have = Array.isArray(u.apps) ? u.apps : (isEdit && u.role === 'admin' ? ids : ['lab']);
+    var roles = Object.assign({}, u.pharmacyRole ? { pharmacy: u.pharmacyRole } : {}, u.appRoles || {});
+    return '<div id="ufAppBox" style="margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:10px 12px"><label class="label" style="margin-bottom:6px">Can open</label>'
+      + info.map(function (p) {
+        var on = have.indexOf(p.id) >= 0, rl = (p.roles || []);
+        return '<div class="ufAppRow" data-app="' + App.esc(p.id) + '" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:3px 0">'
+          + '<label style="display:inline-flex;align-items:center;gap:7px;font-weight:600;cursor:pointer;min-width:190px"><input type="checkbox" class="ufApp" value="' + App.esc(p.id) + '"' + (on ? ' checked' : '') + '> ' + App.esc(p.name) + '</label>'
+          + (rl.length ? '<select class="select ufAppRole" data-app="' + App.esc(p.id) + '" style="width:auto;min-width:190px;' + (on ? '' : 'display:none') + '" title="Role inside ' + App.esc(p.name) + '"><option value="">Role: automatic</option>'
+            + rl.map(function (r) { return '<option value="' + App.esc(r.value) + '"' + (roles[p.id] === r.value ? ' selected' : '') + '>' + App.esc(r.label) + '</option>'; }).join('') + '</select>' : '')
+          + '</div>';
+      }).join('')
+      + '<div class="muted" style="font-size:12px;margin-top:8px">Someone with two or more apps sees a card for each after signing in; with one app they go straight to it.</div></div>';
+  }
+  function readAppAccess() {
+    var box = document.getElementById('ufAppBox'); if (!box) return null;
+    var apps = [], appRoles = {};
+    Array.prototype.forEach.call(box.querySelectorAll('.ufApp'), function (c) {
+      if (!c.checked) return; apps.push(c.value);
+      var sel = box.querySelector('.ufAppRole[data-app="' + c.value + '"]'); if (sel && sel.value) appRoles[c.value] = sel.value;
+    });
+    return { apps: apps, appRoles: appRoles };
+  }
   function openUserModal(u, presetRole) {
     var isEdit = !!u;
     var me = sess();
@@ -4412,6 +4012,7 @@
       + allDocs.map(function (d) { return '<option value="' + App.esc(d.id) + '"' + (u.doctorId === d.id ? ' selected' : '') + '>' + App.esc(d.name) + (d.clinic ? ' — ' + App.esc(d.clinic) : '') + '</option>'; }).join('')
       + '</select></div>'
       + '</div>'
+      + appAccessHtml(u, isEdit, me)
       + '<p class="muted" id="ufRoleNote" style="font-size:12.5px;margin:10px 0 0"></p>'
       + '<div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:18px">'
       + (isEdit && (!me || u.id !== me.userId) ? '<button class="btn btn-ghost btn-sm" id="ufDelete" type="button" style="margin-right:auto;color:#b91c1c">Delete User</button>' : '')
@@ -4442,6 +4043,7 @@
           document.getElementById('ufRoleNote').textContent = roleNote[rv.indexOf('c:') === 0 ? 'custom' : rv] || '';
         }
         document.getElementById('ufRole').addEventListener('change', syncRole);
+        Array.prototype.forEach.call(document.querySelectorAll('.ufApp'), function (c) { c.addEventListener('change', function () { var sel = document.querySelector('.ufAppRole[data-app="' + c.value + '"]'); if (sel) sel.style.display = c.checked ? '' : 'none'; }); });
         document.getElementById('ufDoc').addEventListener('change', function () { var d = DB.get('doctors', this.value), n = document.getElementById('ufName'); if (d && !n.value.trim()) n.value = d.name; });
         syncRole();
         document.getElementById('ufSave').addEventListener('click', function () {
@@ -4452,8 +4054,12 @@
           if (!name) return App.toast('Name is required.', 'err');
           if (!username) return App.toast('Username is required.', 'err');
           if (roleV === 'doctor' && !docId) return App.toast('Choose which doctor this login is for.', 'err');
+          var acc = roleV === 'doctor' ? null : readAppAccess();
+          if (acc && !acc.apps.length) return App.toast('Tick at least one app this person can open.', 'err');
           if (isEdit) {
-            DB.update('users', u.id, roleV === 'doctor' ? { name: name, role: roleV, doctorId: docId, roleId: null } : { name: name, role: roleV, doctorId: null, roleId: roleId });
+            var upd = roleV === 'doctor' ? { name: name, role: roleV, doctorId: docId, roleId: null } : { name: name, role: roleV, doctorId: null, roleId: roleId };
+            if (acc) { upd.apps = acc.apps; upd.appRoles = acc.appRoles; }
+            DB.update('users', u.id, upd);
             App.toast('User updated.');
           } else {
             var pass = document.getElementById('ufPass').value;
@@ -4463,6 +4069,7 @@
             if (dup) return App.toast('Username already exists.', 'err');
             if (roleV !== 'doctor' && App.limitHit && App.limitHit('users')) return;
             var rec = { name: name, username: username, password: pass, role: roleV, active: true }; if (roleV === 'doctor') rec.doctorId = docId; if (roleV === 'custom') rec.roleId = roleId;
+            if (acc) { rec.apps = acc.apps; if (Object.keys(acc.appRoles).length) rec.appRoles = acc.appRoles; }
             DB.insert('users', rec);
             App.toast(roleV === 'doctor' ? 'Doctor login created. Give him the Lab ID, this username and the password.' : 'User added.');
           }
@@ -4838,10 +4445,17 @@
     });
   }
 
-  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'whatsapp', 'sms', 'sharing', 'portal', 'users', 'backup', 'danger'];
-  App.route('#/patients/lists', function () { App.nav('#/patients'); });
-  App.route('#/settings/lists', function () { App.nav('#/patients'); });
+  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'portal', 'users', 'backup', 'danger'];
+  /* Edit Patient Form (the dropdown choices used in patient and bill forms) lives under Patients; the old Settings address still works */
+  App.route('#/patients/lists', function () {
+    if (role() !== 'admin') return denied();
+    document.getElementById('view').innerHTML = '<div class="card"><div class="card-b"><div id="setBody"></div></div></div>';
+    renderSetLists();
+  });
+  App.route('#/settings/lists', function () { App.nav('#/patients/lists'); });
   App.route('#/settings', function () { settingsTab = 'profile'; renderSettings(); });
+  App.route('#/branches', renderBranches);
+  App.route('#/settings/branches', function () { App.nav('#/branches'); });
   App.route('#/settings/:tab', function (p) { settingsTab = (p && SET_TABS.indexOf(p.tab) >= 0) ? p.tab : 'profile'; renderSettings(); });
   App.route('#/signatures', function () { App.nav('#/settings/signatures'); });
 

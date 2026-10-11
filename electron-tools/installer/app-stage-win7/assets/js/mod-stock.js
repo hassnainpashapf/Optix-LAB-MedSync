@@ -6,9 +6,6 @@
   'use strict';
   var esc = App.esc;
   var F = { q: '', show: 'all', tab: 'items', moveType: 'all', mq: '' };
-  var addOpenedFor = ''; // avoid reopening the receive dialog on each render
-  var itemOpenedFor = ''; // avoid reopening the add-item dialog on each route render
-  var selectedOrderId = '';
   var UNITS = ['tests', 'kit', 'vial', 'bottle', 'box', 'pack', 'pcs', 'ml', 'L', 'g'];
 
   var CSS = '' +
@@ -24,9 +21,102 @@
     '@media(max-width:760px){.sk-bar{flex-wrap:wrap}.sk-bar .grow{flex:1 1 100%;min-width:0}}';
   function css() { if (document.getElementById('skCss')) return; var s = document.createElement('style'); s.id = 'skCss'; s.textContent = CSS; document.head.appendChild(s); }
 
+  var CLOCK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  /* stat card in the main dashboard's style (.stat / .stat-ico / .lb / .vl / .dl in app.css) */
+  function statCard(tint, icon, label, value, sub) {
+    return '<div class="stat" data-tint="' + tint + '"><div class="stat-ico">' + icon + '</div><div class="lb">' + label + '</div><div class="vl">' + value + '</div><div class="dl">' + sub + '</div></div>';
+  }
   function num(n) { n = Math.round((+n || 0) * 100) / 100; return String(n); }
   function fdate(d) { return d ? App.d(d) : '—'; }
   function canEdit() { var s = App.session(); return !!s && (s.role === 'admin' || s.role === 'technician' || (s.role === 'custom' && (App.canPage('stock') || App.canPage('inventory')))); }
+
+  function canEditOrders() { return (App.session() || {}).role === 'admin'; }
+  function purchaseMonth(now) { return now.getFullYear() + '-' + ('0' + (now.getMonth() + 1)).slice(-2); }
+  function purchaseOrders() {
+    var st = DB.get('settings', 'main') || {};
+    return Array.isArray(st.stockPurchaseOrders) ? st.stockPurchaseOrders : [];
+  }
+  /* Only called on an admin's Stock visit. An empty draft is also the month's
+     durable marker; editing/removing lines must never regenerate that month. */
+  function ensurePurchaseOrder(now) {
+    if (!canEditOrders()) return;
+    var month = purchaseMonth(now), id = 'PO-' + month, orders = purchaseOrders();
+    if (orders.some(function (po) { return po.id === id || po.month === month; })) return;
+    var items = App.stockState().rows.filter(function (r) { return r.item.active !== false && (r.low || r.out); }).map(function (r) {
+      return { itemId: r.item.id, name: r.item.name, vendor: r.item.vendor || '', unit: r.item.unit || '',
+        onHand: r.onHand, reorderLevel: +r.item.reorderLevel || 0, qty: Math.max(1, Math.ceil((+r.item.reorderLevel || 0) - r.onHand)) };
+    });
+    orders.push({ id: id, month: month, status: 'draft', createdAt: now.toISOString(),
+      createdBy: (App.session() || {}).name || '', items: items });
+    DB.update('settings', 'main', { stockPurchaseOrders: orders });
+  }
+
+  function savePurchaseOrder(id, view, removeId) {
+    if (!canEditOrders()) { App.toast('Only an admin can edit purchase orders.', 'err'); return; }
+    var orders = purchaseOrders(), po = orders.filter(function (o) { return o.id === id; })[0];
+    if (!po || po.status !== 'draft') { App.toast('This draft is no longer available. Reopen Purchase Orders.', 'err'); return; }
+    var quantities = Object.create(null), valid = true;
+    Array.prototype.forEach.call(view.querySelectorAll('[data-po-qty]'), function (input) {
+      var itemId = input.getAttribute('data-po-qty'), qty = +input.value;
+      if (itemId === removeId) return;
+      if (!isFinite(qty) || qty < 1 || Math.floor(qty) !== qty) valid = false;
+      quantities[itemId] = qty;
+    });
+    if (!valid) { App.toast('Enter a whole quantity of at least 1, or remove the item.', 'err'); return; }
+    po.items = po.items.filter(function (item) { return item.itemId !== removeId; }).map(function (item) {
+      if (Object.prototype.hasOwnProperty.call(quantities, item.itemId)) item.qty = quantities[item.itemId];
+      return item;
+    });
+    po.updatedAt = new Date().toISOString();
+    try { DB.update('settings', 'main', { stockPurchaseOrders: orders }); }
+    catch (e) { App.toast('Could not save the purchase order. Please retry.', 'err'); return; }
+    App.toast(removeId ? 'Item removed from draft.' : 'Purchase order draft saved.');
+    render();
+  }
+
+  function renderPurchaseOrders(v) {
+    var currentId = 'PO-' + purchaseMonth(new Date());
+    var orders = purchaseOrders().slice().sort(function (a, b) { return String(b.month).localeCompare(String(a.month)); });
+    var selectedId = F.poId || currentId;
+    var po = orders.filter(function (o) { return o.id === selectedId; })[0];
+    var editable = canEditOrders() && po && po.status === 'draft';
+    var poItems = po ? po.items : [], poQty = poItems.reduce(function (a, i) { return a + (+i.qty || 0); }, 0);
+    var poVendors = {}; poItems.forEach(function (i) { if (i.vendor) poVendors[i.vendor] = 1; });
+    var h = '<div class="stat-grid">' +
+        statCard('brand', App.icon('receipt', 18), 'Monthly Drafts', orders.length, 'saved purchase order drafts') +
+        statCard('amber', App.icon('box', 18), 'Items to Order', poItems.length, po ? 'in ' + esc(po.id) : 'no draft for this month yet') +
+        statCard('blue', App.icon('plus', 18), 'Total Order Quantity', num(poQty), 'units across all lines') +
+        statCard('green', App.icon('users', 18), 'Suppliers', Object.keys(poVendors).length, 'to order from') +
+      '</div>' +
+      '<div class="sk-alert">One monthly draft is created on the first admin visit to Stock each local calendar month, using active low / out-of-stock items at that time. ' +
+      'Nothing runs automatically while the app is closed; missed months are not backfilled. Drafts are never sent to suppliers and do not receive or move stock.</div>' +
+      '<div class="card" style="margin-bottom:16px"><div class="sk-bar"><label for="skPoSelect">Draft history</label><select class="select grow" id="skPoSelect">' +
+      (!orders.some(function (o) { return o.id === currentId; }) ? '<option value="' + currentId + '"' + (selectedId === currentId ? ' selected' : '') + '>' + currentId + ' — not generated</option>' : '') +
+      orders.map(function (o) { return '<option value="' + esc(o.id) + '"' + (o.id === selectedId ? ' selected' : '') + '>' + esc(o.id) +
+        (o.id === currentId ? ' — current month' : '') + ' — Draft · ' + o.items.length + ' items</option>'; }).join('') + '</select></div></div>';
+    if (!po) {
+      h += '<div class="card"><div class="card-b">No draft for this month yet. An admin must visit Stock to generate it.</div></div>';
+    } else {
+      h += '<div class="card"><div class="card-h"><h3>' + esc(po.id) + ' <span class="sk-chip soon">Draft</span></h3></div>' +
+        '<div class="card-b sk-sub">Created ' + esc(po.createdAt || '') + ' by ' + esc(po.createdBy || 'Admin') +
+        '. Stock figures and supplier details are snapshots from creation.' + (!canEditOrders() ? ' Only admins can edit drafts.' : '') + '</div>' +
+        '<div class="tbl-wrap"><table class="table"><thead><tr><th>Item / Supplier</th><th>Unit</th><th>On hand (snapshot)</th><th>Reorder at</th><th>Order quantity</th><th></th></tr></thead><tbody>' +
+        (po.items.length ? po.items.map(function (item) {
+          return '<tr><td><div class="sk-name">' + esc(item.name) + '</div><div class="sk-sub">' + esc(item.vendor || 'No supplier specified') + '</div></td>' +
+            '<td>' + esc(item.unit) + '</td><td>' + num(item.onHand) + '</td><td>' + num(item.reorderLevel) + '</td><td>' +
+            (editable ? '<input class="input" type="number" min="1" step="1" style="width:110px" aria-label="Order quantity for ' + esc(item.name) + '" data-po-qty="' + esc(item.itemId) + '" value="' + esc(item.qty) + '">' : num(item.qty)) + '</td><td>' +
+            (editable ? '<button class="btn btn-ghost btn-sm" data-po-remove="' + esc(item.itemId) + '">Remove</button>' : '') + '</td></tr>';
+        }).join('') : '<tr><td colspan="6" style="padding:24px">This monthly draft has no items. The month is recorded and will not be generated again.</td></tr>') +
+        '</tbody></table></div>' + (editable && po.items.length ? '<div class="card-b"><button class="btn btn-primary" id="skPoSave">Save draft quantities</button></div>' : '') + '</div>';
+    }
+    v.innerHTML = h;
+    document.getElementById('skPoSelect').addEventListener('change', function (e) { F.poId = e.target.value; render(); });
+    var save = document.getElementById('skPoSave');
+    if (save) save.addEventListener('click', function () { savePurchaseOrder(po.id, v); });
+    Array.prototype.forEach.call(v.querySelectorAll('[data-po-remove]'), function (button) {
+      button.addEventListener('click', function () { savePurchaseOrder(po.id, v, button.getAttribute('data-po-remove')); });
+    });
+  }
 
   function statusChips(r) {
     var h = '';
@@ -173,10 +263,85 @@
     URL.revokeObjectURL(url);
   }
 
+  /* ---------- Stock dashboard (#/stock/dashboard): one-screen overview — totals, what needs attention, expiry watch, latest movements ---------- */
+  var MOVE_LABEL = { 'in': 'Received', out: 'Used', waste: 'Waste', adjust: 'Adjustment', transfer: 'Transfer' };
+  function renderStockDashboard(v) {
+    var S = App.stockState(), today = new Date().toISOString().slice(0, 10), weekAgo = new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
+    var warn = new Date(Date.now() + S.warnDays * 86400000).toISOString().slice(0, 10);
+    var moves = (DB.all('stock_moves') || []).slice().sort(function (a, b) { return String(b.createdAt || b.date).localeCompare(String(a.createdAt || a.date)); });
+    var weekMoves = moves.filter(function (m) { return String(m.date || m.createdAt || '').slice(0, 10) >= weekAgo; });
+    var sum = function (arr) { return arr.reduce(function (a, m) { return a + Math.abs(+m.qty || 0); }, 0); };
+    var recvWeek = weekMoves.filter(function (m) { return m.type === 'in'; }).length;
+    var usedWeek = weekMoves.filter(function (m) { return m.type === 'out' || m.type === 'waste'; }).length;
+    var todayMoves = moves.filter(function (m) { return String(m.date || m.createdAt || '').slice(0, 10) === today; }).length;
+    var healthy = S.rows.filter(function (r) { return !(r.out || r.low || r.expired || r.soon); }).length;
+
+    var need = S.rows.filter(function (r) { return r.out || r.low; }).sort(function (a, b) { return (b.out - a.out) || (a.onHand - b.onHand); }).slice(0, 8);
+    var lots = [];
+    S.rows.forEach(function (r) { r.lots.forEach(function (l) { if (l.expiry && l.expiry <= warn) lots.push({ item: r.item, lot: l.lot, expiry: l.expiry, left: l.left }); }); });
+    lots.sort(function (a, b) { return a.expiry < b.expiry ? -1 : 1; });
+    lots = lots.slice(0, 8);
+    var recent = moves.slice(0, 8);
+    var unit = function (it) { return esc(it.unit || ''); };
+    var empty = function (t) { return '<div class="muted" style="text-align:center;padding:22px 12px">' + t + '</div>'; };
+
+    var needRows = need.length ? need.map(function (r) {
+      return '<tr><td><b>' + esc(r.item.name) + '</b><div class="sk-sub">' + esc(r.item.category || '') + '</div></td>' +
+        '<td style="white-space:nowrap">' + num(r.onHand) + ' ' + unit(r.item) + '<div class="sk-sub">reorder at ' + num(r.item.reorderLevel || 0) + '</div></td>' +
+        '<td>' + (r.out ? '<span class="sk-chip exp">Out of stock</span>' : '<span class="sk-chip soon">Low</span>') + '</td></tr>';
+    }).join('') : '<tr><td colspan="3">' + empty('Nothing is running low. 👍') + '</td></tr>';
+    var lotRows = lots.length ? lots.map(function (l) {
+      var dead = l.expiry < today;
+      return '<tr><td><b>' + esc(l.item.name) + '</b><div class="sk-sub">Lot ' + esc(l.lot || '—') + '</div></td>' +
+        '<td style="white-space:nowrap">' + num(l.left) + ' ' + unit(l.item) + '</td>' +
+        '<td style="white-space:nowrap">' + fdate(l.expiry) + '<div>' + (dead ? '<span class="sk-chip exp">Expired</span>' : '<span class="sk-chip soon">Expiring</span>') + '</div></td></tr>';
+    }).join('') : '<tr><td colspan="3">' + empty('No lots expiring within ' + S.warnDays + ' days.') + '</td></tr>';
+    var moveRows = recent.length ? recent.map(function (m) {
+      var it = DB.get('stock_items', m.itemId) || {}, q = +m.qty || 0;
+      return '<tr><td style="white-space:nowrap">' + fdate(m.date || m.createdAt) + '</td><td><b>' + esc(it.name || 'Deleted item') + '</b></td>' +
+        '<td>' + esc(MOVE_LABEL[m.type] || m.type || '') + '</td><td style="white-space:nowrap">' + (m.type === 'in' ? '+' : (m.type === 'out' || m.type === 'waste' ? '−' : '')) + num(Math.abs(q)) + ' ' + unit(it) + '</td>' +
+        '<td class="muted">' + esc(m.note || m.ref || '') + '</td><td class="muted">' + esc(m.by || '') + '</td></tr>';
+    }).join('') : '<tr><td colspan="6">' + empty('No stock movements yet.') + '</td></tr>';
+    var card = function (title, link, linkLabel, head, body) {
+      return '<div class="card"><div class="card-h" style="display:flex;justify-content:space-between;align-items:center"><h3>' + title + '</h3><a class="btn btn-ghost btn-sm" href="' + link + '">' + linkLabel + '</a></div>' +
+        '<div class="card-b" style="padding:0"><div class="tbl-wrap"><table class="table"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div></div></div>';
+    };
+
+    v.innerHTML = '' +
+      '<div class="stat-grid">' +
+        statCard('brand', App.icon('box', 18), 'Total Inventory Items', S.rows.length, 'Tracked in lab catalog') +
+        statCard('amber', App.icon('alert', 18), 'Low / Out of Stock', S.low + S.out, S.out + ' out of stock • ' + S.low + ' low balance') +
+        statCard('blue', CLOCK_SVG, 'Expiring in ' + S.warnDays + ' days', S.soon, 'Reagent lots near expiry') +
+        statCard('red', App.icon('x', 18), 'Expired Lots', S.expired, 'Requires disposal / waste log') +
+      '</div>' +
+      '<div class="stat-grid">' +
+        statCard('green', App.icon('check', 18), 'Healthy Items', healthy, 'Well stocked, no expiry issue') +
+        statCard('blue', App.icon('plus', 18), 'Received · 7 days', recvWeek, 'stock-in entries') +
+        statCard('amber', App.icon('tube', 18), 'Used / Waste · 7 days', usedWeek, 'stock-out entries') +
+        statCard('brand', App.icon('clipboard', 18), 'Movements Today', todayMoves, 'stock entries logged today') +
+      '</div>' +
+      '<div style="display:flex;justify-content:flex-start;align-items:center;margin:0 0 16px;flex-wrap:wrap;gap:12px">' +
+        (canEdit() ? '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" id="sdRecv">' + App.icon('plus', 16) + ' Receive Stock</button>' +
+          '<button class="btn btn-ghost" id="sdUse" style="border:1.5px solid var(--bd,#cbd5e1)">🚚 Move / Use</button>' +
+          '<button class="btn btn-ghost" id="sdAdd" style="border:1.5px solid var(--bd,#cbd5e1)">' + App.icon('plus', 16) + ' Add Item</button></div>' : '') +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;margin-bottom:14px">' +
+        card('Needs Attention', '#/stock/pending', 'View all', '<th>Item</th><th>On hand</th><th>Status</th>', needRows) +
+        card('Expiry Watch', '#/stock/alerts', 'View all', '<th>Item</th><th>Qty left</th><th>Expiry</th>', lotRows) +
+      '</div>' +
+      card('Recent Movements', '#/stock', 'View all', '<th>Date</th><th>Item</th><th>Type</th><th>Quantity</th><th>Note / Ref</th><th>By</th>', moveRows);
+
+    var on = function (id, fn) { var el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+    on('sdRecv', function () { receive(''); });
+    on('sdUse', function () { useForm(''); });
+    on('sdAdd', function () { itemForm(null); });
+  }
+
   function render() {
     css();
     var v = document.getElementById('view'); if (!v) return;
-    if (F.tab === 'purchase-orders') { renderPurchaseOrders(v); return; }
+    if (F.tab === 'orders') { renderPurchaseOrders(v); return; }
+    if (F.tab === 'dashboard') { renderStockDashboard(v); return; }
     var S = App.stockState();
     var q = F.q.toLowerCase();
     var rows = S.rows.filter(function (r) {
@@ -191,68 +356,31 @@
       return sa - sb || String(a.item.name).localeCompare(String(b.item.name));
     });
     var al = S.rows.filter(function (r) { return r.out || r.low || r.expired || r.soon; });
+    var pending = S.rows.filter(function (r) { return r.out || r.low; });
 
     var curTab = F.tab || 'items';
-    var pending = S.rows.filter(function (r) { return r.out || r.low; });
+    var title = curTab === 'items' ? 'Inventory' : curTab === 'pending' ? 'Pending Stock' : curTab === 'alerts' ? 'Alerts & Expiry' : 'Stock Movement History';
 
     var h = '' +
       /* Inventory uses the shell title; retain headings on other stock views. */
-      (curTab === 'items' ? '' : '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">' +
-        '<div>' +
-          '<h2 style="margin:0;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);display:flex;align-items:center;gap:10px">' +
-            '<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:#e0f2fe;color:#0284c7">' + App.icon('box', 22) + '</span>' +
-            (curTab === 'items' ? 'Inventory' : curTab === 'pending' ? 'Pending Stock' : 'Stock Movements') +
-          '</h2>' +
-          '<div style="font-size:12.5px;color:var(--muted);margin-top:2px">Clinical laboratory reagents, test kits, vacutainers, consumables &amp; automated consumption tracking</div>' +
-        '</div>' +
-      '</div>') +
 
-      /* 4 Standardized Unified KPI Stat Cards (.kpi-grid + .kpi) */
-      '<div class="kpi-grid" style="margin-bottom:18px">' +
-        '<div class="kpi t-navy" style="border-left:4px solid #0284c7 !important">' +
-          '<div class="kpi-ic">' + App.icon('box', 18) + '</div>' +
-          '<div class="kpi-lb">TOTAL INVENTORY ITEMS</div>' +
-          '<div class="kpi-nm" style="color:#0284c7">' + S.rows.length + '</div>' +
-          '<div class="kpi-sb">Tracked in lab catalog</div>' +
-        '</div>' +
-        '<div class="kpi t-amber" style="border-left:4px solid #d97706 !important">' +
-          '<div class="kpi-ic">' + App.icon('alert', 18) + '</div>' +
-          '<div class="kpi-lb">LOW / OUT OF STOCK</div>' +
-          '<div class="kpi-nm" style="color:#d97706">' + (S.low + S.out) + '</div>' +
-          '<div class="kpi-sb">' + S.out + ' out of stock • ' + S.low + ' low balance</div>' +
-        '</div>' +
-        '<div class="kpi t-purple" style="border-left:4px solid #7c3aed !important">' +
-          '<div class="kpi-ic">' + App.icon('clock', 18) + '</div>' +
-          '<div class="kpi-lb">EXPIRING IN ' + S.warnDays + ' DAYS</div>' +
-          '<div class="kpi-nm" style="color:#7c3aed">' + S.soon + '</div>' +
-          '<div class="kpi-sb">Reagent lots near expiry</div>' +
-        '</div>' +
-        '<div class="kpi t-red" style="border-left:4px solid #dc2626 !important">' +
-          '<div class="kpi-ic">' + App.icon('x', 18) + '</div>' +
-          '<div class="kpi-lb">EXPIRED LOTS</div>' +
-          '<div class="kpi-nm" style="color:' + (S.expired > 0 ? '#dc2626' : 'var(--muted)') + '">' + S.expired + '</div>' +
-          '<div class="kpi-sb">Requires disposal / waste log</div>' +
-        '</div>' +
+      /* 4 stat cards — same look as the main dashboard (.stat in app.css) */
+      '<div class="stat-grid">' +
+        statCard('brand', App.icon('box', 18), 'Total Inventory Items', S.rows.length, 'Tracked in lab catalog') +
+        statCard('amber', App.icon('alert', 18), 'Low / Out of Stock', S.low + S.out, S.out + ' out of stock • ' + S.low + ' low balance') +
+        statCard('blue', CLOCK_SVG, 'Expiring in ' + S.warnDays + ' days', S.soon, 'Reagent lots near expiry') +
+        statCard('red', App.icon('x', 18), 'Expired Lots', S.expired, 'Requires disposal / waste log') +
       '</div>' +
 
       '<div class="sk-actions" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:18px">' +
-        (canEdit() ? (curTab === 'items' ?
-          '<button class="btn btn-secondary" id="skAddTop">' + App.icon('plus', 16) + ' Add Item</button>' +
-          '<button class="btn btn-ghost btn-sm" id="skSeedCatTop" title="Load common medical laboratory supplies">⚡ Lab Catalog</button>' :
-          '<button class="btn btn-primary" id="skRecvTop">' + App.icon('plus', 16) + ' Add Stock</button>' +
-          '<button class="btn btn-secondary" id="skMoveTop">🚚 Move / Use Stock</button>') : '') +
+        (canEdit() ? '<button class="btn btn-primary" id="skRecvTop" style="display:inline-flex;align-items:center;gap:6px;font-weight:700">' + App.icon('plus', 16) + ' Receive Stock</button>' +
+          '<button class="btn btn-secondary" id="skMoveTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:700;display:inline-flex;align-items:center;gap:6px">🚚 Move / Use Stock</button>' +
+          '<button class="btn btn-secondary" id="skAddTop" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('plus', 16) + ' Add Item</button>' : '') +
         '<button class="btn btn-ghost btn-sm" id="skCsvExport" style="background:#f8fafc;border:1px solid #cbd5e1;font-weight:600;display:inline-flex;align-items:center;gap:6px">' + App.icon('download', 14) + ' Export CSV</button>' +
       '</div>';
 
     /* Tab 1: Inventory Stock Items */
     if (curTab === 'items') {
-      if (al.length) {
-        h += '<div class="sk-alert"><b>⚠️ Stock alerts needing immediate attention:</b><br>' + al.slice(0, 6).map(function (r) {
-          var bits = []; if (r.out) bits.push('<span style="color:#b91c1c;font-weight:800">out of stock</span>'); else if (r.low) bits.push('only ' + num(r.onHand) + ' ' + esc(r.item.unit || '') + ' left (reorder at ' + num(r.item.reorderLevel) + ')');
-          if (r.expired) bits.push('<span style="color:#b91c1c">' + num(r.expiredQty) + ' expired</span>'); if (r.soon) bits.push(num(r.soonQty) + ' expiring by ' + fdate(r.nearest));
-          return '• <b>' + esc(r.item.name) + '</b> — ' + bits.join(', ');
-        }).join('<br>') + (al.length > 6 ? '<br>…and <b>' + (al.length - 6) + ' more</b> in Pending Stock or the expiry filter' : '') + '</div>';
-      }
 
       h += '<div class="card" style="margin-bottom:16px"><div class="sk-bar">' +
         '<input class="input grow" id="skQ" placeholder="Search item, category, vendor…" value="' + esc(F.q) + '">' +
@@ -264,11 +392,13 @@
           '<option value="exp"' + (F.show === 'exp' ? ' selected' : '') + '>Expiring or expired</option>' +
         '</select>' +
         '<select class="select" id="skWarn" title="How early to warn before a lot expires">' + warnOpts(S.warnDays) + '</select>' +
-        (canEdit() ? '<button class="btn btn-secondary" id="skAdd" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)">+ Add item</button>' : '') +
+        (canEdit() ? '<button class="btn btn-primary" id="skRecv">+ Receive stock</button>' +
+          '<button class="btn btn-secondary" id="skMove" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px">🚚 Move / Use</button>' +
+          '<button class="btn btn-secondary" id="skAdd" style="background:#fff;border:1.5px solid var(--bd,#cbd5e1);color:var(--ink);font-weight:600;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 2px rgba(0,0,0,.04)">+ Add item</button>' : '') +
       '</div></div>';
 
       if (!S.rows.length) {
-        h += '<div class="card"><div class="card-b">' + App.empty('No inventory items yet. Add an item or load the Lab Catalog to start tracking supplies. Then use Stock → Add Stock to receive a delivery.') + '</div></div>';
+        h += '<div class="card"><div class="card-b">' + App.empty('No inventory items yet. Add an item, then receive a delivery to create its stock balance.') + '</div></div>';
       } else {
         h += '<div class="card"><div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>On hand</th><th>Reorder at</th><th>Nearest expiry</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody>' +
           (rows.length ? rows.map(function (r) {
@@ -337,12 +467,21 @@
       '</tbody></table></div></div>';
     }
 
-    /* Pending is derived from live low/out balances, never from purchase orders. */
-    else if (curTab === 'pending' || curTab === 'alerts') {
-      var alertRows = curTab === 'pending' ? pending : al;
-      h += '<div class="card"><div class="card-h"><h3 style="margin:0">' + (curTab === 'pending' ? 'Pending Stock — Low or Out of Stock' : 'Reorder &amp; Expiry Alerts') + '</h3></div>' +
+    /* Low and out-of-stock reorder list; expiry alerts remain separate. */
+    else if (curTab === 'pending') {
+      h += '<div class="card"><div class="card-h"><h3 style="margin:0">Low / Out of Stock — Reorder List</h3></div>' +
+        '<div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>On hand</th><th>Reorder at</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody>' +
+        (pending.length ? pending.map(function (r) { var it = r.item; return '<tr><td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc([it.category, it.vendor].filter(Boolean).join(' · ')) + '</div></td>' +
+          '<td><b>' + num(r.onHand) + '</b> ' + esc(it.unit || '') + '</td><td>' + num(it.reorderLevel) + '</td><td>' + statusChips(r) + '</td><td class="actions" style="text-align:right">' +
+          (canEdit() ? '<button class="btn btn-primary btn-sm" data-recv="' + esc(it.id) + '">Receive Stock</button>' : '') + '<button class="btn btn-ghost btn-sm" data-hist="' + esc(it.id) + '">History</button></td></tr>'; }).join('') :
+          '<tr><td colspan="5" style="text-align:center;padding:24px">No low or out-of-stock items. Add inventory items and set reorder levels to track pending stock.</td></tr>') + '</tbody></table></div></div>';
+    }
+
+    /* Tab 3: Reorder & Expiry Alerts */
+    else if (curTab === 'alerts') {
+      h += '<div class="card"><div class="card-h"><h3 style="margin:0">🚨 Items Requiring Action (Low Stock, Expirations &amp; Out of Stock)</h3></div>' +
         '<div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>On hand</th><th>Reorder level</th><th>Nearest expiry</th><th>Alert status</th><th style="text-align:right">Actions</th></tr></thead><tbody>' +
-        (alertRows.length ? alertRows.map(function (r) {
+        (al.length ? al.map(function (r) {
           var it = r.item;
           return '<tr><td><div class="sk-name">' + esc(it.name) + '</div><div class="sk-sub">' + esc([it.category, it.vendor].filter(Boolean).join(' · ')) + '</div></td>' +
             '<td><span class="sk-num" style="color:' + (r.out ? '#dc2626' : (r.low ? '#d97706' : 'inherit')) + '">' + num(r.onHand) + '</span> <span class="sk-sub">' + esc(it.unit || '') + '</span></td>' +
@@ -351,7 +490,7 @@
             '<td>' + statusChips(r) + '</td>' +
             '<td class="actions" style="text-align:right">' + (canEdit() ? '<button class="btn btn-primary btn-sm" data-recv="' + esc(it.id) + '">Receive Stock</button>' : '') +
             '<button class="btn btn-ghost btn-sm" data-hist="' + esc(it.id) + '">History</button></td></tr>';
-        }).join('') : '<tr><td colspan="6" style="text-align:center;padding:24px;color:#16a34a;font-weight:700">' + (curTab === 'pending' ? '✓ No pending stock. All catalog items are above their reorder levels. Expiry alerts remain visible in Inventory.' : '✓ No reorder or expiry alerts.') + '</td></tr>') +
+        }).join('') : '<tr><td colspan="6" style="text-align:center;padding:24px;color:#16a34a;font-weight:700">✓ All stock levels are healthy! No low stock or expired lots detected.</td></tr>') +
       '</tbody></table></div></div>';
     }
 
@@ -593,62 +732,23 @@
         } });
   }
 
-  function renderPurchaseOrders(v) {
-    if (!App.canPage('stock') || !App.featureOn('stock')) {
-      v.innerHTML = App.empty('You do not have access to Purchase Orders.'); return;
-    }
-    var orders = App.stockPurchaseOrders().slice().sort(function (a, b) { return String(b.month || b.id).localeCompare(String(a.month || a.id)); });
-    var currentId = 'PO-' + App.stockPurchaseMonth();
-    var selected = orders.filter(function (po) { return po.id === (selectedOrderId || currentId); })[0] || orders[0];
-    var editable = App.canEditPurchaseOrders() && selected && selected.status === 'draft';
-    var h = '<h2>Purchase Orders</h2><p class="muted">A monthly draft is created on the first administrator visit each local month. Quantities and balances are snapshots. Drafts do not send to suppliers or receive stock.</p>';
-    if (!orders.some(function (po) { return po.id === currentId; })) h += '<div class="sk-alert">No draft for the current month yet. An administrator must visit to generate it.</div>';
-    h += '<div class="card"><div class="sk-bar"><label for="skPoHistory">Current draft / history</label><select class="select" id="skPoHistory">' +
-      orders.map(function (po) { return '<option value="' + esc(po.id) + '"' + (selected && po.id === selected.id ? ' selected' : '') + '>' + esc(po.id) + (po.id === currentId ? ' — Current month' : '') + ' · ' + esc(po.status || 'draft') + ' · ' + (po.items || []).length + ' items</option>'; }).join('') + '</select></div></div>';
-    if (!selected) h += App.empty('No purchase orders yet.');
-    else {
-      h += '<div class="card" style="margin-top:16px"><div class="card-h"><h3>' + esc(selected.id) + ' — ' + esc(selected.status || 'draft') + '</h3><span class="muted">Created ' + esc(fdate(selected.createdAt)) + '</span></div>' +
-        '<div class="tbl-wrap"><table class="table"><thead><tr><th>Item</th><th>Supplier</th><th>Unit</th><th>On hand (snapshot)</th><th>Reorder level</th><th>Order quantity</th>' + (editable ? '<th>Actions</th>' : '') + '</tr></thead><tbody>' +
-        (selected.items || []).map(function (it, index) {
-          return '<tr><td>' + esc(it.name) + '</td><td>' + esc(it.vendor || '—') + '</td><td>' + esc(it.unit) + '</td><td>' + num(it.onHand) + '</td><td>' + num(it.reorderLevel) + '</td><td>' +
-            (editable ? '<input class="input" style="max-width:110px" type="number" min="1" step="1" id="skPoQty' + index + '" aria-label="Order quantity for ' + esc(it.name) + '" value="' + esc(it.qty) + '">' : esc(it.qty)) + '</td>' +
-            (editable ? '<td><button class="btn btn-primary btn-sm" data-po-save="' + index + '">Save quantity</button> <button class="btn btn-ghost btn-sm" data-po-remove="' + index + '">Remove item</button></td>' : '') + '</tr>';
-        }).join('') + (!(selected.items || []).length ? '<tr><td colspan="7" class="muted" style="padding:24px">This monthly draft is empty. It will not regenerate this month.</td></tr>' : '') + '</tbody></table></div></div>';
-      if (!App.canEditPurchaseOrders()) h += '<p class="muted">Only administrators can edit drafts.</p>';
-    }
-    v.innerHTML = h;
-    var select = document.getElementById('skPoHistory');
-    if (select) select.addEventListener('change', function () { selectedOrderId = select.value; render(); });
-    function edit(button, remove) {
-      var index = +button.getAttribute(remove ? 'data-po-remove' : 'data-po-save');
-      var item = selected.items[index];
-      try {
-        App.editPurchaseOrderItem(selected.id, item.itemId, remove ? null : +document.getElementById('skPoQty' + index).value);
-        App.toast(remove ? 'Item removed from draft.' : 'Draft quantity saved.'); render();
-      } catch (e) { App.toast(e.message || 'Could not save the draft.', 'err'); }
-    }
-    Array.prototype.forEach.call(v.querySelectorAll('[data-po-save]'), function (b) { b.addEventListener('click', function () { edit(b, false); }); });
-    Array.prototype.forEach.call(v.querySelectorAll('[data-po-remove]'), function (b) { b.addEventListener('click', function () { edit(b, true); }); });
-  }
-
   function routeHandler(params) {
     var s = App.session();
     if (!s || (s.role !== 'admin' && s.role !== 'technician' && s.role !== 'reception' && !(s.role === 'custom' && (App.canPage('stock') || App.canPage('inventory'))))) {
       document.getElementById('view').innerHTML = '<div class="card"><div class="card-b">' + App.empty('You do not have access to Inventory.') + '</div></div>';
       return;
     }
-    var path = location.hash.split('?')[0];
-    var segment = path.split('/')[2] || '';
-    F.tab = path.indexOf('#/stock') === 0 ? (segment === 'purchase-orders' ? 'purchase-orders' : segment === 'pending' ? 'pending' : segment === 'alerts' ? 'alerts' : segment === 'items' ? 'items' : 'moves') : (segment === 'moves' ? 'moves' : (segment === 'alerts' || segment === 'expiring') ? 'alerts' : (segment === 'pending' || segment === 'low-out') ? 'pending' : 'items');
+    var isStock = location.hash.indexOf('#/stock') === 0;
+    var tab = params && params.tab;
+    F.tab = tab === 'orders' || tab === 'pending' || tab === 'alerts' || tab === 'moves' || tab === 'items' || (tab === 'dashboard' && isStock) ? tab : (isStock ? 'moves' : 'items');
+    if (tab === 'add') F.tab = 'items';
+    F.poId = '';
+    if (isStock && canEditOrders()) {
+      try { ensurePurchaseOrder(new Date()); }
+      catch (e) { App.toast('Could not generate this month’s purchase order. Revisit Stock to retry.', 'err'); }
+    }
     render();
-    if (path === '#/stock/add' && canEdit() && addOpenedFor !== path) {
-      addOpenedFor = path;
-      receive('');
-    } else if (path !== '#/stock/add') addOpenedFor = '';
-    if (path === '#/inventory/add' && canEdit() && itemOpenedFor !== path) {
-      itemOpenedFor = path;
-      itemForm(null);
-    } else if (path !== '#/inventory/add') itemOpenedFor = '';
+    if (tab === 'add' && canEdit()) itemForm(null);
   }
 
   App.route('#/inventory', routeHandler);

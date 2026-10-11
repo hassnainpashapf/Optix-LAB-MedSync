@@ -11,10 +11,9 @@ for (const base of ['', 'electron-tools/installer/app-stage-win7']) {
   const nav = vm.runInNewContext(declaration[0] + '\nNAV;');
   const inventory = nav.find(item => item.key === 'inventory');
   const stock = nav.find(item => item.key === 'stock');
-  const expectedInventory = base ? ['#/inventory', '#/inventory/add'] : ['#/inventory'];
-  const expectedStockRoutes = base
-    ? ['#/stock', '#/stock/pending', '#/stock/purchase-orders', '#/stock/add', '#/stock/alerts']
-    : ['#/stock/dashboard', '#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts'];
+  /* 1.4.1: the desktop app (electron-src and its staged copy) ships the same navigation as the web app */
+  const expectedInventory = ['#/inventory'];
+  const expectedStockRoutes = ['#/stock/dashboard', '#/stock', '#/stock/add', '#/stock/pending', '#/stock/orders', '#/stock/alerts'];
   assert.deepEqual(Array.from(inventory.sub, item => item.route), expectedInventory);
   const routes = Array.from(stock.sub, item => item.route);
   for (const route of expectedStockRoutes) {

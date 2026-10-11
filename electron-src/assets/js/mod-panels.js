@@ -103,7 +103,7 @@
     var p = s.panel;
     function go() {
       var cfg = App.wa.cfg();
-      if (!App.wa.ready(cfg)) { App.toast('WhatsApp is not set up yet (Settings → WhatsApp)', 'err'); return; }
+      if (!App.wa.ready(cfg)) { App.toast('WhatsApp is not set up yet (Tools → WhatsApp → Settings)', 'err'); return; }
       var to = App.wa.phone(p.whatsapp || p.phone); if (!to) { App.toast('No WhatsApp / phone number saved for this client', 'err'); return; }
       App.toast('Preparing the statement…', 'info');
       Promise.resolve(App.ensureJsPDF ? App.ensureJsPDF() : true).then(function () {

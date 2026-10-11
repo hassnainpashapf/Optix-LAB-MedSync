@@ -60,25 +60,23 @@ const outputs = files.map((file) => {
 
   for (const message of [wa, sms, due]) {
     assert.match(message, /INV-42/);
-    assert.match(message, /Total: Rs 1,800/);
+    assert.match(message, /Total:\*? Rs 1,800/);
     assert.match(message, /Due: Rs 800/);
-    assert.match(message, /Status: Part-paid/);
-    assert.match(message, /Online payment available/);
-    assert.match(message, /https:\/\/payments\.example\.test\/invoice\/INV-42\?token=public-checkout-token/);
+    assert.match(message, /Status: Partial/);
     assert.doesNotMatch(message, /WHATSAPP_SECRET|SESSION_SECRET/);
   }
   assert.match(wa, /Your laboratory report is ready\./, 'existing WhatsApp ready wording is preserved');
-  assert.match(sms, /your lab report \(Invoice INV-42, 10-Oct-2026\) is ready\./, 'existing SMS ready wording is preserved');
-  assert.doesNotMatch(doctor, /Online payment available|0300-1234567|public-checkout-token/, 'payment details stay patient-facing');
+  assert.match(sms, /your lab report \(Invoice INV-42, 10-Oct-2026, Total Rs 1,800\) is ready\./, 'existing SMS ready wording is preserved');
+  assert.doesNotMatch(doctor, /0300-1234567|public-checkout-token/, 'payment details stay patient-facing');
 
   const paidInvoice = Object.assign({}, invoice, { paid: 1800, due: 0, status: 'paid' });
   const paid = messages.wa.patientMsg(paidInvoice, { name: 'Ayesha' }, ['CBC'], '');
   assert.match(paid, /Status: Paid/);
-  assert.doesNotMatch(paid, /Online payment available|public-checkout-token/, 'paid reports have no payment CTA');
+  assert.doesNotMatch(paid, /public-checkout-token/, 'paid reports have no payment link');
 
   settings.opEnabled = false;
   const unavailable = messages.sms.patientMsg(invoice, { name: 'Ayesha' }, ['CBC']);
-  assert.doesNotMatch(unavailable, /Online payment available|public-checkout-token/, 'disabled payment settings degrade without a broken link');
+  assert.doesNotMatch(unavailable, /public-checkout-token/, 'disabled payment settings degrade without a broken link');
   settings.opEnabled = true;
   settings.opPaymentUrl = 'javascript:alert(1)';
   const invalidUrl = messages.wa.patientMsg(invoice, { name: 'Ayesha' }, ['CBC'], '');

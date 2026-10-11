@@ -1,50 +1,50 @@
-/* Lazy notifications dashboard; shared monitor owns refresh/audio lifecycle. */
+/* Lazy notification dashboard; all source permissions and lifecycle live in notifications-core. */
 (function () {
   'use strict';
-  var A = window.App, N = A.notifications;
-  function paint(state) {
-    var host = document.getElementById('notificationList');
-    if (!host) return;
-    if (!N.allowed('notifications')) { host.innerHTML = A.empty('You do not have access to notifications.'); return; }
-    var mute = document.getElementById('notificationMute');
-    if (mute) { mute.textContent = N.muted() ? 'Unmute alert sound' : 'Mute alert sound'; mute.setAttribute('aria-pressed', String(N.muted())); }
-    if (state.error) { host.innerHTML = A.empty('Could not read alerts. Refresh to retry.'); return; }
-    if (!state.items.length) { host.innerHTML = A.empty('All caught up. No actionable alerts for your role.'); return; }
-    host.innerHTML = '<p class="muted" style="font-size:12px">' + state.items.length + ' messages · urgent items appear first</p><div class="notif-feed">' + state.items.map(function (a) {
-      var urgent = a.severity === 'critical' || a.severity === 'high';
-      return '<article class="notif-msg ' + (urgent ? 'is-urgent' : '') + '">' +
-        '<div class="notif-msg-meta"><b>' + A.esc(a.category) + '</b><span class="badge ' + (urgent ? 'b-unpaid' : 'b-pending') + '">' + A.esc(a.severity === 'normal' ? 'Attention' : a.severity.toUpperCase()) + '</span></div>' +
-        '<h3>' + A.esc(a.title) + '</h3><p>' + A.esc(a.detail) + '</p>' +
-        '<a class="btn btn-sm btn-secondary" href="' + A.esc(a.href) + '">Open ' + A.esc(a.category.toLowerCase()) + '</a>' +
-        (a.category === 'Results' ? ' <button class="btn btn-sm btn-danger" data-notification-ack="' + A.esc(a.id.slice(9)) + '">Acknowledge after informing doctor</button>' : '') + '</article>';
-    }).join('') + '</div>';
-  }
-  A.paintNotifications = paint;
-  A.route('#/notifications', function () {
+  App.renderNotifications = function (alerts) {
     var view = document.getElementById('view');
-    if (!N || !N.allowed('notifications')) { view.innerHTML = A.empty('You do not have access to notifications.'); return; }
-    view.innerHTML = '<div class="card"><div class="card-b"><h2>Notifications</h2>' +
-      '<p class="muted">Messages from your lab, with alert sounds retained for new critical or high-priority items.</p>' +
-      '<div class="actions"><button class="btn btn-secondary" id="notificationRefresh">Refresh</button> ' +
-      '<button class="btn btn-ghost" id="notificationMute" aria-pressed="false">Mute alert sound</button></div>' +
-      '<div id="notificationList"></div></div></div>';
-    view.querySelector('#notificationRefresh').addEventListener('click', function () { N.refresh(); });
-    view.querySelector('#notificationMute').addEventListener('click', function () { N.setMuted(!N.muted()); });
-    view.querySelector('#notificationList').addEventListener('click', function (e) {
-      var button = e.target.closest('[data-notification-ack]');
-      if (!button || !N.allowed('results') || !N.allowed('notifications')) return;
-      var id = button.getAttribute('data-notification-ack');
-      var sessionKey = JSON.stringify(A.session());
-      var result = DB.get('results', id);
-      if (!result || !result.critical || !result.critical.length || result.criticalAck) { N.refresh(); return; }
-      A.confirm('Have you informed the doctor about this critical result?').then(function (yes) {
-        if (!yes || JSON.stringify(A.session()) !== sessionKey || !N.allowed('results') || !N.allowed('notifications') || location.hash !== '#/notifications') return;
-        var current = DB.get('results', id);
-        if (!current || current.criticalAck || current.reportedAt !== result.reportedAt) { N.refresh(); return; }
-        try { DB.update('results', id, { criticalAck: { by: A.session().name || 'user', at: new Date().toISOString() } }); N.refresh(); }
-        catch (err) { A.toast('Could not acknowledge the result. Please retry.', 'err'); }
-      });
-    });
-    N.refresh();
-  });
+    if (!view || (location.hash || '').split('?')[0] !== '#/notifications') return;
+    var s = App.session();
+    if (!s || !App.can('notifications', s.role)) { view.innerHTML = ''; return; }
+    var high = alerts.filter(function (a) { return a.severity === 'high' || a.severity === 'critical'; }).length;
+    var muted = App.notifications.isMuted();
+    function timestamp(v) {
+      if (!v || isNaN(new Date(v).getTime())) return '';
+      return App.esc(App.dt(v));
+    }
+    var html = '<style>' +
+      '.notification-list{display:flex;flex-direction:column}' +
+      '.notification-row{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);min-width:0}' +
+      '.notification-row:last-child{border-bottom:0}' +
+      '.notification-dot{width:8px;height:8px;border-radius:50%;background:#94a3b8;flex:none;margin:7px 2px 0 2px}' +
+      '.notification-row.is-urgent .notification-dot{background:#dc2626;box-shadow:0 0 0 3px #fdecec}' +
+      '.notification-main{min-width:0;flex:1}.notification-line{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}' +
+      '.notification-title{font-size:13.5px;font-weight:700;color:var(--ink);overflow-wrap:anywhere}' +
+      '.notification-meta{font-size:11.5px;color:var(--muted);white-space:nowrap}' +
+      '.notification-detail{font-size:12.5px;color:var(--muted);margin-top:2px;overflow-wrap:anywhere}' +
+      '.notification-action{flex:none;align-self:center;font-size:12px;font-weight:700;color:#1d4ed8;white-space:nowrap}' +
+      '.notification-priority{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:#b91c1c;background:#fdecec;border-radius:999px;padding:2px 7px;white-space:nowrap}' +
+      '@media(max-width:640px){.notification-row{gap:8px}.notification-action{font-size:11.5px;white-space:normal;text-align:right;max-width:92px}}' +
+      '</style>' +
+      '<div class="card"><div class="card-h" style="flex-wrap:wrap;gap:12px"><div><h3>Notifications</h3>' +
+      '<p class="muted" style="margin:4px 0 0">' + alerts.length + ' actionable alerts · ' + high + ' critical / high priority</p></div>' +
+      '<button type="button" class="btn btn-sm btn-ghost" data-notification-mute aria-pressed="' + muted + '" style="margin-left:auto">' + (muted ? 'Unmute alert sounds' : 'Mute alert sounds') + '</button></div>' +
+      '<div class="card-b"><p class="muted" style="margin:0 0 8px;font-size:12px">' + (muted ? 'Alert sounds are muted on this device.' : 'Sounds play only for new critical or high-priority alerts after you interact with this app. Browser audio settings apply.') +
+      ' Alerts update while the app is open; existing alerts are silent.</p>' +
+      (alerts.length ? '<div class="notification-list" role="list">' + alerts.map(function (a) {
+        var urgent = a.severity === 'warning' ? false : true;
+        var time = timestamp(a.timestamp);
+        return '<div class="notification-row' + (urgent ? ' is-urgent' : '') + '" role="listitem" aria-label="' + App.esc((urgent ? 'High priority, ' : '') + 'Action required: ' + a.title) + '">' +
+          '<span class="notification-dot" aria-hidden="true"></span>' +
+          '<div class="notification-main"><div class="notification-line"><span class="notification-title">' + App.esc(a.title) + '</span>' +
+          (urgent ? '<span class="notification-priority">High priority</span>' : '<span class="notification-meta">Action required</span>') +
+          (time ? '<span class="notification-meta">' + time + '</span>' : '') + '</div>' +
+          '<div class="notification-detail">' + App.esc(a.detail) + '</div></div>' +
+          '<a class="notification-action" href="' + App.esc(a.href) + '">' + App.esc(a.action) + ' &rarr;</a></div>';
+      }).join('') + '</div>' : App.empty('All clear — no actionable alerts for your role.')) + '</div></div>';
+    if (view.__notificationHtml !== html || !view.querySelector('[data-notification-mute]')) {
+      view.innerHTML = html; view.__notificationHtml = html;
+    }
+  };
+  App.route('#/notifications', function () { App.notifications.start(); });
 })();

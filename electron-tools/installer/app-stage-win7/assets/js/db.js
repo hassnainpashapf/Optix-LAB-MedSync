@@ -172,6 +172,7 @@
     report_templates: { prefix: 'TPL', digits: 3 },
     report_schedules: { prefix: 'SCH', digits: 3 },
     wa_log: { prefix: 'WAL', digits: 4 },
+    sms_outbox: { prefix: 'SMS', digits: 4 },
     samples: { prefix: 'S', digits: 5 },
     closings: { prefix: 'CL', digits: 4 },
     stock_items: { prefix: 'SI', digits: 3 },
@@ -181,9 +182,10 @@
     ref_labs: { prefix: 'RL', digits: 3 },
     outsourced: { prefix: 'OS', digits: 5 },
     onlinepay_claims: { prefix: 'OPC', digits: 4 },
-    branches: { prefix: 'BR', digits: 4 }
+    appointments: { prefix: 'APT', digits: 4 },
+    branches: { prefix: 'B',  digits: 2 }
   };
-  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced', 'onlinepay_claims', 'branches'];
+  var ARRAY_TABLES = ['users', 'patients', 'tests', 'doctors', 'invoices', 'payments', 'expenses', 'results', 'report_templates', 'report_schedules', 'wa_log', 'sms_outbox', 'samples', 'closings', 'stock_items', 'stock_moves', 'email_log', 'panels', 'ref_labs', 'outsourced', 'onlinepay_claims', 'appointments', 'branches'];
 
   /* ---------------- storage ---------------- */
   function load() {
@@ -236,7 +238,7 @@
   function seedStore(opts) {
     opts = opts || {};
     var store = {
-      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0, samples: 0 },
+      seq: { users: 0, doctors: 0, tests: 0, patients: 0, invoices: 0, payments: 0, expenses: 0, results: 0, wa_log: 0, sms_outbox: 0, samples: 0, appointments: 0 },
       settings: {
         id: 'main',
         labName: opts.labName || 'Optix Medical Sync',
@@ -248,6 +250,7 @@
         footerNote: '',
         currency: 'PKR',
         whatsapp: { provider: 'ultramsg', instanceId: '', token: '', baseUrl: '', labNumber: '', autoPatient: true, autoDoctor: false },
+        sms: { enabled: false, simNumber: '', autoPatient: true, autoDoctor: false, autoCritical: true },
         signatories: [
           { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
           { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP', title: '' },
@@ -257,7 +260,7 @@
       },
       users: [], patients: [], tests: [], doctors: [],
       invoices: [], payments: [], expenses: [], results: [],
-      wa_log: [], samples: [], stock_items: [], stock_moves: [], email_log: [], panels: [], ref_labs: [], outsourced: [], onlinepay_claims: [], branches: []
+      wa_log: [], sms_outbox: [], samples: [], stock_items: [], stock_moves: [], email_log: [], panels: [], ref_labs: [], outsourced: [], onlinepay_claims: [], appointments: []
     };
 
     function put(table, obj) {
@@ -354,8 +357,8 @@
       'NS1': [{ name: 'Dengue NS1', unit: '', ref: 'Negative', type: 'text' }],
       'WIDAL': [{ name: 'Result', unit: '', ref: 'Negative', type: 'text' }],
       'TYPHI': [
-        { name: 'IgG', unit: '', ref: 'Negative', type: 'text' },
-        { name: 'IgM', unit: '', ref: 'Negative', type: 'text' }
+        { name: 'Typhoid IgM', unit: '', ref: 'Negative', type: 'text', options: ['Negative', 'Positive', 'Borderline'] },
+        { name: 'Typhoid IgG', unit: '', ref: 'Negative', type: 'text', options: ['Negative', 'Positive'] }
       ],
       'TSH': [{ name: 'TSH', unit: 'µIU/mL', ref: '0.27–4.2', type: 'number' }],
       'TFT': [
@@ -407,7 +410,7 @@
       ['HIV', 'HIV Screening', 'Serology', 900, 'Serum', 'Same day', []],
       ['NS1', 'Dengue NS1 Antigen', 'Serology', 1200, 'Serum', 'Same day', []],
       ['WIDAL', 'Widal Test', 'Serology', 600, 'Serum', 'Same day', []],
-      ['TYPHI', 'Typhidot (IgG/IgM)', 'Serology', 800, 'Serum', 'Same day', []],
+      ['TYPHI', 'Typhoid (IgG-IgM) / Typhidot', 'Serology', 800, 'Serum', 'Same day', []],
       ['TSH', 'Thyroid Stimulating Hormone', 'Hormones', 900, 'Serum', 'Same day', []],
       ['TFT', 'Thyroid Profile (T3/T4/TSH)', 'Hormones', 1800, 'Serum', 'Next day', []],
       ['TESTO', 'Testosterone (Total)', 'Hormones', 1500, 'Serum', 'Next day', []],
@@ -419,7 +422,17 @@
       ['UPT', 'Urine Pregnancy Test', 'Urine', 500, 'Urine', 'Same day', []]
     ];
     T.forEach(function (t) {
-      put('tests', { code: t[0], name: t[1], category: t[2], price: t[3], sampleType: t[4], tat: t[5], active: true, params: TP[t[0]] || t[6] });
+      put('tests', {
+        code: t[0],
+        name: t[1],
+        category: t[2],
+        price: t[3],
+        sampleType: t[4],
+        tat: t[5],
+        active: true,
+        aliases: t[0] === 'TYPHI' ? ['Typhoid', 'Typhoid (IgG-IgM)', 'Typhidot', 'Typhoid Rapid', 'Typhi'] : undefined,
+        params: TP[t[0]] || t[6]
+      });
     });
     var testByCode = {};
     store.tests.forEach(function (t) { testByCode[t.code] = t; });
@@ -582,17 +595,17 @@
       if (store.seq.email_log == null) store.seq.email_log = 0;
       save(store);
     }
-    /* existing installs lack branch records */
-    if (store && !Array.isArray(store.branches)) {
-      store.branches = [];
-      if (!store.seq) store.seq = {};
-      if (store.seq.branches == null) store.seq.branches = 0;
-      save(store);
-    }
+    /* existing installs lack the online-payments claim queue */
     if (store && !Array.isArray(store.onlinepay_claims)) {
       store.onlinepay_claims = [];
       if (!store.seq) store.seq = {};
       if (store.seq.onlinepay_claims == null) store.seq.onlinepay_claims = 0;
+      save(store);
+    }
+    if (store && !Array.isArray(store.appointments)) {
+      store.appointments = [];
+      if (!store.seq) store.seq = {};
+      if (store.seq.appointments == null) store.seq.appointments = 0;
       save(store);
     }
     /* existing installs lack the stock tables */
@@ -620,6 +633,60 @@
         { name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Lab Technologist' }
       ];
       save(store);
+    }
+    /* existing installs: ensure Typhoid (IgG-IgM) / Typhidot test has proper params, name, and search aliases */
+    if (store && Array.isArray(store.tests)) {
+      var _typhiT = null;
+      for (var _ti = 0; _ti < store.tests.length; _ti++) {
+        var _tt = store.tests[_ti];
+        if (_tt.code === 'TYPHI' || _tt.id === 'T-026' || /typhidot/i.test(_tt.name || '') || /typhoid/i.test(_tt.name || '')) {
+          _typhiT = _tt;
+          break;
+        }
+      }
+      var _defTyphiParams = [
+        { name: 'Typhoid IgM', unit: '', ref: 'Negative', type: 'text', options: ['Negative', 'Positive', 'Borderline'] },
+        { name: 'Typhoid IgG', unit: '', ref: 'Negative', type: 'text', options: ['Negative', 'Positive'] }
+      ];
+      if (_typhiT) {
+        var _tDirty = false;
+        if (!_typhiT.params || !_typhiT.params.length) {
+          _typhiT.params = _defTyphiParams;
+          _tDirty = true;
+        } else {
+          var _hasM = _typhiT.params.some(function (p) { return /igm/i.test(p.name); });
+          var _hasG = _typhiT.params.some(function (p) { return /igg/i.test(p.name); });
+          if (!_hasM && !_hasG) {
+            _typhiT.params = _defTyphiParams;
+            _tDirty = true;
+          }
+        }
+        if (!/typhoid/i.test(_typhiT.name || '')) {
+          _typhiT.name = 'Typhoid (IgG-IgM) / Typhidot';
+          _tDirty = true;
+        }
+        if (!_typhiT.aliases || !_typhiT.aliases.length) {
+          _typhiT.aliases = ['Typhoid', 'Typhoid (IgG-IgM)', 'Typhidot', 'Typhoid Rapid', 'Typhi'];
+          _tDirty = true;
+        }
+        if (_tDirty) save(store);
+      } else {
+        if (!store.seq) store.seq = {};
+        store.seq.tests = (store.seq.tests || 0) + 1;
+        store.tests.push({
+          id: 'T-026',
+          code: 'TYPHI',
+          name: 'Typhoid (IgG-IgM) / Typhidot',
+          category: 'Serology',
+          price: 800,
+          sampleType: 'Serum',
+          tat: 'Same day',
+          active: true,
+          aliases: ['Typhoid', 'Typhoid (IgG-IgM)', 'Typhidot', 'Typhoid Rapid', 'Typhi'],
+          params: _defTyphiParams
+        });
+        save(store);
+      }
     }
   }
 
@@ -771,9 +838,24 @@
       }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
     },
     /* the lab's own linked WhatsApp number (/api/wa/*): status, link (QR), unlink, send. Resolves the JSON; rejects with a message. */
+    /* current Bearer session token (used by the phone's SMS gateway plugin) */
+    sessToken: sessToken,
     waGw: function (method, path, body) {
       if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));
       return window.fetch(API + '/api/wa/' + path, {
+        method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: body === undefined ? undefined : JSON.stringify(body)
+      }).then(function (r) {
+        return r.json().catch(function () { return {}; }).then(function (j) {
+          if (r.status === 401 && sessToken()) fireAuthError();
+          if (!r.ok) { var e = new Error(j.error || ('Request failed (' + r.status + ')')); e.status = r.status; throw e; }
+          return j;
+        });
+      }, function () { throw new Error('Cannot reach the server. Check your internet connection.'); });
+    },
+    /* SMS outbox (/api/sms/*): queue, status, retry. Resolves the JSON; rejects with a message. */
+    smsApi: function (method, path, body) {
+      if (!API || !window.fetch) return Promise.reject(new Error('Server not configured'));
+      return window.fetch(API + '/api/sms/' + path, {
         method: method, headers: authHeaders({ 'Content-Type': 'application/json' }), body: body === undefined ? undefined : JSON.stringify(body)
       }).then(function (r) {
         return r.json().catch(function () { return {}; }).then(function (j) {
@@ -953,7 +1035,7 @@
         doctors: tables.doctors, invoices: tables.invoices, payments: tables.payments,
         expenses: tables.expenses, results: tables.results,
         report_templates: tables.report_templates, report_schedules: tables.report_schedules,
-        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || [], email_log: tables.email_log || [], panels: tables.panels || [], ref_labs: tables.ref_labs || [], outsourced: tables.outsourced || [], onlinepay_claims: tables.onlinepay_claims || [], branches: tables.branches || []
+        wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || [], email_log: tables.email_log || [], panels: tables.panels || [], ref_labs: tables.ref_labs || [], outsourced: tables.outsourced || [], onlinepay_claims: tables.onlinepay_claims || [], appointments: tables.appointments || []
       };
       normalizeSeq(store);
       persist();
