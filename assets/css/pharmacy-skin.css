@@ -1,0 +1,201 @@
+/* ==========================================================================
+   Pharmacy look for the signed-in Lab app and its sign-in screens.
+   Loads AFTER app.css and pharmacy-tokens.css. It remaps this app's own CSS variables to the Pharmacy design tokens and adds
+   targeted overrides. NO app logic here, only looks.
+   Rules:
+   - LIGHT ONLY (no dark mode, no prefers-color-scheme).
+   - Reports, invoices and prints are "paper": .report-preview / .rpt-page / .print-doc / @media print keep white paper + black text.
+   ========================================================================== */
+
+/* ---------- 1. variables ---------- */
+:root {
+  --bg: #f2f5f9;
+  --card: #fff;
+  --ink: #1b2a4a;
+  --ink2: #3c4761;
+  --muted: #6f7a92;
+  --faint: #8b94a7;
+  --line: #e2e8f1;
+  --line2: #edf1f7;
+  --bd: #d6deea;
+  --brand: #1b2a4a;
+  --brand-d: #1b2a4a;
+  --brand-grad: linear-gradient(135deg, #3b7bf7 0%, #1f4fd1 100%);
+  --brand-soft: #eaf0ff;
+  --brand-line: #c9d8fb;
+  --blue: #2f6df6;
+  --blue-soft: #eaf0ff;
+  --red: #e11d48; --red-soft: #fdecef;
+  --amber: #c2750a; --amber-soft: #fef3dd;
+  --green: #15935a; --green-soft: #e4f6ec;
+  --violet: #7c4ee6; --violet-soft: #f0ebff;
+  --teal: #38a89d;
+  --sidebar: #fbfcfe;
+  --topbar: rgba(251, 252, 254, .9);
+  --tint: #e9f5f2;
+  --tint-line: #d5eae4;
+  --tint-ink: #0b7a72;
+  --r-lg: 22px;
+  --r-md: 14px;
+  --r-sm: 10px;
+  --sh-sm: 0 1px 2px rgba(27, 42, 74, .04), 0 8px 20px -14px rgba(27, 42, 74, .14);
+  --sh-md: 0 16px 38px -18px rgba(27, 42, 74, .16);
+  --sh-lg: 0 30px 60px -22px rgba(27, 42, 74, .24);
+  --paper-ink: #111;
+  --font: 'Plus Jakarta Sans', Inter, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+html { color-scheme: only light; }
+
+/* ---------- 2. base ---------- */
+body { background: var(--bg); color: var(--ink); font-family: var(--font); }
+::selection { background: #2f6df633; }
+::-webkit-scrollbar-thumb { background: #cfd7e4; border-color: var(--bg); }
+.maincol { background: none; }
+.topbar, body:not(.auth) .topbar { background: var(--topbar); backdrop-filter: blur(14px) saturate(1.3); -webkit-backdrop-filter: blur(14px) saturate(1.3); border-bottom: 1px solid var(--line); }
+.page-title, .tb-title h1, .page-h h2 { color: var(--ink); letter-spacing: -.02em; }
+a:focus-visible, button:focus-visible, .nav-it:focus-visible { outline: 3px solid rgba(47, 109, 246, .35); outline-offset: 2px; }
+
+/* cards: white, 1px soft border, very large radius, soft shadow */
+.card { border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--sh-sm); background: #fff; }
+.card-h { border-bottom: 1px solid var(--line2); }
+.modal { border-radius: 28px; border: 1px solid var(--line); box-shadow: var(--sh-lg); }
+.modal-ov { background: rgba(27, 42, 74, .5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+.modal-f { background: #f8fafc; border-radius: 0 0 28px 28px; }
+
+/* buttons: rounded, blue primary */
+.btn { background: #fff; color: var(--ink2); border: 1px solid var(--line); border-radius: 14px; font-weight: 700; box-shadow: none; }
+.btn:hover { background: #f8fafc; border-color: var(--bd); }
+.btn-primary, .login-signin { background: var(--blue); border: 1px solid var(--blue); color: #fff; box-shadow: 0 14px 30px -12px rgba(47, 109, 246, .55); }
+.btn-primary:hover, .login-signin:hover { background: var(--blue-d); border-color: var(--blue-d); color: #fff; transform: translateY(-1px); box-shadow: 0 18px 36px -12px rgba(47, 109, 246, .6); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--muted); box-shadow: none; }
+.btn-ghost:hover { background: #eef2f8; color: var(--ink); }
+.btn-blue { background: var(--blue); } .btn-blue:hover { background: var(--blue-d); }
+
+/* inputs: soft grey fill, rounded, blue focus ring */
+.input, .select, textarea.input { border: 1px solid var(--line); border-radius: 14px; background: #f8fafc; color: var(--ink); font-weight: 500; }
+.input:focus, .select:focus, textarea.input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(47, 109, 246, .14); background: #fff; }
+.input::placeholder { color: var(--faint); }
+.search input { background: #f8fafc; border-color: var(--line); color: var(--ink); border-radius: 14px; }
+.search input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(47, 109, 246, .14); background: #fff; }
+.test-search { background: #f8fafc; border-color: var(--line); box-shadow: none; }
+.test-filter-pill, .test-action-pill { background: #f8fafc; border-color: var(--line); box-shadow: none; }
+.test-add-pill { background: var(--blue); border-color: var(--blue); box-shadow: 0 10px 20px -10px rgba(47, 109, 246, .6); }
+.test-type-pill { color: var(--ink2); }
+.test-type-pill.active { background: var(--blue); border-color: var(--blue); box-shadow: 0 8px 16px -8px rgba(47, 109, 246, .55); }
+.radio-pill { background: #fff; border-color: var(--line); }
+.radio-pill.on { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
+
+/* tables */
+.table thead th { background: #f6f8fb; color: var(--muted); border-bottom: 1px solid var(--line); }
+.table tbody td { border-bottom: 1px solid var(--line2); }
+.table tbody tr:hover, #view .tbl-wrap table.table tbody tr:hover { background: #f4f8ff; }
+#view .tbl-wrap table.table tbody tr { background: transparent; }
+.table .id-cell { color: var(--blue); }
+
+/* badges */
+.b-inactive { background: #eef2f8; }
+.b-teal { background: var(--tint); color: var(--tint-ink); }
+.role-pill { background: var(--blue-soft); color: var(--blue); }
+
+/* ---------- 3. sidebar: white, soft green-tint active item (the Pharmacy sidebar) ---------- */
+.sidebar { background: var(--sidebar); border-right: 1px solid var(--line); }
+.sidebar .brand { border-bottom: 1px solid var(--line2); }
+.sidebar .brand-tx b, .sf-tx b { color: var(--ink); }
+.sidebar .brand-tx small, .sf-tx small, .nav-sec2, .nav-chev { color: var(--muted); }
+.nav-sec2 { letter-spacing: .08em; font-weight: 800; }
+.nav-it, .nav-sub-it { color: var(--ink); border-radius: 12px; }
+.nav-ic { color: var(--muted); }
+.nav-it:hover, .nav-sub-it:hover { background: #f1f4f9; color: var(--ink); }
+.nav-it:hover .nav-ic { color: var(--tint-ink); }
+.nav-it.active { background: var(--tint); color: var(--tint-ink); box-shadow: inset 0 0 0 1px var(--tint-line); font-weight: 700; }
+.nav-it.active .nav-ic { color: var(--tint-ink); }
+.nav-it.active::before { background: var(--teal); width: 4px; }
+.nav-sub { border-left-color: var(--line); }
+.nav-sub-it.on { color: var(--tint-ink); }
+.nav-sub-it.on::before { background: var(--teal); box-shadow: 0 0 0 3px var(--tint); }
+.nav-sub-it.danger, .nav-sub-it.danger.on { color: var(--red); }
+.nav-fold.has-active > .nav-fh { color: var(--tint-ink); }
+.side-foot { border-top: 1px solid var(--line2); background: #f8fafc; }
+.sf-plan.info { background: var(--blue-soft); color: var(--blue); }
+.sf-plan.ok { background: var(--green-soft); color: var(--green); }
+.sf-plan.bad { background: var(--red-soft); color: var(--red); }
+.sf-out { color: var(--muted); } .sf-out:hover { background: var(--red-soft); color: var(--red); }
+.sf-av, .user-av, .avatar, .tb-avatar { background: var(--navy); color: #fff; }
+.logo-mark, .brand-mark { background: var(--brand-grad); box-shadow: 0 10px 20px -8px rgba(47, 109, 246, .55); }
+.sidebar .brand-mark { border-radius: 13px; }
+.nav-toggle, .tb-menu, .side-close { background: #fff; border-color: var(--line); color: var(--ink2); border-radius: 12px; }
+.nav-toggle:hover { background: var(--blue-soft); color: var(--blue); border-color: var(--blue); }
+.tb-qa .tb-classic { background: #fff; border-color: var(--line); color: var(--ink); border-radius: 12px; }
+.tb-qa .tb-classic:hover { background: var(--blue-soft); border-color: var(--blue); color: var(--blue); }
+.tb-qa .tb-classic svg { color: var(--blue); }
+.tb-bell-count { background: var(--blue); }
+.sub-cta { background: var(--navy); }
+
+/* ---------- 4. stat / kpi cards ---------- */
+.stat { background: #fff; }
+.stat[data-tint="brand"] { --sc: var(--blue); background: linear-gradient(55deg, #fff 52%, var(--blue-soft) 52%); }
+.stat[data-tint="blue"] { background: linear-gradient(55deg, #fff 52%, var(--blue-soft) 52%); }
+.stat[data-tint="amber"] { background: linear-gradient(55deg, #fff 52%, var(--amber-soft) 52%); }
+.stat[data-tint="green"] { background: linear-gradient(55deg, #fff 52%, var(--green-soft) 52%); }
+.stat[data-tint="red"] { background: linear-gradient(55deg, #fff 52%, var(--red-soft) 52%); }
+.stat-ico { background: linear-gradient(135deg, var(--sc-soft) 0%, #fff 160%); }
+.kpi { background: linear-gradient(55deg, #fff 52%, var(--tbg, #eef2f8) 52%); }
+.kpi-ic { background: linear-gradient(135deg, var(--tbg, #eef2f8) 0%, #fff 160%); }
+html .db-page { --brand: #1b2a4a; --brand-d: #1b2a4a; --brand-soft: #eaf0ff; --brand-line: #c9d8fb; --brand-grad: linear-gradient(135deg, #3b7bf7, #1f4fd1);
+  --blue: #2f6df6; --blue-soft: #eaf0ff; --ink: #1b2a4a; --ink2: #3c4761; --muted: #6f7a92; --faint: #8b94a7; --line: #e2e8f1; --line2: #edf1f7; --bg: #f2f5f9; --card: #fff;
+  --sh-sm: 0 1px 2px rgba(27, 42, 74, .04), 0 8px 20px -14px rgba(27, 42, 74, .14); --sh-md: 0 16px 38px -18px rgba(27, 42, 74, .16); font-family: var(--font); }
+
+/* ---------- 5. sign-in / sign-up: soft page, one white rounded card (the Pharmacy sign-in) ---------- */
+body.login-mode { background: #f2f5f9; }
+.login-wrap, .login-wrap.lg-split { background: #f2f5f9; flex-direction: column; align-items: center; justify-content: center; overflow: auto; padding: 32px 16px; gap: 0; }
+.login-wrap::before, .login-wrap::after, .login-wrap.lg-split::before, .login-wrap.lg-split::after { display: block; content: ''; position: absolute; border-radius: 50%; pointer-events: none; filter: blur(60px); background: none; }
+.login-wrap.lg-split::before { width: 500px; height: 500px; left: 20%; top: -80px; right: auto; background: linear-gradient(135deg, rgba(47, 109, 246, .10), transparent); }
+.login-wrap.lg-split::after { width: 450px; height: 450px; right: 18%; bottom: -80px; left: auto; background: linear-gradient(315deg, rgba(56, 168, 157, .10), transparent); }
+.lg-split .lg-brand { display: none; }
+.lg-split .lg-form { flex: 0 1 auto; width: 100%; background: transparent; padding: 0; gap: 16px; }
+.lg-form::before, .lg-form::after, .lg-bubs { display: none; }
+.login-wrap.lg-split .login-card, .lg-split .lg-card, .login-card { position: relative; z-index: 2; background: #fff; border: 1px solid var(--line); border-radius: 28px; padding: 40px; width: 448px; max-width: 100%; box-shadow: 0 30px 80px -25px rgba(27, 42, 74, .18); animation: none; }
+.lg-split .lg-card.lg-wide { width: 560px; }
+.lg-split .lg-card::before { display: none; }
+.login-logo h1, .login-card h2 { color: var(--navy); font-weight: 800; letter-spacing: -.02em; }
+.login-tag, .login-sub { color: var(--muted); font-weight: 500; }
+.login-mark { background: var(--brand-grad); box-shadow: 0 14px 26px -10px rgba(47, 109, 246, .55); border-radius: 18px; animation: none; }
+.lg-split .login-mark { animation: none; }
+.lg-fl { color: var(--ink2); font-weight: 700; font-size: 12px; }
+.lg-fl em { color: var(--faint); }
+.lg-f { opacity: 1; animation: none; }
+.lg-in .input, .lg-in .select { background: #f8fafc; border-radius: 16px; border: 1px solid var(--line); }
+.lg-in .input:focus, .lg-in .select:focus { background: #fff; border-color: var(--blue); box-shadow: 0 0 0 4px rgba(47, 109, 246, .15); transform: none; }
+.lg-in:focus-within > svg { color: var(--blue); }
+.login-signin { border-radius: 16px; padding-top: 14px; padding-bottom: 14px; font-weight: 800; font-size: 14px; }
+.lg-split .login-signin::after { display: none; }
+.lg-alt { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.lg-alt-links a { color: var(--ink2); font-weight: 700; }
+.lg-alt-links a:hover, .lg-terms a, .lg-new a, .lg-forgot a, .lg-eye:hover { color: var(--blue); text-decoration: none; }
+.lg-alt-links i { color: #cfd7e4; }
+.lg-new a { border-bottom: 2px solid rgba(47, 109, 246, .2); }
+.lg-forgot a { border-bottom: 1.5px solid rgba(47, 109, 246, .3); }
+.lg-terms input { accent-color: var(--blue); }
+.lg-back { background: #fff; color: var(--ink); border-color: var(--line); box-shadow: none; }
+.lg-back:hover, .lg-eye:hover { background: var(--blue-soft); box-shadow: none; }
+.lg-split .login-foot { color: var(--muted); }
+.lg-secure { background: var(--green-soft); color: var(--green); }
+.login-err { background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; border-radius: 16px; }
+.login-div::before, .login-div::after { background: var(--line); }
+
+/* ---------- 6. subscription / misc accents that were navy ---------- */
+.plan-card.cur, .plan-card.current { border-color: var(--blue); }
+
+.sb-bar i { background: linear-gradient(90deg, #2f6df6, #38a89d) !important; }
+.sb-pc.pop { border-color: var(--blue) !important; box-shadow: 0 16px 38px -18px rgba(47, 109, 246, .4) !important; }
+.sb-ribbon { background: var(--blue) !important; }
+.sb-pc, .sb-code { border-radius: 22px; }
+
+/* ---------- 7. paper: reports, invoices and prints keep white paper + dark text ---------- */
+.report-preview, .rpt-page, .print-doc { color-scheme: light; }
+
+/* ---------- 8. chat widget (shared with the website) ---------- */
+.oxc-fab, .oxc-header, .oxc-msg-user, .oxc-send { background: #2f6df6 !important; }
+.oxc-fab { box-shadow: 0 14px 30px -10px rgba(47, 109, 246, .55) !important; }
+.oxc-panel { border-radius: 24px !important; }

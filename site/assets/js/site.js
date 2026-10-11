@@ -1,4 +1,7 @@
-// Optix Medical Sync website: small effects only. The HTML is complete without this file (light theme only).
+// Optix Medical Sync website: small shared behaviour. The HTML is complete without this file (light theme only).
+// - scroll reveals (rx-tilt), in-frame mobile menu, back-to-top, smooth in-page anchors
+// - contact form (opens WhatsApp with the message)
+// - Google AdSense: only if ads-config.js has a publisher id; loads only after the visitor chooses (consent.js)
 (function () {
   'use strict';
   var $ = function (id) { return document.getElementById(id); };
@@ -6,60 +9,44 @@
   try { reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
   document.documentElement.classList.add('js');
 
-  /* sticky nav shadow, progress bar, back to top */
-  function onScroll() {
-    var h = document.documentElement, max = h.scrollHeight - h.clientHeight, top = h.scrollTop || window.scrollY || 0;
-    if ($('progress')) $('progress').style.width = (max > 0 ? Math.min(100, (top / max) * 100) : 0) + '%';
-    if ($('nav')) $('nav').classList.toggle('stuck', top > 8);
-    if ($('totop')) $('totop').classList.toggle('show', top > 700);
+  /* reveal on scroll (the home script reuses this observer for split headings) */
+  var tio = null;
+  function revealAll() { [].forEach.call(document.querySelectorAll('.rx-tilt,.rx-split,.bn-rise'), function (e) { e.classList.add('rx-in'); if (e.classList.contains('bn-rise')) e.classList.add('bn-in'); }); }
+  if (!('IntersectionObserver' in window) || reduce) { revealAll(); }
+  else {
+    tio = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('rx-in'); tio.unobserve(e.target); } }); }, { threshold: 0.12 });
+    [].forEach.call(document.querySelectorAll('.rx-tilt'), function (el) { tio.observe(el); });
+    setTimeout(revealAll, 6000); /* never leave anything hidden */
   }
-  window.addEventListener('scroll', onScroll, { passive: true }); onScroll();
-  if ($('totop')) $('totop').addEventListener('click', function () { window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); });
+  window.OptixReveal = tio;
 
-  /* mobile menu */
-  var burger = $('burger'), links = $('links');
-  function closeMenu() { if (links) links.classList.remove('open'); if (burger) burger.setAttribute('aria-expanded', 'false'); }
-  if (burger && links) {
-    burger.addEventListener('click', function () { var o = links.classList.toggle('open'); burger.setAttribute('aria-expanded', String(o)); });
-    links.addEventListener('click', function (e) { if (e.target.closest('a')) closeMenu(); });
+  /* in-frame mobile menu */
+  var burger = document.querySelector('.hx-burger'), nav = document.querySelector('.hx-nav');
+  function closeMenu() { if (nav) nav.classList.remove('hx-open'); if (burger) { burger.setAttribute('aria-expanded', 'false'); burger.setAttribute('aria-label', 'Open menu'); } }
+  if (burger && nav) {
+    burger.addEventListener('click', function () {
+      var o = nav.classList.toggle('hx-open');
+      burger.setAttribute('aria-expanded', String(o)); burger.setAttribute('aria-label', o ? 'Close menu' : 'Open menu');
+    });
+    nav.addEventListener('click', function (e) { if (e.target.closest('.hx-links a')) closeMenu(); });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
   }
 
-  /* reveal on scroll */
-  var els = [].slice.call(document.querySelectorAll('.rv'));
-  if (!('IntersectionObserver' in window) || reduce) els.forEach(function (e) { e.classList.add('in'); });
-  else {
-    var io = new IntersectionObserver(function (es) { es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }); }, { rootMargin: '0px 0px -8% 0px' });
-    els.forEach(function (e) { io.observe(e); });
-    setTimeout(function () { els.forEach(function (e) { e.classList.add('in'); }); }, 3500); /* never leave anything hidden */
-  }
-
-  /* count-up numbers: <b data-count="5000" data-suffix="+"> */
-  var nums = [].slice.call(document.querySelectorAll('[data-count]'));
-  if (nums.length && 'IntersectionObserver' in window && !reduce) {
-    var co = new IntersectionObserver(function (es) {
-      es.forEach(function (e) {
-        if (!e.isIntersecting) return; co.unobserve(e.target);
-        var el = e.target, to = +el.getAttribute('data-count') || 0, suf = el.getAttribute('data-suffix') || '', t0 = performance.now();
-        (function tick(t) { var k = Math.min(1, (t - t0) / 1100); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))).toLocaleString('en-US') + suf; if (k < 1) requestAnimationFrame(tick); })(t0);
-      });
-    }, { threshold: 0.6 });
-    nums.forEach(function (n) { co.observe(n); });
-  }
-
-  /* soft light that follows the pointer on cards */
-  document.addEventListener('pointermove', function (e) {
-    var c = e.target.closest && e.target.closest('.pcard, .tool, .dev, .step, .serve'); if (!c) return;
-    var r = c.getBoundingClientRect(); c.style.setProperty('--mx', (e.clientX - r.left) + 'px'); c.style.setProperty('--my', (e.clientY - r.top) + 'px');
-  }, { passive: true });
-
-  /* product showcase tabs */
+  /* smooth in-page anchors */
   document.addEventListener('click', function (e) {
-    var tab = e.target.closest && e.target.closest('[data-tab]'); if (!tab) return;
-    var id = tab.getAttribute('data-tab');
-    [].forEach.call(document.querySelectorAll('.stab'), function (b) { b.classList.toggle('on', b === tab); b.setAttribute('aria-selected', b === tab ? 'true' : 'false'); });
-    [].forEach.call(document.querySelectorAll('.spanel'), function (p) { p.classList.toggle('on', p.getAttribute('data-panel') === id); });
+    var a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a) return;
+    var id = a.getAttribute('href'); if (id.length < 2) return;
+    var t = null; try { t = document.querySelector(id); } catch (x) {}
+    if (t) { e.preventDefault(); t.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' }); }
   });
+
+  /* back to top */
+  var up = $('totop');
+  if (up) {
+    var on = function () { up.classList.toggle('show', (window.scrollY || document.documentElement.scrollTop || 0) > 900); };
+    window.addEventListener('scroll', on, { passive: true }); on();
+    up.addEventListener('click', function () { window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }); });
+  }
 
   /* contact form: opens WhatsApp with the message */
   var form = $('ctForm'), err = $('ctErr');

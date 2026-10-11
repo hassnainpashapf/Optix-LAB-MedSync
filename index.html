@@ -4,17 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Optix Medical Sync</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23131845'/%3E%3Cpath d='M13 7h6v7l4 9.2c.6 1.4-.4 2.8-1.9 2.8H10.9c-1.5 0-2.5-1.4-1.9-2.8L13 14V7z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cpath d='M11 20h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f6df6'/%3E%3Cpath d='M13 7h6v7l4 9.2c.6 1.4-.4 2.8-1.9 2.8H10.9c-1.5 0-2.5-1.4-1.9-2.8L13 14V7z' fill='none' stroke='white' stroke-width='2.4' stroke-linejoin='round'/%3E%3Cpath d='M11 20h10' stroke='white' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="manifest" href="assets/manifest.webmanifest">
-<meta name="theme-color" content="#101a3d">
+<meta name="theme-color" content="#f2f5f9">
 <meta name="color-scheme" content="light">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Optix">
 <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
-<link rel="stylesheet" href="assets/css/app.css?v=227">
-<link rel="stylesheet" href="assets/css/optix-tokens.css?v=227">
-<link rel="stylesheet" href="assets/css/optix-skin.css?v=227">
+<link rel="stylesheet" href="assets/css/app.css?v=228">
+<link rel="stylesheet" href="assets/css/pharmacy-tokens.css?v=228">
+<link rel="stylesheet" href="assets/css/pharmacy-skin.css?v=228">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -44,7 +44,7 @@ if ('serviceWorker' in navigator) {
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
    to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
-window.__ASSET_V = '227';
+window.__ASSET_V = '228';
 /* Lazy route map: pattern -> module script, loaded on first visit (see App lazy loader).
    Only db.js + app.js + mod-dashboard.js load at boot. */
 window.__LAZY_ROUTES = {
@@ -116,9 +116,9 @@ window.__LAZY_ROUTES = {
 <script src="assets/js/qrcode.min.js?v=144"></script>
 <script src="assets/js/db.js?v=201"></script>
 <script src="assets/js/graph-config.js?v=144"></script>
-<script src="assets/js/app.js?v=227"></script>
+<script src="assets/js/app.js?v=228"></script>
 <script src="assets/js/notifications-core.js?v=196"></script>
-<script src="assets/js/mod-auth.js?v=227"></script>
+<script src="assets/js/mod-auth.js?v=228"></script>
 <script src="assets/js/samples-core.js?v=144"></script>
 <script src="assets/js/mod-dashboard.js?v=202"></script>
 </body>
