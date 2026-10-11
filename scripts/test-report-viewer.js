@@ -163,7 +163,7 @@ async function routeChecks(source, desktopMode) {
   const files = new Map(), routes = {}, needUser = () => {}, fetches = [], saves = [];
   const context = {
     app: { get(route, ...handlers) { routes[route] = handlers; }, post(route, ...handlers) { routes[route] = handlers; } },
-    needUser, path, Buffer, REPORT_PDFS_DIR: '/synthetic', viewerHtml: '<html>synthetic viewer</html>',
+    needUser, path, Buffer, REPORT_PDFS_DIR: '/synthetic', saas: null, /* no plans/quota in this harness */ viewerHtml: '<html>synthetic viewer</html>',
     DESKTOP: desktopMode, PUBLIC_API_URL: 'https://example.invalid', DESKTOP_CLOUD_URL: 'https://example.invalid',
     desktop: { async fetchPdf(key) { fetches.push(key); return false; }, onPdfSaved(key) { saves.push(key); } },
     fs: { existsSync: file => files.has(file), readFileSync: file => files.get(file),
