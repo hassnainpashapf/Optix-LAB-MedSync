@@ -180,6 +180,151 @@
     return m;
   }
 
+  /* ================= stock: automatic tube consumption =================
+     One sample row = one physical tube. When a tube is created for a billed invoice (createForInvoice / syncInvoice / recollect) it uses the stock
+     item its tube type is linked to (Stock -> Tube Mapping: settings.main.tubeStock = { 'EDTA (Lavender)': { itemId, qty } }), qty units per tube.
+       - the deduction is a stock_moves row  { type:'out', ref:'smp:<sampleId>', auto:true, sampleId, invoiceId, tube, short }  so the usual Stock
+         screens, on-hand maths and low-stock alerts see it like any other movement;
+       - the sample carries the marker  stockUsed: [{ itemId, qty, want, short, moveId }]  ([] = looked at, nothing linked). A sample that already has
+         the marker is never deducted again (idempotent), and old samples (no marker) are never touched;
+       - stock is clamped at 0: when less is on hand than wanted only what is there is taken and the rest is logged as  short  (shortfall);
+       - a deleted invoice / removed or rejected tube gives the deducted units back as ONE  { type:'adjust', ref:'smp-ret:<sampleId>:<itemId>' }  move
+         (checked by ref, so it can only happen once); a re-collected tube is a new sample and deducts again;
+       - nothing here ever throws into billing: no mapping or no stock only produces a non-blocking notice. */
+  function r3(n) { return Math.round((+n || 0) * 1000) / 1000; }
+  function tubeMap() { var m = settings().tubeStock; return m && typeof m === 'object' ? m : {}; }
+  function stockMoves() { try { return db().all('stock_moves') || []; } catch (e) { return []; } }
+  /* units on hand = received + corrections - everything drawn (same maths as App.stockState) */
+  function onHandOf(itemId, moves) {
+    var t = 0;
+    (moves || stockMoves()).forEach(function (m) {
+      if (m.itemId !== itemId) return;
+      var q = +m.qty || 0;
+      t += (m.type === 'in' || m.type === 'adjust') ? q : -q;
+    });
+    return r3(t);
+  }
+  /* the stock item + units per tube a tube type consumes, or null when it is not linked (or the item was removed) */
+  function linkFor(tube) {
+    var c = tubeMap()[tube]; if (!c || !c.itemId) return null;
+    var it = null; try { it = db().get('stock_items', c.itemId); } catch (e) {}
+    if (!it || it.active === false) return null;
+    return { item: it, qty: +c.qty > 0 ? +c.qty : 1 };
+  }
+  function anyLink() { var m = tubeMap(); return Object.keys(m).some(function (k) { return m[k] && m[k].itemId; }); }
+  function moveBase(row, itemId, type, qty, ref, note, extra) {
+    var now = nowISO(), mv = { itemId: itemId, type: type, qty: qty, ref: ref, note: note, date: now.slice(0, 10), createdAt: now, by: userName(),
+      auto: true, sampleId: row.id, invoiceId: row.invoiceId, tube: row.tube };
+    for (var k in extra) mv[k] = extra[k];
+    return db().insert('stock_moves', mv);
+  }
+  /* deduct for a freshly stored tube; returns { tube, linked, item, want, took, short, left } or null when it was already handled */
+  function applyStock(row) {
+    if (!row || !row.id || row.stockUsed) return null;
+    var out = { tube: row.tube, linked: false, item: null, want: 0, took: 0, short: 0, left: null };
+    try {
+      var lk = linkFor(row.tube), lines = [];
+      if (lk) {
+        var have = Math.max(0, onHandOf(lk.item.id)), took = r3(Math.min(lk.qty, have)), short = r3(lk.qty - took);
+        var mv = moveBase(row, lk.item.id, 'out', took, 'smp:' + row.id,
+          'Auto: tube used — ' + row.tube + ' · ' + (row.barcode || row.invoiceNo || '') + (short > 0 ? ' · shortfall ' + short + ' (no stock left)' : ''), { short: short });
+        lines.push({ itemId: lk.item.id, qty: took, want: lk.qty, short: short, moveId: mv && mv.id });
+        out.linked = true; out.item = lk.item; out.want = lk.qty; out.took = took; out.short = short; out.left = r3(have - took);
+      }
+      row.stockUsed = lines;   /* stored with the row itself by putRow (one write, so a synced copy always carries the marker) */
+    } catch (e) { if (window.console) console.error(e); }
+    return out;
+  }
+  /* give a tube's units back (once). why = short reason for the log. Does not touch the sample row - the caller removes or flags it. */
+  function restoreStock(row, why) {
+    var n = 0;
+    try {
+      if (!row || !row.id || !row.stockUsed || !row.stockUsed.length || row.stockReturned) return 0;
+      var moves = stockMoves();
+      row.stockUsed.forEach(function (ln) {
+        if (!(+ln.qty > 0)) return;
+        var ref = 'smp-ret:' + row.id + ':' + ln.itemId;
+        if (moves.some(function (m) { return m.ref === ref; })) return;
+        moveBase(row, ln.itemId, 'adjust', +ln.qty, ref, 'Auto: tube returned — ' + (why || 'sample removed') + ' · ' + (row.barcode || ''), {});
+        n = r3(n + (+ln.qty));
+      });
+    } catch (e) { if (window.console) console.error(e); }
+    return n;
+  }
+  /* one small non-blocking notice for what a billing step just did (unlinked tube types, items now low / out) */
+  function stockNotice(results) {
+    try {
+      var msgs = [], seen = {};
+      (results || []).forEach(function (r) {
+        if (!r) return;
+        if (!r.linked) {
+          if (anyLink() && !seen['u' + r.tube]) { seen['u' + r.tube] = 1; msgs.push('No stock item linked for ' + r.tube + ' tubes — set it in Stock → Tube Mapping'); }
+          return;
+        }
+        if (r.short > 0 && !seen['s' + r.item.id]) { seen['s' + r.item.id] = 1; msgs.push(r.item.name + ' is out of stock — billed anyway, ' + r.short + ' ' + (r.item.unit || 'unit') + '(s) not deducted'); }
+      });
+      var last = {};
+      (results || []).forEach(function (r) { if (r && r.linked && r.left != null) last[r.item.id] = r; });
+      Object.keys(last).forEach(function (id) {
+        var r = last[id], rl = +r.item.reorderLevel || 0;
+        if (r.short > 0) return;
+        if (r.left <= 0) msgs.push(r.item.name + ' is now out of stock');
+        else if (rl > 0 && r.left <= rl) msgs.push('Low stock: ' + r.item.name + ' — ' + r.left + ' ' + (r.item.unit || '') + ' left');
+      });
+      if (msgs.length && window.App && App.toast) setTimeout(function () { App.toast(msgs.join(' • '), 'info'); }, 700);
+      return msgs;
+    } catch (e) { return []; }
+  }
+  /* store a new tube row and deduct its stock (the one place every creation path goes through) */
+  function putRow(row) {
+    var r = applyStock(row);   /* sets row.stockUsed before the row is written */
+    db().put('samples', row);
+    return r;
+  }
+  /* tubes + units used between two dates (YYYY-MM-DD, local, inclusive) for the Tube Usage page:
+       tubes[]  one row per tube type  { tube, tubes, tests, linked, itemId, itemName, unit, perTube, used, short, untracked, onHand }
+       items[]  one row per stock item  { item, tubes[], used, returned, net, short, onHand, low, out }
+     Tube counts come straight from the samples (so they work with no mapping at all); units come from the auto movements. */
+  function dayKey(iso) { var d = new Date(iso); if (isNaN(d.getTime())) return ''; return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function usage(from, to) {
+    var inR = function (iso) { var k = dayKey(iso); return !!k && (!from || k >= from) && (!to || k <= to); };
+    var moves = stockMoves(), items = {}, map = tubeMap();
+    try { db().all('stock_items').forEach(function (it) { items[it.id] = it; }); } catch (e) {}
+    var by = {};
+    TUBES.forEach(function (t) { by[t] = { tube: t, tubes: 0, tests: 0, used: 0, short: 0, untracked: 0 }; });
+    var total = 0;
+    all().forEach(function (s) {
+      if (!isActive(s) || s.status === 'rejected' || !inR(s.createdAt)) return;
+      var r = by[s.tube] = by[s.tube] || { tube: s.tube, tubes: 0, tests: 0, used: 0, short: 0, untracked: 0 };
+      r.tubes++; total++; r.tests += (s.testIds || []).length;
+      if (!s.stockUsed) r.untracked++;
+      else (s.stockUsed || []).forEach(function (ln) { if (!s.stockReturned) { r.used = r3(r.used + (+ln.qty || 0)); r.short = r3(r.short + (+ln.short || 0)); } });
+    });
+    var st = null; try { st = window.App && App.stockState ? App.stockState() : null; } catch (e) {}
+    var rowOf = function (id) { var f = null; (st && st.rows || []).forEach(function (x) { if (x.item.id === id) f = x; }); return f; };
+    var tubes = Object.keys(by).map(function (k) {
+      var r = by[k], c = map[k] || {}, it = c.itemId ? items[c.itemId] : null, sr = it ? rowOf(it.id) : null;
+      r.linked = !!(it && it.active !== false); r.itemId = r.linked ? it.id : ''; r.itemName = r.linked ? it.name : ''; r.unit = r.linked ? (it.unit || '') : '';
+      r.perTube = r.linked ? (+c.qty > 0 ? +c.qty : 1) : 0; r.onHand = sr ? sr.onHand : null; r.low = !!(sr && sr.low); r.out = !!(sr && sr.out);
+      return r;
+    }).filter(function (r) { return r.tubes > 0 || r.linked; });
+    var ib = {};
+    moves.forEach(function (m) {
+      if (!m.auto || !m.itemId || !inR(m.createdAt || m.date)) return;
+      var x = ib[m.itemId] = ib[m.itemId] || { used: 0, returned: 0, short: 0 };
+      if (m.type === 'out') { x.used = r3(x.used + (+m.qty || 0)); x.short = r3(x.short + (+m.short || 0)); }
+      else if (m.type === 'adjust') x.returned = r3(x.returned + (+m.qty || 0));
+    });
+    var itemRows = Object.keys(ib).map(function (id) {
+      var it = items[id] || { id: id, name: 'Removed item', unit: '' }, sr = rowOf(id), x = ib[id];
+      return { item: it, tubes: Object.keys(map).filter(function (k) { return map[k] && map[k].itemId === id; }), used: x.used, returned: x.returned, net: r3(x.used - x.returned), short: x.short,
+        onHand: sr ? sr.onHand : null, low: !!(sr && sr.low), out: !!(sr && sr.out) };
+    }).sort(function (a, b) { return b.net - a.net; });
+    return { from: from, to: to, totalTubes: total, tubes: tubes, items: itemRows,
+      units: itemRows.reduce(function (a, r) { return r3(a + r.net); }, 0), short: itemRows.reduce(function (a, r) { return r3(a + r.short); }, 0),
+      unlinked: tubes.filter(function (r) { return !r.linked && r.tubes > 0; }).length };
+  }
+
   /* ================= create / sync / remove ================= */
   function patientOf(inv) {
     try { return inv && inv.patientId ? db().get('patients', inv.patientId) : null; } catch (e) { return null; }
@@ -212,13 +357,14 @@
     if (forInvoice(inv.id, list).length && !(opts && opts.force)) return [];
     var groups = groupByTube(expandTests(inv));
     var idx = nextIndex(inv.id, list), used = barcodeSet(list), made = [];
-    var ex0 = { createdAt: nowISO() }; /* one timestamp for all tubes of the invoice keeps them together in lists */
+    var ex0 = { createdAt: nowISO() }, stock = []; /* one timestamp for all tubes of the invoice keeps them together in lists */
     groups.forEach(function (g) {
       var row = buildRow(inv, g.tube, g.tests, idx, ex0);
       while (used[row.barcode.toUpperCase()]) { idx++; row.barcode = (inv.no || inv.id) + '-' + idx; }
       used[row.barcode.toUpperCase()] = true; idx++;
-      try { db().put('samples', row); made.push(row); } catch (e) {}
+      try { stock.push(putRow(row)); made.push(row); } catch (e) {}
     });
+    stockNotice(stock);
     return made;
   }
   /* invoice edited: pending tubes lose removed tests (emptied ones are deleted); new tests go into a pending tube of the same type or a new tube */
@@ -233,7 +379,7 @@
       var keep = [], names = [];
       (s.testIds || []).forEach(function (tid, i) { if (wantIds[tid]) { keep.push(tid); names.push((s.testNames || [])[i] || wantIds[tid].name); } });
       if (keep.length === (s.testIds || []).length) return;
-      if (!keep.length) { try { db().remove('samples', s.id); } catch (e) {} s._gone = true; }
+      if (!keep.length) { restoreStock(s, 'test removed from the invoice'); try { db().remove('samples', s.id); } catch (e) {} s._gone = true; }
       else { try { db().update('samples', s.id, { testIds: keep, testNames: names }); } catch (e) {} s.testIds = keep; s.testNames = names; }
     });
     ex = ex.filter(function (s) { return !s._gone; });
@@ -241,7 +387,7 @@
     ex.forEach(function (s) { (s.testIds || []).forEach(function (tid) { covered[tid] = true; }); });
     var missing = want.filter(function (t) { return !covered[t.testId]; });
     if (!missing.length) return;
-    var idx = nextIndex(inv.id, ex), used = barcodeSet(list);
+    var idx = nextIndex(inv.id, ex), used = barcodeSet(list), stock = [];
     groupByTube(missing).forEach(function (g) {
       var host = null;
       ex.forEach(function (s) { if (!host && s.status === 'pending' && s.tube === g.tube) host = s; });
@@ -258,11 +404,12 @@
       var row = buildRow(inv, g.tube, g.tests, idx, null);
       while (used[row.barcode.toUpperCase()]) { idx++; row.barcode = (inv.no || inv.id) + '-' + idx; }
       used[row.barcode.toUpperCase()] = true; idx++;
-      try { db().put('samples', row); ex.push(row); } catch (e) {}
+      try { stock.push(putRow(row)); ex.push(row); } catch (e) {}
     });
+    stockNotice(stock);
   }
   function removeForInvoice(invId) {
-    forInvoice(invId).forEach(function (s) { try { db().remove('samples', s.id); } catch (e) {} });
+    forInvoice(invId).forEach(function (s) { restoreStock(s, 'invoice deleted'); try { db().remove('samples', s.id); } catch (e) {} });
   }
   /* samples whose invoice no longer exists (deleted on another PC, old data) are removed */
   function cleanupOrphans() {
@@ -270,7 +417,7 @@
     var ids = {};
     try { db().all('invoices').forEach(function (i) { ids[i.id] = true; }); } catch (e) { return 0; }
     var n = 0;
-    list.forEach(function (s) { if (!ids[s.invoiceId]) { try { db().remove('samples', s.id); n++; } catch (e) {} } });
+    list.forEach(function (s) { if (!ids[s.invoiceId]) { restoreStock(s, 'invoice deleted'); try { db().remove('samples', s.id); n++; } catch (e) {} } });
     return n;
   }
 
@@ -281,7 +428,7 @@
   }
   function setStatus(id, status, extra) {
     var s = get(id); if (!s) return null;
-    var by = userName(), at = nowISO();
+    var by = userName(), at = nowISO(), prevStatus = s.status;
     var h = (s.history || []).slice();
     var ent = { status: status, at: at, by: by };
     if (extra && extra.reason) ent.reason = extra.reason;
@@ -289,7 +436,14 @@
     var patch = { status: status, history: h };
     if (status === 'collected') { patch.collectedAt = at; patch.collectedBy = by; }
     if (status === 'rejected') patch.rejectReason = (extra && extra.reason) || '';
-    return db().update('samples', id, patch);
+    var upd = db().update('samples', id, patch);
+    /* a rejected tube gives its stock back (once); the re-collected tube is a new sample and deducts again */
+    if (status === 'rejected' && prevStatus !== 'rejected' && s.stockUsed && s.stockUsed.length && !s.stockReturned) {
+      var back = restoreStock(s, 'sample rejected');
+      try { db().update('samples', id, { stockReturned: nowISO() }); } catch (e) {}
+      if (back > 0 && upd) upd.stockReturned = true;
+    }
+    return upd;
   }
   /* re-create a pending tube for a rejected one (same tube + tests, next barcode of the invoice) */
   function recollect(id) {
@@ -301,8 +455,9 @@
     var tests = (s.testIds || []).map(function (tid, i) { return { testId: tid, name: (s.testNames || [])[i] || tid }; });
     var row = buildRow(inv, s.tube, tests, idx, { recollectOf: s.id });
     while (used[row.barcode.toUpperCase()]) { idx++; row.barcode = (inv.no || inv.id) + '-' + idx; }
-    db().put('samples', row);
+    var made = putRow(row);
     db().update('samples', s.id, { recollectId: row.id });
+    stockNotice([made]);
     return row;
   }
 
@@ -395,6 +550,7 @@
     summaryMap: summaryMap, chipHTML: chipHTML, tubeIcon: tubeIcon, badge: badge, tubeDot: tubeDot, printLabels: printLabels,
     requireCollected: requireCollected, blockedReason: blockedReason, uncollectedCount: uncollectedCount,
     onResultsSaved: onResultsSaved, userName: userName,
+    tubeMap: tubeMap, linkFor: linkFor, onHandOf: onHandOf, usage: usage, applyStock: applyStock, restoreStock: restoreStock,
     _code128Values: code128Values, _code128Widths: code128Widths
   };
   if (window.App) { App.barcodeSvg = barcodeSvg; App.barcodeModules = barcodeModules; }
