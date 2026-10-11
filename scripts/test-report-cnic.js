@@ -78,14 +78,15 @@ async function suite(folder) {
     };
   }
   const text = (value, page) => receipt.text.find(t => t.value === value && t.page === page);
-  function checkPages(value, multiPage) {
+  /* legacy = the old header + patient grid (Without Header / custom header); default = the PATIENT | COMPANY band */
+  function checkPages(value, multiPage, legacy) {
     const pages = receipt.doc.getNumberOfPages();
     if (multiPage) assert.ok(pages > 1 && pages < 15, 'Bounded multi-page report');
     for (let page = 1; page <= pages; page++) {
       const label = text('CNIC:', page), patient = text('Patient Name:', page), visit = text('Registration Date:', page);
       const footer = text('Electronically verified report. No signatures necessary.', page);
       assert.ok(label && patient && visit && footer, 'Full identity and footer on page ' + page);
-      const rendered = receipt.text.find(t => t.page === page && t.y === label.y && t.x === label.x + (staged ? 40 : 44));
+      const rendered = receipt.text.find(t => t.page === page && t.y === label.y && t.x === label.x + (legacy ? (staged ? 40 : 44) : 37.5));
       assert.equal(rendered && rendered.value.trim(), value == null ? '' : String(value).trim(), 'CNIC PDF value');
       assert.ok(label.y < footer.y - 3 && label.y > patient.y);
       if (desktopSource) {
@@ -94,7 +95,12 @@ async function suite(folder) {
         assert.equal(patient.y, visit.y, 'Desktop source keeps side-by-side layout');
       } else {
         assert.ok(label.y < visit.y, 'CNIC belongs above visit details');
-        assert.ok(receipt.lines.some(l => l.page === page && l.x1 === 12 && l.x2 === 198 && l.y1 > label.y && l.y1 < visit.y), 'Divider follows CNIC');
+        if (legacy) assert.ok(receipt.lines.some(l => l.page === page && l.x1 === 12 && l.x2 === 198 && l.y1 > label.y && l.y1 < visit.y), 'Divider follows CNIC');
+        else {
+          assert.equal(patient.x, 12, 'Band: patient list is on the left');
+          assert.ok(text('CNIC Fixture Lab', page).x > 105, 'Band: company block is on the right half');
+          assert.ok(receipt.lines.some(l => l.page === page && l.x1 === 12 && l.x2 === 198 && l.y1 > text('Consultant:', page).y), 'Band: one rule closes the band below the last patient row');
+        }
       }
       for (const item of receipt.text.filter(t => t.page === page)) {
         const left = item.x - (item.align === 'right' ? item.width : item.align === 'center' ? item.width / 2 : 0);
@@ -110,10 +116,12 @@ async function suite(folder) {
   }
   function checkHtml(value) {
     const data = App.testData('i');
-    const html = App.testHtml(data), grid = App.testGrid(data);
-    assert.ok(html.includes(grid), 'Actual printable HTML includes identity grid');
-    assert.equal((grid.match(/>CNIC</g) || []).length, 1);
-    const field = grid.slice(grid.indexOf('>CNIC<'), grid.indexOf('</div>', grid.indexOf('>CNIC<')));
+    const html = App.testHtml(data), grid = html.slice(html.indexOf('class="rpt-band-patient"'), html.indexOf('class="rpt-band-company"'));
+    assert.ok(grid.length > 50 && !html.includes('class="rpt-info"'), 'Actual printable HTML carries the patient list in the left half of the header band (no separate grid)');
+    assert.ok(html.indexOf('class="rpt-band-patient"') < html.indexOf('CNIC Fixture Lab'), 'Patient block comes before the company block');
+    assert.ok(App.testHtml(data, { noLabHeader: true }).includes(App.testGrid(data)), 'Without Header keeps the old patient grid');
+    assert.equal((grid.match(/>CNIC:</g) || []).length, 1);
+    const field = grid.slice(grid.indexOf('>CNIC:<'), grid.indexOf('</div>', grid.indexOf('>CNIC:<')));
     const expected = value == null ? '' : String(value).trim();
     assert.ok(field.includes(expected ? esc(expected) : '&nbsp;'), 'Escaped or blank HTML CNIC');
     if (expected.includes('<')) assert.ok(!grid.includes(expected), 'CNIC cannot inject HTML');
@@ -145,7 +153,7 @@ async function suite(folder) {
   assert.ok(Buffer.from(uploads[0].pdfBase64, 'base64').toString('latin1').includes(cnic));
   assert.ok(prints[0].includes(cnic));
   assert.ok(!receipt.text.some(t => t.value === 'CNIC Fixture Lab'), 'Preprinted option preserved');
-  checkPages(cnic, true);
+  checkPages(cnic, true, true);
   assert.equal(JSON.stringify(tables), before, 'Upload preserves patient/clinical records and stable key');
 
   // A CNIC in the patient record must not enter any ready/due/doctor message.
