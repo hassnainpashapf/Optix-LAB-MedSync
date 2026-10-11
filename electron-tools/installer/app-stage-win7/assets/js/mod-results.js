@@ -2103,6 +2103,92 @@
       ]
     };
   }
+  /* ---------- default report header: PATIENT (left) | COMPANY (right) ----------
+     One band at the top of the report. The left half lists the patient / visit details (the same fields reportHeaderRows
+     gives, plus the Inv # / P # numbers); the right half carries the lab (logo, name, tagline, then the plain "Header text"
+     lines) with the QR (and the Code39 strips) at the far right. HTML/print (reportBandHtml) and the PDF (drawBand in
+     buildReportPdf) share this model and the same millimetre geometry, so both look the same.
+     A custom header (s.headerHtml / header picture) or "Without Header" keeps the old header + patient grid. */
+  var BAND = {
+    gap: 6,         /* mm between the patient half and the company half */
+    labelW: 36,     /* mm, label column of the patient list ("Father / Husband Name:" fits on one line) */
+    labelGap: 1.5,  /* mm between label and value */
+    rowPt: 8.5,     /* pt, patient list */
+    rowLH: 4.05,    /* mm, patient list line height */
+    qrW: 22,        /* mm, QR / barcode column at the far right */
+    colGap: 3,      /* mm between the company text and the QR column */
+    logoW: 18, logoH: 16, logoGap: 2.5,   /* mm, logo box (the logo is fitted inside, aspect kept) */
+    capPt: 8, capLH: 4,                    /* "PATIENT" caption */
+    tagPt: 10, textPt: 8.5, textLH: 4.05,
+    serif: "'Times New Roman',Times,serif"   /* the PDF draws the name in Times, so the printout uses the same face */
+  };
+  function bandModel(d, compact) {
+    var inv = d.inv || {}, hr = reportHeaderRows(d), vn = App.visitNos(inv);
+    var rows = [];
+    hr.patient.concat(hr.visit).forEach(function (cells) { cells.forEach(function (c) { rows.push([c[0], c[1], !!c[2]]); }); });
+    /* order: identity fields, the invoice / patient numbers, then the visit fields */
+    var nIdent = 0; hr.patient.forEach(function (cells) { nIdent += cells.length; });
+    rows.splice(nIdent, 0,
+      ['Inv #', String(vn.labText || '').replace(/^INV\s*#\s*/i, ''), false],
+      ['P #', String(vn.caseText || '').replace(/^P\s*#\s*/i, ''), false]);
+    rows[0][2] = true;   /* patient name in bold */
+    if (compact) rows = rows.filter(function (r) { return /^(Patient Name|Age \/ Sex|Inv #)$/.test(r[0]); });
+    return { caption: 'PATIENT', rows: rows };
+  }
+  /* lab-name size shared by HTML and PDF: the largest of 16..13pt that fits one line in availMm (estimated Times Bold widths), else 13pt wrapped */
+  function bandNamePt(name, availMm) {
+    var em = 0, i, c;
+    name = String(name || '');
+    for (i = 0; i < name.length; i++) {
+      c = name.charAt(i);
+      em += /[A-Z]/.test(c) ? 0.72 : /[a-z]/.test(c) ? 0.5 : /[0-9]/.test(c) ? 0.5 : c === ' ' ? 0.25 : /[؀-ۿ]/.test(c) ? 0.5 : 0.4;
+    }
+    for (var pt = 16; pt >= 13; pt--) { if (em * pt * 0.3528 <= availMm) return pt; }
+    return 13;
+  }
+  function bandNameWidth(hasLogo) {
+    var tw = (186 - BAND.gap) / 2 - BAND.qrW - BAND.colGap;
+    return tw - (hasLogo ? BAND.logoW + BAND.logoGap : 0);
+  }
+  function reportBandHtml(d) {
+    var inv = (d && d.inv) || {}, s = (d && d.s) || {};
+    var showTagline = s.showTagline !== false && !!s.tagline;
+    var showQr = s.showQr !== false;
+    var labName = s.labName || 'Optix Medical Sync';
+    var hdrAccent = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(String(s.accent || '').trim()) ? String(s.accent).trim() : '#1B1B6E';
+    var nameColor = /^#[0-9a-fA-F]{6}$/.test(s.labNameColor || '') ? s.labNameColor : hdrAccent;
+    var m = bandModel(d), B = BAND;
+
+    var left = '<div class="rpt-band-patient" style="min-width:0;text-align:left">' +
+      '<div style="font-weight:700;font-size:' + B.capPt + 'pt;letter-spacing:.12em;line-height:' + B.capLH + 'mm;margin:0 0 1mm">' + m.caption + '</div>' +
+      m.rows.map(function (r) {
+        return '<div style="display:grid;grid-template-columns:' + B.labelW + 'mm minmax(0,1fr);column-gap:' + B.labelGap + 'mm;font-size:' + B.rowPt + 'pt;line-height:' + B.rowLH + 'mm;break-inside:avoid;page-break-inside:avoid">' +
+          '<span style="font-weight:700;overflow-wrap:anywhere">' + App.esc(r[0]) + ':</span>' +
+          '<span style="min-width:0;overflow-wrap:anywhere;white-space:pre-wrap' + (r[2] ? ';font-weight:700' : '') + '">' + (r[1] === '' ? '&nbsp;' : App.esc(r[1])) + '</span></div>';
+      }).join('') + '</div>';
+
+    var namePt = bandNamePt(labName, bandNameWidth(!!s.logo));
+    var top = '<div style="display:flex;align-items:center;gap:' + B.logoGap + 'mm">' +
+      (s.logo ? '<img src="' + App.esc(s.logo) + '" style="width:' + B.logoW + 'mm;height:' + B.logoH + 'mm;object-fit:contain;object-position:left center;flex:none" alt="">' : '') +
+      '<div style="min-width:0">' +
+        '<div style="color:' + nameColor + ';font-family:' + BAND.serif + ';font-weight:700;font-size:' + namePt + 'pt;line-height:1.15;overflow-wrap:anywhere">' + App.esc(labName) + '</div>' +
+        (showTagline ? '<div style="margin-top:1mm;color:' + hdrAccent + ';font-family:' + BAND.serif + ';font-style:italic;font-size:' + B.tagPt + 'pt;line-height:1.2;overflow-wrap:anywhere">' + App.esc(s.tagline) + '</div>' : '') +
+      '</div></div>';
+    var ht = String(s.headerText || '').trim();
+    var text = '<div class="rpt-band-co-text" style="min-width:0;text-align:left">' + top +
+      (ht ? '<div class="rpt-htext" style="margin-top:2mm;color:#000;font-size:' + B.textPt + 'pt;line-height:' + B.textLH + 'mm;white-space:pre-line;overflow-wrap:anywhere">' + App.esc(ht) + '</div>' : '') + '</div>';
+
+    var vn = App.visitNos(inv);
+    var bc = function (code) { return barcodeHtml(code, '100%', '4.2mm').replace('margin:0 auto', 'margin:0'); };
+    var codes = '<div class="rpt-band-co-code" style="width:' + B.qrW + 'mm">' +
+      (showQr ? '<div style="line-height:0"><img data-qr="1" style="display:block;width:' + B.qrW + 'mm;height:' + B.qrW + 'mm" alt="QR"></div>' : '') +
+      '<div style="margin-top:2.2mm">' + bc(vn.labCode) + '</div><div style="margin-top:1.6mm">' + bc(vn.caseCode) + '</div></div>';
+    var right = '<div class="rpt-band-company" style="display:grid;grid-template-columns:minmax(0,1fr) ' + B.qrW + 'mm;column-gap:' + B.colGap + 'mm;align-items:start;min-width:0">' + text + codes + '</div>';
+
+    return '<div class="rpt-band" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:' + B.gap + 'mm;align-items:start;background:#fff;color:#000;padding-top:2px">' +
+      left + right + '</div>' +
+      '<hr style="width:100%;border:none;border-top:1px solid #000;margin:8px 0 0">';
+  }
   function patientGridHtml(d) {
     var hr = reportHeaderRows(d);
     function section(name, rows) {
@@ -2925,10 +3011,12 @@
       var t = String(h).replace(/<[^>]*>/g, '').trim();
       return t.length > 1;
     }
-    var headOut = noLabHeader ? '' : (hasRealHtml(s.headerHtml) ? fillTokens(s.headerHtml, d) : reportHeaderHtml(d));
+    var customHead = !noLabHeader && hasRealHtml(s.headerHtml);
+    /* default header = one band, patient (left) | company (right); a custom header, or "Without Header", keeps the old header + patient grid */
+    var headOut = noLabHeader ? '' : (customHead ? fillTokens(s.headerHtml, d) : reportBandHtml(d));
 
-    /* patient info grid */
-    var infoHtml = patientGridHtml(d);
+    /* patient info grid (only below a custom header / without the lab header; the default band already carries it) */
+    var infoHtml = (noLabHeader || customHead) ? patientGridHtml(d) : '';
 
     /* test sections, grouped by test category when present */
     var rows = readyRows.slice();
@@ -3510,59 +3598,117 @@
         if (!skipPatient) drawPatientGrid();
         return;
       }
-      // --- left: logo (~18mm) + lab name + subtitle ---
-      if (s.logo) addImg(s.logo, M, y, 18, 18);
-      var htx = M + (s.logo ? 22 : 0);
-      doc.setFont('times', 'bold'); doc.setFontSize(18);
-      var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : A; /* the lab-name colour from Lab Profile (default: the accent colour) */
-      doc.setTextColor(NC[0], NC[1], NC[2]);
-      txt(s.labName || 'Optix Medical Sync', htx, y + 9);
-      if (showTagline) {
-        doc.setFont('times', 'italic'); doc.setFontSize(11);
-        doc.setTextColor(A[0], A[1], A[2]);
-        txt(s.tagline, htx, y + 15.5);
-      }
+      drawBand(!!skipPatient);
+    }
+    /* Default letterhead: PATIENT (left half) | COMPANY (right half), one band; the HTML/print twin is reportBandHtml().
+       compact = continuation page after a field longer than a page (only name, age/sex and Inv # on the left). */
+    function drawBand(compact) {
+      var B = BAND, LW = (CW - B.gap) / 2, RX = M + LW + B.gap, MM = 0.3528;
+      var top0 = y;
+      function base(top, pt, lh) { return top + (lh - 1.11 * pt * MM) / 2 + 0.9 * pt * MM; }   // CSS-like baseline inside a line box
 
-      // --- right: Patient No. / Case # right-aligned with wide letter spacing ---
-      var hnx = W - M - (showQr ? qrS + 15 : 0);
-      doc.setTextColor(20, 20, 20);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      // ---------- right half: logo + name + tagline, header text, QR + code strips ----------
+      var hasLogo = !!s.logo, nameX = RX, nameW = LW - B.qrW - B.colGap;
+      var logoBox = null;
+      if (hasLogo) { nameX += B.logoW + B.logoGap; nameW -= B.logoW + B.logoGap; }
+      var labName = s.labName || 'Optix Medical Sync';
+      var namePt = bandNamePt(labName, nameW);
+      doc.setFont('times', 'bold'); doc.setFontSize(namePt);
+      var nameLines = doc.splitTextToSize(labName, nameW), nameLH = namePt * MM * 1.15;
+      var tagLines = [], tagLH = B.tagPt * MM * 1.2;
+      if (showTagline) { doc.setFont('times', 'italic'); doc.setFontSize(B.tagPt); tagLines = doc.splitTextToSize(String(s.tagline), nameW); }
+      var nameBlockH = nameLines.length * nameLH + (tagLines.length ? 1 + tagLines.length * tagLH : 0);
+      var topH = Math.max(hasLogo ? B.logoH : 0, nameBlockH);
+      var ny = top0 + (topH - nameBlockH) / 2;
+      var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : A;
+      if (hasLogo) {
+        var lw = B.logoH, lh = B.logoH;   // fit the logo into the logo box, keep its aspect, left / centre aligned like the HTML
+        try {
+          var ip = doc.getImageProperties(s.logo), ar = ip.width / ip.height;
+          lw = B.logoW; lh = lw / ar;
+          if (lh > B.logoH) { lh = B.logoH; lw = lh * ar; }
+        } catch (e) { lw = lh = B.logoH; }
+        addImg(s.logo, RX, top0 + (topH - B.logoH) / 2 + (B.logoH - lh) / 2, lw, lh);
+      }
+      doc.setFont('times', 'bold'); doc.setFontSize(namePt); doc.setTextColor(NC[0], NC[1], NC[2]);
+      nameLines.forEach(function (ln, i) { txt(ln, nameX, base(ny + i * nameLH, namePt, nameLH)); });
+      if (tagLines.length) {
+        doc.setFont('times', 'italic'); doc.setFontSize(B.tagPt); doc.setTextColor(A[0], A[1], A[2]);
+        tagLines.forEach(function (ln, i) { txt(ln, nameX, base(ny + nameLines.length * nameLH + 1 + i * tagLH, B.tagPt, tagLH)); });
+      }
+      var rightBottom = top0 + topH;
+      var htText = String(s.headerText || '').trim();
+      if (htText) {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(B.textPt); doc.setTextColor(0, 0, 0);
+        var htLines = doc.splitTextToSize(htText, LW - B.qrW - B.colGap);
+        htLines.forEach(function (ln, i) { txt(ln, RX, base(top0 + topH + 2 + i * B.textLH, B.textPt, B.textLH)); });
+        rightBottom = top0 + topH + 2 + htLines.length * B.textLH;
+      }
+      // QR (far right) with the two Code39 strips under it, like the printout
+      var cx = W - M - B.qrW, cy = top0;
+      if (showQr) { addImg(qrDataUrl, cx, cy, B.qrW, B.qrW); cy += B.qrW + 2.2; }
       var vnp = App.visitNos(inv);
-      txt('Inv #:', hnx, y + 5, { align: 'right' });
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt(vnp.labText.replace('INV # ', ''), hnx, y + 10, { align: 'right', charSpace: 0.6 });
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt((/^P\s*#/i.test(String(vnp.caseText || '')) ? vnp.caseText : ('P # ' + vnp.caseText)), hnx, y + 17, { align: 'right', charSpace: 0.6 });
+      drawCode39(vnp.labCode, cx, cy, B.qrW, 4.2); cy += 4.2 + 1.6;
+      drawCode39(vnp.caseCode, cx, cy, B.qrW, 4.2); cy += 4.2;
+      rightBottom = Math.max(rightBottom, cy);
 
-      // --- QR 26mm at far right ---
-      if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
-
-      y += headH + 2;
-
-      // --- plain header text from Lab Profile ("Header text"), centred under the header ---
-      if (String(s.headerText || '').trim()) {
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-        var htLines = doc.splitTextToSize(String(s.headerText).trim(), CW);
-        txt(htLines, W / 2, y + 2, { align: 'center' });
-        y += htLines.length * 4.1 + 3;
-      }
+      // ---------- left half: PATIENT + label: value list ----------
+      var model = bandModel(d, compact), valW = LW - B.labelW - B.labelGap, startPage = doc.internal.getCurrentPageInfo().pageNumber;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(B.capPt); doc.setTextColor(0, 0, 0);
+      txt(model.caption, M, base(y, B.capPt, B.capLH), { charSpace: B.capPt * MM * 0.12 });
+      y += B.capLH + 1;
+      model.rows.forEach(function (r) {
+        doc.setFontSize(B.rowPt);
+        doc.setFont('helvetica', 'bold');
+        var labels = doc.splitTextToSize(r[0] + ':', B.labelW);
+        doc.setFont('helvetica', r[2] ? 'bold' : 'normal');
+        var values = doc.splitTextToSize(r[1] || ' ', valW);
+        var count = Math.max(labels.length, values.length), rh = count * B.rowLH;
+        if (!compact) {
+          // keep a wrapped row together when it fits a fresh page; an exceptionally long value flows line by line across pages
+          if (rh <= maxBodyY - letterheadBottom) need(rh);
+        }
+        for (var li = 0; li < count; li++) {
+          if (!compact) need(B.rowLH);
+          doc.setFontSize(B.rowPt); doc.setTextColor(0, 0, 0);
+          doc.setFont('helvetica', 'bold');
+          if (li < labels.length) txt(labels[li], M, base(y, B.rowPt, B.rowLH));
+          doc.setFont('helvetica', r[2] ? 'bold' : 'normal');
+          if (li < values.length) txt(values[li], M + B.labelW + B.labelGap, base(y, B.rowPt, B.rowLH));
+          y += B.rowLH;
+        }
+      });
+      if (doc.internal.getCurrentPageInfo().pageNumber === startPage) y = Math.max(y, rightBottom);
 
       // --- optional report banner (only when s.reportTitle is set) ---
       if (s.reportTitle) {
+        y += 2;
         doc.setFillColor(A[0], A[1], A[2]);
         doc.setFont('helvetica', 'bold'); doc.setFontSize(12); doc.setTextColor(255, 255, 255);
         doc.rect(M, y, CW, 8, 'F');
         txt(s.reportTitle, M + CW / 2, y + 5.6, { align: 'center' });
-        y += 8 + 2;
+        y += 8;
       }
 
-      // --- navy divider line; y now sits below the header ---
-      doc.setDrawColor(A[0], A[1], A[2]); doc.setLineWidth(0.6);
+      // --- thin rule under the band; the report starts below it ---
+      y += 1.5;
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
       doc.line(M, y, W - M, y);
-      y += 5;
-
+      y += 4;
       letterheadBottom = y;
-      if (!skipPatient) drawPatientGrid();
+      if (!compact && y > maxBodyY - 40) repeatPatientGrid = false;   // no room left for a repeated block: later pages carry the short band
+    }
+    /* Code39 strip with the same proportions as barcodeHtml (narrow 1, wide 3, one narrow gap between characters) */
+    function drawCode39(text, x0, y0, w, h) {
+      var seq = '*' + String(text == null ? '' : text).toUpperCase().replace(/\s+/g, '') + '*', els = [], i, j, pat, u = 0;
+      for (i = 0; i < seq.length; i++) {
+        pat = CODE39[seq.charAt(i)] || CODE39['-'];
+        for (j = 0; j < 9; j++) { var ww = pat.charAt(j) === 'w' ? 3 : 1; els.push({ w: ww, bar: j % 2 === 0 }); u += ww; }
+        if (i < seq.length - 1) { els.push({ w: 1, bar: false }); u += 1; }
+      }
+      var k = w / u, x = x0;
+      doc.setFillColor(0, 0, 0);
+      els.forEach(function (e) { if (e.bar) doc.rect(x, y0, e.w * k, h, 'F'); x += e.w * k; });
     }
     function drawPatientGrid() {
       var hr = reportHeaderRows(d), GAP = 6, VAL_OFF = 44, LH = 4.6, ROW_PAD = 1.4;
