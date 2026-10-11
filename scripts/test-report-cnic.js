@@ -13,8 +13,6 @@ const cnic = '35202-1234567-1';
 
 async function suite(folder) {
   const { jsPDF } = require(path.join(folder, 'assets/vendor/jspdf.umd.min.js'));
-  const desktopSource = false; /* 1.4.1: the desktop app ships the same report layout as the web app */
-  const staged = false; /* the staged desktop copy is rebuilt from electron-src, which now matches the web app */
   let tables, receipt, uploads = [], prints = [], toasts = [];
   function RecordingPdf(options) {
     const doc = new jsPDF(options);
@@ -81,27 +79,32 @@ async function suite(folder) {
   function checkPages(value, multiPage) {
     const pages = receipt.doc.getNumberOfPages();
     if (multiPage) assert.ok(pages > 1 && pages < 15, 'Bounded multi-page report');
+    const shown = value != null && String(value).trim() !== '';
+    const COLON = 12 + 186 * 0.2;          // left column: ":" at 20% of the width, value 3mm after it
     for (let page = 1; page <= pages; page++) {
-      const label = text('CNIC:', page), patient = text('Patient Name:', page), visit = text('Registration Date:', page);
+      const label = text('CNIC', page), patient = text('Patient Name', page), visit = text('Registration Date', page);
+      const phone = text('Phone', page), address = text('Address', page);
       const footer = text('Electronically verified report. No signatures necessary.', page);
-      assert.ok(label && patient && visit && footer, 'Full identity and footer on page ' + page);
-      const rendered = receipt.text.find(t => t.page === page && t.y === label.y && t.x === label.x + (staged ? 40 : 44));
-      assert.equal(rendered && rendered.value.trim(), value == null ? '' : String(value).trim(), 'CNIC PDF value');
-      assert.ok(label.y < footer.y - 3 && label.y > patient.y);
-      if (desktopSource) {
-        assert.equal(patient.x, 12);
-        assert.equal(visit.x, 105);
-        assert.equal(patient.y, visit.y, 'Desktop source keeps side-by-side layout');
-      } else {
-        assert.ok(label.y < visit.y, 'CNIC belongs above visit details');
-        assert.ok(receipt.lines.some(l => l.page === page && l.x1 === 12 && l.x2 === 198 && l.y1 > label.y && l.y1 < visit.y), 'Divider follows CNIC');
+      assert.ok(patient && visit && phone && address && footer, 'Full identity and footer on page ' + page);
+      if (!shown) assert.ok(!label, 'Empty CNIC row is hidden on page ' + page);
+      else {
+        assert.ok(label && label.x === 12, 'CNIC label in the left column on page ' + page);
+        const rendered = receipt.text.find(t => t.page === page && t.y === label.y && Math.abs(t.x - (COLON + 3)) < 0.01);
+        assert.equal(rendered && rendered.value.trim(), String(value).trim(), 'CNIC PDF value');
+        assert.ok(receipt.text.some(t => t.page === page && t.value === ':' && t.y === label.y && Math.abs(t.x - COLON) < 0.01), 'CNIC colon aligned');
+        assert.ok(label.y > phone.y && label.y < address.y, 'CNIC sits after Phone and before Address');
+        assert.ok(label.y < footer.y - 3 && label.y > patient.y);
       }
+      assert.ok(patient.x === 12 && visit.x === 105 && patient.y === visit.y, 'Identity left, visit right, top-aligned');
+      const rule = receipt.lines.filter(l => l.page === page && l.x1 === 12 && l.x2 === 198 && l.y1 > patient.y && l.y1 < footer.y - 3 && l.y1 < (receipt.text.find(t => t.page === page && /^Analyte \d+$/.test(t.value)) || { y: Infinity }).y);
+      assert.equal(rule.length, 1, 'One closing rule, no divider');
+      assert.ok(rule[0].y1 > address.y && rule[0].y1 > text('Consultant', page).y, 'Rule closes the block below both columns');
       for (const item of receipt.text.filter(t => t.page === page)) {
         const left = item.x - (item.align === 'right' ? item.width : item.align === 'center' ? item.width / 2 : 0);
         assert.ok(left >= 11.5 && left + item.width <= 198.5, 'Horizontal bounds: ' + JSON.stringify(item));
         assert.ok(item.y >= 11 && item.y <= 293.1, 'Page bounds: ' + JSON.stringify(item));
         if (/^Analyte \d+$/.test(item.value)) {
-          assert.ok(item.y > Math.max(label.y, text('Consultant:', page).y) + 4, 'Results below complete patient block');
+          assert.ok(item.y > Math.max(address.y, text('Consultant', page).y) + 4, 'Results below complete patient block');
           assert.ok(item.y < footer.y - 3, 'Result above footer');
         }
       }
@@ -112,12 +115,19 @@ async function suite(folder) {
     const data = App.testData('i');
     const html = App.testHtml(data), grid = App.testGrid(data);
     assert.ok(html.includes(grid), 'Actual printable HTML includes identity grid');
-    assert.equal((grid.match(/>CNIC</g) || []).length, 1);
-    const field = grid.slice(grid.indexOf('>CNIC<'), grid.indexOf('</div>', grid.indexOf('>CNIC<')));
     const expected = value == null ? '' : String(value).trim();
-    assert.ok(field.includes(expected ? esc(expected) : '&nbsp;'), 'Escaped or blank HTML CNIC');
-    if (expected.includes('<')) assert.ok(!grid.includes(expected), 'CNIC cannot inject HTML');
-    for (const name of ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'Address', 'Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Reference', 'Consultant']) assert.ok(grid.includes(name), 'Preserved field: ' + name);
+    const names = ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'Address', 'Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Reference', 'Consultant'];
+    if (!expected) {
+      assert.ok(!grid.includes('CNIC'), 'Empty CNIC row hidden in HTML');
+    } else {
+      assert.equal((grid.match(/>CNIC</g) || []).length, 1);
+      const patientCol = grid.slice(grid.indexOf('class="rpt-info-patient"'), grid.indexOf('class="rpt-info-visit"'));
+      assert.ok(patientCol.indexOf('>Phone<') < patientCol.indexOf('>CNIC<') && patientCol.indexOf('>CNIC<') < patientCol.indexOf('>Address<'), 'HTML: CNIC after Phone, before Address');
+      const field = grid.slice(grid.indexOf('>CNIC<'), grid.indexOf('</div>', grid.indexOf('>CNIC<')));
+      assert.ok(field.includes(esc(expected)), 'Escaped HTML CNIC');
+      if (expected.includes('<')) assert.ok(!grid.includes(expected), 'CNIC cannot inject HTML');
+    }
+    for (const name of names) assert.ok(grid.includes(name), 'Preserved field: ' + name);
   }
 
   // Populated, blank and special-character records also exercise repeated headers.
@@ -156,7 +166,7 @@ async function suite(folder) {
     }
   }
 
-  console.log('PASS: ' + (path.relative(root, folder) || 'web') + ' CNIC: populated/empty/escaped HTML, actual multi-page PDF bounds and identity layout, QR upload, immutable records and SMS/WhatsApp exclusion.');
+  console.log('PASS: ' + (path.relative(root, folder) || 'web') + ' CNIC: populated (after Phone) / hidden when empty / escaped HTML, actual multi-page PDF bounds and identity layout, QR upload, immutable records and SMS/WhatsApp exclusion.');
 }
 
 (async () => {

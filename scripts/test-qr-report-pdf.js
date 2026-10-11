@@ -171,9 +171,9 @@ async function suite(folder) {
   assert.equal(text('109')[0].x, 166); assert.equal(text('108')[0].x, 196);
   assert.ok(text('Note: 1 test(s) from this invoice are still pending.').length);
   assert.equal(JSON.stringify(opts), optsBefore);
-  for (const label of ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'Address', 'Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Reference', 'Consultant']) assert.ok(text(label + ':').length, 'Preserved field: ' + label);
+  for (const label of ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'Address', 'Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Reference', 'Consultant']) assert.ok(text(label).length, 'Preserved field: ' + label);
   for (const value of ['Synthetic Parent', '34 Yr(s) / Female', 'O+', '0300-0000000', 'Fixture Street', 'Fixture Reception', 'Fixture Lab', 'Fixture Reference', 'Fixture Consultant']) assert.ok(text(value).length, 'Preserved field value: ' + value);
-  /* 1.4.1: electron-src carries the same stacked patient/visit layout as the web app (no desktop-only side-by-side pin any more) */
+  /* electron-src carries the same two-column patient block as the web app */
   build(); bounds();
   assert.equal(text('History only').length, 0, 'Default remains current-only');
   assert.equal(text('NEWER').length, 0);
@@ -238,7 +238,7 @@ async function suite(folder) {
   fixture();
   build({ noLabHeader: true }); bounds();
   assert.equal(text('Fixture Laboratory').length, 0);
-  assert.ok(text('Patient Name:').length && text('Consultant:').length);
+  assert.ok(text('Patient Name').length && text('Consultant').length);
   assert.equal(receipt.images.length, 0, 'No letterhead QR on preprinted report');
   build({}, { hdr: { url: pixel, ratio: 0.04 }, ftr: { url: pixel, ratio: 0.04 } });
   assert.ok(receipt.images.length >= 2, 'Custom precomputed header/footer retained');

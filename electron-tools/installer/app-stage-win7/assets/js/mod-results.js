@@ -2060,9 +2060,11 @@
     );
   }
 
-  /* Patient identity above visit details. HTML/print and PDF share the
-     same sections, row order and full-width location rows. All fields stay
-     present; existing data sources and missing-value placeholders are retained. */
+  /* Patient information block: two columns, label | ":" | value.
+     LEFT = patient identity, RIGHT = visit details; HTML/print and PDF share
+     these rows (cell = [label, value, boldValue]). All fields stay present;
+     existing data sources and missing-value placeholders are retained.
+     CNIC is shown (after Phone, before Address) only when the patient has one. */
   function reportHeaderRows(d) {
     var inv = d.inv || {}, pat = d.pat || {}, s = d.s || {};
     function t(v, fb) { var x = (v === undefined || v === null) ? '' : String(v).trim(); return x ? x : (fb || ''); }
@@ -2073,50 +2075,42 @@
     }
     var ageStr = t(pat.age), genderStr = t(pat.gender), ageSex = ageStr ? ageStr + ' Yr(s)' : '';
     if (genderStr) ageSex = ageSex ? ageSex + ' / ' + genderStr : genderStr;
+    var identity = [
+      ['Patient Name', t(pat.name)],
+      ['Father / Husband Name', t(pat.father || pat.fatherName, '.')],
+      ['Age / Sex', ageSex],
+      ['Blood Group', t(pat.blood, 'Unknown')],
+      ['Phone', t(pat.phone || pat.whatsapp)]
+    ];
+    if (t(pat.cnic)) identity.push(['CNIC', t(pat.cnic)]);
+    identity.push(['Address', t(pat.address, '.')]);
     return {
-      patient: [
-        [
-          ['Patient Name', t(pat.name)],
-          ['Father / Husband Name', t(pat.father || pat.fatherName, '.')]
-        ], [
-          ['Age / Sex', ageSex],
-          ['Blood Group', t(pat.blood, 'Unknown')]
-        ], [
-          ['Phone', t(pat.phone || pat.whatsapp)],
-          ['CNIC', t(pat.cnic)]
-        ], [
-          ['Address', t(pat.address, '.')]
-        ]
-      ],
+      identity: identity,
       visit: [
-        [
-          ['Registration Date', dts(inv.createdAt)],
-          ['Reporting Date', dts(d.maxReported)]
-        ], [
-          ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address)), true]
-        ], [
-          ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address)), true]
-        ], [
-          ['Reference', t(inv.reference, t(s.reference, 'Standard'))],
-          ['Consultant', t((d.doc && d.doc.name), 'SELF')]
-        ]
+        ['Registration Date', dts(inv.createdAt)],
+        ['Reporting Date', dts(d.maxReported)],
+        ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address)), true],
+        ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address)), true],
+        ['Reference', t(inv.reference, t(s.reference, 'Standard'))],
+        ['Consultant', t((d.doc && d.doc.name), 'SELF')]
       ]
     };
   }
   function patientGridHtml(d) {
     var hr = reportHeaderRows(d);
-    function section(name, rows) {
-      return '<div class="rpt-info-' + name + '" style="width:100%;margin:0 auto;text-align:left">' + rows.map(function (cells) {
-        return '<div style="display:grid;grid-template-columns:repeat(' + cells.length + ',minmax(0,1fr));gap:20px;break-inside:avoid;page-break-inside:avoid">' + cells.map(function (cell) {
-          return '<div style="display:grid;grid-template-columns:140px 8px minmax(0,1fr);min-width:0;margin:2px 0;align-items:start">' +
-            '<span style="font-weight:bold;overflow-wrap:anywhere">' + App.esc(cell[0]) + '</span><span>:</span>' +
-            '<span style="min-width:0;overflow-wrap:anywhere;white-space:pre-wrap' + (cell[2] ? ';font-weight:bold' : '') + '">' + (cell[1] === '' ? '&nbsp;' : App.esc(cell[1])) + '</span></div>';
-        }).join('') + '</div>';
+    /* label column = 40% (left) / 38% (right) of its half, so ":" sits at ~20% / ~69% of the page width */
+    function column(name, rows, extra, lab) {
+      return '<div class="rpt-info-' + name + '" style="min-width:0;text-align:left' + extra + '">' + rows.map(function (cell) {
+        return '<div style="display:grid;grid-template-columns:' + lab + ' 8px minmax(0,1fr);min-width:0;margin:2px 0;align-items:start;break-inside:avoid;page-break-inside:avoid">' +
+          '<span style="font-weight:bold;overflow-wrap:anywhere">' + App.esc(cell[0]) + '</span><span>:</span>' +
+          '<span style="min-width:0;overflow-wrap:anywhere;white-space:pre-wrap' + (cell[2] ? ';font-weight:bold' : '') + '">' + (cell[1] === '' ? '&nbsp;' : App.esc(cell[1])) + '</span></div>';
       }).join('') + '</div>';
     }
     var rule = '<hr style="width:100%;border:none;border-top:1px solid #000;margin:8px 0">';
     return '<div class="rpt-info" style="color:#000;font-size:12px;line-height:1.45;padding-top:8px">' +
-      section('patient', hr.patient) + rule + section('visit', hr.visit) + rule + '</div>';
+      '<div class="rpt-info-cols" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;width:100%;margin:0 auto">' +
+      column('patient', hr.identity, ';padding-right:16px', 'minmax(140px,40%)') + column('visit', hr.visit, '', 'minmax(128px,38%)') +
+      '</div>' + rule + '</div>';
   }
 
   /* ---------- worker 11/20: abnormal value highlighting ----------
@@ -3565,48 +3559,65 @@
       if (!skipPatient) drawPatientGrid();
     }
     function drawPatientGrid() {
-      var hr = reportHeaderRows(d), GAP = 6, VAL_OFF = 44, LH = 4.6, ROW_PAD = 1.4;
-      function section(rows) {
-        rows.forEach(function (cells) {
-          var colW = (CW - GAP * (cells.length - 1)) / cells.length;
-          doc.setFontSize(9);
-          var wrapped = cells.map(function (cell) {
-            doc.setFont('helvetica', 'bold');
-            var labels = doc.splitTextToSize(cell[0] + ':', VAL_OFF - 2);
-            doc.setFont('helvetica', cell[2] ? 'bold' : 'normal');
-            return { labels: labels, values: doc.splitTextToSize(cell[1] || ' ', colW - VAL_OFF), bold: !!cell[2] };
+      var hr = reportHeaderRows(d), LH = 4.6, ROW_PAD = 1.4, COLON_W = 3;
+      /* Two columns like the HTML block: label | ":" | value. Left starts at the
+         margin with ":" at 20% of the width; right starts at 50% with ":" at 70%. */
+      var cols = [
+        { rows: hr.identity, x: M, colon: M + CW * 0.2, right: M + CW * 0.5 - 5 },
+        { rows: hr.visit, x: M + CW * 0.5, colon: M + CW * 0.69, right: W - M }
+      ];
+      doc.setFontSize(9);
+      cols.forEach(function (c) {
+        c.wrapped = c.rows.map(function (cell) {
+          doc.setFont('helvetica', 'bold');
+          var labels = doc.splitTextToSize(cell[0], c.colon - c.x - 0.8);
+          doc.setFont('helvetica', cell[2] ? 'bold' : 'normal');
+          // The built-in PDF font cannot shape Urdu/Arabic (pre-existing): such glyph runs
+          // render ~2x wider than jsPDF measures, so wrap them earlier to stay in the column.
+          var vw = c.right - c.colon - COLON_W, vtxt = cell[1] || ' ';
+          var values = doc.splitTextToSize(vtxt, /[^\u0000-\u00ff]/.test(vtxt) ? vw / 2 : vw);
+          return { labels: labels, values: values, bold: !!cell[2], n: Math.max(labels.length, values.length, 1) };
+        });
+        c.height = c.wrapped.reduce(function (h, w) { return h + w.n * LH + ROW_PAD; }, 0);
+      });
+      function drawLine(c, w, li) {
+        doc.setFontSize(9); doc.setTextColor(20, 20, 20);
+        doc.setFont('helvetica', 'bold');
+        if (li < w.labels.length) txt(w.labels[li], c.x, y + 3.4);
+        if (li === 0) { doc.setFont('helvetica', 'normal'); txt(':', c.colon, y + 3.4); }
+        doc.setFont('helvetica', w.bold ? 'bold' : 'normal');
+        if (li < w.values.length) txt(w.values[li], c.colon + COLON_W, y + 3.4);
+      }
+      var total = Math.max(cols[0].height, cols[1].height);
+      if (total <= maxBodyY - letterheadBottom) {
+        // Normal case: both columns start together, top-aligned, on one page.
+        need(total);
+        var y0 = y;
+        cols.forEach(function (c) {
+          y = y0;
+          c.wrapped.forEach(function (w) {
+            for (var li = 0; li < w.n; li++) { drawLine(c, w, li); y += LH; }
+            y += ROW_PAD;
           });
-          var count = wrapped.reduce(function (n, cell) { return Math.max(n, cell.labels.length, cell.values.length); }, 1);
-          var rh = count * LH + ROW_PAD;
-          // Keep a wrapped row together when it can fit on a fresh page;
-          // exceptionally long values are drawn line-by-line across pages.
-          if (rh <= maxBodyY - letterheadBottom) need(rh);
-          for (var li = 0; li < count; li++) {
-            need(LH + ROW_PAD);
-            doc.setFontSize(9); doc.setTextColor(20, 20, 20);
-            wrapped.forEach(function (cell, ci) {
-              var x = M + ci * (colW + GAP);
-              doc.setFont('helvetica', 'bold');
-              if (li < cell.labels.length) txt(cell.labels[li], x, y + 3.4);
-              doc.setFont('helvetica', cell.bold ? 'bold' : 'normal');
-              if (li < cell.values.length) txt(cell.values[li], x + VAL_OFF, y + 3.4);
-            });
-            y += LH;
-          }
-          y += ROW_PAD;
+        });
+        y = y0 + total;
+      } else {
+        // Exceptionally long values: the columns follow each other and are
+        // drawn line-by-line across pages (never truncated, never recursive).
+        cols.forEach(function (c) {
+          c.wrapped.forEach(function (w) {
+            if (w.n * LH + ROW_PAD <= maxBodyY - letterheadBottom) need(w.n * LH + ROW_PAD);
+            for (var li = 0; li < w.n; li++) { need(LH + ROW_PAD); drawLine(c, w, li); y += LH; }
+            y += ROW_PAD;
+          });
         });
       }
-      function divider() {
-        need(6);
-        y += 1;
-        doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
-        doc.line(M, y, W - M, y);
-        y += 5;
-      }
-      section(hr.patient);
-      divider();
-      section(hr.visit);
-      divider();
+      // One thin rule closes the whole block.
+      need(6);
+      y += 1;
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
+      doc.line(M, y, W - M, y);
+      y += 5;
       // Reserve room for the result title and table on continuation pages.
       if (y > maxBodyY - 40) repeatPatientGrid = false;
     }
