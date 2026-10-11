@@ -2064,7 +2064,7 @@
      LEFT = patient identity, RIGHT = visit details; HTML/print and PDF share
      these rows (cell = [label, value, boldValue]). All fields stay present;
      existing data sources and missing-value placeholders are retained.
-     CNIC is shown (after Phone, before Address) only when the patient has one. */
+     CNIC is always shown (after Phone, before Address); empty after the ":" when the patient has none. */
   function reportHeaderRows(d) {
     var inv = d.inv || {}, pat = d.pat || {}, s = d.s || {};
     function t(v, fb) { var x = (v === undefined || v === null) ? '' : String(v).trim(); return x ? x : (fb || ''); }
@@ -2080,10 +2080,10 @@
       ['Father / Husband Name', t(pat.father || pat.fatherName, '.')],
       ['Age / Sex', ageSex],
       ['Blood Group', t(pat.blood, 'Unknown')],
-      ['Phone', t(pat.phone || pat.whatsapp)]
+      ['Phone', t(pat.phone || pat.whatsapp)],
+      ['CNIC', t(pat.cnic)],
+      ['Address', t(pat.address, '.')]
     ];
-    if (t(pat.cnic)) identity.push(['CNIC', t(pat.cnic)]);
-    identity.push(['Address', t(pat.address, '.')]);
     return {
       identity: identity,
       visit: [

@@ -143,6 +143,7 @@ for (const [gender, age, expected] of [['Male', 30, '13–17'], ['Female', 30, '
 field('ptf-name', 'Range Test Patient');
 field('ptf-age', '30', 'input');
 field('ptf-gender', 'Female');
+field('ptf-blood', 'O+');   // blood group is required to save
 elements['ptf-form'].fire('submit');
 assert.equal(tables.patients.length, 1);
 assert.equal(tables.invoices.length, 1);
