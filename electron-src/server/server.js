@@ -2485,6 +2485,12 @@ async function main() {
       const body = t === 'users' ? await prepUserBody(req, null) : req.body;
       const create = async () => {
         if (body && body.id != null && t !== 'settings' && await store.get(t, String(body.id))) return res.status(409).json({ error: 'id already exists', id: body.id });
+        /* a NEW patient made through the app must carry a real blood group (the patient form enforces it too). Not enforced for: the quick
+           walk-in patient of a package deal (anonymous by design), edits of existing patients, bulk imports and desktop sync (old clients). */
+        if (t === 'patients' && body && !/^Created via Quick Package Deal/.test(String(body.notes || ''))) {
+          const bg = String(body.blood == null ? '' : body.blood).trim();
+          if (!bg || /^(unknown|select.*|n\/?a|none|-+)$/i.test(bg)) return res.status(400).json({ error: 'Please select the blood group.', code: 'BLOOD_REQUIRED' });
+        }
         const e = await limitErr(req, t, [body]); if (e) return res.status(402).json(e);
         const out = await store.put(t, body);
         await auditLog(req, 'create', t, out.id, { label: auditLabel(t, out), changes: auditDiff({}, out, 12) });
