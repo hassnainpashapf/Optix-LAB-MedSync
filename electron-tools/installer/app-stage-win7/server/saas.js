@@ -56,11 +56,11 @@ const DEFAULT_PRODUCTS = [
     site: 'https://pharmacy-pos.ellahabad.workers.dev/',
     downloads: [{ platform: 'windows', label: 'Windows installer', url: 'https://github.com/hassnainpashapf/Pharmacy-POS/releases/download/v2.0.0/Optix-MedSync-Setup-2.0.0.exe', note: 'Version 2.0.0, about 120 MB' }] },
   { id: 'hospital', name: 'Hospital Management', sub: 'Patients, doctors, billing and wards', color: '#0f766e', icon: 'users',
-    url: 'https://hospital.150.230.52.29.sslip.io/app', host: false,
+    url: 'https://optix-medical-sync.pages.dev/', host: false,
     roles: [{ value: 'SUPER_ADMIN', label: 'Super Admin' }, { value: 'DOCTOR', label: 'Doctor' }, { value: 'RECEPTIONIST', label: 'Receptionist' }, { value: 'ACCOUNTANT', label: 'Accountant' }, { value: 'PHARMACIST', label: 'Pharmacist' }],
     desc: 'A hospital system with a workspace for every hospital: appointments and doctor calendars, patient records, billing and transactions, suppliers and stock, staff roles and an audit trail.',
     features: ['No double-booked doctors, calendar and appointments', 'Patient records, vitals and reservations', 'Billing, transactions, suppliers and stock', 'Access by role, enforced on the server', 'Every change written to an audit log'],
-    site: 'https://hospital.150.230.52.29.sslip.io/', downloads: [] },
+    site: 'https://optix-medical-sync.pages.dev/', downloads: [] },
 ];
 const PRODUCT_ID_RE = /^[a-z][a-z0-9-]{1,19}$/;
 /* validate / normalise an edited registry; throws a readable Error */
