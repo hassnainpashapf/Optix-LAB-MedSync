@@ -1532,6 +1532,11 @@
     padding: 0 !important;
     vertical-align: top !important;
   }
+  /* Footer at the bottom of the sheet: the layout table is as tall as the printable area (A4 297mm - 2 x 12mm margin)
+     and the body row takes the spare height, so a one-page report keeps its footer at the foot of the page. */
+  table.rpt-layout-tbl { height: 271mm !important; }
+  table.rpt-layout-tbl > thead > tr, table.rpt-layout-tbl > tfoot > tr { height: 1px !important; }
+  table.rpt-layout-tbl > tbody > tr { height: 100% !important; }
   .rpt-header-block {
     display: block !important;
     break-inside: avoid !important;
