@@ -210,14 +210,14 @@
     '#ptf-form .form-2col{display:contents}' +
     '#ptf-form .form-row{grid-column:span 2;gap:4px}' +
     '#ptf-form .ptf-wide{grid-column:1/-1}' +
-    '#ptf-form .ptf-half{grid-column:span 2}' +
+    '#ptf-form .ptf-half{grid-column:span 3}' +
     '#ptf-form .label{margin:0}' +
     '#ptf-form .input,#ptf-form .select,#ptf-form textarea.input{border:1.5px solid #8c9ab3;background:#fff}' +
     '#ptf-form .input:focus,#ptf-form .select:focus{border-color:#2f6df6;box-shadow:0 0 0 3px rgba(47,109,246,.16)}' +
     '#ptf-form textarea.input{min-height:0;resize:vertical}' +
     '#ptf-form .f-err{min-height:0;margin:0}#ptf-form .f-err:empty{display:none}' +
     '#ptf-form .modal-actions{grid-column:1/-1;margin-top:4px}' +
-    '@media(max-width:900px){#ptf-form.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#ptf-form .form-row,#ptf-form .ptf-half{grid-column:span 1}}' +
+    '@media(max-width:900px){#ptf-form.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#ptf-form .form-row{grid-column:span 1}#ptf-form .ptf-half{grid-column:1/-1}}' +
     '@media(max-width:560px){#ptf-form.form-grid{grid-template-columns:1fr}}' +
     '</style>';
   function formHTML(p) {
@@ -284,6 +284,7 @@
       (!p.id ? '<div class="form-row"><label class="label" for="ptf-destloc">Destination Location <span class="ptf-opt">(where the report is for)</span></label>' +
       '<input class="input" id="ptf-destloc" list="ptf-destloc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '">' + App.datalistHtml('ptf-destloc-dl', 'destLocation', App.visitDefaults().destLocation) + '</div>' +
       (branches.length ? '<div class="form-row"><label class="label" for="ptf-branch">Branch</label><select class="select" id="ptf-branch"><option value="">Unassigned</option>' + branches.map(function (b) { return '<option value="' + App.esc(b.id) + '"' + (defaultBranch && defaultBranch.id === b.id ? ' selected' : '') + '>' + App.esc(b.name || b.code || b.id) + '</option>'; }).join('') + '</select></div>' : '') +
+      '<div class="form-row"><label class="label" for="ptf-specimen">Specimen <span class="ptf-opt">(shown on the report)</span></label><select class="select" id="ptf-specimen">' + App.optionsHtml('specimen', App.listOptions('specimen')[0] || '') + '</select></div>' +
       '<div class="form-row"><label class="label" for="ptf-ref">Reference <span class="ptf-opt">(shown on the report)</span></label><select class="select" id="ptf-ref">' + App.optionsHtml('reference', App.listOptions('reference')[0] || '') + '</select></div>' : '') +
       '<div class="form-row ptf-half"><label class="label" for="ptf-address">Address</label>' +
       '<textarea class="input" id="ptf-address" rows="2" maxlength="200" placeholder="Street, area, city">' + val('address') + '</textarea></div>' +
@@ -305,7 +306,7 @@
     var form = document.getElementById('ptf-form');
     if (!form) return;
     /* tidy order, three fields per row: name / father / phone, age / gender / blood group, date of birth / CNIC / consultant, ... */
-    ['name', 'father', 'whatsapp', 'age', 'gender', 'blood', 'dob', 'cnic', 'doctor', 'panel', 'panelref', 'regdate', 'regloc', 'destloc', 'branch', 'ref', 'address', 'notes'].forEach(function (k, i) {
+    ['name', 'father', 'whatsapp', 'age', 'gender', 'blood', 'dob', 'cnic', 'doctor', 'panel', 'panelref', 'regdate', 'regloc', 'destloc', 'specimen', 'ref', 'branch', 'address', 'notes'].forEach(function (k, i) {
       var el = document.getElementById('ptf-' + k), row = el && el.closest ? el.closest('.form-row') : null;
       if (row) row.style.order = String(i + 1);
     });
@@ -458,7 +459,7 @@
       var notes = document.getElementById('ptf-notes').value.trim();
       var regISO = App.fromLocalInput(document.getElementById('ptf-regdate').value);
       var regLocEl = document.getElementById('ptf-regloc'), destLocEl = document.getElementById('ptf-destloc');
-      var regLoc = regLocEl ? regLocEl.value.trim() : '', destLoc = destLocEl ? destLocEl.value.trim() : '', refEl = document.getElementById('ptf-ref'), refVal = refEl ? refEl.value : '';
+      var regLoc = regLocEl ? regLocEl.value.trim() : '', destLoc = destLocEl ? destLocEl.value.trim() : '', refEl = document.getElementById('ptf-ref'), refVal = refEl ? refEl.value : '', spEl = document.getElementById('ptf-specimen'), spVal = spEl ? spEl.value : '';
       var branchEl = document.getElementById('ptf-branch'), branchId = branchEl ? (branchEl.value || null) : null;
       var ok = true;
       var firstBad = null;
@@ -516,7 +517,7 @@
               labNo: vn.labNo, caseNo: vn.caseNo,
               patientId: np.id, doctorId: null, items: items,
               subtotal: bTotal, discount: 0, total: bTotal, paid: pnl ? bTotal : 0, due: pnl ? 0 : bTotal,
-              status: pnl ? 'paid' : 'unpaid', panelId: pnl ? pnl.id : null, branchId: branchId, regLocation: regLoc, destLocation: destLoc, reference: refVal, createdAt: regISO, createdBy: ptUser()
+              status: pnl ? 'paid' : 'unpaid', panelId: pnl ? pnl.id : null, branchId: branchId, regLocation: regLoc, destLocation: destLoc, reference: refVal, specimen: spVal, createdAt: regISO, createdBy: ptUser()
             };
             var inv = DB.insert('invoices', invData);
             DB.update('invoices', inv.id, { no: inv.id });

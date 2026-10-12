@@ -3800,7 +3800,8 @@
     function paint() {
       var keep = document.activeElement && document.activeElement.getAttribute ? document.activeElement.getAttribute('data-k') + '|' + (document.activeElement.getAttribute('data-i') || 'new') : '';
       document.getElementById('setBody').innerHTML = '<p class="muted" style="margin:0 0 14px;font-size:13.5px">The choices that appear in your forms. Change a name, add a new choice, remove one or move it up/down, then press <b>Save</b> on that list. Records already saved keep what they had.</p>' +
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));gap:14px;align-items:start">' + doctorsHtml() + App.LIST_DEFS.map(cardHtml).join('') + '</div>';
+        '<style>.dl-cols{column-count:3;column-gap:14px}.dl-cols>.card{break-inside:avoid;-webkit-column-break-inside:avoid;margin:0 0 14px !important;display:inline-block;width:100%}.dl-cols .card-h{padding:12px 16px}.dl-cols .card-b{padding:12px 16px}.dl-cols .card-b>p.muted{margin:0 0 8px !important;line-height:1.45}.dl-cols .dl-row{margin-bottom:5px !important}.dl-cols .input{border:1.5px solid #8c9ab3;background:#fff}.dl-cols .input:focus{border-color:#2f6df6;box-shadow:0 0 0 3px rgba(47,109,246,.16)}.dl-cols .input:disabled{background:#f3f5f9}@media(max-width:1100px){.dl-cols{column-count:2}}@media(max-width:700px){.dl-cols{column-count:1}}</style>' +
+        '<div class="dl-cols">' + doctorsHtml() + App.LIST_DEFS.map(cardHtml).join('') + '</div>';
       wire();
     }
     function readInputs() { document.querySelectorAll('.dl-in').forEach(function (e) { var k = e.getAttribute('data-k'), i = +e.getAttribute('data-i'); if (work[k] && work[k][i] != null && !e.disabled) work[k][i] = e.value; }); }
