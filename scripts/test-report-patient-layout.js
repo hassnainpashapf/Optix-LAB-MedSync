@@ -10,7 +10,7 @@ const root = path.resolve(__dirname, '..');
 const { jsPDF } = require(path.join(root, 'assets/vendor/jspdf.umd.min.js'));
 const esc = value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const identityLabels = ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'CNIC', 'Address'];
-const visitLabels = ['Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Reference', 'Consultant'];
+const visitLabels = ['Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Specimen', 'Reference', 'Consultant'];
 let tables, pdf;
 const App = {
   esc, route() {}, toast(message) { throw new Error(message); },

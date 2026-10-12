@@ -1424,6 +1424,7 @@
   var LIST_DEFAULTS = {
     regLocation: [], destLocation: [],
     reference: ['Standard', 'Urgent', 'Camp', 'Corporate', 'VIP'],
+    specimen: ['Brought to Lab', 'Not Taken in Lab'],
     bloodGroup: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
     sampleType: ['Blood', 'Serum', 'Plasma', 'Citrated Blood', 'Whole Blood', 'EDTA', 'Clot Blood', 'Urine', 'Stool', 'Other'],
     expenseCategory: ['Rent', 'Salaries', 'Reagents', 'Utilities', 'Other'],
@@ -1432,6 +1433,7 @@
   App.LIST_DEFS = [
     { key: 'regLocation', label: 'Registration Location', hint: 'Where the patient is registered (branch, collection centre, camp). Shown as suggestions when you register a patient or make a bill; you can still type something else.' },
     { key: 'destLocation', label: 'Destination Location', hint: 'Where the sample / report goes (main lab, outside lab). Same: suggestions, and you can still type another.' },
+    { key: 'specimen', label: 'Specimen', hint: 'The "Specimen" line on the report (Brought to Lab, Not Taken in Lab). The first one is used when nothing is chosen.' },
     { key: 'reference', label: 'Reference', hint: 'The "Reference" line on the report (Standard, Urgent, Camp ...). The first one is used when nothing is chosen.' },
     { key: 'bloodGroup', label: 'Blood Group', hint: 'The blood group choices on the patient form.' },
     { key: 'sampleType', label: 'Sample Type', hint: 'The sample type choices when you add or edit a test.' },

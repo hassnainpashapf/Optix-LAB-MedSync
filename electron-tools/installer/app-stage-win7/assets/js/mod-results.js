@@ -2020,11 +2020,11 @@
     var leftHtml =
       '<div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0">' +
         (s.logo
-          ? '<img src="' + (d && d._tpl ? '{{logo}}' : App.esc(s.logo)) + '" style="max-width:120px;max-height:72px;flex:none" alt="">'
+          ? '<img src="' + (d && d._tpl ? '{{logo}}' : App.esc(s.logo)) + '" style="max-width:190px;max-height:112px;flex:none;image-rendering:-webkit-optimize-contrast" alt="">'
           : '') +
         '<div style="min-width:0">' +
           '<div style="margin:0;color:' + (/^#[0-9a-fA-F]{6}$/.test(s.labNameColor || '') ? s.labNameColor : hdrAccent) + ';font-family:' + RPT.serif +
-            ';font-weight:700;font-size:1.7em;line-height:1.2">' +
+            ';font-weight:700;font-size:2.3em;line-height:1.15">' +
             App.esc(labName) +
           '</div>' +
           ((showTagline && s.tagline)
@@ -2096,6 +2096,7 @@
         ['Reporting Date', dts(d.maxReported)],
         ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address)), true],
         ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address)), true],
+        ['Specimen', t(inv.specimen, (App.listOptions && App.listOptions('specimen')[0]) || 'Brought to Lab')],
         ['Reference', t(inv.reference, t(s.reference, 'Standard'))],
         ['Consultant', t((d.doc && d.doc.name), 'SELF')]
       ]
@@ -2898,6 +2899,7 @@
       .replace(/\{\{\s*(?:case_number_barcode|patient_barcode)\s*\}\}/g, function () { return bc(vn.caseCode); })
       .replace(/\{\{\s*(?:lab_no|case_no)\s*\}\}/g, function () { return App.esc(vn.labText); })
       .replace(/\{\{\s*(?:case_number|patient_id)\s*\}\}/g, function () { return App.esc(vn.caseText); })
+      .replace(/\{\{\s*specimen\s*\}\}/g, function () { return App.esc(inv.specimen || (App.listOptions && App.listOptions('specimen')[0]) || 'Brought to Lab'); })
       .replace(/\{\{\s*qr\s*\}\}/g, function () { return s.showQr === false ? '' : '<img data-qr="1" style="width:70px;height:70px" alt="QR">'; });
   }
   /* the current automatic header / footer as editable HTML (pre-fills the Custom boxes in Settings -> Lab Profile) */
@@ -3493,7 +3495,7 @@
     var showTagline = s.showTagline !== false && !!s.tagline;
 
     var qrS = 26;                                  // QR size (mm)
-    var headH = showQr ? qrS : 23;                 // header block height
+    var headH = showQr ? qrS : 26;                 // header block height
 
     function drawHeader(skipPatient) {
       if (opts && opts.noLabHeader) {
@@ -3510,16 +3512,16 @@
         return;
       }
       // --- left: logo (~18mm) + lab name + subtitle ---
-      if (s.logo) addImg(s.logo, M, y, 18, 18);
-      var htx = M + (s.logo ? 22 : 0);
-      doc.setFont('times', 'bold'); doc.setFontSize(18);
+      if (s.logo) addImg(s.logo, M, y, 26, 26);
+      var htx = M + (s.logo ? 30 : 0);
+      doc.setFont('times', 'bold'); doc.setFontSize(25);
       var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : A; /* the lab-name colour from Lab Profile (default: the accent colour) */
       doc.setTextColor(NC[0], NC[1], NC[2]);
-      txt(s.labName || 'Optix Medical Sync', htx, y + 9);
+      txt(s.labName || 'Optix Medical Sync', htx, y + 12);
       if (showTagline) {
-        doc.setFont('times', 'italic'); doc.setFontSize(11);
+        doc.setFont('times', 'italic'); doc.setFontSize(13);
         doc.setTextColor(A[0], A[1], A[2]);
-        txt(s.tagline, htx, y + 15.5);
+        txt(s.tagline, htx, y + 19.5);
       }
 
       // --- right: Patient No. / Case # right-aligned with wide letter spacing ---

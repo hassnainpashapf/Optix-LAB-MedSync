@@ -2261,7 +2261,7 @@
       '</div>' +
       '</div>';
     document.getElementById('setBody').innerHTML = html;
-    /* lab logo upload: downscale to max 256px PNG, keep in memory until Save */
+    /* lab logo upload: downscale to max 768px PNG (sharp when printed large), keep in memory until Save */
     var _logoData = s.logo || '';
     var _logoPrev = document.getElementById('spLogoPrev');
     var _logoRm = document.getElementById('spLogoRm');
@@ -2281,7 +2281,7 @@
             var im = new Image();
             im.onload = function () {
               try {
-                var max = 256, w = im.width || max, h = im.height || max;
+                var max = 768, w = im.width || max, h = im.height || max;
                 var sc = Math.min(1, max / Math.max(w, h));
                 var cw = Math.max(1, Math.round(w * sc)), ch = Math.max(1, Math.round(h * sc));
                 var cv = document.createElement('canvas');
