@@ -1921,7 +1921,7 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  padding-top: 12px;
+  padding-top: 2px;
 }
 .rpt-page .rpt-sig {
   flex: 1;
@@ -2552,7 +2552,7 @@
         App.esc(verNote) + '</p>';
 
     /* 2: thin black rule */
-    var rule = '<hr class="rpt-footrule" style="border:none;border-top:1px solid #000;margin:2px 0 3px">';
+    var rule = '<hr class="rpt-footrule" style="border:none;border-top:1px solid #000;margin:2px 0 0">';
 
     /* 3: signatory doctors in one row, spread across */
     var sigs = (Array.isArray(s.signatories) ? s.signatories : [])
@@ -2560,7 +2560,7 @@
     var sigHtml = '';
     if (sigs.length) {
       sigHtml =
-        '<div class="rpt-sigs" style="display:flex;justify-content:space-around;gap:12px;margin:3px 0 4px">' +
+        '<div class="rpt-sigs" style="display:flex;justify-content:space-around;gap:12px;margin:0 0 4px;padding-top:2px">' +
           sigs.map(function (g) {
             var sigPic = '';
             var hasSig = s.enableSignatures !== false && (g.sigImg || g.signature);
@@ -2575,7 +2575,7 @@
             }
             return '<div class="rpt-sig" style="flex:1;text-align:center;min-width:0">' +
               sigPic +
-              '<div style="font-weight:700;font-size:0.9em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(g.name) + '</div>' +
+              '<div style="font-weight:700;font-size:0.9em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(g.name) + '</div>' +
               (g.qual ? '<div style="font-size:0.78em;color:#333">' + App.esc(g.qual) + '</div>' : '') +
               (g.title ? '<div style="font-size:0.78em;color:#555">' + App.esc(g.title) + (g.regNo ? ' (' + App.esc(g.regNo) + ')' : '') + '</div>' : '') +
             '</div>';
@@ -3421,7 +3421,7 @@
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
       txt(fVerLines, W / 2, curY + 3, { align: 'center' });
       curY += fVerLines.length * 4.4 + 3;
-      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, curY, W - M, curY); curY += 3;
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, curY, W - M, curY); curY += 2.8;
       fSigs.forEach(function (g, k) {
         var fCx = M + fSw * (k + 0.5), fSy = curY;
         var sigImgData = (s.enableSignatures !== false) ? (g.sigImg || g.signature) : null;
