@@ -103,6 +103,23 @@
       (o.pw ? '<button type="button" class="lg-eye" id="' + id + 'Eye" aria-label="Show password" tabindex="-1">' + ic('eye', 17) + '</button>' : '') +
       '</span>' + (o.hint ? '<small class="lg-hint" id="' + id + 'Hint">' + o.hint + '</small>' : '') + '</label>';
   }
+
+  /* ---------- shared "Optix auth" screen (optix-auth.css): form half + gradient half ---------- */
+  function ofield(id, ph, o) {
+    o = o || {};
+    return '<div class="oa-fld"><span class="oa-fw"><input class="oa-input' + (o.pw ? ' oa-pwi' : '') + '" id="' + id + '" type="' + (o.type || 'text') + '" placeholder="' + esc(ph) + '" aria-label="' + esc(o.label || ph) + '"' +
+      (o.val ? ' value="' + esc(o.val) + '"' : '') + (o.auto ? ' autocomplete="' + o.auto + '"' : ' autocomplete="off"') + (o.focus ? ' autofocus' : '') +
+      (o.max ? ' maxlength="' + o.max + '"' : '') + ' spellcheck="false" autocapitalize="off">' +
+      (o.pw ? '<button type="button" class="lg-eye oa-eye" id="' + id + 'Eye" aria-label="Show password" tabindex="-1">' + ic('eye', 17) + '</button>' : '') +
+      '</span>' + (o.hint ? '<p class="oa-hint">' + o.hint + '</p>' : '') + '</div>';
+  }
+  function oaPage(o) { /* o: {back, form, headline, text, btn:{label, href, attr}} */
+    document.body.className = 'oa-mode';
+    document.body.innerHTML = '<div class="oa-page">' + (o.back || '') +
+      '<div class="oa-card"><div class="oa-form"><div class="oa-in">' + o.form + '</div></div>' +
+      '<aside class="oa-side"><h2>' + o.headline + '</h2><p>' + o.text + '</p>' +
+      (o.btn ? '<a class="oa-ghost" id="oaSwap" href="' + o.btn.href + '"' + (o.btn.attr || '') + '>' + o.btn.label + '</a>' : '') + '</aside></div></div>';
+  }
   function wirePw(id) {
     var inp = document.getElementById(id), eye = document.getElementById(id + 'Eye');
     if (!inp || !eye) return;
@@ -121,7 +138,7 @@
   function showErr(msg) {
     var err = document.getElementById('loginErr'); if (!err) return;
     err.hidden = false; err.textContent = msg;
-    var card = document.querySelector('.login-card');
+    var card = document.querySelector('.oa-card, .login-card');
     if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
   }
   function setSession(j, labSlug) {
@@ -137,7 +154,7 @@
   function googleAllowed() {
     return isCloud() && !isDesktop() && !!window.fetch && !!window.LABPOS_API && !/OptixApp|; wv\)|Electron/i.test(navigator.userAgent || '');
   }
-  function wireGoogle(wrapId, btnId, onCredential) {
+  function wireGoogle(wrapId, btnId, onCredential, mode) {
     if (!googleAllowed()) return;
     window.fetch(window.LABPOS_API + '/api/auth/google-config').then(function (r) { return r.ok ? r.json() : null; }).then(function (cfg) {
       var wrap = document.getElementById(wrapId), box = document.getElementById(btnId);
@@ -145,7 +162,7 @@
       function go() {
         try {
           window.google.accounts.id.initialize({ client_id: cfg.clientId, callback: function (resp) { if (resp && resp.credential) onCredential(resp.credential); }, ux_mode: 'popup' });
-          window.google.accounts.id.renderButton(box, { theme: 'outline', size: 'small', shape: 'pill', text: 'continue_with', logo_alignment: 'left', width: 210 });
+          window.google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', shape: 'pill', text: mode === 'signup' ? 'signup_with' : 'signin_with', logo_alignment: 'left', width: Math.max(200, Math.min(320, (window.innerWidth || 360) - 72)) });
           wrap.hidden = false;
         } catch (e) { /* Google script blocked: the normal form still works */ }
       }
@@ -268,42 +285,35 @@
     var signupHref = desk ? WEB + '/app/#/signup' : '#/signup';
     var signupAttr = desk ? ' target="_blank" rel="noopener"' : '';
 
-    document.body.className = 'login-mode';
-    document.body.innerHTML =
-      '<div class="login-wrap lg-split">' + brandHtml('login') +
-      '<div class="lg-form">' + bubblesHtml() +
-        '<form class="login-card lg-card" id="loginForm" autocomplete="off">' +
-          '<div class="login-logo">' +
-            '<span class="login-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 32)) + '</span>' +
-            '<h1>' + esc(st.labName || 'Optix Medical Sync') + '</h1>' +
-            '<p class="login-tag">' + esc(st.tagline || 'Accurate • Fast • Trusted') + '</p>' +
-          '</div>' +
+    var canSignup = showLabId && !desk;
+    oaPage({
+      back: desk ? '' : '<a class="oa-back" href="' + WEB + '/">&larr; Optix Lab</a>',
+      form:
+        '<div class="oa-brand"><span class="oa-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
+          '<span class="oa-bt"><b class="oa-bn">' + esc(st.labName || 'Optix Medical Sync') + '</b><small class="oa-tag">' + esc(st.tagline || 'Accurate • Fast • Trusted') + '</small></span></div>' +
+        '<h1 class="oa-title">Sign In</h1>' +
+        (showLabId && !desk ? '<div id="lgGoogle" class="oa-gwrap" hidden><div class="oa-google" id="lgGBtn"></div><p class="oa-or">Or use your account</p></div>' : '') +
+        '<form class="oa-fields" id="loginForm" autocomplete="off">' +
           (labs.length > 1 && !showLabId
-            ? '<label class="lg-f"><span class="lg-fl">Lab</span><span class="lg-in lg-sel">' + ic('building', 17) + '<select class="select" id="liLab">' +
-              labs.map(function (l) { return '<option value="' + esc(l.id) + '"' + (l.id === selId ? ' selected' : '') + '>' + esc(l.name) + '</option>'; }).join('') + '</select></span></label>'
+            ? '<select class="oa-input" id="liLab" aria-label="Lab">' +
+              labs.map(function (l) { return '<option value="' + esc(l.id) + '"' + (l.id === selId ? ' selected' : '') + '>' + esc(l.name) + '</option>'; }).join('') + '</select>'
             : '') +
-          '<div class="login-err" id="loginErr" hidden></div>' +
-          (showLabId ? field('liLabId', 'building', 'Lab ID', { ph: 'e.g. al-shifa', val: lget(LKEY), max: 30, hint: 'Shown when your lab was created. Leave empty for the main lab.' }) : '') +
-          field('liUser', 'user', 'Username', { ph: 'Enter username', auto: 'username', focus: !showLabId || !!lget(LKEY) }) +
-          field('liPass', 'lock', 'Password', { ph: 'Enter password', type: 'password', pw: true, auto: 'current-password' }) +
-          '<div class="lg-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
-          (showLabId && !desk ? '<div class="lg-forgot" id="lgForgot" hidden><a href="#/forgot">Forgot password?</a></div>' : '') + /* shown only when the server can send email */
-          '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Sign In</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
-          '<div class="lg-alt">' +
-            (showLabId && !desk ? '<div class="lg-google" id="lgGoogle" hidden><div class="lg-gbtn" id="lgGBtn"></div></div>' : '') +
-            (desk ? '' : ('<nav class="lg-alt-links">' +
-              (showLabId ? '<a href="' + signupHref + '"' + signupAttr + '>Start free trial</a><i>·</i>' : '') +
-              (showLabId ? '<a id="lgPortal" href="' + (desk ? WEB + '/app/#/portal' : '#/portal') + '"' + signupAttr + '>Patient / doctor reports</a><i>·</i>' : '') +
-              (desk
-                ? '<a href="' + WEB + '/superadmin/" target="_blank" rel="noopener">Superadmin</a><i>·</i>'
-                : '<a href="/superadmin/">Superadmin</a><i>·</i>') +
-              '<a href="' + WEB + '/"' + (desk ? ' target="_blank" rel="noopener"' : '') + '>Back to website</a>' +
-'</nav>')) +
-          '</div>' +
+          '<div class="oa-err" id="loginErr" hidden></div>' +
+          (showLabId ? ofield('liLabId', 'Lab ID (e.g. al-shifa)', { label: 'Lab ID', val: lget(LKEY), max: 30, hint: 'Shown when your lab was created. Leave empty for the main lab.' }) : '') +
+          ofield('liUser', 'Username', { auto: 'username', focus: !showLabId || !!lget(LKEY) }) +
+          ofield('liPass', 'Password', { type: 'password', pw: true, auto: 'current-password' }) +
+          '<div class="oa-hint oa-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
+          (showLabId && !desk ? '<div class="lg-forgot" id="lgForgot" hidden><a class="oa-link" href="#/forgot">Forgot password?</a></div>' : '') + /* shown only when the server can send email */
+          '<button class="oa-btn oa-submit" type="submit"><span class="lg-bt">Sign In</span></button>' +
         '</form>' +
-        '<p class="login-foot"><span class="lg-secure">' + ic('shield', 13) + (desk ? 'Desktop app &middot; works offline, syncs when online' : 'Secure, encrypted sign-in') + '</span>Powered by System Optix</p>' +
-      '</div></div>';
-    wireBrand('login');
+        (desk ? '' : '<nav class="oa-links">' +
+          (showLabId ? '<a class="oa-link" id="lgPortal" href="#/portal">Patient / doctor reports</a>' : '') +
+          '<a class="oa-link" href="/superadmin/">Superadmin</a></nav>') +
+        '<p class="oa-foot">' + (desk ? 'Desktop app &middot; works offline, syncs when online' : 'Secure, encrypted sign-in') + ' &middot; Powered by System Optix</p>',
+      headline: canSignup ? 'Hey There!' : 'Welcome Back!',
+      text: canSignup ? 'Start your free 15-day trial &mdash; no credit card needed.' : (desk ? 'Sign in to your lab. The desktop app works offline and syncs when online.' : 'Sign in to your lab to continue.'),
+      btn: canSignup ? { label: 'Sign Up', href: '#/signup' } : null
+    });
     wirePw('liPass');
     try { /* "Forgot password?" appears only once the server has an email sender configured (SMTP) */
       var fg = document.getElementById('lgForgot');
@@ -324,7 +334,7 @@
         showErr((ex && ex.message) || 'Google sign-in failed. Please try again.');
         if (ex && ex.code === 'NO_LAB') { /* no lab for this Google account yet: offer to make one in one click */
           var er = document.getElementById('loginErr'), mk = document.createElement('button');
-          mk.type = 'button'; mk.id = 'lgMakeLab'; mk.className = 'btn btn-primary btn-block'; mk.style.margin = '8px 0 4px';
+          mk.type = 'button'; mk.id = 'lgMakeLab'; mk.className = 'oa-btn'; mk.style.margin = '8px 0 4px'; mk.style.height = 'auto'; mk.style.padding = '12px 20px'; mk.style.lineHeight = '1.3';
           mk.textContent = 'Create my free 15-day trial lab with this Google account';
           mk.onclick = function () {
             mk.disabled = true; mk.textContent = 'Creating your lab…';
@@ -333,16 +343,16 @@
           er.parentNode.insertBefore(mk, er.nextSibling);
         }
       });
-    });
+    }, 'login');
 
     var labSel = document.getElementById('liLab');
     if (labSel) labSel.addEventListener('change', function () {
       try {
         window.DB.useLab(labSel.value);
         var ns = window.DB.get('settings', 'main') || {};
-        var h1 = document.querySelector('.login-card h1'); if (h1) h1.textContent = ns.labName || 'Optix Medical Sync';
-        var tg = document.querySelector('.login-tag'); if (tg) tg.textContent = ns.tagline || 'Accurate • Fast • Trusted';
-        var lm = document.querySelector('.login-mark'); if (lm) lm.innerHTML = ns.logo ? '<img src="' + esc(ns.logo) + '" alt="Lab logo">' : icon('flask', 32);
+        var h1 = document.querySelector('.oa-bn'); if (h1) h1.textContent = ns.labName || 'Optix Medical Sync';
+        var tg = document.querySelector('.oa-tag'); if (tg) tg.textContent = ns.tagline || 'Accurate • Fast • Trusted';
+        var lm = document.querySelector('.oa-mark'); if (lm) lm.innerHTML = ns.logo ? '<img src="' + esc(ns.logo) + '" alt="Lab logo">' : icon('flask', 22);
       } catch (e) {}
     });
 
@@ -356,7 +366,7 @@
       err.hidden = true;
       if (window.DB && DB.isCloud && DB.isCloud()) {
         /* cloud: the server checks the password and returns a session token */
-        var btn = document.querySelector('.login-signin');
+        var btn = document.querySelector('.oa-submit');
         if (btn) { btn.disabled = true; btn.classList.add('busy'); btn.querySelector('.lg-bt').textContent = 'Signing in…'; }
         DB.cloudLogin(u, p, lab).then(function (j) {
           lset(LKEY, lab);
@@ -388,32 +398,33 @@
   /* ---------- free-trial sign-up ---------- */
   A.renderSignup = function () {
     if (isDesktop() || !(window.DB && DB.saas) || !window.LABPOS_API) { location.hash = '#/login'; return; }
-    document.body.className = 'login-mode';
-    document.body.innerHTML =
-      '<div class="login-wrap lg-split lg-signup">' + brandHtml('signup') +
-      '<div class="lg-form">' + bubblesHtml() +
-        '<a class="lg-back" href="#/login"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>Back to sign in</a>' +
-        '<form class="login-card lg-card lg-wide" id="suForm" autocomplete="off">' +
-          '<div class="login-logo lg-sm"><span class="login-mark">' + icon('flask', 28) + '</span></div>' +
-          '<h2>Create your lab account</h2>' +
-          '<p class="login-sub">Free for 15 days &mdash; no credit card needed</p>' +
-          '<div class="login-err" id="loginErr" hidden></div>' +
-          field('suLab', 'building', 'Lab / clinic name', { ph: 'e.g. Al Shifa Diagnostics', max: 60, focus: true }) +
-          '<div class="lg-two">' + field('suOwner', 'user', 'Your name', { ph: 'Owner / manager', max: 60 }) + field('suPhone', 'phone', 'Phone', { ph: '03xx-xxxxxxx', max: 20, opt: true }) + '</div>' +
-          field('suEmail', 'mail', 'Email', { ph: 'you@example.com', type: 'email', auto: 'email', max: 80 }) +
-          field('suSlug', 'at', 'Lab ID', { ph: 'al-shifa', max: 30, hint: 'Your staff type this to sign in. <b id="suSlugMsg"></b>' }) +
-          '<div class="lg-two">' + field('suUser', 'key', 'Admin username', { ph: 'e.g. admin', max: 30, auto: 'username' }) +
-          field('suPass', 'lock', 'Password', { ph: 'Min 6 characters', type: 'password', pw: true, auto: 'new-password' }) + '</div>' +
+    oaPage({
+      back: '<a class="oa-back" href="' + WEB + '/">&larr; Optix Lab</a>',
+      form:
+        '<h1 class="oa-title">Sign Up</h1>' +
+        '<div id="suGoogle" class="oa-gwrap" hidden><div class="oa-google" id="suGBtn"></div>' +
+          '<p class="oa-hint oa-gnote">Nothing to fill in: your name, email, lab name and Lab ID are taken from your Google account (you can change the lab details later in Settings). By continuing you agree to the <a href="' + WEB + '/terms.html" target="_blank" rel="noopener">Terms</a> and <a href="' + WEB + '/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>' +
+          '<p class="oa-or">Or sign up with your details</p></div>' +
+        '<p class="oa-sub">Create your lab account. Free for 15 days &mdash; no credit card needed.</p>' +
+        '<form class="oa-fields" id="suForm" autocomplete="off">' +
+          '<div class="oa-err" id="loginErr" hidden></div>' +
+          ofield('suLab', 'Lab / clinic name', { max: 60, focus: true }) +
+          ofield('suOwner', 'Your name (owner / manager)', { label: 'Your name', max: 60 }) +
+          ofield('suPhone', 'Phone (optional)', { label: 'Phone', max: 20 }) +
+          ofield('suEmail', 'Email', { type: 'email', auto: 'email', max: 80 }) +
+          ofield('suSlug', 'Lab ID (e.g. al-shifa)', { label: 'Lab ID', max: 30, hint: 'Your staff type this to sign in. <b id="suSlugMsg"></b>' }) +
+          ofield('suUser', 'Admin username', { max: 30, auto: 'username' }) +
+          ofield('suPass', 'Password (min 6 characters)', { label: 'Password', type: 'password', pw: true, auto: 'new-password' }) +
           '<div class="lg-meter" id="suMeter"><i></i><i></i><i></i><span id="suMeterT"></span></div>' +
-          '<div class="lg-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
+          '<div class="oa-hint oa-caps" id="lgCaps" hidden>' + ic('alert', 14) + ' Caps Lock is on</div>' +
           '<label class="lg-terms"><input type="checkbox" id="suTerms"><span>I agree to the <a href="' + WEB + '/terms.html" target="_blank" rel="noopener">Terms</a> and <a href="' + WEB + '/privacy.html" target="_blank" rel="noopener">Privacy Policy</a></span></label>' +
-          '<button class="btn login-signin btn-block" type="submit"><span class="lg-bt">Create my lab &mdash; start free trial</span><span class="lg-ba">' + ic('arrow', 18) + '</span></button>' +
-          '<div class="lg-google" id="suGoogle" hidden><div class="login-div"><span>or sign up in one click</span></div><div class="lg-gbtn" id="suGBtn"></div><p class="lg-gnote">Nothing to fill in: your name, email, lab name and Lab ID are taken from your Google account (you can change the lab details later in Settings). By continuing you agree to the <a href="' + WEB + '/terms.html" target="_blank" rel="noopener">Terms</a> and <a href="' + WEB + '/privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p></div>' +
-          '<p class="lg-new">Already have an account? <a href="#/login">Sign in</a></p>' +
+          '<button class="oa-btn oa-submit" type="submit"><span class="lg-bt">Create my lab &mdash; start free trial</span></button>' +
         '</form>' +
-        '<p class="login-foot"><span class="lg-secure">' + ic('shield', 13) + 'Your lab\'s data is stored in its own isolated space</span>Powered by System Optix</p>' +
-      '</div></div>';
-    wireBrand('signup');
+        '<p class="oa-foot">Your lab\'s data is stored in its own isolated space &middot; Powered by System Optix</p>',
+      headline: 'Welcome Back!',
+      text: 'Already have a lab account? Sign in to pick up where you left off.',
+      btn: { label: 'Sign In', href: '#/login' }
+    });
     wirePw('suPass');
 
     var slugTouched = false, chkT = null, slugOk = false;
@@ -449,7 +460,7 @@
         slug: slugify($('suSlug').value), username: $('suUser').value.trim(), password: $('suPass').value
       };
       if (!$('suTerms').checked) { showErr('Please accept the Terms and Privacy Policy to continue.'); return; }
-      var btn = document.querySelector('.login-signin');
+      var btn = document.querySelector('.oa-submit');
       btn.disabled = true; btn.classList.add('busy'); btn.querySelector('.lg-bt').textContent = 'Creating your lab…';
       DB.saas('POST', 'signup', body).then(function (j) {
         /* the lab exists the moment the server says so: a failed first data download must not undo that (the boot retry loads the data) */
@@ -469,7 +480,7 @@
       /* anything already typed in the form is used (lab name, Lab ID, username, password, phone); everything else is filled automatically */
       googleSignup(cred, { labName: $('suLab').value.trim(), slug: slugify($('suSlug').value), phone: $('suPhone').value.trim(), username: $('suUser').value.trim(), password: $('suPass').value })
         .catch(function (ex) { showErr((ex && ex.message) || 'Could not create the account. Please try again.'); });
-    });
+    }, 'signup');
   };
 
   /* ---------- forgot password / reset password (emailed link) ---------- */
