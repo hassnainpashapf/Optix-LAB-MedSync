@@ -2113,7 +2113,7 @@
       }).join('') + '</div>';
     }
     var rule = '<hr style="width:100%;border:none;border-top:1px solid #000;margin:8px 0">';
-    return '<div class="rpt-info" style="color:#000;font-size:12px;line-height:1.45;padding-top:0;margin-top:-12px">' +
+    return '<div class="rpt-info" style="color:#000;font-size:12px;line-height:1.45;padding-top:0">' +
       '<div class="rpt-info-cols" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;width:100%;margin:0 auto">' +
       column('patient', hr.identity, ';padding-right:16px', 'minmax(140px,40%)') + column('visit', hr.visit, '', 'minmax(128px,38%)') +
       '</div>' + rule + '</div>';
@@ -2961,7 +2961,7 @@
       '<table class="rpt-layout-tbl">' +
         '<thead class="rpt-layout-head">' +
           '<tr><td>' +
-            '<div class="rpt-header-block">' + headOut + infoHtml + '</div>' +
+            '<div class="rpt-header-block">' + headOut + '<hr class="rpt-headrule" style="width:100%;border:none;border-top:1px solid #000;margin:6px 0 4px">' + infoHtml + '</div>' +
           '</td></tr>' +
         '</thead>' +
         '<tbody class="rpt-layout-body">' +
@@ -3538,7 +3538,7 @@
       // --- QR 26mm at far right ---
       if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
 
-      y += headH - 1;
+      y += headH + 1.5;
 
       // --- plain header text from Lab Profile ("Header text"), centred under the header ---
       if (String(s.headerText || '').trim()) {
@@ -3560,7 +3560,7 @@
       // --- navy divider line; y now sits below the header ---
       doc.setDrawColor(A[0], A[1], A[2]); doc.setLineWidth(0.6);
       doc.line(M, y, W - M, y);
-      y += 2.5;
+      y += 3;
 
       letterheadBottom = y;
       if (!skipPatient) drawPatientGrid();
