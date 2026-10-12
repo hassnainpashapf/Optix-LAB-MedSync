@@ -662,7 +662,7 @@ html{color-scheme:only light}
 .hx-nav-act{display:flex;align-items:center;gap:10px}
 .hx-login{background:#2f6df6;border-color:#2f6df6;font-weight:700;color:#fff;box-shadow:0 8px 24px rgba(47,109,246,.45);padding:11px 26px}
 .hx-login:hover{background:#1f4fd1;border-color:#1f4fd1}
-.hx-dl{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.7);font-size:14px}
+.hx-dl,.hx-trial{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.7);font-size:14px}
 @media(max-width:1100px){.hx-links{gap:20px}.hx-links a{font-size:14px}.hx-nav{padding:22px 24px}}
 @media(max-width:900px){.hx-links{gap:14px}.hx-links a{font-size:13.5px}.hx-logo{font-size:18px}.hx-demo{padding:10px 16px}}
 @media(max-width:768px){
