@@ -276,3 +276,8 @@ body.login-mode{zoom:1!important}
 
 .lg-split .lg-form{padding:30px 34px!important}
 .lg-split .lg-alt{margin-top:8px!important}
+
+/* Settings pages (Lab Profile and the other tabs): every text field has a clear, bold outline */
+#setBody .input, #setBody .select, #setBody textarea, .unifi-panel .input, .unifi-panel .select, .unifi-panel textarea { border: 1.5px solid #8c9ab3; background: #fff; }
+#setBody .input:focus, #setBody .select:focus, #setBody textarea:focus, .unifi-panel .input:focus, .unifi-panel .select:focus, .unifi-panel textarea:focus { border-color: #2f6df6; box-shadow: 0 0 0 3px rgba(47,109,246,.16); outline: none; }
+#setBody .input:disabled, #setBody .select:disabled { background: #f3f5f9; }

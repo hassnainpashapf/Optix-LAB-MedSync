@@ -93,7 +93,7 @@
       var gw = (window.App && App.smsGw && App.smsGw.available()) ? App.smsGw : null;
       var gwCard;
       if (gw) {
-        gwCard = '<div class="card sms-card"><div class="card-h"><h3>Phone gateway</h3><span class="muted" style="font-size:12px">this phone sends the SMS</span></div>'
+        gwCard = '<div class="card sms-card sms-wide"><div class="card-h"><h3>Phone gateway</h3><span class="muted" style="font-size:12px">this phone sends the SMS</span></div>'
           + '<div class="card-b">'
           + rowSwitch('smsGwOn', false, 'SMS Gateway', 'When ON, this phone checks the server every minute and sends queued SMS from your SIM.')
           + '<div id="smsGwStatus" class="muted" style="font-size:12px;margin-top:6px">Checking gateway status…</div>'
@@ -101,20 +101,36 @@
           + '<p class="muted" style="font-size:12px;margin:8px 0 0">For reliable sending, set this app\u2019s battery usage to <b>Unrestricted</b> (Android Settings → Apps → Optix Lab → Battery).</p>'
           + '</div></div>';
       } else {
-        gwCard = '<div class="card sms-card"><div class="card-b">'
-          + '<p class="muted" style="font-size:13px;margin:0">\U0001F4F2 SMS messages go out from <b>your own mobile phone</b> through the Optix lab app — no extra app or setup needed. Open this page in the app on the phone that holds the SIM and switch the gateway ON there.</p>'
+        gwCard = '<div class="card sms-card sms-wide"><div class="card-b">'
+          + '<p class="muted" style="font-size:13px;margin:0">\uD83D\uDCF2 SMS messages go out from <b>your own mobile phone</b> through the Optix lab app — no extra app or setup needed. Open this page in the app on the phone that holds the SIM and switch the gateway ON there.</p>'
           + '</div></div>';
       }
 
       var html = '<style>'
-        + '.sms-set-wrap{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:14px}'
-        + '.sms-set-head{padding:6px 2px}'
+        + '.sms-set-wrap{max-width:1240px;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}'
+        + '.sms-set-wrap>.sms-set-head,.sms-set-wrap>.sms-wide{grid-column:1/-1}'
+        + '.sms-set-wrap .card{margin:0;border:1.5px solid #8c9ab3;border-radius:14px}'
+        + '.sms-set-wrap .card-h{padding:11px 16px}.sms-set-wrap .card-b{padding:12px 16px}'
+        + '.sms-tpl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}'
+        + '.wa-row-item{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid var(--line2)}'
+        + '.wa-row-item:first-child{border-top:none;padding-top:2px}'
+        + '.wa-row-content{flex:1;min-width:0}'
+        + '.wa-row-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:2px}'
+        + '.wa-row-desc{font-size:12.5px;color:var(--muted);line-height:1.45;margin:0}'
+        + '.wa-switch{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0;cursor:pointer;margin-top:2px}'
+        + '.wa-switch input{opacity:0;width:0;height:0;position:absolute}'
+        + '.wa-slider{position:absolute;inset:0;background-color:#cbd5e1;border-radius:99px;transition:.2s ease}'
+        + '.wa-slider:before{position:absolute;content:"";height:18px;width:18px;left:3px;bottom:3px;background-color:#fff;border-radius:50%;transition:.2s ease;box-shadow:0 1px 3px rgba(0,0,0,.25)}'
+        + '.wa-switch input:checked + .wa-slider{background-color:#16a34a}'
+        + '.wa-switch input:checked + .wa-slider:before{transform:translateX(20px)}'
+        + '@media(max-width:1000px){.sms-set-wrap{grid-template-columns:1fr}.sms-tpl-grid{grid-template-columns:1fr}}'
+        + '.sms-set-head{padding:2px 2px 0}'
         + '.sms-set-title{font-size:20px;font-weight:800;margin:0}'
         + '.sms-set-sub{color:var(--mut);font-size:13px;margin:4px 0 0}'
         + '.sms-brand-ico{width:44px;height:44px;border-radius:12px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}'
         + '.sms-card .card-b{display:flex;flex-direction:column;gap:10px}'
         + '.sms-field label{display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--mut)}'
-        + '.sms-field input,.sms-field textarea,.sms-field select{width:100%;padding:9px 10px;border:1px solid var(--line2);border-radius:8px;font-size:14px;background:var(--bg)}'
+        + '.sms-field input,.sms-field textarea,.sms-field select{width:100%;padding:9px 12px;border:1.5px solid #8c9ab3;border-radius:10px;font-size:14px;background:#fff}.sms-field input:focus,.sms-field textarea:focus,.sms-field select:focus{outline:none;border-color:#2f6df6;box-shadow:0 0 0 3px rgba(47,109,246,.16)}'
         + '.sms-field textarea{min-height:64px;resize:vertical}'
         + '.sms-hint{font-size:12px;color:var(--mut)}'
         + '.sms-log-table{width:100%;border-collapse:collapse;font-size:13px}'
@@ -123,7 +139,7 @@
         + '</style>'
         + '<div class="sms-set-wrap">'
         + '<div class="sms-set-head">'
-        + '  <div style="display:flex;align-items:center;gap:14px"><div class="sms-brand-ico">\U0001F4F2</div>'
+        + '  <div style="display:flex;align-items:center;gap:14px"><div class="sms-brand-ico">\uD83D\uDCF2</div>'
         + '  <div><h2 class="sms-set-title">SIM Setting</h2>'
         + '  <p class="sms-set-sub">Send report alerts as plain SMS from your own SIM card — the Optix app on your phone does the sending.</p></div></div>'
         + '</div>'
@@ -143,19 +159,20 @@
         + rowSwitch('smsAutoCritical', !!c.autoCritical, 'Critical result alerts', 'Immediately SMS the referring doctor and the lab number on critical values.')
         + '</div></div>'
 
-        + '<div class="card sms-card"><div class="card-h"><h3>Message templates</h3></div><div class="card-b">'
+        + '<div class="card sms-card sms-wide"><div class="card-h"><h3>Message templates</h3></div><div class="card-b">'
         + '<div class="sms-hint" style="margin-bottom:2px">Plain text. Placeholders: {lab} {patient} {doctor} {invoice} {date} {tests} {total} {due}. Leave blank to use the default.</div>'
+        + '<div class="sms-tpl-grid">'
         + '<div class="sms-field"><label>Report ready — patient</label><textarea id="smsTplPatient" placeholder="' + App.esc(t.tplPatient) + '">' + App.esc(c.tplPatient || '') + '</textarea></div>'
         + '<div class="sms-field"><label>Report ready — doctor</label><textarea id="smsTplDoctor" placeholder="' + App.esc(t.tplDoctor) + '">' + App.esc(c.tplDoctor || '') + '</textarea></div>'
         + '<div class="sms-field"><label>Critical alert</label><textarea id="smsTplCritical" placeholder="' + App.esc(t.tplCritical) + '">' + App.esc(c.tplCritical || '') + '</textarea></div>'
         + '<div class="sms-field"><label>Balance pending — patient</label><textarea id="smsTplDue" placeholder="' + App.esc(t.tplDue) + '">' + App.esc(c.tplDue || '') + '</textarea></div>'
-        + '</div></div>'
+        + '</div></div></div>'
 
-        + '<div class="card sms-card"><div class="card-h"><h3>SMS log</h3><button class="btn btn-sm btn-ghost" id="smsRetryAll">Retry all failed</button></div>'
+        + '<div class="card sms-card sms-wide"><div class="card-h"><h3>SMS log</h3><button class="btn btn-sm btn-ghost" id="smsRetryAll">Retry all failed</button></div>'
         + '<div class="card-b" style="overflow-x:auto"><table class="sms-log-table"><thead><tr><th>When</th><th>To</th><th>Type</th><th>Invoice</th><th>Status</th></tr></thead>'
         + '<tbody id="smsLogBody"><tr><td colspan="5" class="muted" style="text-align:center;padding:18px">Loading…</td></tr></tbody></table></div></div>'
 
-        + '<div style="margin:4px 0 18px"><button class="btn btn-primary" id="smsSaveAll" style="padding:10px 26px;font-weight:700">Save SMS settings</button></div>'
+        + '<div class="sms-wide" style="margin:0 0 14px"><button class="btn btn-primary" id="smsSaveAll" style="padding:10px 26px;font-weight:700">Save SMS settings</button></div>'
         + '</div>';
 
       document.getElementById('view').innerHTML = html;
