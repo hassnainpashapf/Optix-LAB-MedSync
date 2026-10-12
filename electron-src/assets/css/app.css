@@ -763,11 +763,11 @@ body{zoom:0.9}
 .stat:nth-child(4){animation-delay:.21s}
 .stat:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(15,23,42,.08);border-color:var(--sc) !important}
 .stat::before{content:"";position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;background:var(--sc-circle, var(--sc-soft));opacity:.65;pointer-events:none}
-.stat[data-tint="brand"]{--sc:#0284c7;--sc-line:#aecbe3;--sc-soft:#ebf4f9;--sc-circle:#ddecf5;background:linear-gradient(55deg,#ffffff 52%,#ebf4f9 52%);border-color:#aecbe3 !important}
-.stat[data-tint="blue"]{--sc:#2563eb;--sc-line:#a9c9ec;--sc-soft:#e7f0fe;--sc-circle:#dde9fb;background:linear-gradient(55deg,#ffffff 52%,#e7f0fe 52%);border-color:#a9c9ec !important}
-.stat[data-tint="amber"]{--sc:#d97706;--sc-line:#e9cb96;--sc-soft:#fef4e2;--sc-circle:#fde8c8;background:linear-gradient(55deg,#ffffff 52%,#fef4e2 52%);border-color:#e9cb96 !important}
-.stat[data-tint="green"]{--sc:#16a34a;--sc-line:#9fd8b8;--sc-soft:#e6f7f0;--sc-circle:#d8f2e4;background:linear-gradient(55deg,#ffffff 52%,#e6f7f0 52%);border-color:#9fd8b8 !important}
-.stat[data-tint="red"]{--sc:#dc2626;--sc-line:#e6aaaa;--sc-soft:#fdecec;--sc-circle:#fad2d2;background:linear-gradient(55deg,#ffffff 52%,#fdecec 52%);border-color:#e6aaaa !important}
+.stat[data-tint="brand"]{--sc:#0284c7;--sc-line:#6fa6cf;--sc-soft:#ebf4f9;--sc-circle:#ddecf5;background:linear-gradient(55deg,#ffffff 52%,#ebf4f9 52%);border-color:#6fa6cf !important}
+.stat[data-tint="blue"]{--sc:#2563eb;--sc-line:#7aa7e6;--sc-soft:#e7f0fe;--sc-circle:#dde9fb;background:linear-gradient(55deg,#ffffff 52%,#e7f0fe 52%);border-color:#7aa7e6 !important}
+.stat[data-tint="amber"]{--sc:#d97706;--sc-line:#e0b25c;--sc-soft:#fef4e2;--sc-circle:#fde8c8;background:linear-gradient(55deg,#ffffff 52%,#fef4e2 52%);border-color:#e0b25c !important}
+.stat[data-tint="green"]{--sc:#16a34a;--sc-line:#5fbf8a;--sc-soft:#e6f7f0;--sc-circle:#d8f2e4;background:linear-gradient(55deg,#ffffff 52%,#e6f7f0 52%);border-color:#5fbf8a !important}
+.stat[data-tint="red"]{--sc:#dc2626;--sc-line:#e08080;--sc-soft:#fdecec;--sc-circle:#fad2d2;background:linear-gradient(55deg,#ffffff 52%,#fdecec 52%);border-color:#e08080 !important}
 .stat-ico{position:relative;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--sc);background:linear-gradient(135deg,var(--sc-soft) 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px var(--sc-line),0 1px 3px rgba(15,30,46,.06);margin-bottom:6px;flex:0 0 auto}
 .stat-ico svg{width:17px;height:17px}
 .stat .lb{position:relative;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;flex:0 0 auto}
@@ -1522,15 +1522,15 @@ nav.nav{padding:0 10px 6px}
 .kpi-lb{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:3px;flex:0 0 auto}
 .kpi-nm{font-size:22px;font-weight:800;letter-spacing:-.02em;color:var(--ink) !important;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0 0 4px 0;flex:0 0 auto}
 .kpi-sb{font-size:11.5px;line-height:1.3;color:var(--muted);font-weight:500;margin-top:auto;white-space:normal;overflow-wrap:anywhere;flex:0 0 auto}
-.kpi.t-navy{--tbg:#ebf4f9;--tfg:#0284c7;--tline:#aecbe3;--tcirc:#ddecf5}
-.kpi.t-green{--tbg:#e6f7f0;--tfg:#16a34a;--tline:#9fd8b8;--tcirc:#d8f2e4}
-.kpi.t-blue{--tbg:#e7f0fe;--tfg:#2563eb;--tline:#a9c9ec;--tcirc:#dde9fb}
-.kpi.t-amber{--tbg:#fef4e2;--tfg:#d97706;--tline:#e9cb96;--tcirc:#fde8c8}
-.kpi.t-red{--tbg:#fdecec;--tfg:#dc2626;--tline:#e6aaaa;--tcirc:#fad2d2}
-.kpi.t-purple{--tbg:#f1eafe;--tfg:#7c3aed;--tline:#d8b4fe;--tcirc:#e9d5ff}
-.kpi.hot{border-color:#e6aaaa !important}
+.kpi.t-navy{--tbg:#ebf4f9;--tfg:#0284c7;--tline:#6fa6cf;--tcirc:#ddecf5}
+.kpi.t-green{--tbg:#e6f7f0;--tfg:#16a34a;--tline:#5fbf8a;--tcirc:#d8f2e4}
+.kpi.t-blue{--tbg:#e7f0fe;--tfg:#2563eb;--tline:#7aa7e6;--tcirc:#dde9fb}
+.kpi.t-amber{--tbg:#fef4e2;--tfg:#d97706;--tline:#e0b25c;--tcirc:#fde8c8}
+.kpi.t-red{--tbg:#fdecec;--tfg:#dc2626;--tline:#e08080;--tcirc:#fad2d2}
+.kpi.t-purple{--tbg:#f1eafe;--tfg:#7c3aed;--tline:#b988f5;--tcirc:#e9d5ff}
+.kpi.hot{border-color:#e08080 !important}
 .kpi.hot .kpi-nm{color:#b91c1c !important}
-.kpi.warn{border-color:#e9cb96 !important}
+.kpi.warn{border-color:#e0b25c !important}
 
 /* ============ Optix Assistant chatbot widget (.oxc-*) ============ */
 .oxc-fab{position:fixed;right:20px;bottom:20px;width:56px;height:56px;border-radius:50%;
