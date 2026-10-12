@@ -2094,8 +2094,8 @@
       visit: [
         ['Registration Date', dts(inv.createdAt)],
         ['Reporting Date', dts(d.maxReported)],
-        ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address)), true],
-        ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address)), true],
+        ['Registration Location', t(inv.regLocation, t(s.headOffice || s.address))],
+        ['Destination Location', t(inv.destLocation, t(s.destinationLocation || s.mainLab || s.headOffice || s.address))],
         ['Specimen', t(inv.specimen, (App.listOptions && App.listOptions('specimen')[0]) || 'Brought to Lab')],
         ['Reference', t(inv.reference, t(s.reference, 'Standard'))],
         ['Consultant', t((d.doc && d.doc.name), 'SELF')]
@@ -2113,7 +2113,7 @@
       }).join('') + '</div>';
     }
     var rule = '<hr style="width:100%;border:none;border-top:1px solid #000;margin:8px 0">';
-    return '<div class="rpt-info" style="color:#000;font-size:12px;line-height:1.45;padding-top:8px">' +
+    return '<div class="rpt-info" style="color:#000;font-size:12px;line-height:1.45;padding-top:0">' +
       '<div class="rpt-info-cols" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;width:100%;margin:0 auto">' +
       column('patient', hr.identity, ';padding-right:16px', 'minmax(140px,40%)') + column('visit', hr.visit, '', 'minmax(128px,38%)') +
       '</div>' + rule + '</div>';
@@ -3560,7 +3560,7 @@
       // --- navy divider line; y now sits below the header ---
       doc.setDrawColor(A[0], A[1], A[2]); doc.setLineWidth(0.6);
       doc.line(M, y, W - M, y);
-      y += 5;
+      y += 2.5;
 
       letterheadBottom = y;
       if (!skipPatient) drawPatientGrid();
