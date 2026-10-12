@@ -57,7 +57,7 @@ a:focus-visible, button:focus-visible, .nav-it:focus-visible { outline: 3px soli
 
 /* cards: white, 1px soft border, very large radius, soft shadow */
 /* every card has a clearly visible outline */
-body:not(.auth) .card, .card, .pt-card { border: 1.5px solid #c5cfdf; border-radius: var(--r-lg); box-shadow: var(--sh-sm); background: #fff; }
+body:not(.auth) .card, .card, .pt-card { border: 1.5px solid #8c9ab3; border-radius: var(--r-lg); box-shadow: var(--sh-sm); background: #fff; }
 .card-h { border-bottom: 1px solid var(--line2); }
 .modal { border-radius: 28px; border: 1px solid var(--line); box-shadow: var(--sh-lg); }
 .modal-ov { background: rgba(27, 42, 74, .5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
