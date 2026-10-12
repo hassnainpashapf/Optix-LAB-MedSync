@@ -2078,7 +2078,7 @@
           '<div class="form-grid">' +
             '<div><label class="label">Lab Name *</label><input class="input" id="spName" value="' + App.esc(s.labName || '') + '"></div>' +
             '<div><label class="label">Tagline</label><input class="input" id="spTag" value="' + App.esc(s.tagline || '') + '"></div>' +
-            '<div><label class="label">Invoice Prefix *</label><input class="input" id="spPref" value="' + App.esc(s.invoicePrefix || 'INV') + '" style="max-width:140px"></div>' +
+            '<div style="display:flex;flex-direction:column"><label class="label">Invoice Prefix *</label><input class="input" id="spPref" value="' + App.esc(s.invoicePrefix || 'INV') + '" style="max-width:140px"></div>' +
             '<div><label class="label">Website</label><input class="input" id="spWeb" placeholder="www.example.com" value="' + App.esc(s.website || '') + '"></div>' +
             '<div style="grid-column:1/-1"><label class="label">Laboratory Logo</label>' +
               '<div style="display:flex;align-items:center;gap:14px;background:#f8fafc;padding:12px;border:1px dashed #cbd5e1;border-radius:10px">' +
