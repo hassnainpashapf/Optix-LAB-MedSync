@@ -99,7 +99,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 .b-teal { background: var(--tint); color: var(--tint-ink); }
 .role-pill { background: var(--blue-soft); color: var(--blue); }
 
-/* ---------- 3. sidebar: white, soft green-tint active item (the Pharmacy sidebar) ---------- */
+/* ---------- 3. sidebar: white, blue icons and a soft blue active item ---------- */
 .sidebar { background: var(--sidebar); border-right: 1px solid var(--line); }
 .sidebar .brand { border-bottom: 1px solid var(--line2); }
 .sidebar .brand-tx b, .sf-tx b { color: var(--ink); }
@@ -107,18 +107,18 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 .nav-sec2 { letter-spacing: .08em; font-weight: 800; }
 .nav-it, .nav-sub-it { color: var(--ink); border-radius: 12px; }
 .nav-ic { color: var(--muted); }
-/* every menu icon in its own colour (set per item in app.js as --nic) */
-.sidebar .nav-it .nav-ic, .sidebar .nav-it:hover .nav-ic, .sidebar .nav-it.active .nav-ic { color: var(--nic, #8793a8); }
+/* one colour for the whole left panel: every menu icon and the active item are the brand blue */
+.sidebar .nav-it .nav-ic, .sidebar .nav-it:hover .nav-ic, .sidebar .nav-it.active .nav-ic { color: var(--blue); }
 .nav-it:hover, .nav-sub-it:hover { background: #f1f4f9; color: var(--ink); }
-.nav-it:hover .nav-ic { color: var(--tint-ink); }
-.nav-it.active { background: var(--tint); color: var(--tint-ink); box-shadow: inset 0 0 0 1px var(--tint-line); font-weight: 700; }
-.nav-it.active .nav-ic { color: var(--tint-ink); }
-.nav-it.active::before { background: var(--teal); width: 4px; }
+.nav-it.active { background: var(--blue-soft); color: var(--blue); box-shadow: inset 0 0 0 1px #c7d8fb; font-weight: 700; }
+.nav-it.active::before { background: var(--blue); width: 4px; }
 .nav-sub { border-left-color: var(--line); }
-.nav-sub-it.on { color: var(--tint-ink); }
-.nav-sub-it.on::before { background: var(--teal); box-shadow: 0 0 0 3px var(--tint); }
+.nav-sub-it.on { color: var(--blue); }
+.nav-sub-it.on::before { background: var(--blue); box-shadow: 0 0 0 3px var(--blue-soft); }
+.sidebar .nav-sub-it .nav-sub-ic { color: var(--blue); }
 .nav-sub-it.danger, .nav-sub-it.danger.on { color: var(--red); }
-.nav-fold.has-active > .nav-fh { color: var(--tint-ink); }
+.sidebar .nav-sub-it.danger .nav-sub-ic { color: var(--red); }
+.nav-fold.has-active > .nav-fh { color: var(--blue); }
 .side-foot { border-top: 1px solid var(--line2); background: #f8fafc; }
 .sf-plan.info { background: var(--blue-soft); color: var(--blue); }
 .sf-plan.ok { background: var(--green-soft); color: var(--green); }
