@@ -2188,11 +2188,11 @@
   function resultCellDiv(valueStr, refStr) {
     var disp = (valueStr == null) ? '' : String(valueStr);
     var dir = abnormalDir(valueStr, refStr);
-    if (!dir) return '<div style="text-align:right">' + App.esc(disp) + '</div>';
+    if (!dir) return '<div style="text-align:center">' + App.esc(disp) + '</div>';
     var isHigh = dir === 'high';
     var col = isHigh ? '#dc2626' : '#2563eb';
     var arrow = isHigh ? ' ↑' : ' ↓';
-    return '<div style="text-align:right;color:' + col + ';font-weight:800">' +
+    return '<div style="text-align:center;color:' + col + ';font-weight:800">' +
       App.esc(disp) + arrow + '</div>';
   }
 
@@ -2375,7 +2375,7 @@
     function valCell(valueStr, refStr, isNew) {
       var disp = (valueStr == null) ? '' : String(valueStr);
       var sev = abnormalSeverity(disp, refStr);
-      var base = 'text-align:right;padding-right:20px';
+      var base = 'text-align:center';
       if (cmp) {
         if (isNew && sev) {
           var isH = (sev.dir === 'high');
@@ -3887,15 +3887,17 @@
           row.values.forEach(function (lines, ci) {
             var value = lines[li], dir = ci === 0 ? row.dir : null;
             if (!value) return;
-            var rx = resultStart + (ci + 1) * RBW - 2;
+            /* the value sits in the middle of the RESULT column, under the RESULT box (the arrow, when there is one, goes right after it) */
+            var cxv = resultStart + ci * RBW + RBW / 2;
             var color = dir === 'high' ? RED : (dir === 'low' ? BLUE : INK);
             doc.setFont('helvetica', ci === 0 ? 'bold' : 'normal');
             doc.setTextColor(color[0], color[1], color[2]);
-            txt(value, rx - (dir ? 3.5 : 0), y + LINE, { align: 'right' });
+            var tw = doc.getTextWidth(String(value)), arrowW = dir ? 3.5 : 0, vx = cxv - (tw + arrowW) / 2;
+            txt(value, vx, y + LINE);
             if (dir && li === 0) {
               doc.setFillColor(color[0], color[1], color[2]);
-              var by = y + LINE - 1.1, sign = dir === 'high' ? 1 : -1;
-              doc.triangle(rx - 2.6, by + sign * 1.2, rx, by + sign * 1.2, rx - 1.3, by - sign * 1.3, 'F');
+              var by = y + LINE - 1.1, sign = dir === 'high' ? 1 : -1, ax = vx + tw + 0.9;
+              doc.triangle(ax, by + sign * 1.2, ax + 2.6, by + sign * 1.2, ax + 1.3, by - sign * 1.3, 'F');
             }
           });
           y += LINE;

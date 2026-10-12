@@ -168,7 +168,9 @@ async function suite(folder) {
   for (const value of ['CURRENT-001', 'NEWER', 'OLDER', 'History only', '109', '108', 'Glucose 0 min', '91', '172']) assert.ok(text(value).length, 'Expected content: ' + value);
   for (const value of ['OLDEST', 'OTHER-PATIENT', 'UNREADY', '107', '106', '105', '999999', 'Hidden pending value']) assert.equal(text(value).length, 0, 'Excluded content: ' + value);
   assert.ok(receipt.text.some(t => /02-Oct-2026/.test(t.value)) && receipt.text.some(t => /02-Sep-2026/.test(t.value)), 'Comparison timestamps');
-  assert.equal(text('109')[0].x, 166); assert.equal(text('108')[0].x, 196);
+  /* values are centred in their RESULT column (under the RESULT box): column centres at 153 and 183 */
+  const mid = t => t.x + t.width / 2;
+  assert.ok(Math.abs(mid(text('109')[0]) - 153) < 0.01, 'first result centred'); assert.ok(Math.abs(mid(text('108')[0]) - 183) < 0.01, 'second result centred');
   assert.ok(text('Note: 1 test(s) from this invoice are still pending.').length);
   assert.equal(JSON.stringify(opts), optsBefore);
   for (const label of ['Patient Name', 'Father / Husband Name', 'Age / Sex', 'Blood Group', 'Phone', 'Address', 'Registration Date', 'Reporting Date', 'Registration Location', 'Destination Location', 'Reference', 'Consultant']) assert.ok(text(label).length, 'Preserved field: ' + label);
@@ -223,7 +225,7 @@ async function suite(folder) {
   tables.results.find(r => r.invoiceId === 'newer').values = { Result: 'Previous free text' };
   build({ compareIds: ['newer'] }); bounds();
   assert.equal(receipt.circle.length, 0);
-  assert.ok(receipt.text.filter(t => t.x === 196).map(t => t.value).join(' ').includes('Previous free text'));
+  assert.ok(receipt.text.filter(t => Math.abs(t.x + t.width / 2 - 183) < 0.01).map(t => t.value).join(' ').includes('Previous free text'));
   assert.equal(receipt.text.filter(t => /\bRow499\b/.test(t.value)).length, 1);
 
   // Fewer than two numeric points deliberately produces no graph, just like HTML.
