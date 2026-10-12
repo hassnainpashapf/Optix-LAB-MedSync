@@ -200,6 +200,7 @@ var state = {
   loading: false,
   loginError: '',
   lastUpdated: null,
+  product: '',
   view: 'overview'
 };
 var refreshTimer = null;
@@ -222,6 +223,13 @@ function setStoredKey(k) {
 }
 function clearStoredKey() {
   try { sessionStorage.removeItem(KEY_NAME); } catch (e) {}
+}
+/* which product's superadmin is open in this tab (Lab, Pharmacy); Hospital has its own panel and opens in its own tab */
+var PRODUCT_KEY = 'sa_product';
+function getProduct() { try { return sessionStorage.getItem(PRODUCT_KEY) || ''; } catch (e) { return ''; } }
+function setProduct(p) {
+  state.product = p || '';
+  try { if (p) sessionStorage.setItem(PRODUCT_KEY, p); else sessionStorage.removeItem(PRODUCT_KEY); } catch (e) { /* private mode */ }
 }
 
 /* Relative time: "just now", "5 min ago", "2 h ago", "3 d ago", or a date. */
@@ -681,7 +689,8 @@ function renderLogin() {
     state.loginError = '';
     setStoredKey(token);
     state.loggedIn = true;
-    enterApp();
+    setProduct('');
+    renderChooser();
   }
   $('saLoginForm').addEventListener('submit', function (e) { e.preventDefault(); submit(); });
   uEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); pEl.focus(); } });
@@ -747,6 +756,169 @@ function changelogCardHtml() {
     '</div></div>';
 }
 
+/* ---------------- product chooser + Pharmacy superadmin ---------------- */
+
+var PRODUCT_CARDS = [
+  { id: 'lab', name: 'Blood Test Lab', sub: 'Labs, plans, payments, branch controls, updates and settings.', color: '#0ea5a4', ico: IC.flask },
+  { id: 'pharmacy', name: 'Pharmacy POS', sub: 'Pharmacy businesses, who has access, and their plans.', color: '#7c3aed',
+    ico: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>' },
+  { id: 'hospital', name: 'Hospital Management', sub: 'Hospital workspaces, plans and the platform owner panel. Opens in its own tab.', color: '#2f6df6',
+    ico: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M12 9v6M9 12h6"/><path d="M9 21v-4h6v4"/></svg>' }
+];
+var HOSPITAL_SITE = 'https://optix-medical-sync.pages.dev';
+
+function registryProduct(id) {
+  var list = state.registry || [];
+  for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i];
+  return null;
+}
+function hospitalPanelUrl() {
+  var pr = registryProduct('hospital'), base = String((pr && (pr.site || pr.url)) || HOSPITAL_SITE).replace(/\/+$/, '').replace(/\/app\/?$/, '');
+  return base + '/platform';
+}
+
+function renderChooser() {
+  document.body.className = '';
+  var cards = PRODUCT_CARDS.map(function (c) {
+    return '<button type="button" class="pc-card" data-product="' + c.id + '" style="--pc:' + c.color + '">' +
+      '<span class="pc-ico">' + c.ico + '</span>' +
+      '<span class="pc-name">' + esc(c.name) + '</span>' +
+      '<span class="pc-sub">' + esc(c.sub) + '</span>' +
+      '<span class="pc-meta" id="pcMeta-' + c.id + '">&nbsp;</span>' +
+      '<span class="pc-go">Open superadmin &rarr;</span></button>';
+  }).join('');
+  $('root').innerHTML =
+    '<div class="hdr"><header class="topbar">' +
+    '<div class="tb-brand"><div class="brand-ico">' + IC.cloud + '</div><span class="t">Optix Suite</span> <span class="badge b-blue">SUPERADMIN</span></div>' +
+    '<div class="tb-right"><button class="btn btn-ghost btn-sm" id="logoutBtn">Logout</button></div></header></div>' +
+    '<main class="wrap"><div class="page-h"><div><h1>Choose a product</h1><p>Open the superadmin of the product you want to manage.</p></div></div>' +
+    '<div class="pc-grid">' + cards + '</div><p class="pc-note" id="pcNote"></p></main>';
+  $('logoutBtn').addEventListener('click', function () { logout(false); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-product]'), function (b) {
+    b.addEventListener('click', function () { openProduct(b.getAttribute('data-product'), b); });
+  });
+  /* a quick count on each card, filled in when the hub answers */
+  Promise.all([api('/api/saas/labs').catch(function () { return null; }), api('/api/saas/products').catch(function () { return null; })]).then(function (r) {
+    if (!$('pcMeta-lab')) return;
+    if (r[1] && r[1].products) state.registry = r[1].products;
+    var labs = r[0] && r[0].labs;
+    if (labs) {
+      var ph = labs.filter(function (l) { return (l.products || []).indexOf('pharmacy') >= 0; }).length;
+      $('pcMeta-lab').textContent = labs.length + (labs.length === 1 ? ' business' : ' businesses');
+      $('pcMeta-pharmacy').textContent = ph + (ph === 1 ? ' business with Pharmacy' : ' businesses with Pharmacy');
+    }
+    $('pcMeta-hospital').textContent = 'Own panel, own data';
+  });
+}
+
+function openProduct(id, btn) {
+  if (id === 'lab' || id === 'pharmacy') {
+    setProduct(id);
+    var target = id === 'lab' ? '#overview' : '#ph-overview';
+    if (location.hash !== target) { try { history.replaceState(null, '', target); } catch (e) { location.hash = target; } }
+    enterApp();
+    return;
+  }
+  /* Hospital: its own server and its own panel. The hub hands out a one-time ticket, so no second sign-in. */
+  var w = null;
+  try { w = window.open('', '_blank'); if (w) w.opener = null; } catch (e) { w = null; }
+  if (btn) btn.disabled = true;
+  api('/api/saas/sa-ticket', { method: 'POST', body: { product: 'hospital' } }).then(function (r) {
+    var url = hospitalPanelUrl() + '#sso=' + encodeURIComponent(r.ticket);
+    if (btn) btn.disabled = false;
+    if (w) w.location.href = url; else location.href = url;
+  }, function (err) {
+    if (btn) btn.disabled = false;
+    if (w) { try { w.close(); } catch (e) { /* ignore */ } }
+    if (err && err.auth) { logout(true); return; }
+    toast(errMsg(err) || 'Could not open the Hospital panel.', 'err');
+  });
+}
+
+function loadPharmacy(silent) {
+  if (!silent) { state.ld.ph = true; state.er.ph = null; if (state.loggedIn && isPh(state.view)) paintMain(); }
+  return Promise.all([api('/api/saas/labs'), api('/api/saas/products').catch(function () { return null; })]).then(function (r) {
+    state.ld.ph = false; state.er.ph = null;
+    state.slabs = (r[0] && r[0].labs) || [];
+    if (r[1] && r[1].products) state.registry = r[1].products;
+    if (state.loggedIn && isPh(state.view)) paintMain();
+  }, function (err) {
+    state.ld.ph = false;
+    if (err && err.auth) { logout(true); return; }
+    if (!silent) state.er.ph = errMsg(err);
+    if (state.loggedIn && isPh(state.view)) paintMain();
+  });
+}
+function phLabs() {
+  return (state.slabs || []).filter(function (l) { return (l.products || ['lab']).indexOf('pharmacy') >= 0; });
+}
+function phOverviewHtml() {
+  var pr = registryProduct('pharmacy'), site = (pr && (pr.site || pr.url)) || 'https://pharmacy-pos.ellahabad.workers.dev';
+  var head = pageHead('Pharmacy POS', 'Businesses that can open the Pharmacy with their one Optix login.',
+    '<a class="btn btn-primary" href="' + esc(site) + '" target="_blank" rel="noopener">Open the Pharmacy website</a>');
+  if (!state.slabs) return head + (state.er.ph ? errorCard(state.er.ph) : '<div class="spin"></div>');
+  var ph = phLabs(), by = function (st) { return ph.filter(function (l) { return l.status === st; }).length; };
+  var stats = statCard(IC.lab, 'blue', 'With Pharmacy', String(ph.length), 'of ' + state.slabs.length + ' businesses') +
+    statCard(IC.check, 'green', 'Active', String(by('active')), 'paying and in good standing') +
+    statCard(IC.tag, 'amber', 'On trial', String(by('trial')), 'trying it out') +
+    statCard(IC.alert, 'red', 'Expired / suspended', String(by('expired') + by('suspended')), 'cannot open it right now');
+  var roles = (pr && pr.roles) || [];
+  return head + '<div class="stat-grid">' + stats + '</div>' +
+    '<div class="card"><div class="card-h"><h3>Latest businesses</h3><span class="sub"><a href="#ph-businesses">See all</a></span></div>' + phTableHtml(ph.slice(0, 8), false) + '</div>' +
+    '<div class="card"><div class="card-h"><h3>How access works</h3></div><div class="card-b"><p class="hint" style="margin:0">Each business signs in once with its Optix account. If <b>Pharmacy POS</b> is switched on for the business, its admin can give people access in the app (Settings &rarr; Users &amp; Roles). Switch it on or off per business under <a href="#ph-businesses">Businesses</a>.' +
+    (roles.length ? ' Roles in the Pharmacy: ' + roles.map(function (r) { return esc(r.label || r.value); }).join(', ') + '.' : '') + '</p></div></div>';
+}
+function phTableHtml(list, withToggle) {
+  if (!list.length) return '<div class="empty"><div class="e-ico">' + IC.lab + '</div><h4>No businesses have Pharmacy yet</h4><p>Switch Pharmacy on for a business under Businesses.</p></div>';
+  return '<div class="tbl-wrap"><table class="table"><thead><tr><th>Business</th><th>Owner</th><th>Plan</th><th>Status</th>' + (withToggle ? '<th>Pharmacy</th>' : '') + '</tr></thead><tbody>' +
+    list.map(function (l) {
+      var has = (l.products || ['lab']).indexOf('pharmacy') >= 0;
+      return '<tr><td class="td-main"><strong>' + esc(l.name) + '</strong><div class="cell-sub">' + esc(l.slug) + '</div></td>' +
+        '<td><div class="own"><strong>' + esc(l.ownerName || '—') + '</strong>' + (l.ownerEmail ? '<span>' + esc(l.ownerEmail) + '</span>' : '') + '</div></td>' +
+        '<td>' + planBadge(l.plan) + '</td><td>' + statusBadge(l.status) + '</td>' +
+        (withToggle ? '<td><button type="button" class="btn btn-sm ' + (has ? '' : 'btn-primary') + '" data-phtoggle="' + esc(l.id) + '" data-has="' + (has ? '1' : '0') + '">' + (has ? 'Switch off' : 'Switch on') + '</button></td>' : '') +
+        '</tr>';
+    }).join('') + '</tbody></table></div>';
+}
+function phBusinessesHtml() {
+  var head = pageHead('Businesses', 'Switch Pharmacy POS on or off for each business.');
+  if (!state.slabs) return head + (state.er.ph ? errorCard(state.er.ph) : '<div class="spin"></div>');
+  var q = String(state.phQuery || '').trim().toLowerCase(), f = state.phFilter || 'with';
+  var list = state.slabs.filter(function (l) {
+    var has = (l.products || ['lab']).indexOf('pharmacy') >= 0;
+    if (f === 'with' && !has) return false;
+    if (f === 'without' && has) return false;
+    if (!q) return true;
+    return [l.name, l.slug, l.ownerName, l.ownerEmail, l.phone].join(' ').toLowerCase().indexOf(q) >= 0;
+  });
+  var all = state.slabs, nWith = phLabs().length;
+  return head + '<div class="card"><div class="toolbar"><div class="search"><span class="s-ico">' + IC.search + '</span>' +
+    '<input class="input" id="phSearch" type="search" placeholder="Search name, ID, owner or email" autocomplete="off" spellcheck="false" value="' + esc(state.phQuery || '') + '"></div>' +
+    '<div class="chips">' +
+    [['with', 'With Pharmacy', nWith], ['without', 'Without', all.length - nWith], ['all', 'All', all.length]].map(function (it) {
+      return '<button type="button" class="chip' + (f === it[0] ? ' on' : '') + '" data-phchip="' + it[0] + '">' + it[1] + '<span class="n">' + it[2] + '</span></button>';
+    }).join('') + '</div></div>' + phTableHtml(list, true) + '</div>';
+}
+function wirePharmacyView() {
+  Array.prototype.forEach.call(document.querySelectorAll('[data-retry]'), function (b) { b.addEventListener('click', function () { loadPharmacy(false); }); });
+  var search = $('phSearch');
+  if (search) search.addEventListener('input', function () { state.phQuery = search.value; var pos = search.selectionStart; paintMain(); var again = $('phSearch'); if (again) { again.focus(); try { again.setSelectionRange(pos, pos); } catch (e) { /* ignore */ } } });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-phchip]'), function (b) { b.addEventListener('click', function () { state.phFilter = b.getAttribute('data-phchip'); paintMain(); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-phtoggle]'), function (b) {
+    b.addEventListener('click', function () {
+      var id = b.getAttribute('data-phtoggle'), had = b.getAttribute('data-has') === '1';
+      var lab = (state.slabs || []).filter(function (l) { return l.id === id; })[0]; if (!lab) return;
+      var list = (lab.products || ['lab']).filter(function (x) { return x !== 'pharmacy'; });
+      if (!had) list.push('pharmacy');
+      if (!list.length) list = ['lab'];
+      b.disabled = true;
+      api('/api/saas/labs/' + encodeURIComponent(id), { method: 'PUT', body: { products: list } }).then(function () {
+        lab.products = list; toast((had ? 'Pharmacy switched off for ' : 'Pharmacy switched on for ') + lab.name + '.', 'ok'); paintMain();
+      }, function (err) { b.disabled = false; if (err && err.auth) { logout(true); return; } toast(errMsg(err), 'err'); });
+    });
+  });
+}
+
 /* ---------------- app shell (chrome + navigation) ---------------- */
 
 var NAV = [
@@ -758,14 +930,21 @@ var NAV = [
   { id: 'fleet', label: 'Fleet & Updates' }
 ];
 
+var NAV_PH = [
+  { id: 'ph-overview', label: 'Pharmacy Overview' },
+  { id: 'ph-businesses', label: 'Businesses' }
+];
+function curNav() { return state.product === 'pharmacy' ? NAV_PH : NAV; }
+function isPh(v) { return v === 'ph-overview' || v === 'ph-businesses'; }
+
 function viewFromHash() {
-  var h = String(location.hash || '').replace(/^#/, '');
-  for (var i = 0; i < NAV.length; i++) if (NAV[i].id === h) return h;
-  return 'overview';
+  var h = String(location.hash || '').replace(/^#/, ''), nav = curNav();
+  for (var i = 0; i < nav.length; i++) if (nav[i].id === h) return h;
+  return nav[0].id;
 }
 
 function navHtml() {
-  return '<nav class="nav" aria-label="Sections"><div class="nav-in">' + NAV.map(function (n) {
+  return '<nav class="nav" aria-label="Sections"><div class="nav-in">' + curNav().map(function (n) {
     var badge = '';
     if (n.id === 'payments') {
       badge = '<span class="nav-badge" id="navPayBadge"' + (state.pending > 0 ? '' : ' hidden') + '>' + (state.pending > 99 ? '99+' : state.pending) + '</span>';
@@ -779,9 +958,10 @@ function paintChrome() {
   if (!el) return;
   el.innerHTML =
     '<div class="hdr"><header class="topbar">' +
-    '<div class="tb-brand"><div class="brand-ico">' + IC.cloud + '</div><span class="t">Optix Medical Sync</span> <span class="badge b-blue">SUPERADMIN</span></div>' +
+    '<div class="tb-brand"><div class="brand-ico">' + IC.cloud + '</div><span class="t">' + (state.product === 'pharmacy' ? 'Pharmacy POS' : 'Optix Medical Sync') + '</span> <span class="badge b-blue">SUPERADMIN</span></div>' +
     '<div class="tb-right">' +
     '<span class="api-pill ' + (state.apiDown ? 'down' : 'ok') + '" id="apiPill"><span class="pdot"></span>' + (state.apiDown ? 'API unreachable' : 'API connected') + '</span>' +
+    '<button class="btn btn-ghost btn-sm" id="switchBtn" title="Back to the three products">All products</button>' +
     '<button class="btn btn-sm" id="refreshBtn">Refresh</button>' +
     '<button class="btn btn-ghost btn-sm" id="logoutBtn">Logout</button>' +
     '</div></header>' + navHtml() + '</div>' +
@@ -790,6 +970,7 @@ function paintChrome() {
       : '');
   $('logoutBtn').addEventListener('click', function () { logout(false); });
   $('refreshBtn').addEventListener('click', refreshCurrent);
+  $('switchBtn').addEventListener('click', function () { stopAutoRefresh(); stopPoll(); closeDrawer(); setProduct(''); renderChooser(); });
 }
 
 function setPending(n) {
@@ -858,6 +1039,8 @@ function paintMain() {
   else if (v === 'branchlabs') { main.innerHTML = branchLabsViewHtml(); wireBranchLabsView(); }
   else if (v === 'payments') { main.innerHTML = paymentsViewHtml(); wirePaymentsView(); }
   else if (v === 'settings') { main.innerHTML = settingsViewHtml(); wireSettingsView(); }
+  else if (v === 'ph-overview') { main.innerHTML = phOverviewHtml(); wirePharmacyView(); }
+  else if (v === 'ph-businesses') { main.innerHTML = phBusinessesHtml(); wirePharmacyView(); }
   else { main.innerHTML = overviewViewHtml(); wireOverviewView(); }
   Array.prototype.forEach.call(main.querySelectorAll('[data-retry]'), function (b) {
     b.addEventListener('click', refreshCurrent);
@@ -890,6 +1073,7 @@ function loadViewData(v, silent) {
   if (v === 'payments') return loadPayments(silent);
   if (v === 'settings') return loadSettings(silent);
   if (v === 'fleet') return loadData(!!silent);
+  if (isPh(v)) return loadPharmacy(silent);
 }
 
 function refreshCurrent() { loadViewData(state.view, false); }
@@ -2406,6 +2590,7 @@ function saveSettings() {
 /* ---------------- entering / leaving the console ---------------- */
 
 function enterApp() {
+  if (state.product !== 'pharmacy') state.product = 'lab';
   state.view = viewFromHash();
   startAutoRefresh();
   startPoll();
@@ -2423,6 +2608,7 @@ function enterApp() {
 
 function logout(expired) {
   clearStoredKey();
+  setProduct('');
   state.key = null;
   state.loggedIn = false;
   state.labs = [];
@@ -2453,7 +2639,8 @@ function boot() {
   if (k && k.indexOf('up:') === 0) {
     state.key = k;
     state.loggedIn = true;
-    enterApp();
+    var prod = getProduct();
+    if (prod === 'lab' || prod === 'pharmacy') { state.product = prod; enterApp(); } else { renderChooser(); }
   } else {
     renderLogin();
   }
