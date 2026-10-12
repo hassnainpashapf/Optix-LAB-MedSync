@@ -2018,7 +2018,7 @@
     var hdrAccent = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(String(s.accent || '').trim()) ? String(s.accent).trim() : '#1B1B6E';
     /* LEFT: logo + lab name side by side */
     var leftHtml =
-      '<div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;margin-top:-14px">' +
+      '<div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;margin-top:-28px">' +
         (s.logo
           ? '<img src="' + (d && d._tpl ? '{{logo}}' : App.esc(s.logo)) + '" style="max-width:190px;max-height:112px;flex:none;image-rendering:-webkit-optimize-contrast" alt="">'
           : '') +
@@ -3512,16 +3512,16 @@
         return;
       }
       // --- left: logo (~18mm) + lab name + subtitle ---
-      if (s.logo) addImg(s.logo, M, y - 2, 26, 26);   /* logo and name sit a little higher, level with the barcodes */
+      if (s.logo) addImg(s.logo, M, y - 4, 26, 26);   /* logo and name sit a little higher, level with the barcodes */
       var htx = M + (s.logo ? 30 : 0);
       doc.setFont('times', 'bold'); doc.setFontSize(25);
       var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : A; /* the lab-name colour from Lab Profile (default: the accent colour) */
       doc.setTextColor(NC[0], NC[1], NC[2]);
-      txt(s.labName || 'Optix Medical Sync', htx, y + 10);
+      txt(s.labName || 'Optix Medical Sync', htx, y + 8);
       if (showTagline) {
         doc.setFont('times', 'italic'); doc.setFontSize(13);
         doc.setTextColor(A[0], A[1], A[2]);
-        txt(s.tagline, htx, y + 17.5);
+        txt(s.tagline, htx, y + 15.5);
       }
 
       // --- right: Patient No. / Case # right-aligned with wide letter spacing ---
