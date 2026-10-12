@@ -1975,7 +1975,14 @@
     '.unifi-switch input:checked + .unifi-slider{background-color:#0f172a}' +
     '.unifi-switch input:checked + .unifi-slider:before{transform:translateX(18px)}' +
     '.unifi-toggle-row{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;margin-bottom:8px;gap:14px}' +
-    '.unifi-save-bar{margin-top:20px;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid #e2e8f0}';
+    '.unifi-save-bar{margin-top:20px;display:flex;align-items:center;gap:10px;padding-top:16px;border-top:1px solid #e2e8f0}' +
+    /* tighter panels, clear outlines, and the Online Payments tab uses the full width in two columns */
+    '.unifi-panel{margin-bottom:14px;border:1.5px solid #8c9ab3}' +
+    '.unifi-panel-header{padding:10px 16px}' +
+    '.unifi-panel-body{padding:12px 16px}' +
+    '.unifi-card-group{max-width:1240px !important;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 14px;align-items:start}' +
+    '.unifi-card-group>.unifi-panel:first-child,.unifi-card-group>.unifi-save-bar{grid-column:1/-1}' +
+    '@media(max-width:1000px){.unifi-card-group{grid-template-columns:1fr}}';
 
   var settingsTab = 'profile';
 
