@@ -2018,7 +2018,7 @@
     var hdrAccent = /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(String(s.accent || '').trim()) ? String(s.accent).trim() : '#1B1B6E';
     /* LEFT: logo + lab name side by side */
     var leftHtml =
-      '<div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;margin-top:-28px">' +
+      '<div style="display:flex;align-items:center;gap:14px;flex:1;min-width:0;margin-top:-28px;margin-left:-10px">' +
         (s.logo
           ? '<img src="' + (d && d._tpl ? '{{logo}}' : App.esc(s.logo)) + '" style="max-width:190px;max-height:112px;flex:none;image-rendering:-webkit-optimize-contrast" alt="">'
           : '') +
@@ -3512,8 +3512,8 @@
         return;
       }
       // --- left: logo (~18mm) + lab name + subtitle ---
-      if (s.logo) addImg(s.logo, M, y - 4, 26, 26);   /* logo and name sit a little higher, level with the barcodes */
-      var htx = M + (s.logo ? 30 : 0);
+      if (s.logo) addImg(s.logo, M - 2.5, y - 4, 26, 26);   /* logo and name sit a little higher, level with the barcodes */
+      var htx = M + (s.logo ? 27.5 : 0);
       doc.setFont('times', 'bold'); doc.setFontSize(25);
       var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : A; /* the lab-name colour from Lab Profile (default: the accent colour) */
       doc.setTextColor(NC[0], NC[1], NC[2]);
