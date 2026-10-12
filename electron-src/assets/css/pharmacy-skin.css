@@ -56,7 +56,8 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); }
 a:focus-visible, button:focus-visible, .nav-it:focus-visible { outline: 3px solid rgba(47, 109, 246, .35); outline-offset: 2px; }
 
 /* cards: white, 1px soft border, very large radius, soft shadow */
-.card { border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--sh-sm); background: #fff; }
+/* every card has a clearly visible outline */
+body:not(.auth) .card, .card, .pt-card { border: 1.5px solid #c5cfdf; border-radius: var(--r-lg); box-shadow: var(--sh-sm); background: #fff; }
 .card-h { border-bottom: 1px solid var(--line2); }
 .modal { border-radius: 28px; border: 1px solid var(--line); box-shadow: var(--sh-lg); }
 .modal-ov { background: rgba(27, 42, 74, .5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
@@ -106,6 +107,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 .nav-sec2 { letter-spacing: .08em; font-weight: 800; }
 .nav-it, .nav-sub-it { color: var(--ink); border-radius: 12px; }
 .nav-ic { color: var(--muted); }
+/* every menu icon in its own colour (set per item in app.js as --nic) */
+.sidebar .nav-it .nav-ic, .sidebar .nav-it:hover .nav-ic, .sidebar .nav-it.active .nav-ic { color: var(--nic, #8793a8); }
 .nav-it:hover, .nav-sub-it:hover { background: #f1f4f9; color: var(--ink); }
 .nav-it:hover .nav-ic { color: var(--tint-ink); }
 .nav-it.active { background: var(--tint); color: var(--tint-ink); box-shadow: inset 0 0 0 1px var(--tint-line); font-weight: 700; }
@@ -146,44 +149,92 @@ html .db-page { --brand: #1b2a4a; --brand-d: #1b2a4a; --brand-soft: #eaf0ff; --b
   --blue: #2f6df6; --blue-soft: #eaf0ff; --ink: #1b2a4a; --ink2: #3c4761; --muted: #6f7a92; --faint: #8b94a7; --line: #e2e8f1; --line2: #edf1f7; --bg: #f2f5f9; --card: #fff;
   --sh-sm: 0 1px 2px rgba(27, 42, 74, .04), 0 8px 20px -14px rgba(27, 42, 74, .14); --sh-md: 0 16px 38px -18px rgba(27, 42, 74, .16); font-family: var(--font); }
 
-/* ---------- 5. sign-in / sign-up: soft page, one white rounded card (the Pharmacy sign-in) ---------- */
-body.login-mode { background: #f2f5f9; }
-.login-wrap, .login-wrap.lg-split { background: #f2f5f9; flex-direction: column; align-items: center; justify-content: center; overflow: auto; padding: 32px 16px; gap: 0; }
-.login-wrap::before, .login-wrap::after, .login-wrap.lg-split::before, .login-wrap.lg-split::after { display: block; content: ''; position: absolute; border-radius: 50%; pointer-events: none; filter: blur(60px); background: none; }
-.login-wrap.lg-split::before { width: 500px; height: 500px; left: 20%; top: -80px; right: auto; background: linear-gradient(135deg, rgba(47, 109, 246, .10), transparent); }
-.login-wrap.lg-split::after { width: 450px; height: 450px; right: 18%; bottom: -80px; left: auto; background: linear-gradient(315deg, rgba(56, 168, 157, .10), transparent); }
-.lg-split .lg-brand { display: none; }
-.lg-split .lg-form { flex: 0 1 auto; width: 100%; background: transparent; padding: 0; gap: 16px; }
-.lg-form::before, .lg-form::after, .lg-bubs { display: none; }
-.login-wrap.lg-split .login-card, .lg-split .lg-card, .login-card { position: relative; z-index: 2; background: #fff; border: 1px solid var(--line); border-radius: 28px; padding: 40px; width: 448px; max-width: 100%; box-shadow: 0 30px 80px -25px rgba(27, 42, 74, .18); animation: none; }
-.lg-split .lg-card.lg-wide { width: 560px; }
-.lg-split .lg-card::before { display: none; }
-.login-logo h1, .login-card h2 { color: var(--navy); font-weight: 800; letter-spacing: -.02em; }
-.login-tag, .login-sub { color: var(--muted); font-weight: 500; }
-.login-mark { background: var(--brand-grad); box-shadow: 0 14px 26px -10px rgba(47, 109, 246, .55); border-radius: 18px; animation: none; }
-.lg-split .login-mark { animation: none; }
-.lg-fl { color: var(--ink2); font-weight: 700; font-size: 12px; }
-.lg-fl em { color: var(--faint); }
-.lg-f { opacity: 1; animation: none; }
-.lg-in .input, .lg-in .select { background: #f8fafc; border-radius: 16px; border: 1px solid var(--line); }
-.lg-in .input:focus, .lg-in .select:focus { background: #fff; border-color: var(--blue); box-shadow: 0 0 0 4px rgba(47, 109, 246, .15); transform: none; }
-.lg-in:focus-within > svg { color: var(--blue); }
-.login-signin { border-radius: 16px; padding-top: 14px; padding-bottom: 14px; font-weight: 800; font-size: 14px; }
-.lg-split .login-signin::after { display: none; }
-.lg-alt { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
-.lg-alt-links a { color: var(--ink2); font-weight: 700; }
-.lg-alt-links a:hover, .lg-terms a, .lg-new a, .lg-forgot a, .lg-eye:hover { color: var(--blue); text-decoration: none; }
-.lg-alt-links i { color: #cfd7e4; }
-.lg-new a { border-bottom: 2px solid rgba(47, 109, 246, .2); }
-.lg-forgot a { border-bottom: 1.5px solid rgba(47, 109, 246, .3); }
-.lg-terms input { accent-color: var(--blue); }
-.lg-back { background: #fff; color: var(--ink); border-color: var(--line); box-shadow: none; }
-.lg-back:hover, .lg-eye:hover { background: var(--blue-soft); box-shadow: none; }
-.lg-split .login-foot { color: var(--muted); }
-.lg-secure { background: var(--green-soft); color: var(--green); }
-.login-err { background: #fff1f2; border: 1px solid #fecdd3; color: #be123c; border-radius: 16px; }
-.login-div::before, .login-div::after { background: var(--line); }
-
+/* ---------- 5. sign-in / sign-up: Split Teal & Blurred Artwork Card ---------- */
+body.login-mode { background: linear-gradient(90deg, #f3f7f6 50%, #21524e 50%) !important; min-height: 100vh; }
+.login-wrap, .login-wrap.lg-split {
+  background: linear-gradient(90deg, #f3f7f6 50%, #21524e 50%) !important;
+  display: grid !important;
+  grid-template-columns: 1fr 1fr;
+  width: min(860px, calc(100vw - 32px));
+  min-height: 510px;
+  margin: 4vh auto;
+  padding: 0 !important;
+  border-radius: 26px;
+  box-shadow: 0 32px 72px -18px rgba(8,28,26,.34), 0 8px 24px -8px rgba(8,28,26,.14);
+  overflow: hidden;
+}
+.login-wrap::before, .login-wrap::after, .login-wrap.lg-split::before, .login-wrap.lg-split::after { display: none !important; }
+.lg-split .lg-form { order: 1; background: #f9fbfb !important; padding: 36px 32px !important; display: flex !important; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
+.lg-split .lg-brand {
+  order: 2;
+  display: flex !important;
+  position: relative;
+  isolation: isolate;
+  background: #0b1718 !important;
+  color: #fff;
+  padding: 38px 32px !important;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  overflow: hidden;
+}
+.lg-split .lg-brand::before {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  background:
+    radial-gradient(circle at 62% 52%, #ff3b00 0%, #e0351b 24%, transparent 54%),
+    radial-gradient(circle at 42% 35%, #ff9e2c 0%, transparent 42%),
+    radial-gradient(circle at 48% 25%, #38bdf8 0%, transparent 32%),
+    radial-gradient(circle at 38% 78%, #ec4899 0%, transparent 40%),
+    linear-gradient(145deg, #071314 0%, #0f292a 50%, #091617 100%);
+  filter: blur(26px) saturate(1.25);
+  transform: scale(1.08);
+}
+.lg-orbs, .lg-grid, .lg-pill, .lg-feat, .lg-demo, .lg-plat, .lg-ecg, .lg-bubs, .login-mark, .login-tag, .login-foot { display: none !important; }
+.lg-brand-in { display: flex; flex-direction: column; align-items: center; text-align: center; max-width: 250px; }
+.lg-hero { font-size: 30px !important; font-weight: 700 !important; color: #fff !important; margin: 0 0 12px !important; line-height: 1.18 !important; }
+.lg-lead { font-size: 12.5px !important; color: rgba(255,255,255,.9) !important; line-height: 1.55 !important; margin: 0 0 22px !important; }
+.lg-ghost-cta {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 150px; height: 41px; border-radius: 999px;
+  border: 1.5px solid rgba(255,255,255,.85); background: rgba(255,255,255,.1);
+  backdrop-filter: blur(8px); color: #fff !important; font-size: 12.5px; font-weight: 600;
+  text-decoration: none !important; transition: all .18s;
+}
+.lg-ghost-cta:hover { background: rgba(255,255,255,.22); transform: translateY(-1px); }
+.login-wrap.lg-split .login-card, .lg-split .lg-card, .login-card {
+  background: transparent !important; border: 0 !important; box-shadow: none !important;
+  padding: 0 !important; width: 100% !important; max-width: 300px !important; text-align: center;
+}
+.lg-split .lg-card.lg-wide { max-width: 320px !important; }
+.login-logo { margin-bottom: 10px !important; }
+.login-logo h1, .login-card h2 { font-size: 27px !important; font-weight: 800 !important; color: #111827 !important; margin: 0 0 10px !important; text-align: center; }
+.lg-fl { display: none !important; }
+.lg-in > svg { display: none !important; }
+.lg-in .input, .lg-in .select {
+  height: 42px !important; border-radius: 999px !important;
+  background: #edf3f2 !important; border: 1px solid #d8e3e1 !important;
+  padding: 0 18px !important; font-size: 12.5px !important; color: #1f2937 !important;
+}
+.lg-in .input:focus, .lg-in .select:focus {
+  background: #fff !important; border-color: #21524e !important;
+  box-shadow: 0 0 0 3px rgba(33,82,78,.14) !important;
+}
+.login-signin {
+  width: auto !important; min-width: 170px !important; max-width: 100% !important; min-height: 42px !important; height: auto !important; margin: 10px auto 0 !important;
+  border-radius: 999px !important; background: #21524e !important; color: #fff !important;
+  font-size: 13px !important; font-weight: 600 !important; padding: 10px 28px !important;
+  white-space: nowrap !important; box-sizing: border-box !important;
+  box-shadow: 0 10px 22px -6px rgba(33,82,78,.48) !important;
+}
+.login-signin .lg-ba { display: none !important; }
+@media (max-width: 760px) {
+  body.login-mode, .login-wrap, .login-wrap.lg-split { background: #f3f7f6 !important; grid-template-columns: 1fr; max-width: 400px; }
+  .lg-split .lg-brand { padding: 28px 22px !important; }
+}
 /* ---------- 6. subscription / misc accents that were navy ---------- */
 .plan-card.cur, .plan-card.current { border-color: var(--blue); }
 
@@ -199,3 +250,29 @@ body.login-mode { background: #f2f5f9; }
 .oxc-fab, .oxc-header, .oxc-msg-user, .oxc-send { background: #2f6df6 !important; }
 .oxc-fab { box-shadow: 0 14px 30px -10px rgba(47, 109, 246, .55) !important; }
 .oxc-panel { border-radius: 24px !important; }
+
+.lg-socials { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 10px 0 8px; }
+.lg-soc { width: 38px; height: 38px; border-radius: 50%; border: 1px solid #dde6e5; background: #fff; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+
+.soc-btn, .lg-soc { position: relative !important; overflow: hidden !important; cursor: pointer !important; }
+.soc-g-hit { position: absolute !important; inset: -3px !important; opacity: 0.015 !important; z-index: 20 !important; display: flex !important; align-items: center !important; justify-content: center !important; overflow: hidden !important; cursor: pointer !important; }
+.soc-g-hit iframe { cursor: pointer !important; transform: scale(1.35) !important; }
+
+/* login-compact-final: same compact split card as the Optix Suite sign-in */
+.login-wrap.lg-split{position:fixed!important;inset:0!important;width:min(860px,calc(100vw - 32px))!important;height:fit-content!important;min-height:510px!important;max-height:calc(100vh - 32px)!important;margin:auto!important;overflow:hidden!important;border-radius:26px!important}
+.lg-split .lg-form{justify-content:center!important;padding:38px 34px!important;gap:0!important;overflow:auto!important;background:#f9fbfb!important}
+.lg-split .lg-form::before,.lg-split .lg-form::after,.login-card::before,.login-card::after{display:none!important;content:none!important}
+.lg-split .login-card{animation:none!important;opacity:1!important;transform:none!important}
+.lg-split .lg-hint{display:none!important}
+.lg-split .lg-alt{margin-top:12px!important}
+.lg-split .lg-alt-links a{font-weight:400!important;color:#5f6f6d!important}
+.lg-split .lg-alt-links a:hover{color:#21524e!important}
+.lg-split .lg-forgot a{font-weight:400!important;color:#5f6f6d!important;border:0!important;text-decoration:none!important}
+.lg-split .lg-forgot{text-align:center!important;margin:2px 0 0!important}
+@media(max-width:760px){.login-wrap.lg-split{width:min(400px,calc(100vw - 24px))!important}}
+
+/* login-size: sign-in card is full size (the app zoom of 0.9 must not shrink it) */
+body.login-mode{zoom:1!important}
+
+.lg-split .lg-form{padding:30px 34px!important}
+.lg-split .lg-alt{margin-top:8px!important}

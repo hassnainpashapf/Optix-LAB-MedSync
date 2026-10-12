@@ -86,9 +86,9 @@ for (const relPath of dashboardPaths) {
   assert.match(html, /Rs 100<\/td><td class="num">Rs 60<\/td><td class="num">Rs 40/);
   assert.match(html, /Rs 50<\/td><td class="num">Rs 0<\/td><td class="num">Rs 0/);
   assert.match(html, /Rs 0<\/td><td class="num">Rs 20<\/td><td class="num">Rs 20/);
-  assert.match(html, /<strong>Test One<\/strong><\/td><td class="num">2/);
-  assert.match(html, /<strong>Test Two<\/strong><\/td><td class="num">1/);
-  assert.doesNotMatch(context.renderAnalytics('all'), /<strong>Test Two<\/strong><\/td><td class="num">1/);
+  assert.match(html, /<strong>Test One<\/strong>(?:<div class="db-bar"><i[^>]*><\/i><\/div>)?<\/td><td class="num">2/);
+  assert.match(html, /<strong>Test Two<\/strong>(?:<div class="db-bar"><i[^>]*><\/i><\/div>)?<\/td><td class="num">1/);
+  assert.doesNotMatch(context.renderAnalytics('all'), /<strong>Test Two<\/strong>(?:<div class="db-bar"><i[^>]*><\/i><\/div>)?<\/td><td class="num">1/);
 
   context.showBranchMoney = false;
   const limitedHtml = context.renderAnalytics('30');

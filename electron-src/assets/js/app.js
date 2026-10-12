@@ -776,18 +776,20 @@
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     visible = groupSidebarNav(visible);
     var sidebarActiveKey = sidebarNavKey(activeKey);
+    /* every menu icon has its own colour: the page's colour from the menu list */
+    function navTint(c) { return /^#[0-9a-f]{6}$/i.test(c || '') ? ' style="--nic:' + c + '"' : ''; }
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
     function itemHtml(n) {
       var subs = n.sub ? n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; }) : [];
       if (n.sub && subs.length >= 2) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
         var open = n.key === sidebarActiveKey;
         return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
-           '<button type="button" class="nav-it nav-par' + (open ? ' active' : '') + '" data-nav="' + n.key + '" data-route="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
+           '<button type="button" class="nav-it nav-par' + (open ? ' active' : '') + '"' + navTint(n.color) + ' data-nav="' + n.key + '" data-route="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + esc(n.label) + '</span>' +
           '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
            '<div class="nav-sub">' + subs.map(function (x) { return '<a href="' + x.route + '" title="' + esc(x.label) + '" aria-label="' + esc(x.label) + '" class="nav-sub-it' + (x.danger ? ' danger' : '') + '" data-href="' + x.route + '"><span class="nav-sub-ic">' + icon(x.icon || (x.danger ? 'alert' : n.icon) || 'file', 16) + '</span><span class="nav-sub-lb">' + x.label + '</span></a>'; }).join('') + '</div></div>';
       }
-       return '<a href="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '" data-nav="' + n.key + '">' +
+       return '<a href="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" class="nav-it' + (n.key === activeKey ? ' active' : '') + '"' + navTint(n.color) + ' data-nav="' + n.key + '">' +
         '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + n.label + '</span></a>';
     }
     /* The everyday pages stay on top; everything else lives in folders so the menu stays short as features are added.
@@ -803,9 +805,9 @@
       { label: 'Account', keys: ['subscription', 'settings'] }
     ];
     var FOLDERS = [
-      { id: 'lab', label: 'Lab & Doctors', icon: 'flask', keys: ['outsourced', 'doctors'] },
-      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit'] },
-      { id: 'tools', label: 'Tools', icon: 'chat', keys: ['whatsapp', 'sms', 'email', 'downloads'] }
+      { id: 'lab', label: 'Lab & Doctors', icon: 'flask', color: '#d946ef', keys: ['outsourced', 'doctors'] },
+      { id: 'acct', label: 'Dues & Accounts', icon: 'wallet', color: '#ef4444', keys: ['dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit'] },
+      { id: 'tools', label: 'Tools', icon: 'chat', color: '#22c55e', keys: ['whatsapp', 'sms', 'email', 'downloads'] }
     ];
     var savedOpen = {}; try { savedOpen = JSON.parse(localStorage.getItem('labpos_navfolders') || '{}') || {}; } catch (e) { savedOpen = {}; }
     var byKey = {}; visible.forEach(function (n) { byKey[n.key] = n; });
@@ -817,7 +819,7 @@
       if (inside.length === 1) return itemHtml(byKey[inside[0]]); /* a folder with one page is just that page */
       var holds = inside.indexOf(activeKey) >= 0, open = holds || !!savedOpen[f.id];
       return '<div class="nav-fold' + (open ? ' open' : '') + (holds ? ' has-active' : '') + '" data-fold="' + f.id + '">' +
-         '<button type="button" class="nav-it nav-fh" data-route="' + (byKey[inside[0]] ? byKey[inside[0]].route : '#/dashboard') + '" title="' + esc(f.label) + '" aria-label="' + esc(f.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="nav-ic">' + icon(f.icon, 20) + '</span><span class="nav-lb">' + f.label + '</span>' +
+         '<button type="button" class="nav-it nav-fh"' + navTint(f.color) + ' data-route="' + (byKey[inside[0]] ? byKey[inside[0]].route : '#/dashboard') + '" title="' + esc(f.label) + '" aria-label="' + esc(f.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '"><span class="nav-ic">' + icon(f.icon, 20) + '</span><span class="nav-lb">' + f.label + '</span>' +
         '<svg class="nav-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></button>' +
         '<div class="nav-fb">' + inside.map(function (k) { return itemHtml(byKey[k]); }).join('') + '</div></div>';
     }

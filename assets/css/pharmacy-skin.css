@@ -56,7 +56,8 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); }
 a:focus-visible, button:focus-visible, .nav-it:focus-visible { outline: 3px solid rgba(47, 109, 246, .35); outline-offset: 2px; }
 
 /* cards: white, 1px soft border, very large radius, soft shadow */
-.card { border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--sh-sm); background: #fff; }
+/* every card has a clearly visible outline */
+body:not(.auth) .card, .card, .pt-card { border: 1.5px solid #c5cfdf; border-radius: var(--r-lg); box-shadow: var(--sh-sm); background: #fff; }
 .card-h { border-bottom: 1px solid var(--line2); }
 .modal { border-radius: 28px; border: 1px solid var(--line); box-shadow: var(--sh-lg); }
 .modal-ov { background: rgba(27, 42, 74, .5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
@@ -106,6 +107,8 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 .nav-sec2 { letter-spacing: .08em; font-weight: 800; }
 .nav-it, .nav-sub-it { color: var(--ink); border-radius: 12px; }
 .nav-ic { color: var(--muted); }
+/* every menu icon in its own colour (set per item in app.js as --nic) */
+.sidebar .nav-it .nav-ic, .sidebar .nav-it:hover .nav-ic, .sidebar .nav-it.active .nav-ic { color: var(--nic, #8793a8); }
 .nav-it:hover, .nav-sub-it:hover { background: #f1f4f9; color: var(--ink); }
 .nav-it:hover .nav-ic { color: var(--tint-ink); }
 .nav-it.active { background: var(--tint); color: var(--tint-ink); box-shadow: inset 0 0 0 1px var(--tint-line); font-weight: 700; }

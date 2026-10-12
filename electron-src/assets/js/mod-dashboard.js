@@ -78,6 +78,62 @@
         var key = dayKey(value);
         return !!key && (!range.from || key >= range.from) && key <= todayKey;
       }
+      /* ---- the chart over the selected period: one bar group per day (30 days), week (90 days) or month (all time) ---- */
+      var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], buckets = {};
+      function ymd(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+      function parseKey(k) { return new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, +(k.slice(8, 10) || 1)); }
+      function bucketOf(value) {
+        var k = dayKey(value); if (!k) return '';
+        if (period === 'all') return k.slice(0, 7);
+        if (period === '90') { var d = parseKey(k); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return ymd(d); }
+        return k;
+      }
+      function tally(value, field, amount) {
+        var bk = bucketOf(value); if (!bk) return;
+        var o = buckets[bk] || (buckets[bk] = { billed: 0, collected: 0, tests: 0 });
+        o[field] += amount;
+      }
+      function bucketList() {
+        var from = range.from, list = [], d, end = parseKey(todayKey);
+        if (period === 'all') {
+          var keys = Object.keys(buckets).sort(); if (!keys.length) return [];
+          d = parseKey(keys[0] + '-01'); d.setDate(1);
+          var floor = new Date(end.getFullYear(), end.getMonth() - 23, 1); if (d < floor) d = floor;
+          for (; d <= end; d = new Date(d.getFullYear(), d.getMonth() + 1, 1)) list.push(ymd(d).slice(0, 7));
+        } else if (period === '90') {
+          d = parseKey(bucketOf(from));
+          for (; d <= end; d.setDate(d.getDate() + 7)) list.push(ymd(d));
+        } else {
+          d = parseKey(from);
+          for (; d <= end; d.setDate(d.getDate() + 1)) list.push(ymd(d));
+        }
+        return list;
+      }
+      function bucketLabel(k) {
+        if (period === 'all') return MON[+k.slice(5, 7) - 1] + ' ' + k.slice(2, 4);
+        return (+k.slice(8, 10)) + ' ' + MON[+k.slice(5, 7) - 1];
+      }
+      function niceTop(v) { if (v <= 0) return 4; var q = v / 4, p = Math.pow(10, Math.floor(Math.log(q) / Math.LN10)), f = q / p; return 4 * (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * p; }
+      function shortNum(n) { return n >= 1000000 ? (Math.round(n / 100000) / 10) + 'M' : (n >= 1000 ? (Math.round(n / 100) / 10) + 'k' : String(Math.round(n))); }
+      var SERIES = { billed: ['Billed', '#3b82f6'], collected: ['Collected', '#10b981'], tests: ['Tests ordered', '#7c3aed'] };
+      function trendSvg(fields, isMoney) {
+        var list = bucketList(); if (!list.length) return '';
+        var W = 900, H = 250, L = 50, R = 10, T = 12, B = 30, iw = W - L - R, ih = H - T - B, n = list.length, step = iw / n, max = 0, g = '', bars = '', i;
+        list.forEach(function (k) { var o = buckets[k] || {}; fields.forEach(function (f) { max = Math.max(max, o[f] || 0); }); });
+        max = niceTop(max);
+        for (i = 0; i <= 4; i++) { var y = T + ih - ih * i / 4; g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#e3ecf7"' + (i ? ' stroke-dasharray="3 4"' : '') + '/><text x="' + (L - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="#8a94a6">' + (isMoney ? shortNum(max * i / 4) : (Math.round(max * i / 4 * 10) / 10)) + '</text>'; }
+        var nb = fields.length, bw = Math.max(2, Math.min(18, step / (nb + 0.8))), every = Math.ceil(n / 8);
+        list.forEach(function (k, idx) {
+          var o = buckets[k] || {}, cx = L + step * idx + step / 2;
+          fields.forEach(function (f, bi) {
+            var v = o[f] || 0, h = ih * v / max, x = cx - (nb * bw) / 2 + bi * bw;
+            bars += '<rect x="' + x.toFixed(1) + '" y="' + (T + ih - h).toFixed(1) + '" width="' + (bw - (nb > 1 ? 1 : 0)).toFixed(1) + '" height="' + Math.max(h, v > 0 ? 2 : 0).toFixed(1) + '" rx="' + Math.min(4, bw / 2) + '" fill="' + SERIES[f][1] + '"><title>' + bucketLabel(k) + (period === '90' ? ' (week)' : '') + ' — ' + SERIES[f][0] + ': ' + (isMoney ? 'Rs ' + Math.round(v).toLocaleString('en-US') : v) + '</title></rect>';
+          });
+          if (idx % every === 0) g += '<text x="' + cx + '" y="' + (H - 10) + '" text-anchor="middle" font-size="11" fill="#8a94a6">' + bucketLabel(k) + '</text>';
+        });
+        return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Trend over the selected period" style="display:block">' + g + bars + '</svg>' +
+          '<div class="dbc-leg">' + fields.map(function (f) { return '<span><i style="background:' + SERIES[f][1] + '"></i>' + SERIES[f][0] + '</span>'; }).join('') + '</div>';
+      }
       var invoices = DB.all('invoices') || [];
       invoices.forEach(function (inv) {
         if (!inv || !inv.id) return;
@@ -89,6 +145,7 @@
         if (inPeriod(inv.createdAt)) {
           row.billed += +inv.total || 0;
           row.invoices++;
+          tally(inv.createdAt, 'billed', +inv.total || 0);
         }
       });
       if (showBranchMoney) {
@@ -97,6 +154,7 @@
           if (!inv || !inPeriod(payment.date)) return;
           var row = rows[invoiceBranch[inv.id]] || rows.__unassigned;
           row.collected += +payment.amount || 0;
+          tally(payment.date, 'collected', +payment.amount || 0);
         });
       }
       var demand = {};
@@ -108,6 +166,7 @@
             var test = testId && DB.get('tests', testId), key = testId || item.code || item.name || 'unknown';
             if (!demand[key]) demand[key] = { name: (test && test.name) || item.name || 'Unnamed test', count: 0 };
             demand[key].count++;
+            tally(inv.createdAt, 'tests', 1);
           });
         });
       });
@@ -115,7 +174,7 @@
         .sort(function (a, b) { return b.count - a.count || a.name.localeCompare(b.name); }).slice(0, 10);
       var demandHtml = demandRows.length
         ? '<div class="tbl-wrap"><table class="table"><thead><tr><th>Test</th><th class="num">Ordered</th></tr></thead><tbody>' +
-          demandRows.map(function (r) { return '<tr><td><strong>' + App.esc(r.name) + '</strong></td><td class="num">' + r.count + '</td></tr>'; }).join('') +
+          demandRows.map(function (r) { return '<tr><td><strong>' + App.esc(r.name) + '</strong><div class="db-bar"><i style="width:' + Math.max(3, Math.round(100 * r.count / demandRows[0].count)) + '%"></i></div></td><td class="num">' + r.count + '</td></tr>'; }).join('') +
           '</tbody></table></div>'
         : App.empty('No test orders in this period.');
       var branchHtml = '';
@@ -128,10 +187,25 @@
             branchRows.map(function (r) { return '<tr><td><strong>' + App.esc(r.name) + '</strong><br><small class="muted">' + r.invoices + ' invoice' + (r.invoices === 1 ? '' : 's') + ' in period</small></td><td class="num">' + App.money(r.billed) + '</td><td class="num">' + App.money(r.collected) + '</td><td class="num">' + App.money(r.due) + '</td></tr>'; }).join('') +
             '</tbody></table></div>'
           : App.empty('No invoices or payments in this period.');
-        branchHtml = '<div class="db-smart-branch"><h3>Branch revenue &amp; dues</h3>' + branchTable +
+        var bMax = 0; branchRows.forEach(function (r) { bMax = Math.max(bMax, r.billed, r.collected, r.due); });
+        var branchBars = branchRows.length && bMax > 0 ? '<div class="db-bbars">' + branchRows.map(function (r) {
+          function line(label, v, color) { return '<div class="db-bline"><span>' + label + '</span><div class="db-btrack"><i style="width:' + (v > 0 ? Math.max(2, Math.round(100 * v / bMax)) : 0) + '%;background:' + color + '"></i></div><b>' + App.money(v) + '</b></div>'; }
+          return '<div class="db-bbranch"><div class="db-bname">' + App.esc(r.name) + '</div>' + line('Billed', r.billed, '#3b82f6') + line('Collected', r.collected, '#10b981') + line('Pending', r.due, '#f59e0b') + '</div>';
+        }).join('') + '</div>' : '';
+        branchHtml = '<div class="db-smart-branch"><h3>Branch revenue &amp; dues</h3>' + branchBars + branchTable +
           '<div class="dbc-sub">Billed and collected follow the selected period. Pending dues include all currently open invoices.</div></div>';
       }
-      return '<div class="db-smart-grid' + (showBranchMoney ? '' : ' db-smart-tests-only') + '">' + branchHtml +
+      /* top numbers + the trend over the selected period */
+      var kBilled = 0, kCollected = 0, kDue = 0, kInvoices = 0, kTests = 0;
+      Object.keys(rows).forEach(function (k) { kBilled += rows[k].billed; kCollected += rows[k].collected; kDue += rows[k].due; kInvoices += rows[k].invoices; });
+      Object.keys(demand).forEach(function (k) { kTests += demand[k].count; });
+      function kpi(label, value, color) { return '<div class="db-kpi" style="--kc:' + color + '"><small>' + label + '</small><b>' + value + '</b></div>'; }
+      var kpiHtml = '<div class="db-kpis">' + (showBranchMoney
+        ? kpi('Billed', App.money(kBilled), '#3b82f6') + kpi('Collected', App.money(kCollected), '#10b981') + kpi('Pending dues', App.money(kDue), '#f59e0b') + kpi('Invoices', kInvoices, '#7c3aed')
+        : kpi('Invoices', kInvoices, '#7c3aed') + kpi('Tests ordered', kTests, '#10b981')) + '</div>';
+      var trend = trendSvg(showBranchMoney ? ['billed', 'collected'] : ['tests'], showBranchMoney);
+      var trendHtml = trend ? '<div class="db-trend"><h3>' + (showBranchMoney ? 'Billed vs collected' : 'Tests ordered') + '</h3>' + trend + '</div>' : '';
+      return kpiHtml + trendHtml + '<div class="db-smart-grid' + (showBranchMoney ? '' : ' db-smart-tests-only') + '">' + branchHtml +
         '<div><h3>Test demand</h3>' + demandHtml + '</div></div>';
     }
 
@@ -408,7 +482,7 @@
     '--line:#e3ecf7;--line2:#edf2f9;--bg:#f4f7fc;--card:#ffffff;' +
     '--sh-sm:0 2px 8px rgba(19,24,69,.06);--sh-md:0 18px 45px rgba(11,23,64,.10);' +
     'font-family:"Plus Jakarta Sans",-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink)}' +
-    '.db-page .card{border-radius:16px;box-shadow:var(--sh-md);border:1px solid var(--line)}' +
+    '.db-page .card{border-radius:16px;box-shadow:var(--sh-md);border:1.5px solid #c5cfdf}' +
     '.db-page .card-h h3{color:var(--ink);font-weight:800;letter-spacing:-.01em}' +
     '</style>' +
     '<style>' +
@@ -422,6 +496,11 @@
     '.dbc-line{stroke-dasharray:100;animation:dbcDraw 1.1s .2s ease-out backwards}@keyframes dbcDraw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}' +
     '@media (prefers-reduced-motion:reduce){.dbc-bar,.dbc-line{animation:none}}' +
     '.db-smart{margin-bottom:16px}.db-smart-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:20px}.db-smart-grid.db-smart-tests-only{grid-template-columns:1fr}.db-smart-grid h3{font-size:15px;margin:0 0 10px;font-weight:800}.db-smart-grid .tbl-wrap{max-height:360px;overflow:auto}.db-smart-branch .dbc-sub{margin-top:8px}' +
+    '.db-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px}' +
+    '.db-kpi{background:#f7f9fd;border:1.5px solid #c5cfdf;border-left:4px solid var(--kc);border-radius:14px;padding:12px 14px}.db-kpi small{display:block;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}.db-kpi b{font-size:20px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}' +
+    '.db-trend{margin-bottom:20px;border:1.5px solid #c5cfdf;border-radius:14px;padding:14px 16px}.db-trend h3{font-size:15px;margin:0 0 8px;font-weight:800}' +
+    '.db-bar{height:5px;border-radius:99px;background:#e9eef8;margin-top:6px;overflow:hidden}.db-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#7c3aed,#3b82f6)}' +
+    '.db-bbars{display:flex;flex-direction:column;gap:12px;margin-bottom:14px}.db-bname{font-weight:800;font-size:13.5px;margin-bottom:6px}.db-bline{display:grid;grid-template-columns:72px 1fr auto;gap:10px;align-items:center;font-size:12px;color:var(--muted);margin-bottom:4px}.db-bline b{color:var(--ink);font-variant-numeric:tabular-nums;min-width:88px;text-align:right}.db-btrack{height:9px;border-radius:99px;background:#e9eef8;overflow:hidden}.db-btrack i{display:block;height:100%;border-radius:99px}' +
     '@media(max-width:900px){.db-smart-grid{grid-template-columns:1fr}}' +
     '.db-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:20px}' +
     '@media(max-width:1000px){.db-grid{grid-template-columns:1fr}}' +
