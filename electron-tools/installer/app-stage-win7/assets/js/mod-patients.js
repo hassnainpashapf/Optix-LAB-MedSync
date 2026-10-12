@@ -153,8 +153,8 @@
         '<span class="ptf-tprice">' + App.money(+t.price || 0) + '</span></label>';
     }).join('');
     return PTF_TSTYLE +
-      '<div class="form-row"><label class="label" for="ptf-ttype">Test type</label>' +
-      '<select class="select" id="ptf-ttype"><option value="regular">Regular Tests</option><option value="generic">Generic Tests</option></select>' +
+      '<div class="form-row ptf-wide"><label class="label" for="ptf-ttype">Test type</label>' +
+      '<select class="select" id="ptf-ttype"><option value="regular">Regular Tests</option><option value="generic">Generic Tests</option><option value="all">All Tests</option></select>' +
       '<div class="muted" style="font-size:12px;margin:6px 0">Selections from both types are kept when you switch. Generic templates must be imported as real lab tests before ordering.</div>' +
       '<label class="label" for="ptf-tsearch">Order Tests <span class="ptf-opt">(optional — sent to Lab Results)</span></label>' +
       '<input class="input" id="ptf-tsearch" placeholder="Search tests…" autocomplete="off">' +
@@ -205,6 +205,21 @@
   }
   /* Blood group is required on every staff patient form: a real group, never blank / "Unknown" */
   function isRealBlood(v) { v = String(v == null ? '' : v).trim(); return !!v && !/^(unknown|select.*|n\/?a|none|-+)$/i.test(v); }
+  var PTF_FSTYLE = '<style>' +
+    '#ptf-form.form-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px 14px}' +
+    '#ptf-form .form-2col{display:contents}' +
+    '#ptf-form .form-row{grid-column:span 2;gap:4px}' +
+    '#ptf-form .ptf-wide{grid-column:1/-1}' +
+    '#ptf-form .ptf-half{grid-column:span 2}' +
+    '#ptf-form .label{margin:0}' +
+    '#ptf-form .input,#ptf-form .select,#ptf-form textarea.input{border:1.5px solid #8c9ab3;background:#fff}' +
+    '#ptf-form .input:focus,#ptf-form .select:focus{border-color:#2f6df6;box-shadow:0 0 0 3px rgba(47,109,246,.16)}' +
+    '#ptf-form textarea.input{min-height:0;resize:vertical}' +
+    '#ptf-form .f-err{min-height:0;margin:0}#ptf-form .f-err:empty{display:none}' +
+    '#ptf-form .modal-actions{grid-column:1/-1;margin-top:4px}' +
+    '@media(max-width:900px){#ptf-form.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#ptf-form .form-row,#ptf-form .ptf-half{grid-column:span 1}}' +
+    '@media(max-width:560px){#ptf-form.form-grid{grid-template-columns:1fr}}' +
+    '</style>';
   function formHTML(p) {
     p = p || {};
     function val(k) { return App.esc(p[k] == null ? '' : p[k]); }
@@ -223,7 +238,7 @@
           App.esc(d.name) + '</option>';
       }).join('');
     return '' +
-      '<form id="ptf-form" class="form-grid" novalidate>' +
+      PTF_FSTYLE + '<form id="ptf-form" class="form-grid" novalidate>' +
       '<div class="form-row"><label class="label" for="ptf-name">Full Name *</label>' +
       '<input class="input" id="ptf-name" maxlength="80" placeholder="e.g. Muhammad Ali" value="' + val('name') + '">' +
       '<div class="f-err" id="ptf-e-name"></div></div>' +
@@ -270,9 +285,9 @@
       '<input class="input" id="ptf-destloc" list="ptf-destloc-dl" maxlength="120" value="' + App.esc(App.visitDefaults().destLocation) + '">' + App.datalistHtml('ptf-destloc-dl', 'destLocation', App.visitDefaults().destLocation) + '</div>' +
       (branches.length ? '<div class="form-row"><label class="label" for="ptf-branch">Branch</label><select class="select" id="ptf-branch"><option value="">Unassigned</option>' + branches.map(function (b) { return '<option value="' + App.esc(b.id) + '"' + (defaultBranch && defaultBranch.id === b.id ? ' selected' : '') + '>' + App.esc(b.name || b.code || b.id) + '</option>'; }).join('') + '</select></div>' : '') +
       '<div class="form-row"><label class="label" for="ptf-ref">Reference <span class="ptf-opt">(shown on the report)</span></label><select class="select" id="ptf-ref">' + App.optionsHtml('reference', App.listOptions('reference')[0] || '') + '</select></div>' : '') +
-      '<div class="form-row"><label class="label" for="ptf-address">Address</label>' +
+      '<div class="form-row ptf-half"><label class="label" for="ptf-address">Address</label>' +
       '<textarea class="input" id="ptf-address" rows="2" maxlength="200" placeholder="Street, area, city">' + val('address') + '</textarea></div>' +
-      '<div class="form-row"><label class="label" for="ptf-notes">Notes / Medical History</label>' +
+      '<div class="form-row ptf-half"><label class="label" for="ptf-notes">Notes / Medical History</label>' +
       '<textarea class="input" id="ptf-notes" rows="2" maxlength="500" placeholder="Allergies, chronic conditions, remarks…">' + val('notes') + '</textarea></div>' +
       (!p.id ? orderTestsHTML() : '') +
       '<div class="modal-actions">' +
@@ -289,6 +304,14 @@
   function bindForm(close, existing, afterSave) {
     var form = document.getElementById('ptf-form');
     if (!form) return;
+    /* tidy order, three fields per row: name / father / phone, age / gender / blood group, date of birth / CNIC / consultant, ... */
+    ['name', 'father', 'whatsapp', 'age', 'gender', 'blood', 'dob', 'cnic', 'doctor', 'panel', 'panelref', 'regdate', 'regloc', 'destloc', 'branch', 'ref', 'address', 'notes'].forEach(function (k, i) {
+      var el = document.getElementById('ptf-' + k), row = el && el.closest ? el.closest('.form-row') : null;
+      if (row) row.style.order = String(i + 1);
+    });
+    var tt = document.getElementById('ptf-ttype'), ttRow = tt && tt.closest ? tt.closest('.form-row') : null;
+    if (ttRow) ttRow.style.order = '30';
+    var acts = form.querySelector('.modal-actions'); if (acts) acts.style.order = '40';
     document.getElementById('ptf-cancel').addEventListener('click', close);
     // the one number box: the WhatsApp button next to it follows what is typed, and a number that already exists is flagged
     var phoneInput = document.getElementById('ptf-whatsapp');
@@ -371,12 +394,12 @@
       var q = tSearch.value.trim().toLowerCase(), type = tType.value, visible = 0;
       var rows = tList.querySelectorAll('.ptf-trow');
       for (var i = 0; i < rows.length; i++) {
-        var show = rows[i].getAttribute('data-ttype') === type && (!q || (rows[i].getAttribute('data-tname') || '').indexOf(q) >= 0);
+        var show = (type === 'all' || rows[i].getAttribute('data-ttype') === type) && (!q || (rows[i].getAttribute('data-tname') || '').indexOf(q) >= 0);
         rows[i].style.display = show ? '' : 'none';
         if (show) visible++;
       }
       document.getElementById('ptf-tempty').hidden = !!visible;
-      document.getElementById('ptf-tcatalog').hidden = type !== 'generic';
+      document.getElementById('ptf-tcatalog').hidden = type === 'regular';
       paintTestReferences();
     }
     function showTemplateAvailability() {
@@ -410,7 +433,7 @@
     }
     if (tSearch && tList) {
       tSearch.addEventListener('input', filterTests);
-      tType.addEventListener('change', function () { if (tType.value === 'generic') showTemplateAvailability(); filterTests(); });
+      tType.addEventListener('change', function () { if (tType.value !== 'regular') showTemplateAvailability(); filterTests(); });
       tList.addEventListener('change', paintTSum);
       document.getElementById('ptf-gender').addEventListener('change', paintTestReferences);
       document.getElementById('ptf-age').addEventListener('input', paintTestReferences);
