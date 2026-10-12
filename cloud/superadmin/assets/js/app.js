@@ -762,7 +762,7 @@ var PRODUCT_CARDS = [
   { id: 'lab', name: 'Blood Test Lab', sub: 'Labs, plans, payments, branch controls, updates and settings.', color: '#0ea5a4', ico: IC.flask },
   { id: 'pharmacy', name: 'Pharmacy POS', sub: 'Pharmacy businesses, who has access, and their plans.', color: '#7c3aed',
     ico: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>' },
-  { id: 'hospital', name: 'Hospital Management', sub: 'Hospital workspaces, plans and the platform owner panel. Opens in its own tab.', color: '#2f6df6',
+  { id: 'hospital', name: 'Hospital Management', sub: 'Hospital workspaces, plans and the platform owner panel.', color: '#2f6df6',
     ico: '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M12 9v6M9 12h6"/><path d="M9 21v-4h6v4"/></svg>' }
 ];
 var HOSPITAL_SITE = 'https://optix-medical-sync.pages.dev';
@@ -819,17 +819,12 @@ function openProduct(id, btn) {
     enterApp();
     return;
   }
-  /* Hospital: its own server and its own panel. The hub hands out a one-time ticket, so no second sign-in. */
-  var w = null;
-  try { w = window.open('', '_blank'); if (w) w.opener = null; } catch (e) { w = null; }
+  /* Hospital: its own server and its own panel, opened in this same tab. The hub hands out a one-time ticket, so no second sign-in. */
   if (btn) btn.disabled = true;
   api('/api/saas/sa-ticket', { method: 'POST', body: { product: 'hospital' } }).then(function (r) {
-    var url = hospitalPanelUrl() + '#sso=' + encodeURIComponent(r.ticket);
-    if (btn) btn.disabled = false;
-    if (w) w.location.href = url; else location.href = url;
+    location.href = hospitalPanelUrl() + '#sso=' + encodeURIComponent(r.ticket);
   }, function (err) {
     if (btn) btn.disabled = false;
-    if (w) { try { w.close(); } catch (e) { /* ignore */ } }
     if (err && err.auth) { logout(true); return; }
     toast(errMsg(err) || 'Could not open the Hospital panel.', 'err');
   });
