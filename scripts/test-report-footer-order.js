@@ -107,7 +107,7 @@ function suite(folder) {
       assert.ok(addressAt > noteAt && poweredAt > addressAt, 'HTML NOTE precedes full address/contact block');
       assert.match(footer.slice(0, addressAt).match(/<div[^>]*>$/)[0], /font-weight:700(?:;|")/, 'Entire contact block inherits bold');
       const noteAndAddress = footer.slice(footer.indexOf('<div class="rpt-disc"'), addressAt);
-      assert.equal((noteAndAddress.match(/border-(?:top|bottom):1px solid #000/g) || []).length, 1, 'Single HTML separator between NOTE and address');
+      assert.equal((noteAndAddress.match(/border:1px solid #000/g) || []).length, 1, 'The NOTE sits in one full box');
       const measurement = pdf.measures.find(m => m.value === address && m.width === 186 && m.size === 9);
       assert.ok(measurement && measurement.style === 'bold', 'Measure address with the bold drawing font');
       const reference = new jsPDF({ unit: 'mm', format: 'a4' });
@@ -126,7 +126,7 @@ function suite(folder) {
         assert.ok(noteDraw.bottom < addr.y && addr.bottom < powered.y, 'NOTE above address above powered-by on every PDF page');
         assert.equal(addr.style, 'bold'); assert.equal(addr.align, 'center');
         assert.ok(addr.widths.every(w => w <= 186.01), 'Bold wrapped contact lines fit content width');
-        assert.equal(pdf.lines.filter(l => l.page === page && l.x1 === 12 && l.x2 === 198 && l.y1 > noteDraw.bottom && l.y1 < addr.y).length, 1, 'Single PDF separator between NOTE and address');
+        assert.equal(pdf.lines.filter(l => l.page === page && l.x1 === 12 && l.x2 === 198 && l.y1 > noteDraw.bottom && l.y1 < addr.y).length, 0, 'The NOTE is drawn in a box: no loose separator line between NOTE and address');
       } else {
         assert.ok(noteDraw.bottom < powered.y, 'Address-free footer still contains disclaimer and powered-by');
       }

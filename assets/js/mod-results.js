@@ -2551,7 +2551,7 @@
         App.esc(verNote) + '</p>';
 
     /* 2: thin black rule */
-    var rule = '<hr class="rpt-footrule" style="border:none;border-top:1px solid #000;margin:3px 0">';
+    var rule = '<hr class="rpt-footrule" style="border:none;border-top:1px solid #000;margin:2px 0 3px">';
 
     /* 3: signatory doctors in one row, spread across */
     var sigs = (Array.isArray(s.signatories) ? s.signatories : [])
@@ -2559,7 +2559,7 @@
     var sigHtml = '';
     if (sigs.length) {
       sigHtml =
-        '<div class="rpt-sigs" style="display:flex;justify-content:space-around;gap:12px;margin:6px 0 4px">' +
+        '<div class="rpt-sigs" style="display:flex;justify-content:space-around;gap:12px;margin:3px 0 4px">' +
           sigs.map(function (g) {
             var sigPic = '';
             var hasSig = s.enableSignatures !== false && (g.sigImg || g.signature);
@@ -2570,7 +2570,7 @@
                 (hasStamp ? '<img src="' + g.stampImg + '" style="max-height:38px;max-width:55px;object-fit:contain" alt="Stamp">' : '') +
                 '</div>';
             } else {
-              sigPic = '<div style="height:10px"></div>';
+              sigPic = '';
             }
             return '<div class="rpt-sig" style="flex:1;text-align:center;min-width:0">' +
               sigPic +
@@ -2604,7 +2604,7 @@
     if (_fn === 'Get well soon. Reports available on counter & phone.') _fn = '';
     var disc = s.disclaimer || _fn || DEFAULT_DISCLAIMER;
     var discHtml =
-      '<div class="rpt-disc" style="border:none;border-bottom:1px solid #000;padding:2px 0 6px;font-size:0.52em;line-height:1.4;margin:4px 0 0;text-align:justify">' +
+      '<div class="rpt-disc" style="border:1px solid #000;padding:5px 9px;font-size:0.66em;line-height:1.45;color:#000;margin:6px 0 4px;text-align:justify">' +
         App.esc(disc) + '</div>';
 
     /* 6: powered-by (existing constraint) */
@@ -3394,14 +3394,15 @@
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
     var fAddrLines = fAddrParts.length ? doc.splitTextToSize(fAddrParts.join(' | '), CW) : [];
     var fNote = s.disclaimer || ((s.footerNote && s.footerNote !== 'Get well soon. Reports available on counter & phone.') ? s.footerNote : '') || DEFAULT_DISCLAIMER;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6);
-    var fNoteLines = doc.splitTextToSize(fNote, CW);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.6);
+    var fNoteLines = doc.splitTextToSize(fNote, CW - 5);
+    var fNoteH = fNoteLines.length * 3.3 + 3.4;     /* the NOTE sits in a box */
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
     var fTextLines = String(s.footerText || '').trim() ? doc.splitTextToSize(String(s.footerText).trim(), CW) : [];
     var fTextH = fTextLines.length ? fTextLines.length * 4.2 + 3 : 0;
     var fH = (pre && pre.ftr)
       ? (CW * pre.ftr.ratio + 2)
-      : (fTextH + fVerLines.length * 4.4 + 3 + 1 + 4 + fSigBlockH + 4 + 1 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + fNoteLines.length * 2.9 + 3 + 1 + 5);
+      : (fTextH + fVerLines.length * 4.4 + 3 + 3 + fSigBlockH + 3 + fNoteH + 3 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + 5);
 
     function drawFooter() {
       var fy = PH - FM - fH;
@@ -3418,7 +3419,7 @@
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
       txt(fVerLines, W / 2, curY + 3, { align: 'center' });
       curY += fVerLines.length * 4.4 + 3;
-      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, curY, W - M, curY); curY += 5;
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, curY, W - M, curY); curY += 3;
       fSigs.forEach(function (g, k) {
         var fCx = M + fSw * (k + 0.5), fSy = curY;
         var sigImgData = (s.enableSignatures !== false) ? (g.sigImg || g.signature) : null;
@@ -3436,10 +3437,9 @@
         if (g.title) { txt(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fCx, fSy, { align: 'center' }); fSy += 3.9; }
       });
       curY += fSigBlockH + 3;
-      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.line(M, curY, W - M, curY); curY += 4;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(6.6); doc.setTextColor(20, 20, 20);
-      txt(fNoteLines, M, curY, {}); curY += fNoteLines.length * 2.9 + 2;
-      doc.setLineWidth(0.3); doc.line(M, curY, W - M, curY); curY += 4;
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.rect(M, curY, CW, fNoteH);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(7.6); doc.setTextColor(0, 0, 0);
+      txt(fNoteLines, M + 2.5, curY + 3.4, {}); curY += fNoteH + 3;
       if (fAddrLines.length) {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.setTextColor(20, 20, 20);
         txt(fAddrLines, W / 2, curY, { align: 'center' }); curY += fAddrLines.length * 4.2 + 2;
