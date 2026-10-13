@@ -641,7 +641,7 @@
     }
 
     renderShell(key);
-    paintSubBanner(); startSubWatch();
+    paintSubBanner(); startSubWatch(); paintCrit();
     var view = document.getElementById('view');
     view.innerHTML = '';
     window.scrollTo(0, 0);
@@ -685,6 +685,83 @@
     }
     if (!html) { b.hidden = true; b.innerHTML = ''; return; }
     b.className = 'sub-banner ' + cls; b.innerHTML = html; b.hidden = false;
+  }
+  /* Critical results topbar badge & dropdown */
+  function paintCrit() {
+    var wrap = document.getElementById('tbCritWrap');
+    if (!wrap) return;
+    var me = session();
+    if (!me || ['admin', 'technician'].indexOf(me.role) === -1 || (window.App && App.canPage && !App.canPage('results')) || (window.App && App.featureOn && !App.featureOn('results'))) {
+      wrap.style.display = 'none';
+      return;
+    }
+    var crits = [];
+    try {
+      crits = (window.DB ? DB.all('results') : []).filter(function (r) {
+        return r && r.critical && Array.isArray(r.critical) && r.critical.length && !r.criticalAck;
+      }).sort(function (a, b) {
+        return String(b.reportedAt || '').localeCompare(String(a.reportedAt || ''));
+      });
+    } catch (e) {}
+
+    if (!crits.length) {
+      wrap.style.display = 'none';
+      var m = document.getElementById('tbCritMenu');
+      if (m) m.hidden = true;
+      return;
+    }
+
+    wrap.style.display = 'inline-flex';
+    var badge = document.getElementById('tbCritBadge');
+    if (badge) badge.textContent = crits.length > 99 ? '99+' : String(crits.length);
+
+    var menu = document.getElementById('tbCritMenu');
+    if (!menu) return;
+
+    var rows = crits.map(function (r) {
+      var inv = (window.DB ? DB.get('invoices', r.invoiceId) : null) || {};
+      var p = (window.DB ? DB.get('patients', inv.patientId) : null) || {};
+      var t = (window.DB ? DB.get('tests', r.testId) : null) || {};
+      return '<div class="tb-crit-item" style="padding:12px 16px;border-bottom:1px solid #fee2e2;display:flex;align-items:center;justify-content:space-between;gap:12px">' +
+        '<div style="min-width:0;flex:1">' +
+          '<div style="font-size:13px;line-height:1.3">' +
+            '<b style="color:#991b1b">' + esc(p.name || '—') + '</b> ' +
+            '<span style="color:#7f1d1d;font-size:12px">· ' + esc(inv.no || inv.id || '') + ' · ' + esc(t.name || '') + '</span>' +
+          '</div>' +
+          '<div style="margin-top:4px">' +
+            r.critical.map(function (c) {
+              return '<span style="display:inline-block;margin:2px 8px 0 0;font-size:12.5px">' +
+                '<b>' + esc(c.name) + '</b> <span style="color:#dc2626;font-weight:800">' + (c.dir === 'high' ? '&uarr; ' : '&darr; ') + esc(c.value) + ' ' + esc(c.unit || '') + '</span>' +
+              '</span>';
+            }).join('') +
+          '</div>' +
+          '<small style="color:#991b1b;font-size:11px;display:block;margin-top:4px">' + esc(dt(r.reportedAt) || r.reportedAt || '') + '</small>' +
+        '</div>' +
+        '<button type="button" class="btn btn-sm tb-crit-ack-btn" data-crit-ack="' + esc(r.id) + '" style="flex:none;padding:5px 14px;font-size:12px;font-weight:700;border:1px solid #fca5a5;background:#fff;color:#b91c1c;border-radius:8px;cursor:pointer">Acknowledge</button>' +
+      '</div>';
+    }).join('');
+
+    menu.innerHTML =
+      '<div style="padding:12px 16px;background:#fef2f2;border-bottom:1px solid #fecaca">' +
+        '<b style="color:#991b1b;font-size:14px;display:flex;align-items:center;gap:6px">' +
+          '<span style="font-size:16px">🚨</span> Critical results (' + crits.length + ')' +
+        '</b>' +
+        '<p style="margin:2px 0 0;font-size:12px;color:#7f1d1d">Inform the doctor, then acknowledge.</p>' +
+      '</div>' +
+      '<div style="max-height:360px;overflow-y:auto">' + rows + '</div>';
+
+    menu.querySelectorAll('[data-crit-ack]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var id = btn.getAttribute('data-crit-ack');
+        if (!id || !window.DB) return;
+        var u = session() || {};
+        DB.update('results', id, { criticalAck: { by: u.name || 'user', at: new Date().toISOString() } });
+        if (window.App && App.notifications) App.notifications.refresh();
+        if (window.App && App.toast) App.toast('Critical result acknowledged');
+        paintCrit();
+      });
+    });
   }
   /* plan limit reached? (instant, from the local data) -> explain and stop BEFORE anything is saved */
   function limitHit(kind) {
@@ -945,6 +1022,11 @@
        '<div class="tb-crumb"><span class="tb-crumb-ic">' + (activeKey === 'dashboard' ? _gridSvg : icon((navItem && navItem.icon) || 'grid', 16)) + '</span><h1 class="page-title">' + esc(activeKey === 'dashboard' ? 'Dashboard' : _pageTitle) + '</h1></div>' +
        '<div class="top-right">' +
        (activeKey === 'dashboard' ? '' : '<div class="tb-qa">' + tbQa + '</div>') +
+       '<div class="tb-crit-wrap" id="tbCritWrap" style="display:none">' +
+       '<button type="button" class="tb-icon-btn tb-crit-btn" id="tbCritBtn" aria-label="Critical Results" title="Critical Results" aria-haspopup="true" aria-expanded="false">' +
+       '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+       '<span class="tb-crit-badge" id="tbCritBadge">0</span></button>' +
+       '<div class="tb-crit-menu" id="tbCritMenu" hidden></div></div>' +
        '<button type="button" class="tb-icon-btn" id="tbMsgBtn" aria-label="Messages" title="Messages"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="4"/><path d="M8 10h8M8 14h5"/></svg><span class="tb-dot"></span></button>' +
        (can('downloads', s.role) ? '<a class="btn btn-sm tb-icon tb-icon-btn" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>' : '') +
        '<a class="tb-icon-btn tb-bell" id="notificationBell" href="#/notifications" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0112 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg><span class="tb-dot" id="notificationCount"></span></a>' +
@@ -965,6 +1047,17 @@
     document.getElementById('tbFwd').addEventListener('click', function () { history.forward(); });
     var msgBtn = document.getElementById('tbMsgBtn');
     if (msgBtn) msgBtn.addEventListener('click', function () { location.hash = '#/notifications'; });
+    var critBtn = document.getElementById('tbCritBtn');
+    var critMenu = document.getElementById('tbCritMenu');
+    if (critBtn && critMenu) {
+      critBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        critMenu.hidden = !critMenu.hidden;
+        critBtn.setAttribute('aria-expanded', String(!critMenu.hidden));
+        var userMenu = document.getElementById('userMenu');
+        if (userMenu) userMenu.hidden = true;
+      });
+    }
     if (App.notifications) App.notifications.start();
     /* avatar dropdown: toggle, close on outside click / Escape (delegated once) */
     (function () {
@@ -974,23 +1067,31 @@
         e.stopPropagation();
         userMenu.hidden = !userMenu.hidden;
         avatarBtn.setAttribute('aria-expanded', String(!userMenu.hidden));
+        var cm = document.getElementById('tbCritMenu');
+        if (cm) cm.hidden = true;
       });
       if (!window.__tbAcctWired) {
         window.__tbAcctWired = true;
         document.addEventListener('click', function (e) {
           var m = document.getElementById('userMenu');
           if (m && !m.hidden && !e.target.closest('.tb-acct')) m.hidden = true;
+          var cm = document.getElementById('tbCritMenu');
+          if (cm && !cm.hidden && !e.target.closest('#tbCritWrap')) cm.hidden = true;
         });
         document.addEventListener('keydown', function (e) {
           if (e.key === 'Escape') {
             var m = document.getElementById('userMenu');
             var b = document.getElementById('avatarBtn');
             if (m && !m.hidden) { m.hidden = true; if (b) b.setAttribute('aria-expanded', 'false'); }
+            var cm = document.getElementById('tbCritMenu');
+            var cb = document.getElementById('tbCritBtn');
+            if (cm && !cm.hidden) { cm.hidden = true; if (cb) cb.setAttribute('aria-expanded', 'false'); }
           }
         });
       }
     })();
     syncNavToggle();
+    paintCrit();
     /* One delegated controller handles desktop collapse and the mobile drawer. */
     if (!window.__sideDrawerWired) {
       window.__sideDrawerWired = true;
@@ -1143,6 +1244,7 @@
     badge: badge,
     icon: icon,
     renderShell: renderShell,
+    paintCrit: paintCrit,
     isNative: isNativeApp,
     applyFont: applyFont,
     session: session,

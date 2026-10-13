@@ -53,6 +53,7 @@
       b.title = alerts.length + ' actionable alert' + (alerts.length === 1 ? '' : 's');
     }
     if (count) { count.hidden = !alerts.length; count.textContent = alerts.length > 99 ? '99+' : String(alerts.length); }
+    if (App.paintCrit) App.paintCrit();
     if (App.renderNotifications && (location.hash || '').split('?')[0] === '#/notifications') App.renderNotifications(alerts);
   }
   function unlock(e) {

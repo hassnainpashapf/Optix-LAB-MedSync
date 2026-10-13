@@ -845,7 +845,7 @@
     '.ap-pager .pg.on{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:700}' +
     '</style>' +
 
-    ovHead + critCard() + ovGrid + midHtml +
+    ovHead + ovGrid + midHtml +
     mid2Html +
     patCard +
     '<div id="tip2" class="tip2" hidden></div>' +
@@ -917,34 +917,12 @@
       });
     }
 
-    /* Critical results nobody has acknowledged yet (set when a result far outside the normal range is saved) */
+    /* Critical results are displayed in the header icon */
     function critCard() {
-      var me = App.session();
-      if (!me || ['admin', 'technician'].indexOf(me.role) === -1 || !App.canPage('results') || (App.featureOn && !App.featureOn('results'))) return '';
-      var crits = DB.all('results').filter(function (r) { return r.critical && r.critical.length && !r.criticalAck; })
-        .sort(function (a, b) { return String(b.reportedAt || '').localeCompare(String(a.reportedAt || '')); });
-      if (!crits.length) return '';
-      var rows = crits.slice(0, 8).map(function (r) {
-        var inv = DB.get('invoices', r.invoiceId) || {}, p = DB.get('patients', inv.patientId) || {}, t = DB.get('tests', r.testId) || {};
-        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #fecaca;flex-wrap:wrap">' +
-          '<div style="flex:1;min-width:200px"><b style="color:#991b1b">' + App.esc(p.name || '—') + '</b> <span style="color:#7f1d1d;font-size:12.5px">· ' + App.esc(inv.no || inv.id || '') + ' · ' + App.esc(t.name || '') + '</span><br>' +
-          r.critical.map(function (c) { return '<span style="display:inline-block;margin:3px 8px 0 0;font-size:13px"><b>' + App.esc(c.name) + '</b> <span style="color:#b91c1c;font-weight:800">' + (c.dir === 'high' ? '&uarr; ' : '&darr; ') + App.esc(c.value) + ' ' + App.esc(c.unit || '') + '</span></span>'; }).join('') + '</div>' +
-          '<small style="color:#7f1d1d">' + App.esc(App.dt(r.reportedAt) || '') + '</small>' +
-          '<button class="btn btn-sm btn-danger" data-ack="' + App.esc(r.id) + '">Acknowledge</button></div>';
-      }).join('');
-      return '<div class="card" style="margin-bottom:16px;background:#fff5f5"><div class="card-h"><h3 style="color:#991b1b">🚨 Critical results (' + crits.length + ')</h3>' +
-        '<span class="muted" style="font-size:12.5px">Inform the doctor, then acknowledge.</span></div><div class="card-b">' + rows + '</div></div>';
+      return '';
     }
     function wireCrit(v) {
-      v.querySelectorAll('[data-ack]').forEach(function (b) {
-        b.addEventListener('click', function () {
-          var me = App.session();
-          if (!me || ['admin', 'technician'].indexOf(me.role) === -1 || !App.canPage('results') || (App.featureOn && !App.featureOn('results'))) return;
-          DB.update('results', b.getAttribute('data-ack'), { criticalAck: { by: (session() || {}).name || 'user', at: new Date().toISOString() } });
-          if (App.notifications) App.notifications.refresh();
-          v.innerHTML = buildDashboard(); wireCrit(v); wireFlow(v); wireAppts(v); scheduleCountUp();
-        });
-      });
+      if (App.paintCrit) App.paintCrit();
     }
 
     function wireAppts(v) {
