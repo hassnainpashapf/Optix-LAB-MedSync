@@ -22,6 +22,10 @@
     plus: '<path d="M12 5v14M5 12h14"/>',
     printer: '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
     menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+    'arrow-left': '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+    'arrow-right': '<path d="M5 12h14M12 5l7 7-7 7"/>',
+    'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
     alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
     download: '<path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>',
@@ -670,7 +674,7 @@
     if (!b) return;
     var l = subInfo && subInfo.lab, s = session();
     if (!l || !s || l.legacy) { b.hidden = true; return; }
-    var admin = s.role === 'admin', link = admin ? '<a href="#/subscription" class="sub-cta">' + (l.status === 'expired' ? 'Renew now' : 'Choose a plan') + '</a>' : '<span class="sub-note">Ask your lab admin to renew.</span>';
+    var admin = s.role === 'admin', link = admin ? '<a href="#/subscription" class="sub-cta">' + (l.status === 'expired' ? 'Renew now' : 'Plan &amp; Usage') + '</a>' : '<span class="sub-note">Ask your lab admin to renew.</span>';
     var html = '', cls = '';
     if (l.status === 'expired') {
       cls = 'bad';
@@ -678,7 +682,7 @@
     } else if (l.status === 'trial') {
       var d = l.daysLeft == null ? 14 : l.daysLeft;
       cls = d <= 3 ? 'bad' : (d <= 7 ? 'warn' : 'info');
-      html = '<b>Free trial: ' + Math.max(d, 0) + ' day' + (d === 1 ? '' : 's') + ' left.</b> ' + (d <= 7 ? 'Pick a plan to keep saving data without interruption. ' : 'Everything is unlocked. ') + link;
+      html = '<b>Free trial: ' + Math.max(d, 0) + ' day' + (d === 1 ? '' : 's') + ' left.</b> ' + (d <= 7 ? 'Pick a plan to keep saving data without interruption. ' : '') + link;
     } else if (l.status === 'active' && l.daysLeft != null && l.daysLeft <= 5) {
       cls = l.daysLeft <= 2 ? 'bad' : 'warn';
       html = '<b>Your ' + esc(l.planName) + ' plan ends in ' + Math.max(l.daysLeft, 0) + ' day' + (l.daysLeft === 1 ? '' : 's') + '.</b> Renew to avoid interruption. ' + link;
@@ -840,10 +844,41 @@
       '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
        '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Sync') + '</b></span>' +
       '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
+      '<div class="sb-search"><span class="sb-search-ic">' + icon('search', 16) + '</span><input id="sbSearch" type="search" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search the menu"></div>' +
       '<nav class="nav">' + items + '</nav>' +
       '<div class="side-foot"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a>' +
       '<div class="sf-user"><span class="sf-av">' + ((_me && _me.photo) ? '<img src="' + _me.photo + '" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">' : esc((s.name || 'U').charAt(0).toUpperCase())) + '</span><span class="sf-tx"><b>' + esc(s.name || 'User') + '</b><small>' + esc(roleLabel(s)) + '</small></span>' +
       '<button type="button" class="sf-out" id="sideLogout" title="Log out" aria-label="Log out">' + icon('logout', 17) + '</button></div></div>';
+    /* the menu search: type to narrow the menu to matching pages (sections and groups with no match hide) */
+    (function () {
+      var inp = document.getElementById('sbSearch'); if (!inp) return;
+      inp.addEventListener('input', function () {
+        var q = inp.value.trim().toLowerCase(), nav = document.querySelector('#sidebar .nav'); if (!nav) return;
+        function txt(n) { return String(n.textContent || '').toLowerCase(); }
+        nav.querySelectorAll('.nav-it, .nav-sub-it').forEach(function (n) { n.style.display = ''; });
+        nav.querySelectorAll('.nav-grp, .nav-fold').forEach(function (n) { n.style.display = ''; n.classList.remove('sb-found'); });
+        nav.querySelectorAll('.nav-sec2').forEach(function (n) { n.style.display = ''; });
+        if (!q) return;
+        nav.querySelectorAll('.nav-grp, .nav-fold').forEach(function (g) {
+          var any = false;
+          g.querySelectorAll('.nav-it, .nav-sub-it').forEach(function (n) { var m = txt(n).indexOf(q) >= 0; n.style.display = m ? '' : 'none'; if (m) any = true; });
+          g.style.display = any ? '' : 'none'; if (any) g.classList.add('sb-found');
+        });
+        nav.querySelectorAll(':scope > .nav-it').forEach(function (n) { n.style.display = txt(n).indexOf(q) >= 0 ? '' : 'none'; });
+        /* a section label stays only when something under it is showing */
+        var secs = nav.querySelectorAll('.nav-sec2');
+        secs.forEach(function (sec) {
+          var shown = false, el = sec.nextElementSibling;
+          while (el && !el.classList.contains('nav-sec2')) { if (el.style.display !== 'none') shown = true; el = el.nextElementSibling; }
+          sec.style.display = shown ? '' : 'none';
+        });
+      });
+      inp.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        var first = document.querySelector('#sidebar .nav a.nav-it:not([style*="none"]), #sidebar .nav .nav-sub-it:not([style*="none"])');
+        if (first && first.getAttribute('href')) { location.hash = first.getAttribute('href'); }
+      });
+    })();
     document.getElementById('sideLogout').addEventListener('click', logout);
     paintSidePlan();
     /* topbar */
@@ -917,12 +952,15 @@
       '@media (max-width:640px){.tb-qa{display:none}}' +
       '</style>' +
        '<button type="button" class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false" title="Toggle navigation">' + icon('menu', 18) + '</button>' +
-       '<h1 class="page-title">' + esc(activeKey === 'dashboard' ? 'Dashboard' : _pageTitle) + '</h1>' +
+       '<button type="button" class="tb-nb" id="tbBack" aria-label="Back" title="Back">' + icon('arrow-left', 16) + '</button>' +
+       '<button type="button" class="tb-nb" id="tbFwd" aria-label="Forward" title="Forward">' + icon('arrow-right', 16) + '</button>' +
+       '<div class="tb-crumb"><span class="tb-crumb-ic">' + icon((navItem && navItem.icon) || 'grid', 16) + '</span><h1 class="page-title">' + esc(activeKey === 'dashboard' ? 'Dashboard' : _pageTitle) + '</h1></div>' +
       '<div class="top-right"><div class="tb-qa">' + tbQa + '</div><div class="tb-alert-actions">' +
       (can('downloads', s.role) ? '<a class="btn btn-sm tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>' : '') +
       '<a class="btn btn-sm tb-icon tb-bell" id="notificationBell" href="#/notifications" title="Notifications" aria-label="Notifications">' + icon('bell', 18) + '<span id="notificationCount" class="tb-bell-count" hidden></span></a></div></div>' +
       '<div class="tb-acct">' +
-      '<button class="tb-avatar" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false">' + _avatarInner + '</button>' +
+      '<button class="tb-avatar tb-chip" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false"><span class="tb-av">' + _avatarInner + '</span>' +
+      '<span class="tb-who"><b>' + esc(s.name || '') + '</b><small>' + esc(roleLabel(s)) + ' &middot; ' + esc(st.labName || 'Lab') + '</small></span>' + icon('chevron-down', 14) + '</button>' +
       '<div class="tb-menu" id="userMenu" hidden>' +
       '<div class="tb-menu-head"><b>' + esc(s.name) + '</b>' + (s.role === 'custom' ? '<span class="badge b-ready">' + esc(roleLabel(s)) + '</span>' : badge(s.role)) + '</div>' +
       ((s.apps && s.apps.length > 1) ? '<a class="tb-menu-it" href="#/apps">' + icon('grid', 16) + '<span>Switch app</span></a>' : '') +
@@ -931,6 +969,8 @@
       '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
       '</div></div>';
     document.getElementById('menuLogout').addEventListener('click', logout);
+    document.getElementById('tbBack').addEventListener('click', function () { history.back(); });
+    document.getElementById('tbFwd').addEventListener('click', function () { history.forward(); });
     if (App.notifications) App.notifications.start();
     /* avatar dropdown: toggle, close on outside click / Escape (delegated once) */
     (function () {

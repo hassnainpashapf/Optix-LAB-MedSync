@@ -256,7 +256,7 @@
         return isMoney ? 'Rs ' + raw.toLocaleString('en-US') : String(raw);
       }
       function run() {
-        var els = document.querySelectorAll('#view .stat .vl[data-count], #view .kpi .kpi-nm[data-count]');
+        var els = document.querySelectorAll('#view .stat .vl[data-count], #view .kpi .kpi-nm[data-count], #view .ovk .ovk-v[data-count]');
         var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         for (var i = 0; i < els.length; i++) (function (el) {
           var target = parseFloat(el.getAttribute('data-count')) || 0;
@@ -314,6 +314,64 @@
         statCard(ICONS.alert, 'amber', 'Pending Results', String(pendingRes.length), 'awaiting entry', pendingRes.length, false) +
         statCard(ICONS.users, 'brand', 'Total Patients', String(patients.length), monthPatients + ' new this month', patients.length, false);
     }
+
+    // ---- Overview: period dropdown + eight KPI cards ----
+    var expAll = DB.all('expenses') || [];
+    function rangeFrom(period) {
+      var d = new Date();
+      if (period === '7') d.setDate(d.getDate() - 6);
+      else if (period === 'month') d.setDate(1);
+      return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+    }
+    var PERIOD_LABEL = { today: 'today', '7': 'this week', month: 'this month' };
+    function ovCards(period) {
+      var from = rangeFrom(period), within = function (v) { var k = dayKey(v); return !!k && k >= from && k <= today; };
+      var pays = payments.filter(function (x) { return within(x.date); });
+      var col = pays.reduce(function (a, x) { return a + (+x.amount || 0); }, 0);
+      var invs = invoices.filter(function (x) { return within(x.createdAt); });
+      var tests = invs.reduce(function (a, x) { return a + (x.items ? x.items.length : 0); }, 0);
+      var billed = invs.reduce(function (a, x) { return a + (+x.total || 0); }, 0);
+      var seen = {}, reported = results.filter(function (r) {
+        if (r.status !== 'ready' || !within(r.reportedAt)) return false;
+        var k = r.invoiceId + '|' + r.testId; if (seen[k]) return false; seen[k] = 1; return true;
+      }).length;
+      var newPts = patients.filter(function (x) { return within(x.createdAt); }).length;
+      var dueSum = invoices.reduce(function (a, x) { return a + Math.max(0, +x.due || 0); }, 0);
+      var dueN = invoices.filter(function (x) { return (+x.due || 0) > 0; }).length;
+      var exp = expAll.filter(function (x) { return within(x.date); }).reduce(function (a, x) { return a + (+x.amount || 0); }, 0);
+      var pl = PERIOD_LABEL[period] || '';
+      function card(ic, tint, title, sub, value, raw, isMoney, extra, href) {
+        var cnt = (typeof raw === 'number' && isFinite(raw)) ? ' data-count="' + raw + '" data-money="' + (isMoney ? '1' : '0') + '"' : '';
+        return '<div class="ovk" style="--kc:' + tint + '"><div class="ovk-h"><span class="ovk-ic">' + App.icon(ic, 20) + '</span>' +
+          '<div class="ovk-t"><b>' + App.esc(title) + '</b><small>' + App.esc(sub) + '</small></div>' +
+          '<a class="ovk-m" href="' + href + '" title="Open" aria-label="Open ' + App.esc(title) + '">' +
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></a></div>' +
+          '<div class="ovk-v"' + cnt + '>' + value + '</div>' + (extra || '') + '</div>';
+      }
+      var bar = function (pct, color) { return '<div class="ovk-bar"><i style="width:' + Math.max(2, Math.min(100, Math.round(pct))) + '%;background:' + color + '"></i></div>'; };
+      var out = '';
+      if (isTech) {
+        out += card('flask', '#7c3aed', 'Tests Ordered', 'Tests ' + pl, String(tests), tests, false, '<div class="ovk-f">' + invs.length + ' invoices</div>', '#/invoices');
+        out += card('check', '#16a34a', 'Reported', 'Results completed ' + pl, String(reported), reported, false, '', '#/results/ready');
+        out += card('alert', '#d97706', 'Pending Results', 'Waiting for entry', String(pendingRes.length), pendingRes.length, false, '', '#/results');
+        out += card('users', '#2f6df6', 'New Patients', 'Registered ' + pl, String(newPts), newPts, false, '<div class="ovk-f">' + patients.length + ' in total</div>', '#/patients');
+        return out;
+      }
+      var rate = billed > 0 ? Math.min(100, col * 100 / billed) : 0;
+      out += card('wallet', '#2f6df6', 'Collection', 'Cash received ' + pl, App.money(col), col, true, '<div class="ovk-f">' + pays.length + ' payment' + (pays.length === 1 ? '' : 's') + '</div>', '#/finance');
+      out += card('flask', '#7c3aed', 'Tests Ordered', 'Tests ' + pl, String(tests), tests, false, '<div class="ovk-f">' + invs.length + ' invoice' + (invs.length === 1 ? '' : 's') + '</div>', '#/invoices');
+      out += card('alert', '#d97706', 'Pending Results', 'Waiting for entry', String(pendingRes.length), pendingRes.length, false, '<div class="ovk-f">awaiting result entry</div>', '#/results');
+      out += card('users', '#0ea5e9', 'New Patients', 'Registered ' + pl, String(newPts), newPts, false, '<div class="ovk-f">' + patients.length + ' patients in total</div>', '#/patients');
+      out += card('check', '#16a34a', 'Reported', 'Results completed ' + pl, String(reported), reported, false, '', '#/results/ready');
+      out += card('file', '#2563eb', 'Billed', 'Invoices ' + pl, App.money(billed), billed, true, bar(rate, '#16a34a') + '<div class="ovk-f"><b>' + Math.round(rate) + '%</b> collected</div>', '#/invoices');
+      out += card('coins', '#dc2626', 'Outstanding Dues', 'Unpaid balance, all invoices', App.money(dueSum), dueSum, true, '<div class="ovk-f">' + dueN + ' unpaid invoice' + (dueN === 1 ? '' : 's') + '</div>', '#/dues');
+      out += card('finance', '#0ea5a4', 'Expenses', 'Spent ' + pl, App.money(exp), exp, true, '<div class="ovk-f">net <b>' + App.money(col - exp) + '</b></div>', '#/expenses');
+      return out;
+    }
+    var ovHead = '<div class="ov-head"><div><h1>Overview</h1><p>Here is the Summary of Overall Data</p></div>' +
+      '<select class="select" id="ovPeriod" aria-label="Period"><option value="today">Today</option><option value="7">Last 7 days</option><option value="month">This month</option></select></div>';
+    var ovGrid = '<div class="ov-grid" id="ovGrid">' + ovCards('today') + '</div>';
+    window.__ovCards = ovCards;
 
     // ---- quick-access cards ----
     var quickCss =
@@ -462,7 +520,7 @@
       var col7 = perDay(payments, function (r) { return r.date; }, function (r) { return +r.amount || 0; });
       var exp7 = perDay(expenses, function (r) { return r.date; }, function (r) { return +r.amount || 0; });
       var net = sum(col7) - sum(exp7);
-      chartA = bigCard('Collections vs Expenses', 'Last 7 days', chip('Collected', App.money(sum(col7)), '#2563eb') + chip('Expenses', App.money(sum(exp7)), '#d97706') + chip(net >= 0 ? 'Net profit' : 'Net loss', (net < 0 ? '−' : '') + App.money(Math.abs(net)), net >= 0 ? '#059669' : '#dc2626'),
+      chartA = bigCard('Cash Flow', 'Collections vs expenses · last 7 days', chip('Collected', App.money(sum(col7)), '#2563eb') + chip('Expenses', App.money(sum(exp7)), '#d97706') + chip(net >= 0 ? 'Net profit' : 'Net loss', (net < 0 ? '−' : '') + App.money(Math.abs(net)), net >= 0 ? '#059669' : '#dc2626'),
         chartSvg({ label: 'Collections and expenses per day', money: true, bars: [{ name: 'Collected', data: col7, color: '#3b82f6' }, { name: 'Expenses', data: exp7, color: '#f59e0b' }] }), legend([['Collected', '#3b82f6'], ['Expenses', '#f59e0b']]), ['#/finance/profit', 'Profit &amp; Loss']);
     }
     chartB = bigCard('Tests &amp; Invoices', 'Last 7 days', chip('Tests ordered', sum(tests7), '#7c3aed') + chip('Invoices', sum(inv7), '#ea580c') + chip('Today', tests7[6] + ' tests'),
@@ -508,12 +566,11 @@
     '@media (prefers-reduced-motion:reduce){.stat{animation:none}.stat:hover{transform:none}}' +
     '</style>' +
 
-    '<div class="stat-grid">' + stats + '</div>' +
-
-    quickCss + quickAccess +
-
-     critCard() + smartHtml + chartsHtml +
-    '<div class="db-grid">' + patCard + pendCard + '</div>' +
+    ovHead + critCard() + ovGrid +
+    '<div class="ov-two">' + chartA + patCard + '</div>' +
+    '<div class="ov-two">' + chartB + pendCard + '</div>' +
+    smartHtml +
+    '<h3 class="ov-h3">Quick access</h3>' + quickCss + quickAccess +
     '</div>';
     } /* end buildDashboard */
 
@@ -553,6 +610,10 @@
       if (!v || !v.querySelector('[data-db-skel]')) return; /* user navigated away */
       v.innerHTML = buildDashboard();
       wireCrit(v);
+      var ovSel = v.querySelector('#ovPeriod');
+      if (ovSel) ovSel.addEventListener('change', function () {
+        var g = v.querySelector('#ovGrid'); if (g && window.__ovCards) { g.innerHTML = window.__ovCards(ovSel.value); scheduleCountUp(); }
+      });
       var periodSelect = v.querySelector('#dbAnalyticsPeriod');
       if (periodSelect) periodSelect.addEventListener('change', function () {
         var body = v.querySelector('#dbSmartBody');
