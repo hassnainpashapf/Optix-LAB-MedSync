@@ -1092,6 +1092,758 @@
     return alerts;
   };
 
+  /* ---------------- PRO FEATURE: Interactive Human Anatomy Organ Impact Map ---------------- */
+  AI.evaluateOrganMap = function (reportData, findings, calculatedIndices) {
+    var rawVals = AI.extractRawValues(reportData);
+    var pt = (reportData && (reportData.pt || reportData.pat || reportData.patient)) || {};
+    var sexStr = String(pt.sex || pt.gender || 'male').toLowerCase();
+    var isFem = (sexStr === 'female' || sexStr === 'f');
+    var indices = calculatedIndices || AI.calculateIndices(reportData, findings);
+    var egfrItem = indices.filter(function (x) { return x.id === 'egfr'; })[0];
+    var egfr = egfrItem ? egfrItem.score : null;
+    var fib4Item = indices.filter(function (x) { return x.id === 'fib4'; })[0];
+    var fib4 = fib4Item ? fib4Item.score : null;
+    var mentzerItem = indices.filter(function (x) { return x.id === 'mentzer'; })[0];
+    var mentzer = mentzerItem ? mentzerItem.score : null;
+
+    var organs = [];
+
+    // 1. Brain & Central Nervous System (🧠 Dimagh)
+    (function () {
+      var tested = false;
+      var markers = [];
+      var status = 'normal';
+      var hazards = [];
+      var actions = [];
+
+      var g = rawVals.glucose_random != null ? rawVals.glucose_random : rawVals.glucose_fasting;
+      if (g != null) {
+        tested = true;
+        if (g < 50) {
+          status = 'critical';
+          markers.push({ name: 'Blood Glucose', val: g + ' mg/dL', status: 'critical', note: 'Severe Neuroglycopenia' });
+          hazards.push('Critical hypoglycemia (< 50 mg/dL): Deprivation of obligate cerebral glucose substrate. High risk of seizure, loss of consciousness, and irreversible neuronal injury.');
+          actions.push('EMERGENCY: Immediate IV 25% Dextrose (50-100 mL) followed by 10% Dextrose infusion and hourly glucometry.');
+        } else if (g > 400) {
+          if (status !== 'critical') status = 'critical';
+          markers.push({ name: 'Blood Glucose', val: g + ' mg/dL', status: 'critical', note: 'Extreme Hyperosmolar Threat' });
+          hazards.push('Extreme hyperglycemia (> 400 mg/dL): High serum hyperosmolality predisposing to intracellular cerebral dehydration and hyperosmolar hyperglycemic coma.');
+          actions.push('Urgent isotonic saline rehydration and intravenous sliding-scale regular insulin.');
+        } else {
+          markers.push({ name: 'Blood Glucose', val: g + ' mg/dL', status: 'normal', note: 'Euglycemic' });
+        }
+      }
+
+      if (rawVals.sodium != null) {
+        tested = true;
+        var na = rawVals.sodium;
+        if (na < 125) {
+          status = 'critical';
+          markers.push({ name: 'Serum Sodium (Na+)', val: na + ' mEq/L', status: 'critical', note: 'Severe Hyponatremia' });
+          hazards.push('Severe acute hyponatremia (< 125 mEq/L): Rapid cerebral edema with raised intracranial pressure, risk of uncal herniation and coma.');
+          actions.push('Cautious hypertonic (3%) saline in ICU setting. Restrict Na correction rate to maximum 8 mEq/L in 24 hours to prevent osmotic demyelination syndrome.');
+        } else if (na > 155) {
+          status = 'critical';
+          markers.push({ name: 'Serum Sodium (Na+)', val: na + ' mEq/L', status: 'critical', note: 'Severe Hypernatremia' });
+          hazards.push('Severe hypernatremia (> 155 mEq/L): Acute brain shrinkage, subarachnoid vessel stretching, and intracranial hemorrhage risk.');
+          actions.push('Slow correction with hypotonic IV fluids (5% Dextrose or 0.45% Saline).');
+        } else if (na < 135 || na > 145) {
+          if (status !== 'critical') status = 'warning';
+          markers.push({ name: 'Serum Sodium (Na+)', val: na + ' mEq/L', status: 'warning', note: 'Mild Dysnatremia' });
+          hazards.push('Mild electrolyte imbalance causing potential lethargy, headache, and confusion in elderly patients.');
+          actions.push('Adjust fluid balance and recheck electrolytes in 48 hours.');
+        } else {
+          markers.push({ name: 'Serum Sodium (Na+)', val: na + ' mEq/L', status: 'normal', note: 'Normal Osmolality' });
+        }
+      }
+
+      if (rawVals.creatinine != null && rawVals.creatinine > 4.0) {
+        status = 'critical';
+        markers.push({ name: 'Creatinine', val: rawVals.creatinine + ' mg/dL', status: 'critical', note: 'Uremic Threat' });
+        hazards.push('Severe nitrogenous waste buildup causing uremic encephalopathy, asterixis, and altered mental sensorium.');
+        actions.push('Urgent nephrology consultation and dialysis evaluation for clearance of uremic neurotoxins.');
+      }
+
+      if (rawVals.bili_total != null && rawVals.bili_total > 10.0) {
+        if (status !== 'critical') status = 'critical';
+        markers.push({ name: 'Total Bilirubin', val: rawVals.bili_total + ' mg/dL', status: 'critical', note: 'Neurotoxic Bilirubin' });
+        hazards.push('Severe hyperbilirubinemia: Potential passage across blood-brain barrier causing subcortical neuronal toxicity.');
+        actions.push('Urgent intervention to decompress biliary obstruction or treat underlying acute hepatic necrosis.');
+      }
+
+      var finalHazard = tested
+        ? (hazards.length ? hazards.join(' | ') : 'Cerebral parenchymal metabolic homeostasis is well-maintained within physiological parameters.')
+        : 'Parameters for brain metabolic osmolality (Glucose, Sodium) not included in current test panel.';
+      var finalAction = tested
+        ? (actions.length ? actions.join(' | ') : 'Maintain standard neurological wellness, adequate hydration, and balanced glycemic habits.')
+        : 'Include Fasting Glucose & Serum Electrolytes for baseline neurological assessment.';
+
+      organs.push({
+        id: 'brain',
+        name: 'Brain & Central Nervous System',
+        urduName: 'Dimagh & Aasabi Nizam',
+        icon: '🧠',
+        tested: tested,
+        status: tested ? status : 'untested',
+        stressScore: status === 'critical' ? 95 : (status === 'warning' ? 55 : (tested ? 10 : 0)),
+        markers: markers,
+        hazard: finalHazard,
+        action: finalAction,
+        svgX: 160,
+        svgY: 52
+      });
+    })();
+
+    // 2. Heart & Cardiovascular System (🫀 Dil & Raggain)
+    (function () {
+      var tested = false;
+      var markers = [];
+      var status = 'normal';
+      var hazard = 'Cardiovascular hemodynamic and electrophysiological parameters within normal limits.';
+      var action = 'Maintain cardioprotective lifestyle, low saturated fat diet, and regular aerobic exercise.';
+
+      if (rawVals.potassium != null) {
+        tested = true;
+        var k = rawVals.potassium;
+        if (k > 6.2) {
+          status = 'critical';
+          markers.push({ name: 'Serum Potassium (K+)', val: k + ' mEq/L', status: 'critical', note: 'Fatal Arrhythmia Hazard' });
+          hazard = 'CRITICAL HYPERKALEMIA (> 6.2 mEq/L): Lethal cardiac conduction blockade, tall peaked T-waves, sine-wave progression, and ventricular arrest.';
+          action = 'STAT 12-lead ECG, IV Calcium Gluconate (10ml of 10% over 5-10 mins) for membrane stabilization, followed by IV Insulin + Dextrose and nebulized Salbutamol.';
+        } else if (k < 2.8) {
+          status = 'critical';
+          markers.push({ name: 'Serum Potassium (K+)', val: k + ' mEq/L', status: 'critical', note: 'Severe Hypokalemia' });
+          hazard = 'CRITICAL HYPOKALEMIA (< 2.8 mEq/L): Prolonged QTc, U-waves, flattened T-waves, and fatal Torsades de Pointes ventricular tachycardia.';
+          action = 'Continuous ECG monitoring, slow IV Potassium Chloride infusion (max 10-20 mEq/hr via infusion pump with central or wide vein).';
+        } else if (k > 5.2 || k < 3.5) {
+          if (status !== 'critical') status = 'warning';
+          markers.push({ name: 'Serum Potassium (K+)', val: k + ' mEq/L', status: 'warning', note: 'Mild K+ Imbalance' });
+          hazard = 'Suboptimal serum potassium predisposing to atrial ectopic beats and mild myocardial irritability.';
+          action = 'Dietary adjustment and repeat serum electrolytes within 7 days.';
+        } else {
+          markers.push({ name: 'Serum Potassium (K+)', val: k + ' mEq/L', status: 'normal', note: 'Electrophysiologically Stable' });
+        }
+      }
+
+      if (rawVals.cholesterol != null || rawVals.ldl != null) {
+        tested = true;
+        var chol = rawVals.cholesterol;
+        var ldl = rawVals.ldl;
+        if ((chol != null && chol >= 240) || (ldl != null && ldl >= 160)) {
+          if (status !== 'critical') status = 'warning';
+          markers.push({ name: 'Total Cholesterol / LDL', val: (chol ? chol + ' mg/dL' : '') + (ldl ? ' / LDL ' + ldl + ' mg/dL' : ''), status: 'warning', note: 'High Atherogenic Burden' });
+          hazard = 'Atherosclerotic lipid buildup accelerating coronary artery disease, plaque stenosis, and acute myocardial infarction risk.';
+          action = 'Initiate lipid-lowering Statin therapy (Atorvastatin 20mg or Rosuvastatin 10mg HS). Restrict saturated dietary fats.';
+        } else if (chol != null && chol >= 200) {
+          if (status === 'normal') status = 'warning';
+          markers.push({ name: 'Total Cholesterol', val: chol + ' mg/dL', status: 'warning', note: 'Borderline High' });
+          hazard = 'Early plaque deposition risk; requires lifestyle vigilance.';
+          action = 'Dietary fat control, exercise, and follow-up lipid profile in 12 weeks.';
+        } else if (chol != null) {
+          markers.push({ name: 'Total Cholesterol', val: chol + ' mg/dL', status: 'normal', note: 'Optimal Range' });
+        }
+      }
+
+      if (rawVals.hb != null && rawVals.hb < 6.5) {
+        status = 'critical';
+        markers.push({ name: 'Hemoglobin', val: rawVals.hb + ' g/dL', status: 'critical', note: 'Severe Myocardial Strain' });
+        hazard = 'Extreme tissue hypoxia forcing hyperdynamic cardiac output, predisposing to high-output heart failure and angina.';
+        action = 'Urgent packed red blood cell (PRBC) transfusion and bed rest.';
+      }
+
+      organs.push({
+        id: 'heart',
+        name: 'Heart & Cardiovascular System',
+        urduName: 'Dil & Khoon Ki Raggain',
+        icon: '🫀',
+        tested: tested,
+        status: tested ? status : 'untested',
+        stressScore: status === 'critical' ? 95 : (status === 'warning' ? 60 : (tested ? 12 : 0)),
+        markers: markers,
+        hazard: tested ? hazard : 'Lipid profile and electrolytes not included in current test panel.',
+        action: tested ? action : 'Order Fasting Lipid Profile & Serum Electrolytes to assess coronary heart disease risk.',
+        svgX: 174,
+        svgY: 156
+      });
+    })();
+
+    // 3. Lungs & Respiratory System (🫁 Phepde)
+    (function () {
+      var tested = false;
+      var markers = [];
+      var status = 'normal';
+      var hazard = 'Bronchopulmonary gas exchange and alveolar capillary bed appear non-compromised.';
+      var action = 'Maintain clean pulmonary hygiene, avoid passive smoke exposure, and practice aerobic conditioning.';
+
+      if (rawVals.wbc != null) {
+        tested = true;
+        var w = rawVals.wbc;
+        if (w > 35000) {
+          status = 'critical';
+          markers.push({ name: 'WBC (TLC)', val: w + ' /uL', status: 'critical', note: 'Severe Sepsis / Leukostasis Threat' });
+          hazard = 'Hyperleukocytosis: Potential sludging of white blood cells in pulmonary microcirculation causing acute dyspnea, alveolar injury, and ARDS.';
+          action = 'Immediate hospital admission, Chest X-ray, blood cultures, and broad-spectrum IV antimicrobial coverage.';
+        } else if (w < 1500) {
+          status = 'critical';
+          markers.push({ name: 'WBC (TLC)', val: w + ' /uL', status: 'critical', note: 'Severe Immunodeficiency' });
+          hazard = 'Profound neutropenia / agranulocytosis: Extreme vulnerability to fulminant opportunistic bacterial/fungal pneumonia.';
+          action = 'Reverse barrier isolation, prompt empiric broad-spectrum antibiotic coverage at first fever spike.';
+        } else if (w > 11000) {
+          if (status !== 'critical') status = 'warning';
+          markers.push({ name: 'WBC (TLC)', val: w + ' /uL', status: 'warning', note: 'Active Infection / Inflammation' });
+          hazard = 'Active leukocyte mobilization consistent with acute respiratory, bronchial, or systemic inflammatory response.';
+          action = 'Co-Amoxiclav 625mg/1g BD x 5-7 days for respiratory infection; monitor oxygen saturation.';
+        } else {
+          markers.push({ name: 'WBC (TLC)', val: w + ' /uL', status: 'normal', note: 'Immune Defense Intact' });
+        }
+      }
+
+      if (rawVals.hb != null) {
+        tested = true;
+        if (rawVals.hb < 8.0) {
+          if (status === 'normal') status = 'warning';
+          markers.push({ name: 'Hemoglobin', val: rawVals.hb + ' g/dL', status: 'warning', note: 'Oxygen Carrying Deficit' });
+          hazard = 'Reduced arterial oxygen content triggering compensatory exertional tachypnea and shortness of breath.';
+          action = 'Hematinic restoration; supplement iron and avoid intense physical exertion until Hb recovers.';
+        }
+      }
+
+      organs.push({
+        id: 'lungs',
+        name: 'Lungs & Respiratory System',
+        urduName: 'Phepde & Saans Ka Nizam',
+        icon: '🫁',
+        tested: tested,
+        status: tested ? status : 'untested',
+        stressScore: status === 'critical' ? 90 : (status === 'warning' ? 50 : (tested ? 10 : 0)),
+        markers: markers,
+        hazard: tested ? hazard : 'Respiratory inflammatory markers (WBC, Sputum) not tested in this panel.',
+        action: tested ? action : 'Perform Complete Blood Count (CBC) and Chest examination if cough or shortness of breath is present.',
+        svgX: 148,
+        svgY: 138
+      });
+    })();
+
+    // 4. Liver & Hepatobiliary System (🥩 Jigar & Pitta)
+    (function () {
+      var tested = false;
+      var markers = [];
+      var status = 'normal';
+      var hazard = 'Hepatic parenchymal architecture, transaminases, and bile secretion are physiologically stable.';
+      var action = 'Maintain liver health: minimize deep-fried foods, zero unverified desi tonics, and preserve normal body mass index.';
+
+      var alt = rawVals.alt;
+      var ast = rawVals.ast;
+      var bili = rawVals.bili_total;
+      var alp = rawVals.alp;
+      var alb = rawVals.albumin;
+
+      if (alt != null || ast != null || bili != null || alp != null || alb != null) {
+        tested = true;
+
+        var maxT = Math.max(alt || 0, ast || 0);
+        if (maxT > 300) {
+          status = 'critical';
+          markers.push({ name: 'Transaminases (ALT/AST)', val: (alt ? 'ALT ' + alt : '') + (ast ? ' | AST ' + ast : '') + ' U/L', status: 'critical', note: 'Fulminant Hepatocellular Injury' });
+          hazard = 'Severe acute hepatic necrosis (> 300 U/L). Risk of acute liver failure, coagulopathy, and hepatic encephalopathy.';
+          action = 'Urgent hospitalization, check PT/INR and Blood Ammonia, screen for Viral Hepatitis (HBsAg, Anti-HCV, Anti-HEV), withhold all hepatotoxic drugs.';
+        } else if (maxT > 45) {
+          if (status !== 'critical') status = 'warning';
+          markers.push({ name: 'Transaminases (ALT/AST)', val: (alt ? 'ALT ' + alt : '') + (ast ? ' | AST ' + ast : '') + ' U/L', status: 'warning', note: 'Transaminitis (Liver Inflammation)' });
+          hazard = 'Active liver parenchymal inflammation consistent with NAFLD / Fatty Liver, viral infection, or drug stress.';
+          action = 'Cap. Silymarin 140mg BD, strict elimination of fried foods, Ultrasound Abdomen, viral hepatitis screening.';
+        } else if (alt != null) {
+          markers.push({ name: 'ALT (SGPT)', val: alt + ' U/L', status: 'normal', note: 'Normal Hepatocytes' });
+        }
+
+        if (bili != null) {
+          if (bili > 10.0) {
+            status = 'critical';
+            markers.push({ name: 'Total Bilirubin', val: bili + ' mg/dL', status: 'critical', note: 'Severe Cholestatic Jaundice' });
+            hazard = 'Severe hyperbilirubinemia: Biliary tract obstruction or massive hepatocellular failure with overt scleral icterus and pruritus.';
+            action = 'Urgent Ultrasound Abdomen & MRCP to evaluate biliary obstruction / CBD dilatation.';
+          } else if (bili > 1.2) {
+            if (status !== 'critical') status = 'warning';
+            markers.push({ name: 'Total Bilirubin', val: bili + ' mg/dL', status: 'warning', note: 'Elevated Bilirubin (Jaundice)' });
+            hazard = 'Impaired bilirubin clearance or accelerated hemolysis creating clinical jaundice.';
+            action = 'Tab. UDCA 250mg BD, check direct/indirect fraction, evaluate for biliary stasis.';
+          } else {
+            markers.push({ name: 'Total Bilirubin', val: bili + ' mg/dL', status: 'normal', note: 'Normal Clearance' });
+          }
+        }
+
+        if (fib4 != null && fib4 > 2.67) {
+          if (status !== 'critical') status = 'critical';
+          markers.push({ name: 'FIB-4 Liver Fibrosis Score', val: fib4 + ' (High Risk)', status: 'critical', note: 'Advanced Fibrosis / Cirrhosis' });
+          hazard = 'FIB-4 score > 2.67 has ~80% positive predictive value for advanced bridging fibrosis or established cirrhosis.';
+          action = 'Urgent Hepatology referral, Transient Elastography (FibroScan), screen for portal hypertension.';
+        }
+      }
+
+      organs.push({
+        id: 'liver',
+        name: 'Liver & Hepatobiliary System',
+        urduName: 'Jigar & Pitta',
+        icon: '🥩',
+        tested: tested,
+        status: tested ? status : 'untested',
+        stressScore: status === 'critical' ? 95 : (status === 'warning' ? 65 : (tested ? 10 : 0)),
+        markers: markers,
+        hazard: tested ? hazard : 'Liver Function Tests (ALT, AST, Bilirubin) not present in current report.',
+        action: tested ? action : 'Order Liver Function Tests (LFTs) and Ultrasound Abdomen for comprehensive hepatic staging.',
+        svgX: 130,
+        svgY: 206
+      });
+    })();
+
+    // 5. Pancreas & Endocrine System (🥞 Lublooba & Sugar)
+    (function () {
+      var tested = false;
+      var markers = [];
+      var status = 'normal';
+      var hazard = 'Pancreatic endocrine beta-cell function and insulin sensitivity are within physiological boundaries.';
+      var action = 'Maintain low glycemic index diet, limit refined confectionery sweets, and maintain regular physical activity.';
+
+      var g = rawVals.glucose_random != null ? rawVals.glucose_random : rawVals.glucose_fasting;
+      var a1c = rawVals.hba1c;
+      var tg = rawVals.triglycerides;
+
+      if (g != null || a1c != null || tg != null) {
+        tested = true;
+
+        if (tg != null && tg >= 500) {
+          status = 'critical';
+          markers.push({ name: 'Triglycerides', val: tg + ' mg/dL', status: 'critical', note: 'Acute Pancreatitis Hazard' });
+          hazard = 'Extreme hypertriglyceridemia (≥ 500 mg/dL): Chylomicron accumulation triggering localized capillary thrombosis and acute necrotizing pancreatitis.';
+          action = 'Urgent initiation of Fenofibrate 145mg daily and Gemfibrozil/Omega-3; zero dietary fat intake; screen for epigastric pain radiating to back.';
+        } else if (tg != null && tg >= 200) {
+          if (status !== 'critical') status = 'warning';
+          markers.push({ name: 'Triglycerides', val: tg + ' mg/dL', status: 'warning', note: 'Elevated Triglycerides' });
+          hazard = 'High circulating triglyceride levels causing insulin resistance and metabolic stress.';
+          action = 'Reduce dietary sugars and carbohydrates, increase dietary fiber and exercise.';
+        }
+
+        if (a1c != null) {
+          if (a1c >= 9.0) {
+            status = 'critical';
+            markers.push({ name: 'HbA1c', val: a1c + '%', status: 'critical', note: 'Severe Glycemic Decompensation' });
+            hazard = 'Chronic severe hyperglycemia with extensive microvascular and macrovascular endothelial damage.';
+            action = 'Intensify antidiabetic therapy (Metformin + SGLT2i / GLP-1 RA or basal insulin). Screen for diabetic retinopathy and nephropathy.';
+          } else if (a1c >= 6.5) {
+            if (status !== 'critical') status = 'warning';
+            markers.push({ name: 'HbA1c', val: a1c + '%', status: 'warning', note: 'Diabetes Mellitus' });
+            hazard = 'Chronic hyperglycemic dysregulation promoting beta-cell burnout and accelerated atherosclerosis.';
+            action = 'Tab. Metformin 500-1000mg BD with meals, dietary sugar restriction, daily brisk walking.';
+          } else if (a1c >= 5.7) {
+            if (status === 'normal') status = 'warning';
+            markers.push({ name: 'HbA1c', val: a1c + '%', status: 'warning', note: 'Pre-Diabetes' });
+            hazard = 'Impaired glucose tolerance and early insulin resistance.';
+            action = 'Lifestyle intervention: 7% weight loss target and 150 minutes weekly exercise to prevent progression to overt diabetes.';
+          } else {
+            markers.push({ name: 'HbA1c', val: a1c + '%', status: 'normal', note: 'Euglycemic Control' });
+          }
+        }
+
+        if (g != null && a1c == null) {
+          if (g >= 200) {
+            if (status !== 'critical') status = 'warning';
+            markers.push({ name: 'Blood Glucose', val: g + ' mg/dL', status: 'warning', note: 'Diabetic Hyperglycemia' });
+            hazard = 'Elevated blood glucose indicating inadequate insulin release or peripheral receptor insensitivity.';
+            action = 'Order confirmatory HbA1c, initiate oral hypoglycemic agent, eliminate refined sugars.';
+          } else {
+            markers.push({ name: 'Blood Glucose', val: g + ' mg/dL', status: 'normal', note: 'Normal Sugar' });
+          }
+        }
+      }
+
+      organs.push({
+        id: 'pancreas',
+        name: 'Pancreas & Endocrine System',
+        urduName: 'Lublooba (Pancreas) & Sugar',
+        icon: '🥞',
+        tested: tested,
+        status: tested ? status : 'untested',
+        stressScore: status === 'critical' ? 95 : (status === 'warning' ? 60 : (tested ? 10 : 0)),
+        markers: markers,
+        hazard: tested ? hazard : 'Glycemic parameters (Glucose, HbA1c) not tested in current panel.',
+        action: tested ? action : 'Order Fasting Blood Glucose and HbA1c to screen for metabolic syndrome.',
+        svgX: 160,
+        svgY: 228
+      });
+    })();
+
+    // 6. Kidneys & Urinary System (🫘 Gurday & Pishaab)
+    (function () {
+      var tested = false;
+      var markers = [];
+      var status = 'normal';
+      var hazard = 'Renal filtration, tubular reabsorption, and urinary tract are biologically healthy.';
+      var action = 'Maintain 2 to 2.5 liters daily water hydration. Avoid habitual consumption of OTC NSAID painkillers.';
+
+      var cr = rawVals.creatinine;
+      var ur = rawVals.urea;
+      var pus = rawVals.urine_pus;
+      var crLimit = isFem ? 1.1 : 1.3;
+
+      if (cr != null || ur != null || pus != null || egfr != null) {
+        tested = true;
+
+        if (cr != null && cr > 4.0) {
+          status = 'critical';
+          markers.push({ name: 'Serum Creatinine', val: cr + ' mg/dL', status: 'critical', note: 'Severe Renal Shutdown' });
+          hazard = 'Acute kidney shutdown / End-stage renal crisis (> 4.0 mg/dL). High risk of uremic pericarditis, metabolic acidosis, and pulmonary edema.';
+          action = 'EMERGENCY: Urgent Nephrology consultation for hemodialysis access. Strictly stop all NSAIDs, Metformin, and ACEi/ARBs.';
+        } else if (egfr != null && egfr < 15) {
+          status = 'critical';
+          markers.push({ name: 'eGFR', val: egfr + ' mL/min/1.73m²', status: 'critical', note: 'Kidney Failure (Stage 5)' });
+          hazard = 'Severe end-stage renal filtration collapse.';
+          action = 'Dialysis or renal transplant evaluation; fluid and potassium restriction.';
+        } else if ((cr != null && cr > crLimit) || (egfr != null && egfr < 60)) {
+          if (status !== 'critical') status = 'warning';
+          markers.push({ name: 'Serum Creatinine / eGFR', val: (cr ? cr + ' mg/dL' : '') + (egfr ? ' (eGFR ' + egfr + ')' : ''), status: 'warning', note: 'Renal Impairment (Azotemia)' });
+          hazard = 'Reduced glomerular filtration capacity causing nitrogenous waste retention and impaired drug elimination.';
+          action = 'STRICTLY AVOID ALL NSAIDs (Diclofenac, Brufen, Ponstan). Adjust renal doses of all drugs. Order Urine ACR and Ultrasound KUB.';
+        } else if (cr != null) {
+          markers.push({ name: 'Serum Creatinine', val: cr + ' mg/dL (eGFR ' + (egfr || '>90') + ')', status: 'normal', note: 'Normal Glomerular Filtration' });
+        }
+
+        if (pus != null) {
+          if (pus > 25) {
+            if (status !== 'critical') status = 'critical';
+            markers.push({ name: 'Urine Pus Cells', val: pus + ' /HPF', status: 'critical', note: 'Severe Acute Pyuria (UTI)' });
+            hazard = 'Severe active bacterial infection of urinary tract with risk of ascending pyelonephritis and bacteremia.';
+            action = 'Urine Culture & Sensitivity STAT; Tab. Ciprofloxacin 500mg BD or Nitrofurantoin 100mg BD x 5-7 days; 3.5L fluid hydration.';
+          } else if (pus > 5) {
+            if (status === 'normal') status = 'warning';
+            markers.push({ name: 'Urine Pus Cells', val: pus + ' /HPF', status: 'warning', note: 'Pyuria (Urinary Infection)' });
+            hazard = 'Active lower urinary tract infection with dysuria and frequency.';
+            action = 'Urine C/S, empiric urinary antibiotic coverage, Citro-soda urinary alkalinizer.';
+          } else {
+            markers.push({ name: 'Urine Pus Cells', val: pus + ' /HPF', status: 'normal', note: 'Clear Sterile Urine' });
+          }
+        }
+      }
+
+      organs.push({
+        id: 'kidneys',
+        name: 'Kidneys & Urinary Tract',
+        urduName: 'Gurday & Pishaab Ka Nizam',
+        icon: '🫘',
+        tested: tested,
+        status: tested ? status : 'untested',
+        stressScore: status === 'critical' ? 95 : (status === 'warning' ? 65 : (tested ? 10 : 0)),
+        markers: markers,
+        hazard: tested ? hazard : 'Renal parameters (Creatinine, Urine R/E) not tested in current panel.',
+        action: tested ? action : 'Order Serum Creatinine, Blood Urea, and Urine Routine Examination for baseline renal staging.',
+        svgX: 126,
+        svgY: 256
+      });
+    })();
+
+    // 7. Bone Marrow & Hematological Circulation (🩸 Khoon & Bone Marrow)
+    (function () {
+      var tested = false;
+      var markers = [];
+      var status = 'normal';
+      var hazard = 'Hematopoiesis, erythroid/myeloid maturation, and platelet hemostatic function are within normal ranges.';
+      var action = 'Maintain balanced dietary iron, folate, and vitamin B12 intake.';
+
+      var hb = rawVals.hb;
+      var plt = rawVals.plt;
+      var mcv = rawVals.mcv;
+      var rbc = rawVals.rbc;
+
+      if (hb != null || plt != null || mcv != null || rbc != null) {
+        tested = true;
+
+        if (plt != null && plt < 20000) {
+          status = 'critical';
+          markers.push({ name: 'Platelet Count', val: plt + ' /uL', status: 'critical', note: 'Extreme Thrombocytopenia' });
+          hazard = 'SPONTANEOUS FATAL BLEED THRESHOLD (< 20,000 /uL): High hazard of spontaneous intracranial, pulmonary, or massive gastrointestinal hemorrhage.';
+          action = 'EMERGENCY: Strict bed rest, hospital admission, prepare platelet concentrate transfusion, avoid IM injections and all NSAIDs/blood thinners.';
+        } else if (plt != null && plt < 80000) {
+          if (status !== 'critical') status = 'warning';
+          markers.push({ name: 'Platelet Count', val: plt + ' /uL', status: 'warning', note: 'Thrombocytopenia (Bleeding Risk)' });
+          hazard = 'Marked platelet deficiency predisposing to mucosal petechiae, gum bleeding, and hematoma.';
+          action = 'STRICT BLEEDING SHIELD: Absolute contraindication of Brufen, Aspirin, Diclofenac. Use soft brush. Monitor platelet nadir daily.';
+        } else if (plt != null) {
+          markers.push({ name: 'Platelet Count', val: plt + ' /uL', status: 'normal', note: 'Adequate Hemostasis' });
+        }
+
+        if (hb != null) {
+          var minHb = isFem ? 12.0 : 13.0;
+          if (hb < 6.5) {
+            status = 'critical';
+            markers.push({ name: 'Hemoglobin', val: hb + ' g/dL', status: 'critical', note: 'Severe Anemia (Transfusion Trigger)' });
+            hazard = 'Profound oxygen carrying collapse with critical myocardial and end-organ hypoxia.';
+            action = 'Urgent packed red blood cell (PRBC) transfusion; urgent hematology workup.';
+          } else if (hb < minHb) {
+            if (status !== 'critical') status = 'warning';
+            markers.push({ name: 'Hemoglobin', val: hb + ' g/dL', status: 'warning', note: 'Anemia' });
+            hazard = 'Deficient red blood cell mass causing fatigue, weakness, dizziness, and pallor.';
+            action = 'Tab. Ferrous Polymaltose / Ascorbate 100mg with Vitamin C 500mg daily x 3 months; Serum Ferritin test.';
+          } else {
+            markers.push({ name: 'Hemoglobin', val: hb + ' g/dL', status: 'normal', note: 'Adequate Oxygenation' });
+          }
+        }
+
+        if (mentzer != null && mentzer < 13) {
+          if (status !== 'critical') status = 'warning';
+          markers.push({ name: 'Mentzer Index', val: mentzer + ' (<13)', status: 'warning', note: 'Beta-Thalassemia Trait Pattern' });
+          hazard = 'Genetic hemoglobinopathy carrier state with microcytic target cells.';
+          action = 'Order Hemoglobin Electrophoresis (HbA2 > 3.5%). Avoid empirical iron overload.';
+        }
+      }
+
+      organs.push({
+        id: 'blood',
+        name: 'Bone Marrow & Circulatory System',
+        urduName: 'Khoon & Bone Marrow (Hemato)',
+        icon: '🩸',
+        tested: tested,
+        status: tested ? status : 'untested',
+        stressScore: status === 'critical' ? 95 : (status === 'warning' ? 65 : (tested ? 10 : 0)),
+        markers: markers,
+        hazard: tested ? hazard : 'Complete Blood Count (CBC) not tested in current panel.',
+        action: tested ? action : 'Order Complete Blood Count (CBC / CP) for baseline hematological profiling.',
+        svgX: 160,
+        svgY: 310
+      });
+    })();
+
+    // 8. Musculoskeletal & Joints (🦴 Haddi & Jor)
+    (function () {
+      var tested = false;
+      var markers = [];
+      var status = 'normal';
+      var hazard = 'Bone mineral turnover and synovial joint fluid uric acid saturation are within physiological limits.';
+      var action = 'Maintain adequate dietary calcium, Vitamin D3, and proper hydration to prevent crystalluria.';
+
+      var ua = rawVals.uric_acid;
+      var alp = rawVals.alp;
+      var uaLimit = isFem ? 6.0 : 7.0;
+
+      if (ua != null || alp != null) {
+        tested = true;
+
+        if (ua != null) {
+          if (ua > 9.0) {
+            status = 'critical';
+            markers.push({ name: 'Serum Uric Acid', val: ua + ' mg/dL', status: 'critical', note: 'Severe Hyperuricemia (Gout)' });
+            hazard = 'Extreme monosodium urate supersaturation: High risk of excruciating acute podagra (big toe gout), joint tophi, and urate nephropathy.';
+            action = 'Tab. Febuxostat 40mg daily morning + Tab. Colchicine 0.5mg flare prophylaxis; strict low-purine diet (avoid red meat, kaleji, seafood); 3.5L water daily.';
+          } else if (ua > uaLimit) {
+            if (status !== 'critical') status = 'warning';
+            markers.push({ name: 'Serum Uric Acid', val: ua + ' mg/dL', status: 'warning', note: 'Elevated Uric Acid' });
+            hazard = 'Hyperuricemia increasing long-term risk of inflammatory arthritis and crystal nephrolithiasis.';
+            action = 'Eliminate beef, mutton, organ meats, and high-fructose sodas. Recheck uric acid in 6 weeks.';
+          } else {
+            markers.push({ name: 'Serum Uric Acid', val: ua + ' mg/dL', status: 'normal', note: 'Normal Urate Balance' });
+          }
+        }
+
+        if (alp != null && alp > 280) {
+          if (status === 'normal') status = 'warning';
+          markers.push({ name: 'Alkaline Phosphatase (ALP)', val: alp + ' U/L', status: 'warning', note: 'High Osteoblastic / Bone Turnover' });
+          hazard = 'Elevated ALP indicating accelerated bone remodelling, Vitamin D deficiency osteomalacia, or biliary ductal micro-stasis.';
+          action = 'Serum 25-OH Vitamin D3, Serum Calcium, and liver isoenzyme differentiation.';
+        }
+      }
+
+      organs.push({
+        id: 'joints',
+        name: 'Musculoskeletal & Joints',
+        urduName: 'Haddiyan & Jor (Bones/Joints)',
+        icon: '🦴',
+        tested: tested,
+        status: tested ? status : 'untested',
+        stressScore: status === 'critical' ? 85 : (status === 'warning' ? 55 : (tested ? 10 : 0)),
+        markers: markers,
+        hazard: tested ? hazard : 'Uric acid and bone turnover markers not tested in current panel.',
+        action: tested ? action : 'Order Serum Uric Acid & Alkaline Phosphatase if joint pain or stiffness is present.',
+        svgX: 160,
+        svgY: 420
+      });
+    })();
+
+    return organs;
+  };
+
+  /* Render Single Organ Deep-Dive Card */
+  AI.renderSingleOrganCard = function (org) {
+    if (!org) return '';
+    var isCrit = org.status === 'critical';
+    var isWarn = org.status === 'warning';
+    var isSafe = org.status === 'normal';
+    var cardBorder = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#cbd5e1'));
+    var cardBg = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : (isSafe ? '#f0fdf4' : '#f8fafc'));
+    var badgeBg = isCrit ? '#fee2e2' : (isWarn ? '#fef3c7' : (isSafe ? '#dcfce7' : '#f1f5f9'));
+    var badgeColor = isCrit ? '#991b1b' : (isWarn ? '#92400e' : (isSafe ? '#166534' : '#475569'));
+    var badgeText = isCrit ? '🚨 CRITICAL STRESS' : (isWarn ? '⚠️ WARNING / STRESSED' : (isSafe ? '✅ OPTIMAL / HEALTHY' : '⚪ UNTESTED IN PANEL'));
+
+    var markersHtml = '';
+    if (org.markers && org.markers.length) {
+      markersHtml = '<div style="margin-bottom:12px">'
+        + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em;margin-bottom:6px">Tested Organ Biomarkers</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px">'
+        + org.markers.map(function (m) {
+            var mCrit = m.status === 'critical';
+            var mWarn = m.status === 'warning';
+            var mBorder = mCrit ? '#fca5a5' : (mWarn ? '#fde68a' : '#bbf7d0');
+            var mBg = mCrit ? '#fff1f2' : (mWarn ? '#fffbeb' : '#f0fdf4');
+            var mColor = mCrit ? '#dc2626' : (mWarn ? '#d97706' : '#16a34a');
+            return '<div style="background:' + mBg + ';border:1px solid ' + mBorder + ';border-radius:8px;padding:6px 10px">'
+              + '<div style="font-size:11px;color:#64748b">' + (window.App ? App.esc(m.name) : m.name) + '</div>'
+              + '<div style="font-size:13px;font-weight:800;color:' + mColor + '">' + (window.App ? App.esc(m.val) : m.val) + '</div>'
+              + (m.note ? '<div style="font-size:10.5px;color:#475569;margin-top:1px">' + (window.App ? App.esc(m.note) : m.note) + '</div>' : '')
+              + '</div>';
+          }).join('')
+        + '</div>'
+        + '</div>';
+    } else {
+      markersHtml = '<div style="font-size:11.5px;color:#64748b;background:#fff;padding:8px 10px;border-radius:8px;border:1px dashed #cbd5e1;margin-bottom:12px">No direct parameters tested for this organ in current laboratory order.</div>';
+    }
+
+    var gaugeColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#94a3b8'));
+
+    return '<div style="background:' + cardBg + ';border:2px solid ' + cardBorder + ';border-radius:14px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,0.04);transition:all 0.2s ease">'
+      // Header
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
+      + '  <div style="display:flex;align-items:center;gap:10px">'
+      + '    <span style="font-size:32px">' + org.icon + '</span>'
+      + '    <div>'
+      + '      <div style="font-size:16px;font-weight:900;color:#0f172a">' + (window.App ? App.esc(org.name) : org.name) + '</div>'
+      + '      <div style="font-size:12px;font-weight:700;color:#4f46e5">' + (window.App ? App.esc(org.urduName) : org.urduName) + '</div>'
+      + '    </div>'
+      + '  </div>'
+      + '  <span style="background:' + badgeBg + ';color:' + badgeColor + ';border:1px solid ' + cardBorder + ';font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px">' + badgeText + '</span>'
+      + '</div>'
+
+      // Organ Stress Level Gauge
+      + '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px">'
+      + '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11.5px">'
+      + '    <span style="font-weight:700;color:#334155">Organ Stress Index:</span>'
+      + '    <span style="font-weight:900;color:' + gaugeColor + '">' + org.stressScore + '% Stress</span>'
+      + '  </div>'
+      + '  <div style="width:100%;height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden">'
+      + '    <div style="width:' + org.stressScore + '%;height:100%;background:' + gaugeColor + ';border-radius:999px;transition:width 0.4s ease"></div>'
+      + '  </div>'
+      + '</div>'
+
+      // Markers Grid
+      + markersHtml
+
+      // Pathological Hazard / Stress Mechanism
+      + '<div style="background:#fff;border-left:4px solid ' + cardBorder + ';border-radius:6px;padding:10px 12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.03)">'
+      + '  <div style="font-size:11.5px;font-weight:800;color:' + (isCrit ? '#991b1b' : (isWarn ? '#92400e' : '#1e293b')) + ';text-transform:uppercase;margin-bottom:3px">⚠️ Pathophysiological Stress & Hazard:</div>'
+      + '  <div style="font-size:12.5px;color:#334155;line-height:1.5">' + (window.App ? App.esc(org.hazard) : org.hazard) + '</div>'
+      + '</div>'
+
+      // Clinical Action Plan
+      + '<div style="background:#fff;border:1px solid #bbf7d0;border-left:4px solid #10b981;border-radius:6px;padding:10px 12px">'
+      + '  <div style="font-size:11.5px;font-weight:800;color:#047857;text-transform:uppercase;margin-bottom:3px">💡 Evidence-Based Clinical Protection Plan:</div>'
+      + '  <div style="font-size:12.5px;color:#1e293b;line-height:1.5;font-weight:600">' + (window.App ? App.esc(org.action) : org.action) + '</div>'
+      + '</div>'
+      + '</div>';
+  };
+
+  /* Render Interactive Body Map HTML */
+  AI.renderBodyMapHtml = function (analysis) {
+    var organs = (analysis && analysis.organMap) || [];
+    if (!organs.length) return '<div style="padding:20px;text-align:center;color:#64748b">No organ map data available.</div>';
+
+    var activeOrganId = organs[0].id;
+    var critOne = organs.filter(function (o) { return o.status === 'critical'; })[0];
+    var warnOne = organs.filter(function (o) { return o.status === 'warning'; })[0];
+    if (critOne) activeOrganId = critOne.id;
+    else if (warnOne) activeOrganId = warnOne.id;
+
+    var selectorButtons = organs.map(function (o) {
+      var isCrit = o.status === 'critical';
+      var isWarn = o.status === 'warning';
+      var isSafe = o.status === 'normal';
+      var btnBorder = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#cbd5e1'));
+      var btnBg = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : (isSafe ? '#f0fdf4' : '#f8fafc'));
+      var btnColor = isCrit ? '#b91c1c' : (isWarn ? '#b45309' : (isSafe ? '#15803d' : '#475569'));
+      var isAct = o.id === activeOrganId;
+
+      return '<button type="button" class="btn btn-ghost ai-organ-select-btn' + (isAct ? ' active' : '') + '" data-organ-id="' + o.id + '" style="border:1.5px solid ' + (isAct ? '#4f46e5' : btnBorder) + ';background:' + (isAct ? '#ede9fe' : btnBg) + ';color:' + (isAct ? '#4338ca' : btnColor) + ';font-weight:700;font-size:11.5px;padding:6px 8px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;white-space:nowrap">'
+        + '<span>' + o.icon + '</span> <span>' + (window.App ? App.esc(o.name.split(' ')[0]) : o.name.split(' ')[0]) + '</span>'
+        + '</button>';
+    }).join('');
+
+    var beaconsSvg = organs.map(function (o) {
+      var isCrit = o.status === 'critical';
+      var isWarn = o.status === 'warning';
+      var isSafe = o.status === 'normal';
+      var pulseColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#64748b'));
+      var coreBg = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#475569'));
+      var isAct = o.id === activeOrganId;
+
+      return '<g class="ai-organ-beacon" data-organ-id="' + o.id + '" style="cursor:pointer" transform="translate(0,0)">'
+        + (isCrit ? '<circle cx="' + o.svgX + '" cy="' + o.svgY + '" r="22" fill="none" stroke="' + pulseColor + '" stroke-width="1.5" opacity="0.6"><animate attributeName="r" values="16;25;16" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.8;0.1;0.8" dur="2s" repeatCount="indefinite"/></circle>' : '')
+        + (isWarn ? '<circle cx="' + o.svgX + '" cy="' + o.svgY + '" r="19" fill="none" stroke="' + pulseColor + '" stroke-width="1.2" opacity="0.5"/>' : '')
+        + '<circle class="ai-beacon-ring" cx="' + o.svgX + '" cy="' + o.svgY + '" r="16" fill="' + (isAct ? '#ffffff' : coreBg) + '" stroke="' + (isAct ? '#4f46e5' : '#ffffff') + '" stroke-width="' + (isAct ? '3' : '2') + '" filter="url(' + (isCrit ? '#glowCrit' : (isWarn ? '#glowWarn' : '#glowSafe')) + ')" />'
+        + '<text x="' + o.svgX + '" y="' + (o.svgY + 4) + '" text-anchor="middle" font-size="11" pointer-events="none">' + o.icon + '</text>'
+        + '</g>';
+    }).join('');
+
+    var activeOrganObj = organs.filter(function (o) { return o.id === activeOrganId; })[0] || organs[0];
+    var detailCardHtml = AI.renderSingleOrganCard(activeOrganObj);
+
+    return '<div class="ai-bodymap-wrapper" style="margin-bottom:12px">'
+      + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+      + '  <div>'
+      + '    <div style="font-size:14px;font-weight:900;color:#0f172a">🫀 Interactive Human Body Anatomy Map (Organ Impact Visualizer)</div>'
+      + '    <div style="font-size:11.5px;color:#64748b">Click any glowing organ on the body silhouette to inspect organ-specific biomarkers and clinical protection rules</div>'
+      + '  </div>'
+      + '  <div style="display:flex;gap:6px;font-size:11px;font-weight:700">'
+      + '    <span style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:2px 8px;border-radius:6px">🔴 Critical</span>'
+      + '    <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:2px 8px;border-radius:6px">🟡 Warning</span>'
+      + '    <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;padding:2px 8px;border-radius:6px">🟢 Normal</span>'
+      + '    <span style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px">⚪ Untested</span>'
+      + '  </div>'
+      + '</div>'
+
+      + '<div class="ai-bodymap-layout" style="display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start">'
+      // Left: SVG Silhouette
+      + '  <div style="background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);border:2px solid #334155;border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.18)">'
+      + '    <svg viewBox="0 0 320 500" width="100%" height="auto" style="max-height:480px;display:block;margin:0 auto;overflow:visible">'
+      + '      <defs>'
+      + '        <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">'
+      + '          <stop offset="0%" stop-color="#334155" stop-opacity="0.8"/>'
+      + '          <stop offset="100%" stop-color="#1e293b" stop-opacity="0.95"/>'
+      + '        </linearGradient>'
+      + '        <filter id="glowCrit" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#ef4444" flood-opacity="0.9"/></filter>'
+      + '        <filter id="glowWarn" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#f59e0b" flood-opacity="0.8"/></filter>'
+      + '        <filter id="glowSafe" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#10b981" flood-opacity="0.7"/></filter>'
+      + '      </defs>'
+      // Human Body Silhouette
+      + '      <circle cx="160" cy="52" r="26" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1.5"/>'
+      + '      <path d="M152,78 L168,78 L171,94 L149,94 Z" fill="url(#bodyGrad)"/>'
+      + '      <path d="M110,105 C110,95 130,94 160,94 C190,94 210,95 210,105 L222,165 L204,180 L200,285 L120,285 L116,180 L98,165 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1.5"/>'
+      + '      <path d="M98,165 L80,260 L80,310 L94,310 L98,260 L114,180 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1"/>'
+      + '      <path d="M222,165 L240,260 L240,310 L226,310 L222,260 L206,180 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1"/>'
+      + '      <path d="M120,285 L200,285 L208,375 L192,490 L170,490 L174,360 L160,315 L146,360 L150,490 L128,490 L112,375 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1.5"/>'
+      + '      <line x1="160" y1="80" x2="160" y2="315" stroke="#475569" stroke-dasharray="3,3" stroke-width="1" opacity="0.6"/>'
+      +        beaconsSvg
+      + '    </svg>'
+      + '    <div style="margin-top:10px;font-size:11px;color:#94a3b8">Interactive Bio-Anatomical Projection</div>'
+      + '  </div>'
+
+      // Right: Selector Bar + Active Card
+      + '  <div>'
+      + '    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">'
+      +        selectorButtons
+      + '    </div>'
+      + '    <div id="aiOrganDetailCard">'
+      +        detailCardHtml
+      + '    </div>'
+      + '  </div>'
+      + '</div>'
+      + '</div>';
+  };
+
   /* ---------------- PRO FEATURE: 1-Click AI Executive Summary Narrative ---------------- */
   AI.generateReportNarrative = function (analysis) {
     var s = (analysis && analysis.solutions) || {};
@@ -1982,6 +2734,7 @@
     sol2_meds.forEach(function (cat) { (cat.items || []).forEach(function (it) { allMedsFlat.push(it.drug); }); });
     var drugInteractions = AI.checkDrugInteractions(allMedsFlat);
     var geneticGuard = AI.evaluateGeneticGuard(reportData, findings, indices);
+    var organMap = AI.evaluateOrganMap(reportData, findings, indices);
 
     var urduGuide = AI.generateUrduPatientGuide({
       patient: pt, invoice: inv, doctor: doc, findings: findings,
@@ -2015,6 +2768,7 @@
       ddx: ddx,
       drugInteractions: drugInteractions,
       geneticGuard: geneticGuard,
+      organMap: organMap,
       urduGuide: urduGuide,
       reportNarrative: reportNarrative
     };
@@ -2081,6 +2835,10 @@
     var geneticGuard = analysis.geneticGuard || [];
     var urduGuide = analysis.urduGuide || { wazahat: [], khurak: [], parhez: [], dawaiSchedule: [], khatraAlamaat: [], plainText: '' };
     var reportNarrative = analysis.reportNarrative || '';
+    var organMap = analysis.organMap || [];
+    var critOrgans = organMap.filter(function (o) { return o.status === 'critical'; });
+    var warnOrgans = organMap.filter(function (o) { return o.status === 'warning'; });
+    var safeOrgans = organMap.filter(function (o) { return o.status === 'normal'; });
 
     // Badges HTML
     var findingsBadges = findings.length
@@ -2450,6 +3208,7 @@
       // Pro Navigation Tabs Bar
       + '<div class="ai-tabs-bar" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;margin-bottom:12px;border-bottom:1.5px solid #e2e8f0">'
       + '  <button type="button" class="btn btn-ghost ai-tab-btn active" data-tab="solutions" style="background:#4f46e5;color:#fff;border:1px solid #4338ca;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🩺 5 Solutions</button>'
+      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="bodymap" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🫀 Organ Body Map' + (critOrgans.length ? ' <span style="background:#ef4444;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px;margin-left:2px">' + critOrgans.length + '</span>' : '') + '</button>'
       + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="indices" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🧮 Indices & ASCVD</button>'
       + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="safety" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">⚠️ Drug Safety & DDI</button>'
       + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="trends" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">📈 Velocity</button>'
@@ -2463,6 +3222,17 @@
       + '  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;margin-bottom:12px">'
       + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.05em;margin-bottom:6px">Detected Abnormal Lab Parameters</div>'
       + '    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' + findingsBadges + '</div>'
+      + '  </div>'
+      // Organ Impact Teaser Banner
+      + '  <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#fff;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;box-shadow:0 4px 14px rgba(0,0,0,0.12)">'
+      + '    <div style="display:flex;align-items:center;gap:10px">'
+      + '      <span style="font-size:22px">🧍</span>'
+      + '      <div>'
+      + '        <div style="font-size:13px;font-weight:900;letter-spacing:0.02em">Visual Anatomy Organ Impact Map</div>'
+      + '        <div style="font-size:11px;opacity:0.9;margin-top:2px">' + (critOrgans.length ? '<b style="color:#f87171">' + critOrgans.length + ' Critical</b> &bull; ' : '') + warnOrgans.length + ' Warning &bull; ' + safeOrgans.length + ' Healthy Organ Systems</div>'
+      + '      </div>'
+      + '    </div>'
+      + '    <button type="button" class="btn btn-ghost ai-jump-bodymap-btn" style="background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer">👉 View Interactive Body Map</button>'
       + '  </div>'
       + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-bottom:12px">'
       + '    <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:14px;padding:14px">'
@@ -2516,6 +3286,11 @@
       // PANE 7: Digital Rx Pad
       + '<div class="ai-tab-pane" id="aiPane-rx" style="display:none">'
       +   rxPadPreviewHtml
+      + '</div>'
+
+      // PANE 8: Interactive Organ Body Map
+      + '<div class="ai-tab-pane" id="aiPane-bodymap" style="display:none">'
+      +   AI.renderBodyMapHtml(analysis)
       + '</div>'
 
       // Medical Advisory Disclaimer
@@ -2587,6 +3362,79 @@
             AI.attachSummaryToReportRemarks(inv.id || inv.no, reportNarrative);
           });
         }
+
+        // Organ Body Map Selection & Jump Interactivity
+        var jumpBtn = ov.querySelector('.ai-jump-bodymap-btn');
+        if (jumpBtn) {
+          jumpBtn.addEventListener('click', function () {
+            var bTab = ov.querySelector('.ai-tab-btn[data-tab="bodymap"]');
+            if (bTab) bTab.click();
+          });
+        }
+
+        function selectOrgan(organId) {
+          var org = organMap.filter(function (x) { return x.id === organId; })[0];
+          if (!org) return;
+
+          var cardContainer = ov.querySelector('#aiOrganDetailCard');
+          if (cardContainer) {
+            cardContainer.innerHTML = AI.renderSingleOrganCard(org);
+          }
+
+          ov.querySelectorAll('.ai-organ-select-btn').forEach(function (btn) {
+            var bId = btn.getAttribute('data-organ-id');
+            if (bId === organId) {
+              btn.style.borderColor = '#4f46e5';
+              btn.style.background = '#ede9fe';
+              btn.style.color = '#4338ca';
+              btn.classList.add('active');
+            } else {
+              var targetOrg = organMap.filter(function (x) { return x.id === bId; })[0];
+              var isC = targetOrg && targetOrg.status === 'critical';
+              var isW = targetOrg && targetOrg.status === 'warning';
+              var isS = targetOrg && targetOrg.status === 'normal';
+              btn.style.borderColor = isC ? '#ef4444' : (isW ? '#f59e0b' : (isS ? '#10b981' : '#cbd5e1'));
+              btn.style.background = isC ? '#fef2f2' : (isW ? '#fffbeb' : (isS ? '#f0fdf4' : '#f8fafc'));
+              btn.style.color = isC ? '#b91c1c' : (isW ? '#b45309' : (isS ? '#15803d' : '#475569'));
+              btn.classList.remove('active');
+            }
+          });
+
+          ov.querySelectorAll('.ai-organ-beacon').forEach(function (beacon) {
+            var bId = beacon.getAttribute('data-organ-id');
+            var ring = beacon.querySelector('.ai-beacon-ring');
+            var targetOrg = organMap.filter(function (x) { return x.id === bId; })[0];
+            if (ring && targetOrg) {
+              var isC = targetOrg.status === 'critical';
+              var isW = targetOrg.status === 'warning';
+              var isS = targetOrg.status === 'normal';
+              var coreBg = isC ? '#ef4444' : (isW ? '#f59e0b' : (isS ? '#10b981' : '#475569'));
+              if (bId === organId) {
+                ring.setAttribute('fill', '#ffffff');
+                ring.setAttribute('stroke', '#4f46e5');
+                ring.setAttribute('stroke-width', '3');
+              } else {
+                ring.setAttribute('fill', coreBg);
+                ring.setAttribute('stroke', '#ffffff');
+                ring.setAttribute('stroke-width', '2');
+              }
+            }
+          });
+        }
+
+        ov.querySelectorAll('.ai-organ-select-btn').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var orgId = btn.getAttribute('data-organ-id');
+            selectOrgan(orgId);
+          });
+        });
+
+        ov.querySelectorAll('.ai-organ-beacon').forEach(function (beacon) {
+          beacon.addEventListener('click', function () {
+            var orgId = beacon.getAttribute('data-organ-id');
+            selectOrgan(orgId);
+          });
+        });
 
         // Voice Dictation Button (Urdu & English Speech Recognition)
         var voiceBtn = ov.querySelector('#aiVoiceDictateBtn');

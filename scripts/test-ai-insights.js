@@ -580,8 +580,66 @@ assert.equal(attachSuccess, true, 'attachSummaryToReportRemarks must succeed');
 assert(testResultsDB[0].values['Remarks'].includes('AI Clinical Correlation'), 'Result Remarks must contain the AI narrative');
 console.log('✓ Ultra-Advanced Feature 7: AI Executive Summary successfully generated and attached to printed report remarks');
 
+// 24. Test Ultra-Advanced Feature: Interactive Human Anatomy Organ Impact Map
+console.log('\n--- Testing Ultra-Advanced Feature 8: Interactive Human Anatomy Organ Impact Map ---');
+assert.equal(typeof AI.evaluateOrganMap, 'function', 'evaluateOrganMap must be a function');
+assert.equal(typeof AI.renderSingleOrganCard, 'function', 'renderSingleOrganCard must be a function');
+assert.equal(typeof AI.renderBodyMapHtml, 'function', 'renderBodyMapHtml must be a function');
+
+const anatomyTestReport = {
+  pt: { name: 'Multi Organ Patient', age: 60, gender: 'male' },
+  inv: { id: 'inv_organ_1', no: 'INV-ORG-1' },
+  groups: [
+    {
+      test: { name: 'Comprehensive Metabolic & Hematology Panel' },
+      res: {
+        values: {
+          glucose_fasting: 45, // Brain critical hypoglycemia (< 50)
+          potassium: 6.5,      // Heart critical hyperkalemia (> 6.2)
+          alt: 350,            // Liver critical hepatocellular necrosis (> 300)
+          creatinine: 4.5,     // Kidneys critical renal shutdown (> 4.0)
+          plt: 15000,          // Blood critical spontaneous bleed (< 20,000)
+          uric_acid: 9.5       // Joints critical hyperuricemia (> 9.0)
+        }
+      }
+    }
+  ]
+};
+
+const anatomyAnalysis = AI.generate5Solutions(anatomyTestReport);
+assert(anatomyAnalysis.organMap && Array.isArray(anatomyAnalysis.organMap), 'Solutions must include organMap array');
+assert.equal(anatomyAnalysis.organMap.length, 8, 'Must assess 8 physiological organ systems');
+
+const brainOrg = anatomyAnalysis.organMap.find(o => o.id === 'brain');
+assert(brainOrg && brainOrg.status === 'critical', 'Brain must flag critical for glucose 45 mg/dL');
+assert(brainOrg.hazard.includes('hypoglycemia'), 'Brain hazard must explain neuroglycopenia');
+
+const heartOrg = anatomyAnalysis.organMap.find(o => o.id === 'heart');
+assert(heartOrg && heartOrg.status === 'critical', 'Heart must flag critical for potassium 6.5 mEq/L');
+assert(heartOrg.hazard.includes('HYPERKALEMIA'), 'Heart hazard must explain hyperkalemia arrhythmia');
+
+const liverOrg = anatomyAnalysis.organMap.find(o => o.id === 'liver');
+assert(liverOrg && liverOrg.status === 'critical', 'Liver must flag critical for ALT 350 U/L');
+
+const kidneyOrg = anatomyAnalysis.organMap.find(o => o.id === 'kidneys');
+assert(kidneyOrg && kidneyOrg.status === 'critical', 'Kidneys must flag critical for Creatinine 4.5 mg/dL');
+
+const bloodOrg = anatomyAnalysis.organMap.find(o => o.id === 'blood');
+assert(bloodOrg && bloodOrg.status === 'critical', 'Blood must flag critical for Platelets 15,000 /uL');
+
+const jointsOrg = anatomyAnalysis.organMap.find(o => o.id === 'joints');
+assert(jointsOrg && jointsOrg.status === 'critical', 'Joints must flag critical for Uric Acid 9.5 mg/dL');
+
+const mapHtml = AI.renderBodyMapHtml(anatomyAnalysis);
+assert(mapHtml.includes('ai-organ-beacon'), 'Body map HTML must include SVG organ beacons');
+assert(mapHtml.includes('ai-organ-select-btn'), 'Body map HTML must render quick organ selection buttons');
+assert(mapHtml.includes('aiOrganDetailCard'), 'Body map HTML must include organ detail card container');
+assert(mapHtml.includes('Organ Stress Index'), 'Body map card must render stress level gauge');
+
+console.log('✓ Ultra-Advanced Feature 8: Interactive Human Anatomy Organ Impact Map successfully evaluated 8 physiological systems and rendered SVG projections');
+
 console.log('\n============================================================');
-console.log('ALL 23 TEST SUITES PASSED! ULTRA-ADVANCED HOSPITAL-GRADE AI VERIFIED WITH ZERO REGRESSIONS.');
+console.log('ALL 24 TEST SUITES PASSED! ULTRA-ADVANCED HOSPITAL-GRADE AI VERIFIED WITH ZERO REGRESSIONS.');
 console.log('============================================================\n');
 
 
