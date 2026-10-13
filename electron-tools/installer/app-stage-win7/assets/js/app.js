@@ -1463,6 +1463,12 @@
   /* location boxes: suggestions come from the list (and the Lab Profile address); anything can still be typed */
   App.datalistHtml = function (id, key, dflt) {
     var o = App.listOptions(key); if (dflt && o.indexOf(dflt) < 0) o.unshift(dflt);
+    if (key === 'regLocation' || key === 'destLocation') {   /* never an empty menu: the lab's own places, and the places used on earlier bills */
+      var st = {}; try { st = DB.get('settings', 'main') || {}; } catch (e) {}
+      var more = key === 'regLocation' ? [st.headOffice, st.address, st.mainLab, st.labName] : [st.destinationLocation, st.mainLab, st.headOffice, st.address, st.labName];
+      try { (DB.all('invoices') || []).slice(-400).forEach(function (iv) { more.push(iv && (key === 'regLocation' ? iv.regLocation : iv.destLocation)); }); } catch (e) {}
+      more.forEach(function (x) { x = String(x || '').trim(); if (x && x.length <= 120 && o.indexOf(x) < 0) o.push(x); });
+    }
     return '<datalist id="' + id + '">' + o.map(function (x) { return '<option value="' + App.esc(x) + '">'; }).join('') + '</datalist>';
   };
   /* Visit details (registration date, registration location, destination): filled in automatically, the person can change them */
@@ -1472,6 +1478,13 @@
     return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + 'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
   };
   App.fromLocalInput = function (v) { var d = v ? new Date(v) : null; return (d && !isNaN(d.getTime()) ? d : new Date()).toISOString(); };
+  /* the location boxes show their choices when clicked: the browser lists only choices that match what is already typed, so the box is
+     emptied while it is open and gets its text back if nothing was chosen */
+  (function () {
+    function combo(el) { return el && el.tagName === 'INPUT' && /(regloc|destloc)/i.test(el.getAttribute('list') || ''); }
+    document.addEventListener('focusin', function (e) { var el = e.target; if (!combo(el) || el.readOnly) return; el.setAttribute('data-prev', el.value); el.value = ''; });
+    document.addEventListener('focusout', function (e) { var el = e.target; if (!combo(el)) return; if (el.value === '' && el.hasAttribute('data-prev')) el.value = el.getAttribute('data-prev'); el.removeAttribute('data-prev'); });
+  })();
   App.visitDefaults = function () {   /* where the lab registers patients / sends reports unless told otherwise (Settings -> Lab Profile) */
     var s = {}; try { s = DB.get('settings', 'main') || {}; } catch (e) {}
     return { regLocation: s.headOffice || s.address || s.labName || '', destLocation: s.destinationLocation || s.mainLab || s.headOffice || s.address || s.labName || '' };
