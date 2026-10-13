@@ -432,134 +432,117 @@
         '</div></a>' +
     '</div>';
 
-    /* Recent Patients — Diagnostic lab patients table */
-    function doctorAvatarSvg(type) {
-      if (type === 'female' || type === 'hijab') {
-        return '<svg viewBox="0 0 40 40" width="100%" height="100%">' +
-          '<circle cx="20" cy="20" r="20" fill="#ebf3fc"/>' +
-          '<path d="M4 40c1-8 7-12 16-12s15 4 16 12z" fill="#f8fafc"/>' +
-          '<path d="M16 28l4 6 4-6" fill="#e2e8f0"/>' +
-          '<circle cx="20" cy="18" r="13" fill="#3c2f27"/>' +
-          '<ellipse cx="20" cy="18" rx="6.5" ry="8" fill="#f0cbaf"/>' +
-        '</svg>';
-      }
-      return '<svg viewBox="0 0 40 40" width="100%" height="100%">' +
-        '<circle cx="20" cy="20" r="20" fill="#ebf3fc"/>' +
-        '<path d="M4 40c1-8 7-12 16-12s15 4 16 12z" fill="#f8fafc"/>' +
-        '<path d="M16 28l4 6 4-6" fill="#e2e8f0"/>' +
-        '<ellipse cx="20" cy="19" rx="6.5" ry="8" fill="#cf9a72"/>' +
-        '<path d="M13.5 18c0-5 3-8 6.5-8s6.5 3 6.5 8c-2-2-4-3-6.5-3s-4.5 1-6.5 3z" fill="#2b2622"/>' +
-      '</svg>';
+    /* Recent Patients — Patient lab records table */
+    function ptAvatar(name, i) {
+      var initials = (name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).slice(0, 2).join('').toUpperCase();
+      var colors = ['#2563eb', '#7c3aed', '#db2777', '#059669', '#d97706', '#dc2626', '#0284c7', '#16a34a'];
+      var bg = colors[(i || 0) % colors.length];
+      return '<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:' + bg + ';color:#fff;font-size:13.5px;font-weight:700;flex:none;letter-spacing:-.3px">' + App.esc(initials) + '</span>';
     }
-    var apptFaces = {
-      amany: doctorAvatarSvg('female'),
-      yasmin: doctorAvatarSvg('female'),
-      sara: doctorAvatarSvg('female'),
-      tariq: doctorAvatarSvg('male'),
-      farid: doctorAvatarSvg('male'),
-      amir: doctorAvatarSvg('male'),
-      ahmed: doctorAvatarSvg('male')
-    };
 
-    var defaultLabPatients = [
-      { id: 'lp1', patient: 'Muhammad Imran', visit: 'Walk-in', doctor: 'Dr. Ahmed Khan', face: 'ahmed', spec: 'Hematology (CBC)', date: '13 Oct 2026', time: '09:30 AM' },
-      { id: 'lp2', patient: 'Ayesha Bibi', visit: 'Routine Test', doctor: 'Dr. Sara Malik', face: 'sara', spec: 'Diabetes (HbA1c)', date: '13 Oct 2026', time: '10:15 AM' },
-      { id: 'lp3', patient: 'Muhammad Aslam', visit: 'Referred OPD', doctor: 'Dr. Ahmed Khan', face: 'ahmed', spec: 'Biochemistry (LFT, RFT)', date: '13 Oct 2026', time: '11:45 AM' },
-      { id: 'lp4', patient: 'Fatima Noor', visit: 'Home Sampling', doctor: 'Dr. Sara Malik', face: 'sara', spec: 'Serology (HBsAg, HCV)', date: '13 Oct 2026', time: '01:20 PM' },
-      { id: 'lp5', patient: 'Bilal Hussain', visit: 'Walk-in', doctor: 'Dr. Tariq Al-Hakim', face: 'tariq', spec: 'Biochemistry (Lipid Profile)', date: '13 Oct 2026', time: '03:00 PM' },
-      { id: 'lp6', patient: 'Zainab Tariq', visit: 'Follow-Up', doctor: 'Dr. Sara Malik', face: 'sara', spec: 'Hormones (Vitamin D, TSH)', date: '13 Oct 2026', time: '04:15 PM' },
-      { id: 'lp7', patient: 'Kamran Akmal', visit: 'Walk-in', doctor: 'Dr. Ahmed Khan', face: 'ahmed', spec: 'Clinical Pathology (Urine R/E)', date: '12 Oct 2026', time: '09:00 AM' },
-      { id: 'lp8', patient: 'Nusrat Parveen', visit: 'Urgent / STAT', doctor: 'Dr. Sara Malik', face: 'sara', spec: 'Cardiac (Troponin I)', date: '12 Oct 2026', time: '11:30 AM' }
+    function genderBadge(g) {
+      var v = String(g || '').toLowerCase().charAt(0);
+      if (v === 'm') return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:700;border:1px solid #bfdbfe;flex:none">M</span>';
+      if (v === 'f') return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fdf2f8;color:#db2777;font-size:11px;font-weight:700;border:1px solid #fbcfe8;flex:none">F</span>';
+      return '';
+    }
+
+    function statusBadge(s) {
+      var sStr = String(s || '').toLowerCase();
+      if (sStr === 'paid') return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#ecfdf3;color:#16a34a;border:1px solid #86efac;text-align:center">Paid</span>';
+      if (sStr === 'unpaid') return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;text-align:center">Unpaid</span>';
+      if (sStr === 'new') return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;text-align:center">New</span>';
+      return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fffbeb;color:#d97706;border:1px solid #fde68a;text-align:center">Partial</span>';
+    }
+
+    /* Gather real recent invoices and patients sorted by newest first */
+    var recentPtList = [];
+    var seenInvs = {};
+    (invoices || []).slice().sort(function (a, b) {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    }).forEach(function (inv) {
+      if (!inv || !inv.id || seenInvs[inv.id]) return;
+      seenInvs[inv.id] = true;
+      var pt = (inv.patientId && DB.get('patients', inv.patientId)) || {};
+      var pName = (pt && pt.name) || inv.patientName || 'Patient';
+      var phone = (pt && (pt.phone || pt.whatsapp)) || inv.phone || '—';
+      var age = (pt && pt.age) ? String(pt.age) : '—';
+      var gender = (pt && pt.gender) || inv.gender || 'M';
+      var testNames = (inv.items || []).map(function (it) { return it.name || it.testName || ''; }).filter(Boolean).join(', ') || 'Lab Test';
+      var due = parseFloat(inv.due != null ? inv.due : (inv.total || 0));
+      var total = parseFloat(inv.total || 0);
+      var status = (due <= 0) ? 'paid' : (due >= total ? 'unpaid' : 'partial');
+      var amountStr = App.money ? App.money(total) : ('Rs ' + Math.round(total).toLocaleString('en-US'));
+      var d = inv.createdAt ? new Date(inv.createdAt) : new Date();
+      var dStr = ('0' + d.getDate()).slice(-2) + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear();
+      if (localDay(d) === today) dStr = 'Today';
+      else if (localDay(d) === localDay(new Date(Date.now() - 86400000))) dStr = 'Yesterday';
+
+      recentPtList.push({
+        id: inv.id,
+        patientId: inv.patientId || '',
+        name: pName,
+        phone: phone,
+        age: age,
+        gender: gender,
+        tests: testNames,
+        amountNum: total,
+        amount: amountStr,
+        status: status,
+        dateRaw: d.getTime(),
+        dateStr: dStr
+      });
+    });
+
+    /* Fallback demo rows when database has no invoices */
+    var demoPatRows = [
+      { id: 'd1', patientId: '', name: 'ALI RAZA', phone: '03000722292', age: '26', gender: 'M', tests: 'Anti-HCV (Hepatitis C), Vitamin B12, CBC', amountNum: 7100, amount: 'Rs 7,100', status: 'paid', dateRaw: Date.now(), dateStr: 'Today' },
+      { id: 'd2', patientId: '', name: 'Hussnain Pasha', phone: '03040683558', age: '45', gender: 'M', tests: 'PT / INR, Complete Blood Count', amountNum: 900, amount: 'Rs 900', status: 'unpaid', dateRaw: Date.now() - 86400000, dateStr: 'Yesterday' },
+      { id: 'd3', patientId: '', name: 'ALI', phone: '03000722292', age: '26', gender: 'M', tests: 'Blood Group (ABO/Rh), Hemoglobin', amountNum: 300, amount: 'Rs 300', status: 'paid', dateRaw: Date.now() - 86400000, dateStr: 'Yesterday' },
+      { id: 'd4', patientId: '', name: 'SAMREEN', phone: '—', age: '25', gender: 'F', tests: 'Hemoglobin, Urine Routine Examination', amountNum: 150, amount: 'Rs 150', status: 'paid', dateRaw: Date.now() - 86400000 * 3, dateStr: '10 Oct 2026' },
+      { id: 'd5', patientId: '', name: 'ALI RAZA', phone: '—', age: '26', gender: 'M', tests: 'Anti-HCV (Hepatitis C), Blood Group (ABO/Rh)', amountNum: 7250, amount: 'Rs 7,250', status: 'paid', dateRaw: Date.now() - 86400000 * 4, dateStr: '9 Oct 2026' },
+      { id: 'd6', patientId: '', name: 'FATIMA', phone: '—', age: '20', gender: 'F', tests: 'Complete Blood Count, Malarial Parasite (MP)', amountNum: 800, amount: 'Rs 800', status: 'paid', dateRaw: Date.now() - 86400000 * 4, dateStr: '9 Oct 2026' },
+      { id: 'd7', patientId: '', name: 'GHAZALA', phone: '—', age: '35', gender: 'F', tests: 'Complete Blood Count, Total Cholesterol', amountNum: 1250, amount: 'Rs 1,250', status: 'paid', dateRaw: Date.now() - 86400000 * 4, dateStr: '9 Oct 2026' },
+      { id: 'd8', patientId: '', name: 'WAQAS', phone: '—', age: '18', gender: 'M', tests: 'Complete Blood Count, Liver Function Test (LFT)', amountNum: 3200, amount: 'Rs 3,200', status: 'paid', dateRaw: Date.now() - 86400000 * 6, dateStr: '7 Oct 2026' }
     ];
 
-    /* Gather real laboratory patients from invoices sorted newest first */
-    var recentInvoices = invoices.slice().sort(function (a, b) {
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-    });
+    var ptDisplayList = recentPtList.length > 0 ? recentPtList : demoPatRows;
+    window.__recentPtList = ptDisplayList;
 
-    var realLabPatients = recentInvoices.map(function (inv, i) {
-      var pt = (inv.patientId && DB.get('patients', inv.patientId)) || {};
-      var doc = (inv.doctorId && DB.get('doctors', inv.doctorId)) || {};
-      var pName = (pt && pt.name) || inv.patientName || ('Patient ' + (i + 1));
-      var dName = (doc && doc.name) || (inv.doctorName) || (i % 2 === 0 ? 'Dr. Ahmed Khan' : 'Dr. Sara Malik');
-      var isFem = /sara|ayesha|amany|yasmin|fatima/i.test(dName);
-      var faceKey = isFem ? (i % 2 === 0 ? 'sara' : 'yasmin') : (['ahmed', 'tariq', 'farid'][i % 3]);
-
-      var items = inv.items || [];
-      var firstTest = items[0] || {};
-      var tName = firstTest.name || firstTest.testName || '';
-      var cat = (function (n, code) {
-        var str = ((code || '') + ' ' + (n || '')).toLowerCase();
-        if (/hba1c|glucose|fbs|rbs|ogtt|sugar/i.test(str)) return 'Diabetes';
-        if (/cbc|blood|hb|esr|plt|coag|pt|inr/i.test(str)) return 'Hematology';
-        if (/lft|rft|liver|renal|kft|elec|calc|uric/i.test(str)) return 'Biochemistry';
-        if (/lipid|chol|tg/i.test(str)) return 'Biochemistry';
-        if (/dengue|ns1|widal|typh|hbs|hcv|hiv|serol/i.test(str)) return 'Serology';
-        if (/tsh|tft|thyroid|vit|b12|ferr|horm/i.test(str)) return 'Hormones';
-        if (/urine|ure|stool|culture|semen|preg/i.test(str)) return 'Clinical Pathology';
-        return 'Diagnostic Lab';
-      })(tName, firstTest.code);
-
-      var shortTestName = firstTest.code || (tName.length > 20 ? tName.slice(0, 18) + '…' : tName);
-      var specText = shortTestName ? (cat + ' (' + shortTestName + ')') : cat;
-      if (items.length > 1) specText += ' +' + (items.length - 1);
-
-      var vType = inv.serviceType === 'home-collection' || inv.homeSampling ? 'Home Sampling' :
-                  (inv.urgent || inv.stat ? 'Urgent / STAT' : (i % 3 === 0 ? 'Walk-in' : (i % 3 === 1 ? 'Routine Test' : 'Referred OPD')));
-
-      var d = inv.createdAt ? new Date(inv.createdAt) : new Date(Date.now() - i * 3600000 * 3);
-      var dateStr = !isNaN(d) ? (('0' + d.getDate()).slice(-2) + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear()) : '13 Oct 2026';
-      var hours = !isNaN(d) ? d.getHours() : 10;
-      var ampm = hours >= 12 ? 'PM' : 'AM';
-      var h12 = hours % 12 || 12;
-      var timeStr = ('0' + h12).slice(-2) + ':' + ('0' + (!isNaN(d) ? d.getMinutes() : 0)).slice(-2) + ' ' + ampm;
-
-      return {
-        id: inv.id || ('lp-' + i),
-        patientId: inv.patientId,
-        patient: pName,
-        visit: vType,
-        doctor: dName,
-        face: faceKey,
-        spec: specText,
-        date: dateStr,
-        time: timeStr
-      };
-    });
-
-    var allLabPatients = realLabPatients.length >= 6 ? realLabPatients : realLabPatients.concat(defaultLabPatients);
-    window.__apptsList = allLabPatients;
-
-    function renderApptRow(r) {
-      var faceSvg = apptFaces[r.face] || apptFaces.ahmed || apptFaces.tariq;
+    function renderPtRowHtml(r, i) {
+      var gBadge = genderBadge(r.gender);
       var targetLink = r.patientId ? ('#/patient/' + encodeURIComponent(r.patientId)) : '#/patients';
-      return '<tr onclick="location.hash=\'' + targetLink + '\'" style="cursor:pointer" title="View Patient Details">' +
-        '<td style="font-weight:600;color:#1b2a4a;padding-left:20px">' + App.esc(r.patient) + '</td>' +
-        '<td style="color:#475569;font-weight:500">' + App.esc(r.visit) + '</td>' +
-        '<td><div class="dcell"><span class="pic">' + faceSvg + '</span><span style="font-weight:500;color:#1b2a4a">' + App.esc(r.doctor) + '</span></div></td>' +
-        '<td style="color:#475569;font-weight:500">' + App.esc(r.spec) + '</td>' +
-        '<td style="color:#475569;font-weight:500">' + App.esc(r.date) + '</td>' +
-        '<td style="color:#475569;font-weight:500;padding-right:20px">' + App.esc(r.time) + '</td>' +
+      var ageText = (r.age && r.age !== '—') ? (App.esc(r.age) + (!/yr/i.test(r.age) ? ' yr' : '')) : '—';
+      return '<tr>' +
+        '<td style="padding-left:20px"><div style="display:flex;align-items:center;gap:12px">' + ptAvatar(r.name, i) +
+        '<div><b style="font-size:13.5px;font-weight:600;color:#1b2a4a;display:block;letter-spacing:-.1px">' + App.esc(r.name) + '</b>' +
+        '<small style="color:#8a94a6;font-size:12px;font-weight:500;display:block;margin-top:2px">' + App.esc(r.phone) + '</small></div></div></td>' +
+        '<td><div style="display:flex;align-items:center;gap:7px">' + gBadge + '<span style="font-size:13px;color:#475569;font-weight:500">' + ageText + '</span></div></td>' +
+        '<td style="font-size:13px;color:#475569;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(r.tests) + '">' + App.esc(r.tests) + '</td>' +
+        '<td style="font-size:14px;font-weight:600;color:#1b2a4a">' + App.esc(r.amount) + '</td>' +
+        '<td>' + statusBadge(r.status) + '</td>' +
+        '<td style="font-size:13px;color:#8a94a6;white-space:nowrap;font-weight:500">' + App.esc(r.dateStr) + '</td>' +
+        '<td style="text-align:center;padding-right:20px"><a href="' + targetLink + '" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #86efac;background:#fff;color:#16a34a;transition:all .15s" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
       '</tr>';
     }
-    window.__renderApptRow = renderApptRow;
+    window.__renderPtRowHtml = renderPtRowHtml;
 
     var sortIcon = '<svg width="9" height="12" viewBox="0 0 9 12" fill="none" style="margin-left:6px;vertical-align:middle;display:inline-block"><path d="M4.5 1.5L8 5H1L4.5 1.5Z" fill="#94a3b8"/><path d="M4.5 10.5L1 7H8L4.5 10.5Z" fill="#94a3b8"/></svg>';
 
-    var apptsToRender = allLabPatients.slice(0, 6);
-    var apptRowsHtml = apptsToRender.map(renderApptRow).join('');
+    var ptRowsHtml = ptDisplayList.slice(0, 8).map(renderPtRowHtml).join('');
 
     var patCard = '<section class="card appts-card" id="apptsCard">' +
-      '<div class="ap-head"><div><h2>Recent Patients</h2><p>Latest laboratory patients &amp; test orders.</p></div>' +
+      '<div class="ap-head"><div><h2>Recent Patients</h2><p>Latest patients who visited for tests.</p></div>' +
       '<a href="#/patients" class="btn-soft" id="seeAll">See All <span style="font-size:14px;margin-left:2px">→</span></a></div>' +
       '<div class="tbl-wrap"><table class="ap-tbl"><thead><tr id="dhead">' +
-        '<th><button type="button" data-col="patient">Patient Name ' + sortIcon + '</button></th>' +
-        '<th><button type="button" data-col="visit">Visit Type ' + sortIcon + '</button></th>' +
-        '<th><button type="button" data-col="doctor">Doctor Name ' + sortIcon + '</button></th>' +
-        '<th><button type="button" data-col="spec">Specialty ' + sortIcon + '</button></th>' +
-        '<th><button type="button" data-col="date">Appointment Date ' + sortIcon + '</button></th>' +
-        '<th style="padding-right:20px"><button type="button" data-col="time">Time ' + sortIcon + '</button></th>' +
-      '</tr></thead><tbody id="apptsRows">' + apptRowsHtml + '</tbody></table></div>' +
+        '<th><button type="button" data-col="name">Patient Name ' + sortIcon + '</button></th>' +
+        '<th><button type="button" data-col="age">Age / Gender ' + sortIcon + '</button></th>' +
+        '<th><button type="button" data-col="tests">Tests Ordered ' + sortIcon + '</button></th>' +
+        '<th><button type="button" data-col="amountNum">Amount ' + sortIcon + '</button></th>' +
+        '<th><button type="button" data-col="status">Status ' + sortIcon + '</button></th>' +
+        '<th><button type="button" data-col="dateRaw">Date ' + sortIcon + '</button></th>' +
+        '<th style="text-align:center">Action</th>' +
+      '</tr></thead><tbody id="apptsRows">' + ptRowsHtml + '</tbody></table></div>' +
       '<nav class="ap-pager" id="dpager" aria-label="Pages"><button class="pg pg-nav" type="button" data-pg="first" title="First page">«</button><button class="pg pg-nav" type="button" data-pg="prev" title="Previous page">‹</button><button class="pg on" type="button" data-pg="1">1</button><button class="pg" type="button" data-pg="2">2</button><button class="pg" type="button" data-pg="3">3</button><span class="pg-dots">…</span><button class="pg" type="button" data-pg="8">8</button><button class="pg pg-nav" type="button" data-pg="next" title="Next page">›</button><button class="pg pg-nav" type="button" data-pg="last" title="Last page">»</button></nav>' +
       '</section>';
 
@@ -972,12 +955,12 @@
       var pagerEl = v.querySelector('#dpager');
       if (!rowsEl) return;
 
-      var data = (window.__apptsList || []).slice();
-      var pageSize = 6;
+      var data = (window.__recentPtList || []).slice();
+      var pageSize = 8;
       var curPage = 1;
       var curSortCol = null;
       var curSortAsc = true;
-      var renderRow = window.__renderApptRow || function () { return ''; };
+      var renderRow = window.__renderPtRowHtml || function () { return ''; };
 
       function renderPage(p) {
         curPage = p;
@@ -986,7 +969,7 @@
         if (!slice.length && data.length) {
           slice = data.slice(0, pageSize);
         }
-        rowsEl.innerHTML = slice.map(renderRow).join('');
+        rowsEl.innerHTML = slice.map(function (r, i) { return renderRow(r, start + i); }).join('');
 
         if (pagerEl) {
           pagerEl.querySelectorAll('.pg:not(.pg-nav)').forEach(function (btn) {
@@ -1023,7 +1006,7 @@
               curSortAsc = true;
             }
             data.sort(function (a, b) {
-              var va = a[colKey] || '', vb = b[colKey] || '';
+              var va = a[colKey] != null ? a[colKey] : '', vb = b[colKey] != null ? b[colKey] : '';
               if (typeof va === 'string') va = va.toLowerCase();
               if (typeof vb === 'string') vb = vb.toLowerCase();
               if (va < vb) return curSortAsc ? -1 : 1;
