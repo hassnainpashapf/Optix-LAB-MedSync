@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-installer/
+dist-bundle/
 *.exe
 *.dmg
 *.dmg.tar.gz
@@ -11,6 +12,7 @@ dist-installer/
 *.sqlite
 
 electron-tools/installer/app-stage/
+electron-tools/installer/labpos-setup.build.nsi
 
 tmp-build/
 ~
@@ -19,5 +21,6 @@ cloud/*.db
 
 # SMS build: generated Android project + APK binaries (never commit)
 android-app/android/
+android-app/plugins/*/android/build/
 *.apk
 *.idsig

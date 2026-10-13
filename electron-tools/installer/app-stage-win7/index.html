@@ -35,13 +35,6 @@
 <script src="assets/js/api-config.js"></script>
 <script src="assets/js/sms-gateway.js"></script>
 <script>
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', function () {
-    navigator.serviceWorker.register('offline-sw.js').catch(function (err) {
-      console.error('Offline app-shell caching could not start:', err);
-    });
-  });
-}
 /* Asset version stamp — BUMP ON EVERY RELEASE (use the release commit's short hash).
    It cache-busts all JS: eager tags below carry ?v=, and App.loadScript appends it
    to lazily loaded modules + jsPDF, so users always fetch fresh code after a deploy. */
