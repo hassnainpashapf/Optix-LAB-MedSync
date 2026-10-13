@@ -437,19 +437,19 @@
     function ptAvatar(name, idx) {
       var initials = (name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).slice(0, 2).join('').toUpperCase();
       var bg = AVATAR_COLORS[idx % AVATAR_COLORS.length];
-      return '<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:' + bg + ';color:#fff;font-size:14px;font-weight:800;flex:none;letter-spacing:-.5px">' + App.esc(initials) + '</span>';
+      return '<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:' + bg + ';color:#fff;font-size:13.5px;font-weight:800;flex:none;letter-spacing:-.3px">' + App.esc(initials) + '</span>';
     }
-    function genderIcon(g) {
+    function genderBadge(g) {
       var v = String(g || '').toLowerCase().charAt(0);
-      if (v === 'm') return '<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe">M</span>';
-      if (v === 'f') return '<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#fdf2f8;color:#db2777;border:1px solid #fbcfe8">F</span>';
+      if (v === 'm') return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:800;border:1px solid #bfdbfe;flex:none">M</span>';
+      if (v === 'f') return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fdf2f8;color:#db2777;font-size:11px;font-weight:800;border:1px solid #fbcfe8;flex:none">F</span>';
       return '';
     }
     function statusBadge(inv) {
       var due = parseFloat(inv.due || 0), total = parseFloat(inv.total || 0);
-      if (due <= 0) return '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#ecfdf3;color:#16a34a;border:1px solid #86efac">Paid</span>';
-      if (due >= total) return '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5">Unpaid</span>';
-      return '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#fffbeb;color:#d97706;border:1px solid #fcd34d">Partial</span>';
+      if (due <= 0) return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#ecfdf3;color:#16a34a;border:1px solid #86efac;text-align:center">Paid</span>';
+      if (due >= total) return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;text-align:center">Unpaid</span>';
+      return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#fffbeb;color:#d97706;border:1px solid #fde68a;text-align:center">Partial</span>';
     }
 
     /* Gather real recent invoices sorted by newest first */
@@ -458,38 +458,40 @@
       .sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); })
       .slice(0, 8);
 
-    /* Demo fallback rows when DB is empty */
+    /* Demo rows precisely matching the screenshot */
     var demoPatRows = [
-      { name: 'Ali Hassan', phone: '0300-1234567', age: '34', gender: 'M', tests: 'CBC, LFT', amount: 'Rs 2,500', status: 'paid', date: 'Today' },
-      { name: 'Sara Fatima', phone: '0321-9876543', age: '27', gender: 'F', tests: 'Thyroid Profile', amount: 'Rs 1,800', status: 'unpaid', date: 'Today' },
-      { name: 'Muhammad Usman', phone: '0311-5554444', age: '45', gender: 'M', tests: 'RFT, Urine R/E', amount: 'Rs 1,200', status: 'paid', date: 'Yesterday' },
-      { name: 'Ayesha Malik', phone: '0333-7778888', age: '31', gender: 'F', tests: 'Blood Sugar, HbA1c', amount: 'Rs 1,600', status: 'partial', date: 'Yesterday' },
-      { name: 'Khalid Mehmood', phone: '0345-2223333', age: '52', gender: 'M', tests: 'Lipid Profile', amount: 'Rs 900', status: 'paid', date: '12 Oct 2026' },
-      { name: 'Nadia Iqbal', phone: '0302-1112222', age: '38', gender: 'F', tests: 'CBC, ESR', amount: 'Rs 750', status: 'paid', date: '11 Oct 2026' }
+      { name: 'ALI RAZA', phone: '03000722292', age: '26', gender: 'M', tests: 'Anti-HCV (Hepatitis C), Vitamin B...', amount: 'Rs 7,100', status: 'paid', date: 'Today' },
+      { name: 'Hussnain Pasha', phone: '03040683558', age: '45', gender: 'M', tests: 'PT / INR', amount: 'Rs 900', status: 'unpaid', date: 'Yesterday' },
+      { name: 'ALI', phone: '03000722292', age: '26', gender: 'M', tests: 'Blood Group (ABO/Rh), Hemoglo...', amount: 'Rs 300', status: 'paid', date: 'Yesterday' },
+      { name: 'SAMREEN', phone: '—', age: '25', gender: 'F', tests: 'Hemoglobin', amount: 'Rs 150', status: 'paid', date: '10 Oct 2026' },
+      { name: 'ALI RAZA', phone: '—', age: '26', gender: 'M', tests: 'Anti-HCV (Hepatitis C), Blood Gr...', amount: 'Rs 7,250', status: 'paid', date: '9 Oct 2026' },
+      { name: 'FATIMA', phone: '—', age: '20', gender: 'F', tests: 'Complete Blood Count, Malarial ...', amount: 'Rs 800', status: 'paid', date: '9 Oct 2026' },
+      { name: 'GHAZALA', phone: '—', age: '35', gender: 'F', tests: 'Complete Blood Count, Total Cho...', amount: 'Rs 1,250', status: 'paid', date: '9 Oct 2026' },
+      { name: 'WAQAS', phone: '—', age: '18', gender: 'M', tests: 'Complete Blood Count, Liver Fun...', amount: 'Rs 3,200', status: 'paid', date: '7 Oct 2026' }
     ];
 
     var useDemo = recentInvs.length === 0;
 
+    var sortIcon = '<svg width="9" height="12" viewBox="0 0 9 12" fill="none" style="margin-left:5px;vertical-align:middle;display:inline-block"><path d="M4.5 1L7.5 4.5H1.5L4.5 1Z" fill="#94a3b8"/><path d="M4.5 11L1.5 7.5H7.5L4.5 11Z" fill="#94a3b8"/></svg>';
+
     var ptRowsHtml = useDemo
       ? demoPatRows.map(function (r, i) {
           var statusHtml = r.status === 'paid'
-            ? '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#ecfdf3;color:#16a34a;border:1px solid #86efac">Paid</span>'
+            ? '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#ecfdf3;color:#16a34a;border:1px solid #86efac;text-align:center">Paid</span>'
             : r.status === 'unpaid'
-            ? '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5">Unpaid</span>'
-            : '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#fffbeb;color:#d97706;border:1px solid #fcd34d">Partial</span>';
-          var gBadge = r.gender === 'M'
-            ? '<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe">M</span>'
-            : '<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#fdf2f8;color:#db2777;border:1px solid #fbcfe8">F</span>';
+            ? '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;text-align:center">Unpaid</span>'
+            : '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#fffbeb;color:#d97706;border:1px solid #fde68a;text-align:center">Partial</span>';
+          var gBadge = genderBadge(r.gender);
           return '<tr>' +
             '<td><div style="display:flex;align-items:center;gap:12px">' + ptAvatar(r.name, i) +
-            '<div><b style="font-size:13.5px;color:#1b2a4a;display:block">' + App.esc(r.name) + '</b>' +
-            '<small style="color:#8a94a6;font-size:12px">' + App.esc(r.phone) + '</small></div></div></td>' +
-            '<td><div style="display:flex;align-items:center;gap:6px">' + gBadge + '<span style="font-size:13px;color:#475569">' + App.esc(r.age) + ' yr</span></div></td>' +
-            '<td style="font-size:13px;color:#334155;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(r.tests) + '</td>' +
-            '<td style="font-size:13.5px;font-weight:700;color:#1b2a4a">' + App.esc(r.amount) + '</td>' +
+            '<div><b style="font-size:13.5px;font-weight:800;color:#1b2a4a;display:block;letter-spacing:-.1px">' + App.esc(r.name) + '</b>' +
+            '<small style="color:#8a94a6;font-size:12px;font-weight:500;display:block;margin-top:2px">' + App.esc(r.phone) + '</small></div></div></td>' +
+            '<td><div style="display:flex;align-items:center;gap:7px">' + gBadge + '<span style="font-size:13px;color:#475569;font-weight:500">' + App.esc(r.age) + ' yr</span></div></td>' +
+            '<td style="font-size:13px;color:#475569;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(r.tests) + '">' + App.esc(r.tests) + '</td>' +
+            '<td style="font-size:14px;font-weight:800;color:#1b2a4a">' + App.esc(r.amount) + '</td>' +
             '<td>' + statusHtml + '</td>' +
-            '<td style="font-size:12.5px;color:#8a94a6;white-space:nowrap">' + App.esc(r.date) + '</td>' +
-            '<td><a href="#/patients" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #bbf7d0;background:#fff;color:#16a34a" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
+            '<td style="font-size:13px;color:#8a94a6;white-space:nowrap;font-weight:500">' + App.esc(r.date) + '</td>' +
+            '<td><a href="#/patients" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #86efac;background:#fff;color:#16a34a;transition:all .15s" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
           '</tr>';
         }).join('')
       : recentInvs.map(function (inv, i) {
@@ -497,7 +499,7 @@
           var pName = pt.name || inv.patientName || 'Patient';
           var phone = pt.phone || pt.whatsapp || inv.phone || '—';
           var age = pt.age ? (pt.age + ' yr') : '—';
-          var gender = genderIcon(pt.gender);
+          var gender = genderBadge(pt.gender);
           var testNames = (inv.items || []).slice(0, 3).map(function (it) { return it.name || it.testName || ''; }).filter(Boolean).join(', ') || 'Lab Test';
           var testCount = (inv.items || []).length;
           if (testCount > 3) testNames += ' +' + (testCount - 3) + ' more';
@@ -505,27 +507,27 @@
           var invDate = inv.createdAt ? (function () { var d = new Date(inv.createdAt); var dd = d.getDate(), mm = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()], yy = d.getFullYear(); var todayStr = today; var dStr = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); return dStr === todayStr ? 'Today' : dStr === (function(){var x=new Date();x.setDate(x.getDate()-1);return x.getFullYear()+'-'+('0'+(x.getMonth()+1)).slice(-2)+'-'+('0'+x.getDate()).slice(-2)})() ? 'Yesterday' : dd + ' ' + mm + ' ' + yy; })() : '—';
           return '<tr>' +
             '<td><div style="display:flex;align-items:center;gap:12px">' + ptAvatar(pName, i) +
-            '<div><b style="font-size:13.5px;color:#1b2a4a;display:block">' + App.esc(pName) + '</b>' +
-            '<small style="color:#8a94a6;font-size:12px">' + App.esc(phone) + '</small></div></div></td>' +
-            '<td><div style="display:flex;align-items:center;gap:6px">' + gender + '<span style="font-size:13px;color:#475569">' + App.esc(age) + '</span></div></td>' +
-            '<td style="font-size:13px;color:#334155;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(testNames) + '">' + App.esc(testNames) + '</td>' +
-            '<td style="font-size:13.5px;font-weight:700;color:#1b2a4a">' + App.esc(amount) + '</td>' +
+            '<div><b style="font-size:13.5px;font-weight:800;color:#1b2a4a;display:block;letter-spacing:-.1px">' + App.esc(pName) + '</b>' +
+            '<small style="color:#8a94a6;font-size:12px;font-weight:500;display:block;margin-top:2px">' + App.esc(phone) + '</small></div></div></td>' +
+            '<td><div style="display:flex;align-items:center;gap:7px">' + gender + '<span style="font-size:13px;color:#475569;font-weight:500">' + App.esc(age) + '</span></div></td>' +
+            '<td style="font-size:13px;color:#475569;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(testNames) + '">' + App.esc(testNames) + '</td>' +
+            '<td style="font-size:14px;font-weight:800;color:#1b2a4a">' + App.esc(amount) + '</td>' +
             '<td>' + statusBadge(inv) + '</td>' +
-            '<td style="font-size:12.5px;color:#8a94a6;white-space:nowrap">' + App.esc(invDate) + '</td>' +
-            '<td><a href="#/patients/' + App.esc(inv.patientId) + '" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #bbf7d0;background:#fff;color:#16a34a" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
+            '<td style="font-size:13px;color:#8a94a6;white-space:nowrap;font-weight:500">' + App.esc(invDate) + '</td>' +
+            '<td><a href="#/patients/' + App.esc(inv.patientId) + '" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #86efac;background:#fff;color:#16a34a;transition:all .15s" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
           '</tr>';
         }).join('');
 
     var patCard = '<section class="card appts-card" id="apptsCard">' +
       '<div class="ap-head"><div><h2>Recent Patients</h2><p>Latest patients who visited for tests.</p></div>' +
-      '<a href="#/patients" class="btn-soft" id="seeAll">See All <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>' +
+      '<a href="#/patients" class="btn-soft" id="seeAll">See All <span style="font-size:14px;margin-left:2px">→</span></a></div>' +
       '<div class="tbl-wrap"><table class="ap-tbl"><thead><tr id="dhead">' +
-        '<th><button type="button">Patient Name <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th><button type="button">Age / Gender <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th><button type="button">Tests Ordered <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th><button type="button">Amount <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th><button type="button">Status <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th><button type="button">Date <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th><button type="button">Patient Name ' + sortIcon + '</button></th>' +
+        '<th><button type="button">Age / Gender ' + sortIcon + '</button></th>' +
+        '<th><button type="button">Tests Ordered ' + sortIcon + '</button></th>' +
+        '<th><button type="button">Amount ' + sortIcon + '</button></th>' +
+        '<th><button type="button">Status ' + sortIcon + '</button></th>' +
+        '<th><button type="button">Date ' + sortIcon + '</button></th>' +
         '<th>Action</th>' +
       '</tr></thead><tbody id="apptsRows">' + ptRowsHtml + '</tbody></table></div>' +
       '<nav class="ap-pager" id="dpager" aria-label="Pages"><button class="pg on" type="button">1</button><button class="pg" type="button">2</button><button class="pg" type="button">3</button></nav>' +
@@ -827,41 +829,29 @@
     'details.dt summary::marker{display:none}' +
     '.tip2{position:fixed;z-index:9999;pointer-events:none;background:#1e243b;color:#fff;border-radius:8px;padding:9px 13px;font-size:12px;line-height:1.55;box-shadow:0 10px 25px rgba(15,23,42,.4)}' +
     '.tip2[hidden]{display:none}' +
-    '/* ===== Appointments table (appts-card) ===== */' +
-    '.appts-card{padding:22px 24px 18px;border-radius:20px;background:#fff;border:0!important;box-shadow:0 2px 14px rgba(27,42,74,.09)!important;margin-bottom:18px}' +
-    '.ap-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}' +
-    '.ap-head h2{margin:0 0 4px;font-size:20px;font-weight:700;color:var(--ink);letter-spacing:-.2px}' +
-    '.ap-head p{margin:0;font-size:13.5px;color:#8a94a6;font-weight:500}' +
-    '.btn-soft{height:36px;padding:0 16px;border:0;border-radius:10px;background:#eef3fd;color:#2f6df6;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer;transition:background .15s}' +
-    '.btn-soft:hover{background:#e2eafc}' +
-    '.btn-soft svg{width:13px;height:13px;stroke-width:2.5;fill:none;stroke:currentColor}' +
-    '.tbl-wrap{margin-top:16px;overflow-x:auto}' +
+    '/* ===== Appointments / Recent Patients table (appts-card) ===== */' +
+    '.appts-card{padding:24px 26px 20px;border-radius:20px;background:#fff;border:0!important;box-shadow:0 2px 14px rgba(27,42,74,.08)!important;margin-bottom:20px}' +
+    '.ap-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px}' +
+    '.ap-head h2{margin:0 0 4px;font-size:20px;font-weight:800;color:#1b2a4a;letter-spacing:-.01em}' +
+    '.ap-head p{margin:0;font-size:13.5px;color:#8a94a6;font-weight:400}' +
+    '.btn-soft{height:34px;padding:0 16px;border:0;border-radius:999px;background:#eef4fd;color:#2f6df6;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer;transition:background .15s}' +
+    '.btn-soft:hover{background:#e0ebfb}' +
+    '.tbl-wrap{margin-top:14px;overflow-x:auto}' +
     '.ap-tbl{width:100%;min-width:860px;border-collapse:collapse}' +
-    '.ap-tbl thead th{background:#f8fafc;text-align:left;font-weight:600;color:#8a94a6;font-size:13px;height:46px;padding:0 14px;white-space:nowrap}' +
-    '.ap-tbl thead th:first-child{border-radius:12px 0 0 12px;padding-left:20px}' +
-    '.ap-tbl thead th:last-child{border-radius:0 12px 12px 0}' +
-    '.ap-tbl th button{border:0;background:none;padding:0;color:inherit;font:inherit;display:inline-flex;align-items:center;gap:8px;cursor:pointer}' +
-    '.ap-tbl th .sort{display:inline-flex;flex-direction:column;gap:1.5px}' +
-    '.ap-tbl th .sort i{display:block;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent}' +
-    '.ap-tbl th .sort i:first-child{border-bottom:3.5px solid #a5adbc}' +
-    '.ap-tbl th .sort i:last-child{border-top:3.5px solid #a5adbc}' +
-    '.ap-tbl th[data-dir="asc"] .sort i:first-child{border-bottom-color:#2563eb}' +
-    '.ap-tbl th[data-dir="desc"] .sort i:last-child{border-top-color:#2563eb}' +
-    '.ap-tbl tbody td{height:72px;padding:0 14px;font-size:13.5px;color:var(--ink);border-bottom:1px solid #f1f4f9;white-space:nowrap}' +
-    '.ap-tbl tbody td:first-child{padding-left:20px;font-weight:600}' +
+    '.ap-tbl thead th{background:#f8fafc;text-align:left;font-weight:600;color:#8a94a6;font-size:13px;height:46px;padding:0 14px;white-space:nowrap;border:none}' +
+    '.ap-tbl thead th:first-child{border-radius:12px 0 0 12px;padding-left:18px}' +
+    '.ap-tbl thead th:last-child{border-radius:0 12px 12px 0;text-align:center}' +
+    '.ap-tbl th button{border:0;background:none;padding:0;color:inherit;font:inherit;display:inline-flex;align-items:center;gap:4px;cursor:pointer}' +
+    '.ap-tbl tbody td{height:68px;padding:0 14px;font-size:13.5px;color:#1b2a4a;border-bottom:1px solid #f1f5f9;white-space:nowrap;vertical-align:middle}' +
+    '.ap-tbl tbody td:first-child{padding-left:18px}' +
+    '.ap-tbl tbody td:last-child{text-align:center}' +
+    '.ap-tbl tbody tr:hover{background:#fafcff}' +
     '.ap-tbl tbody tr:last-child td{border-bottom:0}' +
-    '.ap-tbl .dcell{display:flex;align-items:center;gap:12px}' +
-    '.ap-tbl .dcell .pic{width:42px;height:42px;border-radius:50%;overflow:hidden;background:#f1f5f9;border:1px solid #eef2f6;flex:none;display:flex;align-items:center;justify-content:center}' +
-    '.ap-tbl .acts{display:flex;align-items:center;gap:10px}' +
-    '.ap-tbl .round{width:36px;height:36px;border-radius:50%;border:1.2px solid;background:#fff;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;transition:all .15s}' +
-    '.ap-tbl .round svg{width:15px;height:15px;stroke-width:2.2;fill:none;stroke:currentColor}' +
-    '.ap-tbl .round.x{color:#ef4444;border-color:#fecaca}' +
-    '.ap-tbl .round.x:hover{background:#fef2f2;border-color:#fca5a5}' +
-    '.ap-tbl .round.v{color:#22c55e;border-color:#bbf7d0}' +
-    '.ap-tbl .round.v:hover{background:#f0fdf4;border-color:#86efac}' +
-    '.ap-pager{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:16px}' +
-    '.ap-pager .pg{min-width:32px;height:32px;padding:0 8px;border-radius:8px;border:1px solid #e3e8f1;background:#fff;color:#5b6577;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}' +
-    '.ap-pager .pg:hover{background:#f8fafc}' +
+    '.ap-tbl .round{width:34px;height:34px;border-radius:50%;border:1.2px solid #86efac;background:#fff;color:#16a34a;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;transition:all .15s}' +
+    '.ap-tbl .round:hover{background:#f0fdf4;border-color:#4ade80;transform:scale(1.05)}' +
+    '.ap-pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:22px}' +
+    '.ap-pager .pg{width:32px;height:32px;padding:0;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:600;display:inline-grid;place-items:center;cursor:pointer;transition:all .15s}' +
+    '.ap-pager .pg:hover:not(.on){background:#f8fafc;border-color:#cbd5e1}' +
     '.ap-pager .pg.on{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:700}' +
     '</style>' +
 
