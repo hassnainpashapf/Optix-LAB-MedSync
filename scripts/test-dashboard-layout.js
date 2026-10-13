@@ -21,13 +21,13 @@ for (const source of [webDashboard, desktopDashboard]) {
     const context = { isTech, App: { icon: () => '<svg aria-hidden="true"></svg>' } };
     vm.runInNewContext(source.slice(start, end), context);
     const bodyStyle = context.quickCss.match(/\.dbq-card \.card-b\{([^}]+)\}/)[1];
-    assert.match(bodyStyle, /flex-direction:column/);
+    /* the shortcut cards look like the KPI cards: icon chip on the left, title and description beside it */
+    assert.match(bodyStyle, /flex-direction:row!important/);
     assert.match(bodyStyle, /align-items:center/);
-    assert.match(bodyStyle, /text-align:center/);
-    assert.match(bodyStyle, /padding:8px 6px!important/);
-    assert.match(bodyStyle, /gap:4px!important/);
-    assert.match(context.quickCss, /min-height:78px/);
-    assert.match(context.quickCss, /width:28px!important;height:28px!important/);
+    assert.match(bodyStyle, /text-align:left/);
+    assert.match(bodyStyle, /padding:16px 18px!important/);
+    assert.match(bodyStyle, /gap:14px!important/);
+    assert.match(context.quickCss, /width:46px!important;height:46px!important/);
     const cards = [...context.quickAccess.matchAll(/<a href="([^"]+)" class="card dbq-card"[^>]*>([\s\S]*?)<\/a>/g)];
     assert.equal(cards.length, isTech ? 7 : 8);
     for (const [, , body] of cards) {
