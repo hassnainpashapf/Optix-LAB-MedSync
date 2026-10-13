@@ -456,12 +456,16 @@
       var t = DB.get('tests', r.testId) || {};
       return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)">' +
         '<span style="width:34px;height:34px;border-radius:10px;background:#8b5cf61a;color:#8b5cf6;display:grid;place-items:center;flex:none">' + App.icon('flask', 16) + '</span>' +
-        '<span style="flex:1"><b style="font-size:13px;color:var(--ink)">' + App.esc(t.name || r.testName || 'Test') + '</b><br>' +
-        '<small style="color:var(--muted)">' + App.esc(p.name || '') + '</small></span>' +
-        '<span class="badge badge-warn">Pending</span></div>';
+        '<span style="flex:1;min-width:0"><b style="font-size:13px;color:var(--ink);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(t.name || r.testName || 'Test') + '</b>' +
+        '<small style="color:var(--muted);display:block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(p.name || '') + '</small></span>' +
+        '<span class="badge badge-warn" style="flex:none">Pending</span></div>';
     }).join('');
-    var pendCard = '<div class="card"><div class="card-h"><h3>Tests in Progress</h3><a class="btn btn-ghost btn-sm" href="#/results">View all</a></div>' +
-      '<div class="card-b">' + (pendRows || App.empty('No pending tests.')) + '</div></div>';
+    var pendCard = '<div class="card rd-card">' +
+      '<div class="rd-head"><span class="cf-badge" style="background:#f3e8ff;color:#7c3aed">' + App.icon('flask', 17) + '</span>' +
+        '<div class="t"><b>Tests in Progress</b><small>' + pendingRes.length + ' awaiting result entry</small></div>' +
+        '<a class="ovk-m" href="#/results" title="Open" aria-label="Open results"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></a></div>' +
+      '<div class="rd-list" style="margin-top:4px">' + (pendRows || App.empty('No pending tests.')) + '</div>' +
+      '<a class="rd-all" href="#/results" style="margin-top:auto">View All Results ' + App.icon('arrow-right', 13) + '</a></div>';
 
 
     /* ---------- two big graph cards: last 7 days (hand-drawn SVG, no libraries) ---------- */
@@ -517,7 +521,7 @@
     var chartB = bigCard('Tests &amp; Invoices', 'Last 7 days', chip('Tests ordered', sum(tests7), '#7c3aed') + chip('Invoices', sum(inv7), '#ea580c') + chip('Today', tests7[6] + ' tests'),
       chartSvg({ label: 'Tests ordered and invoices per day', bars: [{ name: 'Invoices', data: inv7, color: '#fdba74' }], line: { name: 'Tests ordered', data: tests7, color: '#7c3aed' } }), legend([['Invoices', '#fdba74'], ['Tests ordered', '#7c3aed']]), isTech ? null : ['#/invoices', 'Invoices']);
 
-    /* ---------- Overview middle row (as in the Overview picture): Cash Flow by month + Referring Doctors ---------- */
+    /* ---------- Overview middle row: monthly Cash Flow + Tests in Progress ---------- */
     var yr = today.slice(0, 4), flowIn = [], flowOut = [], fi;
     for (fi = 0; fi < 12; fi++) { flowIn.push(0); flowOut.push(0); }
     function monthOf(v) { var k = localDay(v); return k && k.slice(0, 4) === yr ? +k.slice(5, 7) - 1 : -1; }
@@ -543,31 +547,7 @@
       '<div class="cf-plot"><div class="cf-yax" id="cfYax"></div><div class="cf-area" id="cfArea"></div></div>' +
       '<div class="cf-spacer"></div></div>';
 
-    var canDocs = !App.canPage || App.canPage('doctors');
     var sideCard = pendCard, lowerRight = patCard, lowerLeft = chartB;
-    if (canDocs) {
-      var docs = DB.all('doctors') || [], since = new Date(); since.setDate(since.getDate() - 29);
-      var sinceKey = localDay(since), refs = {};
-      invoices.forEach(function (inv) { var k = localDay(inv.createdAt); if (inv.doctorId && k && k >= sinceKey && k <= today) refs[inv.doctorId] = (refs[inv.doctorId] || 0) + 1; });
-      var activeN = docs.filter(function (d) { return refs[d.id]; }).length;
-      var topDocs = docs.slice().sort(function (a, b) { return (refs[b.id] || 0) - (refs[a.id] || 0) || String(a.name || '').localeCompare(String(b.name || '')); }).slice(0, 5);
-      var AV = ['#2f6df6', '#16a34a', '#7c3aed', '#ea580c', '#0891b2'];
-      var docRows = topDocs.map(function (d, i) {
-        var n = refs[d.id] || 0, nm = String(d.name || 'Doctor'), ini = nm.replace(/^dr\.?\s*/i, '').charAt(0).toUpperCase() || 'D';
-        return '<div class="rd-row"><span class="rd-pic" style="--ac:' + AV[i % AV.length] + '">' + App.esc(ini) + '</span>' +
-          '<div class="rd-nm"><b>' + App.esc(nm) + '</b><small>' + App.esc(d.clinic || 'Referring doctor') + ' · ' + n + ' referral' + (n === 1 ? '' : 's') + '</small></div>' +
-          '<span class="rd-tag ' + (n ? 'ok' : 'no') + '">' + (n ? 'Active' : 'Inactive') + '</span></div>';
-      }).join('');
-      sideCard = '<div class="card rd-card">' +
-        '<div class="rd-head"><span class="cf-badge">' + App.icon('users', 17) + '</span>' +
-          '<div class="t"><b>Referring Doctors</b><small>Patients referred in the last 30 days</small></div>' +
-          '<a class="ovk-m" href="#/doctors" title="Open" aria-label="Open doctors"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></a></div>' +
-        '<div class="rd-avail"><div class="rd-box g"><small>Active</small><b>' + activeN + ' Doctor' + (activeN === 1 ? '' : 's') + '</b></div>' +
-          '<div class="rd-box r"><small>Inactive</small><b>' + (docs.length - activeN) + ' Doctor' + (docs.length - activeN === 1 ? '' : 's') + '</b></div></div>' +
-        '<div class="rd-list">' + (docRows || App.empty('Add referring doctors to see them here.')) + '</div>' +
-        '<a class="rd-all" href="#/doctors">See All Doctors ' + App.icon('arrow-right', 13) + '</a></div>';
-      lowerLeft = chartB + pendCard;
-    }
     var midHtml = '<div class="ov-mid">' + flowCard + sideCard + '</div>';
     /* the Smart Dashboard section was removed from the dashboard (smartAnalyticsBody is kept for the tests / later use) */
 
