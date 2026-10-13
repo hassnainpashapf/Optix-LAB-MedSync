@@ -371,3 +371,16 @@ input[list*="regloc" i]::-webkit-calendar-picker-indicator, input[list*="destloc
 .nav-sub-it.on { color: var(--tint-ink); font-weight: 600; }
 .sidebar .nav-sub-it.on .nav-sub-ic { color: var(--tint-ink); }
 .nav-sub-it.on::before { background: var(--tint-ink); box-shadow: 0 0 0 3px var(--tint); }
+
+/* ================= cards without an outline: a soft shadow separates them from the page ================= */
+body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, .unifi-panel, .db-kpi, .db-trend, .sms-set-wrap .card, .dl-cols > .card {
+  border: 0 !important;
+  box-shadow: 0 2px 14px rgba(27, 42, 74, .09) !important;
+}
+.ovk:hover, .dbq-card:hover { box-shadow: 0 14px 34px -16px rgba(27, 42, 74, .32) !important; }
+.db-kpi { border-left: 4px solid var(--kc, #2f6df6) !important; }
+
+/* one icon colour everywhere on the cards: the same light blue chip and blue icon */
+.ovk-ic, .stat .stat-ico, .kpi .kpi-ic { color: #2f6df6 !important; background: #eef3ff !important; box-shadow: none !important; border: 0 !important; }
+.dbq-card .card-b > span:first-child { color: #2f6df6 !important; background: #eef3ff !important; }
+.stat-ic, .stat-ic.blue, .stat-ic.teal { color: #2f6df6; background: #eef3ff; }
