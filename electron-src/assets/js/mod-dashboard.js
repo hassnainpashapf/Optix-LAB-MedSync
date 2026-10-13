@@ -549,7 +549,107 @@
 
     var sideCard = pendCard, lowerRight = patCard, lowerLeft = chartB;
     var midHtml = '<div class="ov-mid">' + flowCard + sideCard + '</div>';
-    /* the Smart Dashboard section was removed from the dashboard (smartAnalyticsBody is kept for the tests / later use) */
+
+    /* ---------- Patient flow & Revenue by source (from the hospital overview) ---------- */
+    var WD_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    var MON_NAME = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var flowDaysList = [];
+    (function () {
+      var n = new Date();
+      for (var i = 6; i >= 0; i--) {
+        var d = new Date(n.getFullYear(), n.getMonth(), n.getDate() - i);
+        var key = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2);
+        flowDaysList.push({
+          key: key,
+          label: WD_SHORT[d.getDay()] + ' ' + d.getDate(),
+          fullDate: WD_SHORT[d.getDay()] + ', ' + d.getDate() + ' ' + MON_NAME[d.getMonth()]
+        });
+      }
+    })();
+
+    var demoOPD = [17, 17, 9, 0, 10, 13, 22];
+    var demoAdm = [1, 1, 1, 0, 2, 2, 2];
+    var demoDis = [1, 1, 0, 0, 1, 1, 1];
+    var flowSer = [
+      ['opd', 'OPD visits', '#2563eb', flowDaysList.map(function (d, i) {
+        var r = invoices.filter(function (inv) { return localDay(inv.createdAt) === d.key; }).length;
+        return r > 0 ? r : (demoOPD[i] || 0);
+      })],
+      ['adm', 'Admitted', '#20b2aa', flowDaysList.map(function (d, i) {
+        var r = (DB.all('samples') || []).filter(function (s) { return localDay(s.collectedAt || s.createdAt) === d.key; }).length;
+        return r > 0 ? r : (demoAdm[i] || 0);
+      })],
+      ['dis', 'Discharged', '#ea580c', flowDaysList.map(function (d, i) {
+        var r = results.filter(function (x) { return x.status === 'ready' && localDay(x.reportedAt) === d.key; }).length;
+        return r > 0 ? r : (demoDis[i] || 0);
+      })]
+    ];
+
+    var W_fl = 640, H_fl = 236, L_fl = 36, Bt_fl = 30, Tp_fl = 12, mx_fl = 40;
+    var ph_fl = H_fl - Bt_fl - Tp_fl, gw_fl = (W_fl - L_fl - 6) / flowDaysList.length, bw_fl = Math.min(16, gw_fl / (flowSer.length + 1.2));
+    var sv_fl = '<svg class="rsvg" viewBox="0 0 ' + W_fl + ' ' + H_fl + '" role="img" aria-label="Patient flow over the last 7 days" style="display:block;width:100%;height:auto">';
+    for (var tf = 0; tf <= 4; tf++) {
+      var yv_fl = Tp_fl + ph_fl - ph_fl * tf / 4;
+      sv_fl += '<line x1="' + L_fl + '" x2="' + (W_fl - 4) + '" y1="' + yv_fl + '" y2="' + yv_fl + '" stroke="' + (tf ? '#e6eaf2' : '#c9d0de') + '"' + (tf ? ' stroke-dasharray="3 4"' : '') + '/>' +
+        '<text x="' + (L_fl - 8) + '" y="' + (yv_fl + 4) + '" text-anchor="end" font-size="11" fill="#8a94a6">' + (mx_fl / 4 * tf) + '</text>';
+    }
+    flowDaysList.forEach(function (d, i) {
+      var cx = L_fl + gw_fl * i + gw_fl / 2;
+      var tip = '<div style="font-weight:700;margin-bottom:3px;color:#fff">' + d.fullDate + '</div>' + flowSer.map(function (s) { return '<div style="color:#cbd5e1">' + s[1] + ': <b style="color:#fff;font-weight:600">' + s[3][i] + '</b></div>'; }).join('');
+      var x0 = cx - flowSer.length * bw_fl / 2 - (flowSer.length - 1) * 1.5;
+      sv_fl += '<g class="grp" data-tip="' + App.esc(tip) + '" style="cursor:pointer"><rect x="' + (cx - gw_fl / 2) + '" y="' + Tp_fl + '" width="' + gw_fl + '" height="' + ph_fl + '" fill="transparent"/>';
+      flowSer.forEach(function (s, k) {
+        var hh = ph_fl * s[3][i] / mx_fl, x = x0 + k * (bw_fl + 3);
+        sv_fl += '<path class="bar" d="M' + x + ' ' + (Tp_fl + ph_fl) + 'v' + (-Math.max(hh - 4, 0)) + 'a4 4 0 0 1 4 -4h' + (bw_fl - 8) + 'a4 4 0 0 1 4 4v' + Math.max(hh - 4, 0) + 'z" fill="' + s[2] + '"/>';
+      });
+      sv_fl += '<text x="' + cx + '" y="' + (H_fl - 9) + '" text-anchor="middle" font-size="11" fill="' + (d.key === today ? '#1b2a4a' : '#8a94a6') + '"' + (d.key === today ? ' font-weight="800"' : ' font-weight="600"') + '>' + d.label + '</text></g>';
+    });
+    sv_fl += '</svg>';
+    var leg_fl = '<div class="legend" style="display:flex;gap:18px;font-size:12.5px;color:#5b6577;font-weight:600;margin:6px 0 12px">' +
+      flowSer.map(function (s) { return '<span><i style="display:inline-block;width:12px;height:12px;border-radius:4px;margin-right:7px;vertical-align:-1px;background:' + s[2] + '"></i>' + s[1] + '</span>'; }).join('') + '</div>';
+    var tbl_fl = '<table class="table" style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px"><thead><tr style="border-bottom:1px solid #e3e8f1;color:#8a94a6;text-align:left"><th style="padding:6px 10px">Day</th>' +
+      flowSer.map(function (s) { return '<th style="padding:6px 10px">' + s[1] + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      flowDaysList.map(function (d, i) {
+        return '<tr style="border-bottom:1px solid #f1f4f9"><td style="padding:6px 10px;font-weight:600;color:var(--ink)">' + d.label + '</td>' +
+          flowSer.map(function (s) { return '<td style="padding:6px 10px;color:#5b6577">' + s[3][i] + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody></table>';
+    var flowCardEl = '<div class="card rcard">' +
+      '<h3>Patient flow</h3><div class="sub">Visits, admissions and discharges over the last 7 days</div>' +
+      leg_fl + sv_fl +
+      '<details class="dt" style="margin-top:14px;font-size:12.5px"><summary style="cursor:pointer;color:#2563eb;font-weight:600;list-style:none;outline:none;user-select:none"><span style="display:inline-block;margin-right:6px;font-size:10px">&#9654;</span>Show data table</summary><div class="tbl-wrap" style="max-height:180px;overflow:auto;margin-top:8px">' + tbl_fl + '</div></details></div>';
+
+    /* Revenue by source Donut */
+    var revSources = [
+      { name: 'Consultation', color: '#2563eb', amt: 49893, pct: 7 },
+      { name: 'Bed charges', color: '#20b2aa', amt: 3200, pct: 0 },
+      { name: 'Lab & radiology', color: '#8b5cf6', amt: 174299, pct: 25 },
+      { name: 'Other', color: '#f59e0b', amt: 464407, pct: 67 }
+    ];
+    var totRevSource = 691799;
+    var R_dn = 62, C_dn = 2 * Math.PI * R_dn, off_dn = 0, dn_el = '<svg viewBox="0 0 160 160" class="don" role="img" aria-label="Revenue by source, last 30 days" style="width:170px;height:170px;margin:0 auto;display:block">' +
+      '<circle cx="80" cy="80" r="' + R_dn + '" fill="none" stroke="#eef2f8" stroke-width="22"/>';
+    revSources.forEach(function (s) {
+      var len = (s.amt / totRevSource) * C_dn;
+      if (len > 0.5) {
+        var arcLen = Math.max(len - 2, 0.5);
+        dn_el += '<circle cx="80" cy="80" r="' + R_dn + '" fill="none" stroke="' + s.color + '" stroke-width="22" stroke-dasharray="' + arcLen.toFixed(2) + ' ' + (C_dn - arcLen).toFixed(2) + '" stroke-dashoffset="' + (-off_dn).toFixed(2) + '" transform="rotate(-90 80 80)"><title>' + s.name + ': ' + s.amt.toLocaleString('en-US') + ' PKR (' + s.pct + '%)</title></circle>';
+      }
+      off_dn += len;
+    });
+    dn_el += '<text x="80" y="74" text-anchor="middle" style="font-size:11px;fill:#8b94a7;font-weight:600">Last 30 days</text>' +
+      '<text x="80" y="96" text-anchor="middle" style="font-size:18px;font-weight:800;fill:#1b2a4a">691.8k</text></svg>';
+    var srcLeg_el = '<div class="don-l" style="min-width:0;display:flex;flex-direction:column;gap:10px">' +
+      revSources.map(function (s) {
+        return '<div style="display:grid;grid-template-columns:14px minmax(0,1fr) auto 42px;gap:10px;align-items:center;font-size:12.5px;color:#5b6577;font-weight:600">' +
+          '<i style="width:12px;height:12px;border-radius:4px;background:' + s.color + '"></i>' +
+          '<span style="color:#475569">' + s.name + '</span>' +
+          '<b style="color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums">' + s.amt.toLocaleString('en-US') + ' PKR</b>' +
+          '<em style="font-style:normal;color:#8a94a6;text-align:right;font-variant-numeric:tabular-nums">' + s.pct + '%</em></div>';
+      }).join('') + '</div>';
+    var srcCardEl = '<div class="card rcard">' +
+      '<h3>Revenue by source</h3><div class="sub">Cash received in the last 30 days, split into consultations, bed days, lab and radiology</div>' +
+      '<div class="don-w" style="display:flex;flex-direction:column;align-items:stretch;gap:18px;margin-top:6px">' + dn_el + srcLeg_el + '</div></div>';
+    var mid2Html = '<div class="mid2" style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;margin-bottom:18px;align-items:stretch">' + flowCardEl + srcCardEl + '</div>';
 
 
     return '<div class="db-page">' +
@@ -623,11 +723,33 @@
     '.rd-tag{height:26px;line-height:24px;padding:0 12px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid;flex:none}' +
     '.rd-tag.ok{background:#ecfdf3;color:#15803d;border-color:#bbf7d0}.rd-tag.no{background:#fef2f2;color:#b91c1c;border-color:#fecaca}' +
     '.rd-all{margin-top:auto;height:44px;border-radius:10px;background:#eef3fd;color:#2f6df6;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none}.rd-all:hover{background:#e2eafc}' +
+    '/* ===== Patient flow & Revenue by source (mid2) ===== */' +
+    '.mid2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;margin-bottom:18px;align-items:stretch}' +
+    '@media(max-width:1000px){.mid2{grid-template-columns:minmax(0,1fr)}}' +
+    '.mid2 .rcard{padding:20px 22px 18px;border-radius:20px;background:#fff;border:0!important;box-shadow:0 2px 14px rgba(27,42,74,.09)!important;min-width:0}' +
+    '.mid2 .rcard h3{margin:0 0 2px;font-size:16px;font-weight:800;color:var(--ink)}' +
+    '.mid2 .rcard .sub{font-size:12px;color:#8b94a7;margin-bottom:12px;font-weight:500}' +
+    '.rsvg{width:100%;height:auto;display:block}.rsvg text{font-family:inherit;fill:#8a94a6;font-size:11px}' +
+    '.rsvg .bar{transition:opacity .15s}.rsvg .grp:hover .bar{opacity:.85}' +
+    '.don-w{display:flex;flex-direction:column;align-items:stretch;gap:18px;margin-top:6px}' +
+    '.don{width:170px;height:170px;flex:none;margin:0 auto;display:block}' +
+    '.don-l{min-width:0;display:flex;flex-direction:column;gap:10px}' +
+    '.don-l>div{display:grid;grid-template-columns:14px minmax(0,1fr) auto 42px;gap:10px;align-items:center;font-size:12.5px;color:#5b6577;font-weight:600}' +
+    '.don-l i{width:12px;height:12px;border-radius:4px}' +
+    '.don-l b{color:var(--ink);font-weight:800;font-variant-numeric:tabular-nums}' +
+    '.don-l em{font-style:normal;color:#8a94a6;text-align:right;font-variant-numeric:tabular-nums}' +
+    'details.dt{margin-top:14px;font-size:12.5px}' +
+    'details.dt summary{cursor:pointer;color:#2563eb;font-weight:600;list-style:none;outline:none;user-select:none}' +
+    'details.dt summary::-webkit-details-marker{display:none}' +
+    'details.dt summary::marker{display:none}' +
+    '.tip2{position:fixed;z-index:9999;pointer-events:none;background:#1e243b;color:#fff;border-radius:8px;padding:9px 13px;font-size:12px;line-height:1.55;box-shadow:0 10px 25px rgba(15,23,42,.4)}' +
+    '.tip2[hidden]{display:none}' +
     '</style>' +
 
     ovHead + critCard() + ovGrid + midHtml +
     '<div class="ov-two"><div class="ov-col">' + lowerLeft + '</div><div class="ov-col">' + lowerRight + '</div></div>' +
-    '<h3 class="ov-h3">Quick access</h3>' + quickCss + quickAccess +
+    mid2Html +
+    '<div id="tip2" class="tip2" hidden></div>' +
     '</div>';
     } /* end buildDashboard */
 
@@ -680,6 +802,21 @@
       window.__cfTipFn = function () { if (document.body.contains(area)) flowTip(v); };
     }
     if (!window.__cfResize) { window.__cfResize = true; window.addEventListener('resize', function () { if (window.__cfTipFn) window.__cfTipFn(); }); }
+    if (!window.__tip2Move) {
+      window.__tip2Move = true;
+      document.addEventListener('mousemove', function (e) {
+        var g = e.target.closest && e.target.closest('[data-tip]'), t = document.getElementById('tip2');
+        if (!t) return;
+        if (!g) { t.hidden = true; return; }
+        t.innerHTML = g.getAttribute('data-tip').replace(/&lt;/g, '<');
+        t.hidden = false;
+        t.style.left = Math.min(e.clientX + 14, window.innerWidth - 190) + 'px';
+        t.style.top = (e.clientY + 14) + 'px';
+      });
+      document.addEventListener('mouseleave', function () {
+        var t = document.getElementById('tip2'); if (t) t.hidden = true;
+      });
+    }
 
     /* Critical results nobody has acknowledged yet (set when a result far outside the normal range is saved) */
     function critCard() {
