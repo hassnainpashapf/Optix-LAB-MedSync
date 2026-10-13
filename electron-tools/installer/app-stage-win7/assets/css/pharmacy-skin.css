@@ -473,3 +473,264 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .sidebar .nav-sub-it { color: #4b5671; }
 .topbar .tb-who small { color: #8b94a7; font-weight: 500; }
 .ov-h3 { font-weight: 700; }
+
+/* ============================================================
+   GLOBAL SUB-PAGE DASHBOARD GUI
+   Applies dashboard look to ALL sub-pages (#view content)
+   Cards → white, rounded-20, soft shadow, no border
+   Tables → clean header, subtle row hover
+   Page headers → bold title + muted subtitle
+   Stat cards → dashboard gradient style
+   Inputs/search → rounded, soft fill
+   ============================================================ */
+
+/* Page wrapper — dashboard background on all pages */
+#view {
+  background: #f2f5f9;
+}
+
+/* ---- Page header (h2 + subtitle row) ---- */
+#view .page-h h2,
+#view .page-h h1 {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: #1b2a4a !important;
+  letter-spacing: -.02em !important;
+  margin: 0 !important;
+}
+#view .page-h .sub,
+#view .page-h p {
+  color: #8a94a6 !important;
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  margin-top: 3px !important;
+}
+
+/* ---- Cards ---- */
+#view .card {
+  background: #fff !important;
+  border: 0 !important;
+  border-radius: 20px !important;
+  box-shadow: 0 2px 14px rgba(27, 42, 74, .08) !important;
+  margin-bottom: 18px;
+  overflow: hidden;
+}
+#view .card:hover {
+  box-shadow: 0 6px 24px rgba(27, 42, 74, .12) !important;
+}
+#view .card-h {
+  border-bottom: 1px solid #f0f3f8 !important;
+  padding: 16px 22px !important;
+  background: #fff !important;
+}
+#view .card-h h3 {
+  font-size: 15.5px !important;
+  font-weight: 700 !important;
+  color: #1b2a4a !important;
+  letter-spacing: -.01em;
+}
+#view .card-b {
+  padding: 20px 22px !important;
+}
+#view .card-b.flush {
+  padding: 0 !important;
+}
+
+/* ---- Tables ---- */
+#view table.table {
+  font-size: 13.5px !important;
+}
+#view .table thead th {
+  background: #f7f9fc !important;
+  color: #6f7a92 !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: .07em !important;
+  text-transform: uppercase !important;
+  padding: 11px 16px !important;
+  border-bottom: 1px solid #edf1f7 !important;
+}
+#view .table tbody td {
+  padding: 13px 16px !important;
+  border-bottom: 1px solid #f0f3f8 !important;
+  color: #1b2a4a !important;
+  vertical-align: middle !important;
+}
+#view .table tbody tr:hover {
+  background: #f5f8ff !important;
+}
+#view .table tbody tr:last-child td {
+  border-bottom: none !important;
+}
+#view .tbl-wrap {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* ---- Buttons ---- */
+#view .btn {
+  border-radius: 12px !important;
+  font-weight: 600 !important;
+  font-size: 13.5px !important;
+}
+#view .btn-primary {
+  background: #2f6df6 !important;
+  border-color: #2f6df6 !important;
+  color: #fff !important;
+  box-shadow: 0 8px 20px -8px rgba(47, 109, 246, .5) !important;
+}
+#view .btn-primary:hover {
+  background: #1d5ce5 !important;
+  border-color: #1d5ce5 !important;
+}
+#view .btn-ghost {
+  background: transparent !important;
+  border-color: #e2e8f0 !important;
+  color: #475569 !important;
+}
+#view .btn-ghost:hover {
+  background: #f1f5fb !important;
+  color: #1b2a4a !important;
+}
+
+/* ---- Inputs ---- */
+#view .input,
+#view .select,
+#view textarea.input {
+  border: 1.5px solid #dde3ee !important;
+  border-radius: 12px !important;
+  background: #f8fafc !important;
+  color: #1b2a4a !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+}
+#view .input:focus,
+#view .select:focus,
+#view textarea.input:focus {
+  border-color: #2f6df6 !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3px rgba(47, 109, 246, .12) !important;
+}
+#view .search input {
+  border: 1.5px solid #dde3ee !important;
+  border-radius: 999px !important;
+  background: #fff !important;
+  font-size: 13.5px !important;
+}
+#view .search input:focus {
+  border-color: #2f6df6 !important;
+  box-shadow: 0 0 0 3px rgba(47, 109, 246, .12) !important;
+}
+
+/* ---- Stat cards (pgstat / stat-grid) ---- */
+#view .pgstat,
+#view .stat-grid {
+  margin-bottom: 20px;
+}
+#view .stat {
+  border-radius: 18px !important;
+  border: 0 !important;
+  box-shadow: 0 2px 14px rgba(27, 42, 74, .08) !important;
+}
+
+/* ---- Badges ---- */
+#view .badge {
+  border-radius: 999px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 3px 10px !important;
+}
+#view .b-paid   { background: #ecfdf3 !important; color: #16a34a !important; }
+#view .b-ready  { background: #ecfdf3 !important; color: #16a34a !important; }
+#view .b-pending { background: #fffbeb !important; color: #d97706 !important; }
+#view .b-warn   { background: #fff7ed !important; color: #ea580c !important; }
+#view .b-red    { background: #fef2f2 !important; color: #dc2626 !important; }
+#view .badge-warn { background: #fff7ed !important; color: #ea580c !important; border-radius: 999px !important; }
+
+/* ---- Labels / form labels ---- */
+#view .label {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+}
+
+/* ---- Muted text ---- */
+#view .muted,
+#view small.muted {
+  color: #8a94a6 !important;
+}
+
+/* ---- Empty state ---- */
+#view .empty {
+  color: #8a94a6 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+/* ---- Section/page title standalone h2 ---- */
+#view h2:not(.page-h h2) {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1b2a4a;
+  letter-spacing: -.015em;
+}
+#view h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1b2a4a;
+}
+
+/* ---- Toolbar strip ---- */
+#view .toolbar {
+  margin-bottom: 16px;
+}
+
+/* ---- Patient avatar / initials ---- */
+#view .pt-avatar {
+  background: #1b2a4a !important;
+  color: #fff !important;
+  font-weight: 800 !important;
+  border-radius: 50% !important;
+}
+
+/* ---- Section dividers inside cards ---- */
+#view .sec-sep,
+#view hr {
+  border: none !important;
+  border-top: 1px solid #f0f3f8 !important;
+  margin: 14px 0 !important;
+}
+
+/* ---- Inline card pill info boxes ---- */
+#view .info-box,
+#view .alert-box {
+  border-radius: 14px !important;
+  font-size: 13.5px !important;
+}
+
+/* ---- Page-head (back link + title used in patient profile) ---- */
+#view .page-head h1 {
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: #1b2a4a !important;
+}
+#view .back-link {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #2f6df6 !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  margin-bottom: 6px !important;
+}
+#view .back-link:hover {
+  color: #1d5ce5 !important;
+}
+
+/* ---- Responsive: mobile tighten ---- */
+@media (max-width: 640px) {
+  #view .card-b { padding: 14px 16px !important; }
+  #view .card-h { padding: 12px 16px !important; }
+  #view .page-h h2, #view .page-h h1 { font-size: 20px !important; }
+}
