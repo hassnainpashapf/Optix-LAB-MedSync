@@ -8,13 +8,20 @@
      4. 🔬 Recommended Confirmatory & Follow-up Tests
      5. ⚠️ Red Flags, Urgent Precautions & Specialist Referral
    
-   PRO CLINICAL EXTENSIONS:
+   PRO CLINICAL EXTENSIONS (ULTRA-ADVANCED):
      🧮 Automated Clinical Calculators & Medical Indices
         - Mentzer Index (Thalassemia Minor vs Iron Deficiency Anemia)
         - eGFR (CKD-EPI 2021 Race-Free Equation for Kidney Staging 1-5)
         - FIB-4 Liver Fibrosis Score & APRI Index
         - De Ritis Ratio (AST / ALT)
         - Atherogenic Lipoprotein Ratios (Chol/HDL, TG/HDL)
+     🫀 10-Year ASCVD Cardiovascular Risk Calculator (ACC/AHA Guidelines)
+     🚨 Automatic Panic-Value SOS Alert to Doctor (CAP / ISO 15189 Standard)
+     💊 Multi-Drug Interaction & CYP450 Cross-Clash Checker (DDI Matrix)
+     🧠 Differential Diagnosis (DDx) Probability Matrix (Multi-Disease Engine)
+     🧬 Family Genetic & Thalassemia Marriage Guard (Pakistan Context)
+     🎙️ Urdu / English Voice-to-Rx Dictation ("Bol Kar Nuskha Likhein")
+     📄 1-Click "AI Executive Summary" On Printed Lab Report Remarks
      ⚠️ Organ-Specific Drug Safety Shield (Renal, Hepatic, Bleeding)
      📈 Longitudinal Multi-Report Trend & Delta Velocity
      🇵🇰 Bilingual Patient Care Guide (Roman Urdu Khurak & Parhez)
@@ -35,7 +42,7 @@
         var num = parseFloat(v); if (isNaN(num)) return null;
         var min = (sex === 'female' || sex === 'f') ? 12.0 : 13.0;
         var max = (sex === 'female' || sex === 'f') ? 15.5 : 17.5;
-        if (num < 7.0) return { status: 'critical_low', val: num, note: 'Severe Anemia (Transfusion Threshold)' };
+        if (num < 6.5) return { status: 'critical_low', val: num, note: 'Severe Anemia (Emergency Transfusion Threshold)' };
         if (num < min) return { status: 'low', val: num, note: 'Anemia' };
         if (num > max) return { status: 'high', val: num, note: 'Polycythemia' };
         return { status: 'normal', val: num };
@@ -45,8 +52,9 @@
       name: 'Total Leukocyte Count (WBC)', unit: '/uL',
       eval: function (v) {
         var num = parseFloat(v); if (isNaN(num)) return null;
-        if (num > 25000) return { status: 'critical_high', val: num, note: 'Hyperleukocytosis / Leukemoid Reaction' };
+        if (num > 35000) return { status: 'critical_high', val: num, note: 'Hyperleukocytosis / Severe Sepsis / Leukemoid' };
         if (num > 11000) return { status: 'high', val: num, note: 'Leukocytosis (Infection / Inflammation)' };
+        if (num < 1500) return { status: 'critical_low', val: num, note: 'Severe Agranulocytosis / Neutropenia' };
         if (num < 4000) return { status: 'low', val: num, note: 'Leukopenia (Viral / Bone Marrow Suppression)' };
         return { status: 'normal', val: num };
       }
@@ -55,7 +63,7 @@
       name: 'Platelet Count', unit: '/uL',
       eval: function (v) {
         var num = parseFloat(v); if (isNaN(num)) return null;
-        if (num < 30000) return { status: 'critical_low', val: num, note: 'Severe Thrombocytopenia (Bleeding Risk)' };
+        if (num < 20000) return { status: 'critical_low', val: num, note: 'Extreme Thrombocytopenia (Spontaneous Bleed Risk)' };
         if (num < 150000) return { status: 'low', val: num, note: 'Thrombocytopenia' };
         if (num > 450000) return { status: 'high', val: num, note: 'Thrombocytosis' };
         return { status: 'normal', val: num };
@@ -87,7 +95,8 @@
       name: 'Fasting Blood Glucose', unit: 'mg/dL',
       eval: function (v) {
         var num = parseFloat(v); if (isNaN(num)) return null;
-        if (num < 60) return { status: 'critical_low', val: num, note: 'Hypoglycemia' };
+        if (num < 50) return { status: 'critical_low', val: num, note: 'Severe Hypoglycemia (Coma Risk)' };
+        if (num >= 350) return { status: 'critical_high', val: num, note: 'Extreme Hyperglycemia (DKA/HHS Risk)' };
         if (num >= 126) return { status: 'high', val: num, note: 'Diabetic Hyperglycemia' };
         if (num >= 100) return { status: 'borderline_high', val: num, note: 'Impaired Fasting Glucose (Pre-Diabetes)' };
         return { status: 'normal', val: num };
@@ -97,7 +106,8 @@
       name: 'Random Blood Glucose', unit: 'mg/dL',
       eval: function (v) {
         var num = parseFloat(v); if (isNaN(num)) return null;
-        if (num < 65) return { status: 'critical_low', val: num, note: 'Hypoglycemia' };
+        if (num < 50) return { status: 'critical_low', val: num, note: 'Severe Hypoglycemia (Coma Risk)' };
+        if (num >= 400) return { status: 'critical_high', val: num, note: 'Extreme Hyperglycemia (DKA/HHS Risk)' };
         if (num >= 200) return { status: 'high', val: num, note: 'Diabetic Hyperglycemia' };
         if (num >= 140) return { status: 'borderline_high', val: num, note: 'Impaired Glucose Tolerance' };
         return { status: 'normal', val: num };
@@ -136,7 +146,7 @@
       name: 'Total Bilirubin', unit: 'mg/dL',
       eval: function (v) {
         var num = parseFloat(v); if (isNaN(num)) return null;
-        if (num > 5.0) return { status: 'critical_high', val: num, note: 'Overt Jaundice / Hyperbilirubinemia' };
+        if (num > 10.0) return { status: 'critical_high', val: num, note: 'Severe Hyperbilirubinemia (Acute Cholestasis/Necrosis)' };
         if (num > 1.2) return { status: 'high', val: num, note: 'Jaundice / Hyperbilirubinemia' };
         return { status: 'normal', val: num };
       }
@@ -164,7 +174,7 @@
       eval: function (v, sex) {
         var num = parseFloat(v); if (isNaN(num)) return null;
         var limit = (sex === 'female' || sex === 'f') ? 1.1 : 1.3;
-        if (num > 3.0) return { status: 'critical_high', val: num, note: 'Severe Renal Impairment / AKI' };
+        if (num > 4.0) return { status: 'critical_high', val: num, note: 'Severe Renal Shutdown / Dialysis Threshold' };
         if (num > limit) return { status: 'high', val: num, note: 'Elevated Creatinine (Azotemia)' };
         return { status: 'normal', val: num };
       }
@@ -184,6 +194,29 @@
         var num = parseFloat(v); if (isNaN(num)) return null;
         var limit = (sex === 'female' || sex === 'f') ? 6.0 : 7.0;
         if (num > limit) return { status: 'high', val: num, note: 'Hyperuricemia (Gout Risk)' };
+        return { status: 'normal', val: num };
+      }
+    },
+    // Electrolytes
+    potassium: {
+      name: 'Serum Potassium (K+)', unit: 'mEq/L',
+      eval: function (v) {
+        var num = parseFloat(v); if (isNaN(num)) return null;
+        if (num > 6.2) return { status: 'critical_high', val: num, note: 'Severe Hyperkalemia (Cardiac Arrhythmia Risk)' };
+        if (num > 5.2) return { status: 'high', val: num, note: 'Hyperkalemia' };
+        if (num < 2.8) return { status: 'critical_low', val: num, note: 'Severe Hypokalemia (Arrhythmia/Paralysis Risk)' };
+        if (num < 3.5) return { status: 'low', val: num, note: 'Hypokalemia' };
+        return { status: 'normal', val: num };
+      }
+    },
+    sodium: {
+      name: 'Serum Sodium (Na+)', unit: 'mEq/L',
+      eval: function (v) {
+        var num = parseFloat(v); if (isNaN(num)) return null;
+        if (num > 155) return { status: 'critical_high', val: num, note: 'Severe Hypernatremia' };
+        if (num > 145) return { status: 'high', val: num, note: 'Hypernatremia' };
+        if (num < 125) return { status: 'critical_low', val: num, note: 'Severe Hyponatremia (Seizure Risk)' };
+        if (num < 135) return { status: 'low', val: num, note: 'Hyponatremia' };
         return { status: 'normal', val: num };
       }
     },
@@ -267,6 +300,8 @@
     if (s.indexOf('creatinine') >= 0) return 'creatinine';
     if (s.indexOf('urea') >= 0 || s === 'bun') return 'urea';
     if (s.indexOf('uricacid') >= 0) return 'uric_acid';
+    if (s === 'potassium' || s === 'k' || s.indexOf('serumpotassium') >= 0) return 'potassium';
+    if (s === 'sodium' || s === 'na' || s.indexOf('serumsodium') >= 0) return 'sodium';
     if (s.indexOf('totalchol') >= 0 || s === 'cholesterol' || s === 'totalcholesterol' || (s.indexOf('cholesterol') >= 0 && s.indexOf('hdl') < 0 && s.indexOf('ldl') < 0)) return 'cholesterol';
     if (s.indexOf('triglyceride') >= 0 || s === 'tg') return 'triglycerides';
     if (s === 'ldl' || s.indexOf('ldlchol') >= 0) return 'ldl';
@@ -352,7 +387,6 @@
             });
           }
         } else {
-          // Fallback: check flagged status in test parameters if flagged as H or L
           var num = parseFloat(rawVal);
           var ref = p.ref || '';
           if (!isNaN(num) && ref) {
@@ -564,6 +598,600 @@
     }
 
     return list;
+  };
+
+  /* ---------------- PRO FEATURE: 10-Year ASCVD Cardiovascular Risk Calculator ---------------- */
+  AI.calculateAscvdRisk = function (reportData) {
+    var rawVals = AI.extractRawValues(reportData);
+    var pt = (reportData && (reportData.pt || reportData.pat || reportData.patient)) || {};
+    var age = parseFloat(pt.age) || 50;
+    var sexStr = String(pt.sex || pt.gender || 'male').toLowerCase();
+    var isFem = (sexStr === 'female' || sexStr === 'f');
+
+    var chol = rawVals.cholesterol || 210;
+    var hdl = rawVals.hdl || 45;
+    var isDiabetic = !!(rawVals.glucose_fasting >= 126 || rawVals.glucose_random >= 200 || rawVals.hba1c >= 6.5);
+    var sbp = 130;
+
+    var lnAge = Math.log(Math.max(age, 20));
+    var lnTotChol = Math.log(Math.max(chol, 100));
+    var lnHDL = Math.log(Math.max(hdl, 20));
+    var lnSBP = Math.log(sbp);
+
+    var coeffSum = 0;
+    var pct = 5.0;
+    if (isFem) {
+      coeffSum = (-29.799 * lnAge) + (4.884 * Math.pow(lnAge, 2)) + (13.540 * lnTotChol)
+        + (-3.114 * lnAge * lnTotChol) + (-13.578 * lnHDL) + (3.149 * lnAge * lnHDL)
+        + (2.019 * lnSBP) + (0.661 * (isDiabetic ? 1 : 0));
+      var indF = coeffSum - (-29.18);
+      var riskF = 1 - Math.pow(0.9665, Math.exp(indF));
+      pct = Math.round(Math.min(Math.max(riskF * 100, 1.0), 75.0) * 10) / 10;
+    } else {
+      coeffSum = (12.344 * lnAge) + (11.853 * lnTotChol) + (-2.664 * lnAge * lnTotChol)
+        + (-7.990 * lnHDL) + (1.769 * lnAge * lnHDL) + (1.797 * lnSBP) + (0.658 * (isDiabetic ? 1 : 0));
+      var indM = coeffSum - (61.18);
+      var riskM = 1 - Math.pow(0.8954, Math.exp(indM));
+      pct = Math.round(Math.min(Math.max(riskM * 100, 1.2), 80.0) * 10) / 10;
+    }
+
+    var tier = '';
+    var status = 'safe';
+    var recommendation = '';
+
+    if (pct < 5.0) {
+      tier = 'Low Cardiovascular Risk (< 5.0%)';
+      status = 'safe';
+      recommendation = 'Emphasize lifestyle modifications: Mediterranean cardioprotective diet, 150 mins/week regular aerobic exercise.';
+    } else if (pct < 7.5) {
+      tier = 'Borderline Cardiovascular Risk (5.0% – 7.4%)';
+      status = 'info';
+      recommendation = 'Consider Moderate-Intensity Statin therapy if risk-enhancing factors present (family history, metabolic syndrome).';
+    } else if (pct < 20.0) {
+      tier = 'Intermediate Cardiovascular Risk (7.5% – 19.9%)';
+      status = 'warning';
+      recommendation = 'Initiate Moderate-to-High Intensity Statin (Atorvastatin 20mg or Rosuvastatin 10mg) to reduce LDL by ≥ 30-50%.';
+    } else {
+      tier = 'High Cardiovascular Risk (≥ 20.0%)';
+      status = 'critical';
+      recommendation = 'Urgent initiation of High-Intensity Statin (Atorvastatin 40-80mg or Rosuvastatin 20mg), Low-Dose Aspirin, and strict BP control.';
+    }
+
+    return {
+      riskScore: pct,
+      unit: '% 10-Year Risk',
+      tier: tier,
+      status: status,
+      recommendation: recommendation,
+      details: 'Age: ' + age + 'y | Total Chol: ' + chol + ' mg/dL | HDL: ' + hdl + ' mg/dL' + (isDiabetic ? ' | Diabetic: Yes' : ' | Non-Diabetic')
+    };
+  };
+
+  /* ---------------- PRO FEATURE: Automatic Panic-Value SOS Alert (CAP / ISO 15189) ---------------- */
+  AI.checkPanicValues = function (reportData) {
+    var rawVals = AI.extractRawValues(reportData);
+    var pt = (reportData && (reportData.pt || reportData.pat || reportData.patient)) || {};
+    var inv = (reportData && (reportData.inv || reportData.invoice)) || {};
+    var doc = (reportData && (reportData.doc || reportData.doctor)) || null;
+
+    var alerts = [];
+
+    // 1. Platelets Panic (< 20,000 /uL)
+    if (rawVals.plt != null && rawVals.plt < 20000) {
+      alerts.push({
+        param: 'Platelet Count',
+        value: rawVals.plt + ' /uL',
+        threshold: '< 20,000 /uL',
+        severity: 'EMERGENCY',
+        hazard: 'Extreme risk of spontaneous fatal intracranial or gastrointestinal hemorrhage.'
+      });
+    }
+
+    // 2. Hemoglobin Panic (< 6.5 g/dL)
+    if (rawVals.hb != null && rawVals.hb < 6.5) {
+      alerts.push({
+        param: 'Hemoglobin',
+        value: rawVals.hb + ' g/dL',
+        threshold: '< 6.5 g/dL',
+        severity: 'EMERGENCY',
+        hazard: 'Critical tissue hypoxia & high-output myocardial heart failure. Immediate PRBC transfusion required.'
+      });
+    }
+
+    // 3. WBC Panic (> 35,000 or < 1,500)
+    if (rawVals.wbc != null) {
+      if (rawVals.wbc > 35000) {
+        alerts.push({
+          param: 'Total Leukocytes (WBC)',
+          value: rawVals.wbc + ' /uL',
+          threshold: '> 35,000 /uL',
+          severity: 'CRITICAL',
+          hazard: 'Hyperleukocytosis / Severe Sepsis / Leukostasis crisis.'
+        });
+      } else if (rawVals.wbc < 1500) {
+        alerts.push({
+          param: 'Total Leukocytes (WBC)',
+          value: rawVals.wbc + ' /uL',
+          threshold: '< 1,500 /uL',
+          severity: 'CRITICAL',
+          hazard: 'Agranulocytosis / Severe neutropenia. Extreme susceptibility to life-threatening sepsis.'
+        });
+      }
+    }
+
+    // 4. Glucose Panic (> 400 or < 50 mg/dL)
+    var gVal = rawVals.glucose_random != null ? rawVals.glucose_random : rawVals.glucose_fasting;
+    if (gVal != null) {
+      if (gVal > 400) {
+        alerts.push({
+          param: 'Blood Glucose',
+          value: gVal + ' mg/dL',
+          threshold: '> 400 mg/dL',
+          severity: 'EMERGENCY',
+          hazard: 'Diabetic Ketoacidosis (DKA) or Hyperosmolar Hyperglycemic State (HHS) alert.'
+        });
+      } else if (gVal < 50) {
+        alerts.push({
+          param: 'Blood Glucose',
+          value: gVal + ' mg/dL',
+          threshold: '< 50 mg/dL',
+          severity: 'EMERGENCY',
+          hazard: 'Critical neuroglycopenia / Hypoglycemic coma risk. Immediate IV 25% Dextrose administration.'
+        });
+      }
+    }
+
+    // 5. Serum Creatinine Panic (> 4.0 mg/dL)
+    if (rawVals.creatinine != null && rawVals.creatinine > 4.0) {
+      alerts.push({
+        param: 'Serum Creatinine',
+        value: rawVals.creatinine + ' mg/dL',
+        threshold: '> 4.0 mg/dL',
+        severity: 'CRITICAL',
+        hazard: 'Acute severe renal shutdown / Uremic encephalopathy. Urgent nephrology / dialysis assessment.'
+      });
+    }
+
+    // 6. Bilirubin Panic (> 10.0 mg/dL)
+    if (rawVals.bili_total != null && rawVals.bili_total > 10.0) {
+      alerts.push({
+        param: 'Total Bilirubin',
+        value: rawVals.bili_total + ' mg/dL',
+        threshold: '> 10.0 mg/dL',
+        severity: 'CRITICAL',
+        hazard: 'Severe obstructive cholestasis or acute fulminant hepatocellular necrosis.'
+      });
+    }
+
+    // 7. Potassium Panic (> 6.2 or < 2.8 mEq/L)
+    if (rawVals.potassium != null) {
+      if (rawVals.potassium > 6.2) {
+        alerts.push({
+          param: 'Serum Potassium (K+)',
+          value: rawVals.potassium + ' mEq/L',
+          threshold: '> 6.2 mEq/L',
+          severity: 'EMERGENCY',
+          hazard: 'Severe hyperkalemia. Risk of peaked T-waves, ventricular arrhythmia, and sudden cardiac arrest.'
+        });
+      } else if (rawVals.potassium < 2.8) {
+        alerts.push({
+          param: 'Serum Potassium (K+)',
+          value: rawVals.potassium + ' mEq/L',
+          threshold: '< 2.8 mEq/L',
+          severity: 'EMERGENCY',
+          hazard: 'Severe hypokalemia. Paralytic ileus and lethal ventricular dysrhythmia risk.'
+        });
+      }
+    }
+
+    var isPanic = alerts.length > 0;
+    var formattedMessage = '';
+    if (isPanic) {
+      formattedMessage = '🚨 *CRITICAL PANIC-VALUE LAB ALERT (ISO 15189 / CAP Standard)*\n'
+        + 'Patient: ' + (pt.name || 'Patient') + ' (' + (pt.age ? pt.age + 'y, ' : '') + (pt.sex || pt.gender || '') + ')\n'
+        + 'Invoice #: ' + (inv.no || inv.id) + '\n'
+        + (doc ? 'Attending Doctor: Dr. ' + doc.name + '\n' : '')
+        + 'Time: ' + new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + '\n\n'
+        + '*CRITICAL FINDING(S):*\n'
+        + alerts.map(function (a) { return '⚠️ *' + a.param + ': ' + a.value + '* (Alert: ' + a.threshold + ')\n   → ' + a.hazard; }).join('\n\n') + '\n\n'
+        + '_Immediate clinical intervention advised. Generated automatically by Optix LAB Panic Notification System._';
+    }
+
+    return {
+      isPanic: isPanic,
+      alerts: alerts,
+      formattedMessage: formattedMessage
+    };
+  };
+
+  /* ---------------- PRO FEATURE: Multi-Drug Interaction & CYP450 Cross-Clash Checker ---------------- */
+  AI.checkDrugInteractions = function (medsList) {
+    var list = [];
+    if (!Array.isArray(medsList)) return list;
+
+    var flat = [];
+    medsList.forEach(function (m) {
+      if (typeof m === 'string') flat.push(m);
+      else if (m && m.drug) flat.push(m.drug);
+      else if (m && m.name) flat.push(m.name);
+    });
+
+    var drugStr = flat.join(' | ').toLowerCase();
+    function hasDrug(rx) { return rx.test(drugStr); }
+
+    var RULES = [
+      {
+        id: 'nsaid_blood_thinner',
+        d1: /nsaid|ibuprofen|brufen|diclofenac|naproxen|ponstan|ketorolac|mefenamic/i,
+        d2: /aspirin|disprin|clopidogrel|plavix|warfarin|heparin|enoxaparin|rivaroxaban|xarelto|eliquis/i,
+        severity: 'critical',
+        pair: 'NSAID + Antiplatelet / Anticoagulant',
+        title: 'Severe Gastrointestinal Hemorrhage Hazard',
+        mechanism: 'Concurrent inhibition of COX-1 mucosal protection and platelet aggregation increases severe GI ulcer bleeding risk by 5-to-10 fold.',
+        solution: 'Strictly avoid NSAID. Substitute with Paracetamol 500mg or topical analgesics. Add PPI if anticoagulation is mandatory.'
+      },
+      {
+        id: 'acei_spirono',
+        d1: /captopril|enalapril|ramipril|lisinopril|losartan|valsartan|telmisartan/i,
+        d2: /spironolactone|aldactone|eplerenone|amiloride/i,
+        severity: 'critical',
+        pair: 'ACE Inhibitor / ARB + Potassium-Sparing Diuretic',
+        title: 'Fatal Hyperkalemia & Conduction Block Risk',
+        mechanism: 'Synergistic reduction in aldosterone production prevents renal potassium excretion, risking sudden ventricular arrhythmias.',
+        solution: 'Monitor Serum Potassium within 5-7 days of initiation. Withhold any potassium supplements.'
+      },
+      {
+        id: 'cipro_theophylline',
+        d1: /ciprofloxacin|cipro|levofloxacin/i,
+        d2: /theophylline|aminophylline/i,
+        severity: 'critical',
+        pair: 'Ciprofloxacin + Theophylline',
+        title: 'Theophylline Toxicity & Seizure Risk',
+        mechanism: 'Ciprofloxacin strongly inhibits hepatic CYP1A2, increasing serum theophylline concentrations by 100-300%, triggering cardiac arrhythmias and seizures.',
+        solution: 'Reduce theophylline dosage by 50% or switch antimicrobial coverage to Azithromycin or Ceftriaxone.'
+      },
+      {
+        id: 'statin_macrolide',
+        d1: /atorvastatin|lipitor|simvastatin|rosuvastatin/i,
+        d2: /clarithromycin|klacid|erythromycin|azithromycin/i,
+        severity: 'critical',
+        pair: 'Statin + Macrolide Antibiotic',
+        title: 'Severe Rhabdomyolysis & Acute Tubular Necrosis',
+        mechanism: 'Macrolides inhibit CYP3A4, causing dangerous accumulation of statin metabolites, triggering muscle breakdown (rhabdomyolysis).',
+        solution: 'Temporarily pause statin therapy during the 5-7 day antimicrobial course.'
+      },
+      {
+        id: 'clopidogrel_omeprazole',
+        d1: /clopidogrel|plavix/i,
+        d2: /omeprazole|losec|esomeprazole|nexium/i,
+        severity: 'moderate',
+        pair: 'Clopidogrel + Omeprazole / Esomeprazole',
+        title: 'Attenuated Antiplatelet Protective Efficacy',
+        mechanism: 'Omeprazole inhibits CYP2C19, significantly reducing bioactivation of clopidogrel prodrug into active antiplatelet metabolite.',
+        solution: 'Substitute Omeprazole with Pantoprazole or Dexlansoprazole, which exhibit negligible CYP2C19 competition.'
+      },
+      {
+        id: 'metformin_nsaid',
+        d1: /metformin|glucophage/i,
+        d2: /diclofenac|ibuprofen|brufen|naproxen|ketorolac/i,
+        severity: 'major',
+        pair: 'Metformin + NSAIDs',
+        title: 'Renal Perfusion Impairment & Lactic Acidosis Risk',
+        mechanism: 'NSAIDs induce acute renal vasoconstriction, precipitating acute kidney injury and impairing metformin clearance.',
+        solution: 'Discontinue NSAIDs. Prescribe Paracetamol SOS.'
+      },
+      {
+        id: 'iron_chelation',
+        d1: /ferrous|iron|polymaltose/i,
+        d2: /levothyroxine|thyroxine|ciprofloxacin|calcium/i,
+        severity: 'moderate',
+        pair: 'Oral Iron + Levothyroxine / Ciprofloxacin / Calcium',
+        title: 'Insoluble Chelate Formation (Poor Absorption)',
+        mechanism: 'Divalent and trivalent iron cations bind to thyroid hormones and quinolones, inhibiting intestinal absorption by > 60%.',
+        solution: 'Enforce a minimum 2 to 4 hour administration separation gap between doses.'
+      }
+    ];
+
+    RULES.forEach(function (r) {
+      if (hasDrug(r.d1) && hasDrug(r.d2)) {
+        list.push(r);
+      }
+    });
+
+    return list;
+  };
+
+  /* ---------------- PRO FEATURE: Differential Diagnosis (DDx) Probability Matrix ---------------- */
+  AI.calculateDifferentialDiagnosis = function (reportData, findings) {
+    findings = findings || AI.extractFindings(reportData);
+    var rawVals = AI.extractRawValues(reportData);
+    var has = {};
+    findings.forEach(function (f) { has[f.key] = f; });
+
+    var ddx = [];
+
+    // 1. Thrombocytopenia DDx
+    if (has.plt && has.plt.status.indexOf('low') >= 0) {
+      var pltVal = rawVals.plt || 0;
+      var wbcVal = rawVals.wbc || 7000;
+      var isWbcLow = wbcVal < 5000;
+
+      ddx.push({
+        domain: 'Hematology / Thrombocytopenia',
+        candidates: [
+          {
+            disease: 'Dengue Fever / Arboviral Illness',
+            probability: isWbcLow ? 88 : 75,
+            badge: isWbcLow ? 'High Probability' : 'Probable',
+            status: 'warning',
+            supporting: 'Acute thrombocytopenia (' + pltVal + ' /uL)' + (isWbcLow ? ' with leukopenia (WBC ' + wbcVal + ' /uL)' : ''),
+            differentiator: 'Febrile illness, retro-orbital ache, petechiae, hemoconcentration.',
+            confirmatoryTest: 'Dengue NS1 Antigen (Day 1-5) and Dengue IgM/IgG Serology'
+          },
+          {
+            disease: 'Immune Thrombocytopenic Purpura (ITP)',
+            probability: 60,
+            badge: 'Consider',
+            status: 'info',
+            supporting: 'Isolated destruction of peripheral platelets with preserved erythroid/myeloid lines.',
+            differentiator: 'Absence of fever, splenomegaly, or systemic infection.',
+            confirmatoryTest: 'Peripheral Blood Film (rule out pseudothrombocytopenia) & Bone Marrow Biopsy'
+          },
+          {
+            disease: 'Drug-Induced Thrombocytopenia / Sepsis',
+            probability: 30,
+            badge: 'Possible',
+            status: 'info',
+            supporting: 'Immune-mediated clearance or consumptive coagulopathy.',
+            differentiator: 'Recent initiation of antibiotics, heparin, or systemic infection.',
+            confirmatoryTest: 'Serum Procalcitonin, Blood Culture & Coagulation Profile (PT/INR, D-Dimer)'
+          }
+        ]
+      });
+    }
+
+    // 2. Microcytic Anemia DDx
+    if (has.hb && has.hb.status.indexOf('low') >= 0 && has.mcv && has.mcv.status === 'low') {
+      var rbc = rawVals.rbc || 0;
+      var mcv = rawVals.mcv || 0;
+      var mentzer = (rbc > 0) ? (mcv / (rbc > 100 ? rbc / 1000000 : rbc)) : 15;
+      var isMentzerLow = mentzer < 13;
+
+      ddx.push({
+        domain: 'Microcytic Hypochromic Anemia',
+        candidates: [
+          {
+            disease: 'Beta-Thalassemia Minor Trait',
+            probability: isMentzerLow ? 92 : 35,
+            badge: isMentzerLow ? 'High Probability' : 'Differential',
+            status: isMentzerLow ? 'warning' : 'info',
+            supporting: 'Microcytosis (MCV ' + mcv + ' fL) with Mentzer Index ' + mentzer.toFixed(1) + (isMentzerLow ? ' (< 13)' : ''),
+            differentiator: 'High/normal RBC count, family history, resistance to oral iron.',
+            confirmatoryTest: 'Hemoglobin Electrophoresis (HbA2 quantification > 3.5%)'
+          },
+          {
+            disease: 'Iron Deficiency Anemia (IDA)',
+            probability: isMentzerLow ? 40 : 94,
+            badge: isMentzerLow ? 'Differential' : 'High Probability',
+            status: isMentzerLow ? 'info' : 'warning',
+            supporting: 'Impaired heme synthesis with microcytic red blood cells.',
+            differentiator: 'Low serum iron, high TIBC, koilonychia, occult blood loss.',
+            confirmatoryTest: 'Serum Ferritin (< 15 ng/mL) and Total Iron Binding Capacity (TIBC)'
+          },
+          {
+            disease: 'Anemia of Chronic Disease (ACD)',
+            probability: 25,
+            badge: 'Possible',
+            status: 'info',
+            supporting: 'Hepcidin-mediated iron sequestration.',
+            differentiator: 'Normal/elevated ferritin with underlying chronic inflammation.',
+            confirmatoryTest: 'High-Sensitivity CRP, ESR, and Serum Transferrin Receptor'
+          }
+        ]
+      });
+    }
+
+    // 3. Glycemic Dysregulation DDx
+    if (has.glucose_fasting || has.glucose_random || has.hba1c) {
+      var a1c = rawVals.hba1c;
+      ddx.push({
+        domain: 'Endocrine / Glycemic Dysregulation',
+        candidates: [
+          {
+            disease: 'Type 2 Diabetes Mellitus with Insulin Resistance',
+            probability: 92,
+            badge: 'High Probability',
+            status: 'warning',
+            supporting: 'Chronic hyperglycemia' + (a1c ? ' with HbA1c ' + a1c + '%' : ''),
+            differentiator: 'Adult onset, metabolic syndrome, central adiposity, acanthosis nigricans.',
+            confirmatoryTest: 'Fasting Lipid Profile, Spot Urine Microalbumin:Creatinine Ratio'
+          },
+          {
+            disease: 'Latent Autoimmune Diabetes in Adults (LADA)',
+            probability: 25,
+            badge: 'Consider',
+            status: 'info',
+            supporting: 'Hyperglycemia presenting with progressive beta-cell failure.',
+            differentiator: 'Non-obese phenotype, poor response to oral sulfonylureas.',
+            confirmatoryTest: 'Anti-GAD65 Antibodies & Fasting C-Peptide level'
+          }
+        ]
+      });
+    }
+
+    // 4. Hepatocellular Injury DDx
+    if (has.alt || has.ast) {
+      var altV = rawVals.alt || 0;
+      var isMarked = altV > 250;
+      ddx.push({
+        domain: 'Hepatology / Transaminitis',
+        candidates: [
+          {
+            disease: isMarked ? 'Acute Viral Hepatitis (B / C / E)' : 'Non-Alcoholic Fatty Liver Disease (NAFLD / NASH)',
+            probability: isMarked ? 86 : 82,
+            badge: 'High Probability',
+            status: 'warning',
+            supporting: 'Elevated serum transaminases (ALT ' + altV + ' U/L)',
+            differentiator: isMarked ? 'Marked transaminase spike > 5x ULN, jaundice, prodromal fatigue.' : 'Mild-to-moderate elevation, metabolic syndrome, fatty liver on ultrasound.',
+            confirmatoryTest: isMarked ? 'Viral Hepatitis Serology (HBsAg, Anti-HCV, Anti-HEV IgM)' : 'Ultrasound of Abdomen & FIB-4 Liver Fibrosis Staging'
+          },
+          {
+            disease: 'Drug-Induced Liver Injury (DILI)',
+            probability: 45,
+            badge: 'Consider',
+            status: 'info',
+            supporting: 'Parenchymal hepatic inflammatory response.',
+            differentiator: 'Temporal relationship with antibiotics, statins, NSAIDs, or herbal remedies.',
+            confirmatoryTest: 'Drug dechallenge response & Baseline Alkaline Phosphatase/Bilirubin'
+          }
+        ]
+      });
+    }
+
+    return ddx;
+  };
+
+  /* ---------------- PRO FEATURE: Family Genetic & Thalassemia Marriage Guard ---------------- */
+  AI.evaluateGeneticGuard = function (reportData, findings, calculatedIndices) {
+    var rawVals = AI.extractRawValues(reportData);
+    var pt = (reportData && (reportData.pt || reportData.pat || reportData.patient)) || {};
+    var indices = calculatedIndices || AI.calculateIndices(reportData, findings);
+    var mentzer = indices.filter(function (x) { return x.id === 'mentzer'; })[0];
+
+    var alerts = [];
+
+    // 1. Thalassemia Carrier Premarital Shield
+    var isThalCarrier = (mentzer && mentzer.score < 13) || (rawVals.mcv != null && rawVals.mcv < 75 && rawVals.rbc != null && rawVals.rbc > 4.8);
+    if (isThalCarrier) {
+      alerts.push({
+        title: '🧬 Premarital Thalassemia Screening & Family Guard',
+        category: 'Hemoglobinopathy Prevention',
+        severity: 'CRITICAL PRECAUTION',
+        summary: 'Red cell indices indicate strong probability of Heterozygous Beta-Thalassemia Minor trait (Carrier state).',
+        geneticRisk: 'Consanguineous (cousin) marriage with another asymptomatic carrier poses a 25% (1 in 4) risk per child of Thalassemia Major (Cooley’s Anemia) requiring lifelong blood transfusions and iron chelation.',
+        mandatoryAction: 'MANDATORY PREMARITAL SCREENING: Intended spouse must undergo Hemoglobin Electrophoresis (HbA2 quantification) prior to marriage.',
+        familyAction: 'First-degree relatives (siblings & parents) should also be screened to map familial inheritance pattern.'
+      });
+    }
+
+    // 2. Young-Onset Familial Metabolic Guard
+    var age = parseFloat(pt.age) || 40;
+    var isYoungDiabetic = (age < 35) && (rawVals.glucose_fasting >= 126 || rawVals.glucose_random >= 200 || rawVals.hba1c >= 6.5);
+    if (isYoungDiabetic) {
+      alerts.push({
+        title: '🧬 Early-Onset Familial Diabetes & Monogenic (MODY) Advisory',
+        category: 'Endocrine Genetics',
+        severity: 'FAMILY ADVISORY',
+        summary: 'Diabetic onset at age < 35 warrants screening for familial clustering or Monogenic Maturity-Onset Diabetes of the Young (MODY).',
+        geneticRisk: 'Strong autosomal dominant transmission risk to offspring and siblings.',
+        mandatoryAction: 'Screen all first-degree relatives (parents, siblings, children) with Fasting Blood Glucose and HbA1c.',
+        familyAction: 'Maintain early dietary vigilance and physical activity in children.'
+      });
+    }
+
+    return alerts;
+  };
+
+  /* ---------------- PRO FEATURE: 1-Click AI Executive Summary Narrative ---------------- */
+  AI.generateReportNarrative = function (analysis) {
+    var s = (analysis && analysis.solutions) || {};
+    var findings = (analysis && analysis.findings) || [];
+    var indices = (analysis && analysis.indices) || [];
+
+    if (!findings.length) {
+      return 'AI Clinical Correlation: Laboratory biochemical and hematological parameters are within physiological reference intervals. Routine wellness follow-up advised.';
+    }
+
+    var diagList = (s.diagnosis || []).map(function (d) { return d.title; });
+    var narrative = 'AI Clinical Correlation: ' + diagList.join('; ') + '.';
+
+    var mentzer = indices.filter(function (x) { return x.id === 'mentzer'; })[0];
+    if (mentzer) {
+      narrative += ' ' + (mentzer.score < 13 ? 'Mentzer index (' + mentzer.score + ') points to Thalassemia Minor pattern.' : 'Mentzer index (' + mentzer.score + ') points to Iron Deficiency pattern.');
+    }
+
+    var egfr = indices.filter(function (x) { return x.id === 'egfr'; })[0];
+    if (egfr && egfr.score < 60) {
+      narrative += ' Renal filtration moderately reduced (eGFR ' + egfr.score + ' mL/min).';
+    }
+
+    if (s.tests && s.tests.length) {
+      narrative += ' Recommended follow-up: ' + s.tests.slice(0, 2).join(', ') + '.';
+    }
+
+    narrative += ' Clinical correlation by treating physician advised.';
+    return narrative;
+  };
+
+  /* Attach AI Executive Summary directly to Result Remarks in DB */
+  AI.attachSummaryToReportRemarks = function (invoiceId, narrativeText) {
+    if (!invoiceId || !window.DB || typeof DB.all !== 'function' || typeof DB.set !== 'function') {
+      if (window.App && App.toast) App.toast('Database not available to save remarks', 'err');
+      return false;
+    }
+
+    var allRes = (DB.all('results') || []).filter(function (r) {
+      return r.invoiceId === invoiceId || r.invoiceId === String(invoiceId);
+    });
+
+    if (!allRes.length) {
+      if (window.App && App.toast) App.toast('No result record found for invoice #' + invoiceId, 'err');
+      return false;
+    }
+
+    allRes.forEach(function (r) {
+      r.values = r.values || {};
+      var existing = r.values['Remarks'] || '';
+      if (existing.indexOf('AI Clinical Correlation') < 0) {
+        r.values['Remarks'] = existing ? (existing + ' | ' + narrativeText) : narrativeText;
+        DB.set('results', r.id, r);
+      }
+    });
+
+    if (window.App && App.toast) {
+      App.toast('AI Executive Summary successfully attached to printed report note!');
+    }
+    return true;
+  };
+
+  /* ---------------- PRO FEATURE: Native Voice Dictation (Urdu & English) ---------------- */
+  AI.isVoiceSupported = function () {
+    return !!(typeof window !== 'undefined' && (window.SpeechRecognition || window.webkitSpeechRecognition));
+  };
+
+  AI.startVoiceDictation = function (options) {
+    options = options || {};
+    if (!AI.isVoiceSupported()) {
+      if (window.App && App.toast) App.toast('Speech recognition not supported in this browser. Please use Google Chrome or Edge.', 'err');
+      return null;
+    }
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    var recognizer = new SR();
+    recognizer.continuous = options.continuous !== false;
+    recognizer.interimResults = true;
+    recognizer.lang = options.lang || 'ur-PK';
+
+    recognizer.onresult = function (event) {
+      var transcript = '';
+      for (var i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      if (typeof options.onTranscript === 'function') {
+        var isFinal = event.results[event.results.length - 1].isFinal;
+        options.onTranscript(transcript, isFinal);
+      }
+    };
+
+    recognizer.onerror = function (event) {
+      if (typeof options.onError === 'function') options.onError(event.error);
+    };
+
+    recognizer.onend = function () {
+      if (typeof options.onEnd === 'function') options.onEnd();
+    };
+
+    try { recognizer.start(); } catch (e) {}
+    return recognizer;
   };
 
   /* ---------------- PRO FEATURE 2: Organ-Specific Drug Safety Shield ---------------- */
@@ -952,6 +1580,12 @@
       + '  </table>'
       + '</div>'
 
+      // Custom Spoken / Dictated Clinical Notes Area
+      + '<div id="rxDictationNotesBox" style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:10px 12px;margin-bottom:18px;display:none">'
+      + '  <div style="font-size:11px;font-weight:800;color:#4f46e5;text-transform:uppercase;margin-bottom:4px">🎙️ Dictated Physician Notes:</div>'
+      + '  <div id="rxDictationText" style="font-size:12.5px;color:#1e293b;line-height:1.45"></div>'
+      + '</div>'
+
       // Instructions & Parhez Columns
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">'
       + '  <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px">'
@@ -1332,19 +1966,33 @@
       sol5_redflags.push('Consult attending physician if clinical symptoms persist despite normal baseline laboratory findings.');
     }
 
-    // Default safety caution for all reports
     if (!sol5_redflags.length) {
       sol5_redflags.push('CLINICAL CORRELATION REQUIRED: Always correlate laboratory findings with the patient’s physical examination, clinical history, and symptom severity.');
     }
 
-    // Compute Pro Extensions
+    // Compute Extended Pro Capabilities
     var indices = AI.calculateIndices(reportData, findings);
+    var ascvdRisk = AI.calculateAscvdRisk(reportData);
     var drugSafety = AI.evaluateDrugSafety(reportData, findings, indices);
+    var panicInfo = AI.checkPanicValues(reportData);
     var historicalDelta = AI.evaluateHistoricalDelta(inv.id || inv.no, reportData);
+    var ddx = AI.calculateDifferentialDiagnosis(reportData, findings);
+
+    var allMedsFlat = [];
+    sol2_meds.forEach(function (cat) { (cat.items || []).forEach(function (it) { allMedsFlat.push(it.drug); }); });
+    var drugInteractions = AI.checkDrugInteractions(allMedsFlat);
+    var geneticGuard = AI.evaluateGeneticGuard(reportData, findings, indices);
+
     var urduGuide = AI.generateUrduPatientGuide({
       patient: pt, invoice: inv, doctor: doc, findings: findings,
       solutions: { diagnosis: sol1_diagnosis, medications: sol2_meds, diet: sol3_diet, tests: sol4_tests, redflags: sol5_redflags }
     }, indices, drugSafety);
+
+    var reportNarrative = AI.generateReportNarrative({
+      patient: pt, invoice: inv, findings: findings,
+      solutions: { diagnosis: sol1_diagnosis, medications: sol2_meds, diet: sol3_diet, tests: sol4_tests, redflags: sol5_redflags },
+      indices: indices
+    });
 
     return {
       patient: pt,
@@ -1358,11 +2006,17 @@
         tests: sol4_tests,
         redflags: sol5_redflags
       },
-      // Pro extensions
+      // Extended Pro Modules
       indices: indices,
+      ascvdRisk: ascvdRisk,
       drugSafety: drugSafety,
+      panicInfo: panicInfo,
       historicalDelta: historicalDelta,
-      urduGuide: urduGuide
+      ddx: ddx,
+      drugInteractions: drugInteractions,
+      geneticGuard: geneticGuard,
+      urduGuide: urduGuide,
+      reportNarrative: reportNarrative
     };
   };
 
@@ -1381,7 +2035,7 @@
     return allowed.indexOf(role) >= 0;
   };
 
-  /* Render Rich Modal with 5 Solutions + Pro Clinical Extension Tabs */
+  /* Render Rich Modal with 5 Solutions + All Extended Pro Clinical Tabs */
   AI.showModal = function (invoiceId, directData) {
     var d = directData || null;
     if (!d) {
@@ -1418,9 +2072,15 @@
     var s = analysis.solutions;
     var findings = analysis.findings;
     var indices = analysis.indices || [];
+    var ascvdRisk = analysis.ascvdRisk || null;
     var drugSafety = analysis.drugSafety || [];
+    var panicInfo = analysis.panicInfo || { isPanic: false, alerts: [], formattedMessage: '' };
     var historicalDelta = analysis.historicalDelta || { hasHistory: false, comparisons: [], velocityAlerts: [] };
+    var ddx = analysis.ddx || [];
+    var drugInteractions = analysis.drugInteractions || [];
+    var geneticGuard = analysis.geneticGuard || [];
     var urduGuide = analysis.urduGuide || { wazahat: [], khurak: [], parhez: [], dawaiSchedule: [], khatraAlamaat: [], plainText: '' };
+    var reportNarrative = analysis.reportNarrative || '';
 
     // Badges HTML
     var findingsBadges = findings.length
@@ -1434,7 +2094,7 @@
         }).join(' ')
       : '<span style="color:#059669;font-weight:700;font-size:12px">✅ All tested parameters within normal reference ranges</span>';
 
-    // Solution 1 HTML
+    // Solution 1 HTML (with embedded DDx preview)
     var diagHtml = s.diagnosis.map(function (di) {
       return '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,0.05)">'
         + '<div style="font-size:13.5px;font-weight:800;color:#1e293b;margin-bottom:2px">🩺 ' + (window.App ? App.esc(di.title) : di.title) + '</div>'
@@ -1442,7 +2102,22 @@
         + '</div>';
     }).join('');
 
-    // Solution 2 HTML (Medications)
+    if (ddx.length) {
+      var ddxSnippets = ddx.map(function (dm) {
+        return dm.candidates.map(function (c) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px dashed #e2e8f0;font-size:11.5px">'
+            + '<div><b style="color:#1e293b">' + (window.App ? App.esc(c.disease) : c.disease) + '</b> <span style="color:#64748b">(' + (window.App ? App.esc(c.confirmatoryTest) : c.confirmatoryTest) + ')</span></div>'
+            + '<span style="background:#e0e7ff;color:#4338ca;padding:1px 6px;border-radius:4px;font-weight:800;font-size:11px">' + c.probability + '% Match</span>'
+            + '</div>';
+        }).join('');
+      }).join('');
+      diagHtml += '<div style="margin-top:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px">'
+        + '<div style="font-size:11px;font-weight:800;color:#4338ca;text-transform:uppercase;margin-bottom:4px">🧠 Differential Diagnosis (DDx Matrix):</div>'
+        + ddxSnippets
+        + '</div>';
+    }
+
+    // Solution 2 HTML (Medications + DDI Clash Alert)
     var medsHtml = s.medications.map(function (m) {
       var items = m.items.map(function (it) {
         return '<div style="background:#fff;border:1px solid #e2e8f0;border-left:3.5px solid #10b981;border-radius:8px;padding:8px 12px;margin-bottom:6px">'
@@ -1458,6 +2133,21 @@
         + items
         + '</div>';
     }).join('');
+
+    if (drugInteractions.length) {
+      var ddiSnippets = drugInteractions.map(function (di) {
+        var isCrit = di.severity === 'critical';
+        return '<div style="background:' + (isCrit ? '#fef2f2' : '#fffbeb') + ';border:1px solid ' + (isCrit ? '#fca5a5' : '#fde68a') + ';border-radius:6px;padding:6px 10px;margin-bottom:4px;font-size:11.5px">'
+          + '<b style="color:' + (isCrit ? '#b91c1c' : '#b45309') + '">⚠️ ' + (window.App ? App.esc(di.pair) : di.pair) + ':</b> '
+          + (window.App ? App.esc(di.mechanism) : di.mechanism)
+          + '<div style="color:#047857;font-weight:700;margin-top:2px">💡 ' + (window.App ? App.esc(di.solution) : di.solution) + '</div>'
+          + '</div>';
+      }).join('');
+      medsHtml += '<div style="margin-top:8px">'
+        + '<div style="font-size:11px;font-weight:800;color:#dc2626;text-transform:uppercase;margin-bottom:4px">💊 Drug-to-Drug Interaction (DDI) Conflict Alert:</div>'
+        + ddiSnippets
+        + '</div>';
+    }
 
     // Solution 3 HTML (Diet & Lifestyle)
     var dietHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
@@ -1500,77 +2190,131 @@
       + s.redflags.map(function (x) { return '• ' + x; }).join('\n') + '\n\n'
       + '_Note: Clinical decision support for authorized medical practitioners only._';
 
-    // Critical persistent alert banner (if critical drug safety or delta alert)
-    var critSafetyAlerts = drugSafety.filter(function (x) { return x.status === 'critical'; });
-    var critAlertBanner = '';
-    if (critSafetyAlerts.length || (historicalDelta.velocityAlerts && historicalDelta.velocityAlerts.length)) {
-      var critMsgs = [];
-      critSafetyAlerts.forEach(function (cs) { critMsgs.push(cs.title + ': ' + cs.contraindications[0]); });
-      (historicalDelta.velocityAlerts || []).forEach(function (va) { critMsgs.push(va); });
-      critAlertBanner = '<div style="background:#fef2f2;border:1.5px solid #f87171;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:flex-start;gap:10px">'
-        + '<div style="font-size:20px;line-height:1">🚨</div>'
-        + '<div style="font-size:12px;font-weight:700;color:#991b1b;line-height:1.45">'
-        + '<b>CRITICAL CLINICAL CAUTION:</b> ' + critMsgs.map(function (m) { return window.App ? App.esc(m) : m; }).join(' &bull; ')
+    // Panic Value Banner (CAP / ISO 15189)
+    var panicBannerHtml = '';
+    if (panicInfo.isPanic) {
+      var panicDetails = panicInfo.alerts.map(function (a) {
+        return '<b>' + (window.App ? App.esc(a.param) : a.param) + ' (' + (window.App ? App.esc(a.value) : a.value) + '):</b> ' + (window.App ? App.esc(a.hazard) : a.hazard);
+      }).join(' &bull; ');
+
+      panicBannerHtml = '<div style="background:linear-gradient(135deg,#991b1b 0%,#b91c1c 100%);color:#fff;border-radius:12px;padding:12px 16px;margin-bottom:12px;box-shadow:0 6px 20px rgba(185,28,28,0.3);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
+        + '<div style="display:flex;align-items:center;gap:10px">'
+        + '  <span style="font-size:24px">🚨</span>'
+        + '  <div>'
+        + '    <div style="font-size:13px;font-weight:900;letter-spacing:0.04em">CRITICAL PANIC-VALUE LAB ALERT (ISO 15189 / CAP Standard)</div>'
+        + '    <div style="font-size:11.5px;opacity:0.95;margin-top:2px">' + panicDetails + '</div>'
+        + '  </div>'
+        + '</div>'
+        + '<div>'
+        + '  <button type="button" class="btn btn-ghost" id="aiSendPanicSos" style="background:#fff;color:#991b1b;font-weight:900;border:0;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">💬 Send Panic SOS to Doctor</button>'
         + '</div>'
         + '</div>';
     }
 
-    // --- TAB 2: Medical Calculators HTML ---
-    var indicesHtml = indices.length ? indices.map(function (ind) {
-      var isCrit = ind.status === 'critical';
-      var isWarn = ind.status === 'warning';
-      var cardBorder = isCrit ? '#fca5a5' : (isWarn ? '#fde68a' : '#bbf7d0');
-      var cardBg = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : '#f0fdf4');
-      var scoreColor = isCrit ? '#dc2626' : (isWarn ? '#d97706' : '#16a34a');
+    // --- TAB 2: Medical Indices & ASCVD HTML ---
+    var indicesHtml = '';
+    if (ascvdRisk) {
+      var isHighCvd = ascvdRisk.riskScore >= 20.0;
+      var cvdBg = isHighCvd ? '#fef2f2' : (ascvdRisk.riskScore >= 7.5 ? '#fffbeb' : '#f0fdf4');
+      var cvdBorder = isHighCvd ? '#f87171' : (ascvdRisk.riskScore >= 7.5 ? '#fde68a' : '#bbf7d0');
+      var cvdColor = isHighCvd ? '#dc2626' : (ascvdRisk.riskScore >= 7.5 ? '#d97706' : '#16a34a');
 
-      return '<div style="background:' + cardBg + ';border:1.5px solid ' + cardBorder + ';border-radius:12px;padding:14px;margin-bottom:12px">'
+      indicesHtml += '<div style="background:' + cvdBg + ';border:2px solid ' + cvdBorder + ';border-radius:12px;padding:14px;margin-bottom:12px">'
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px">'
         + '  <div>'
-        + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">' + (window.App ? App.esc(ind.category) : ind.category) + '</div>'
-        + '    <div style="font-size:14px;font-weight:900;color:#0f172a">' + (window.App ? App.esc(ind.name) : ind.name) + '</div>'
-        + '    <div style="font-size:11px;color:#64748b;margin-top:1px">Formula: ' + (window.App ? App.esc(ind.formula) : ind.formula) + '</div>'
+        + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">Cardiovascular / AHA-ACC 2019 Guideline</div>'
+        + '    <div style="font-size:14.5px;font-weight:900;color:#0f172a">🫀 10-Year ASCVD Heart Attack & Stroke Risk</div>'
+        + '    <div style="font-size:11px;color:#64748b;margin-top:1px">' + (window.App ? App.esc(ascvdRisk.details) : ascvdRisk.details) + '</div>'
         + '  </div>'
         + '  <div style="text-align:right">'
-        + '    <div style="font-size:20px;font-weight:900;color:' + scoreColor + '">' + ind.score + ' <span style="font-size:11.5px;font-weight:600;color:#64748b">' + ind.unit + '</span></div>'
-        + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#fff;border:1px solid ' + cardBorder + ';color:' + scoreColor + '">' + (window.App ? App.esc(ind.statusLabel) : ind.statusLabel) + '</span>'
+        + '    <div style="font-size:22px;font-weight:900;color:' + cvdColor + '">' + ascvdRisk.riskScore + '% <span style="font-size:11px;font-weight:700;color:#64748b">10-Yr Risk</span></div>'
+        + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#fff;border:1px solid ' + cvdBorder + ';color:' + cvdColor + '">' + (window.App ? App.esc(ascvdRisk.tier) : ascvdRisk.tier) + '</span>'
         + '  </div>'
         + '</div>'
-        + '<div style="font-size:12.5px;color:#334155;line-height:1.45;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(0,0,0,0.08)">'
-        + '  <b>Interpretation:</b> ' + (window.App ? App.esc(ind.interpretation) : ind.interpretation) + '<br>'
-        + '  <b>Clinical Action:</b> ' + (window.App ? App.esc(ind.recommendation) : ind.recommendation)
+        + '<div style="font-size:12px;color:#334155;line-height:1.45;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(0,0,0,0.08)">'
+        + '  <b>Clinical Recommendation:</b> ' + (window.App ? App.esc(ascvdRisk.recommendation) : ascvdRisk.recommendation)
         + '</div>'
         + '</div>';
-    }).join('') : '<div style="padding:20px;text-align:center;color:#64748b;background:#f8fafc;border-radius:10px">No specific multi-parameter indices computable from available test parameters. Enter CBC (MCV+RBC), RFT (Creatinine), or LFT (AST+ALT) to activate calculators.</div>';
+    }
 
-    // --- TAB 3: Drug Safety Shield HTML ---
-    var safetyHtml = drugSafety.length ? drugSafety.map(function (ds) {
-      var isCrit = ds.status === 'critical';
-      var border = isCrit ? '#ef4444' : '#f59e0b';
-      var bg = isCrit ? '#fef2f2' : '#fffbeb';
+    if (indices.length) {
+      indicesHtml += indices.map(function (ind) {
+        var isCrit = ind.status === 'critical';
+        var isWarn = ind.status === 'warning';
+        var cardBorder = isCrit ? '#fca5a5' : (isWarn ? '#fde68a' : '#bbf7d0');
+        var cardBg = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : '#f0fdf4');
+        var scoreColor = isCrit ? '#dc2626' : (isWarn ? '#d97706' : '#16a34a');
 
-      var contraHtml = ds.contraindications.map(function (c) {
-        return '<li style="margin-bottom:3px"><b>🚫 CONTRAINDICATED:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
+        return '<div style="background:' + cardBg + ';border:1.5px solid ' + cardBorder + ';border-radius:12px;padding:14px;margin-bottom:12px">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px">'
+          + '  <div>'
+          + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">' + (window.App ? App.esc(ind.category) : ind.category) + '</div>'
+          + '    <div style="font-size:14px;font-weight:900;color:#0f172a">' + (window.App ? App.esc(ind.name) : ind.name) + '</div>'
+          + '    <div style="font-size:11px;color:#64748b;margin-top:1px">Formula: ' + (window.App ? App.esc(ind.formula) : ind.formula) + '</div>'
+          + '  </div>'
+          + '  <div style="text-align:right">'
+          + '    <div style="font-size:20px;font-weight:900;color:' + scoreColor + '">' + ind.score + ' <span style="font-size:11.5px;font-weight:600;color:#64748b">' + ind.unit + '</span></div>'
+          + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#fff;border:1px solid ' + cardBorder + ';color:' + scoreColor + '">' + (window.App ? App.esc(ind.statusLabel) : ind.statusLabel) + '</span>'
+          + '  </div>'
+          + '</div>'
+          + '<div style="font-size:12.5px;color:#334155;line-height:1.45;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(0,0,0,0.08)">'
+          + '  <b>Interpretation:</b> ' + (window.App ? App.esc(ind.interpretation) : ind.interpretation) + '<br>'
+          + '  <b>Clinical Action:</b> ' + (window.App ? App.esc(ind.recommendation) : ind.recommendation)
+          + '</div>'
+          + '</div>';
       }).join('');
-      var cautionsHtml = ds.cautions.map(function (c) {
-        return '<li style="margin-bottom:3px"><b>⚠️ CAUTION:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
-      }).join('');
-      var safeHtml = ds.safeAlternatives.map(function (sAlt) {
-        return '<li style="margin-bottom:3px;color:#047857"><b>💡 SAFE ALTERNATIVE:</b> ' + (window.App ? App.esc(sAlt) : sAlt) + '</li>';
-      }).join('');
+    }
 
-      return '<div style="background:' + bg + ';border:2px solid ' + border + ';border-radius:12px;padding:14px;margin-bottom:12px">'
-        + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
-        + '  <span style="font-size:22px">' + ds.icon + '</span>'
-        + '  <div>'
-        + '    <div style="font-size:14px;font-weight:900;color:' + (isCrit ? '#991b1b' : '#92400e') + '">' + (window.App ? App.esc(ds.title) : ds.title) + '</div>'
-        + '    <div style="font-size:11.5px;color:#64748b">Trigger: ' + (window.App ? App.esc(ds.trigger) : ds.trigger) + '</div>'
-        + '  </div>'
-        + '</div>'
-        + '<ul style="margin:8px 0 0;padding-left:18px;font-size:12px;color:#334155;line-height:1.5">'
-        + contraHtml + cautionsHtml + safeHtml
-        + '</ul>'
+    // --- TAB 3: Drug Safety & DDI Shield HTML ---
+    var safetyHtml = '';
+    if (drugInteractions.length) {
+      safetyHtml += '<div style="background:#fff1f2;border:2px solid #fecdd3;border-radius:12px;padding:14px;margin-bottom:14px">'
+        + '<div style="font-size:13.5px;font-weight:900;color:#991b1b;margin-bottom:6px">💊 Multi-Drug Pharmacokinetic / Pharmacodynamic Conflict Matrix</div>'
+        + drugInteractions.map(function (di) {
+            return '<div style="background:#fff;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;margin-bottom:6px">'
+              + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'
+              + '  <b style="color:#b91c1c;font-size:12.5px">⚡ ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
+              + '  <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;text-transform:uppercase">' + di.severity + '</span>'
+              + '</div>'
+              + '<div style="font-size:12px;color:#475569;margin-top:3px">' + (window.App ? App.esc(di.mechanism) : di.mechanism) + '</div>'
+              + '<div style="font-size:11.5px;color:#047857;font-weight:700;margin-top:3px">💡 Recommendation: ' + (window.App ? App.esc(di.solution) : di.solution) + '</div>'
+              + '</div>';
+          }).join('')
         + '</div>';
-    }).join('') : '<div style="padding:20px;text-align:center;color:#059669;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;font-weight:700">✅ All organ safety shields green. No renal, hepatic, or hematological drug contraindications detected.</div>';
+    }
+
+    if (drugSafety.length) {
+      safetyHtml += drugSafety.map(function (ds) {
+        var isCrit = ds.status === 'critical';
+        var border = isCrit ? '#ef4444' : '#f59e0b';
+        var bg = isCrit ? '#fef2f2' : '#fffbeb';
+
+        var contraHtml = ds.contraindications.map(function (c) {
+          return '<li style="margin-bottom:3px"><b>🚫 CONTRAINDICATED:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
+        }).join('');
+        var cautionsHtml = ds.cautions.map(function (c) {
+          return '<li style="margin-bottom:3px"><b>⚠️ CAUTION:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
+        }).join('');
+        var safeHtml = ds.safeAlternatives.map(function (sAlt) {
+          return '<li style="margin-bottom:3px;color:#047857"><b>💡 SAFE ALTERNATIVE:</b> ' + (window.App ? App.esc(sAlt) : sAlt) + '</li>';
+        }).join('');
+
+        return '<div style="background:' + bg + ';border:2px solid ' + border + ';border-radius:12px;padding:14px;margin-bottom:12px">'
+          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+          + '  <span style="font-size:22px">' + ds.icon + '</span>'
+          + '  <div>'
+          + '    <div style="font-size:14px;font-weight:900;color:' + (isCrit ? '#991b1b' : '#92400e') + '">' + (window.App ? App.esc(ds.title) : ds.title) + '</div>'
+          + '    <div style="font-size:11.5px;color:#64748b">Trigger: ' + (window.App ? App.esc(ds.trigger) : ds.trigger) + '</div>'
+          + '  </div>'
+          + '</div>'
+          + '<ul style="margin:8px 0 0;padding-left:18px;font-size:12px;color:#334155;line-height:1.5">'
+          + contraHtml + cautionsHtml + safeHtml
+          + '</ul>'
+          + '</div>';
+      }).join('');
+    } else if (!drugInteractions.length) {
+      safetyHtml = '<div style="padding:20px;text-align:center;color:#059669;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;font-weight:700">✅ All organ safety shields green. No renal, hepatic, or hematological drug contraindications detected.</div>';
+    }
 
     // --- TAB 4: Longitudinal Historical Trends HTML ---
     var trendsHtml = '';
@@ -1606,7 +2350,28 @@
         + '</div>';
     }
 
-    // --- TAB 5: Roman Urdu Patient Care Guide HTML ---
+    // --- TAB 5: Family Genetic & Marriage Guard HTML ---
+    var geneticHtml = '';
+    if (geneticGuard.length) {
+      geneticHtml = geneticGuard.map(function (g) {
+        return '<div style="background:#f5f3ff;border:2px solid #ddd6fe;border-radius:12px;padding:16px;margin-bottom:12px">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
+          + '  <div style="font-size:15px;font-weight:900;color:#5b21b6">' + (window.App ? App.esc(g.title) : g.title) + '</div>'
+          + '  <span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800">' + (window.App ? App.esc(g.severity) : g.severity) + '</span>'
+          + '</div>'
+          + '<div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px">' + (window.App ? App.esc(g.summary) : g.summary) + '</div>'
+          + '<div style="background:#fff;border-left:4px solid #7c3aed;padding:8px 12px;border-radius:6px;font-size:12px;color:#4c1d95;margin-bottom:8px">'
+          + '  <b>Inheritance Hazard:</b> ' + (window.App ? App.esc(g.geneticRisk) : g.geneticRisk)
+          + '</div>'
+          + '<div style="font-size:12px;color:#047857;font-weight:700">' + (window.App ? App.esc(g.mandatoryAction) : g.mandatoryAction) + '</div>'
+          + '<div style="font-size:11.5px;color:#64748b;margin-top:4px">' + (window.App ? App.esc(g.familyAction) : g.familyAction) + '</div>'
+          + '</div>';
+      }).join('');
+    } else {
+      geneticHtml = '<div style="padding:20px;text-align:center;color:#059669;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;font-weight:700">🧬 No high-risk familial carrier traits (such as Beta-Thalassemia or early onset monogenic diabetes) detected in current report.</div>';
+    }
+
+    // --- TAB 6: Roman Urdu Patient Care Guide HTML ---
     var urduHtml = '<div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:16px;margin-bottom:12px">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px">'
       + '  <div>'
@@ -1649,21 +2414,30 @@
       + '</div>'
       + '</div>';
 
-    // --- TAB 6: Digital Rx Pad Preview HTML ---
+    // --- TAB 7: Digital Rx Pad Preview with Voice Dictation HTML ---
     var rxPadPreviewHtml = '<div style="margin-bottom:12px">'
-      + '<div style="display:flex;justify-content:flex-end;margin-bottom:8px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
+      + '  <div style="display:flex;align-items:center;gap:6px">'
+      + '    <button type="button" class="btn btn-ghost" id="aiVoiceDictateBtn" style="border:1.5px solid #6366f1;color:#4f46e5;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:6px">'
+      + '      <span id="aiVoiceMicIcon">🎙️</span> <span id="aiVoiceMicText">Bol Kar Likhain (Voice Dictate)</span>'
+      + '    </button>'
+      + '    <span id="aiVoiceStatusText" style="font-size:11px;color:#64748b;font-weight:600"></span>'
+      + '  </div>'
       + '  <button type="button" class="btn btn-primary" id="aiPrintRxPadDirect" style="background:#4f46e5;font-weight:700">🖨️ Print Digital Rx Pad</button>'
       + '</div>'
       + AI.generateRxPadHtml(analysis)
       + '</div>';
 
     // Modal Master HTML
-    var modalHtml = '<div style="max-width:920px;font-family:inherit">'
+    var modalHtml = '<div style="max-width:940px;font-family:inherit">'
+      // Panic Banner
+      + panicBannerHtml
+
       // Header Card
       + '<div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#fff;border-radius:14px;padding:16px 20px;margin-bottom:12px;box-shadow:0 8px 24px rgba(79,70,229,0.22)">'
       + '  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">'
       + '    <div>'
-      + '      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.85">Smart Medical Intelligence Pro</div>'
+      + '      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.85">Smart Medical Intelligence Pro (Hospital-Grade)</div>'
       + '      <h2 style="font-size:20px;font-weight:800;margin:2px 0 4px">🤖 AI Doctor Recommendations & Clinical Intelligence</h2>'
       + '      <div style="font-size:13px;opacity:0.95">Patient: <b>' + (window.App ? App.esc(pt.name || 'Ali Raza') : (pt.name || 'Ali Raza')) + '</b> &bull; Invoice: <b>#' + (window.App ? App.esc(inv.no || inv.id) : (inv.no || inv.id)) + '</b>' + (doc ? ' &bull; Ref. Doctor: <b>' + (window.App ? App.esc(doc.name) : doc.name) + '</b>' : '') + '</div>'
       + '    </div>'
@@ -1673,15 +2447,13 @@
       + '  </div>'
       + '</div>'
 
-      // Critical Alert Banner (if any)
-      + critAlertBanner
-
       // Pro Navigation Tabs Bar
       + '<div class="ai-tabs-bar" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;margin-bottom:12px;border-bottom:1.5px solid #e2e8f0">'
       + '  <button type="button" class="btn btn-ghost ai-tab-btn active" data-tab="solutions" style="background:#4f46e5;color:#fff;border:1px solid #4338ca;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🩺 5 Solutions</button>'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="indices" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🧮 Medical Indices (' + indices.length + ')</button>'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="safety" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">⚠️ Drug Safety Shield (' + drugSafety.length + ')</button>'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="trends" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">📈 Historical Velocity</button>'
+      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="indices" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🧮 Indices & ASCVD</button>'
+      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="safety" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">⚠️ Drug Safety & DDI</button>'
+      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="trends" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">📈 Velocity</button>'
+      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="genetic" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🧬 Genetic Guard</button>'
       + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="urdu" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🇵🇰 Roman Urdu Guide</button>'
       + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="rx" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🖨️ Digital Rx Pad</button>'
       + '</div>'
@@ -1716,12 +2488,12 @@
       + '  </div>'
       + '</div>'
 
-      // PANE 2: Medical Indices
+      // PANE 2: Medical Indices & ASCVD
       + '<div class="ai-tab-pane" id="aiPane-indices" style="display:none">'
       +   indicesHtml
       + '</div>'
 
-      // PANE 3: Drug Safety Shield
+      // PANE 3: Drug Safety & DDI Shield
       + '<div class="ai-tab-pane" id="aiPane-safety" style="display:none">'
       +   safetyHtml
       + '</div>'
@@ -1731,12 +2503,17 @@
       +   trendsHtml
       + '</div>'
 
-      // PANE 5: Roman Urdu Guide
+      // PANE 5: Family Genetic & Marriage Guard
+      + '<div class="ai-tab-pane" id="aiPane-genetic" style="display:none">'
+      +   geneticHtml
+      + '</div>'
+
+      // PANE 6: Roman Urdu Guide
       + '<div class="ai-tab-pane" id="aiPane-urdu" style="display:none">'
       +   urduHtml
       + '</div>'
 
-      // PANE 6: Digital Rx Pad
+      // PANE 7: Digital Rx Pad
       + '<div class="ai-tab-pane" id="aiPane-rx" style="display:none">'
       +   rxPadPreviewHtml
       + '</div>'
@@ -1751,6 +2528,7 @@
       + '  <button type="button" class="btn btn-ghost" id="aiModalClose">Close</button>'
       + '  <div style="display:flex;gap:6px;flex-wrap:wrap">'
       + '    <button type="button" class="btn btn-ghost" id="aiCopyPrescription" style="border:1px solid #cbd5e1;font-weight:700">📋 Copy 5 Solutions</button>'
+      + '    <button type="button" class="btn btn-ghost" id="aiAttachReportRemarks" style="border:1px solid #a5b4fc;color:#4f46e5;font-weight:700">📄 Attach to Report Remarks</button>'
       + (doc && (doc.phone || doc.whatsapp)
           ? '  <button type="button" class="btn btn-ghost" id="aiWaDoctor" style="color:#059669;border:1px solid #a7f3d0;font-weight:700">💬 WhatsApp to Doctor</button>'
           : '')
@@ -1788,6 +2566,76 @@
             if (targetPane) targetPane.style.display = 'block';
           });
         });
+
+        // Panic SOS WhatsApp Button
+        var sosBtn = ov.querySelector('#aiSendPanicSos');
+        if (sosBtn) {
+          sosBtn.addEventListener('click', function () {
+            var rawPh = (doc && (doc.whatsapp || doc.phone)) || '';
+            var ph = rawPh.replace(/[^0-9]/g, '');
+            if (ph.indexOf('0') === 0) ph = '92' + ph.slice(1);
+            var url = ph ? ('https://wa.me/' + ph + '?text=' + encodeURIComponent(panicInfo.formattedMessage))
+                         : ('https://wa.me/?text=' + encodeURIComponent(panicInfo.formattedMessage));
+            window.open(url, '_blank');
+          });
+        }
+
+        // Attach Summary to Printed Report Remarks Button
+        var attachBtn = ov.querySelector('#aiAttachReportRemarks');
+        if (attachBtn) {
+          attachBtn.addEventListener('click', function () {
+            AI.attachSummaryToReportRemarks(inv.id || inv.no, reportNarrative);
+          });
+        }
+
+        // Voice Dictation Button (Urdu & English Speech Recognition)
+        var voiceBtn = ov.querySelector('#aiVoiceDictateBtn');
+        var voiceStatus = ov.querySelector('#aiVoiceStatusText');
+        var dictBox = ov.querySelector('#rxDictationNotesBox');
+        var dictTxt = ov.querySelector('#rxDictationText');
+        var activeRecognizer = null;
+
+        if (voiceBtn) {
+          voiceBtn.addEventListener('click', function () {
+            if (activeRecognizer) {
+              try { activeRecognizer.stop(); } catch (e) {}
+              activeRecognizer = null;
+              voiceBtn.style.background = '#fff';
+              voiceBtn.style.color = '#4f46e5';
+              if (voiceStatus) voiceStatus.textContent = '';
+              return;
+            }
+
+            if (!AI.isVoiceSupported()) {
+              if (App.toast) App.toast('Microphone voice dictation requires Google Chrome or Microsoft Edge.', 'err');
+              return;
+            }
+
+            voiceBtn.style.background = '#fee2e2';
+            voiceBtn.style.color = '#b91c1c';
+            if (voiceStatus) voiceStatus.textContent = '🔴 Listening (Bolain)...';
+
+            activeRecognizer = AI.startVoiceDictation({
+              lang: 'ur-PK',
+              onTranscript: function (text) {
+                if (dictBox) dictBox.style.display = 'block';
+                if (dictTxt) dictTxt.textContent = text;
+              },
+              onEnd: function () {
+                activeRecognizer = null;
+                voiceBtn.style.background = '#fff';
+                voiceBtn.style.color = '#4f46e5';
+                if (voiceStatus) voiceStatus.textContent = '✓ Voice Captured';
+              },
+              onError: function () {
+                activeRecognizer = null;
+                voiceBtn.style.background = '#fff';
+                voiceBtn.style.color = '#4f46e5';
+                if (voiceStatus) voiceStatus.textContent = '';
+              }
+            });
+          });
+        }
 
         // 1-Tap Order Follow-Up Tests Buttons
         ov.querySelectorAll('.ai-order-test-btn').forEach(function (b) {

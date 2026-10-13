@@ -442,7 +442,146 @@ assert(precartSaved.includes('Complete Blood Count'), 'precart must contain orde
 assert.equal(navLocation, '#/billing/pt_100', 'Must redirect to billing POS for patient');
 console.log('✓ Pro Feature 6: 1-Tap Order Follow-Up Tests saves to precart and navigates to billing POS');
 
+// 17. Test Ultra-Advanced Feature: Automatic Panic-Value SOS Alert (CAP / ISO 15189)
+console.log('\n--- Testing Ultra-Advanced Feature 1: Automatic Panic-Value SOS Alert ---');
+const panicReport = {
+  pt: { name: 'Emergency Patient', age: 62, gender: 'male' },
+  inv: { id: 'inv_sos_1', no: 'INV-SOS-1' },
+  doc: { name: 'Dr. Zulfiqar Ali', phone: '+92 300 1122334' },
+  groups: [
+    { test: { name: 'CBC' }, res: { values: { plt: 14000, hb: 5.9 } } }, // Extreme Platelets < 20,000 & Hb < 6.5
+    { test: { name: 'RBS' }, res: { values: { glucose: 450 } } }         // Extreme Glucose > 400
+  ]
+};
+const panicCheck = AI.checkPanicValues(panicReport);
+assert.equal(panicCheck.isPanic, true, 'Must flag emergency panic condition');
+assert(panicCheck.alerts.length >= 3, `Expected at least 3 panic alerts, got ${panicCheck.alerts.length}`);
+assert(panicCheck.alerts.some(a => a.param === 'Platelet Count'), 'Must trigger platelet panic alert');
+assert(panicCheck.alerts.some(a => a.param === 'Hemoglobin'), 'Must trigger hemoglobin panic alert');
+assert(panicCheck.alerts.some(a => a.param === 'Blood Glucose'), 'Must trigger glucose panic alert');
+assert(panicCheck.formattedMessage.includes('CRITICAL PANIC-VALUE LAB ALERT'), 'Message must contain official CAP/ISO header');
+assert(panicCheck.formattedMessage.includes('Dr. Zulfiqar Ali'), 'Message must address the attending doctor');
+console.log('✓ Ultra-Advanced Feature 1: Panic-Value SOS Alert accurately detects emergency thresholds and generates WhatsApp alert');
+
+// 18. Test Ultra-Advanced Feature: Multi-Drug Interaction Clash Matrix (DDI)
+console.log('\n--- Testing Ultra-Advanced Feature 2: Multi-Drug Interaction Checker ---');
+const conflictingMeds = [
+  'Tab. Diclofenac Sodium 50mg BD',
+  'Tab. Aspirin (Disprin) 75mg daily',
+  'Tab. Ciprofloxacin 500mg BD',
+  'Tab. Theophylline 300mg daily',
+  'Tab. Atorvastatin 20mg HS',
+  'Tab. Clarithromycin 500mg BD'
+];
+const ddiResults = AI.checkDrugInteractions(conflictingMeds);
+assert(ddiResults.length >= 3, `Expected at least 3 severe drug interactions, got ${ddiResults.length}`);
+assert(ddiResults.some(d => d.id === 'nsaid_blood_thinner'), 'Must detect NSAID + Aspirin hemorrhage clash');
+assert(ddiResults.some(d => d.id === 'cipro_theophylline'), 'Must detect Ciprofloxacin + Theophylline seizure hazard');
+assert(ddiResults.some(d => d.id === 'statin_macrolide'), 'Must detect Statin + Clarithromycin rhabdomyolysis clash');
+console.log('✓ Ultra-Advanced Feature 2: Multi-Drug Interaction Clash Matrix successfully flagged lethal pharmacodynamic conflicts');
+
+// 19. Test Ultra-Advanced Feature: Differential Diagnosis (DDx) Probability Matrix
+console.log('\n--- Testing Ultra-Advanced Feature 3: Differential Diagnosis DDx Matrix ---');
+const ddxReportData = {
+  pt: { name: 'Fever Patient', age: 26, gender: 'male' },
+  inv: { id: 'inv_ddx_1' },
+  groups: [
+    { test: { name: 'CBC' }, res: { values: { plt: 38000, wbc: 3100, hb: 7.2, mcv: 67, rbc: 5.6 } } }
+  ]
+};
+const ddxFindings = AI.extractFindings(ddxReportData);
+const ddxMatrix = AI.calculateDifferentialDiagnosis(ddxReportData, ddxFindings);
+assert(ddxMatrix.length >= 2, 'Must generate DDx for Thrombocytopenia and Microcytic Anemia');
+
+const pltDDx = ddxMatrix.find(d => d.domain.includes('Thrombocytopenia'));
+assert(pltDDx, 'Must contain Thrombocytopenia DDx domain');
+const dengueCandidate = pltDDx.candidates.find(c => c.disease.includes('Dengue'));
+assert(dengueCandidate && dengueCandidate.probability >= 80, 'Dengue Fever should have >= 80% match in febrile thrombocytopenia');
+
+const microDDx = ddxMatrix.find(d => d.domain.includes('Microcytic'));
+assert(microDDx, 'Must contain Microcytic Anemia DDx domain');
+const thalCandidate = microDDx.candidates.find(c => c.disease.includes('Thalassemia Minor'));
+assert(thalCandidate && thalCandidate.probability >= 90, 'Thalassemia Minor should have >= 90% probability when Mentzer < 13');
+console.log('✓ Ultra-Advanced Feature 3: Differential Diagnosis (DDx) Matrix successfully evaluated probabilistic disease differentials');
+
+// 20. Test Ultra-Advanced Feature: 10-Year ASCVD Cardiovascular Risk Calculator
+console.log('\n--- Testing Ultra-Advanced Feature 4: 10-Year ASCVD Heart Attack Risk ---');
+const cvdReport = {
+  pt: { name: 'Cardio Patient', age: 58, gender: 'male' },
+  inv: { id: 'inv_cvd_1' },
+  groups: [
+    { test: { name: 'Lipid Profile' }, res: { values: { cholesterol: 260, hdl: 36 } } },
+    { test: { name: 'Sugar' }, res: { values: { glucose: 220 } } } // Diabetic flag
+  ]
+};
+const ascvdScore = AI.calculateAscvdRisk(cvdReport);
+assert(ascvdScore.riskScore >= 20.0, `Expected High Risk >= 20.0%, got ${ascvdScore.riskScore}%`);
+assert.equal(ascvdScore.status, 'critical', 'ASCVD risk >= 20% must have critical status');
+assert(ascvdScore.recommendation.includes('High-Intensity Statin'), 'Must advise High-Intensity Statin for high ASCVD risk');
+console.log('✓ Ultra-Advanced Feature 4: 10-Year ASCVD Cardiovascular Risk Calculator correctly classified high-risk heart attack probability');
+
+// 21. Test Ultra-Advanced Feature: Family Genetic & Thalassemia Marriage Guard
+console.log('\n--- Testing Ultra-Advanced Feature 5: Family Genetic & Marriage Guard ---');
+const geneticReport = {
+  pt: { name: 'Young Adult Patient', age: 22, gender: 'female' },
+  inv: { id: 'inv_gen_1' },
+  groups: [
+    { test: { name: 'CBC' }, res: { values: { hb: 9.8, mcv: 64, rbc: 5.5 } } } // Mentzer = 64/5.5 = 11.6 (< 13)
+  ]
+};
+const geneticAlerts = AI.evaluateGeneticGuard(geneticReport);
+assert(geneticAlerts.length >= 1, 'Must trigger genetic carrier alert');
+const thalGuard = geneticAlerts.find(g => g.title.includes('Premarital Thalassemia'));
+assert(thalGuard, 'Must generate Premarital Thalassemia Screening Guard');
+assert(thalGuard.geneticRisk.includes('25%'), 'Must state 25% homozygous risk per pregnancy in cousin marriages');
+assert(thalGuard.mandatoryAction.includes('MANDATORY PREMARITAL SCREENING'), 'Must require spouse screening before marriage');
+console.log('✓ Ultra-Advanced Feature 5: Family Genetic & Thalassemia Marriage Guard successfully triggered premarital advisory');
+
+// 22. Test Ultra-Advanced Feature: Voice Dictation API
+console.log('\n--- Testing Ultra-Advanced Feature 6: Voice Dictation API ---');
+assert.equal(typeof AI.isVoiceSupported, 'function', 'isVoiceSupported must be a function');
+assert.equal(typeof AI.startVoiceDictation, 'function', 'startVoiceDictation must be a function');
+// Mock SpeechRecognition in sandbox
+sandbox.window.SpeechRecognition = function () {
+  this.start = () => {};
+  this.stop = () => {};
+};
+assert.equal(AI.isVoiceSupported(), true, 'isVoiceSupported must return true when SpeechRecognition exists');
+console.log('✓ Ultra-Advanced Feature 6: Voice Dictation API registered and ready for microphone input');
+
+// 23. Test Ultra-Advanced Feature: 1-Click AI Executive Summary Narrative & Report Attachment
+console.log('\n--- Testing Ultra-Advanced Feature 7: AI Executive Summary on Report Footer ---');
+const narrativeReport = {
+  patient: { name: 'Report Patient', age: 45, gender: 'male' },
+  invoice: { id: 'inv_narrative_1' },
+  findings: [
+    { key: 'hb', status: 'low', value: 7.2 },
+    { key: 'glucose_random', status: 'high', value: 210 }
+  ],
+  solutions: {
+    diagnosis: [{ title: 'Microcytic Anemia' }, { title: 'Hyperglycemia' }],
+    tests: ['Serum Ferritin', 'HbA1c']
+  },
+  indices: [{ id: 'mentzer', score: 11.8 }]
+};
+const narrative = AI.generateReportNarrative(narrativeReport);
+assert(narrative.includes('AI Clinical Correlation:'), 'Must start with official narrative prefix');
+assert(narrative.includes('Microcytic Anemia'), 'Must mention primary clinical findings');
+assert(narrative.includes('Thalassemia Minor pattern'), 'Must correlate Mentzer index');
+
+// Test attaching remarks directly into DB
+let testResultsDB = [{ id: 'res_n1', invoiceId: 'inv_narrative_1', values: {} }];
+sandbox.DB.all = (t) => (t === 'results' ? testResultsDB : []);
+sandbox.DB.set = (t, id, item) => {
+  if (t === 'results' && id === 'res_n1') testResultsDB[0] = item;
+};
+const attachSuccess = AI.attachSummaryToReportRemarks('inv_narrative_1', narrative);
+assert.equal(attachSuccess, true, 'attachSummaryToReportRemarks must succeed');
+assert(testResultsDB[0].values['Remarks'].includes('AI Clinical Correlation'), 'Result Remarks must contain the AI narrative');
+console.log('✓ Ultra-Advanced Feature 7: AI Executive Summary successfully generated and attached to printed report remarks');
+
 console.log('\n============================================================');
-console.log('ALL 16 TEST SUITES PASSED! PRO MEDICAL FEATURES VERIFIED WITH ZERO REGRESSIONS.');
+console.log('ALL 23 TEST SUITES PASSED! ULTRA-ADVANCED HOSPITAL-GRADE AI VERIFIED WITH ZERO REGRESSIONS.');
 console.log('============================================================\n');
+
 
