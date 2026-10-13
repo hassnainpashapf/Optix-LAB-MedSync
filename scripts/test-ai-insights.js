@@ -16,12 +16,15 @@ const sandbox = {
   window: {},
   document: {
     createElement: () => ({ select: () => {}, value: '' }),
+    querySelector: () => null,
+    querySelectorAll: () => [],
     body: { appendChild: () => {}, removeChild: () => {} },
     addEventListener: () => {},
     removeEventListener: () => {}
   },
   navigator: { clipboard: { writeText: () => Promise.resolve() } },
-  console: console
+  console: console,
+  setTimeout: (fn) => fn()
 };
 sandbox.window = sandbox;
 sandbox.App = {
@@ -219,4 +222,227 @@ const win7IndexHtml = fs.readFileSync(path.join(root, 'electron-tools/installer/
 assert(win7IndexHtml.includes('assets/js/mod-ai-insights.js'), 'win7 index.html must register mod-ai-insights.js');
 console.log('✓ All HTML entries across web, electron, and win7 bundle have mod-ai-insights.js registered');
 
-console.log('\nALL 10 TEST SUITES PASSED! DOCTOR DASHBOARD & ADMIN PERMISSIONS VERIFIED SUCCESSFULLY.\n');
+// 11. Test Pro Medical Indices & Calculators
+console.log('\n--- Testing Pro Feature 1: Clinical Calculators & Medical Indices ---');
+const thalReport = {
+  pt: { name: 'Thalassemia Patient', age: 24, gender: 'male' },
+  inv: { id: 'inv_thal_1' },
+  groups: [
+    { test: { name: 'Complete Blood Count' }, res: { values: { mcv: 68, rbc: 5.8 } } } // Mentzer = 68 / 5.8 = 11.72 (< 13)
+  ]
+};
+const thalIndices = AI.calculateIndices(thalReport);
+const mentzerThal = thalIndices.find(x => x.id === 'mentzer');
+assert(mentzerThal, 'Mentzer Index must be computed');
+assert.equal(mentzerThal.score, 11.72, 'Mentzer score must equal MCV/RBC');
+assert.equal(mentzerThal.status, 'warning', 'Mentzer < 13 must flag warning for Thalassemia Minor');
+assert(mentzerThal.statusLabel.includes('Thalassemia Minor'), 'Mentzer label must identify Thalassemia Minor');
+
+const idaReport = {
+  pt: { name: 'IDA Patient', age: 30, gender: 'female' },
+  inv: { id: 'inv_ida_1' },
+  groups: [
+    { test: { name: 'CBC' }, res: { values: { mcv: 72, rbc: 3.6 } } } // Mentzer = 72 / 3.6 = 20.0 (> 13)
+  ]
+};
+const idaIndices = AI.calculateIndices(idaReport);
+const mentzerIda = idaIndices.find(x => x.id === 'mentzer');
+assert(mentzerIda && mentzerIda.score === 20.0, 'Mentzer IDA score must equal 20.0');
+assert(mentzerIda.statusLabel.includes('Iron Deficiency'), 'Mentzer > 13 must identify Iron Deficiency');
+
+// eGFR CKD-EPI 2021 Equation
+const ckdReport = {
+  pt: { name: 'Renal Patient', age: 60, gender: 'male' },
+  inv: { id: 'inv_ckd_1' },
+  groups: [
+    { test: { name: 'RFT' }, res: { values: { creatinine: 2.3 } } }
+  ]
+};
+const ckdIndices = AI.calculateIndices(ckdReport);
+const egfrItem = ckdIndices.find(x => x.id === 'egfr');
+assert(egfrItem, 'eGFR must be computed');
+assert(egfrItem.score < 40 && egfrItem.score > 25, `eGFR score should be ~30 mL/min, got ${egfrItem.score}`);
+assert(egfrItem.statusLabel.includes('Stage 3') || egfrItem.statusLabel.includes('Stage 4'), 'eGFR should classify KDIGO stage');
+
+// FIB-4 & APRI Liver Fibrosis & De Ritis Ratio
+const liverScoreReport = {
+  pt: { name: 'Liver Patient', age: 50, gender: 'male' },
+  inv: { id: 'inv_liv_1' },
+  groups: [
+    { test: { name: 'LFT' }, res: { values: { ast: 120, alt: 95 } } },
+    { test: { name: 'CBC' }, res: { values: { plt: 110000 } } }
+  ]
+};
+const livIndices = AI.calculateIndices(liverScoreReport);
+const fib4Item = livIndices.find(x => x.id === 'fib4');
+assert(fib4Item, 'FIB-4 score must be computed');
+assert(fib4Item.score > 2.67, `FIB-4 score should be > 2.67 (High Risk Fibrosis), got ${fib4Item.score}`);
+assert.equal(fib4Item.status, 'critical', 'FIB-4 > 2.67 must be critical');
+
+const apriItem = livIndices.find(x => x.id === 'apri');
+assert(apriItem && apriItem.score > 1.5, 'APRI score should be > 1.5 (High Risk Cirrhosis)');
+
+const deRitisItem = livIndices.find(x => x.id === 'deritis');
+assert(deRitisItem && deRitisItem.score === 1.26, 'De Ritis score must be AST/ALT');
+
+// Atherogenic Lipoprotein Ratios
+const lipidScoreReport = {
+  pt: { name: 'Lipid Patient', age: 48, gender: 'female' },
+  inv: { id: 'inv_lip_1' },
+  groups: [
+    { test: { name: 'Lipid Profile' }, res: { values: { cholesterol: 240, hdl: 38, triglycerides: 230 } } }
+  ]
+};
+const lipIndices = AI.calculateIndices(lipidScoreReport);
+const castelliItem = lipIndices.find(x => x.id === 'castelli');
+assert(castelliItem && castelliItem.score === 6.32, 'Castelli ratio should be 240 / 38 = 6.32');
+assert.equal(castelliItem.status, 'critical', 'Castelli ratio > 5.0 must flag critical');
+const tgHdlItem = lipIndices.find(x => x.id === 'tghdl');
+assert(tgHdlItem && tgHdlItem.score === 6.05, 'TG/HDL ratio should be 230 / 38 = 6.05');
+console.log('✓ Pro Feature 1: Clinical Calculators & Medical Indices (Mentzer, eGFR, FIB-4, APRI, De Ritis, Castelli) verified successfully');
+
+// 12. Test Pro Feature 2: Organ-Specific Drug Safety Shield
+console.log('\n--- Testing Pro Feature 2: Organ-Specific Drug Safety Shield ---');
+const multiOrganReport = {
+  pt: { name: 'Safety Shield Patient', age: 58, gender: 'male' },
+  inv: { id: 'inv_safe_1' },
+  groups: [
+    { test: { name: 'RFT' }, res: { values: { creatinine: 2.8 } } },
+    { test: { name: 'LFT' }, res: { values: { alt: 145, ast: 110, bili_total: 2.6 } } },
+    { test: { name: 'CBC' }, res: { values: { plt: 25000 } } }
+  ]
+};
+const safetyAlerts = AI.evaluateDrugSafety(multiOrganReport);
+assert.equal(safetyAlerts.length, 3, 'Must trigger Renal, Hepatic, and Bleeding shields');
+
+const renalShield = safetyAlerts.find(s => s.organ === 'Renal');
+assert(renalShield, 'Renal shield must be active');
+assert.equal(renalShield.status, 'critical', 'Cr > 2.5 must trigger critical renal status');
+assert(renalShield.contraindications.some(c => c.includes('NSAID')), 'Renal shield must contraindicate NSAIDs');
+
+const hepaticShield = safetyAlerts.find(s => s.organ === 'Hepatic');
+assert(hepaticShield, 'Hepatic shield must be active');
+assert(hepaticShield.contraindications.some(c => c.includes('Paracetamol')), 'Hepatic shield must cap Paracetamol');
+assert(hepaticShield.cautions.some(c => c.includes('Statin')), 'Hepatic shield must caution Statins');
+
+const bleedingShield = safetyAlerts.find(s => s.organ === 'Hematology');
+assert(bleedingShield, 'Bleeding shield must be active');
+assert.equal(bleedingShield.status, 'critical', 'Platelets < 30,000 must trigger critical bleeding alert');
+assert(bleedingShield.contraindications.some(c => c.includes('IM Injection') || c.includes('Intramuscular')), 'Must strictly forbid IM injections');
+console.log('✓ Pro Feature 2: Drug Safety Shield (Renal, Hepatic, Hematology) verified with active contraindications');
+
+// 13. Test Pro Feature 3: Longitudinal Trend & Delta Velocity
+console.log('\n--- Testing Pro Feature 3: Longitudinal Trend & Delta Velocity ---');
+const mockInvoicesDB = [
+  { id: 'inv_cur_10', no: 'INV-10', patientId: 'pt_long_1', date: '2026-10-13' },
+  { id: 'inv_prev_9', no: 'INV-09', patientId: 'pt_long_1', date: '2026-10-01' }
+];
+const mockResultsDB = [
+  { invoiceId: 'inv_cur_10', testId: 't_cbc', values: { hb: 8.1, plt: 48000 } },
+  { invoiceId: 'inv_cur_10', testId: 't_rft', values: { creatinine: 1.8 } },
+  { invoiceId: 'inv_prev_9', testId: 't_cbc', values: { hb: 12.5, plt: 210000 } }, // Hb drop = 4.4, Plt drop = 77%
+  { invoiceId: 'inv_prev_9', testId: 't_rft', values: { creatinine: 0.9 } }          // Cr rise = +0.9 (KDIGO AKI)
+];
+const mockTestsDB = [
+  { id: 't_cbc', name: 'Complete Blood Count' },
+  { id: 't_rft', name: 'Renal Function Test' }
+];
+
+sandbox.DB.all = (table) => {
+  if (table === 'invoices') return mockInvoicesDB;
+  if (table === 'results') return mockResultsDB;
+  if (table === 'tests') return mockTestsDB;
+  return [];
+};
+sandbox.DB.get = (table, id) => {
+  if (table === 'invoices') return mockInvoicesDB.find(x => x.id === id);
+  if (table === 'tests') return mockTestsDB.find(x => x.id === id);
+  if (table === 'settings' && id === 'main') return mockSettings;
+  return null;
+};
+
+const currentDeltaReport = {
+  pt: { id: 'pt_long_1', name: 'Longitudinal Patient', age: 35, gender: 'male' },
+  inv: { id: 'inv_cur_10', no: 'INV-10', patientId: 'pt_long_1' },
+  groups: [
+    { test: { name: 'CBC' }, res: { values: { hb: 8.1, plt: 48000 } } },
+    { test: { name: 'RFT' }, res: { values: { creatinine: 1.8 } } }
+  ]
+};
+
+const deltaResult = AI.evaluateHistoricalDelta('inv_cur_10', currentDeltaReport);
+assert.equal(deltaResult.hasHistory, true, 'Should detect historical reports for patient');
+assert.equal(deltaResult.prevInvoice.id, 'inv_prev_9', 'Should pair with previous invoice inv_prev_9');
+assert(deltaResult.velocityAlerts.length >= 3, `Expected at least 3 acute delta alerts, got ${deltaResult.velocityAlerts.length}`);
+assert(deltaResult.velocityAlerts.some(a => a.includes('ACUTE HEMOGLOBIN DROP')), 'Must flag acute hemoglobin drop');
+assert(deltaResult.velocityAlerts.some(a => a.includes('ACUTE PLATELET CRASH')), 'Must flag acute platelet crash');
+assert(deltaResult.velocityAlerts.some(a => a.includes('KDIGO AKI CRITERION')), 'Must flag KDIGO Acute Kidney Injury surge');
+console.log('✓ Pro Feature 3: Longitudinal Trend & Delta Velocity successfully flagged Hb drop, Platelet crash, and KDIGO AKI surge');
+
+// 14. Test Pro Feature 4: Bilingual Patient Care Guide (Roman Urdu)
+console.log('\n--- Testing Pro Feature 4: Roman Urdu Patient Care Guide ---');
+const urduReport = {
+  patient: { name: 'Zahid Khan', age: 40, gender: 'male' },
+  invoice: { id: 'inv_u1', no: 'INV-U1' },
+  findings: [
+    { key: 'hb', status: 'low', value: 7.5 },
+    { key: 'plt', status: 'low', value: 45000 },
+    { key: 'glucose_random', status: 'high', value: 240 }
+  ]
+};
+const urduGuide = AI.generateUrduPatientGuide(urduReport);
+assert(urduGuide.wazahat.length >= 3, 'Must include Urdu disease explanations for Anemia, Platelets, Sugar');
+assert(urduGuide.wazahat.some(w => w.includes('Hemoglobin') || w.includes('Khoon ki kami')), 'Must explain anemia in Roman Urdu');
+assert(urduGuide.parhez.some(p => p.includes('Chai') || p.includes('Cold Drink') || p.includes('Brufen')), 'Must advise dietary & painkiller parhez in Urdu');
+assert(urduGuide.khurak.some(k => k.includes('Palak') || k.includes('Chukandar') || k.includes('Nariyal')), 'Must advise Pakistani foods in Urdu');
+assert(urduGuide.plainText.includes('OPTIX LAB — SEHAT O PARHEZ GUIDE'), 'Plain text Roman Urdu must have official header');
+console.log('✓ Pro Feature 4: Bilingual Patient Care Guide in Roman Urdu generated successfully with 1-click text');
+
+// 15. Test Pro Feature 5: Digital Doctor Prescription Pad
+console.log('\n--- Testing Pro Feature 5: Digital Doctor Prescription Pad ---');
+const rxData = {
+  patient: { name: 'Kashif Mehmood', age: 44, gender: 'male' },
+  invoice: { id: 'inv_rx1', no: 'INV-RX1' },
+  doctor: { name: 'Dr. Tariq Jamil', pmdc: '38192-P', phone: '+92 301 1234567' },
+  solutions: {
+    diagnosis: [{ title: 'Microcytic Anemia', detail: 'Low Hb' }],
+    medications: [
+      {
+        category: 'Hematinic',
+        items: [
+          { drug: 'Tab. Ferrous Ascorbate 100mg', dosage: '1 tablet BD x 3 months', note: 'After meals with juice' }
+        ]
+      }
+    ],
+    diet: ['Eat spinach and pomegranate', 'Avoid tea after food'],
+    tests: ['Serum Ferritin', 'TIBC'],
+    redflags: ['Contact hospital if breathlessness worsens']
+  }
+};
+const rxHtml = AI.generateRxPadHtml(rxData);
+assert(rxHtml.includes('Dr. Tariq Jamil'), 'Rx pad must display doctor name');
+assert(rxHtml.includes('38192-P'), 'Rx pad must display doctor PMDC number');
+assert(rxHtml.includes('Tab. Ferrous Ascorbate 100mg'), 'Rx pad must contain prescribed medicine in Rx table');
+assert(rxHtml.includes('℞'), 'Rx pad must feature traditional ℞ symbol');
+assert(rxHtml.includes('Doctor Signature &amp; Stamp') || rxHtml.includes('Doctor Signature & Stamp'), 'Rx pad must have signature line');
+console.log('✓ Pro Feature 5: Digital Doctor Prescription Pad HTML generated with complete credentials and Rx table');
+
+// 16. Test Pro Feature 6: 1-Tap Order Follow-Up Tests
+console.log('\n--- Testing Pro Feature 6: 1-Tap Order Follow-Up Tests ---');
+let precartSaved = '';
+sandbox.sessionStorage = {
+  getItem: (k) => (k === 'labpos_precart' ? precartSaved : null),
+  setItem: (k, v) => { if (k === 'labpos_precart') precartSaved = v; }
+};
+let navLocation = '';
+sandbox.App.nav = (url) => { navLocation = url; };
+
+AI.orderFollowupTest('Complete Blood Count', 'pt_100');
+assert(precartSaved.includes('Complete Blood Count'), 'precart must contain ordered test');
+assert.equal(navLocation, '#/billing/pt_100', 'Must redirect to billing POS for patient');
+console.log('✓ Pro Feature 6: 1-Tap Order Follow-Up Tests saves to precart and navigates to billing POS');
+
+console.log('\n============================================================');
+console.log('ALL 16 TEST SUITES PASSED! PRO MEDICAL FEATURES VERIFIED WITH ZERO REGRESSIONS.');
+console.log('============================================================\n');
+
