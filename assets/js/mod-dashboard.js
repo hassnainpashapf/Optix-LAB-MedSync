@@ -432,7 +432,7 @@
         '</div></a>' +
     '</div>';
 
-    /* Recent Patients — Appointments awaiting approval table */
+    /* Recent Patients — Diagnostic lab patients table */
     function doctorAvatarSvg(type) {
       if (type === 'female' || type === 'hijab') {
         return '<svg viewBox="0 0 40 40" width="100%" height="100%">' +
@@ -453,45 +453,87 @@
     }
     var apptFaces = {
       amany: doctorAvatarSvg('female'),
+      yasmin: doctorAvatarSvg('female'),
+      sara: doctorAvatarSvg('female'),
       tariq: doctorAvatarSvg('male'),
       farid: doctorAvatarSvg('male'),
-      yasmin: doctorAvatarSvg('female'),
-      amir: doctorAvatarSvg('male')
+      amir: doctorAvatarSvg('male'),
+      ahmed: doctorAvatarSvg('male')
     };
 
-    var defaultAppts = [
-      { id: 'ap1', patient: 'Yousef Al-Subaie', visit: 'Check-Up', doctor: 'Dr/Amany Ahmed', face: 'amany', spec: 'Neurology', date: '14 Oct 2026', time: '09:00 AM' },
-      { id: 'ap2', patient: 'Mariam Al-Subaie', visit: 'Follow-Up', doctor: 'Dr. Tariq Al-Hakim', face: 'tariq', spec: 'Orthopedics', date: '14 Oct 2026', time: '09:00 AM' },
-      { id: 'ap3', patient: 'Salma Al-Shehri', visit: 'Follow-Up', doctor: 'Dr. Farid Al-Zahrani', face: 'farid', spec: 'Nephrology', date: '14 Oct 2026', time: '12:30 PM' },
-      { id: 'ap4', patient: 'Mariam Al-Qahtani', visit: 'Check-Up', doctor: 'Dr. Tariq Al-Hakim', face: 'tariq', spec: 'Orthopedics', date: '14 Oct 2026', time: '02:00 PM' },
-      { id: 'ap5', patient: 'Hassan Al-Najjar', visit: 'Consultation', doctor: 'Dr. Yasmin Farah', face: 'yasmin', spec: 'Gynecology', date: '14 Oct 2026', time: '03:00 PM' },
-      { id: 'ap6', patient: 'Ibrahim Al-Dosari', visit: 'Follow-Up', doctor: 'Dr. Amir Al-Farsi', face: 'amir', spec: 'Neurology', date: '15 Oct 2026', time: '12:00 PM' }
+    var defaultLabPatients = [
+      { id: 'lp1', patient: 'Muhammad Imran', visit: 'Walk-in', doctor: 'Dr. Ahmed Khan', face: 'ahmed', spec: 'Hematology (CBC)', date: '13 Oct 2026', time: '09:30 AM' },
+      { id: 'lp2', patient: 'Ayesha Bibi', visit: 'Routine Test', doctor: 'Dr. Sara Malik', face: 'sara', spec: 'Diabetes (HbA1c)', date: '13 Oct 2026', time: '10:15 AM' },
+      { id: 'lp3', patient: 'Muhammad Aslam', visit: 'Referred OPD', doctor: 'Dr. Ahmed Khan', face: 'ahmed', spec: 'Biochemistry (LFT, RFT)', date: '13 Oct 2026', time: '11:45 AM' },
+      { id: 'lp4', patient: 'Fatima Noor', visit: 'Home Sampling', doctor: 'Dr. Sara Malik', face: 'sara', spec: 'Serology (HBsAg, HCV)', date: '13 Oct 2026', time: '01:20 PM' },
+      { id: 'lp5', patient: 'Bilal Hussain', visit: 'Walk-in', doctor: 'Dr. Tariq Al-Hakim', face: 'tariq', spec: 'Biochemistry (Lipid Profile)', date: '13 Oct 2026', time: '03:00 PM' },
+      { id: 'lp6', patient: 'Zainab Tariq', visit: 'Follow-Up', doctor: 'Dr. Sara Malik', face: 'sara', spec: 'Hormones (Vitamin D, TSH)', date: '13 Oct 2026', time: '04:15 PM' },
+      { id: 'lp7', patient: 'Kamran Akmal', visit: 'Walk-in', doctor: 'Dr. Ahmed Khan', face: 'ahmed', spec: 'Clinical Pathology (Urine R/E)', date: '12 Oct 2026', time: '09:00 AM' },
+      { id: 'lp8', patient: 'Nusrat Parveen', visit: 'Urgent / STAT', doctor: 'Dr. Sara Malik', face: 'sara', spec: 'Cardiac (Troponin I)', date: '12 Oct 2026', time: '11:30 AM' }
     ];
 
-    var dbAppts = (DB.all('appointments') || []).filter(function (a) { return a.status === 'requested' || a.status === 'pending' || !a.status; }).map(function (a, i) {
-      var pt = DB.get('patients', a.patientId) || {};
-      var pName = (pt && pt.name) || a.patientName || 'Patient';
-      var dKeys = ['amany', 'tariq', 'farid', 'yasmin', 'amir'];
-      var dNames = ['Dr/Amany Ahmed', 'Dr. Tariq Al-Hakim', 'Dr. Farid Al-Zahrani', 'Dr. Yasmin Farah', 'Dr. Amir Al-Farsi'];
-      var dSpecs = ['Neurology', 'Orthopedics', 'Nephrology', 'Gynecology', 'Cardiology'];
+    /* Gather real laboratory patients from invoices sorted newest first */
+    var recentInvoices = invoices.slice().sort(function (a, b) {
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+
+    var realLabPatients = recentInvoices.map(function (inv, i) {
+      var pt = (inv.patientId && DB.get('patients', inv.patientId)) || {};
+      var doc = (inv.doctorId && DB.get('doctors', inv.doctorId)) || {};
+      var pName = (pt && pt.name) || inv.patientName || ('Patient ' + (i + 1));
+      var dName = (doc && doc.name) || (inv.doctorName) || (i % 2 === 0 ? 'Dr. Ahmed Khan' : 'Dr. Sara Malik');
+      var isFem = /sara|ayesha|amany|yasmin|fatima/i.test(dName);
+      var faceKey = isFem ? (i % 2 === 0 ? 'sara' : 'yasmin') : (['ahmed', 'tariq', 'farid'][i % 3]);
+
+      var items = inv.items || [];
+      var firstTest = items[0] || {};
+      var tName = firstTest.name || firstTest.testName || '';
+      var cat = (function (n, code) {
+        var str = ((code || '') + ' ' + (n || '')).toLowerCase();
+        if (/hba1c|glucose|fbs|rbs|ogtt|sugar/i.test(str)) return 'Diabetes';
+        if (/cbc|blood|hb|esr|plt|coag|pt|inr/i.test(str)) return 'Hematology';
+        if (/lft|rft|liver|renal|kft|elec|calc|uric/i.test(str)) return 'Biochemistry';
+        if (/lipid|chol|tg/i.test(str)) return 'Biochemistry';
+        if (/dengue|ns1|widal|typh|hbs|hcv|hiv|serol/i.test(str)) return 'Serology';
+        if (/tsh|tft|thyroid|vit|b12|ferr|horm/i.test(str)) return 'Hormones';
+        if (/urine|ure|stool|culture|semen|preg/i.test(str)) return 'Clinical Pathology';
+        return 'Diagnostic Lab';
+      })(tName, firstTest.code);
+
+      var shortTestName = firstTest.code || (tName.length > 20 ? tName.slice(0, 18) + '…' : tName);
+      var specText = shortTestName ? (cat + ' (' + shortTestName + ')') : cat;
+      if (items.length > 1) specText += ' +' + (items.length - 1);
+
+      var vType = inv.serviceType === 'home-collection' || inv.homeSampling ? 'Home Sampling' :
+                  (inv.urgent || inv.stat ? 'Urgent / STAT' : (i % 3 === 0 ? 'Walk-in' : (i % 3 === 1 ? 'Routine Test' : 'Referred OPD')));
+
+      var d = inv.createdAt ? new Date(inv.createdAt) : new Date(Date.now() - i * 3600000 * 3);
+      var dateStr = !isNaN(d) ? (('0' + d.getDate()).slice(-2) + ' ' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + ' ' + d.getFullYear()) : '13 Oct 2026';
+      var hours = !isNaN(d) ? d.getHours() : 10;
+      var ampm = hours >= 12 ? 'PM' : 'AM';
+      var h12 = hours % 12 || 12;
+      var timeStr = ('0' + h12).slice(-2) + ':' + ('0' + (!isNaN(d) ? d.getMinutes() : 0)).slice(-2) + ' ' + ampm;
+
       return {
-        id: a.id || ('ap' + (i + 1)),
+        id: inv.id || ('lp-' + i),
+        patientId: inv.patientId,
         patient: pName,
-        visit: a.serviceType === 'home-collection' ? 'Home Collection' : (a.visitType || 'Check-Up'),
-        doctor: a.doctorName || dNames[i % dNames.length],
-        face: dKeys[i % dKeys.length],
-        spec: a.specialty || dSpecs[i % dSpecs.length],
-        date: a.date ? (App.dt(a.date) || '').slice(0, 11) : '14 Oct 2026',
-        time: a.timeSlot || '09:00 AM'
+        visit: vType,
+        doctor: dName,
+        face: faceKey,
+        spec: specText,
+        date: dateStr,
+        time: timeStr
       };
     });
 
-    var apptsToRender = dbAppts.length ? dbAppts.slice(0, 6) : defaultAppts;
-    window.__apptsList = dbAppts.length ? dbAppts.concat(defaultAppts) : defaultAppts;
+    var allLabPatients = realLabPatients.length >= 6 ? realLabPatients : realLabPatients.concat(defaultLabPatients);
+    window.__apptsList = allLabPatients;
 
     function renderApptRow(r) {
-      var faceSvg = apptFaces[r.face] || apptFaces.amany;
-      return '<tr>' +
+      var faceSvg = apptFaces[r.face] || apptFaces.ahmed || apptFaces.tariq;
+      var targetLink = r.patientId ? ('#/patient/' + encodeURIComponent(r.patientId)) : '#/patients';
+      return '<tr onclick="location.hash=\'' + targetLink + '\'" style="cursor:pointer" title="View Patient Details">' +
         '<td style="font-weight:600;color:#1b2a4a;padding-left:20px">' + App.esc(r.patient) + '</td>' +
         '<td style="color:#475569;font-weight:500">' + App.esc(r.visit) + '</td>' +
         '<td><div class="dcell"><span class="pic">' + faceSvg + '</span><span style="font-weight:500;color:#1b2a4a">' + App.esc(r.doctor) + '</span></div></td>' +
@@ -504,11 +546,12 @@
 
     var sortIcon = '<svg width="9" height="12" viewBox="0 0 9 12" fill="none" style="margin-left:6px;vertical-align:middle;display:inline-block"><path d="M4.5 1.5L8 5H1L4.5 1.5Z" fill="#94a3b8"/><path d="M4.5 10.5L1 7H8L4.5 10.5Z" fill="#94a3b8"/></svg>';
 
+    var apptsToRender = allLabPatients.slice(0, 6);
     var apptRowsHtml = apptsToRender.map(renderApptRow).join('');
 
     var patCard = '<section class="card appts-card" id="apptsCard">' +
-      '<div class="ap-head"><div><h2>Recent Patients</h2><p>Latest Appointments awaiting approval.</p></div>' +
-      '<a href="#/appointments" class="btn-soft" id="seeAll">See All <span style="font-size:14px;margin-left:2px">→</span></a></div>' +
+      '<div class="ap-head"><div><h2>Recent Patients</h2><p>Latest laboratory patients &amp; test orders.</p></div>' +
+      '<a href="#/patients" class="btn-soft" id="seeAll">See All <span style="font-size:14px;margin-left:2px">→</span></a></div>' +
       '<div class="tbl-wrap"><table class="ap-tbl"><thead><tr id="dhead">' +
         '<th><button type="button" data-col="patient">Patient Name ' + sortIcon + '</button></th>' +
         '<th><button type="button" data-col="visit">Visit Type ' + sortIcon + '</button></th>' +
