@@ -384,3 +384,33 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .ovk-ic, .stat .stat-ico, .kpi .kpi-ic { color: #2f6df6 !important; background: #eef3ff !important; box-shadow: none !important; border: 0 !important; }
 .dbq-card .card-b > span:first-child { color: #2f6df6 !important; background: #eef3ff !important; }
 .stat-ic, .stat-ic.blue, .stat-ic.teal { color: #2f6df6; background: #eef3ff; }
+
+/* Smart Dashboard: same look as the Overview (section header, KPI cards, separate cards for branch, demand and the trend) */
+.db-smart { margin: 8px 0 18px; }
+.ov-head.sm { margin: 4px 0 14px; }
+.ov-head.sm h2 { margin: 0; font-size: 26px; line-height: 1.15; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+.ov-head.sm p { margin: 5px 0 0; font-size: 14.5px; color: var(--muted); font-weight: 500; }
+.ovk.sm .ovk-v { font-size: 30px; }
+.ovk.sm { padding: 16px 18px 14px; gap: 10px; }
+.db-smart .db-smart-grid { gap: 16px; margin-bottom: 16px; align-items: start; }
+.db-smart .db-smart-grid > .card, .db-smart .db-trend { margin: 0 !important; }
+.db-smart .db-smart-grid h3, .db-smart .db-trend h3 { font-size: 16px; font-weight: 800; margin: 0 0 12px; color: var(--ink); }
+.db-smart .db-trend { margin-bottom: 0 !important; }
+.db-smart .db-trend { padding: 0; }
+
+/* KPI cards a little smaller */
+.ov-grid { gap: 14px; margin-bottom: 16px; }
+.ovk { padding: 14px 16px 13px; gap: 9px; border-radius: 20px; }
+.ovk-ic { width: 40px; height: 40px; border-radius: 12px; }
+.ovk-ic svg { width: 18px; height: 18px; }
+.ovk-t b { font-size: 14.5px; }
+.ovk-t small { font-size: 12px; }
+.ovk-v { font-size: 28px; }
+.ovk-f { font-size: 12.5px; }
+.ovk-bar { height: 6px; }
+.ovk-m { width: 24px; height: 24px; }
+.ovk.sm { padding: 12px 14px 11px; gap: 8px; }
+.ovk.sm .ovk-v { font-size: 24px; }
+.dbq-card .card-b { padding: 12px 14px !important; }
+.dbq-card .card-b > span:first-child { width: 40px !important; height: 40px !important; }
+@media (max-width: 1250px) { .ovk-v { font-size: 26px; } }

@@ -73,6 +73,7 @@ for (const relPath of dashboardPaths) {
       today: () => data.today,
       esc: value => String(value == null ? '' : value),
       money: value => 'Rs ' + Math.round(value),
+      icon: () => '<svg></svg>',
       empty: message => '<empty>' + message + '</empty>'
     }
   };

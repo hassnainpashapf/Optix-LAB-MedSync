@@ -199,14 +199,17 @@
       var kBilled = 0, kCollected = 0, kDue = 0, kInvoices = 0, kTests = 0;
       Object.keys(rows).forEach(function (k) { kBilled += rows[k].billed; kCollected += rows[k].collected; kDue += rows[k].due; kInvoices += rows[k].invoices; });
       Object.keys(demand).forEach(function (k) { kTests += demand[k].count; });
-      function kpi(label, value, color) { return '<div class="db-kpi" style="--kc:' + color + '"><small>' + label + '</small><b>' + value + '</b></div>'; }
-      var kpiHtml = '<div class="db-kpis">' + (showBranchMoney
-        ? kpi('Billed', App.money(kBilled), '#3b82f6') + kpi('Collected', App.money(kCollected), '#10b981') + kpi('Pending dues', App.money(kDue), '#f59e0b') + kpi('Invoices', kInvoices, '#7c3aed')
-        : kpi('Invoices', kInvoices, '#7c3aed') + kpi('Tests ordered', kTests, '#10b981')) + '</div>';
+      function kpi(icon, label, sub, value) {
+        return '<div class="ovk sm"><div class="ovk-h"><span class="ovk-ic">' + App.icon(icon, 20) + '</span><div class="ovk-t"><b>' + label + '</b><small>' + sub + '</small></div></div><div class="ovk-v">' + value + '</div></div>';
+      }
+      var kpiHtml = '<div class="ov-grid">' + (showBranchMoney
+        ? kpi('file', 'Billed', 'Invoices in the period', App.money(kBilled)) + kpi('wallet', 'Collected', 'Cash received', App.money(kCollected)) + kpi('coins', 'Pending dues', 'All open invoices', App.money(kDue)) + kpi('clipboard', 'Invoices', 'Made in the period', String(kInvoices))
+        : kpi('clipboard', 'Invoices', 'Made in the period', String(kInvoices)) + kpi('flask', 'Tests ordered', 'In the period', String(kTests))) + '</div>';
       var trend = trendSvg(showBranchMoney ? ['billed', 'collected'] : ['tests'], showBranchMoney);
-      var trendHtml = trend ? '<div class="db-trend"><h3>' + (showBranchMoney ? 'Billed vs collected' : 'Tests ordered') + '</h3>' + trend + '</div>' : '';
-      return kpiHtml + '<div class="db-smart-grid' + (showBranchMoney ? '' : ' db-smart-tests-only') + '">' + branchHtml +
-        '<div><h3>Test demand</h3>' + demandHtml + '</div></div>' + trendHtml;
+      var trendHtml = trend ? '<div class="card db-trend"><div class="card-b"><h3>' + (showBranchMoney ? 'Billed vs collected' : 'Tests ordered') + '</h3>' + trend + '</div></div>' : '';
+      return kpiHtml + '<div class="db-smart-grid' + (showBranchMoney ? '' : ' db-smart-tests-only') + '">' +
+        (branchHtml ? '<div class="card"><div class="card-b">' + branchHtml + '</div></div>' : '') +
+        '<div class="card"><div class="card-b"><h3>Test demand</h3>' + demandHtml + '</div></div></div>' + trendHtml;
     }
 
     /* ---------- loading skeletons (CSS-only shimmer, shown while content computes) ---------- */
@@ -526,9 +529,9 @@
     chartB = bigCard('Tests &amp; Invoices', 'Last 7 days', chip('Tests ordered', sum(tests7), '#7c3aed') + chip('Invoices', sum(inv7), '#ea580c') + chip('Today', tests7[6] + ' tests'),
       chartSvg({ label: 'Tests ordered and invoices per day', bars: [{ name: 'Invoices', data: inv7, color: '#fdba74' }], line: { name: 'Tests ordered', data: tests7, color: '#7c3aed' } }), legend([['Invoices', '#fdba74'], ['Tests ordered', '#7c3aed']]), isTech ? null : ['#/invoices', 'Invoices']);
     var chartsHtml = '<div class="db-charts">' + chartA + chartB + '</div>';
-    var smartHtml = '<div class="card db-smart"><div class="card-h"><div><h3>Smart Dashboard</h3><div class="dbc-sub">Branch performance and most-ordered tests</div></div>' +
-      '<select class="select" id="dbAnalyticsPeriod" aria-label="Analytics period" style="max-width:150px;margin-left:auto"><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="all">All time</option></select></div>' +
-      '<div class="card-b" id="dbSmartBody">' + smartAnalyticsBody('30') + '</div></div>';
+    var smartHtml = '<section class="db-smart"><div class="ov-head sm"><div><h2>Smart Dashboard</h2><p>Branch performance and most-ordered tests</p></div>' +
+      '<select class="select" id="dbAnalyticsPeriod" aria-label="Analytics period"><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="all">All time</option></select></div>' +
+      '<div id="dbSmartBody">' + smartAnalyticsBody('30') + '</div></section>';
 
     return '<div class="db-page">' +
     '<style>' +
