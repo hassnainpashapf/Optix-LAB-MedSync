@@ -1013,11 +1013,12 @@
       '.tb-menu-danger:hover{background:var(--red-soft)}' +
       '.tb-menu-danger svg{color:var(--red)}' +
       '.tb-qa{display:flex;gap:8px;align-items:center;margin-right:6px}' +
-      '.tb-qa .tb-qab{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0!important;border-radius:50%!important;text-decoration:none;cursor:pointer;transition:all .15s ease}' +
-      '.tb-qa .tb-classic{background:#fff!important;border:1px solid #e2e8f0!important;color:#1b2a4a!important;box-shadow:none!important;transform:none!important}' +
-      '.tb-qa .tb-classic:hover{background:#f8fafc!important;border-color:#cbd5e1!important;color:#1b2a4a!important;transform:none!important}' +
-      '.tb-qa .tb-classic svg{color:#1b2a4a!important;width:18px!important;height:18px!important;flex:none}' +
-      '@media(max-width:640px){.tb-qa{display:none}}' +
+      '.tb-qa .tb-qab{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0!important;border-radius:50%!important;border:1px solid #e2e8f0!important;background:#fff!important;color:#1b2a4a!important;box-shadow:0 1px 2px rgba(15,23,42,0.05)!important;text-decoration:none;cursor:pointer;flex:none;transition:all .15s ease}' +
+      '.tb-qa .tb-classic{background:#fff!important;border:1px solid #e2e8f0!important;color:#1b2a4a!important;box-shadow:0 1px 2px rgba(15,23,42,0.05)!important;transform:none!important}' +
+      '.tb-qa .tb-classic:hover,.tb-qa .tb-qab:hover{background:#f8fafc!important;border-color:#cbd5e1!important;color:#2563eb!important;box-shadow:0 3px 8px rgba(15,23,42,0.08)!important;transform:translateY(-1px)!important}' +
+      '.tb-qa .tb-classic svg,.tb-qa .tb-qab svg{color:inherit!important;width:18px!important;height:18px!important;flex:none}' +
+      '@media(max-width:768px){.tb-qa{gap:6px;margin-right:4px}.tb-qa .tb-qab{width:34px;height:34px}.tb-qa .tb-qab svg{width:16px!important;height:16px!important}}' +
+      '@media(max-width:480px){.tb-qa{gap:4px}.tb-qa .tb-qab{width:32px;height:32px}.tb-qa .tb-qab svg{width:15px!important;height:15px!important}}' +
       '</style>' +
        '<button type="button" class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false" title="Toggle navigation">' + icon('menu', 18) + '</button>' +
        '<button type="button" class="tb-nb" id="tbBack" aria-label="Back" title="Back"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>' +

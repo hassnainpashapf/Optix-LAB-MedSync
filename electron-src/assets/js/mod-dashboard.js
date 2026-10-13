@@ -496,14 +496,62 @@
 
     /* Fallback demo rows when database has no invoices */
     var demoPatRows = [
+      /* Page 1 */
       { id: 'd1', patientId: '', name: 'ALI RAZA', phone: '03000722292', age: '26', gender: 'M', tests: 'Anti-HCV (Hepatitis C), Vitamin B12, CBC', amountNum: 7100, amount: 'Rs 7,100', status: 'paid', dateRaw: Date.now(), dateStr: 'Today' },
       { id: 'd2', patientId: '', name: 'Hussnain Pasha', phone: '03040683558', age: '45', gender: 'M', tests: 'PT / INR, Complete Blood Count', amountNum: 900, amount: 'Rs 900', status: 'unpaid', dateRaw: Date.now() - 86400000, dateStr: 'Yesterday' },
       { id: 'd3', patientId: '', name: 'ALI', phone: '03000722292', age: '26', gender: 'M', tests: 'Blood Group (ABO/Rh), Hemoglobin', amountNum: 300, amount: 'Rs 300', status: 'paid', dateRaw: Date.now() - 86400000, dateStr: 'Yesterday' },
       { id: 'd4', patientId: '', name: 'SAMREEN', phone: '—', age: '25', gender: 'F', tests: 'Hemoglobin, Urine Routine Examination', amountNum: 150, amount: 'Rs 150', status: 'paid', dateRaw: Date.now() - 86400000 * 3, dateStr: '10 Oct 2026' },
       { id: 'd5', patientId: '', name: 'ALI RAZA', phone: '—', age: '26', gender: 'M', tests: 'Anti-HCV (Hepatitis C), Blood Group (ABO/Rh)', amountNum: 7250, amount: 'Rs 7,250', status: 'paid', dateRaw: Date.now() - 86400000 * 4, dateStr: '9 Oct 2026' },
       { id: 'd6', patientId: '', name: 'FATIMA', phone: '—', age: '20', gender: 'F', tests: 'Complete Blood Count, Malarial Parasite (MP)', amountNum: 800, amount: 'Rs 800', status: 'paid', dateRaw: Date.now() - 86400000 * 4, dateStr: '9 Oct 2026' },
+      /* Page 2 */
       { id: 'd7', patientId: '', name: 'GHAZALA', phone: '—', age: '35', gender: 'F', tests: 'Complete Blood Count, Total Cholesterol', amountNum: 1250, amount: 'Rs 1,250', status: 'paid', dateRaw: Date.now() - 86400000 * 4, dateStr: '9 Oct 2026' },
-      { id: 'd8', patientId: '', name: 'WAQAS', phone: '—', age: '18', gender: 'M', tests: 'Complete Blood Count, Liver Function Test (LFT)', amountNum: 3200, amount: 'Rs 3,200', status: 'paid', dateRaw: Date.now() - 86400000 * 6, dateStr: '7 Oct 2026' }
+      { id: 'd8', patientId: '', name: 'WAQAS', phone: '—', age: '18', gender: 'M', tests: 'Complete Blood Count, Liver Function Test (LFT)', amountNum: 3200, amount: 'Rs 3,200', status: 'paid', dateRaw: Date.now() - 86400000 * 6, dateStr: '7 Oct 2026' },
+      { id: 'd9', patientId: '', name: 'USMAN TARIQ', phone: '03214567890', age: '32', gender: 'M', tests: 'Lipid Profile, Serum Creatinine', amountNum: 1800, amount: 'Rs 1,800', status: 'paid', dateRaw: Date.now() - 86400000 * 6, dateStr: '7 Oct 2026' },
+      { id: 'd10', patientId: '', name: 'AYESHA BIBI', phone: '—', age: '28', gender: 'F', tests: 'Thyroid Profile (T3, T4, TSH), Iron Profile', amountNum: 2800, amount: 'Rs 2,800', status: 'partial', dateRaw: Date.now() - 86400000 * 7, dateStr: '6 Oct 2026' },
+      { id: 'd11', patientId: '', name: 'MOHAMMAD BILAL', phone: '03129876543', age: '52', gender: 'M', tests: 'HbA1c (Glycated Hb), Fasting Blood Sugar', amountNum: 1400, amount: 'Rs 1,400', status: 'paid', dateRaw: Date.now() - 86400000 * 7, dateStr: '6 Oct 2026' },
+      { id: 'd12', patientId: '', name: 'SABA NOOR', phone: '—', age: '22', gender: 'F', tests: 'Complete Blood Count, Serum Ferritin', amountNum: 1600, amount: 'Rs 1,600', status: 'unpaid', dateRaw: Date.now() - 86400000 * 8, dateStr: '5 Oct 2026' },
+      /* Page 3 */
+      { id: 'd13', patientId: '', name: 'ZAINAB KHAN', phone: '—', age: '29', gender: 'F', tests: 'Urine Routine Examination, Serum Uric Acid', amountNum: 650, amount: 'Rs 650', status: 'paid', dateRaw: Date.now() - 86400000 * 8, dateStr: '5 Oct 2026' },
+      { id: 'd14', patientId: '', name: 'HAMZA IQBAL', phone: '03007654321', age: '34', gender: 'M', tests: 'Liver Function Test, Renal Function Test', amountNum: 3500, amount: 'Rs 3,500', status: 'paid', dateRaw: Date.now() - 86400000 * 9, dateStr: '4 Oct 2026' },
+      { id: 'd15', patientId: '', name: 'KHALID MEHMOOD', phone: '—', age: '58', gender: 'M', tests: 'Serum Electrolytes, Blood Urea, Creatinine', amountNum: 2100, amount: 'Rs 2,100', status: 'paid', dateRaw: Date.now() - 86400000 * 9, dateStr: '4 Oct 2026' },
+      { id: 'd16', patientId: '', name: 'MARIA JAVED', phone: '—', age: '31', gender: 'F', tests: 'Dengue Serology (NS1, IgG/IgM)', amountNum: 1950, amount: 'Rs 1,950', status: 'paid', dateRaw: Date.now() - 86400000 * 10, dateStr: '3 Oct 2026' },
+      { id: 'd17', patientId: '', name: 'ADNAN SHAHID', phone: '03456789012', age: '40', gender: 'M', tests: 'Vitamin D3 (25-OH), Calcium Total', amountNum: 3400, amount: 'Rs 3,400', status: 'unpaid', dateRaw: Date.now() - 86400000 * 10, dateStr: '3 Oct 2026' },
+      { id: 'd18', patientId: '', name: 'NAILA PERVEEN', phone: '—', age: '48', gender: 'F', tests: 'Lipid Profile, Random Blood Sugar', amountNum: 1350, amount: 'Rs 1,350', status: 'paid', dateRaw: Date.now() - 86400000 * 11, dateStr: '2 Oct 2026' },
+      /* Page 4 */
+      { id: 'd19', patientId: '', name: 'RASHID MINHAS', phone: '—', age: '62', gender: 'M', tests: 'PSA Total (Prostate), Urine Culture', amountNum: 2600, amount: 'Rs 2,600', status: 'paid', dateRaw: Date.now() - 86400000 * 11, dateStr: '2 Oct 2026' },
+      { id: 'd20', patientId: '', name: 'HINA TARIQ', phone: '03335551234', age: '24', gender: 'F', tests: 'Complete Blood Count, Blood Group (ABO/Rh)', amountNum: 750, amount: 'Rs 750', status: 'paid', dateRaw: Date.now() - 86400000 * 12, dateStr: '1 Oct 2026' },
+      { id: 'd21', patientId: '', name: 'BABAR AZAM', phone: '—', age: '30', gender: 'M', tests: 'HBsAg (Hepatitis B), Anti-HCV', amountNum: 2200, amount: 'Rs 2,200', status: 'paid', dateRaw: Date.now() - 86400000 * 12, dateStr: '1 Oct 2026' },
+      { id: 'd22', patientId: '', name: 'FARZANA AKHTAR', phone: '—', age: '44', gender: 'F', tests: 'Thyroid Stimulating Hormone (TSH), Anti-TPO', amountNum: 2400, amount: 'Rs 2,400', status: 'partial', dateRaw: Date.now() - 86400000 * 13, dateStr: '30 Sep 2026' },
+      { id: 'd23', patientId: '', name: 'IMRAN NAZIR', phone: '03014449876', age: '37', gender: 'M', tests: 'Semen Analysis, Serum Testosterone', amountNum: 2500, amount: 'Rs 2,500', status: 'paid', dateRaw: Date.now() - 86400000 * 13, dateStr: '30 Sep 2026' },
+      { id: 'd24', patientId: '', name: 'SUMAIRA LATIF', phone: '—', age: '27', gender: 'F', tests: 'Triple Marker Screen, CBC', amountNum: 4200, amount: 'Rs 4,200', status: 'paid', dateRaw: Date.now() - 86400000 * 14, dateStr: '29 Sep 2026' },
+      /* Page 5 */
+      { id: 'd25', patientId: '', name: 'KAMRAN AKMAL', phone: '—', age: '36', gender: 'M', tests: 'Cardiac Enzymes (Troponin-I, CK-MB)', amountNum: 3800, amount: 'Rs 3,800', status: 'paid', dateRaw: Date.now() - 86400000 * 14, dateStr: '29 Sep 2026' },
+      { id: 'd26', patientId: '', name: 'SHAZIA BASHIR', phone: '03221234567', age: '41', gender: 'F', tests: 'Stool Examination R/E, Occult Blood', amountNum: 600, amount: 'Rs 600', status: 'paid', dateRaw: Date.now() - 86400000 * 15, dateStr: '28 Sep 2026' },
+      { id: 'd27', patientId: '', name: 'FAISAL QURESHI', phone: '—', age: '49', gender: 'M', tests: 'Serum Bilirubin, ALT / SGPT, AST / SGOT', amountNum: 1100, amount: 'Rs 1,100', status: 'paid', dateRaw: Date.now() - 86400000 * 15, dateStr: '28 Sep 2026' },
+      { id: 'd28', patientId: '', name: 'BUSHRA ANSARI', phone: '—', age: '33', gender: 'F', tests: 'Prolactin, LH, FSH Hormones', amountNum: 3600, amount: 'Rs 3,600', status: 'unpaid', dateRaw: Date.now() - 86400000 * 16, dateStr: '27 Sep 2026' },
+      { id: 'd29', patientId: '', name: 'NAVEED ANWAR', phone: '03028889900', age: '46', gender: 'M', tests: 'Serum Uric Acid, ESR (Sedimentation Rate)', amountNum: 750, amount: 'Rs 750', status: 'paid', dateRaw: Date.now() - 86400000 * 16, dateStr: '27 Sep 2026' },
+      { id: 'd30', patientId: '', name: 'RABIA BASRI', phone: '—', age: '19', gender: 'F', tests: 'Widal Test (Typhoid Serology), CBC', amountNum: 1050, amount: 'Rs 1,050', status: 'paid', dateRaw: Date.now() - 86400000 * 17, dateStr: '26 Sep 2026' },
+      /* Page 6 */
+      { id: 'd31', patientId: '', name: 'SOHAIL AHMED', phone: '—', age: '55', gender: 'M', tests: 'Coagulation Profile (PT, APTT, Fibrinogen)', amountNum: 2400, amount: 'Rs 2,400', status: 'paid', dateRaw: Date.now() - 86400000 * 17, dateStr: '26 Sep 2026' },
+      { id: 'd32', patientId: '', name: 'KINZA HASHMI', phone: '03135557788', age: '23', gender: 'F', tests: 'Beta-hCG Quantitative, CBC', amountNum: 2200, amount: 'Rs 2,200', status: 'paid', dateRaw: Date.now() - 86400000 * 18, dateStr: '25 Sep 2026' },
+      { id: 'd33', patientId: '', name: 'TAHIR MEHMOOD', phone: '—', age: '60', gender: 'M', tests: 'Renal Function Test, Serum Potassium', amountNum: 1700, amount: 'Rs 1,700', status: 'partial', dateRaw: Date.now() - 86400000 * 18, dateStr: '25 Sep 2026' },
+      { id: 'd34', patientId: '', name: 'SADIA KHAN', phone: '—', age: '38', gender: 'F', tests: 'Serum Magnesium, Serum Calcium Total', amountNum: 1200, amount: 'Rs 1,200', status: 'paid', dateRaw: Date.now() - 86400000 * 19, dateStr: '24 Sep 2026' },
+      { id: 'd35', patientId: '', name: 'ASAD ALI', phone: '03009988776', age: '29', gender: 'M', tests: 'HIV I & II Antibodies Screening, Syphilis VDRL', amountNum: 2100, amount: 'Rs 2,100', status: 'paid', dateRaw: Date.now() - 86400000 * 19, dateStr: '24 Sep 2026' },
+      { id: 'd36', patientId: '', name: 'TAYYABA REHMAN', phone: '—', age: '21', gender: 'F', tests: 'Blood Group (ABO/Rh), Hemoglobin, CBC', amountNum: 950, amount: 'Rs 950', status: 'paid', dateRaw: Date.now() - 86400000 * 20, dateStr: '23 Sep 2026' },
+      /* Page 7 */
+      { id: 'd37', patientId: '', name: 'JAWAD AHMED', phone: '—', age: '43', gender: 'M', tests: 'Allergy Profile IgE Total, Absolute Eosinophil', amountNum: 3100, amount: 'Rs 3,100', status: 'paid', dateRaw: Date.now() - 86400000 * 20, dateStr: '23 Sep 2026' },
+      { id: 'd38', patientId: '', name: 'MEHWISH HAYAT', phone: '03248881122', age: '28', gender: 'F', tests: 'Serum Ferritin, Iron, TIBC Profile', amountNum: 2700, amount: 'Rs 2,700', status: 'paid', dateRaw: Date.now() - 86400000 * 21, dateStr: '22 Sep 2026' },
+      { id: 'd39', patientId: '', name: 'SHAHID AFRIDI', phone: '—', age: '47', gender: 'M', tests: 'Liver Function Test, Viral Serology Combo', amountNum: 4500, amount: 'Rs 4,500', status: 'paid', dateRaw: Date.now() - 86400000 * 21, dateStr: '22 Sep 2026' },
+      { id: 'd40', patientId: '', name: 'SIDRA TUL MUNTAHA', phone: '—', age: '26', gender: 'F', tests: 'TORCH Profile IgM / IgG Antibodies', amountNum: 5500, amount: 'Rs 5,500', status: 'unpaid', dateRaw: Date.now() - 86400000 * 22, dateStr: '21 Sep 2026' },
+      { id: 'd41', patientId: '', name: 'NOMAN IJAZ', phone: '03056664433', age: '53', gender: 'M', tests: 'Serum Albumin, Total Protein, A/G Ratio', amountNum: 900, amount: 'Rs 900', status: 'paid', dateRaw: Date.now() - 86400000 * 22, dateStr: '21 Sep 2026' },
+      { id: 'd42', patientId: '', name: 'UZMA GILLANI', phone: '—', age: '39', gender: 'F', tests: 'Lipid Profile, Serum Amylase & Lipase', amountNum: 2600, amount: 'Rs 2,600', status: 'paid', dateRaw: Date.now() - 86400000 * 23, dateStr: '20 Sep 2026' },
+      /* Page 8 */
+      { id: 'd43', patientId: '', name: 'SHOAIB MALIK', phone: '—', age: '42', gender: 'M', tests: 'Routine Medical Fitness Certificate Panel', amountNum: 4800, amount: 'Rs 4,800', status: 'paid', dateRaw: Date.now() - 86400000 * 23, dateStr: '20 Sep 2026' },
+      { id: 'd44', patientId: '', name: 'SANIA SAEED', phone: '03157778899', age: '37', gender: 'F', tests: 'Free T3, Free T4, Ultrasensitive TSH', amountNum: 3200, amount: 'Rs 3,200', status: 'paid', dateRaw: Date.now() - 86400000 * 24, dateStr: '19 Sep 2026' },
+      { id: 'd45', patientId: '', name: 'ATIF ASLAM', phone: '—', age: '41', gender: 'M', tests: 'Comprehensive Executive Health Checkup', amountNum: 9500, amount: 'Rs 9,500', status: 'paid', dateRaw: Date.now() - 86400000 * 24, dateStr: '19 Sep 2026' },
+      { id: 'd46', patientId: '', name: 'MAIRA KHAN', phone: '—', age: '25', gender: 'F', tests: 'Platelet Count, Dengue NS1 Antigen Rapid', amountNum: 1250, amount: 'Rs 1,250', status: 'paid', dateRaw: Date.now() - 86400000 * 25, dateStr: '18 Sep 2026' },
+      { id: 'd47', patientId: '', name: 'FAHAD MUSTAFA', phone: '03001239874', age: '36', gender: 'M', tests: 'Urine C/S (Culture & Sensitivity), R/E', amountNum: 1850, amount: 'Rs 1,850', status: 'paid', dateRaw: Date.now() - 86400000 * 25, dateStr: '18 Sep 2026' },
+      { id: 'd48', patientId: '', name: 'ZUBAIDA TARIQ', phone: '—', age: '65', gender: 'F', tests: 'Serum Uric Acid, Rheumatoid Factor (RA)', amountNum: 1600, amount: 'Rs 1,600', status: 'paid', dateRaw: Date.now() - 86400000 * 26, dateStr: '17 Sep 2026' }
     ];
 
     var ptDisplayList = recentPtList.length > 0 ? recentPtList : demoPatRows;
@@ -529,7 +577,7 @@
 
     var sortIcon = '<svg width="9" height="12" viewBox="0 0 9 12" fill="none" style="margin-left:6px;vertical-align:middle;display:inline-block"><path d="M4.5 1.5L8 5H1L4.5 1.5Z" fill="#94a3b8"/><path d="M4.5 10.5L1 7H8L4.5 10.5Z" fill="#94a3b8"/></svg>';
 
-    var ptRowsHtml = ptDisplayList.slice(0, 8).map(renderPtRowHtml).join('');
+    var ptRowsHtml = ptDisplayList.slice(0, 6).map(renderPtRowHtml).join('');
 
     var patCard = '<section class="card appts-card" id="apptsCard">' +
       '<div class="ap-head"><div><h2>Recent Patients</h2><p>Latest patients who visited for tests.</p></div>' +
@@ -863,11 +911,11 @@
     '.ap-tbl tbody tr:last-child td{border-bottom:0}' +
     '.ap-tbl .dcell{display:flex;align-items:center;gap:12px}' +
     '.ap-tbl .dcell .pic{width:40px;height:40px;border-radius:50%;overflow:hidden;background:#ebf3fc;border:1px solid #e0edfb;flex:none;display:inline-flex;align-items:center;justify-content:center}' +
-    '.ap-pager{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:20px}' +
-    '.ap-pager .pg{min-width:32px;height:32px;padding:0 8px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}' +
-    '.ap-pager .pg:hover:not(.on){background:#f8fafc;border-color:#cbd5e1}' +
-    '.ap-pager .pg.on{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:700}' +
-    '.ap-pager .pg-dots{color:#94a3b8;font-weight:600;padding:0 4px}' +
+    '.ap-pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:22px;padding-bottom:4px}' +
+    '.ap-pager .pg{min-width:36px;height:36px;padding:0 10px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s ease}' +
+    '.ap-pager .pg:hover:not(.on){background:#f8fafc;border-color:#cbd5e1;color:#1e293b}' +
+    '.ap-pager .pg.on{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important;font-weight:700!important;box-shadow:0 0 0 3.5px rgba(37,99,235,0.28)!important}' +
+    '.ap-pager .pg-dots{color:#94a3b8;font-weight:700;padding:0 4px;font-size:14px}' +
     '</style>' +
 
     ovHead + ovGrid + midHtml +
@@ -956,7 +1004,7 @@
       if (!rowsEl) return;
 
       var data = (window.__recentPtList || []).slice();
-      var pageSize = 8;
+      var pageSize = 6;
       var curPage = 1;
       var curSortCol = null;
       var curSortAsc = true;
