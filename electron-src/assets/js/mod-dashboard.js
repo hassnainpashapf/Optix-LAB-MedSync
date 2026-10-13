@@ -445,7 +445,7 @@
         '<small style="color:var(--muted)">' + App.esc(p.phone || p.cnic || '') + '</small></span>' +
         '<small style="color:var(--muted)">' + App.esc(App.dt(p.createdAt) || '') + '</small></a>';
     }).join('');
-    var patCard = '<div class="card"><div class="card-h"><h3>Recent Patients</h3><a class="btn btn-ghost btn-sm" href="#/patients">View all</a></div>' +
+    var patCard = '<div class="card pat-card"><div class="card-h"><h3>Recent Patients</h3><a class="btn btn-ghost btn-sm" href="#/patients">View all</a></div>' +
       '<div class="card-b">' + (patRows || App.empty('No patients yet.')) + '</div></div>';
 
     /* Tests in Progress — pending results */
@@ -547,7 +547,7 @@
       '<div class="cf-plot"><div class="cf-yax" id="cfYax"></div><div class="cf-area" id="cfArea"></div></div>' +
       '<div class="cf-spacer"></div></div>';
 
-    var sideCard = pendCard, lowerRight = patCard, lowerLeft = chartB;
+    var sideCard = pendCard;
     var midHtml = '<div class="ov-mid">' + flowCard + sideCard + '</div>';
 
     /* ---------- Patient flow & Revenue by source (from the hospital overview) ---------- */
@@ -744,11 +744,16 @@
     'details.dt summary::marker{display:none}' +
     '.tip2{position:fixed;z-index:9999;pointer-events:none;background:#1e243b;color:#fff;border-radius:8px;padding:9px 13px;font-size:12px;line-height:1.55;box-shadow:0 10px 25px rgba(15,23,42,.4)}' +
     '.tip2[hidden]{display:none}' +
+    '/* ===== Recent Patients full-width card ===== */' +
+    '.pat-card{margin-bottom:18px;border-radius:20px;background:#fff;border:0!important;box-shadow:0 2px 14px rgba(27,42,74,.09)!important;padding:20px 22px}' +
+    '.pat-card .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}' +
+    '.pat-card .card-h h3{margin:0;font-size:16px;font-weight:800;color:var(--ink)}' +
+    '.pat-card .card-b{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:6px 24px}' +
     '</style>' +
 
     ovHead + critCard() + ovGrid + midHtml +
-    '<div class="ov-two"><div class="ov-col">' + lowerLeft + '</div><div class="ov-col">' + lowerRight + '</div></div>' +
     mid2Html +
+    patCard +
     '<div id="tip2" class="tip2" hidden></div>' +
     '</div>';
     } /* end buildDashboard */
