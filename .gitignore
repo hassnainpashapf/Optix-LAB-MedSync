@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-installer/
+dist-installer-win7/
 dist-bundle/
 *.exe
 *.dmg

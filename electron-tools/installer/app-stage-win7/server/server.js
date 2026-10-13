@@ -856,6 +856,28 @@ async function main() {
       try { const list = await saas.setProducts((req.body || {}).products); console.log('[labpos-cloud] saas: product list updated (' + list.map((p) => p.id).join(', ') + ')'); res.json({ ok: true, products: list }); }
       catch (e) { res.status(400).json({ error: e.message }); }
     });
+    /* The superadmin opens another product's own superadmin without a second login: the console asks for a one-time ticket (60 seconds,
+       only for that product), the product's server sends it back here to confirm it, and only then starts its own owner session. */
+    const saTickets = new Map(); /* sha256(ticket) -> { product, exp } */
+    const saTicketHits = new Map(); /* ip -> {n, until}: confirmations asked for */
+    LIMIT_MAPS.push(saTicketHits);
+    app.post('/api/saas/sa-ticket', requireSuperadmin, (req, res) => {
+      const product = String((req.body || {}).product || '').toLowerCase();
+      if (product === 'lab' || !saas.getProducts().some((x) => x.id === product)) return res.status(400).json({ error: 'Unknown product.' });
+      const now = Date.now(); for (const [k, v] of saTickets) if (v.exp <= now) saTickets.delete(k);
+      if (saTickets.size > 500) return res.status(429).json({ error: 'Too many open tickets. Try again in a minute.' });
+      const ticket = crypto.randomBytes(24).toString('base64url');
+      saTickets.set(sha(ticket), { product, exp: now + 60000 });
+      res.json({ ok: true, ticket, product, expiresIn: 60 });
+    });
+    app.post('/api/saas/sa-ticket/verify', (req, res) => {
+      if (hot(saTicketHits, req.ip, 30)) return res.status(429).json({ error: 'Too many attempts' });
+      bump(saTicketHits, req.ip, 60000);
+      const b = req.body || {}, key = sha(String(b.ticket || '')), t = saTickets.get(key);
+      if (t) saTickets.delete(key); /* single use, whatever the answer */
+      if (!t || t.exp <= Date.now() || t.product !== String(b.product || '').toLowerCase()) return res.status(401).json({ error: 'This sign-in is not valid or has expired.' });
+      res.json({ ok: true, product: t.product });
+    });
     /* for a product's own backend: hand over a user's token and learn who it is, which business, and which apps they may open */
     app.get('/api/auth/whoami', needUser, async (req, res) => {
       const lab = req.lab || await saas.getLab('main'), u = await req.store.get('users', req.user.id) || {};
