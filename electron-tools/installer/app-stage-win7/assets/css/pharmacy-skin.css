@@ -335,12 +335,14 @@ input[list*="regloc" i]::-webkit-calendar-picker-indicator, input[list*="destloc
 .ovk-bar { height: 8px; border-radius: 99px; background: #e4e9f3; overflow: hidden; }
 .ovk-bar i { display: block; height: 100%; border-radius: 99px; }
 .ov-two { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; margin-bottom: 18px; align-items: start; }
-.ov-two > .card { margin: 0 !important; }
+.ov-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.ov-col > .card { margin: 0 !important; }
 .ov-h3 { font-size: 15px; font-weight: 800; margin: 6px 0 10px; color: var(--ink); }
 @media (max-width: 1250px) { .ov-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .ovk-v { font-size: 32px; } }
 @media (max-width: 1000px) { .ov-two { grid-template-columns: 1fr; } }
 @media (max-width: 640px) { .ov-grid { grid-template-columns: 1fr; } .ov-head h1 { font-size: 28px; } }
-.ov-two .dbc-card svg { max-height: 250px; }
+.ov-two .dbc-card .card-b { padding-top: 10px; padding-bottom: 12px; }
+.ov-two .dbc-chips { margin-bottom: 4px; }
 
 
 /* ================= left panel: the Overview look (roomy rows, grey line icons, soft green active item, bold section labels) ================= */

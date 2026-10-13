@@ -376,14 +376,14 @@
     // ---- quick-access cards ----
     var quickCss =
     '<style>' +
-    '.dbw-grid{display:grid;grid-template-columns:repeat(' + (isTech ? 7 : 8) + ',minmax(0,1fr));gap:8px;margin-bottom:12px;align-items:stretch}' +
-    '.dbq-card{display:flex;flex-direction:column;height:100%;min-height:78px;transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(15,30,46,.12)}' +
-    '.dbq-card .card-b{padding:8px 6px!important;flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;gap:4px!important;box-sizing:border-box}' +
-    '.dbq-card .card-b>span:first-child{width:28px!important;height:28px!important;border-radius:8px!important}.dbq-card .card-b>span:first-child svg{width:16px;height:16px}' +
-    '.dbq-card .card-b>span:last-child{width:100%;min-width:0;overflow-wrap:break-word}' +
-    '.dbq-card b{display:block;font-size:12px!important;line-height:1.3!important}.dbq-card br{display:none}.dbq-card small{font-size:10px!important;line-height:1.25!important;display:block;margin-top:2px}' +
-    '@media(max-width:1180px){.dbw-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}' +
-    '@media(max-width:900px){.dbw-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}' +
+    '.dbw-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;margin-bottom:18px;align-items:stretch}' +
+    '.dbq-card{display:flex;flex-direction:column;height:100%;min-height:0;border-radius:22px!important;transition:transform .15s,box-shadow .15s}.dbq-card:hover{transform:translateY(-2px);box-shadow:0 14px 34px -18px rgba(27,42,74,.35)}' +
+    '.dbq-card .card-b{padding:16px 18px!important;flex:1;display:flex!important;flex-direction:row!important;align-items:center;justify-content:flex-start;text-align:left;gap:14px!important;box-sizing:border-box}' +
+    '.dbq-card .card-b>span:first-child{width:46px!important;height:46px!important;border-radius:14px!important;flex:none}.dbq-card .card-b>span:first-child svg{width:22px;height:22px}' +
+    '.dbq-card .card-b>span:last-child{flex:1;min-width:0;overflow-wrap:break-word}' +
+    '.dbq-card b{display:block;font-size:15px!important;line-height:1.3!important}.dbq-card br{display:none}.dbq-card small{font-size:12.5px!important;line-height:1.35!important;display:block;margin-top:2px}' +
+    '@media(max-width:1250px){.dbw-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}' +
+    '@media(max-width:640px){.dbw-grid{grid-template-columns:1fr}}' +
     '</style>';
     var quickAccess =
     '<div class="dbw-grid">' +
@@ -432,7 +432,7 @@
     /* Recent Patients — latest 5 added */
     var recentPats = patients.slice().sort(function (a, b) {
       return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-    }).slice(0, 5);
+    }).slice(0, 7);
     var patRows = recentPats.map(function (p) {
       var nm = p.name || 'Patient';
       var init = App.esc(nm.charAt(0).toUpperCase());
@@ -447,7 +447,7 @@
 
     /* Tests in Progress — pending results */
     var pendRes = results.filter(function (r) { return !r.value && r.status !== 'ready'; })
-      .sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); }).slice(0, 5);
+      .sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); }).slice(0, 6);
     var pendRows = pendRes.map(function (r) {
       var p = DB.get('patients', r.patientId) || {};
       var t = DB.get('tests', r.testId) || {};
@@ -479,7 +479,7 @@
     function short(n) { return n >= 1000000 ? (Math.round(n / 100000) / 10) + 'M' : (n >= 1000 ? (Math.round(n / 100) / 10) + 'k' : String(Math.round(n))); }
     /* bars (one or two series) + optional line; W/H = viewBox */
     function chartSvg(o) {
-      var W = 640, H = 270, L = 46, R = 14, T = 16, B = 34, iw = W - L - R, ih = H - T - B, n = DAYS7.length;
+      var W = 900, H = 270, L = 50, R = 14, T = 16, B = 34, iw = W - L - R, ih = H - T - B, n = DAYS7.length;
       var all = []; o.bars.forEach(function (b) { all = all.concat(b.data); }); if (o.line) all = all.concat(o.line.data);
       var max = niceMax(Math.max.apply(null, all.concat([0]))), step = iw / n, g = '', i, k;
       for (k = 0; k <= 4; k++) { var y = T + ih - ih * k / 4; g += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y + '" y2="' + y + '" stroke="#e3ecf7" stroke-width="1"' + (k ? ' stroke-dasharray="3 4"' : '') + '/>' + '<text x="' + (L - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="11" fill="#8a94a6">' + (o.money ? short(max * k / 4) : Math.round(max * k / 4)) + '</text>'; }
@@ -567,10 +567,9 @@
     '</style>' +
 
     ovHead + critCard() + ovGrid +
-    '<div class="ov-two">' + chartA + patCard + '</div>' +
-    '<div class="ov-two">' + chartB + pendCard + '</div>' +
-    smartHtml +
     '<h3 class="ov-h3">Quick access</h3>' + quickCss + quickAccess +
+    '<div class="ov-two"><div class="ov-col">' + chartA + chartB + '</div><div class="ov-col">' + patCard + pendCard + '</div></div>' +
+    smartHtml +
     '</div>';
     } /* end buildDashboard */
 
