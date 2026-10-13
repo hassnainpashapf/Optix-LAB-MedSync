@@ -55,10 +55,9 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font); }
 .page-title, .tb-title h1, .page-h h2 { color: var(--ink); letter-spacing: -.02em; }
 a:focus-visible, button:focus-visible, .nav-it:focus-visible { outline: 3px solid rgba(47, 109, 246, .35); outline-offset: 2px; }
 
-/* cards: white, 1px soft border, very large radius, soft shadow */
-/* every card has a clearly visible outline */
-body:not(.auth) .card, .card, .pt-card { border: 1.5px solid #8c9ab3; border-radius: var(--r-lg); box-shadow: var(--sh-sm); background: #fff; }
-.card-h { border-bottom: 1px solid var(--line2); }
+/* cards: clean white, rounded 20px, soft shadow, borderless (matching Dashboard) */
+body:not(.auth) .card, .card, .pt-card { border: 0 !important; border-radius: 20px !important; box-shadow: 0 2px 14px rgba(27, 42, 74, .08) !important; background: #fff !important; }
+.card-h { border-bottom: 1px solid #f0f3f8 !important; }
 .modal { border-radius: 28px; border: 1px solid var(--line); box-shadow: var(--sh-lg); }
 .modal-ov { background: rgba(27, 42, 74, .5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .modal-f { background: #f8fafc; border-radius: 0 0 28px 28px; }
@@ -138,16 +137,45 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 .tb-bell-count { background: var(--blue); }
 .sub-cta { background: var(--navy); }
 
-/* ---------- 4. stat / kpi cards ---------- */
-.stat { background: #fff; }
-.stat[data-tint="brand"] { --sc: var(--blue); background: linear-gradient(55deg, #fff 52%, var(--blue-soft) 52%); }
-.stat[data-tint="blue"] { background: linear-gradient(55deg, #fff 52%, var(--blue-soft) 52%); }
-.stat[data-tint="amber"] { background: linear-gradient(55deg, #fff 52%, var(--amber-soft) 52%); }
-.stat[data-tint="green"] { background: linear-gradient(55deg, #fff 52%, var(--green-soft) 52%); }
-.stat[data-tint="red"] { background: linear-gradient(55deg, #fff 52%, var(--red-soft) 52%); }
-.stat-ico { background: linear-gradient(135deg, var(--sc-soft) 0%, #fff 160%); }
-.kpi { background: linear-gradient(55deg, #fff 52%, var(--tbg, #eef2f8) 52%); }
-.kpi-ic { background: linear-gradient(135deg, var(--tbg, #eef2f8) 0%, #fff 160%); }
+/* ---------- 4. stat / kpi cards (clean solid white dashboard cards) ---------- */
+.stat, .kpi {
+  background: #ffffff !important;
+  border-radius: 20px !important;
+  border: none !important;
+  box-shadow: 0 2px 14px rgba(27, 42, 74, .08) !important;
+  padding: 18px 20px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: transform .18s ease, box-shadow .18s ease !important;
+}
+.stat:hover, .kpi:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 14px 34px -16px rgba(27, 42, 74, .25) !important;
+}
+.stat::before, .kpi::before,
+.stat > div[style*="border-radius:50%"] { display: none !important; }
+
+.stat-ico, .kpi-ic, .stat-ic {
+  position: relative !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  display: grid !important;
+  place-items: center !important;
+  margin-bottom: 10px !important;
+  border: none !important;
+  box-shadow: none !important;
+  flex: none !important;
+}
+.stat[data-tint="brand"] .stat-ico, .stat[data-tint="blue"] .stat-ico { color: #2563eb !important; background: #eef3ff !important; }
+.stat[data-tint="green"] .stat-ico { color: #16a34a !important; background: #ecfdf3 !important; }
+.stat[data-tint="amber"] .stat-ico { color: #d97706 !important; background: #fffbeb !important; }
+.stat[data-tint="red"] .stat-ico { color: #dc2626 !important; background: #fef2f2 !important; }
+.stat[data-tint="purple"] .stat-ico, .stat[data-tint="violet"] .stat-ico { color: #7c3aed !important; background: #f5f3ff !important; }
+
 html .db-page { --brand: #1b2a4a; --brand-d: #1b2a4a; --brand-soft: #eaf0ff; --brand-line: #c9d8fb; --brand-grad: linear-gradient(135deg, #3b7bf7, #1f4fd1);
   --blue: #2f6df6; --blue-soft: #eaf0ff; --ink: #1b2a4a; --ink2: #3c4761; --muted: #6f7a92; --faint: #8b94a7; --line: #e2e8f1; --line2: #edf1f7; --bg: #f2f5f9; --card: #fff;
   --sh-sm: 0 1px 2px rgba(27, 42, 74, .04), 0 8px 20px -14px rgba(27, 42, 74, .14); --sh-md: 0 16px 38px -18px rgba(27, 42, 74, .16); font-family: var(--font); }
@@ -622,15 +650,72 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   box-shadow: 0 0 0 3px rgba(47, 109, 246, .12) !important;
 }
 
-/* ---- Stat cards (pgstat / stat-grid) ---- */
+/* ---- Stat cards (pgstat / stat-grid): exact Dashboard .ovk look ---- */
 #view .pgstat,
 #view .stat-grid {
-  margin-bottom: 20px;
+  margin-bottom: 22px !important;
+  gap: 16px !important;
 }
 #view .stat {
-  border-radius: 18px !important;
-  border: 0 !important;
+  background: #ffffff !important;
+  border-radius: 20px !important;
+  border: none !important;
   box-shadow: 0 2px 14px rgba(27, 42, 74, .08) !important;
+  padding: 18px 20px 16px !important;
+  min-height: 130px !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  position: relative !important;
+  overflow: hidden !important;
+  transition: transform .18s ease, box-shadow .18s ease !important;
+}
+#view .stat:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 14px 34px -16px rgba(27, 42, 74, .25) !important;
+}
+#view .stat::before,
+#view .stat > div[style*="border-radius:50%"] {
+  display: none !important;
+}
+#view .stat .stat-ico {
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
+  display: grid !important;
+  place-items: center !important;
+  margin-bottom: 10px !important;
+  border: none !important;
+  box-shadow: none !important;
+  flex: none !important;
+}
+#view .stat .stat-ico svg {
+  width: 22px !important;
+  height: 22px !important;
+}
+#view .stat .lb {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: .06em !important;
+  text-transform: uppercase !important;
+  color: #8a94a6 !important;
+  margin-bottom: 4px !important;
+}
+#view .stat .vl {
+  font-size: 28px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.02em !important;
+  color: #1b2a4a !important;
+  line-height: 1.1 !important;
+  font-variant-numeric: tabular-nums !important;
+  margin: 0 0 6px 0 !important;
+}
+#view .stat .dl {
+  font-size: 12.5px !important;
+  color: #8a94a6 !important;
+  font-weight: 500 !important;
+  margin-top: auto !important;
 }
 
 /* ---- Badges ---- */
