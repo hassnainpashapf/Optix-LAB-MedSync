@@ -3354,6 +3354,7 @@
       '<div id="rvAuto" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>' +
       '<div class="actions" style="margin-top:12px;flex-wrap:wrap;justify-content:flex-end;gap:8px">' +
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
+        '<button type="button" class="btn btn-primary" id="rvAiInsights" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,58,237,.35)">🤖 AI Doctor Recommendations (5 Solutions)</button>' +
         '<button class="btn btn-ghost" id="rvWaPatient">' + WA_ICON + ' Send to Patient (WhatsApp)</button>' +
         docWaBtn +
         '<button class="btn btn-ghost" id="rvSmsPatient">📲 Send SMS to Patient</button>' +
@@ -3441,6 +3442,16 @@
             }
           }
           document.addEventListener('keydown', rvKey, true);
+          var aiBtn = ov.querySelector('#rvAiInsights');
+          if (aiBtn) {
+            aiBtn.addEventListener('click', function () {
+              if (window.App && window.App.aiInsights && typeof window.App.aiInsights.showModal === 'function') {
+                window.App.aiInsights.showModal(invoiceId);
+              } else {
+                App.toast('AI Recommendations module loading… please retry.', 'err');
+              }
+            });
+          }
           document.getElementById('rvWaPatient').addEventListener('click', function () { waManualSend(invoiceId, 'patient'); });
           var wdoc = document.getElementById('rvWaDoctor');
           if (wdoc && !wdoc.disabled) wdoc.addEventListener('click', function () { waManualSend(invoiceId, 'doctor'); });
@@ -4351,6 +4362,7 @@
             var inv = invMap[iid].invoice;
             var cmpBtn = '';
             return '<div style="margin-bottom:4px;white-space:nowrap">' +
+              '<button class="btn btn-ghost btn-sm" data-rai="' + App.esc(inv.id) + '" style="color:#7c3aed;font-weight:700" title="AI Doctor Recommendations">🤖 AI</button> ' +
               '<button class="btn btn-ghost btn-sm" data-rview="' + App.esc(inv.id) + '">View</button> ' +
               '<button class="btn btn-primary btn-sm" data-rprint="' + App.esc(inv.id) + '">' + PRINT_ICON + ' Print</button>' + cmpBtn + '</div>';
           }).join('');
@@ -4393,6 +4405,13 @@
       });
     });
     // wire view/print (ready tab patient list)
+    v.querySelectorAll('[data-rai]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (App.aiInsights && typeof App.aiInsights.showModal === 'function') {
+          App.aiInsights.showModal(b.getAttribute('data-rai'));
+        }
+      });
+    });
     v.querySelectorAll('[data-rview]').forEach(function (b) {
       b.addEventListener('click', function () { viewReport(b.getAttribute('data-rview')); });
     });
@@ -4475,7 +4494,7 @@
           '<td style="max-width:260px;font-size:13px">' + App.esc(names.slice(0, 3).join(', ')) + (names.length > 3 ? ' <span class="muted">+' + (names.length - 3) + ' more</span>' : '') + '</td>' +
           '<td>' + App.esc(d ? d.name : 'Self') + '</td><td class="muted">' + App.esc(g.last ? App.d(g.last) : '—') + '</td>' +
           '<td>' + ((+inv.due || 0) > 0.009 ? '<span class="badge b-unpaid">Due ' + App.esc(App.money(inv.due)) + '</span>' : '<span class="badge b-paid">Paid</span>') + '</td>' +
-          '<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" data-ov="' + App.esc(inv.id) + '">View</button> <button class="btn btn-ghost btn-sm" data-op="' + App.esc(inv.id) + '">Print</button> <button class="btn btn-ghost btn-sm" data-oe="' + App.esc(inv.id) + '">Edit</button> <button class="btn btn-ghost btn-sm" data-od="' + App.esc(inv.id) + '" style="color:#b91c1c">Delete</button></td></tr>';
+          '<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" data-oai="' + App.esc(inv.id) + '" style="color:#7c3aed;font-weight:700" title="AI Doctor Recommendations">🤖 AI</button> <button class="btn btn-ghost btn-sm" data-ov="' + App.esc(inv.id) + '">View</button> <button class="btn btn-ghost btn-sm" data-op="' + App.esc(inv.id) + '">Print</button> <button class="btn btn-ghost btn-sm" data-oe="' + App.esc(inv.id) + '">Edit</button> <button class="btn btn-ghost btn-sm" data-od="' + App.esc(inv.id) + '" style="color:#b91c1c">Delete</button></td></tr>';
       }).join('') + '</tbody></table></div>' +
       (pages > 1 ? '<div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px"><button class="btn btn-ghost btn-sm" id="olPrev"' + (old.page <= 1 ? ' disabled' : '') + '>&larr; Newer</button><span class="muted" style="font-size:13px">Page ' + old.page + ' of ' + pages + '</span><button class="btn btn-ghost btn-sm" id="olNext"' + (old.page >= pages ? ' disabled' : '') + '>Older &rarr;</button></div>' : '');
     view.innerHTML = oldKpis(all) + bar + '<div class="card"><div class="card-b">' + body + '</div></div>';
@@ -4485,6 +4504,7 @@
     var cl = document.getElementById('olClear'); if (cl) cl.addEventListener('click', function () { old = { q: '', from: '', to: '', doc: '', page: 1 }; renderOld(); });
     var pv = document.getElementById('olPrev'); if (pv) pv.addEventListener('click', function () { old.page--; renderOld(); });
     var nx = document.getElementById('olNext'); if (nx) nx.addEventListener('click', function () { old.page++; renderOld(); });
+    view.querySelectorAll('[data-oai]').forEach(function (b) { b.addEventListener('click', function () { if (App.aiInsights && typeof App.aiInsights.showModal === 'function') App.aiInsights.showModal(b.getAttribute('data-oai')); }); });
     view.querySelectorAll('[data-ov]').forEach(function (b) { b.addEventListener('click', function () { viewReport(b.getAttribute('data-ov')); }); });
     view.querySelectorAll('[data-op]').forEach(function (b) { b.addEventListener('click', function () { printReportChoice(b.getAttribute('data-op')); }); });
     view.querySelectorAll('[data-oe]').forEach(function (b) { b.addEventListener('click', function () { manageReport(b.getAttribute('data-oe'), 'edit'); }); });
