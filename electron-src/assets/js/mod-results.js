@@ -2575,9 +2575,9 @@
             }
             return '<div class="rpt-sig" style="flex:1;text-align:center;min-width:0">' +
               sigPic +
-              '<div style="font-weight:400;font-size:0.9em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(g.name) + '</div>' +
-              (g.qual ? '<div style="font-size:0.78em;color:#333">' + App.esc(g.qual) + '</div>' : '') +
-              (g.title ? '<div style="font-size:0.78em;color:#555">' + App.esc(g.title) + (g.regNo ? ' (' + App.esc(g.regNo) + ')' : '') + '</div>' : '') +
+              '<div style="font-weight:400;font-size:0.78em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(g.name) + '</div>' +
+              (g.qual ? '<div style="font-size:0.68em;color:#333">' + App.esc(g.qual) + '</div>' : '') +
+              (g.title ? '<div style="font-size:0.68em;color:#555">' + App.esc(g.title) + (g.regNo ? ' (' + App.esc(g.regNo) + ')' : '') + '</div>' : '') +
             '</div>';
           }).join('') + '</div>';
     }
@@ -3379,10 +3379,10 @@
     var fHasSigImg = s.enableSignatures !== false && fSigs.some(function (g) { return !!(g.sigImg || g.signature); });
     var fSigImgH = fHasSigImg ? 9 : 0;
     var fSigBlockH = 0;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2);
     var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
     fSigs.forEach(function (g, k) {
-      var h = fSigImgH + fSigNameLines[k].length * 4.1 + (g.qual ? 3.9 : 0) + (g.title ? 3.9 : 0);
+      var h = fSigImgH + fSigNameLines[k].length * 3.6 + (g.qual ? 3.3 : 0) + (g.title ? 3.3 : 0);
       if (h > fSigBlockH) fSigBlockH = h;
     });
     var fAddrParts = [];
@@ -3432,11 +3432,11 @@
           try { doc.addImage(g.stampImg, 'PNG', fCx + 10, fSy, 8, 8); } catch (e) {}
         }
         if (fSigImgH) fSy += fSigImgH + 1;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
-        txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 4.1;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(40, 40, 40);
-        if (g.qual) { txt(g.qual, fCx, fSy, { align: 'center' }); fSy += 3.9; }
-        if (g.title) { txt(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fCx, fSy, { align: 'center' }); fSy += 3.9; }
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); doc.setTextColor(20, 20, 20);
+        txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 3.6;
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2); doc.setTextColor(40, 40, 40);
+        if (g.qual) { txt(g.qual, fCx, fSy, { align: 'center' }); fSy += 3.3; }
+        if (g.title) { txt(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fCx, fSy, { align: 'center' }); fSy += 3.3; }
       });
       curY += fSigBlockH + 3;
       doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.rect(M, curY, CW, fNoteH);
