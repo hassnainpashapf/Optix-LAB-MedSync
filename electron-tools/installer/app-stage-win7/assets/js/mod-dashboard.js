@@ -432,21 +432,84 @@
         '</div></a>' +
     '</div>';
 
-    /* Recent Patients — latest 5 added */
-    var recentPats = patients.slice().sort(function (a, b) {
-      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-    }).slice(0, 7);
-    var patRows = recentPats.map(function (p) {
-      var nm = p.name || 'Patient';
-      var init = App.esc(nm.charAt(0).toUpperCase());
-      return '<a href="#/patient/' + p.id + '" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);text-decoration:none">' +
-        '<span style="width:34px;height:34px;border-radius:50%;background:#22c55e1a;color:#22c55e;display:grid;place-items:center;font-weight:700;flex:none">' + init + '</span>' +
-        '<span style="flex:1"><b style="font-size:13px;color:var(--ink)">' + App.esc(nm) + '</b><br>' +
-        '<small style="color:var(--muted)">' + App.esc(p.phone || p.cnic || '') + '</small></span>' +
-        '<small style="color:var(--muted)">' + App.esc(App.dt(p.createdAt) || '') + '</small></a>';
+    /* Recent Patients — Appointments awaiting approval table */
+    function face(skin, hair, coat, bg, female) {
+      return '<svg viewBox="0 0 46 46" width="100%" height="100%">' +
+        '<rect width="46" height="46" fill="' + bg + '"/>' +
+        '<path d="M5 46c1-9 7-13 18-13s17 4 18 13z" fill="' + coat + '"/>' +
+        '<path d="M18 33l5 8 5-8" fill="#fff" opacity=".9"/>' +
+        (female ? '<path d="M12 22c0-9 5-13 11-13s11 4 11 13c0 6-2 10-3 11H15c-1-1-3-5-3-11z" fill="' + hair + '"/>' : '') +
+        '<ellipse cx="23" cy="21" rx="7" ry="8.5" fill="' + skin + '"/>' +
+        (female ? '<path d="M16 19c2-6 12-6 14 0-3-2-11-2-14 0z" fill="' + hair + '"/>' : '<path d="M15.5 19c0-7 15-7 15 0-2-3-13-3-15 0z" fill="' + hair + '"/>') +
+        '</svg>';
+    }
+    var apptFaces = {
+      amany: face('#f2cdb0', '#4a3426', '#f4f7fc', '#e8eefb', true),
+      tariq: face('#cf9a72', '#171413', '#f4f7fc', '#e6edf9', false),
+      farid: face('#d9a77f', '#1f1b19', '#f4f7fc', '#e6edf9', false),
+      yasmin: face('#e8bd9a', '#2b2320', '#f4f7fc', '#e8eefb', true),
+      amir: face('#cf9a72', '#171413', '#f4f7fc', '#e6edf9', false)
+    };
+
+    var defaultAppts = [
+      { id: 'ap1', patient: 'Yousef Al-Subaie', visit: 'Check-Up', doctor: 'Dr/Amany Ahmed', face: 'amany', spec: 'Neurology', date: '14 Oct 2026', time: '09:00 AM' },
+      { id: 'ap2', patient: 'Mariam Al-Subaie', visit: 'Follow-Up', doctor: 'Dr. Tariq Al-Hakim', face: 'tariq', spec: 'Orthopedics', date: '14 Oct 2026', time: '09:00 AM' },
+      { id: 'ap3', patient: 'Salma Al-Shehri', visit: 'Follow-Up', doctor: 'Dr. Farid Al-Zahrani', face: 'farid', spec: 'Nephrology', date: '14 Oct 2026', time: '12:30 PM' },
+      { id: 'ap4', patient: 'Mariam Al-Qahtani', visit: 'Check-Up', doctor: 'Dr. Tariq Al-Hakim', face: 'tariq', spec: 'Orthopedics', date: '14 Oct 2026', time: '02:00 PM' },
+      { id: 'ap5', patient: 'Hassan Al-Najjar', visit: 'Consultation', doctor: 'Dr. Yasmin Farah', face: 'yasmin', spec: 'Gynecology', date: '14 Oct 2026', time: '03:00 PM' },
+      { id: 'ap6', patient: 'Ibrahim Al-Dosari', visit: 'Follow-Up', doctor: 'Dr. Amir Al-Farsi', face: 'amir', spec: 'Neurology', date: '15 Oct 2026', time: '12:00 PM' }
+    ];
+
+    var dbAppts = (DB.all('appointments') || []).filter(function (a) { return a.status === 'requested' || !a.status; }).map(function (a, i) {
+      var pt = DB.get('patients', a.patientId) || {};
+      var pName = (pt && pt.name) || a.patientName || 'Patient';
+      var dKeys = ['amany', 'tariq', 'farid', 'yasmin', 'amir'];
+      var dNames = ['Dr/Amany Ahmed', 'Dr. Tariq Al-Hakim', 'Dr. Farid Al-Zahrani', 'Dr. Yasmin Farah', 'Dr. Amir Al-Farsi'];
+      var dSpecs = ['Neurology', 'Orthopedics', 'Nephrology', 'Gynecology', 'Cardiology'];
+      return {
+        id: a.id,
+        patient: pName,
+        visit: a.serviceType === 'home-collection' ? 'Home Collection' : (a.visitType || 'Check-Up'),
+        doctor: a.doctorName || dNames[i % dNames.length],
+        face: dKeys[i % dKeys.length],
+        spec: a.specialty || dSpecs[i % dSpecs.length],
+        date: a.date ? (App.dt(a.date) || '').slice(0, 11) : '14 Oct 2026',
+        time: a.timeSlot || '09:00 AM'
+      };
+    });
+
+    var apptsToRender = dbAppts.length ? dbAppts.slice(0, 6) : defaultAppts;
+    var crossSvg = '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>';
+    var checkSvg = '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+    var apptRowsHtml = apptsToRender.map(function (r) {
+      return '<tr>' +
+        '<td>' + App.esc(r.patient) + '</td>' +
+        '<td>' + App.esc(r.visit) + '</td>' +
+        '<td><div class="dcell"><span class="pic">' + (apptFaces[r.face] || apptFaces.amany) + '</span><span>' + App.esc(r.doctor) + '</span></div></td>' +
+        '<td>' + App.esc(r.spec) + '</td>' +
+        '<td>' + App.esc(r.date) + '</td>' +
+        '<td>' + App.esc(r.time) + '</td>' +
+        '<td><div class="acts">' +
+          '<button type="button" class="round x" data-appt-act="decline" data-id="' + App.esc(r.id) + '" data-name="' + App.esc(r.patient) + '" aria-label="Decline ' + App.esc(r.patient) + '">' + crossSvg + '</button>' +
+          '<button type="button" class="round v" data-appt-act="approve" data-id="' + App.esc(r.id) + '" data-name="' + App.esc(r.patient) + '" aria-label="Approve ' + App.esc(r.patient) + '">' + checkSvg + '</button>' +
+        '</div></td>' +
+      '</tr>';
     }).join('');
-    var patCard = '<div class="card pat-card"><div class="card-h"><h3>Recent Patients</h3><a class="btn btn-ghost btn-sm" href="#/patients">View all</a></div>' +
-      '<div class="card-b">' + (patRows || App.empty('No patients yet.')) + '</div></div>';
+
+    var patCard = '<section class="card appts-card" id="apptsCard">' +
+      '<div class="ap-head"><div><h2>Appointments</h2><p>Latest Appointments awaiting approval.</p></div>' +
+      '<a href="#/appointments" class="btn-soft" id="seeAll">See All <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>' +
+      '<div class="tbl-wrap"><table class="ap-tbl"><thead><tr id="dhead">' +
+        '<th data-k="patient"><button type="button">Patient Name <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th data-k="visit"><button type="button">Visit Type <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th data-k="doctor"><button type="button">Doctor Name <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th data-k="spec"><button type="button">Specialty <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th data-k="date"><button type="button">Appointment Date <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th data-k="time"><button type="button">Time <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th>Actions</th>' +
+      '</tr></thead><tbody id="apptsRows">' + apptRowsHtml + '</tbody></table></div>' +
+      '<nav class="ap-pager" id="dpager" aria-label="Pages"><button class="pg on" type="button">1</button><button class="pg" type="button">2</button><button class="pg" type="button">3</button></nav>' +
+      '</section>';
 
     /* Tests in Progress — pending results */
     var pendRes = results.filter(function (r) { return !r.value && r.status !== 'ready'; })
@@ -744,11 +807,42 @@
     'details.dt summary::marker{display:none}' +
     '.tip2{position:fixed;z-index:9999;pointer-events:none;background:#1e243b;color:#fff;border-radius:8px;padding:9px 13px;font-size:12px;line-height:1.55;box-shadow:0 10px 25px rgba(15,23,42,.4)}' +
     '.tip2[hidden]{display:none}' +
-    '/* ===== Recent Patients full-width card ===== */' +
-    '.pat-card{margin-bottom:18px;border-radius:20px;background:#fff;border:0!important;box-shadow:0 2px 14px rgba(27,42,74,.09)!important;padding:20px 22px}' +
-    '.pat-card .card-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}' +
-    '.pat-card .card-h h3{margin:0;font-size:16px;font-weight:800;color:var(--ink)}' +
-    '.pat-card .card-b{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:6px 24px}' +
+    '/* ===== Appointments table (appts-card) ===== */' +
+    '.appts-card{padding:22px 24px 18px;border-radius:20px;background:#fff;border:0!important;box-shadow:0 2px 14px rgba(27,42,74,.09)!important;margin-bottom:18px}' +
+    '.ap-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}' +
+    '.ap-head h2{margin:0 0 4px;font-size:20px;font-weight:700;color:var(--ink);letter-spacing:-.2px}' +
+    '.ap-head p{margin:0;font-size:13.5px;color:#8a94a6;font-weight:500}' +
+    '.btn-soft{height:36px;padding:0 16px;border:0;border-radius:10px;background:#eef3fd;color:#2f6df6;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer;transition:background .15s}' +
+    '.btn-soft:hover{background:#e2eafc}' +
+    '.btn-soft svg{width:13px;height:13px;stroke-width:2.5;fill:none;stroke:currentColor}' +
+    '.tbl-wrap{margin-top:16px;overflow-x:auto}' +
+    '.ap-tbl{width:100%;min-width:860px;border-collapse:collapse}' +
+    '.ap-tbl thead th{background:#f8fafc;text-align:left;font-weight:600;color:#8a94a6;font-size:13px;height:46px;padding:0 14px;white-space:nowrap}' +
+    '.ap-tbl thead th:first-child{border-radius:12px 0 0 12px;padding-left:20px}' +
+    '.ap-tbl thead th:last-child{border-radius:0 12px 12px 0}' +
+    '.ap-tbl th button{border:0;background:none;padding:0;color:inherit;font:inherit;display:inline-flex;align-items:center;gap:8px;cursor:pointer}' +
+    '.ap-tbl th .sort{display:inline-flex;flex-direction:column;gap:1.5px}' +
+    '.ap-tbl th .sort i{display:block;width:0;height:0;border-left:3px solid transparent;border-right:3px solid transparent}' +
+    '.ap-tbl th .sort i:first-child{border-bottom:3.5px solid #a5adbc}' +
+    '.ap-tbl th .sort i:last-child{border-top:3.5px solid #a5adbc}' +
+    '.ap-tbl th[data-dir="asc"] .sort i:first-child{border-bottom-color:#2563eb}' +
+    '.ap-tbl th[data-dir="desc"] .sort i:last-child{border-top-color:#2563eb}' +
+    '.ap-tbl tbody td{height:72px;padding:0 14px;font-size:13.5px;color:var(--ink);border-bottom:1px solid #f1f4f9;white-space:nowrap}' +
+    '.ap-tbl tbody td:first-child{padding-left:20px;font-weight:600}' +
+    '.ap-tbl tbody tr:last-child td{border-bottom:0}' +
+    '.ap-tbl .dcell{display:flex;align-items:center;gap:12px}' +
+    '.ap-tbl .dcell .pic{width:42px;height:42px;border-radius:50%;overflow:hidden;background:#f1f5f9;border:1px solid #eef2f6;flex:none;display:flex;align-items:center;justify-content:center}' +
+    '.ap-tbl .acts{display:flex;align-items:center;gap:10px}' +
+    '.ap-tbl .round{width:36px;height:36px;border-radius:50%;border:1.2px solid;background:#fff;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;transition:all .15s}' +
+    '.ap-tbl .round svg{width:15px;height:15px;stroke-width:2.2;fill:none;stroke:currentColor}' +
+    '.ap-tbl .round.x{color:#ef4444;border-color:#fecaca}' +
+    '.ap-tbl .round.x:hover{background:#fef2f2;border-color:#fca5a5}' +
+    '.ap-tbl .round.v{color:#22c55e;border-color:#bbf7d0}' +
+    '.ap-tbl .round.v:hover{background:#f0fdf4;border-color:#86efac}' +
+    '.ap-pager{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:16px}' +
+    '.ap-pager .pg{min-width:32px;height:32px;padding:0 8px;border-radius:8px;border:1px solid #e3e8f1;background:#fff;color:#5b6577;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}' +
+    '.ap-pager .pg:hover{background:#f8fafc}' +
+    '.ap-pager .pg.on{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:700}' +
     '</style>' +
 
     ovHead + critCard() + ovGrid + midHtml +
@@ -848,7 +942,26 @@
           if (!me || ['admin', 'technician'].indexOf(me.role) === -1 || !App.canPage('results') || (App.featureOn && !App.featureOn('results'))) return;
           DB.update('results', b.getAttribute('data-ack'), { criticalAck: { by: (session() || {}).name || 'user', at: new Date().toISOString() } });
           if (App.notifications) App.notifications.refresh();
-          v.innerHTML = buildDashboard(); wireCrit(v); wireFlow(v); scheduleCountUp();
+          v.innerHTML = buildDashboard(); wireCrit(v); wireFlow(v); wireAppts(v); scheduleCountUp();
+        });
+      });
+    }
+
+    function wireAppts(v) {
+      v.querySelectorAll('[data-appt-act]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var act = btn.getAttribute('data-appt-act'), name = btn.getAttribute('data-name'), id = btn.getAttribute('data-id');
+          var row = btn.closest('tr');
+          if (row) {
+            row.style.transition = 'opacity 0.25s';
+            row.style.opacity = '0.35';
+            row.style.pointerEvents = 'none';
+          }
+          var existing = DB.get('appointments', id);
+          if (existing) {
+            DB.update('appointments', id, { status: act === 'approve' ? 'confirmed' : 'rejected' });
+          }
+          App.toast((act === 'approve' ? 'Approved: ' : 'Declined: ') + name);
         });
       });
     }
@@ -860,6 +973,7 @@
       v.innerHTML = buildDashboard();
       wireCrit(v);
       wireFlow(v);
+      wireAppts(v);
       var ovSel = v.querySelector('#ovPeriod');
       if (ovSel) ovSel.addEventListener('change', function () {
         var g = v.querySelector('#ovGrid'); if (g && window.__ovCards) { g.innerHTML = window.__ovCards(ovSel.value); scheduleCountUp(); }
