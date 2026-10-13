@@ -664,30 +664,26 @@
   function paintSidePlan() {
     var el = document.getElementById('sfPlan'); if (!el) return;
     var l = subInfo && subInfo.lab, s = session();
-    if (!l || l.legacy || !s || s.role !== 'admin') { el.hidden = true; return; }
-    var txt = l.status === 'expired' ? 'Plan expired — renew' : (l.status === 'trial' ? 'Free trial · ' + Math.max(l.daysLeft == null ? 0 : l.daysLeft, 0) + ' days left' : l.planName + (l.daysLeft != null && l.daysLeft <= 7 ? ' · ' + Math.max(l.daysLeft, 0) + ' days left' : ' plan'));
-    el.textContent = txt; el.className = 'sf-plan ' + (l.status === 'expired' ? 'bad' : (l.status === 'trial' ? 'info' : 'ok')); el.hidden = false;
+    if (!l || l.legacy || !s || s.role !== 'admin' || l.status === 'trial') { el.hidden = true; return; }
+    var txt = l.status === 'expired' ? 'Plan expired — renew' : l.planName + (l.daysLeft != null && l.daysLeft <= 7 ? ' · ' + Math.max(l.daysLeft, 0) + ' days left' : ' plan');
+    el.textContent = txt; el.className = 'sf-plan ' + (l.status === 'expired' ? 'bad' : 'ok'); el.hidden = false;
   }
   function paintSubBanner() {
     paintSidePlan();
     var b = document.getElementById('subBanner');
     if (!b) return;
     var l = subInfo && subInfo.lab, s = session();
-    if (!l || !s || l.legacy) { b.hidden = true; return; }
+    if (!l || !s || l.legacy || l.status === 'trial') { b.hidden = true; b.innerHTML = ''; return; }
     var admin = s.role === 'admin', link = admin ? '<a href="#/subscription" class="sub-cta">' + (l.status === 'expired' ? 'Renew now' : 'Plan &amp; Usage') + '</a>' : '<span class="sub-note">Ask your lab admin to renew.</span>';
     var html = '', cls = '';
     if (l.status === 'expired') {
       cls = 'bad';
       html = '<b>Your ' + (l.plan === 'trial' ? 'free trial' : 'subscription') + ' has ended.</b> The app is now read-only &mdash; you can view and print everything, but new data cannot be saved. ' + link;
-    } else if (l.status === 'trial') {
-      var d = l.daysLeft == null ? 14 : l.daysLeft;
-      cls = d <= 3 ? 'bad' : (d <= 7 ? 'warn' : 'info');
-      html = '<b>Free trial: ' + Math.max(d, 0) + ' day' + (d === 1 ? '' : 's') + ' left.</b> ' + (d <= 7 ? 'Pick a plan to keep saving data without interruption. ' : '') + link;
     } else if (l.status === 'active' && l.daysLeft != null && l.daysLeft <= 5) {
       cls = l.daysLeft <= 2 ? 'bad' : 'warn';
       html = '<b>Your ' + esc(l.planName) + ' plan ends in ' + Math.max(l.daysLeft, 0) + ' day' + (l.daysLeft === 1 ? '' : 's') + '.</b> Renew to avoid interruption. ' + link;
     }
-    if (!html) { b.hidden = true; return; }
+    if (!html) { b.hidden = true; b.innerHTML = ''; return; }
     b.className = 'sub-banner ' + cls; b.innerHTML = html; b.hidden = false;
   }
   /* plan limit reached? (instant, from the local data) -> explain and stop BEFORE anything is saved */
@@ -839,7 +835,8 @@
     /* current user record (for profile photo in avatar & sidebar) */
     var _me = null;
     try { _me = window.DB.get('users', s.userId); } catch (e) {}
-    var _avatarInner = (_me && _me.photo) ? '<img src="' + _me.photo + '" alt="">' : esc((s.name || 'U').charAt(0).toUpperCase());
+    var _silhouetteSvg = '<svg width="100%" height="100%" viewBox="0 0 46 46"><circle cx="23" cy="17" r="6" fill="#e8e8e8"/><path d="M10 44c1-10 6-15 13-15s12 5 13 15z" fill="#d9d9d9"/><path d="M14 36l9-8 9 8" stroke="#111" stroke-width="2" fill="none"/></svg>';
+    var _avatarInner = (_me && _me.photo) ? '<img src="' + _me.photo + '" alt="">' : _silhouetteSvg;
     document.getElementById('sidebar').innerHTML =
       '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
        '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Sync') + '</b></span>' +
@@ -920,13 +917,10 @@
                      _curHash === '#/samples/home' ? 'Home Sampling & Dispatch' :
                      (_curHash === '#/reports/trends' || _curHash === '#/trends') ? 'Patient Trends & Delta' :
                      (navItem ? navItem.label : '');
+    var _gridSvg = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#8a94a6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></svg>';
     document.getElementById('topbar').innerHTML =
       '<style>' +
       '.tb-acct{position:relative;flex:none}' +
-      '.tb-div{width:1px;align-self:stretch;background:var(--line);margin:3px 0}' +
-      '.tb-avatar{width:36px;height:36px;border-radius:50%;border:2px solid #fff;background:var(--brand-grad);color:#fff;display:grid;place-items:center;font-weight:800;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(19,24,69,.35);transition:transform .15s,box-shadow .15s;padding:0}' +
-      '.tb-avatar:hover{transform:scale(1.07);box-shadow:0 3px 12px rgba(19,24,69,.5)}' +
-      '.tb-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}' +
       '.tb-menu{position:absolute;right:0;top:calc(100% + 10px);min-width:212px;background:var(--card,#fff);border:1px solid var(--line);border-radius:14px;box-shadow:0 16px 40px rgba(15,30,46,.16);padding:6px;z-index:80}' +
       '.tb-menu-head{padding:10px 12px 12px;border-bottom:1px solid var(--line);margin-bottom:6px;display:flex;flex-direction:column;align-items:flex-start;gap:5px}' +
       '.tb-menu-head b{font-size:14px;color:var(--ink)}' +
@@ -941,36 +935,36 @@
       '.tb-qa .tb-classic{background:#fff;border:1px solid var(--bd);color:#131845;font-weight:600;box-shadow:none}' +
       '.tb-qa .tb-classic:hover{background:#ebf4f8;border-color:#8fa0c0;color:#131845;transform:none}' +
       '.tb-qa .tb-classic svg{color:#131845;flex:none}' +
-      '.tb-qa .tb-icon,.tb-alert-actions .tb-icon{padding:7px;border-radius:10px;min-width:34px;justify-content:center}' +
-      '.tb-alert-actions{display:flex;align-items:center;gap:8px}.tb-bell{position:relative}.tb-bell-count{position:absolute;top:-7px;right:-7px;min-width:18px;padding:2px 4px;border-radius:20px;background:#131845;color:#fff;font-size:10px;line-height:14px;text-align:center}.tb-bell-count[hidden]{display:none}.tb-bell.has-urgent{color:#b91c1c;border-color:#fca5a5;background:#fff5f5}.tb-bell.has-urgent .tb-bell-count{background:#b91c1c}' +
       '@media(max-width:640px){.tb-qa .tb-qa-t{display:none}.tb-qa{gap:6px}.tb-qa .tb-qab{padding:7px 9px}}' +
-      '.tb-greet{display:flex;flex-direction:column;justify-content:center;line-height:1.3;min-width:0;margin-right:2px}' +
-      '.tb-greet b{font-size:14.5px;font-weight:800;color:var(--ink);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}' +
-      '.tb-greet span{font-size:12px;color:var(--muted);font-weight:500;white-space:nowrap}' +
-      '@media (max-width:760px){.tb-greet{display:none}}' +
       '@media (max-width:900px){.tb-qa .tb-qa-t{display:none}}' +
       '@media (max-width:640px){.tb-qa{display:none}}' +
       '</style>' +
        '<button type="button" class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false" title="Toggle navigation">' + icon('menu', 18) + '</button>' +
-       '<button type="button" class="tb-nb" id="tbBack" aria-label="Back" title="Back">' + icon('arrow-left', 16) + '</button>' +
-       '<button type="button" class="tb-nb" id="tbFwd" aria-label="Forward" title="Forward">' + icon('arrow-right', 16) + '</button>' +
-       '<div class="tb-crumb"><span class="tb-crumb-ic">' + icon((navItem && navItem.icon) || 'grid', 16) + '</span><h1 class="page-title">' + esc(activeKey === 'dashboard' ? 'Dashboard' : _pageTitle) + '</h1></div>' +
-      '<div class="top-right"><div class="tb-qa">' + tbQa + '</div><div class="tb-alert-actions">' +
-      (can('downloads', s.role) ? '<a class="btn btn-sm tb-icon" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>' : '') +
-      '<a class="btn btn-sm tb-icon tb-bell" id="notificationBell" href="#/notifications" title="Notifications" aria-label="Notifications">' + icon('bell', 18) + '<span id="notificationCount" class="tb-bell-count" hidden></span></a></div></div>' +
-      '<div class="tb-acct">' +
-      '<button class="tb-avatar tb-chip" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false"><span class="tb-av">' + _avatarInner + '</span>' +
-      '<span class="tb-who"><b>' + esc(s.name || '') + '</b><small>' + esc(roleLabel(s)) + ' &middot; ' + esc(st.labName || 'Lab') + '</small></span>' + icon('chevron-down', 14) + '</button>' +
-      '<div class="tb-menu" id="userMenu" hidden>' +
-      '<div class="tb-menu-head"><b>' + esc(s.name) + '</b>' + (s.role === 'custom' ? '<span class="badge b-ready">' + esc(roleLabel(s)) + '</span>' : badge(s.role)) + '</div>' +
-      ((s.apps && s.apps.length > 1) ? '<a class="tb-menu-it" href="#/apps">' + icon('grid', 16) + '<span>Switch app</span></a>' : '') +
-      '<a class="tb-menu-it" href="#/profile">' + icon('gear', 16) + '<span>Settings</span></a>' +
-      '<a class="tb-menu-it" href="#/profile">' + icon('lock', 16) + '<span>Change Password</span></a>' +
-      '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
-      '</div></div>';
+       '<button type="button" class="tb-nb" id="tbBack" aria-label="Back" title="Back"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>' +
+       '<button type="button" class="tb-nb" id="tbFwd" aria-label="Forward" title="Forward"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>' +
+       '<div class="tb-crumb"><span class="tb-crumb-ic">' + (activeKey === 'dashboard' ? _gridSvg : icon((navItem && navItem.icon) || 'grid', 16)) + '</span><h1 class="page-title">' + esc(activeKey === 'dashboard' ? 'Dashboard' : _pageTitle) + '</h1></div>' +
+       '<div class="top-right">' +
+       (activeKey === 'dashboard' ? '' : '<div class="tb-qa">' + tbQa + '</div>') +
+       '<button type="button" class="tb-icon-btn" id="tbMsgBtn" aria-label="Messages" title="Messages"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="4"/><path d="M8 10h8M8 14h5"/></svg><span class="tb-dot"></span></button>' +
+       (can('downloads', s.role) ? '<a class="btn btn-sm tb-icon tb-icon-btn" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>' : '') +
+       '<a class="tb-icon-btn tb-bell" id="notificationBell" href="#/notifications" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0112 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg><span class="tb-dot" id="notificationCount"></span></a>' +
+       '<span class="tb-vsep"></span>' +
+       '<div class="tb-acct">' +
+       '<button class="tb-avatar tb-chip" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false"><span class="tb-av">' + _avatarInner + '</span>' +
+       '<span class="tb-who"><b>' + esc(s.name || 'Hussnain Pasha') + '</b><small>' + esc(roleLabel(s)) + ' &middot; ' + esc(st.labName || 'test') + '</small></span>' +
+       '<svg class="tb-caretdn" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>' +
+       '<div class="tb-menu" id="userMenu" hidden>' +
+       '<div class="tb-menu-head"><b>' + esc(s.name) + '</b>' + (s.role === 'custom' ? '<span class="badge b-ready">' + esc(roleLabel(s)) + '</span>' : badge(s.role)) + '</div>' +
+       ((s.apps && s.apps.length > 1) ? '<a class="tb-menu-it" href="#/apps">' + icon('grid', 16) + '<span>Switch app</span></a>' : '') +
+       '<a class="tb-menu-it" href="#/profile">' + icon('gear', 16) + '<span>Settings</span></a>' +
+       '<a class="tb-menu-it" href="#/profile">' + icon('lock', 16) + '<span>Change Password</span></a>' +
+       '<button class="tb-menu-it tb-menu-danger" id="menuLogout">' + icon('logout', 16) + '<span>Log Out</span></button>' +
+       '</div></div></div>';
     document.getElementById('menuLogout').addEventListener('click', logout);
     document.getElementById('tbBack').addEventListener('click', function () { history.back(); });
     document.getElementById('tbFwd').addEventListener('click', function () { history.forward(); });
+    var msgBtn = document.getElementById('tbMsgBtn');
+    if (msgBtn) msgBtn.addEventListener('click', function () { location.hash = '#/notifications'; });
     if (App.notifications) App.notifications.start();
     /* avatar dropdown: toggle, close on outside click / Escape (delegated once) */
     (function () {
