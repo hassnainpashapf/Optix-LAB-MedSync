@@ -355,8 +355,8 @@
       var out = '';
       if (isTech) {
         out += card('flask', '#7c3aed', 'Tests Ordered', 'Tests ' + pl, String(tests), tests, false, '<div class="ovk-f">' + invs.length + ' invoices</div>', '#/invoices');
-        out += card('check', '#16a34a', 'Reported', 'Results completed ' + pl, String(reported), reported, false, '', '#/results/ready');
-        out += card('alert', '#d97706', 'Pending Results', 'Waiting for entry', String(pendingRes.length), pendingRes.length, false, '', '#/results');
+        out += card('check', '#16a34a', 'Reported', 'Results completed ' + pl, String(reported), reported, false, '<div class="ovk-f">ready for print</div>', '#/results/ready');
+        out += card('alert', '#d97706', 'Pending Results', 'Waiting for entry', String(pendingRes.length), pendingRes.length, false, '<div class="ovk-f">awaiting entry</div>', '#/results');
         out += card('users', '#2f6df6', 'New Patients', 'Registered ' + pl, String(newPts), newPts, false, '<div class="ovk-f">' + patients.length + ' in total</div>', '#/patients');
         return out;
       }
@@ -365,7 +365,7 @@
       out += card('flask', '#7c3aed', 'Tests Ordered', 'Tests ' + pl, String(tests), tests, false, '<div class="ovk-f">' + invs.length + ' invoice' + (invs.length === 1 ? '' : 's') + '</div>', '#/invoices');
       out += card('alert', '#d97706', 'Pending Results', 'Waiting for entry', String(pendingRes.length), pendingRes.length, false, '<div class="ovk-f">awaiting result entry</div>', '#/results');
       out += card('users', '#0ea5e9', 'New Patients', 'Registered ' + pl, String(newPts), newPts, false, '<div class="ovk-f">' + patients.length + ' patients in total</div>', '#/patients');
-      out += card('check', '#16a34a', 'Reported', 'Results completed ' + pl, String(reported), reported, false, '', '#/results/ready');
+      out += card('check', '#16a34a', 'Reported', 'Results completed ' + pl, String(reported), reported, false, '<div class="ovk-f">ready for print</div>', '#/results/ready');
       out += card('file', '#2563eb', 'Billed', 'Invoices ' + pl, App.money(billed), billed, true, bar(rate, '#16a34a') + '<div class="ovk-f"><b>' + Math.round(rate) + '%</b> collected</div>', '#/invoices');
       out += card('coins', '#dc2626', 'Outstanding Dues', 'Unpaid balance, all invoices', App.money(dueSum), dueSum, true, '<div class="ovk-f">' + dueN + ' unpaid invoice' + (dueN === 1 ? '' : 's') + '</div>', '#/dues');
       out += card('finance', '#0ea5a4', 'Expenses', 'Spent ' + pl, App.money(exp), exp, true, '<div class="ovk-f">net <b>' + App.money(col - exp) + '</b></div>', '#/expenses');
@@ -514,21 +514,61 @@
     var expenses = DB.all('expenses') || [];
     var tests7 = perDay(invoices, function (r) { return r.createdAt; }, function (r) { return r.items ? r.items.length : 0; });
     var inv7 = perDay(invoices, function (r) { return r.createdAt; }, function () { return 1; });
-    var chartA, chartB;
-    if (isTech) {
-      var rep7 = perDay(results.filter(function (r) { return r.status === 'ready'; }), function (r) { return r.reportedAt; }, function () { return 1; });
-      chartA = bigCard('Results reported', 'Last 7 days', chip('Reported (7 days)', sum(rep7), '#059669') + chip('Pending now', pendingRes.length, '#d97706') + chip('Today', rep7[6]),
-        chartSvg({ label: 'Results reported per day', bars: [{ name: 'Results reported', data: rep7, color: '#10b981' }] }), legend([['Results reported', '#10b981']]), ['#/results/ready', 'Ready reports']);
-    } else {
-      var col7 = perDay(payments, function (r) { return r.date; }, function (r) { return +r.amount || 0; });
-      var exp7 = perDay(expenses, function (r) { return r.date; }, function (r) { return +r.amount || 0; });
-      var net = sum(col7) - sum(exp7);
-      chartA = bigCard('Cash Flow', 'Collections vs expenses · last 7 days', chip('Collected', App.money(sum(col7)), '#2563eb') + chip('Expenses', App.money(sum(exp7)), '#d97706') + chip(net >= 0 ? 'Net profit' : 'Net loss', (net < 0 ? '−' : '') + App.money(Math.abs(net)), net >= 0 ? '#059669' : '#dc2626'),
-        chartSvg({ label: 'Collections and expenses per day', money: true, bars: [{ name: 'Collected', data: col7, color: '#3b82f6' }, { name: 'Expenses', data: exp7, color: '#f59e0b' }] }), legend([['Collected', '#3b82f6'], ['Expenses', '#f59e0b']]), ['#/finance/profit', 'Profit &amp; Loss']);
-    }
-    chartB = bigCard('Tests &amp; Invoices', 'Last 7 days', chip('Tests ordered', sum(tests7), '#7c3aed') + chip('Invoices', sum(inv7), '#ea580c') + chip('Today', tests7[6] + ' tests'),
+    var chartB = bigCard('Tests &amp; Invoices', 'Last 7 days', chip('Tests ordered', sum(tests7), '#7c3aed') + chip('Invoices', sum(inv7), '#ea580c') + chip('Today', tests7[6] + ' tests'),
       chartSvg({ label: 'Tests ordered and invoices per day', bars: [{ name: 'Invoices', data: inv7, color: '#fdba74' }], line: { name: 'Tests ordered', data: tests7, color: '#7c3aed' } }), legend([['Invoices', '#fdba74'], ['Tests ordered', '#7c3aed']]), isTech ? null : ['#/invoices', 'Invoices']);
-    var chartsHtml = '<div class="db-charts">' + chartA + chartB + '</div>';
+
+    /* ---------- Overview middle row (as in the Overview picture): Cash Flow by month + Referring Doctors ---------- */
+    var yr = today.slice(0, 4), flowIn = [], flowOut = [], fi;
+    for (fi = 0; fi < 12; fi++) { flowIn.push(0); flowOut.push(0); }
+    function monthOf(v) { var k = localDay(v); return k && k.slice(0, 4) === yr ? +k.slice(5, 7) - 1 : -1; }
+    if (isTech) {   /* no money for this role: tests ordered vs results reported per month */
+      invoices.forEach(function (r) { var m = monthOf(r.createdAt); if (m >= 0) flowIn[m] += r.items ? r.items.length : 0; });
+      results.forEach(function (r) { var m = r.status === 'ready' ? monthOf(r.reportedAt) : -1; if (m >= 0) flowOut[m]++; });
+    } else {        /* cash received vs expenses per month */
+      payments.forEach(function (r) { var m = monthOf(r.date); if (m >= 0) flowIn[m] += +r.amount || 0; });
+      expenses.forEach(function (r) { var m = monthOf(r.date); if (m >= 0) flowOut[m] += +r.amount || 0; });
+    }
+    var flowMax = (function () {
+      var mx = Math.max.apply(null, flowIn.concat([1])), rough = Math.max(mx / 6, isTech ? 1 : 1000);
+      var mag = Math.pow(10, Math.floor(Math.log(rough) / Math.LN10)), f = rough / mag;
+      return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * mag * 6;
+    })();
+    var curMonth = +today.slice(5, 7) - 1;
+    FLOW = { money: !isTech, inn: flowIn, out: flowOut, max: flowMax, vis: 7, active: curMonth, start: Math.max(0, Math.min(12 - 7, curMonth - 3)) };
+    var flowCard = '<div class="card cf-card">' +
+      '<div class="cf-head"><span class="cf-badge">' + App.icon('chart', 17) + '</span>' +
+        '<div class="t"><small>' + (isTech ? 'LAB' : 'FINANCE') + '</small><b>' + (isTech ? 'Tests per Month' : 'Cash Flow') + '</b></div>' +
+        '<button type="button" class="cf-sq" data-cf="prev" aria-label="Earlier months">' + App.icon('arrow-left', 16) + '</button>' +
+        '<button type="button" class="cf-sq" data-cf="next" aria-label="Later months">' + App.icon('arrow-right', 16) + '</button></div>' +
+      '<div class="cf-plot"><div class="cf-yax" id="cfYax"></div><div class="cf-area" id="cfArea"></div></div>' +
+      '<div class="cf-spacer"></div></div>';
+
+    var canDocs = !App.canPage || App.canPage('doctors');
+    var sideCard = pendCard, lowerRight = patCard, lowerLeft = chartB;
+    if (canDocs) {
+      var docs = DB.all('doctors') || [], since = new Date(); since.setDate(since.getDate() - 29);
+      var sinceKey = localDay(since), refs = {};
+      invoices.forEach(function (inv) { var k = localDay(inv.createdAt); if (inv.doctorId && k && k >= sinceKey && k <= today) refs[inv.doctorId] = (refs[inv.doctorId] || 0) + 1; });
+      var activeN = docs.filter(function (d) { return refs[d.id]; }).length;
+      var topDocs = docs.slice().sort(function (a, b) { return (refs[b.id] || 0) - (refs[a.id] || 0) || String(a.name || '').localeCompare(String(b.name || '')); }).slice(0, 5);
+      var AV = ['#2f6df6', '#16a34a', '#7c3aed', '#ea580c', '#0891b2'];
+      var docRows = topDocs.map(function (d, i) {
+        var n = refs[d.id] || 0, nm = String(d.name || 'Doctor'), ini = nm.replace(/^dr\.?\s*/i, '').charAt(0).toUpperCase() || 'D';
+        return '<div class="rd-row"><span class="rd-pic" style="--ac:' + AV[i % AV.length] + '">' + App.esc(ini) + '</span>' +
+          '<div class="rd-nm"><b>' + App.esc(nm) + '</b><small>' + App.esc(d.clinic || 'Referring doctor') + ' · ' + n + ' referral' + (n === 1 ? '' : 's') + '</small></div>' +
+          '<span class="rd-tag ' + (n ? 'ok' : 'no') + '">' + (n ? 'Active' : 'Inactive') + '</span></div>';
+      }).join('');
+      sideCard = '<div class="card rd-card">' +
+        '<div class="rd-head"><span class="cf-badge">' + App.icon('users', 17) + '</span>' +
+          '<div class="t"><b>Referring Doctors</b><small>Patients referred in the last 30 days</small></div>' +
+          '<a class="ovk-m" href="#/doctors" title="Open" aria-label="Open doctors"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg></a></div>' +
+        '<div class="rd-avail"><div class="rd-box g"><small>Active</small><b>' + activeN + ' Doctor' + (activeN === 1 ? '' : 's') + '</b></div>' +
+          '<div class="rd-box r"><small>Inactive</small><b>' + (docs.length - activeN) + ' Doctor' + (docs.length - activeN === 1 ? '' : 's') + '</b></div></div>' +
+        '<div class="rd-list">' + (docRows || App.empty('Add referring doctors to see them here.')) + '</div>' +
+        '<a class="rd-all" href="#/doctors">See All Doctors ' + App.icon('arrow-right', 13) + '</a></div>';
+      lowerLeft = chartB + pendCard;
+    }
+    var midHtml = '<div class="ov-mid">' + flowCard + sideCard + '</div>';
     /* the Smart Dashboard section was removed from the dashboard (smartAnalyticsBody is kept for the tests / later use) */
 
 
@@ -567,12 +607,99 @@
     '.db-grid .card-h h3{font-size:16.5px;font-weight:700;letter-spacing:-.01em}' +
     '@media (prefers-reduced-motion:reduce){.stat{animation:none}.stat:hover{transform:none}}' +
     '</style>' +
+    '<style>' +
+    '/* ===== Overview middle row: monthly Cash Flow + Referring Doctors (the Overview picture) ===== */' +
+    '.ov-mid{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:16px;margin-bottom:18px;align-items:stretch}' +
+    '@media(max-width:1100px){.ov-mid{grid-template-columns:minmax(0,1fr)}}' +
+    '.ov-mid>.card{margin:0!important;border-radius:20px}' +
+    '.cf-badge{width:36px;height:36px;border-radius:50%;background:#eef3ff;color:#2f6df6;display:grid;place-items:center;flex:none}' +
+    '.cf-card{padding:18px 20px 14px 18px;display:flex;flex-direction:column;min-width:0}' +
+    '.cf-head,.rd-head{display:flex;align-items:center;gap:10px}.cf-head .t,.rd-head .t{flex:1;min-width:0}' +
+    '.cf-head small{display:block;font-size:11px;color:#8b94a7;letter-spacing:.04em}.cf-head b{display:block;font-size:15px;font-weight:700;color:var(--ink);margin-top:1px}' +
+    '.cf-sq{width:34px;height:34px;border-radius:10px;border:1px solid #e3e8f1;background:#fff;color:var(--ink);display:grid;place-items:center;cursor:pointer;padding:0}.cf-sq:hover{background:#f1f4fa}.cf-sq:disabled{opacity:.4;cursor:default;background:#fff}' +
+    '.cf-plot{position:relative;margin-top:14px;flex:1;min-height:270px;display:grid;grid-template-columns:48px minmax(0,1fr)}' +
+    '.cf-yax{position:relative;font-size:12px;color:#5b6577}.cf-yax span{position:absolute;left:0;transform:translateY(-50%);font-variant-numeric:tabular-nums}' +
+    '.cf-area{position:relative}.cf-grid{position:absolute;left:0;right:0;border-top:1px dashed #e3e8f1}' +
+    '.cf-bars{position:absolute;inset:0;display:flex;align-items:flex-end;gap:16px;padding-left:4px}' +
+    '.cf-col{flex:1 1 0;min-width:0;height:100%;position:relative;display:flex;align-items:flex-end;border:0;background:none;padding:0;cursor:pointer}' +
+    '.cf-bar{width:100%;border-radius:6px 6px 0 0;background:linear-gradient(180deg,#e8ebf2,#f1f4fa);transition:height .35s ease,background .2s}' +
+    '.cf-col.on .cf-bar{background:linear-gradient(180deg,#2f6df6 0%,#6b97f4 45%,#eef3fd 100%)}' +
+    '.cf-pt{display:none;position:absolute;left:50%;width:28px;height:28px;border-radius:50%;background:#3f7bf3;border:3px solid #fff;transform:translate(-50%,50%);box-shadow:0 2px 8px rgba(47,109,240,.35)}.cf-col.on .cf-pt{display:block}' +
+    '.cf-xax{position:absolute;left:0;right:0;bottom:-28px;display:flex;gap:16px;padding-left:4px;font-size:12px;color:var(--ink)}.cf-xax span{flex:1 1 0;text-align:center}' +
+    '.cf-tip{position:absolute;z-index:5;background:#1c2340;color:#fff;border-radius:10px;padding:12px 14px;width:230px;font-size:12px;pointer-events:none;transition:left .2s,top .2s;box-shadow:0 12px 28px -12px rgba(15,23,42,.5)}' +
+    '.cf-tip::before{content:"";position:absolute;left:-5px;top:50%;width:10px;height:10px;background:#1c2340;transform:translateY(-50%) rotate(45deg)}.cf-tip.flip::before{left:auto;right:-5px}' +
+    '.cf-tip h4{margin:0 0 8px;padding-bottom:8px;border-bottom:1px solid #3a4160;font-size:12.5px;font-weight:600;color:#fff}' +
+    '.cf-tip div{display:flex;justify-content:space-between;gap:10px;margin-top:8px;color:#d9deea}.cf-tip div b{font-weight:700;color:#fff;font-variant-numeric:tabular-nums}' +
+    '.cf-spacer{height:30px;flex:none}' +
+    '.rd-card{padding:18px 16px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}' +
+    '.rd-head b{display:block;font-size:15px;font-weight:700;color:var(--ink)}.rd-head small{display:block;font-size:11.5px;color:#8b94a7;margin-top:2px}' +
+    '.rd-avail{display:grid;grid-template-columns:1fr 1fr;gap:10px}' +
+    '.rd-box{background:#f7f8fb;border-radius:10px;padding:9px 12px;border-left:4px solid}.rd-box.g{border-color:#6cc070}.rd-box.r{border-color:#e7797b}' +
+    '.rd-box small{display:block;font-size:11px;color:#5b6577}.rd-box b{display:block;font-size:13.5px;font-weight:600;color:var(--ink);margin-top:2px}' +
+    '.rd-list{display:flex;flex-direction:column;gap:8px}' +
+    '.rd-row{display:flex;align-items:center;gap:10px;padding:2px 0}' +
+    '.rd-pic{width:42px;height:42px;border-radius:50%;flex:none;display:grid;place-items:center;font-weight:800;font-size:15px;color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,#fff);border:1px solid color-mix(in srgb,var(--ac) 22%,#fff)}' +
+    '.rd-nm{flex:1;min-width:0}.rd-nm b{display:block;font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rd-nm small{display:block;font-size:11px;color:#8b94a7;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}' +
+    '.rd-tag{height:26px;line-height:24px;padding:0 12px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid;flex:none}' +
+    '.rd-tag.ok{background:#ecfdf3;color:#15803d;border-color:#bbf7d0}.rd-tag.no{background:#fef2f2;color:#b91c1c;border-color:#fecaca}' +
+    '.rd-all{margin-top:auto;height:44px;border-radius:10px;background:#eef3fd;color:#2f6df6;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:7px;text-decoration:none}.rd-all:hover{background:#e2eafc}' +
+    '</style>' +
 
-    ovHead + critCard() + ovGrid +
+    ovHead + critCard() + ovGrid + midHtml +
+    '<div class="ov-two"><div class="ov-col">' + lowerLeft + '</div><div class="ov-col">' + lowerRight + '</div></div>' +
     '<h3 class="ov-h3">Quick access</h3>' + quickCss + quickAccess +
-    '<div class="ov-two"><div class="ov-col">' + chartA + chartB + '</div><div class="ov-col">' + patCard + pendCard + '</div></div>' +
     '</div>';
     } /* end buildDashboard */
+
+    /* ---------- monthly Cash Flow chart (drawn after paint; tooltip needs real sizes) ---------- */
+    var FLOW = null;
+    var MON_S = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var MON_F = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    function flowK(n) { return n >= 1e6 ? +(n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? +(n / 1e3).toFixed(1) + 'k' : String(Math.round(n)); }
+    function flowTip(v) {
+      var f = FLOW, area = v.querySelector('#cfArea'), tip = v.querySelector('#cfTip'); if (!f || !area || !tip) return;
+      var col = area.querySelector('.cf-col.on'); if (!col) { tip.style.display = 'none'; return; }
+      var i = f.active, val = function (n) { return f.money ? App.money(n) : String(n); };
+      tip.style.display = '';
+      tip.innerHTML = '<h4>' + MON_F[i] + (f.money ? ' Cash Flow' : ' Tests') + '</h4>' +
+        '<div>' + (f.money ? 'Cash Flow' : 'Tests ordered') + ' <b>' + val(f.inn[i]) + '</b></div>' +
+        '<div>' + (f.money ? 'Out Flow' : 'Reported') + ' <b>' + (f.money && f.out[i] ? '-' : '') + val(f.out[i]) + '</b></div>';
+      var ar = area.getBoundingClientRect(), cr = col.getBoundingClientRect(), w = 230, left = cr.right - ar.left + 16, flip = false;
+      if (left + w > ar.width) { left = cr.left - ar.left - w - 16; flip = true; }
+      tip.classList.toggle('flip', flip);
+      tip.style.left = left + 'px';
+      tip.style.top = Math.max(ar.height * (1 - Math.min(f.inn[i] / f.max, 1)) - 36, -4) + 'px';
+    }
+    function flowDraw(v) {
+      var f = FLOW, area = v.querySelector('#cfArea'), yax = v.querySelector('#cfYax'); if (!f || !area || !yax) return;
+      var ticks = [6, 5, 4, 3, 2, 1, 0], cols = '', xs = '', grid = '';
+      yax.innerHTML = ticks.map(function (t, i) { return '<span style="top:' + (i / 6 * 100) + '%">' + flowK(f.max / 6 * t) + '</span>'; }).join('');
+      ticks.forEach(function (t, i) { if (t) grid += '<div class="cf-grid" style="top:' + (i / 6 * 100) + '%"></div>'; });
+      for (var i = 0; i < f.vis; i++) {
+        var idx = f.start + i; if (idx > 11) break;
+        var pc = Math.min(100, f.inn[idx] / f.max * 100);
+        cols += '<button type="button" class="cf-col' + (idx === f.active ? ' on' : '') + '" data-i="' + idx + '" aria-label="' + MON_F[idx] + '"><span class="cf-bar" style="height:' + pc + '%"></span><span class="cf-pt" style="bottom:' + pc + '%"></span></button>';
+        xs += '<span>' + MON_S[idx] + '</span>';
+      }
+      area.innerHTML = grid + '<div class="cf-bars">' + cols + '</div><div class="cf-xax">' + xs + '</div><div class="cf-tip" id="cfTip"></div>';
+      var pv = v.querySelector('[data-cf="prev"]'), nx = v.querySelector('[data-cf="next"]');
+      if (pv) pv.disabled = f.start === 0;
+      if (nx) nx.disabled = f.start + f.vis >= 12;
+      flowTip(v);
+    }
+    function wireFlow(v) {
+      var area = v.querySelector('#cfArea'); if (!area || !FLOW) return;
+      flowDraw(v);
+      function pick(e) { var c = e.target.closest('.cf-col'); if (!c || +c.getAttribute('data-i') === FLOW.active) return; FLOW.active = +c.getAttribute('data-i'); area.querySelectorAll('.cf-col').forEach(function (b) { b.classList.toggle('on', +b.getAttribute('data-i') === FLOW.active); }); flowTip(v); }
+      area.addEventListener('mouseover', pick);
+      area.addEventListener('click', pick);
+      function shift(d) { var f = FLOW; f.start = Math.max(0, Math.min(12 - f.vis, f.start + d)); if (f.active < f.start || f.active >= f.start + f.vis) f.active = f.start + 3; flowDraw(v); }
+      var pv = v.querySelector('[data-cf="prev"]'), nx = v.querySelector('[data-cf="next"]');
+      if (pv) pv.addEventListener('click', function () { shift(-1); });
+      if (nx) nx.addEventListener('click', function () { shift(1); });
+      window.__cfTipFn = function () { if (document.body.contains(area)) flowTip(v); };
+    }
+    if (!window.__cfResize) { window.__cfResize = true; window.addEventListener('resize', function () { if (window.__cfTipFn) window.__cfTipFn(); }); }
 
     /* Critical results nobody has acknowledged yet (set when a result far outside the normal range is saved) */
     function critCard() {
@@ -599,7 +726,7 @@
           if (!me || ['admin', 'technician'].indexOf(me.role) === -1 || !App.canPage('results') || (App.featureOn && !App.featureOn('results'))) return;
           DB.update('results', b.getAttribute('data-ack'), { criticalAck: { by: (session() || {}).name || 'user', at: new Date().toISOString() } });
           if (App.notifications) App.notifications.refresh();
-          v.innerHTML = buildDashboard(); wireCrit(v); scheduleCountUp();
+          v.innerHTML = buildDashboard(); wireCrit(v); wireFlow(v); scheduleCountUp();
         });
       });
     }
@@ -610,6 +737,7 @@
       if (!v || !v.querySelector('[data-db-skel]')) return; /* user navigated away */
       v.innerHTML = buildDashboard();
       wireCrit(v);
+      wireFlow(v);
       var ovSel = v.querySelector('#ovPeriod');
       if (ovSel) ovSel.addEventListener('change', function () {
         var g = v.querySelector('#ovGrid'); if (g && window.__ovCards) { g.innerHTML = window.__ovCards(ovSel.value); scheduleCountUp(); }
