@@ -1580,7 +1580,7 @@
     var l = s.formLists && Array.isArray(s.formLists[key]) ? s.formLists[key] : (LIST_DEFAULTS[key] || []), out = [], seen = {};
     l.forEach(function (x) { x = String(x == null ? '' : x).trim(); if (x && !seen[x.toLowerCase()]) { seen[x.toLowerCase()] = 1; out.push(x); } });
     if (key === 'paymentMethod' && !seen['cash']) out.unshift('Cash');
-    if (key === 'bloodGroup' && !out.length) out = LIST_DEFAULTS.bloodGroup.slice();   /* blood group is required on the patient form: an emptied list falls back to the standard eight */
+    if (key === 'bloodGroup' && !out.length) out = LIST_DEFAULTS.bloodGroup.slice();   /* default blood group choices for the patient form */
     if (key === 'sampleType') {
       (LIST_DEFAULTS.sampleType || []).forEach(function (x) {
         if (!seen[x.toLowerCase()]) { seen[x.toLowerCase()] = 1; out.push(x); }

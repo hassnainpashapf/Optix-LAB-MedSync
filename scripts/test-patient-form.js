@@ -77,30 +77,32 @@ function run(base) {
   openAdd();
   assert.ok(/for="ptf-cnic">CNIC/.test(modalHtml), 'CNIC label');
   assert.ok(/id="ptf-cnic"[^>]*placeholder="00000-0000000-0"/.test(modalHtml), 'CNIC placeholder');
-  assert.ok(/for="ptf-blood">Blood Group \*/.test(modalHtml), 'Blood group is marked required');
+  assert.ok(/for="ptf-blood">Blood Group<\/label>/.test(modalHtml), 'Blood group label is not required');
+  assert.ok(!/for="ptf-blood">Blood Group \*/.test(modalHtml), 'Blood group is not marked required');
   assert.ok(/<option value="">Select blood group<\/option>/.test(modalHtml), 'Blood group starts on the placeholder');
   assert.ok(!/<option value="Unknown"/.test(modalHtml), 'No Unknown option');
   assert.equal(elements['ptf-blood'].value, '', 'Nothing preselected');
   assert.ok(modalHtml.indexOf('id="ptf-whatsapp"') < modalHtml.indexOf('id="ptf-cnic"'), 'CNIC after the mobile number');
 
-  // ---- blood group required: blocked, inline error, focused, nothing saved ----
+  // ---- blood group is optional: allowed, no inline error, patient saves cleanly ----
   fillValid({ blood: '' });
   submit();
-  assert.equal(errText('blood'), 'Please select the blood group.');
-  assert.equal(elements['ptf-blood'].invalid, true, 'invalid style on the select');
-  assert.equal(focused, 'ptf-blood', 'blood group focused');
-  assert.equal(tables.patients.length, 0, 'not saved without a blood group');
-  assert.equal(closed, 0);
-  // "Unknown" (legacy value) does not count either
-  fillValid({ blood: 'Unknown' }); submit();
-  assert.equal(tables.patients.length, 0);
-  assert.equal(errText('blood'), 'Please select the blood group.');
+  assert.equal(errText('blood'), '', 'no blood group error');
+  assert.equal(tables.patients.length, 1, 'saved without a blood group');
+  assert.equal(tables.patients[0].blood, '', 'saved with empty blood group');
+  assert.equal(closed, 1);
+  // "Unknown" (legacy value) saves as empty without blocking
+  openAdd(); fillValid({ blood: 'Unknown' }); submit();
+  assert.equal(tables.patients.length, 1, 'saved cleanly');
+  assert.equal(tables.patients[0].blood, '', 'Unknown normalized to empty');
   // the first invalid field gets the focus (name before blood)
-  fillValid({ name: '', blood: '' }); submit();
+  openAdd(); fillValid({ name: '', blood: '' }); submit();
   assert.equal(focused, 'ptf-name');
-  assert.ok(errText('name') && errText('blood'));
-  // picking a group clears the error
-  elements['ptf-blood'].value = 'B-'; elements['ptf-blood'].fire('change');
+  assert.ok(errText('name'));
+  assert.equal(errText('blood'), '');
+  // picking a group saves properly
+  openAdd(); fillValid({ blood: 'B-' }); submit();
+  assert.equal(tables.patients[0].blood, 'B-');
   assert.equal(errText('blood'), '');
 
   // ---- every one of the 8 groups saves ----
@@ -119,17 +121,19 @@ function run(base) {
   assert.equal(tables.patients.length, 1, 'CNIC is optional'); assert.equal(tables.patients[0].cnic, '');
   openAdd(); fillValid({ cnic: '35202-12345' }); submit();
   assert.equal(tables.patients.length, 0, 'short CNIC blocked'); assert.match(errText('cnic'), /13 digits/); assert.equal(focused, 'ptf-cnic');
-  openAdd(); fillValid({ cnic: '35202-1234567-1' }); fillValid({ blood: '' }); submit();
-  assert.equal(focused, 'ptf-blood', 'valid CNIC does not hide the blood group error'); assert.equal(errText('cnic'), '');
+  openAdd(); fillValid({ cnic: '35202-1234567-1', blood: '' }); submit();
+  assert.equal(tables.patients.length, 1, 'valid CNIC and empty blood saves'); assert.equal(errText('cnic'), ''); assert.equal(errText('blood'), '');
 
   // ---- Edit form ----
   const existing = { id: 'PX', name: 'Old Patient', age: 40, gender: 'Male', blood: '', phone: '0300-1111111', whatsapp: '0300-1111111', cnic: '' };
-  tables.patients = [existing];
+  tables.patients = [existing]; closed = 0;
   App.testOpen(existing); modalOpen();
   assert.ok(/<option value="">Select blood group<\/option>/.test(modalHtml) && !/ selected>/.test(modalHtml.match(/<select[^>]*id="ptf-blood"[\s\S]*?<\/select>/)[0]), 'Old patient without a blood group starts on the placeholder');
   submit();
-  assert.equal(errText('blood'), 'Please select the blood group.', 'Saving the edit form forces a blood group');
+  assert.equal(errText('blood'), '', 'Saving the edit form does not force a blood group');
   assert.equal(existing.blood, '');
+  assert.equal(closed, 1);
+  App.testOpen(existing); modalOpen();
   elements['ptf-blood'].value = 'AB+'; elements['ptf-cnic'].value = '3520112345679'; elements['ptf-cnic'].fire('input'); submit();
   assert.equal(existing.blood, 'AB+'); assert.equal(existing.cnic, '35201-1234567-9', 'Edit saves CNIC');
   // existing legacy "Unknown" blood group is not offered as a choice
@@ -143,7 +147,7 @@ function run(base) {
   tables.patients.push(odd);
   App.testOpen(odd); modalOpen(); fillValid({ blood: 'A+' }); elements['ptf-cnic'].value = 'PK-pending'; submit();
   assert.equal(errText('cnic'), '', 'untouched old value tolerated');
-  console.log('PASS: ' + (base || 'web') + ' patient form: CNIC field (optional, auto-dash, 13 digits, saved on add + edit) and required blood group (blocked, inline error, focus, no Unknown, old patients forced on save).');
+  console.log('PASS: ' + (base || 'web') + ' patient form: CNIC field (optional, auto-dash, 13 digits, saved on add + edit) and optional blood group (saved with or without group, no Unknown, edit untouched).');
 }
 run('');
 for (const base of ['electron-src', 'electron-tools/installer/app-stage-win7']) run(base);

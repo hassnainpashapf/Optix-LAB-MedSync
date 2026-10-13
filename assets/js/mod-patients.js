@@ -202,7 +202,7 @@
     var d = cnicDigits(v);
     return d.length > 12 ? d.slice(0, 5) + '-' + d.slice(5, 12) + '-' + d.slice(12) : (d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d);
   }
-  /* Blood group is required on every staff patient form: a real group, never blank / "Unknown" */
+  /* Blood group is optional on every staff patient form */
   function isRealBlood(v) { v = String(v == null ? '' : v).trim(); return !!v && !/^(unknown|select.*|n\/?a|none|-+)$/i.test(v); }
   var PTF_FSTYLE = '<style>' +
     '#ptf-form.form-grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:10px 14px}' +
@@ -258,7 +258,7 @@
       '<div class="form-2col">' +
       '<div class="form-row"><label class="label" for="ptf-dob">Date of Birth</label>' +
       '<input class="input" id="ptf-dob" type="date" value="' + val('dob') + '"></div>' +
-      '<div class="form-row"><label class="label" for="ptf-blood">Blood Group *</label>' +
+      '<div class="form-row"><label class="label" for="ptf-blood">Blood Group</label>' +
       '<select class="select" id="ptf-blood">' +
       App.optionsHtml('bloodGroup', isRealBlood(p.blood) ? p.blood : '', 'Select blood group') +
       '</select><div class="f-err" id="ptf-e-blood"></div></div>' +
@@ -468,7 +468,6 @@
       var age = parseInt(ageRaw, 10);
       if (!ageRaw || isNaN(age) || age < 1 || age > 120) bad('ptf-age', 'ptf-e-age', 'Enter a valid age (1–120).');
       if (!gender) bad('ptf-gender', 'ptf-e-gender', 'Please select gender.');
-      if (!isRealBlood(blood)) bad('ptf-blood', 'ptf-e-blood', 'Please select the blood group.');
       if (num && !/^[+\d][\d\s\-()]{5,19}$/.test(num)) bad('ptf-whatsapp', 'ptf-e-whatsapp', 'Enter a valid mobile number.');
       /* CNIC is optional; when filled it needs 13 digits (an unchanged old value is left alone) */
       var cnic = cnicDigits(cnicRaw).length === 13 ? cnicFormat(cnicRaw) : cnicRaw;
@@ -483,7 +482,7 @@
       }
       var data = { name: name, age: age, gender: gender, address: address,
         father: father, dob: dob,
-        blood: blood, doctorId: doctorId, notes: notes };
+        blood: isRealBlood(blood) ? blood : '', doctorId: doctorId, notes: notes };
       if (cnicEl) data.cnic = cnic;
       /* one number serves WhatsApp, reports and the patient portal; an existing patient's numbers are only touched when the box was changed */
       if (!(existing && existing.id) || num !== String(existing.whatsapp || existing.phone || '')) { data.phone = num; data.whatsapp = num; }
