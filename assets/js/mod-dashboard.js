@@ -437,19 +437,19 @@
     function ptAvatar(name, idx) {
       var initials = (name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).slice(0, 2).join('').toUpperCase();
       var bg = AVATAR_COLORS[idx % AVATAR_COLORS.length];
-      return '<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:' + bg + ';color:#fff;font-size:13.5px;font-weight:800;flex:none;letter-spacing:-.3px">' + App.esc(initials) + '</span>';
+      return '<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:' + bg + ';color:#fff;font-size:13.5px;font-weight:700;flex:none;letter-spacing:-.3px">' + App.esc(initials) + '</span>';
     }
     function genderBadge(g) {
       var v = String(g || '').toLowerCase().charAt(0);
-      if (v === 'm') return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:800;border:1px solid #bfdbfe;flex:none">M</span>';
-      if (v === 'f') return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fdf2f8;color:#db2777;font-size:11px;font-weight:800;border:1px solid #fbcfe8;flex:none">F</span>';
+      if (v === 'm') return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:700;border:1px solid #bfdbfe;flex:none">M</span>';
+      if (v === 'f') return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fdf2f8;color:#db2777;font-size:11px;font-weight:700;border:1px solid #fbcfe8;flex:none">F</span>';
       return '';
     }
     function statusBadge(inv) {
       var due = parseFloat(inv.due || 0), total = parseFloat(inv.total || 0);
-      if (due <= 0) return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#ecfdf3;color:#16a34a;border:1px solid #86efac;text-align:center">Paid</span>';
-      if (due >= total) return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;text-align:center">Unpaid</span>';
-      return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#fffbeb;color:#d97706;border:1px solid #fde68a;text-align:center">Partial</span>';
+      if (due <= 0) return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#ecfdf3;color:#16a34a;border:1px solid #86efac;text-align:center">Paid</span>';
+      if (due >= total) return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;text-align:center">Unpaid</span>';
+      return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fffbeb;color:#d97706;border:1px solid #fde68a;text-align:center">Partial</span>';
     }
 
     /* Gather real recent invoices sorted by newest first */
@@ -477,18 +477,18 @@
     var ptRowsHtml = useDemo
       ? demoPatRows.map(function (r, i) {
           var statusHtml = r.status === 'paid'
-            ? '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#ecfdf3;color:#16a34a;border:1px solid #86efac;text-align:center">Paid</span>'
+            ? '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#ecfdf3;color:#16a34a;border:1px solid #86efac;text-align:center">Paid</span>'
             : r.status === 'unpaid'
-            ? '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;text-align:center">Unpaid</span>'
-            : '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:700;background:#fffbeb;color:#d97706;border:1px solid #fde68a;text-align:center">Partial</span>';
+            ? '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;text-align:center">Unpaid</span>'
+            : '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fffbeb;color:#d97706;border:1px solid #fde68a;text-align:center">Partial</span>';
           var gBadge = genderBadge(r.gender);
           return '<tr>' +
             '<td><div style="display:flex;align-items:center;gap:12px">' + ptAvatar(r.name, i) +
-            '<div><b style="font-size:13.5px;font-weight:800;color:#1b2a4a;display:block;letter-spacing:-.1px">' + App.esc(r.name) + '</b>' +
+            '<div><b style="font-size:13.5px;font-weight:600;color:#1b2a4a;display:block;letter-spacing:-.1px">' + App.esc(r.name) + '</b>' +
             '<small style="color:#8a94a6;font-size:12px;font-weight:500;display:block;margin-top:2px">' + App.esc(r.phone) + '</small></div></div></td>' +
             '<td><div style="display:flex;align-items:center;gap:7px">' + gBadge + '<span style="font-size:13px;color:#475569;font-weight:500">' + App.esc(r.age) + ' yr</span></div></td>' +
             '<td style="font-size:13px;color:#475569;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(r.tests) + '">' + App.esc(r.tests) + '</td>' +
-            '<td style="font-size:14px;font-weight:800;color:#1b2a4a">' + App.esc(r.amount) + '</td>' +
+            '<td style="font-size:14px;font-weight:600;color:#1b2a4a">' + App.esc(r.amount) + '</td>' +
             '<td>' + statusHtml + '</td>' +
             '<td style="font-size:13px;color:#8a94a6;white-space:nowrap;font-weight:500">' + App.esc(r.date) + '</td>' +
             '<td><a href="#/patients" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #86efac;background:#fff;color:#16a34a;transition:all .15s" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
@@ -507,11 +507,11 @@
           var invDate = inv.createdAt ? (function () { var d = new Date(inv.createdAt); var dd = d.getDate(), mm = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()], yy = d.getFullYear(); var todayStr = today; var dStr = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); return dStr === todayStr ? 'Today' : dStr === (function(){var x=new Date();x.setDate(x.getDate()-1);return x.getFullYear()+'-'+('0'+(x.getMonth()+1)).slice(-2)+'-'+('0'+x.getDate()).slice(-2)})() ? 'Yesterday' : dd + ' ' + mm + ' ' + yy; })() : '—';
           return '<tr>' +
             '<td><div style="display:flex;align-items:center;gap:12px">' + ptAvatar(pName, i) +
-            '<div><b style="font-size:13.5px;font-weight:800;color:#1b2a4a;display:block;letter-spacing:-.1px">' + App.esc(pName) + '</b>' +
+            '<div><b style="font-size:13.5px;font-weight:600;color:#1b2a4a;display:block;letter-spacing:-.1px">' + App.esc(pName) + '</b>' +
             '<small style="color:#8a94a6;font-size:12px;font-weight:500;display:block;margin-top:2px">' + App.esc(phone) + '</small></div></div></td>' +
             '<td><div style="display:flex;align-items:center;gap:7px">' + gender + '<span style="font-size:13px;color:#475569;font-weight:500">' + App.esc(age) + '</span></div></td>' +
             '<td style="font-size:13px;color:#475569;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(testNames) + '">' + App.esc(testNames) + '</td>' +
-            '<td style="font-size:14px;font-weight:800;color:#1b2a4a">' + App.esc(amount) + '</td>' +
+            '<td style="font-size:14px;font-weight:600;color:#1b2a4a">' + App.esc(amount) + '</td>' +
             '<td>' + statusBadge(inv) + '</td>' +
             '<td style="font-size:13px;color:#8a94a6;white-space:nowrap;font-weight:500">' + App.esc(invDate) + '</td>' +
             '<td><a href="#/patients/' + App.esc(inv.patientId) + '" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #86efac;background:#fff;color:#16a34a;transition:all .15s" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
