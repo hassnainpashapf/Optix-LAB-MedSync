@@ -529,9 +529,8 @@
     chartB = bigCard('Tests &amp; Invoices', 'Last 7 days', chip('Tests ordered', sum(tests7), '#7c3aed') + chip('Invoices', sum(inv7), '#ea580c') + chip('Today', tests7[6] + ' tests'),
       chartSvg({ label: 'Tests ordered and invoices per day', bars: [{ name: 'Invoices', data: inv7, color: '#fdba74' }], line: { name: 'Tests ordered', data: tests7, color: '#7c3aed' } }), legend([['Invoices', '#fdba74'], ['Tests ordered', '#7c3aed']]), isTech ? null : ['#/invoices', 'Invoices']);
     var chartsHtml = '<div class="db-charts">' + chartA + chartB + '</div>';
-    var smartHtml = '<section class="db-smart"><div class="ov-head sm"><div><h2>Smart Dashboard</h2><p>Branch performance and most-ordered tests</p></div>' +
-      '<select class="select" id="dbAnalyticsPeriod" aria-label="Analytics period"><option value="30">Last 30 days</option><option value="90">Last 90 days</option><option value="all">All time</option></select></div>' +
-      '<div id="dbSmartBody">' + smartAnalyticsBody('30') + '</div></section>';
+    /* the Smart Dashboard section was removed from the dashboard (smartAnalyticsBody is kept for the tests / later use) */
+
 
     return '<div class="db-page">' +
     '<style>' +
@@ -572,7 +571,6 @@
     ovHead + critCard() + ovGrid +
     '<h3 class="ov-h3">Quick access</h3>' + quickCss + quickAccess +
     '<div class="ov-two"><div class="ov-col">' + chartA + chartB + '</div><div class="ov-col">' + patCard + pendCard + '</div></div>' +
-    smartHtml +
     '</div>';
     } /* end buildDashboard */
 
@@ -615,11 +613,6 @@
       var ovSel = v.querySelector('#ovPeriod');
       if (ovSel) ovSel.addEventListener('change', function () {
         var g = v.querySelector('#ovGrid'); if (g && window.__ovCards) { g.innerHTML = window.__ovCards(ovSel.value); scheduleCountUp(); }
-      });
-      var periodSelect = v.querySelector('#dbAnalyticsPeriod');
-      if (periodSelect) periodSelect.addEventListener('change', function () {
-        var body = v.querySelector('#dbSmartBody');
-        if (body) body.innerHTML = smartAnalyticsBody(periodSelect.value);
       });
       scheduleCountUp();
     }, 120);

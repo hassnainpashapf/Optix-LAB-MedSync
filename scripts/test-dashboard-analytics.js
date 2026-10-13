@@ -58,8 +58,6 @@ for (const relPath of dashboardPaths) {
   const start = source.indexOf('    function reportPeriod(period) {');
   const end = source.indexOf('    /* ---------- loading skeletons', start);
   assert.ok(start >= 0 && end > start, relPath + ': analytics helper block was not found');
-  assert.ok(source.includes('id="dbAnalyticsPeriod"'), relPath + ': analytics period selector is missing');
-  assert.ok(source.includes('smartAnalyticsBody(periodSelect.value)'), relPath + ': period changes are not wired');
 
   const data = fixture();
   const context = {
