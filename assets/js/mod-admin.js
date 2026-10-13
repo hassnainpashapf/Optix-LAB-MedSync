@@ -3875,8 +3875,57 @@
         .map(function (r) { return '<div style="border:1px solid var(--line);border-radius:12px;padding:12px 14px"><div>' + roleBadge(r[0]) + '</div><div class="muted" style="font-size:12.5px;margin-top:6px;line-height:1.5">' + r[2] + '</div></div>'; }).join('')
       + '</div>'
       + customRolesHtml()
-      + '<p class="muted" style="font-size:12.5px;margin-top:10px">A <strong>doctor login</strong> does not use up one of your staff seats. Create it with <b>+ Doctor login</b>, then give the doctor your <b>Lab ID</b>, his username and password. He signs in on the normal sign-in page (web or Android app).</p>';
+      + (function () {
+        var mainSettings = DB.get('settings', 'main') || {};
+        var aiRoles = Array.isArray(mainSettings.aiInsightsRoles) ? mainSettings.aiInsightsRoles : ['admin', 'doctor', 'technician'];
+        var techChecked = aiRoles.indexOf('technician') >= 0;
+        var recepChecked = aiRoles.indexOf('reception') >= 0;
+        return '<div style="margin-top:22px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:14px;padding:16px 18px">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'
+          + '<div>'
+          + '<div style="display:flex;align-items:center;gap:8px">'
+          + '<h3 style="margin:0;font-size:16px;color:#1e293b">🤖 AI Doctor Recommendations (5 Solutions) Permissions</h3>'
+          + '<span class="badge b-paid" style="font-size:11px">Role Access</span>'
+          + '</div>'
+          + '<p class="muted" style="font-size:12.5px;margin:4px 0 0">Control which staff roles can view and use the AI Clinical Decision Support tool on lab reports.</p>'
+          + '</div>'
+          + '<button class="btn btn-primary btn-sm" id="btnSaveAiPerms" style="background:#4f46e5;font-weight:700">Save AI Permissions</button>'
+          + '</div>'
+          + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px">'
+          + '<div style="background:#fff;border:1px solid #bbf7d0;border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:10px">'
+          + '<input type="checkbox" checked disabled style="width:17px;height:17px;margin-top:2px;accent-color:#16a34a">'
+          + '<div><b style="color:#166534">Doctor Account</b> <span class="badge b-paid" style="font-size:10px;margin-left:4px">Mandatory</span><div class="muted" style="font-size:11.5px;margin-top:2px">Always enabled for referring & attending doctors.</div></div>'
+          + '</div>'
+          + '<div style="background:#fff;border:1px solid #bbf7d0;border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:10px">'
+          + '<input type="checkbox" checked disabled style="width:17px;height:17px;margin-top:2px;accent-color:#16a34a">'
+          + '<div><b style="color:#166534">Admin Account</b> <span class="badge b-paid" style="font-size:10px;margin-left:4px">Full Access</span><div class="muted" style="font-size:11.5px;margin-top:2px">Full administrative access and permission control.</div></div>'
+          + '</div>'
+          + '<label style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:10px;cursor:pointer">'
+          + '<input type="checkbox" id="aiPermTech"' + (techChecked ? ' checked' : '') + ' style="width:17px;height:17px;margin-top:2px;accent-color:#4f46e5">'
+          + '<div><b style="color:#0f172a">Technician</b><div class="muted" style="font-size:11.5px;margin-top:2px">Lab technologists entering & validating results.</div></div>'
+          + '</label>'
+          + '<label style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:10px;cursor:pointer">'
+          + '<input type="checkbox" id="aiPermRecep"' + (recepChecked ? ' checked' : '') + ' style="width:17px;height:17px;margin-top:2px;accent-color:#4f46e5">'
+          + '<div><b style="color:#0f172a">Reception</b><div class="muted" style="font-size:11.5px;margin-top:2px">Front desk & intake staff viewing patient reports.</div></div>'
+          + '</label>'
+          + '</div>'
+          + '</div>';
+      })()
+      + '<p class="muted" style="font-size:12.5px;margin-top:14px">A <strong>doctor login</strong> does not use up one of your staff seats. Create it with <b>+ Doctor login</b>, then give the doctor your <b>Lab ID</b>, his username and password. He signs in on the normal sign-in page (web or Android app).</p>';
     document.getElementById('setBody').innerHTML = html;
+
+    var saveAiBtn = document.getElementById('btnSaveAiPerms');
+    if (saveAiBtn) {
+      saveAiBtn.addEventListener('click', function () {
+        var roles = ['admin', 'doctor'];
+        if ((document.getElementById('aiPermTech') || {}).checked) roles.push('technician');
+        if ((document.getElementById('aiPermRecep') || {}).checked) roles.push('reception');
+        var st = DB.get('settings', 'main') || {};
+        st.aiInsightsRoles = roles;
+        DB.update('settings', 'main', st);
+        App.toast('AI Recommendations permissions saved.');
+      });
+    }
 
     document.getElementById('crNew').addEventListener('click', function () { openRoleModal(null); });
     document.querySelectorAll('[data-cr-edit]').forEach(function (b) { b.addEventListener('click', function () { openRoleModal(b.getAttribute('data-cr-edit')); }); });

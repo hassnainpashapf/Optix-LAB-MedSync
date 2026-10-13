@@ -115,6 +115,7 @@
     return '<div class="pt-rep"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><b>' + esc(doc ? (r.patient || r.no) : r.no) + '</b><div class="m">' + (doc ? esc(r.no) + ' · ' : '') + dlabel(r.date) + '</div></div>' + chip + '</div>' +
       '<div class="t">' + esc(r.tests || '—') + '</div>' + (doc && r.total ? '<div class="m">Billed ' + money(r.total) + '</div>' : '') +
       (r.status === 'ready' && r.link ? '<a class="pt-open" href="' + esc(r.link) + '" target="_blank" rel="noopener">Open / download report</a>' : '') +
+      (doc && r.status === 'ready' ? ' <button type="button" class="pt-open pt-doc-ai-btn" data-doc-ai="' + esc(r.id || r.invoiceId || r.no) + '" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;margin-left:8px;padding:6px 14px;border-radius:8px;font-weight:700;display:inline-flex;align-items:center;gap:6px;cursor:pointer">🤖 AI Doctor Recommendations (5 Solutions)</button>' : '') +
       (r.status === 'locked' ? '<div class="m" style="margin-top:6px">Balance ' + money(r.due) + ' is pending. Please clear it at the lab to get your report here.</div>' : '') +
       (r.status === 'preparing' ? '<div class="m" style="margin-top:6px">The report is finishing up. Please check again in a few minutes.</div>' : '') + '</div>';
   }
@@ -373,6 +374,52 @@
     Array.prototype.forEach.call(document.querySelectorAll('[data-v]'), function (b) { b.addEventListener('click', function () { S.view = b.getAttribute('data-v'); S.q = ''; S.filt = 'all'; paint(); window.scrollTo(0, 0); }); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-role]'), function (b) { b.addEventListener('click', function () { S.role = b.getAttribute('data-role'); S.view = 'home'; S.q = ''; S.filt = 'all'; paint(); }); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-f]'), function (b) { b.addEventListener('click', function () { S.filt = b.getAttribute('data-f'); paint(); }); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-doc-ai]'), function (b) {
+      b.addEventListener('click', function () {
+        var invId = b.getAttribute('data-doc-ai');
+        var dRep = ((S.data && S.data.doctor && S.data.doctor.reports) || []).filter(function (x) {
+          return String(x.id || x.invoiceId || x.no) === String(invId);
+        })[0];
+
+        function launchAi() {
+          if (!window.App || !window.App.aiInsights) {
+            window.App = window.App || {};
+            var v = window.__ASSET_V || '293';
+            var s = document.createElement('script');
+            s.src = 'assets/js/mod-ai-insights.js?v=' + v;
+            s.onload = launchAi;
+            document.head.appendChild(s);
+            return;
+          }
+          var directData = null;
+          if (dRep) {
+            var rawGroups = [];
+            if (Array.isArray(dRep.results) && dRep.results.length) {
+              rawGroups = dRep.results.map(function (res) {
+                return {
+                  test: { name: res.testName, params: res.params },
+                  res: { values: res.values }
+                };
+              });
+            } else if (dRep.tests) {
+              rawGroups = [{
+                test: { name: dRep.tests, params: [] },
+                res: { values: {} }
+              }];
+            }
+            directData = {
+              pt: { name: dRep.patient, age: dRep.age, gender: dRep.gender },
+              inv: { id: dRep.id || dRep.invoiceId || dRep.no, no: dRep.no },
+              doc: { name: (S.data && S.data.doctor && S.data.doctor.names && S.data.doctor.names[0]) || 'Doctor' },
+              groups: rawGroups
+            };
+          }
+          window.App.aiInsights.showModal(invId, directData);
+        }
+
+        launchAi();
+      });
+    });
     var q = document.getElementById('ptQ'); if (q) q.addEventListener('input', function () { S.q = q.value; var pos = q.selectionStart; paint(); var n = document.getElementById('ptQ'); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (e) {} } });
     var f = document.getElementById('ptPhone') || document.getElementById('ptCode') || document.getElementById('ptLab'); if (f && S.step !== 'app') { try { f.focus(); } catch (e) {} }
   }

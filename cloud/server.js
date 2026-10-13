@@ -1795,18 +1795,31 @@ async function main() {
 
     async function portalBuild(req, lab, st, set, w) {
       const invs = await st.all('invoices'), results = await st.all('results'), patById = {}; (await st.all('patients')).forEach((p) => { patById[p.id] = p; });
-        const gatewayReady = patientPayReady(await patientPayConfig(lab.id));
-        const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
-        const allPayments = await st.all('payments'), claims = await st.all('onlinepay_claims');
-        const allAppointments = await st.all('appointments');
-        const reportOf = (inv, forDoctor) => {
-          const rs = byInv[inv.id] || [], items = Array.isArray(inv.items) ? inv.items : [], done = rs.length > 0 && items.every((it) => rs.some((r) => r.testId === it.testId && r.status === 'ready') || rs.some((r) => r.status === 'ready' && it.isPackage));
-          const ready = rs.length > 0 && rs.every((r) => r.status === 'ready') && done, due = +inv.due || 0;
-          const key = inv.reportPdfKey, havePdf = !!key && REPORT_KEY_RE.test(String(key)) && fs.existsSync(path.join(REPORT_PDFS_DIR, key + '.pdf'));
-          return { no: inv.no || inv.id, date: inv.createdAt, patient: (patById[inv.patientId] || {}).name || '', tests: items.map((x) => x.name || x.code || '').filter(Boolean).join(', ').slice(0, 200),
-            status: ready ? ((due > 0.009 && !forDoctor) ? 'locked' : (havePdf ? 'ready' : 'preparing')) : 'pending', due: due > 0.009 ? Math.round(due) : 0, total: forDoctor ? Math.round(+inv.total || 0) : undefined,
-            link: ready && havePdf && (due <= 0.009 || forDoctor) ? linkOf(req, key) : '' };
+      const tById = {}; (await st.all('tests')).forEach((t) => { tById[t.id] = t; });
+      const gatewayReady = patientPayReady(await patientPayConfig(lab.id));
+      const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
+      const allPayments = await st.all('payments'), claims = await st.all('onlinepay_claims');
+      const allAppointments = await st.all('appointments');
+      const reportOf = (inv, forDoctor) => {
+        const rs = byInv[inv.id] || [], items = Array.isArray(inv.items) ? inv.items : [], done = rs.length > 0 && items.every((it) => rs.some((r) => r.testId === it.testId && r.status === 'ready') || rs.some((r) => r.status === 'ready' && it.isPackage));
+        const ready = rs.length > 0 && rs.every((r) => r.status === 'ready') && done, due = +inv.due || 0;
+        const key = inv.reportPdfKey, havePdf = !!key && REPORT_KEY_RE.test(String(key)) && fs.existsSync(path.join(REPORT_PDFS_DIR, key + '.pdf'));
+        const pat = patById[inv.patientId] || {};
+        return {
+          id: inv.id, invoiceId: inv.id, no: inv.no || inv.id, date: inv.createdAt,
+          patient: pat.name || '', age: pat.age, gender: pat.gender || pat.sex,
+          tests: items.map((x) => x.name || x.code || '').filter(Boolean).join(', ').slice(0, 200),
+          status: ready ? ((due > 0.009 && !forDoctor) ? 'locked' : (havePdf ? 'ready' : 'preparing')) : 'pending',
+          due: due > 0.009 ? Math.round(due) : 0, total: forDoctor ? Math.round(+inv.total || 0) : undefined,
+          link: ready && havePdf && (due <= 0.009 || forDoctor) ? linkOf(req, key) : '',
+          results: forDoctor ? rs.map((r) => ({
+            testId: r.testId,
+            testName: (tById[r.testId] || {}).name || '',
+            values: r.values || {},
+            params: (tById[r.testId] || {}).params || []
+          })) : undefined
         };
+      };
         const out = { ok: true, lab: { name: set.labName || lab.name }, patient: null, doctor: null };
         if (w.pats.length) {
           const ids = {}; w.pats.forEach((p) => { ids[p.id] = 1; });
@@ -1848,7 +1861,6 @@ async function main() {
         }
         if (w.docs.length) {
           const dids = {}; w.docs.forEach((d) => { dids[d.id] = d; });
-          const tById = {}; (await st.all('tests')).forEach((t) => { tById[t.id] = t; });
           const commissionOf = (inv, doc, tests) => {   /* same rules as the app: test rule > category rule > default % */
             const total = +inv.total || 0, base = +doc.commissionPct || 0, rules = Array.isArray(doc.commissionRules) ? doc.commissionRules : [];
             if (!rules.length) return total * base / 100;

@@ -3327,6 +3327,10 @@
         ? '<button class="btn btn-ghost" id="rvWaDoctor">' + WA_ICON + ' Send to Doctor (WhatsApp)</button>'
         : '<button class="btn btn-ghost" id="rvWaDoctor" disabled title="No WhatsApp number on file" style="opacity:.45;cursor:not-allowed">' + WA_ICON + ' Send to Doctor (WhatsApp)</button>';
     }
+    var canSeeAi = (!window.App || !App.aiInsights || typeof App.aiInsights.canAccess !== 'function') || App.aiInsights.canAccess();
+    var aiBtnHtml = canSeeAi
+      ? '<button type="button" class="btn btn-primary" id="rvAiInsights" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,58,237,.35)">🤖 AI Doctor Recommendations (5 Solutions)</button>'
+      : '';
     var htmlContent = previewQr(reportHtml(d), invoiceId);
     var activeBlobUrl = null;
     var close = App.modal('Lab Report — ' + App.esc(d.inv.no),
@@ -3354,7 +3358,7 @@
       '<div id="rvAuto" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>' +
       '<div class="actions" style="margin-top:12px;flex-wrap:wrap;justify-content:flex-end;gap:8px">' +
         '<button class="btn btn-ghost" id="rvClose">Close</button>' +
-        '<button type="button" class="btn btn-primary" id="rvAiInsights" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,58,237,.35)">🤖 AI Doctor Recommendations (5 Solutions)</button>' +
+        aiBtnHtml +
         '<button class="btn btn-ghost" id="rvWaPatient">' + WA_ICON + ' Send to Patient (WhatsApp)</button>' +
         docWaBtn +
         '<button class="btn btn-ghost" id="rvSmsPatient">📲 Send SMS to Patient</button>' +
@@ -4342,6 +4346,7 @@
       if (!rpgroups.length) {
         bodyHtml = App.empty(query ? 'No ready reports match your search.' : 'No ready reports yet.');
       } else {
+        var canSeeAi = (!window.App || !App.aiInsights || typeof App.aiInsights.canAccess !== 'function') || App.aiInsights.canAccess();
         var rprowsHtml = rpgroups.map(function (pg, pi) {
           var pat = pg.patient || {};
           // group this patient's ready rows by invoice for per-report actions
@@ -4362,7 +4367,7 @@
             var inv = invMap[iid].invoice;
             var cmpBtn = '';
             return '<div style="margin-bottom:4px;white-space:nowrap">' +
-              '<button class="btn btn-ghost btn-sm" data-rai="' + App.esc(inv.id) + '" style="color:#7c3aed;font-weight:700" title="AI Doctor Recommendations">🤖 AI</button> ' +
+              (canSeeAi ? '<button class="btn btn-ghost btn-sm" data-rai="' + App.esc(inv.id) + '" style="color:#7c3aed;font-weight:700" title="AI Doctor Recommendations">🤖 AI</button> ' : '') +
               '<button class="btn btn-ghost btn-sm" data-rview="' + App.esc(inv.id) + '">View</button> ' +
               '<button class="btn btn-primary btn-sm" data-rprint="' + App.esc(inv.id) + '">' + PRINT_ICON + ' Print</button>' + cmpBtn + '</div>';
           }).join('');
@@ -4486,6 +4491,7 @@
       '<select class="select" id="olDoc" style="width:auto"><option value="">All doctors</option>' + docs.map(function (d) { return '<option value="' + App.esc(d.id) + '"' + (old.doc === d.id ? ' selected' : '') + '>' + App.esc(d.name) + '</option>'; }).join('') + '</select>' +
       ((old.q || old.from || old.to || old.doc) ? '<button class="btn btn-ghost btn-sm" id="olClear">Clear</button>' : '') +
       '<div style="margin-left:auto;font-weight:700;font-size:14px;color:var(--ink2)">Old Reports <span class="badge b-ready" style="margin-left:6px">' + rows.length + (rows.length !== all.length ? ' of ' + all.length : '') + '</span></div></div>';
+    var canSeeAi = (!window.App || !App.aiInsights || typeof App.aiInsights.canAccess !== 'function') || App.aiInsights.canAccess();
     var body = !slice.length ? App.empty(all.length ? 'No report matches your search.' : 'No finished reports yet.') :
       '<div class="tbl-wrap"><table class="table"><thead><tr><th>INV # / Invoice no.</th><th>Registered</th><th>Patient</th><th>Tests</th><th>Doctor</th><th>Reported</th><th>Bill</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + slice.map(function (g) {
         var inv = g.inv, vn = App.visitNos(inv), d = inv.doctorId ? DB.get('doctors', inv.doctorId) : null, names = g.rows.map(function (r) { return testName(r); }).filter(Boolean);
@@ -4494,7 +4500,7 @@
           '<td style="max-width:260px;font-size:13px">' + App.esc(names.slice(0, 3).join(', ')) + (names.length > 3 ? ' <span class="muted">+' + (names.length - 3) + ' more</span>' : '') + '</td>' +
           '<td>' + App.esc(d ? d.name : 'Self') + '</td><td class="muted">' + App.esc(g.last ? App.d(g.last) : '—') + '</td>' +
           '<td>' + ((+inv.due || 0) > 0.009 ? '<span class="badge b-unpaid">Due ' + App.esc(App.money(inv.due)) + '</span>' : '<span class="badge b-paid">Paid</span>') + '</td>' +
-          '<td style="text-align:right;white-space:nowrap"><button class="btn btn-ghost btn-sm" data-oai="' + App.esc(inv.id) + '" style="color:#7c3aed;font-weight:700" title="AI Doctor Recommendations">🤖 AI</button> <button class="btn btn-ghost btn-sm" data-ov="' + App.esc(inv.id) + '">View</button> <button class="btn btn-ghost btn-sm" data-op="' + App.esc(inv.id) + '">Print</button> <button class="btn btn-ghost btn-sm" data-oe="' + App.esc(inv.id) + '">Edit</button> <button class="btn btn-ghost btn-sm" data-od="' + App.esc(inv.id) + '" style="color:#b91c1c">Delete</button></td></tr>';
+          '<td style="text-align:right;white-space:nowrap">' + (canSeeAi ? '<button class="btn btn-ghost btn-sm" data-oai="' + App.esc(inv.id) + '" style="color:#7c3aed;font-weight:700" title="AI Doctor Recommendations">🤖 AI</button> ' : '') + '<button class="btn btn-ghost btn-sm" data-ov="' + App.esc(inv.id) + '">View</button> <button class="btn btn-ghost btn-sm" data-op="' + App.esc(inv.id) + '">Print</button> <button class="btn btn-ghost btn-sm" data-oe="' + App.esc(inv.id) + '">Edit</button> <button class="btn btn-ghost btn-sm" data-od="' + App.esc(inv.id) + '" style="color:#b91c1c">Delete</button></td></tr>';
       }).join('') + '</tbody></table></div>' +
       (pages > 1 ? '<div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px"><button class="btn btn-ghost btn-sm" id="olPrev"' + (old.page <= 1 ? ' disabled' : '') + '>&larr; Newer</button><span class="muted" style="font-size:13px">Page ' + old.page + ' of ' + pages + '</span><button class="btn btn-ghost btn-sm" id="olNext"' + (old.page >= pages ? ' disabled' : '') + '>Older &rarr;</button></div>' : '');
     view.innerHTML = oldKpis(all) + bar + '<div class="card"><div class="card-b">' + body + '</div></div>';

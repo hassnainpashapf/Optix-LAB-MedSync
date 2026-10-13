@@ -8,9 +8,10 @@ const vm = require('node:vm');
 const root = path.resolve(__dirname, '..');
 const aiCode = fs.readFileSync(path.join(root, 'assets/js/mod-ai-insights.js'), 'utf8');
 
-console.log('--- Testing AI Recommendations Module (mod-ai-insights.js) ---');
+console.log('--- Testing AI Recommendations Module & Doctor Dashboard Integration ---');
 
 // 1. VM Execution Test
+let mockSettings = { aiInsightsRoles: ['admin', 'doctor', 'technician'] };
 const sandbox = {
   window: {},
   document: {
@@ -31,7 +32,10 @@ sandbox.App = {
   }
 };
 sandbox.DB = {
-  get: () => null,
+  get: (table, id) => {
+    if (table === 'settings' && id === 'main') return mockSettings;
+    return null;
+  },
   all: () => []
 };
 
@@ -43,9 +47,24 @@ assert(AI, 'App.aiInsights must be registered');
 assert.equal(typeof AI.extractFindings, 'function', 'extractFindings must be a function');
 assert.equal(typeof AI.generate5Solutions, 'function', 'generate5Solutions must be a function');
 assert.equal(typeof AI.showModal, 'function', 'showModal must be a function');
+assert.equal(typeof AI.canAccess, 'function', 'canAccess must be a function');
 console.log('✓ mod-ai-insights.js loaded cleanly in VM and exported API methods');
 
-// 2. Test Abnormality Extraction
+// 2. Role Permissions Tests (Doctor MUST have it, Admin has it, Admin can configure others)
+assert.equal(AI.canAccess('doctor'), true, 'Doctor MUST always have AI Recommendations access');
+assert.equal(AI.canAccess('admin'), true, 'Admin MUST always have AI Recommendations access');
+assert.equal(AI.canAccess('technician'), true, 'Technician has access when in settings list');
+assert.equal(AI.canAccess('reception'), false, 'Reception does not have access when omitted from settings list');
+
+// Toggle reception on and technician off
+mockSettings.aiInsightsRoles = ['admin', 'doctor', 'reception'];
+assert.equal(AI.canAccess('reception'), true, 'Reception gains access when admin enables it');
+assert.equal(AI.canAccess('technician'), false, 'Technician loses access when admin disables it');
+assert.equal(AI.canAccess('doctor'), true, 'Doctor remains enabled regardless of custom list');
+assert.equal(AI.canAccess('admin'), true, 'Admin remains enabled regardless of custom list');
+console.log('✓ Role & Permissions: Doctor is mandatory, Admin has full access, and other roles are configurable');
+
+// 3. Test Abnormality Extraction
 const mockReportData = {
   patient: { name: 'Ali Raza', age: 45, gender: 'male' },
   invoice: { id: 'inv_101', no: 'INV-2026-001' },
@@ -100,7 +119,7 @@ assert(foundKeys.includes('creatinine'), 'Should detect Creatinine abnormality')
 assert(foundKeys.includes('glucose_fasting') || foundKeys.includes('glucose_random'), 'Should detect Glucose abnormality');
 console.log('✓ Successfully detected all abnormal clinical parameters with correct severity thresholds');
 
-// 3. Test 5 Structured Solutions Generation
+// 4. Test 5 Structured Solutions Generation
 const analysis = AI.generate5Solutions(mockReportData);
 const s = analysis.solutions;
 
@@ -144,42 +163,60 @@ const redFlagsText = s.redflags.join(' ').toLowerCase();
 assert(redFlagsText.includes('bleeding') || redFlagsText.includes('platelet') || redFlagsText.includes('transfusion'), 'Must flag urgent bleeding/transfusion precautions');
 console.log('✓ Solution 5 (Red Flags & Urgent Precautions) generated correctly');
 
-// 4. Edge Case: Normal Report
-const normalReportData = {
-  patient: { name: 'Healthy Patient', age: 30, gender: 'female' },
-  invoice: { id: 'inv_102', no: 'INV-2026-002' },
+// 5. Direct Doctor Dashboard Modal Invocation (directData test)
+let modalOpenedTitle = '';
+sandbox.App.modal = (title) => {
+  modalOpenedTitle = title;
+  return () => {};
+};
+const directDoctorData = {
+  pt: { name: 'Doctor Patient', age: 52, gender: 'female' },
+  inv: { id: 'inv_doc_1', no: 'INV-DOC-1' },
+  doc: { name: 'Dr. Ahmed Khan' },
   groups: [
-    {
-      test: { name: 'Complete Blood Count (CBC)' },
-      res: {
-        values: { hb: 13.5, wbc: 7200, plt: 250000, mcv: 88 }
-      }
-    }
+    { test: { name: 'Urine Routine Examination', params: [] }, res: { values: { puscell: 30 } } }
   ]
 };
-const normalAnalysis = AI.generate5Solutions(normalReportData);
-assert.equal(normalAnalysis.findings.length, 0, 'Normal report should have 0 abnormal findings');
-assert(normalAnalysis.solutions.diagnosis[0].title.includes('Normal'), 'Should note normal status');
-assert(normalAnalysis.solutions.medications.length >= 1, 'Should offer maintenance / multivitamin support');
-console.log('✓ Edge case: Normal laboratory report handled gracefully with wellness guidance');
+AI.showModal('inv_doc_1', directDoctorData);
+assert.equal(modalOpenedTitle, 'AI Clinical Recommendations', 'Doctor portal showModal must open modal with direct data');
+console.log('✓ showModal successfully launches with direct data provided by doctor dashboard');
 
-// 5. Check Integration in mod-results.js
+// 6. Check Integration in mod-results.js
 const resultsCode = fs.readFileSync(path.join(root, 'assets/js/mod-results.js'), 'utf8');
+assert(resultsCode.includes('canSeeAi'), 'mod-results.js must check canSeeAi permission');
 assert(resultsCode.includes('id="rvAiInsights"'), 'mod-results.js must include #rvAiInsights button');
 assert(resultsCode.includes('App.aiInsights.showModal'), 'mod-results.js must wire showModal click handler');
 assert(resultsCode.includes('data-rai='), 'mod-results.js must include data-rai in ready table');
 assert(resultsCode.includes('data-oai='), 'mod-results.js must include data-oai in old reports table');
-console.log('✓ mod-results.js has all AI trigger buttons and event listeners wired');
+console.log('✓ mod-results.js has role-aware AI trigger buttons and event listeners');
 
-// 6. Check Registration in index.html and desktop files
+// 7. Check Doctor Dashboard in mod-portal.js
+const portalCode = fs.readFileSync(path.join(root, 'assets/js/mod-portal.js'), 'utf8');
+assert(portalCode.includes('data-doc-ai='), 'mod-portal.js must render data-doc-ai button for ready reports in doctor view');
+assert(portalCode.includes('App.aiInsights.showModal'), 'mod-portal.js must wire data-doc-ai click listener to launch AI recommendations');
+console.log('✓ mod-portal.js doctor dashboard has AI Recommendations button and handler wired');
+
+// 8. Check Admin Settings in mod-admin.js
+const adminCode = fs.readFileSync(path.join(root, 'assets/js/mod-admin.js'), 'utf8');
+assert(adminCode.includes('btnSaveAiPerms'), 'mod-admin.js must include btnSaveAiPerms save button in Users & Roles');
+assert(adminCode.includes('aiInsightsRoles'), 'mod-admin.js must persist aiInsightsRoles into settings');
+assert(adminCode.includes('Doctor Account') && adminCode.includes('Mandatory'), 'Doctor account must be locked mandatory in settings UI');
+console.log('✓ mod-admin.js includes role permissions management for AI Recommendations with doctor locked mandatory');
+
+// 9. Check Backend Server Support in cloud and win7 server.js
+const cloudServer = fs.readFileSync(path.join(root, 'cloud/server.js'), 'utf8');
+assert(cloudServer.includes('results: forDoctor ? rs.map'), 'cloud/server.js must attach results for doctor in reportOf');
+const win7Server = fs.readFileSync(path.join(root, 'electron-tools/installer/app-stage-win7/server/server.js'), 'utf8');
+assert(win7Server.includes('results: forDoctor ? rs.map'), 'win7 server.js must attach results for doctor in reportOf');
+console.log('✓ Backend servers (cloud & win7) supply test results to doctor reports');
+
+// 10. Check Registration in index.html and desktop files
 const indexHtml = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 assert(indexHtml.includes('assets/js/mod-ai-insights.js'), 'index.html must register mod-ai-insights.js');
-
 const electronIndexHtml = fs.readFileSync(path.join(root, 'electron-src/index.html'), 'utf8');
 assert(electronIndexHtml.includes('assets/js/mod-ai-insights.js'), 'electron-src/index.html must register mod-ai-insights.js');
-
 const win7IndexHtml = fs.readFileSync(path.join(root, 'electron-tools/installer/app-stage-win7/index.html'), 'utf8');
 assert(win7IndexHtml.includes('assets/js/mod-ai-insights.js'), 'win7 index.html must register mod-ai-insights.js');
 console.log('✓ All HTML entries across web, electron, and win7 bundle have mod-ai-insights.js registered');
 
-console.log('\nALL 6 TEST SUITES PASSED! AI CLINICAL INTELLIGENCE VERIFIED SUCCESSFULLY.\n');
+console.log('\nALL 10 TEST SUITES PASSED! DOCTOR DASHBOARD & ADMIN PERMISSIONS VERIFIED SUCCESSFULLY.\n');

@@ -575,28 +575,53 @@
     };
   };
 
+  /* Role & Permission Access Check */
+  AI.canAccess = function (role) {
+    if (!role) {
+      var s = null;
+      try { s = JSON.parse(localStorage.getItem('labpos_session') || 'null'); } catch (e) {}
+      role = (s && s.role) || 'admin';
+    }
+    // Doctors and Admins ALWAYS have access (Mandatory for doctors, full access for admin)
+    if (role === 'doctor' || role === 'admin') return true;
+
+    // Check admin-configured settings
+    var set = null;
+    try { set = (window.DB && typeof DB.get === 'function') ? DB.get('settings', 'main') : null; } catch (e) {}
+    var allowed = (set && Array.isArray(set.aiInsightsRoles)) ? set.aiInsightsRoles : ['admin', 'doctor', 'technician'];
+    return allowed.indexOf(role) >= 0;
+  };
+
   /* Render Rich Modal with 5 Solutions */
-  AI.showModal = function (invoiceId) {
-    var d = null;
-    try {
-      if (window.reportData) d = window.reportData(invoiceId);
-      else if (window.App && App.reportData) d = App.reportData(invoiceId);
-    } catch (e) {}
+  AI.showModal = function (invoiceId, directData) {
+    var d = directData || null;
+    if (!d) {
+      try {
+        if (window.reportData) d = window.reportData(invoiceId);
+        else if (window.App && App.reportData) d = App.reportData(invoiceId);
+      } catch (e) {}
+    }
 
     // Fallback if reportData not globally exposed
     if (!d) {
-      var inv = DB.get('invoices', invoiceId);
-      if (!inv) { App.toast('Invoice not found', 'err'); return; }
-      var pt = DB.get('patients', inv.patientId) || {};
-      var doc = inv.doctorId ? DB.get('doctors', inv.doctorId) : null;
-      var tests = DB.all('tests');
-      var results = DB.all('results').filter(function (r) { return r.invoiceId === invoiceId; });
-      var groups = results.map(function (r) {
-        var t = DB.get('tests', r.testId) || tests.filter(function (x) { return x.id === r.testId; })[0];
-        return { test: t, res: r };
-      });
-      d = { inv: inv, pt: pt, doc: doc, groups: groups };
+      var inv = (window.DB && typeof DB.get === 'function')
+        ? (DB.get('invoices', invoiceId) || (DB.all('invoices') || []).filter(function (x) { return x.no === invoiceId; })[0])
+        : null;
+      if (!inv && !directData) { App.toast('Invoice not found', 'err'); return; }
+      if (inv) {
+        var pt = (DB.get('patients', inv.patientId)) || {};
+        var doc = inv.doctorId ? DB.get('doctors', inv.doctorId) : null;
+        var tests = (DB.all('tests')) || [];
+        var results = (DB.all('results') || []).filter(function (r) { return r.invoiceId === invoiceId || r.invoiceId === inv.id; });
+        var groups = results.map(function (r) {
+          var t = DB.get('tests', r.testId) || tests.filter(function (x) { return x.id === r.testId; })[0];
+          return { test: t, res: r };
+        });
+        d = { inv: inv, pt: pt, doc: doc, groups: groups };
+      }
     }
+
+    if (!d) { App.toast('Report data unavailable for AI analysis', 'err'); return; }
 
     var analysis = AI.generate5Solutions(d);
     var pt = analysis.patient;
