@@ -961,15 +961,15 @@
     var isTech = (s.role === 'technician');
     var tbQa = s.role === 'custom'
       ? [['patients', '#/patients/new', 'users', 'Add Patient'], ['packages', '#/packages', 'box', 'Packages'], ['results', '#/results', 'clipboard', 'Lab Results'], ['expenses', '#/expenses', 'wallet', 'Add Expense'], ['finance', '#/finance', 'finance', 'Close Day']]
-        .filter(function (q) { return can(q[0], 'custom') || (q[0] === 'packages' && can('tests', 'custom')); }).slice(0, 4).map(function (q) { return '<a class="btn btn-sm tb-qab tb-classic" href="' + q[1] + '">' + icon(q[2], 16) + '<span class="tb-qa-t">' + q[3] + '</span></a>'; }).join('')
+        .filter(function (q) { return can(q[0], 'custom') || (q[0] === 'packages' && can('tests', 'custom')); }).slice(0, 4).map(function (q) { return '<a class="btn btn-sm tb-qab tb-classic" href="' + q[1] + '" title="' + q[3] + '" aria-label="' + q[3] + '">' + icon(q[2], 18) + '</a>'; }).join('')
       : isTech
-      ? '<a class="btn btn-sm tb-qab tb-classic" href="#/results">' + icon('clipboard', 16) + '<span class="tb-qa-t">Lab Results</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/tests">' + icon('flask', 16) + '<span class="tb-qa-t">View Tests</span></a>' +
-         '<a class="btn btn-sm tb-qab tb-classic" href="#/packages">' + icon('box', 16) + '<span class="tb-qa-t">Packages</span></a>'
-      : '<a class="btn btn-sm tb-qab tb-classic" href="#/patients/new">' + icon('users', 16) + '<span class="tb-qa-t">Add Patient</span></a>' +
-         '<a class="btn btn-sm tb-qab tb-classic" href="#/packages">' + icon('box', 16) + '<span class="tb-qa-t">Packages</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses">' + icon('wallet', 16) + '<span class="tb-qa-t">Add Expense</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/finance">' + icon('finance', 16) + '<span class="tb-qa-t">Close Day</span></a>';
+      ? '<a class="btn btn-sm tb-qab tb-classic" href="#/results" title="Lab Results" aria-label="Lab Results">' + icon('clipboard', 18) + '</a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/tests" title="View Tests" aria-label="View Tests">' + icon('flask', 18) + '</a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/packages" title="Packages" aria-label="Packages">' + icon('box', 18) + '</a>'
+      : '<a class="btn btn-sm tb-qab tb-classic" href="#/patients/new" title="Add Patient" aria-label="Add Patient">' + icon('users', 18) + '</a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/packages" title="Packages" aria-label="Packages">' + icon('box', 18) + '</a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses" title="Add Expense" aria-label="Add Expense">' + icon('wallet', 18) + '</a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/finance" title="Close Day" aria-label="Close Day">' + icon('finance', 18) + '</a>';
     var _curHash = (location.hash || '').split('?')[0];
      var _pageTitle = _curHash === '#/tests' ? 'All Tests' :
                       _curHash === '#/tests/regular' ? 'Regular Tests' :
@@ -1008,11 +1008,10 @@
       '.tb-menu-danger:hover{background:var(--red-soft)}' +
       '.tb-menu-danger svg{color:var(--red)}' +
       '.tb-qa{display:flex;gap:8px;align-items:center;margin-right:6px}' +
-      '.tb-qa .tb-qab{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;height:38px;padding:0 16px;border-radius:999px!important;font-size:13.5px;font-weight:700;text-decoration:none;cursor:pointer;transition:all .15s ease}' +
+      '.tb-qa .tb-qab{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0!important;border-radius:50%!important;text-decoration:none;cursor:pointer;transition:all .15s ease}' +
       '.tb-qa .tb-classic{background:#fff!important;border:1px solid #e2e8f0!important;color:#1b2a4a!important;box-shadow:none!important;transform:none!important}' +
       '.tb-qa .tb-classic:hover{background:#f8fafc!important;border-color:#cbd5e1!important;color:#1b2a4a!important;transform:none!important}' +
-      '.tb-qa .tb-classic svg{color:#1b2a4a!important;width:16px!important;height:16px!important;flex:none}' +
-      '@media(max-width:992px){.tb-qa .tb-qa-t{display:none}.tb-qa .tb-qab{padding:0 10px;width:38px;justify-content:center}}' +
+      '.tb-qa .tb-classic svg{color:#1b2a4a!important;width:18px!important;height:18px!important;flex:none}' +
       '@media(max-width:640px){.tb-qa{display:none}}' +
       '</style>' +
        '<button type="button" class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false" title="Toggle navigation">' + icon('menu', 18) + '</button>' +
