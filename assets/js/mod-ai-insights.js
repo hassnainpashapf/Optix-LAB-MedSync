@@ -1904,31 +1904,132 @@
 
   /* Attach AI Executive Summary directly to Result Remarks in DB */
   AI.attachSummaryToReportRemarks = function (invoiceId, narrativeText) {
-    if (!invoiceId || !window.DB || typeof DB.all !== 'function' || typeof DB.set !== 'function') {
+    if (!invoiceId) {
+      if (window.App && App.toast) App.toast('Invoice ID is missing', 'err');
+      return false;
+    }
+
+    narrativeText = narrativeText || 'AI Clinical Correlation: Laboratory findings clinically reviewed.';
+
+    // 1. Simulation / Sandbox mode check
+    if (String(invoiceId).indexOf('SIM-') === 0) {
+      if (window.App && App.toast) App.toast('AI Executive Summary attached to simulated report remarks (Preview Mode)!', 'ok');
+      return true;
+    }
+
+    if (!window.DB || typeof DB.all !== 'function') {
       if (window.App && App.toast) App.toast('Database not available to save remarks', 'err');
       return false;
     }
 
+    // 2. Resolve both invoice ID and invoice number
+    var targetIds = [String(invoiceId)];
+    var targetInv = null;
+    try {
+      var allInvs = DB.all('invoices') || [];
+      for (var i = 0; i < allInvs.length; i++) {
+        var it = allInvs[i];
+        if (it && (String(it.id) === String(invoiceId) || String(it.no) === String(invoiceId))) {
+          targetInv = it;
+          if (it.id && targetIds.indexOf(String(it.id)) < 0) targetIds.push(String(it.id));
+          if (it.no && targetIds.indexOf(String(it.no)) < 0) targetIds.push(String(it.no));
+          break;
+        }
+      }
+    } catch (eInv) {}
+
+    // 3. Find matching results
     var allRes = (DB.all('results') || []).filter(function (r) {
-      return r.invoiceId === invoiceId || r.invoiceId === String(invoiceId);
+      return r && targetIds.indexOf(String(r.invoiceId)) >= 0;
     });
 
+    // 4. If no results record exists yet, but invoice exists with test items:
+    if (!allRes.length && targetInv && Array.isArray(targetInv.items) && targetInv.items.length) {
+      targetInv.items.forEach(function (it) {
+        var newRes = {
+          invoiceId: targetInv.id,
+          testId: it.testId || it.id,
+          values: { 'Remarks': narrativeText },
+          status: 'pending',
+          reportedAt: new Date().toISOString()
+        };
+        if (typeof DB.insert === 'function') {
+          var created = DB.insert('results', newRes);
+          if (created) allRes.push(created);
+        }
+      });
+    }
+
     if (!allRes.length) {
+      // Check if Result Entry form remarks input is open on screen
+      var remInp = (typeof document !== 'undefined') ? document.getElementById('resRemarks') : null;
+      if (remInp && typeof remInp === 'object') {
+        var curVal = (remInp.value != null ? String(remInp.value) : '').trim();
+        if (curVal.indexOf('AI Clinical Correlation') < 0) {
+          remInp.value = curVal ? (curVal + ' | ' + narrativeText) : narrativeText;
+        }
+        if (window.App && App.toast) App.toast('AI Executive Summary copied into Remarks field!', 'ok');
+        return true;
+      }
       if (window.App && App.toast) App.toast('No result record found for invoice #' + invoiceId, 'err');
       return false;
     }
 
+    // 5. Update results in DB
     allRes.forEach(function (r) {
       r.values = r.values || {};
       var existing = r.values['Remarks'] || '';
       if (existing.indexOf('AI Clinical Correlation') < 0) {
         r.values['Remarks'] = existing ? (existing + ' | ' + narrativeText) : narrativeText;
+      }
+      if (typeof DB.update === 'function') {
+        DB.update('results', r.id, { values: r.values });
+      } else if (typeof DB.put === 'function') {
+        DB.put('results', r);
+      } else if (typeof DB.set === 'function') {
         DB.set('results', r.id, r);
       }
     });
 
+    // 6. Update open DOM inputs if Result Entry form or Report Viewer is open
+    if (typeof document !== 'undefined') {
+      var remInp2 = document.getElementById('resRemarks');
+      if (remInp2 && typeof remInp2 === 'object') {
+        var ex2 = (remInp2.value != null ? String(remInp2.value) : '').trim();
+        if (ex2.indexOf('AI Clinical Correlation') < 0) {
+          remInp2.value = ex2 ? (ex2 + ' | ' + narrativeText) : narrativeText;
+        }
+      }
+      var bremInps = document.querySelectorAll ? document.querySelectorAll('[data-brem]') : null;
+      if (bremInps && bremInps.length) {
+        bremInps.forEach(function (inp) {
+          if (inp && typeof inp === 'object') {
+            var exB = (inp.value != null ? String(inp.value) : '').trim();
+            if (exB.indexOf('AI Clinical Correlation') < 0) {
+              inp.value = exB ? (exB + ' | ' + narrativeText) : narrativeText;
+            }
+          }
+        });
+      }
+
+      // If Report Viewer modal is open in the background, refresh its preview HTML
+      try {
+        var rvHtmlWrap = document.getElementById('rvHtmlFrameWrap');
+        if (rvHtmlWrap && window.App && typeof App.reportHtml === 'function' && typeof App.reportData === 'function') {
+          var updatedData = App.reportData(targetInv ? targetInv.id : invoiceId);
+          if (updatedData) {
+            rvHtmlWrap.innerHTML = App.previewQr ? App.previewQr(App.reportHtml(updatedData), targetInv ? targetInv.id : invoiceId) : App.reportHtml(updatedData);
+          }
+        }
+      } catch (ePreview) {}
+    }
+
+    try {
+      localStorage.setItem('optix_ai_remarks_' + invoiceId, narrativeText);
+    } catch (eLs) {}
+
     if (window.App && App.toast) {
-      App.toast('AI Executive Summary successfully attached to printed report note!');
+      App.toast('AI Executive Summary successfully attached to printed report note!', 'ok');
     }
     return true;
   };
@@ -3405,7 +3506,14 @@
         var attachBtn = ov.querySelector('#aiAttachReportRemarks');
         if (attachBtn) {
           attachBtn.addEventListener('click', function () {
-            AI.attachSummaryToReportRemarks(inv.id || inv.no, reportNarrative);
+            var targetId = (inv && (inv.id || inv.no)) || invoiceId;
+            var ok = AI.attachSummaryToReportRemarks(targetId, reportNarrative);
+            if (ok) {
+              attachBtn.innerHTML = '✅ Attached to Remarks!';
+              attachBtn.style.color = '#059669';
+              attachBtn.style.borderColor = '#10b981';
+              attachBtn.style.background = '#ecfdf5';
+            }
           });
         }
 
@@ -3710,13 +3818,17 @@
 
   AI.saveAiConfig = function (newConfig) {
     try {
-      var set = (window.DB && typeof DB.get === 'function') ? DB.get('settings', 'main') : {};
-      if (!set) set = {};
-      set.aiConfig = newConfig;
+      var patch = { aiConfig: newConfig };
       if (Array.isArray(newConfig.roles)) {
-        set.aiInsightsRoles = newConfig.roles;
+        patch.aiInsightsRoles = newConfig.roles;
       }
-      if (window.DB && typeof DB.set === 'function') {
+      if (window.DB && typeof DB.update === 'function') {
+        DB.update('settings', 'main', patch);
+      } else if (window.DB && typeof DB.set === 'function') {
+        var set = (typeof DB.get === 'function') ? DB.get('settings', 'main') : {};
+        if (!set) set = {};
+        set.aiConfig = newConfig;
+        if (Array.isArray(newConfig.roles)) set.aiInsightsRoles = newConfig.roles;
         DB.set('settings', 'main', set);
       }
       if (window.App && App.toast) App.toast('AI Control Center configuration saved successfully!', 'ok');

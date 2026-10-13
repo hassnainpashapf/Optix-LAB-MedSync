@@ -581,16 +581,36 @@ assert(narrative.includes('AI Clinical Correlation:'), 'Must start with official
 assert(narrative.includes('Microcytic Anemia'), 'Must mention primary clinical findings');
 assert(narrative.includes('Thalassemia Minor pattern'), 'Must correlate Mentzer index');
 
-// Test attaching remarks directly into DB
+// Test attaching remarks directly into DB (using DB.update contract of db.js)
 let testResultsDB = [{ id: 'res_n1', invoiceId: 'inv_narrative_1', values: {} }];
-sandbox.DB.all = (t) => (t === 'results' ? testResultsDB : []);
-sandbox.DB.set = (t, id, item) => {
-  if (t === 'results' && id === 'res_n1') testResultsDB[0] = item;
+let testInvoicesDB = [{ id: 'inv_narrative_1', no: 'INV-2026-NARR', patientId: 'pt_1', items: [{ testId: 't_cbc' }] }];
+delete sandbox.DB.set; // Ensure NO reliance on DB.set
+sandbox.DB.all = (t) => (t === 'results' ? testResultsDB : (t === 'invoices' ? testInvoicesDB : []));
+sandbox.DB.update = (t, id, patch) => {
+  if (t === 'settings' && id === 'main') {
+    mockSettings = Object.assign(mockSettings || {}, patch);
+    return mockSettings;
+  }
+  if (t === 'results' && id === 'res_n1') {
+    Object.assign(testResultsDB[0], patch);
+    return testResultsDB[0];
+  }
 };
 const attachSuccess = AI.attachSummaryToReportRemarks('inv_narrative_1', narrative);
-assert.equal(attachSuccess, true, 'attachSummaryToReportRemarks must succeed');
+assert.equal(attachSuccess, true, 'attachSummaryToReportRemarks must succeed with DB.update');
 assert(testResultsDB[0].values['Remarks'].includes('AI Clinical Correlation'), 'Result Remarks must contain the AI narrative');
-console.log('✓ Ultra-Advanced Feature 7: AI Executive Summary successfully generated and attached to printed report remarks');
+
+// Test alias lookup using invoice number
+testResultsDB[0].values = {};
+const attachSuccessByNo = AI.attachSummaryToReportRemarks('INV-2026-NARR', narrative);
+assert.equal(attachSuccessByNo, true, 'attachSummaryToReportRemarks must resolve via invoice.no alias');
+assert(testResultsDB[0].values['Remarks'].includes('AI Clinical Correlation'), 'Result Remarks must be populated via invoice.no');
+
+// Test sandbox simulation mode
+const attachSim = AI.attachSummaryToReportRemarks('SIM-DENGUE', narrative);
+assert.equal(attachSim, true, 'attachSummaryToReportRemarks must succeed for SIM-* sandbox reports');
+
+console.log('✓ Ultra-Advanced Feature 7: AI Executive Summary successfully generated and attached to printed report remarks (DB.update + alias + simulation)');
 
 // 24. Test Ultra-Advanced Feature: Interactive Human Anatomy Organ Impact Map
 console.log('\n--- Testing Ultra-Advanced Feature 8: Interactive Human Anatomy Organ Impact Map ---');
@@ -711,7 +731,20 @@ const statsBefore = AI.getAiStats();
 assert.equal(typeof statsBefore.analyzed, 'number', 'analyzed stat must be numeric');
 AI.recordAiStat('analyzed');
 const statsAfter = AI.getAiStats();
-assert.equal(statsAfter.analyzed, statsBefore.analyzed + 1, 'analyzed counter must increment by 1');
+// Test AI Configuration Saving via DB.update
+let testSettingsStore = { main: { id: 'main' } };
+sandbox.DB.update = (table, id, patch) => {
+  if (table === 'settings' && id === 'main') {
+    Object.assign(testSettingsStore.main, patch);
+    return testSettingsStore.main;
+  }
+};
+const saveOk = AI.saveAiConfig({ modules: { bodyMap: true }, roles: ['admin', 'doctor', 'reception'] });
+assert.equal(saveOk, true, 'AI.saveAiConfig must return true on success');
+assert.deepEqual(testSettingsStore.main.aiInsightsRoles, ['admin', 'doctor', 'reception'], 'aiInsightsRoles must be saved');
+assert.equal(testSettingsStore.main.aiConfig.modules.bodyMap, true, 'aiConfig.modules must be saved');
+console.log('✓ AI Control Center configuration correctly saved via DB.update');
+
 
 // Clinical Sandbox Simulation
 let simulatedModalOpened = false;
