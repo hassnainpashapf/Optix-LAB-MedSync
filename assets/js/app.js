@@ -960,16 +960,16 @@
     /* quick actions — role-aware; technicians get read-only shortcuts */
     var isTech = (s.role === 'technician');
     var tbQa = s.role === 'custom'
-      ? [['patients', '#/patients/new', 'users', 'Add Patient'], ['packages', '#/packages', 'box', 'Health Packages'], ['results', '#/results', 'clipboard', 'Lab Results'], ['expenses', '#/expenses', 'wallet', 'Add Expense'], ['finance', '#/finance', 'finance', 'Close Day']]
-        .filter(function (q) { return can(q[0], 'custom') || (q[0] === 'packages' && can('tests', 'custom')); }).slice(0, 4).map(function (q) { return '<a class="btn btn-sm tb-qab tb-classic" href="' + q[1] + '">' + icon(q[2], 14) + '<span class="tb-qa-t">' + q[3] + '</span></a>'; }).join('')
+      ? [['patients', '#/patients/new', 'users', 'Add Patient'], ['packages', '#/packages', 'box', 'Packages'], ['results', '#/results', 'clipboard', 'Lab Results'], ['expenses', '#/expenses', 'wallet', 'Add Expense'], ['finance', '#/finance', 'finance', 'Close Day']]
+        .filter(function (q) { return can(q[0], 'custom') || (q[0] === 'packages' && can('tests', 'custom')); }).slice(0, 4).map(function (q) { return '<a class="btn btn-sm tb-qab tb-classic" href="' + q[1] + '">' + icon(q[2], 16) + '<span class="tb-qa-t">' + q[3] + '</span></a>'; }).join('')
       : isTech
-      ? '<a class="btn btn-sm tb-qab tb-classic" href="#/results">' + icon('clipboard', 14) + '<span class="tb-qa-t">Lab Results</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/tests">' + icon('flask', 14) + '<span class="tb-qa-t">View Tests</span></a>' +
-         '<a class="btn btn-sm tb-qab tb-classic" href="#/packages">' + icon('box', 14) + '<span class="tb-qa-t">Packages</span></a>'
-      : '<a class="btn btn-sm tb-qab tb-classic" href="#/patients/new">' + icon('users', 14) + '<span class="tb-qa-t">Add Patient</span></a>' +
-         '<a class="btn btn-sm tb-qab tb-classic" href="#/packages">' + icon('box', 14) + '<span class="tb-qa-t">Packages</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses">' + icon('wallet', 14) + '<span class="tb-qa-t">Add Expense</span></a>' +
-        '<a class="btn btn-sm tb-qab tb-classic" href="#/finance">' + icon('finance', 14) + '<span class="tb-qa-t">Close Day</span></a>';
+      ? '<a class="btn btn-sm tb-qab tb-classic" href="#/results">' + icon('clipboard', 16) + '<span class="tb-qa-t">Lab Results</span></a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/tests">' + icon('flask', 16) + '<span class="tb-qa-t">View Tests</span></a>' +
+         '<a class="btn btn-sm tb-qab tb-classic" href="#/packages">' + icon('box', 16) + '<span class="tb-qa-t">Packages</span></a>'
+      : '<a class="btn btn-sm tb-qab tb-classic" href="#/patients/new">' + icon('users', 16) + '<span class="tb-qa-t">Add Patient</span></a>' +
+         '<a class="btn btn-sm tb-qab tb-classic" href="#/packages">' + icon('box', 16) + '<span class="tb-qa-t">Packages</span></a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/expenses">' + icon('wallet', 16) + '<span class="tb-qa-t">Add Expense</span></a>' +
+        '<a class="btn btn-sm tb-qab tb-classic" href="#/finance">' + icon('finance', 16) + '<span class="tb-qa-t">Close Day</span></a>';
     var _curHash = (location.hash || '').split('?')[0];
      var _pageTitle = _curHash === '#/tests' ? 'All Tests' :
                       _curHash === '#/tests/regular' ? 'Regular Tests' :
@@ -1007,21 +1007,20 @@
       '.tb-menu-danger{color:var(--red)}' +
       '.tb-menu-danger:hover{background:var(--red-soft)}' +
       '.tb-menu-danger svg{color:var(--red)}' +
-      '.tb-qa{display:flex;gap:8px;align-items:center;margin-left:2px}' +
-      '.tb-qa .tb-qab{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}' +
-      '.tb-qa .tb-classic{background:#fff;border:1px solid var(--bd);color:#131845;font-weight:600;box-shadow:none}' +
-      '.tb-qa .tb-classic:hover{background:#ebf4f8;border-color:#8fa0c0;color:#131845;transform:none}' +
-      '.tb-qa .tb-classic svg{color:#131845;flex:none}' +
-      '@media(max-width:640px){.tb-qa .tb-qa-t{display:none}.tb-qa{gap:6px}.tb-qa .tb-qab{padding:7px 9px}}' +
-      '@media (max-width:900px){.tb-qa .tb-qa-t{display:none}}' +
-      '@media (max-width:640px){.tb-qa{display:none}}' +
+      '.tb-qa{display:flex;gap:8px;align-items:center;margin-right:6px}' +
+      '.tb-qa .tb-qab{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;height:38px;padding:0 16px;border-radius:999px!important;font-size:13.5px;font-weight:700;text-decoration:none;cursor:pointer;transition:all .15s ease}' +
+      '.tb-qa .tb-classic{background:#fff!important;border:1px solid #e2e8f0!important;color:#1b2a4a!important;box-shadow:none!important;transform:none!important}' +
+      '.tb-qa .tb-classic:hover{background:#f8fafc!important;border-color:#cbd5e1!important;color:#1b2a4a!important;transform:none!important}' +
+      '.tb-qa .tb-classic svg{color:#1b2a4a!important;width:16px!important;height:16px!important;flex:none}' +
+      '@media(max-width:992px){.tb-qa .tb-qa-t{display:none}.tb-qa .tb-qab{padding:0 10px;width:38px;justify-content:center}}' +
+      '@media(max-width:640px){.tb-qa{display:none}}' +
       '</style>' +
        '<button type="button" class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false" title="Toggle navigation">' + icon('menu', 18) + '</button>' +
        '<button type="button" class="tb-nb" id="tbBack" aria-label="Back" title="Back"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>' +
        '<button type="button" class="tb-nb" id="tbFwd" aria-label="Forward" title="Forward"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>' +
        '<div class="tb-crumb"><span class="tb-crumb-ic">' + (activeKey === 'dashboard' ? _gridSvg : icon((navItem && navItem.icon) || 'grid', 16)) + '</span><h1 class="page-title">' + esc(activeKey === 'dashboard' ? 'Dashboard' : _pageTitle) + '</h1></div>' +
        '<div class="top-right">' +
-       (activeKey === 'dashboard' ? '' : '<div class="tb-qa">' + tbQa + '</div>') +
+       '<div class="tb-qa">' + tbQa + '</div>' +
        '<div class="tb-crit-wrap" id="tbCritWrap" style="display:none">' +
        '<button type="button" class="tb-icon-btn tb-crit-btn" id="tbCritBtn" aria-label="Critical Results" title="Critical Results" aria-haspopup="true" aria-expanded="false">' +
        '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +

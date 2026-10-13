@@ -432,82 +432,102 @@
         '</div></a>' +
     '</div>';
 
-    /* Recent Patients — Appointments awaiting approval table */
-    function face(skin, hair, coat, bg, female) {
-      return '<svg viewBox="0 0 46 46" width="100%" height="100%">' +
-        '<rect width="46" height="46" fill="' + bg + '"/>' +
-        '<path d="M5 46c1-9 7-13 18-13s17 4 18 13z" fill="' + coat + '"/>' +
-        '<path d="M18 33l5 8 5-8" fill="#fff" opacity=".9"/>' +
-        (female ? '<path d="M12 22c0-9 5-13 11-13s11 4 11 13c0 6-2 10-3 11H15c-1-1-3-5-3-11z" fill="' + hair + '"/>' : '') +
-        '<ellipse cx="23" cy="21" rx="7" ry="8.5" fill="' + skin + '"/>' +
-        (female ? '<path d="M16 19c2-6 12-6 14 0-3-2-11-2-14 0z" fill="' + hair + '"/>' : '<path d="M15.5 19c0-7 15-7 15 0-2-3-13-3-15 0z" fill="' + hair + '"/>') +
-        '</svg>';
+    /* Recent Patients for Tests — pulled from real invoices + patients DB */
+    var AVATAR_COLORS = ['#2563eb','#7c3aed','#db2777','#059669','#d97706','#dc2626','#0284c7','#16a34a'];
+    function ptAvatar(name, idx) {
+      var initials = (name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).slice(0, 2).join('').toUpperCase();
+      var bg = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+      return '<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:' + bg + ';color:#fff;font-size:14px;font-weight:800;flex:none;letter-spacing:-.5px">' + App.esc(initials) + '</span>';
     }
-    var apptFaces = {
-      amany: face('#f2cdb0', '#4a3426', '#f4f7fc', '#e8eefb', true),
-      tariq: face('#cf9a72', '#171413', '#f4f7fc', '#e6edf9', false),
-      farid: face('#d9a77f', '#1f1b19', '#f4f7fc', '#e6edf9', false),
-      yasmin: face('#e8bd9a', '#2b2320', '#f4f7fc', '#e8eefb', true),
-      amir: face('#cf9a72', '#171413', '#f4f7fc', '#e6edf9', false)
-    };
+    function genderIcon(g) {
+      var v = String(g || '').toLowerCase().charAt(0);
+      if (v === 'm') return '<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe">M</span>';
+      if (v === 'f') return '<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#fdf2f8;color:#db2777;border:1px solid #fbcfe8">F</span>';
+      return '';
+    }
+    function statusBadge(inv) {
+      var due = parseFloat(inv.due || 0), total = parseFloat(inv.total || 0);
+      if (due <= 0) return '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#ecfdf3;color:#16a34a;border:1px solid #86efac">Paid</span>';
+      if (due >= total) return '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5">Unpaid</span>';
+      return '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#fffbeb;color:#d97706;border:1px solid #fcd34d">Partial</span>';
+    }
 
-    var defaultAppts = [
-      { id: 'ap1', patient: 'Yousef Al-Subaie', visit: 'Check-Up', doctor: 'Dr/Amany Ahmed', face: 'amany', spec: 'Neurology', date: '14 Oct 2026', time: '09:00 AM' },
-      { id: 'ap2', patient: 'Mariam Al-Subaie', visit: 'Follow-Up', doctor: 'Dr. Tariq Al-Hakim', face: 'tariq', spec: 'Orthopedics', date: '14 Oct 2026', time: '09:00 AM' },
-      { id: 'ap3', patient: 'Salma Al-Shehri', visit: 'Follow-Up', doctor: 'Dr. Farid Al-Zahrani', face: 'farid', spec: 'Nephrology', date: '14 Oct 2026', time: '12:30 PM' },
-      { id: 'ap4', patient: 'Mariam Al-Qahtani', visit: 'Check-Up', doctor: 'Dr. Tariq Al-Hakim', face: 'tariq', spec: 'Orthopedics', date: '14 Oct 2026', time: '02:00 PM' },
-      { id: 'ap5', patient: 'Hassan Al-Najjar', visit: 'Consultation', doctor: 'Dr. Yasmin Farah', face: 'yasmin', spec: 'Gynecology', date: '14 Oct 2026', time: '03:00 PM' },
-      { id: 'ap6', patient: 'Ibrahim Al-Dosari', visit: 'Follow-Up', doctor: 'Dr. Amir Al-Farsi', face: 'amir', spec: 'Neurology', date: '15 Oct 2026', time: '12:00 PM' }
+    /* Gather real recent invoices sorted by newest first */
+    var recentInvs = (DB.all('invoices') || [])
+      .filter(function (inv) { return inv.patientId; })
+      .sort(function (a, b) { return new Date(b.createdAt || 0) - new Date(a.createdAt || 0); })
+      .slice(0, 8);
+
+    /* Demo fallback rows when DB is empty */
+    var demoPatRows = [
+      { name: 'Ali Hassan', phone: '0300-1234567', age: '34', gender: 'M', tests: 'CBC, LFT', amount: 'Rs 2,500', status: 'paid', date: 'Today' },
+      { name: 'Sara Fatima', phone: '0321-9876543', age: '27', gender: 'F', tests: 'Thyroid Profile', amount: 'Rs 1,800', status: 'unpaid', date: 'Today' },
+      { name: 'Muhammad Usman', phone: '0311-5554444', age: '45', gender: 'M', tests: 'RFT, Urine R/E', amount: 'Rs 1,200', status: 'paid', date: 'Yesterday' },
+      { name: 'Ayesha Malik', phone: '0333-7778888', age: '31', gender: 'F', tests: 'Blood Sugar, HbA1c', amount: 'Rs 1,600', status: 'partial', date: 'Yesterday' },
+      { name: 'Khalid Mehmood', phone: '0345-2223333', age: '52', gender: 'M', tests: 'Lipid Profile', amount: 'Rs 900', status: 'paid', date: '12 Oct 2026' },
+      { name: 'Nadia Iqbal', phone: '0302-1112222', age: '38', gender: 'F', tests: 'CBC, ESR', amount: 'Rs 750', status: 'paid', date: '11 Oct 2026' }
     ];
 
-    var dbAppts = (DB.all('appointments') || []).filter(function (a) { return a.status === 'requested' || !a.status; }).map(function (a, i) {
-      var pt = DB.get('patients', a.patientId) || {};
-      var pName = (pt && pt.name) || a.patientName || 'Patient';
-      var dKeys = ['amany', 'tariq', 'farid', 'yasmin', 'amir'];
-      var dNames = ['Dr/Amany Ahmed', 'Dr. Tariq Al-Hakim', 'Dr. Farid Al-Zahrani', 'Dr. Yasmin Farah', 'Dr. Amir Al-Farsi'];
-      var dSpecs = ['Neurology', 'Orthopedics', 'Nephrology', 'Gynecology', 'Cardiology'];
-      return {
-        id: a.id,
-        patient: pName,
-        visit: a.serviceType === 'home-collection' ? 'Home Collection' : (a.visitType || 'Check-Up'),
-        doctor: a.doctorName || dNames[i % dNames.length],
-        face: dKeys[i % dKeys.length],
-        spec: a.specialty || dSpecs[i % dSpecs.length],
-        date: a.date ? (App.dt(a.date) || '').slice(0, 11) : '14 Oct 2026',
-        time: a.timeSlot || '09:00 AM'
-      };
-    });
+    var useDemo = recentInvs.length === 0;
 
-    var apptsToRender = dbAppts.length ? dbAppts.slice(0, 6) : defaultAppts;
-    var crossSvg = '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>';
-    var checkSvg = '<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
-    var apptRowsHtml = apptsToRender.map(function (r) {
-      return '<tr>' +
-        '<td>' + App.esc(r.patient) + '</td>' +
-        '<td>' + App.esc(r.visit) + '</td>' +
-        '<td><div class="dcell"><span class="pic">' + (apptFaces[r.face] || apptFaces.amany) + '</span><span>' + App.esc(r.doctor) + '</span></div></td>' +
-        '<td>' + App.esc(r.spec) + '</td>' +
-        '<td>' + App.esc(r.date) + '</td>' +
-        '<td>' + App.esc(r.time) + '</td>' +
-        '<td><div class="acts">' +
-          '<button type="button" class="round x" data-appt-act="decline" data-id="' + App.esc(r.id) + '" data-name="' + App.esc(r.patient) + '" aria-label="Decline ' + App.esc(r.patient) + '">' + crossSvg + '</button>' +
-          '<button type="button" class="round v" data-appt-act="approve" data-id="' + App.esc(r.id) + '" data-name="' + App.esc(r.patient) + '" aria-label="Approve ' + App.esc(r.patient) + '">' + checkSvg + '</button>' +
-        '</div></td>' +
-      '</tr>';
-    }).join('');
+    var ptRowsHtml = useDemo
+      ? demoPatRows.map(function (r, i) {
+          var statusHtml = r.status === 'paid'
+            ? '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#ecfdf3;color:#16a34a;border:1px solid #86efac">Paid</span>'
+            : r.status === 'unpaid'
+            ? '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5">Unpaid</span>'
+            : '<span style="display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:#fffbeb;color:#d97706;border:1px solid #fcd34d">Partial</span>';
+          var gBadge = r.gender === 'M'
+            ? '<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe">M</span>'
+            : '<span style="display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;background:#fdf2f8;color:#db2777;border:1px solid #fbcfe8">F</span>';
+          return '<tr>' +
+            '<td><div style="display:flex;align-items:center;gap:12px">' + ptAvatar(r.name, i) +
+            '<div><b style="font-size:13.5px;color:#1b2a4a;display:block">' + App.esc(r.name) + '</b>' +
+            '<small style="color:#8a94a6;font-size:12px">' + App.esc(r.phone) + '</small></div></div></td>' +
+            '<td><div style="display:flex;align-items:center;gap:6px">' + gBadge + '<span style="font-size:13px;color:#475569">' + App.esc(r.age) + ' yr</span></div></td>' +
+            '<td style="font-size:13px;color:#334155;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(r.tests) + '</td>' +
+            '<td style="font-size:13.5px;font-weight:700;color:#1b2a4a">' + App.esc(r.amount) + '</td>' +
+            '<td>' + statusHtml + '</td>' +
+            '<td style="font-size:12.5px;color:#8a94a6;white-space:nowrap">' + App.esc(r.date) + '</td>' +
+            '<td><a href="#/patients" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #bbf7d0;background:#fff;color:#16a34a" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
+          '</tr>';
+        }).join('')
+      : recentInvs.map(function (inv, i) {
+          var pt = DB.get('patients', inv.patientId) || {};
+          var pName = pt.name || inv.patientName || 'Patient';
+          var phone = pt.phone || pt.whatsapp || inv.phone || '—';
+          var age = pt.age ? (pt.age + ' yr') : '—';
+          var gender = genderIcon(pt.gender);
+          var testNames = (inv.items || []).slice(0, 3).map(function (it) { return it.name || it.testName || ''; }).filter(Boolean).join(', ') || 'Lab Test';
+          var testCount = (inv.items || []).length;
+          if (testCount > 3) testNames += ' +' + (testCount - 3) + ' more';
+          var amount = App.money ? App.money(inv.total || 0) : ('Rs ' + (inv.total || 0));
+          var invDate = inv.createdAt ? (function () { var d = new Date(inv.createdAt); var dd = d.getDate(), mm = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()], yy = d.getFullYear(); var todayStr = today; var dStr = d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2); return dStr === todayStr ? 'Today' : dStr === (function(){var x=new Date();x.setDate(x.getDate()-1);return x.getFullYear()+'-'+('0'+(x.getMonth()+1)).slice(-2)+'-'+('0'+x.getDate()).slice(-2)})() ? 'Yesterday' : dd + ' ' + mm + ' ' + yy; })() : '—';
+          return '<tr>' +
+            '<td><div style="display:flex;align-items:center;gap:12px">' + ptAvatar(pName, i) +
+            '<div><b style="font-size:13.5px;color:#1b2a4a;display:block">' + App.esc(pName) + '</b>' +
+            '<small style="color:#8a94a6;font-size:12px">' + App.esc(phone) + '</small></div></div></td>' +
+            '<td><div style="display:flex;align-items:center;gap:6px">' + gender + '<span style="font-size:13px;color:#475569">' + App.esc(age) + '</span></div></td>' +
+            '<td style="font-size:13px;color:#334155;max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(testNames) + '">' + App.esc(testNames) + '</td>' +
+            '<td style="font-size:13.5px;font-weight:700;color:#1b2a4a">' + App.esc(amount) + '</td>' +
+            '<td>' + statusBadge(inv) + '</td>' +
+            '<td style="font-size:12.5px;color:#8a94a6;white-space:nowrap">' + App.esc(invDate) + '</td>' +
+            '<td><a href="#/patients/' + App.esc(inv.patientId) + '" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #bbf7d0;background:#fff;color:#16a34a" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
+          '</tr>';
+        }).join('');
 
     var patCard = '<section class="card appts-card" id="apptsCard">' +
-      '<div class="ap-head"><div><h2>Appointments</h2><p>Latest Appointments awaiting approval.</p></div>' +
-      '<a href="#/appointments" class="btn-soft" id="seeAll">See All <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>' +
+      '<div class="ap-head"><div><h2>Recent Patients</h2><p>Latest patients who visited for tests.</p></div>' +
+      '<a href="#/patients" class="btn-soft" id="seeAll">See All <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>' +
       '<div class="tbl-wrap"><table class="ap-tbl"><thead><tr id="dhead">' +
-        '<th data-k="patient"><button type="button">Patient Name <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th data-k="visit"><button type="button">Visit Type <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th data-k="doctor"><button type="button">Doctor Name <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th data-k="spec"><button type="button">Specialty <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th data-k="date"><button type="button">Appointment Date <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th data-k="time"><button type="button">Time <span class="sort"><i></i><i></i></span></button></th>' +
-        '<th>Actions</th>' +
-      '</tr></thead><tbody id="apptsRows">' + apptRowsHtml + '</tbody></table></div>' +
+        '<th><button type="button">Patient Name <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th><button type="button">Age / Gender <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th><button type="button">Tests Ordered <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th><button type="button">Amount <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th><button type="button">Status <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th><button type="button">Date <span class="sort"><i></i><i></i></span></button></th>' +
+        '<th>Action</th>' +
+      '</tr></thead><tbody id="apptsRows">' + ptRowsHtml + '</tbody></table></div>' +
       '<nav class="ap-pager" id="dpager" aria-label="Pages"><button class="pg on" type="button">1</button><button class="pg" type="button">2</button><button class="pg" type="button">3</button></nav>' +
       '</section>';
 
