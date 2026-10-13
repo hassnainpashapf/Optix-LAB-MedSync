@@ -859,13 +859,14 @@
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     visible = groupSidebarNav(visible);
     var sidebarActiveKey = sidebarNavKey(activeKey);
+    var savedGroups = {}; try { savedGroups = JSON.parse(localStorage.getItem('labpos_navgroups') || '{}') || {}; } catch (e) { savedGroups = {}; }
     /* every menu icon has its own colour: the page's colour from the menu list */
     function navTint(c) { return /^#[0-9a-f]{6}$/i.test(c || '') ? ' style="--nic:' + c + '"' : ''; }
     /* a menu entry: a plain link, or (for pages with sub-pages) a small accordion */
     function itemHtml(n) {
       var subs = n.sub ? n.sub.filter(function (x) { return !x.roles || x.roles.indexOf(s.role) >= 0; }) : [];
       if (n.sub && subs.length >= 2) { /* collapsible group: the parent only opens / closes the sub-menu, the children are the pages */
-        var open = n.key === sidebarActiveKey;
+        var open = (n.key === sidebarActiveKey) || !!savedGroups[n.key];
         return '<div class="nav-grp' + (open ? ' open' : '') + '" data-grp="' + n.key + '">' +
            '<button type="button" class="nav-it nav-par' + (open ? ' active' : '') + '"' + navTint(n.color) + ' data-nav="' + n.key + '" data-route="' + n.route + '" title="' + esc(n.label) + '" aria-label="' + esc(n.label) + '" aria-expanded="' + (open ? 'true' : 'false') + '">' +
           '<span class="nav-ic">' + icon(n.icon, 20) + '</span><span class="nav-lb">' + esc(n.label) + '</span>' +
@@ -920,45 +921,62 @@
     try { _me = window.DB.get('users', s.userId); } catch (e) {}
     var _silhouetteSvg = '<svg width="100%" height="100%" viewBox="0 0 46 46"><circle cx="23" cy="17" r="6" fill="#e8e8e8"/><path d="M10 44c1-10 6-15 13-15s12 5 13 15z" fill="#d9d9d9"/><path d="M14 36l9-8 9 8" stroke="#111" stroke-width="2" fill="none"/></svg>';
     var _avatarInner = (_me && _me.photo) ? '<img src="' + _me.photo + '" alt="">' : _silhouetteSvg;
-    document.getElementById('sidebar').innerHTML =
-      '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
-       '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Sync') + '</b></span>' +
-      '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
-      '<div class="sb-search"><span class="sb-search-ic">' + icon('search', 16) + '</span><input id="sbSearch" type="search" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search the menu"></div>' +
-      '<nav class="nav">' + items + '</nav>' +
-      '<div class="side-foot" id="sideFoot" style="display:none"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a></div>';
-    /* the menu search: type to narrow the menu to matching pages (sections and groups with no match hide) */
-    (function () {
-      var inp = document.getElementById('sbSearch'); if (!inp) return;
-      inp.addEventListener('input', function () {
-        var q = inp.value.trim().toLowerCase(), nav = document.querySelector('#sidebar .nav'); if (!nav) return;
-        function txt(n) { return String(n.textContent || '').toLowerCase(); }
-        nav.querySelectorAll('.nav-it, .nav-sub-it').forEach(function (n) { n.style.display = ''; });
-        nav.querySelectorAll('.nav-grp, .nav-fold').forEach(function (n) { n.style.display = ''; n.classList.remove('sb-found'); });
-        nav.querySelectorAll('.nav-sec2').forEach(function (n) { n.style.display = ''; });
-        if (!q) return;
-        nav.querySelectorAll('.nav-grp, .nav-fold').forEach(function (g) {
-          var any = false;
-          g.querySelectorAll('.nav-it, .nav-sub-it').forEach(function (n) { var m = txt(n).indexOf(q) >= 0; n.style.display = m ? '' : 'none'; if (m) any = true; });
-          g.style.display = any ? '' : 'none'; if (any) g.classList.add('sb-found');
+    var sidebarEl = document.getElementById('sidebar');
+    var existingNav = sidebarEl ? sidebarEl.querySelector('.nav') : null;
+    var sbSignature = (s.userId || '') + ':' + (s.role || '') + ':' + (st.labName || '') + ':' + (st.logo || '');
+    if (!sidebarEl || !existingNav || sidebarEl.getAttribute('data-sb-sig') !== sbSignature) {
+      var prevScroll = existingNav ? existingNav.scrollTop : (window.__sbScrollTop || 0);
+      if (sidebarEl) {
+        sidebarEl.setAttribute('data-sb-sig', sbSignature);
+        sidebarEl.innerHTML =
+          '<div class="brand"><span class="brand-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
+           '<span class="brand-tx"><b>' + esc(st.labName || 'Optix Medical Sync') + '</b></span>' +
+          '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
+          '<div class="sb-search"><span class="sb-search-ic">' + icon('search', 16) + '</span><input id="sbSearch" type="search" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search the menu"></div>' +
+          '<nav class="nav">' + items + '</nav>' +
+          '<div class="side-foot" id="sideFoot" style="display:none"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a></div>';
+        var newNav = sidebarEl.querySelector('.nav');
+        if (newNav) {
+          if (prevScroll) newNav.scrollTop = prevScroll;
+          newNav.addEventListener('scroll', function () {
+            window.__sbScrollTop = newNav.scrollTop;
+            try { sessionStorage.setItem('labpos_sb_scroll', String(newNav.scrollTop)); } catch (e) {}
+          }, { passive: true });
+        }
+      }
+      /* the menu search: type to narrow the menu to matching pages (sections and groups with no match hide) */
+      (function () {
+        var inp = document.getElementById('sbSearch'); if (!inp) return;
+        inp.addEventListener('input', function () {
+          var q = inp.value.trim().toLowerCase(), nav = document.querySelector('#sidebar .nav'); if (!nav) return;
+          function txt(n) { return String(n.textContent || '').toLowerCase(); }
+          nav.querySelectorAll('.nav-it, .nav-sub-it').forEach(function (n) { n.style.display = ''; });
+          nav.querySelectorAll('.nav-grp, .nav-fold').forEach(function (n) { n.style.display = ''; n.classList.remove('sb-found'); });
+          nav.querySelectorAll('.nav-sec2').forEach(function (n) { n.style.display = ''; });
+          if (!q) return;
+          nav.querySelectorAll('.nav-grp, .nav-fold').forEach(function (g) {
+            var any = false;
+            g.querySelectorAll('.nav-it, .nav-sub-it').forEach(function (n) { var m = txt(n).indexOf(q) >= 0; n.style.display = m ? '' : 'none'; if (m) any = true; });
+            g.style.display = any ? '' : 'none'; if (any) g.classList.add('sb-found');
+          });
+          nav.querySelectorAll(':scope > .nav-it').forEach(function (n) { n.style.display = txt(n).indexOf(q) >= 0 ? '' : 'none'; });
+          /* a section label stays only when something under it is showing */
+          var secs = nav.querySelectorAll('.nav-sec2');
+          secs.forEach(function (sec) {
+            var shown = false, el = sec.nextElementSibling;
+            while (el && !el.classList.contains('nav-sec2')) { if (el.style.display !== 'none') shown = true; el = el.nextElementSibling; }
+            sec.style.display = shown ? '' : 'none';
+          });
         });
-        nav.querySelectorAll(':scope > .nav-it').forEach(function (n) { n.style.display = txt(n).indexOf(q) >= 0 ? '' : 'none'; });
-        /* a section label stays only when something under it is showing */
-        var secs = nav.querySelectorAll('.nav-sec2');
-        secs.forEach(function (sec) {
-          var shown = false, el = sec.nextElementSibling;
-          while (el && !el.classList.contains('nav-sec2')) { if (el.style.display !== 'none') shown = true; el = el.nextElementSibling; }
-          sec.style.display = shown ? '' : 'none';
+        inp.addEventListener('keydown', function (e) {
+          if (e.key !== 'Enter') return;
+          var first = document.querySelector('#sidebar .nav a.nav-it:not([style*="none"]), #sidebar .nav .nav-sub-it:not([style*="none"])');
+          if (first && first.getAttribute('href')) { location.hash = first.getAttribute('href'); }
         });
-      });
-      inp.addEventListener('keydown', function (e) {
-        if (e.key !== 'Enter') return;
-        var first = document.querySelector('#sidebar .nav a.nav-it:not([style*="none"]), #sidebar .nav .nav-sub-it:not([style*="none"])');
-        if (first && first.getAttribute('href')) { location.hash = first.getAttribute('href'); }
-      });
-    })();
-    var sideLogoutBtn = document.getElementById('sideLogout');
-    if (sideLogoutBtn) sideLogoutBtn.addEventListener('click', logout);
+      })();
+      var sideLogoutBtn = document.getElementById('sideLogout');
+      if (sideLogoutBtn) sideLogoutBtn.addEventListener('click', logout);
+    }
     paintSidePlan();
     /* topbar */
     var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
@@ -1157,6 +1175,23 @@
       gk.classList.toggle('open', hold);
       var pk = gk.querySelector('.nav-par'); if (pk) pk.setAttribute('aria-expanded', hold ? 'true' : 'false');
     }
+    /* Maintain scroll position of sidebar navigation so it never jumps to top */
+    var navEl = (typeof document !== 'undefined' && document.querySelector) ? document.querySelector('#sidebar .nav') : null;
+    if (navEl) {
+      if (window.__sbScrollTop !== undefined && Math.abs(navEl.scrollTop - window.__sbScrollTop) > 2) {
+        navEl.scrollTop = window.__sbScrollTop;
+      }
+      var activeEl = navEl.querySelector ? navEl.querySelector('.nav-it.active, .nav-sub-it.on') : null;
+      if (activeEl && navEl.getBoundingClientRect && activeEl.getBoundingClientRect) {
+        var navRect = navEl.getBoundingClientRect();
+        var elRect = activeEl.getBoundingClientRect();
+        if (elRect.top < navRect.top || elRect.bottom > navRect.bottom) {
+          activeEl.scrollIntoView({ block: 'nearest', behavior: 'auto' });
+          window.__sbScrollTop = navEl.scrollTop;
+          try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('labpos_sb_scroll', String(navEl.scrollTop)); } catch (e) {}
+        }
+      }
+    }
   }
   /* folders open / close on click and the choice is remembered on this device */
   document.addEventListener('click', function (e) {
@@ -1173,16 +1208,35 @@
     var g = b.closest('.nav-grp'); if (!g) return;
     var open = g.classList.toggle('open');
     b.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) { /* opening one group closes the others */
-      Array.prototype.forEach.call(document.querySelectorAll('.nav-grp.open'), function (o) {
-        if (o === g) return; o.classList.remove('open');
-        var op = o.querySelector('.nav-par'); if (op) op.setAttribute('aria-expanded', 'false');
-      });
+    var grpId = g.getAttribute('data-grp');
+    try {
+      var mg = JSON.parse(localStorage.getItem('labpos_navgroups') || '{}') || {};
+      mg[grpId] = open;
+      localStorage.setItem('labpos_navgroups', JSON.stringify(mg));
+    } catch (x) {}
+    if (open) {
       if (b.getAttribute('data-nav') === 'reports' && (location.hash || '').indexOf('#/reports') === -1) {
         location.hash = '#/reports/tests';
       }
     }
   });
+
+  /* global sidebar scroll persistence */
+  try {
+    if (typeof sessionStorage !== 'undefined') {
+      window.__sbScrollTop = parseInt(sessionStorage.getItem('labpos_sb_scroll') || '0', 10) || 0;
+    }
+  } catch (e) { window.__sbScrollTop = 0; }
+  document.addEventListener('click', function (e) {
+    var inSidebar = e.target && e.target.closest && e.target.closest('#sidebar');
+    if (inSidebar) {
+      var navEl = (typeof document !== 'undefined' && document.querySelector) ? document.querySelector('#sidebar .nav') : null;
+      if (navEl) {
+        window.__sbScrollTop = navEl.scrollTop;
+        try { if (typeof sessionStorage !== 'undefined') sessionStorage.setItem('labpos_sb_scroll', String(navEl.scrollTop)); } catch (err) {}
+      }
+    }
+  }, true);
 
   /* ---------------- login / sign-up: see mod-auth.js (App.renderLogin / App.renderSignup) ---------------- */
 
@@ -1248,6 +1302,7 @@
     badge: badge,
     icon: icon,
     renderShell: renderShell,
+    markActive: markActive,
     paintCrit: paintCrit,
     isNative: isNativeApp,
     applyFont: applyFont,
