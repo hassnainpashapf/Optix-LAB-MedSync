@@ -663,10 +663,16 @@
   }
   function paintSidePlan() {
     var el = document.getElementById('sfPlan'); if (!el) return;
+    var foot = document.getElementById('sideFoot');
     var l = subInfo && subInfo.lab, s = session();
-    if (!l || l.legacy || !s || s.role !== 'admin' || l.status === 'trial') { el.hidden = true; return; }
+    if (!l || l.legacy || !s || s.role !== 'admin' || l.status === 'trial') {
+      el.hidden = true;
+      if (foot) foot.style.display = 'none';
+      return;
+    }
     var txt = l.status === 'expired' ? 'Plan expired — renew' : l.planName + (l.daysLeft != null && l.daysLeft <= 7 ? ' · ' + Math.max(l.daysLeft, 0) + ' days left' : ' plan');
     el.textContent = txt; el.className = 'sf-plan ' + (l.status === 'expired' ? 'bad' : 'ok'); el.hidden = false;
+    if (foot) foot.style.display = '';
   }
   function paintSubBanner() {
     paintSidePlan();
@@ -920,8 +926,7 @@
       '<button class="side-close" id="sideClose" aria-label="Close menu">' + icon('x', 16) + '</button></div>' +
       '<div class="sb-search"><span class="sb-search-ic">' + icon('search', 16) + '</span><input id="sbSearch" type="search" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search the menu"></div>' +
       '<nav class="nav">' + items + '</nav>' +
-      '<div class="side-foot"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a>' +
-      '<div class="sf-user"><span class="sf-av">' + ((_me && _me.photo) ? '<img src="' + _me.photo + '" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">' : esc((s.name || 'U').charAt(0).toUpperCase())) + '</span><span class="sf-tx"><b>' + esc(s.name || 'User') + '</b><small>' + esc(roleLabel(s)) + '</small></span></div></div>';
+      '<div class="side-foot" id="sideFoot" style="display:none"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a></div>';
     /* the menu search: type to narrow the menu to matching pages (sections and groups with no match hide) */
     (function () {
       var inp = document.getElementById('sbSearch'); if (!inp) return;
