@@ -591,7 +591,6 @@
         '<th><button type="button" data-col="dateRaw">Date ' + sortIcon + '</button></th>' +
         '<th style="text-align:center">Action</th>' +
       '</tr></thead><tbody id="apptsRows">' + ptRowsHtml + '</tbody></table></div>' +
-      '<nav class="ap-pager" id="dpager" aria-label="Pages"><button class="pg pg-nav" type="button" data-pg="first" title="First page">«</button><button class="pg pg-nav" type="button" data-pg="prev" title="Previous page">‹</button><button class="pg on" type="button" data-pg="1">1</button><button class="pg" type="button" data-pg="2">2</button><button class="pg" type="button" data-pg="3">3</button><span class="pg-dots">…</span><button class="pg" type="button" data-pg="8">8</button><button class="pg pg-nav" type="button" data-pg="next" title="Next page">›</button><button class="pg pg-nav" type="button" data-pg="last" title="Last page">»</button></nav>' +
       '</section>';
 
     /* Tests in Progress — pending results */
@@ -910,12 +909,6 @@
     '.ap-tbl tbody tr:hover{background:#fafcff}' +
     '.ap-tbl tbody tr:last-child td{border-bottom:0}' +
     '.ap-tbl .dcell{display:flex;align-items:center;gap:12px}' +
-    '.ap-tbl .dcell .pic{width:40px;height:40px;border-radius:50%;overflow:hidden;background:#ebf3fc;border:1px solid #e0edfb;flex:none;display:inline-flex;align-items:center;justify-content:center}' +
-    '.ap-pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:22px;padding-bottom:4px}' +
-    '.ap-pager .pg{min-width:36px;height:36px;padding:0 10px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s ease}' +
-    '.ap-pager .pg:hover:not(.on){background:#f8fafc;border-color:#cbd5e1;color:#1e293b}' +
-    '.ap-pager .pg.on{background:#2563eb!important;color:#fff!important;border-color:#2563eb!important;font-weight:700!important;box-shadow:0 0 0 3.5px rgba(37,99,235,0.28)!important}' +
-    '.ap-pager .pg-dots{color:#94a3b8;font-weight:700;padding:0 4px;font-size:14px}' +
     '</style>' +
 
     ovHead + ovGrid + midHtml +
@@ -1000,45 +993,17 @@
 
     function wireRecentPatients(v) {
       var rowsEl = v.querySelector('#apptsRows');
-      var pagerEl = v.querySelector('#dpager');
       if (!rowsEl) return;
 
       var data = (window.__recentPtList || []).slice();
-      var pageSize = 6;
-      var curPage = 1;
+      var maxRows = 6;
       var curSortCol = null;
       var curSortAsc = true;
       var renderRow = window.__renderPtRowHtml || function () { return ''; };
 
-      function renderPage(p) {
-        curPage = p;
-        var start = (p - 1) * pageSize;
-        var slice = data.slice(start, start + pageSize);
-        if (!slice.length && data.length) {
-          slice = data.slice(0, pageSize);
-        }
-        rowsEl.innerHTML = slice.map(function (r, i) { return renderRow(r, start + i); }).join('');
-
-        if (pagerEl) {
-          pagerEl.querySelectorAll('.pg:not(.pg-nav)').forEach(function (btn) {
-            var bPg = parseInt(btn.getAttribute('data-pg') || btn.textContent, 10);
-            btn.classList.toggle('on', bPg === curPage);
-          });
-        }
-      }
-
-      if (pagerEl) {
-        pagerEl.addEventListener('click', function (e) {
-          var btn = e.target.closest('.pg');
-          if (!btn) return;
-          var pgAttr = btn.getAttribute('data-pg');
-          if (pgAttr === 'first') { renderPage(1); return; }
-          if (pgAttr === 'prev') { renderPage(Math.max(1, curPage - 1)); return; }
-          if (pgAttr === 'next') { renderPage(Math.min(8, curPage + 1)); return; }
-          if (pgAttr === 'last') { renderPage(8); return; }
-          var pg = parseInt(pgAttr || btn.textContent, 10);
-          if (!isNaN(pg)) renderPage(pg);
-        });
+      function renderTable() {
+        var slice = data.slice(0, maxRows);
+        rowsEl.innerHTML = slice.map(function (r, i) { return renderRow(r, i); }).join('');
       }
 
       var dhead = v.querySelector('#dhead');
@@ -1061,7 +1026,7 @@
               if (va > vb) return curSortAsc ? 1 : -1;
               return 0;
             });
-            renderPage(1);
+            renderTable();
           });
         });
       }
