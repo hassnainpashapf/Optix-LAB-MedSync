@@ -432,199 +432,92 @@
         '</div></a>' +
     '</div>';
 
-    /* Recent Patients for Tests — pulled from real patients + invoices DB */
-    var AVATAR_COLORS = ['#2563eb','#7c3aed','#db2777','#059669','#d97706','#dc2626','#0284c7','#16a34a'];
-    function ptAvatar(name, idx) {
-      var initials = (name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).slice(0, 2).join('').toUpperCase();
-      var bg = AVATAR_COLORS[(idx || 0) % AVATAR_COLORS.length];
-      return '<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:' + bg + ';color:#fff;font-size:13.5px;font-weight:700;flex:none;letter-spacing:-.3px">' + App.esc(initials) + '</span>';
-    }
-    function genderBadge(g) {
-      var v = String(g || '').toLowerCase().charAt(0);
-      if (v === 'm') return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:700;border:1px solid #bfdbfe;flex:none">M</span>';
-      if (v === 'f') return '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fdf2f8;color:#db2777;font-size:11px;font-weight:700;border:1px solid #fbcfe8;flex:none">F</span>';
-      return '';
-    }
-    function statusBadge(statusStr) {
-      var s = String(statusStr || '').toLowerCase();
-      if (s === 'paid') return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#ecfdf3;color:#16a34a;border:1px solid #86efac;text-align:center">Paid</span>';
-      if (s === 'unpaid') return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;text-align:center">Unpaid</span>';
-      if (s === 'new') return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;text-align:center">New</span>';
-      return '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fffbeb;color:#d97706;border:1px solid #fde68a;text-align:center">Partial</span>';
-    }
-
-    function formatPatientDate(iso) {
-      if (!iso) return '—';
-      var d = new Date(iso);
-      if (isNaN(d.getTime())) return String(iso);
-      var now = new Date();
-      if (d.toDateString() === now.toDateString()) return 'Today';
-      var yest = new Date(now);
-      yest.setDate(yest.getDate() - 1);
-      if (d.toDateString() === yest.toDateString()) return 'Yesterday';
-      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
-    }
-
-    /* Build dynamic recent patients list */
-    var allPatients = DB.all('patients') || [];
-    var allInvoices = DB.all('invoices') || [];
-
-    var invsByPt = {};
-    allInvoices.forEach(function (inv) {
-      if (!inv) return;
-      var pid = inv.patientId;
-      if (pid) {
-        if (!invsByPt[pid]) invsByPt[pid] = [];
-        invsByPt[pid].push(inv);
+    /* Recent Patients — Appointments awaiting approval table */
+    function doctorAvatarSvg(type) {
+      if (type === 'female' || type === 'hijab') {
+        return '<svg viewBox="0 0 40 40" width="100%" height="100%">' +
+          '<circle cx="20" cy="20" r="20" fill="#ebf3fc"/>' +
+          '<path d="M4 40c1-8 7-12 16-12s15 4 16 12z" fill="#f8fafc"/>' +
+          '<path d="M16 28l4 6 4-6" fill="#e2e8f0"/>' +
+          '<circle cx="20" cy="18" r="13" fill="#3c2f27"/>' +
+          '<ellipse cx="20" cy="18" rx="6.5" ry="8" fill="#f0cbaf"/>' +
+        '</svg>';
       }
-    });
+      return '<svg viewBox="0 0 40 40" width="100%" height="100%">' +
+        '<circle cx="20" cy="20" r="20" fill="#ebf3fc"/>' +
+        '<path d="M4 40c1-8 7-12 16-12s15 4 16 12z" fill="#f8fafc"/>' +
+        '<path d="M16 28l4 6 4-6" fill="#e2e8f0"/>' +
+        '<ellipse cx="20" cy="19" rx="6.5" ry="8" fill="#cf9a72"/>' +
+        '<path d="M13.5 18c0-5 3-8 6.5-8s6.5 3 6.5 8c-2-2-4-3-6.5-3s-4.5 1-6.5 3z" fill="#2b2622"/>' +
+      '</svg>';
+    }
+    var apptFaces = {
+      amany: doctorAvatarSvg('female'),
+      tariq: doctorAvatarSvg('male'),
+      farid: doctorAvatarSvg('male'),
+      yasmin: doctorAvatarSvg('female'),
+      amir: doctorAvatarSvg('male')
+    };
 
-    Object.keys(invsByPt).forEach(function (pid) {
-      invsByPt[pid].sort(function (a, b) {
-        return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-      });
-    });
-
-    var recentPtList = [];
-    var seenPatients = {};
-
-    // 1. Registered patients
-    allPatients.forEach(function (pt) {
-      if (!pt || !pt.id) return;
-      seenPatients[pt.id] = true;
-      var pInvs = invsByPt[pt.id] || [];
-      var latestInv = pInvs[0];
-
-      var testNames = '—';
-      var totalAmt = 0;
-      var status = 'new';
-      var dateRaw = new Date(pt.createdAt || 0).getTime();
-      var dateStr = formatPatientDate(pt.createdAt);
-
-      if (latestInv) {
-        if (latestInv.createdAt) {
-          dateRaw = Math.max(dateRaw, new Date(latestInv.createdAt).getTime());
-          dateStr = formatPatientDate(latestInv.createdAt);
-        }
-        var items = (latestInv.items || []).map(function (it) { return it.name || it.testName || ''; }).filter(Boolean);
-        testNames = items.slice(0, 3).join(', ');
-        if (items.length > 3) testNames += ' +' + (items.length - 3) + ' more';
-        if (!testNames) testNames = 'Lab Test';
-
-        totalAmt = parseFloat(latestInv.total || 0);
-        var due = parseFloat(latestInv.due || 0);
-        if (due <= 0) status = 'paid';
-        else if (due >= totalAmt && totalAmt > 0) status = 'unpaid';
-        else status = 'partial';
-      } else {
-        testNames = pt.referredBy ? ('Ref: ' + pt.referredBy) : 'Registered';
-        status = 'new';
-      }
-
-      recentPtList.push({
-        id: pt.id,
-        patientId: pt.id,
-        name: pt.name || 'Patient',
-        phone: pt.phone || pt.whatsapp || '—',
-        age: pt.age ? String(pt.age) : '—',
-        gender: pt.gender || '',
-        tests: testNames,
-        amountNum: totalAmt,
-        amount: App.money ? App.money(totalAmt) : ('Rs ' + totalAmt.toLocaleString()),
-        status: status,
-        dateRaw: dateRaw,
-        dateStr: dateStr
-      });
-    });
-
-    // 2. Invoices that don't belong to an already listed patient (walk-ins)
-    allInvoices.forEach(function (inv) {
-      if (!inv) return;
-      if (inv.patientId && seenPatients[inv.patientId]) return;
-      var pKey = inv.patientId || ('walkin-' + inv.id);
-      if (seenPatients[pKey]) return;
-      seenPatients[pKey] = true;
-
-      var items = (inv.items || []).map(function (it) { return it.name || it.testName || ''; }).filter(Boolean);
-      var testNames = items.slice(0, 3).join(', ');
-      if (items.length > 3) testNames += ' +' + (items.length - 3) + ' more';
-      if (!testNames) testNames = 'Lab Test';
-
-      var totalAmt = parseFloat(inv.total || 0);
-      var due = parseFloat(inv.due || 0);
-      var status = 'partial';
-      if (due <= 0) status = 'paid';
-      else if (due >= totalAmt && totalAmt > 0) status = 'unpaid';
-
-      recentPtList.push({
-        id: pKey,
-        patientId: inv.patientId || '',
-        name: inv.patientName || 'Walk-in Patient',
-        phone: inv.phone || '—',
-        age: inv.age ? String(inv.age) : '—',
-        gender: inv.gender || '',
-        tests: testNames,
-        amountNum: totalAmt,
-        amount: App.money ? App.money(totalAmt) : ('Rs ' + totalAmt.toLocaleString()),
-        status: status,
-        dateRaw: new Date(inv.createdAt || 0).getTime(),
-        dateStr: formatPatientDate(inv.createdAt)
-      });
-    });
-
-    // Sort by most recent activity
-    recentPtList.sort(function (a, b) { return b.dateRaw - a.dateRaw; });
-
-    // Fallback demo rows if DB has 0 patients and 0 invoices
-    var demoPatRows = [
-      { id: 'd1', patientId: '', name: 'ALI RAZA', phone: '03000722292', age: '26', gender: 'M', tests: 'Anti-HCV (Hepatitis C), Vitamin B...', amountNum: 7100, amount: 'Rs 7,100', status: 'paid', dateRaw: Date.now(), dateStr: 'Today' },
-      { id: 'd2', patientId: '', name: 'Hussnain Pasha', phone: '03040683558', age: '45', gender: 'M', tests: 'PT / INR', amountNum: 900, amount: 'Rs 900', status: 'unpaid', dateRaw: Date.now() - 86400000, dateStr: 'Yesterday' },
-      { id: 'd3', patientId: '', name: 'ALI', phone: '03000722292', age: '26', gender: 'M', tests: 'Blood Group (ABO/Rh), Hemoglo...', amountNum: 300, amount: 'Rs 300', status: 'paid', dateRaw: Date.now() - 86400000, dateStr: 'Yesterday' },
-      { id: 'd4', patientId: '', name: 'SAMREEN', phone: '—', age: '25', gender: 'F', tests: 'Hemoglobin', amountNum: 150, amount: 'Rs 150', status: 'paid', dateRaw: Date.now() - 86400000 * 3, dateStr: '10 Oct 2026' },
-      { id: 'd5', patientId: '', name: 'ALI RAZA', phone: '—', age: '26', gender: 'M', tests: 'Anti-HCV (Hepatitis C), Blood Gr...', amountNum: 7250, amount: 'Rs 7,250', status: 'paid', dateRaw: Date.now() - 86400000 * 4, dateStr: '9 Oct 2026' },
-      { id: 'd6', patientId: '', name: 'FATIMA', phone: '—', age: '20', gender: 'F', tests: 'Complete Blood Count, Malarial ...', amountNum: 800, amount: 'Rs 800', status: 'paid', dateRaw: Date.now() - 86400000 * 4, dateStr: '9 Oct 2026' },
-      { id: 'd7', patientId: '', name: 'GHAZALA', phone: '—', age: '35', gender: 'F', tests: 'Complete Blood Count, Total Cho...', amountNum: 1250, amount: 'Rs 1,250', status: 'paid', dateRaw: Date.now() - 86400000 * 4, dateStr: '9 Oct 2026' },
-      { id: 'd8', patientId: '', name: 'WAQAS', phone: '—', age: '18', gender: 'M', tests: 'Complete Blood Count, Liver Fun...', amountNum: 3200, amount: 'Rs 3,200', status: 'paid', dateRaw: Date.now() - 86400000 * 6, dateStr: '7 Oct 2026' }
+    var defaultAppts = [
+      { id: 'ap1', patient: 'Yousef Al-Subaie', visit: 'Check-Up', doctor: 'Dr/Amany Ahmed', face: 'amany', spec: 'Neurology', date: '14 Oct 2026', time: '09:00 AM' },
+      { id: 'ap2', patient: 'Mariam Al-Subaie', visit: 'Follow-Up', doctor: 'Dr. Tariq Al-Hakim', face: 'tariq', spec: 'Orthopedics', date: '14 Oct 2026', time: '09:00 AM' },
+      { id: 'ap3', patient: 'Salma Al-Shehri', visit: 'Follow-Up', doctor: 'Dr. Farid Al-Zahrani', face: 'farid', spec: 'Nephrology', date: '14 Oct 2026', time: '12:30 PM' },
+      { id: 'ap4', patient: 'Mariam Al-Qahtani', visit: 'Check-Up', doctor: 'Dr. Tariq Al-Hakim', face: 'tariq', spec: 'Orthopedics', date: '14 Oct 2026', time: '02:00 PM' },
+      { id: 'ap5', patient: 'Hassan Al-Najjar', visit: 'Consultation', doctor: 'Dr. Yasmin Farah', face: 'yasmin', spec: 'Gynecology', date: '14 Oct 2026', time: '03:00 PM' },
+      { id: 'ap6', patient: 'Ibrahim Al-Dosari', visit: 'Follow-Up', doctor: 'Dr. Amir Al-Farsi', face: 'amir', spec: 'Neurology', date: '15 Oct 2026', time: '12:00 PM' }
     ];
 
-    var ptDisplayList = recentPtList.length > 0 ? recentPtList : demoPatRows;
-    window.__recentPtList = ptDisplayList;
+    var dbAppts = (DB.all('appointments') || []).filter(function (a) { return a.status === 'requested' || a.status === 'pending' || !a.status; }).map(function (a, i) {
+      var pt = DB.get('patients', a.patientId) || {};
+      var pName = (pt && pt.name) || a.patientName || 'Patient';
+      var dKeys = ['amany', 'tariq', 'farid', 'yasmin', 'amir'];
+      var dNames = ['Dr/Amany Ahmed', 'Dr. Tariq Al-Hakim', 'Dr. Farid Al-Zahrani', 'Dr. Yasmin Farah', 'Dr. Amir Al-Farsi'];
+      var dSpecs = ['Neurology', 'Orthopedics', 'Nephrology', 'Gynecology', 'Cardiology'];
+      return {
+        id: a.id || ('ap' + (i + 1)),
+        patient: pName,
+        visit: a.serviceType === 'home-collection' ? 'Home Collection' : (a.visitType || 'Check-Up'),
+        doctor: a.doctorName || dNames[i % dNames.length],
+        face: dKeys[i % dKeys.length],
+        spec: a.specialty || dSpecs[i % dSpecs.length],
+        date: a.date ? (App.dt(a.date) || '').slice(0, 11) : '14 Oct 2026',
+        time: a.timeSlot || '09:00 AM'
+      };
+    });
 
-    function renderPtRowHtml(r, i) {
-      var gBadge = genderBadge(r.gender);
-      var targetLink = r.patientId ? ('#/patient/' + encodeURIComponent(r.patientId)) : '#/patients';
-      var ageText = (r.age && r.age !== '—') ? (App.esc(r.age) + (!/yr/i.test(r.age) ? ' yr' : '')) : '—';
+    var apptsToRender = dbAppts.length ? dbAppts.slice(0, 6) : defaultAppts;
+    window.__apptsList = dbAppts.length ? dbAppts.concat(defaultAppts) : defaultAppts;
+
+    function renderApptRow(r) {
+      var faceSvg = apptFaces[r.face] || apptFaces.amany;
       return '<tr>' +
-        '<td><div style="display:flex;align-items:center;gap:12px">' + ptAvatar(r.name, i) +
-        '<div><b style="font-size:13.5px;font-weight:600;color:#1b2a4a;display:block;letter-spacing:-.1px">' + App.esc(r.name) + '</b>' +
-        '<small style="color:#8a94a6;font-size:12px;font-weight:500;display:block;margin-top:2px">' + App.esc(r.phone) + '</small></div></div></td>' +
-        '<td><div style="display:flex;align-items:center;gap:7px">' + gBadge + '<span style="font-size:13px;color:#475569;font-weight:500">' + ageText + '</span></div></td>' +
-        '<td style="font-size:13px;color:#475569;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(r.tests) + '">' + App.esc(r.tests) + '</td>' +
-        '<td style="font-size:14px;font-weight:600;color:#1b2a4a">' + App.esc(r.amount) + '</td>' +
-        '<td>' + statusBadge(r.status) + '</td>' +
-        '<td style="font-size:13px;color:#8a94a6;white-space:nowrap;font-weight:500">' + App.esc(r.dateStr) + '</td>' +
-        '<td><a href="' + targetLink + '" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #86efac;background:#fff;color:#16a34a;transition:all .15s" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
+        '<td style="font-weight:600;color:#1b2a4a;padding-left:20px">' + App.esc(r.patient) + '</td>' +
+        '<td style="color:#475569;font-weight:500">' + App.esc(r.visit) + '</td>' +
+        '<td><div class="dcell"><span class="pic">' + faceSvg + '</span><span style="font-weight:500;color:#1b2a4a">' + App.esc(r.doctor) + '</span></div></td>' +
+        '<td style="color:#475569;font-weight:500">' + App.esc(r.spec) + '</td>' +
+        '<td style="color:#475569;font-weight:500">' + App.esc(r.date) + '</td>' +
+        '<td style="color:#475569;font-weight:500;padding-right:20px">' + App.esc(r.time) + '</td>' +
       '</tr>';
     }
+    window.__renderApptRow = renderApptRow;
 
-    var ptRowsHtml = ptDisplayList.slice(0, 8).map(renderPtRowHtml).join('');
+    var sortIcon = '<svg width="9" height="12" viewBox="0 0 9 12" fill="none" style="margin-left:6px;vertical-align:middle;display:inline-block"><path d="M4.5 1.5L8 5H1L4.5 1.5Z" fill="#94a3b8"/><path d="M4.5 10.5L1 7H8L4.5 10.5Z" fill="#94a3b8"/></svg>';
 
-    var sortIcon = '<svg width="9" height="12" viewBox="0 0 9 12" fill="none" style="margin-left:5px;vertical-align:middle;display:inline-block"><path d="M4.5 1L7.5 4.5H1.5L4.5 1Z" fill="#94a3b8"/><path d="M4.5 11L1.5 7.5H7.5L4.5 11Z" fill="#94a3b8"/></svg>';
+    var apptRowsHtml = apptsToRender.map(renderApptRow).join('');
 
     var patCard = '<section class="card appts-card" id="apptsCard">' +
-      '<div class="ap-head"><div><h2>Recent Patients</h2><p>Latest patients who visited for tests.</p></div>' +
-      '<a href="#/patients" class="btn-soft" id="seeAll">See All <span style="font-size:14px;margin-left:2px">→</span></a></div>' +
+      '<div class="ap-head"><div><h2>Recent Patients</h2><p>Latest Appointments awaiting approval.</p></div>' +
+      '<a href="#/appointments" class="btn-soft" id="seeAll">See All <span style="font-size:14px;margin-left:2px">→</span></a></div>' +
       '<div class="tbl-wrap"><table class="ap-tbl"><thead><tr id="dhead">' +
-        '<th><button type="button" data-col="name">Patient Name ' + sortIcon + '</button></th>' +
-        '<th><button type="button" data-col="age">Age / Gender ' + sortIcon + '</button></th>' +
-        '<th><button type="button" data-col="tests">Tests Ordered ' + sortIcon + '</button></th>' +
-        '<th><button type="button" data-col="amountNum">Amount ' + sortIcon + '</button></th>' +
-        '<th><button type="button" data-col="status">Status ' + sortIcon + '</button></th>' +
-        '<th><button type="button" data-col="dateRaw">Date ' + sortIcon + '</button></th>' +
-        '<th>Action</th>' +
-      '</tr></thead><tbody id="apptsRows">' + ptRowsHtml + '</tbody></table></div>' +
-      '<nav class="ap-pager" id="dpager" aria-label="Pages"><button class="pg on" type="button" data-pg="1">1</button><button class="pg" type="button" data-pg="2">2</button><button class="pg" type="button" data-pg="3">3</button></nav>' +
+        '<th><button type="button" data-col="patient">Patient Name ' + sortIcon + '</button></th>' +
+        '<th><button type="button" data-col="visit">Visit Type ' + sortIcon + '</button></th>' +
+        '<th><button type="button" data-col="doctor">Doctor Name ' + sortIcon + '</button></th>' +
+        '<th><button type="button" data-col="spec">Specialty ' + sortIcon + '</button></th>' +
+        '<th><button type="button" data-col="date">Appointment Date ' + sortIcon + '</button></th>' +
+        '<th style="padding-right:20px"><button type="button" data-col="time">Time ' + sortIcon + '</button></th>' +
+      '</tr></thead><tbody id="apptsRows">' + apptRowsHtml + '</tbody></table></div>' +
+      '<nav class="ap-pager" id="dpager" aria-label="Pages"><button class="pg pg-nav" type="button" data-pg="first" title="First page">«</button><button class="pg pg-nav" type="button" data-pg="prev" title="Previous page">‹</button><button class="pg on" type="button" data-pg="1">1</button><button class="pg" type="button" data-pg="2">2</button><button class="pg" type="button" data-pg="3">3</button><span class="pg-dots">…</span><button class="pg" type="button" data-pg="8">8</button><button class="pg pg-nav" type="button" data-pg="next" title="Next page">›</button><button class="pg pg-nav" type="button" data-pg="last" title="Last page">»</button></nav>' +
       '</section>';
 
     /* Tests in Progress — pending results */
@@ -923,30 +816,32 @@
     'details.dt summary::marker{display:none}' +
     '.tip2{position:fixed;z-index:9999;pointer-events:none;background:#1e243b;color:#fff;border-radius:8px;padding:9px 13px;font-size:12px;line-height:1.55;box-shadow:0 10px 25px rgba(15,23,42,.4)}' +
     '.tip2[hidden]{display:none}' +
-    '/* ===== Appointments / Recent Patients table (appts-card) ===== */' +
+    /* ===== Appointments / Recent Patients table (appts-card) ===== */
     '.appts-card{padding:24px 26px 20px;border-radius:20px;background:#fff;border:0!important;box-shadow:0 2px 14px rgba(27,42,74,.08)!important;margin-bottom:20px}' +
     '.ap-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px}' +
-    '.ap-head h2{margin:0 0 4px;font-size:20px;font-weight:800;color:#1b2a4a;letter-spacing:-.01em}' +
+    '.ap-head h2{margin:0 0 4px;font-size:20px;font-weight:700;color:#1b2a4a;letter-spacing:-.01em}' +
     '.ap-head p{margin:0;font-size:13.5px;color:#8a94a6;font-weight:400}' +
     '.btn-soft{height:34px;padding:0 16px;border:0;border-radius:999px;background:#eef4fd;color:#2f6df6;font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px;text-decoration:none;cursor:pointer;transition:background .15s}' +
     '.btn-soft:hover{background:#e0ebfb}' +
     '.tbl-wrap{margin-top:14px;overflow-x:auto}' +
     '.ap-tbl{width:100%;min-width:860px;border-collapse:collapse}' +
     '.ap-tbl thead th{background:#f8fafc;text-align:left;font-weight:600;color:#8a94a6;font-size:13px;height:46px;padding:0 14px;white-space:nowrap;border:none}' +
-    '.ap-tbl thead th:first-child{border-radius:12px 0 0 12px;padding-left:18px}' +
-    '.ap-tbl thead th:last-child{border-radius:0 12px 12px 0;text-align:center}' +
+    '.ap-tbl thead th:first-child{border-radius:12px 0 0 12px;padding-left:20px}' +
+    '.ap-tbl thead th:last-child{border-radius:0 12px 12px 0;padding-right:20px}' +
     '.ap-tbl th button{border:0;background:none;padding:0;color:inherit;font:inherit;display:inline-flex;align-items:center;gap:4px;cursor:pointer}' +
     '.ap-tbl tbody td{height:68px;padding:0 14px;font-size:13.5px;color:#1b2a4a;border-bottom:1px solid #f1f5f9;white-space:nowrap;vertical-align:middle}' +
-    '.ap-tbl tbody td:first-child{padding-left:18px}' +
-    '.ap-tbl tbody td:last-child{text-align:center}' +
+    '.ap-tbl tbody td:first-child{padding-left:20px}' +
+    '.ap-tbl tbody td:last-child{padding-right:20px}' +
+    '.ap-tbl tbody tr{transition:background .15s}' +
     '.ap-tbl tbody tr:hover{background:#fafcff}' +
     '.ap-tbl tbody tr:last-child td{border-bottom:0}' +
-    '.ap-tbl .round{width:34px;height:34px;border-radius:50%;border:1.2px solid #86efac;background:#fff;color:#16a34a;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;transition:all .15s}' +
-    '.ap-tbl .round:hover{background:#f0fdf4;border-color:#4ade80;transform:scale(1.05)}' +
-    '.ap-pager{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:22px}' +
-    '.ap-pager .pg{width:32px;height:32px;padding:0;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:600;display:inline-grid;place-items:center;cursor:pointer;transition:all .15s}' +
+    '.ap-tbl .dcell{display:flex;align-items:center;gap:12px}' +
+    '.ap-tbl .dcell .pic{width:40px;height:40px;border-radius:50%;overflow:hidden;background:#ebf3fc;border:1px solid #e0edfb;flex:none;display:inline-flex;align-items:center;justify-content:center}' +
+    '.ap-pager{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:20px}' +
+    '.ap-pager .pg{min-width:32px;height:32px;padding:0 8px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s}' +
     '.ap-pager .pg:hover:not(.on){background:#f8fafc;border-color:#cbd5e1}' +
     '.ap-pager .pg.on{background:#2563eb;color:#fff;border-color:#2563eb;font-weight:700}' +
+    '.ap-pager .pg-dots{color:#94a3b8;font-weight:600;padding:0 4px}' +
     '</style>' +
 
     ovHead + ovGrid + midHtml +
@@ -1034,11 +929,12 @@
       var pagerEl = v.querySelector('#dpager');
       if (!rowsEl) return;
 
-      var data = (window.__recentPtList || []).slice();
-      var pageSize = 8;
+      var data = (window.__apptsList || []).slice();
+      var pageSize = 6;
       var curPage = 1;
       var curSortCol = null;
       var curSortAsc = true;
+      var renderRow = window.__renderApptRow || function () { return ''; };
 
       function renderPage(p) {
         curPage = p;
@@ -1047,41 +943,10 @@
         if (!slice.length && data.length) {
           slice = data.slice(0, pageSize);
         }
-        rowsEl.innerHTML = slice.map(function (r, i) {
-          var initials = (r.name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).slice(0, 2).join('').toUpperCase();
-          var bg = ['#2563eb','#7c3aed','#db2777','#059669','#d97706','#dc2626','#0284c7','#16a34a'][(start + i) % 8];
-          var av = '<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:' + bg + ';color:#fff;font-size:13.5px;font-weight:700;flex:none;letter-spacing:-.3px">' + App.esc(initials) + '</span>';
-
-          var gBadge = '';
-          var gv = String(r.gender || '').toLowerCase().charAt(0);
-          if (gv === 'm') gBadge = '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#eff6ff;color:#2563eb;font-size:11px;font-weight:700;border:1px solid #bfdbfe;flex:none">M</span>';
-          else if (gv === 'f') gBadge = '<span style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#fdf2f8;color:#db2777;font-size:11px;font-weight:700;border:1px solid #fbcfe8;flex:none">F</span>';
-
-          var sHtml = '';
-          var sStr = String(r.status || '').toLowerCase();
-          if (sStr === 'paid') sHtml = '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#ecfdf3;color:#16a34a;border:1px solid #86efac;text-align:center">Paid</span>';
-          else if (sStr === 'unpaid') sHtml = '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;text-align:center">Unpaid</span>';
-          else if (sStr === 'new') sHtml = '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;text-align:center">New</span>';
-          else sHtml = '<span style="display:inline-block;padding:3.5px 14px;border-radius:999px;font-size:11.5px;font-weight:600;background:#fffbeb;color:#d97706;border:1px solid #fde68a;text-align:center">Partial</span>';
-
-          var targetLink = r.patientId ? ('#/patient/' + encodeURIComponent(r.patientId)) : '#/patients';
-          var ageText = (r.age && r.age !== '—') ? (App.esc(r.age) + (!/yr/i.test(r.age) ? ' yr' : '')) : '—';
-
-          return '<tr>' +
-            '<td><div style="display:flex;align-items:center;gap:12px">' + av +
-            '<div><b style="font-size:13.5px;font-weight:600;color:#1b2a4a;display:block;letter-spacing:-.1px">' + App.esc(r.name) + '</b>' +
-            '<small style="color:#8a94a6;font-size:12px;font-weight:500;display:block;margin-top:2px">' + App.esc(r.phone) + '</small></div></div></td>' +
-            '<td><div style="display:flex;align-items:center;gap:7px">' + gBadge + '<span style="font-size:13px;color:#475569;font-weight:500">' + ageText + '</span></div></td>' +
-            '<td style="font-size:13px;color:#475569;max-width:210px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + App.esc(r.tests) + '">' + App.esc(r.tests) + '</td>' +
-            '<td style="font-size:14px;font-weight:600;color:#1b2a4a">' + App.esc(r.amount) + '</td>' +
-            '<td>' + sHtml + '</td>' +
-            '<td style="font-size:13px;color:#8a94a6;white-space:nowrap;font-weight:500">' + App.esc(r.dateStr) + '</td>' +
-            '<td><a href="' + targetLink + '" class="round v" style="text-decoration:none;display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1.2px solid #86efac;background:#fff;color:#16a34a;transition:all .15s" title="View Patient"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></a></td>' +
-          '</tr>';
-        }).join('');
+        rowsEl.innerHTML = slice.map(renderRow).join('');
 
         if (pagerEl) {
-          pagerEl.querySelectorAll('.pg').forEach(function (btn) {
+          pagerEl.querySelectorAll('.pg:not(.pg-nav)').forEach(function (btn) {
             var bPg = parseInt(btn.getAttribute('data-pg') || btn.textContent, 10);
             btn.classList.toggle('on', bPg === curPage);
           });
@@ -1092,7 +957,12 @@
         pagerEl.addEventListener('click', function (e) {
           var btn = e.target.closest('.pg');
           if (!btn) return;
-          var pg = parseInt(btn.getAttribute('data-pg') || btn.textContent, 10);
+          var pgAttr = btn.getAttribute('data-pg');
+          if (pgAttr === 'first') { renderPage(1); return; }
+          if (pgAttr === 'prev') { renderPage(Math.max(1, curPage - 1)); return; }
+          if (pgAttr === 'next') { renderPage(Math.min(8, curPage + 1)); return; }
+          if (pgAttr === 'last') { renderPage(8); return; }
+          var pg = parseInt(pgAttr || btn.textContent, 10);
           if (!isNaN(pg)) renderPage(pg);
         });
       }
@@ -1110,7 +980,7 @@
               curSortAsc = true;
             }
             data.sort(function (a, b) {
-              var va = a[colKey], vb = b[colKey];
+              var va = a[colKey] || '', vb = b[colKey] || '';
               if (typeof va === 'string') va = va.toLowerCase();
               if (typeof vb === 'string') vb = vb.toLowerCase();
               if (va < vb) return curSortAsc ? -1 : 1;
