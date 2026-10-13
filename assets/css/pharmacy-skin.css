@@ -13,7 +13,7 @@
   --card: #fff;
   --ink: #1b2a4a;
   --ink2: #3c4761;
-  --muted: #475266;
+  --muted: #6f7a92;
   --faint: #8b94a7;
   --line: #e2e8f1;
   --line2: #edf1f7;
@@ -145,7 +145,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 .kpi { background: linear-gradient(55deg, #fff 52%, var(--tbg, #eef2f8) 52%); }
 .kpi-ic { background: linear-gradient(135deg, var(--tbg, #eef2f8) 0%, #fff 160%); }
 html .db-page { --brand: #1b2a4a; --brand-d: #1b2a4a; --brand-soft: #eaf0ff; --brand-line: #c9d8fb; --brand-grad: linear-gradient(135deg, #3b7bf7, #1f4fd1);
-  --blue: #2f6df6; --blue-soft: #eaf0ff; --ink: #1b2a4a; --ink2: #3c4761; --muted: #475266; --faint: #5d6a82; --line: #e2e8f1; --line2: #edf1f7; --bg: #f2f5f9; --card: #fff;
+  --blue: #2f6df6; --blue-soft: #eaf0ff; --ink: #1b2a4a; --ink2: #3c4761; --muted: #6f7a92; --faint: #8b94a7; --line: #e2e8f1; --line2: #edf1f7; --bg: #f2f5f9; --card: #fff;
   --sh-sm: 0 1px 2px rgba(27, 42, 74, .04), 0 8px 20px -14px rgba(27, 42, 74, .14); --sh-md: 0 16px 38px -18px rgba(27, 42, 74, .16); font-family: var(--font); }
 
 /* ---------- 5. sign-in / sign-up: Split Teal & Blurred Artwork Card ---------- */
@@ -414,3 +414,18 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .dbq-card .card-b { padding: 12px 14px !important; }
 .dbq-card .card-b > span:first-child { width: 40px !important; height: 40px !important; }
 @media (max-width: 1250px) { .ovk-v { font-size: 26px; } }
+
+
+/* dashboard text: titles stay dark, the supporting lines are light (as in the Overview picture) */
+.ov-head p, .ov-head.sm p { color: #8b94a7; font-weight: 400; }
+.ovk-t small { color: #8b94a7; font-weight: 400; }
+.ovk-f { color: #7b869c; font-weight: 500; }
+.ovk-f b { color: var(--ink); font-weight: 700; }
+.ovk-t b { font-weight: 700; }
+.dbq-card small, .dbq-card .card-b small { color: #8b94a7 !important; font-weight: 400 !important; }
+.ov-two .muted, .ov-two small, .ov-col small { color: #8b94a7; }
+.ov-two .dbc-sub, .dbc-sub { color: #8b94a7; font-weight: 400; }
+.sidebar .nav-it { color: #3a4560; }
+.sidebar .nav-sub-it { color: #4b5671; }
+.topbar .tb-who small { color: #8b94a7; font-weight: 500; }
+.ov-h3 { font-weight: 700; }
