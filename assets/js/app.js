@@ -921,8 +921,7 @@
       '<div class="sb-search"><span class="sb-search-ic">' + icon('search', 16) + '</span><input id="sbSearch" type="search" placeholder="Search" autocomplete="off" spellcheck="false" aria-label="Search the menu"></div>' +
       '<nav class="nav">' + items + '</nav>' +
       '<div class="side-foot"><a class="sf-plan" id="sfPlan" href="#/subscription" hidden></a>' +
-      '<div class="sf-user"><span class="sf-av">' + ((_me && _me.photo) ? '<img src="' + _me.photo + '" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">' : esc((s.name || 'U').charAt(0).toUpperCase())) + '</span><span class="sf-tx"><b>' + esc(s.name || 'User') + '</b><small>' + esc(roleLabel(s)) + '</small></span>' +
-      '<button type="button" class="sf-out" id="sideLogout" title="Log out" aria-label="Log out">' + icon('logout', 17) + '</button></div></div>';
+      '<div class="sf-user"><span class="sf-av">' + ((_me && _me.photo) ? '<img src="' + _me.photo + '" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover">' : esc((s.name || 'U').charAt(0).toUpperCase())) + '</span><span class="sf-tx"><b>' + esc(s.name || 'User') + '</b><small>' + esc(roleLabel(s)) + '</small></span></div></div>';
     /* the menu search: type to narrow the menu to matching pages (sections and groups with no match hide) */
     (function () {
       var inp = document.getElementById('sbSearch'); if (!inp) return;
@@ -953,7 +952,8 @@
         if (first && first.getAttribute('href')) { location.hash = first.getAttribute('href'); }
       });
     })();
-    document.getElementById('sideLogout').addEventListener('click', logout);
+    var sideLogoutBtn = document.getElementById('sideLogout');
+    if (sideLogoutBtn) sideLogoutBtn.addEventListener('click', logout);
     paintSidePlan();
     /* topbar */
     var navItem = NAV.filter(function (n) { return n.key === activeKey; })[0];
