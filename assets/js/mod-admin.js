@@ -1998,6 +1998,7 @@
       { id: 'signatures', sec: 'REPORTS & PRINTING', label: 'Digital Signatures', desc: 'Pathologist stamps & e-signatures', icon: 'check' },
 
       { id: 'portal', sec: 'AUTOMATION & PORTAL', label: 'Patient Portal', desc: 'Online verification & QR access', icon: 'lock' },
+      { id: 'ai', sec: 'AUTOMATION & PORTAL', label: 'AI Intelligence Hub', desc: 'Clinical AI thresholds, doctor branding & module controls', icon: 'shield' },
 
       { id: 'backup', sec: 'SYSTEM', label: 'Backup & Cloud Sync', desc: 'Automated backups & export', icon: 'download' },
       { id: 'danger', sec: 'SYSTEM', label: 'Danger Zone', desc: 'Factory reset & data purge', icon: 'alert', isDanger: true }
@@ -2021,6 +2022,13 @@
     else if (settingsTab === 'templates') renderSetTemplates();
     else if (settingsTab === 'signatures') renderSetSignatures();
     else if (settingsTab === 'portal') renderSetPortal();
+    else if (settingsTab === 'ai') {
+      if (window.App && window.App.aiInsights && window.App.aiInsights.renderDashboard) {
+        window.App.aiInsights.renderDashboard('setBody');
+      } else {
+        document.getElementById('setBody').innerHTML = '<div style="padding:24px;text-align:center;color:#64748b">AI Intelligence Hub loading...</div>';
+      }
+    }
     else if (settingsTab === 'users') renderSetUsers();
     else if (settingsTab === 'backup') renderSetBackup();
     else renderSetDanger();
@@ -4502,7 +4510,7 @@
     });
   }
 
-  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'portal', 'users', 'backup', 'danger'];
+  var SET_TABS = ['profile', 'payments', 'account', 'templates', 'signatures', 'portal', 'ai', 'users', 'backup', 'danger'];
   /* Edit Patient Form (the dropdown choices used in patient and bill forms) lives under Patients; the old Settings address still works */
   App.route('#/patients/lists', function () {
     if (role() !== 'admin') return denied();

@@ -107,9 +107,11 @@
         { key: 'templates', label: 'Report Templates', icon: 'file', route: '#/settings/templates' },
         { key: 'signatures', label: 'Digital Signatures', icon: 'check', route: '#/settings/signatures' },
         { key: 'portal', label: 'Patient Portal', icon: 'lock', route: '#/settings/portal' },
+        { key: 'ai', label: 'AI Control Center', icon: 'shield', route: '#/settings/ai' },
         { key: 'backup', label: 'Backup', icon: 'download', route: '#/settings/backup' },
         { key: 'danger', label: 'Danger Zone', icon: 'alert', route: '#/settings/danger', danger: true }
       ] },
+    { key: 'ai-dashboard', label: 'AI Control Center', icon: 'shield', route: '#/ai-dashboard', color: '#6366f1', roles: ['admin', 'doctor', 'technician'] },
     { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
   ];
   var PERMS = {
@@ -136,6 +138,7 @@
     finance:   ['admin', 'reception'],
     profit:    ['admin'],
     reports:   ['admin'],
+    'ai-dashboard': ['admin', 'doctor', 'technician'],
     downloads:  ['admin', 'reception', 'technician'],
     whatsapp:  ['admin', 'reception'],
     sms:       ['admin', 'reception'],
@@ -156,6 +159,7 @@
     if (seg === 'trends') seg = 'reports';
     if (seg === 'signatures') seg = 'settings';
     if (seg === 'online-payments') seg = 'onlinepay';
+    if (seg === 'ai-dashboard' || seg === 'ai') seg = 'ai-dashboard';
     if (seg === 'digest') seg = 'whatsapp';
     if (seg === 'close-day') seg = 'finance';
     return seg || 'dashboard';
@@ -163,7 +167,7 @@
   /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
      Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
   var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['appointments', 'Appointments'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests Catalog'], ['packages', 'Health Packages & Deals'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['onlinepay', 'Online Payments'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
-    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Close Day (Cash Closing)'], ['profit', 'Profit & Loss Statement'], ['reports', 'Reports'], ['inventory', 'Inventory'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['sms', 'SIM Setting'], ['downloads', 'Downloads']];
+    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Close Day (Cash Closing)'], ['profit', 'Profit & Loss Statement'], ['reports', 'Reports'], ['ai-dashboard', 'AI Control Center'], ['inventory', 'Inventory'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['sms', 'SIM Setting'], ['downloads', 'Downloads']];
   function roleDef(s) {
     s = s || session(); if (!s || s.role !== 'custom') return null;
     var set = null; try { set = DB.get('settings', 'main'); } catch (e) {}
@@ -852,9 +856,9 @@
     var _isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || '');
     /* grouped, professional sidebar: section labels, one icon style, active state on the left */
     var SEC = { dashboard: 'Overview', branches: 'Overview', patients: 'Laboratory', samples: 'Laboratory', stock: 'Laboratory', inventory: 'Laboratory', results: 'Laboratory', tests: 'Laboratory', packages: 'Laboratory', outsourced: 'Laboratory', doctors: 'Laboratory',
-      invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', profit: 'Billing', reports: 'Insights', audit: 'Insights',
+      invoices: 'Billing', dues: 'Billing', discounts: 'Billing', onlinepay: 'Billing', panels: 'Billing', expenses: 'Billing', finance: 'Billing', profit: 'Billing', reports: 'Insights', 'ai-dashboard': 'Insights', audit: 'Insights',
       whatsapp: 'Tools', sms: 'Tools', email: 'Tools', downloads: 'Tools', subscription: 'Account', settings: 'Account' };
-    var ORDER = ['dashboard', 'branches', 'patients', 'samples', 'results', 'invoices', 'inventory', 'stock', 'tests', 'packages', 'reports', 'audit', 'outsourced', 'doctors', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
+    var ORDER = ['dashboard', 'branches', 'patients', 'samples', 'results', 'invoices', 'inventory', 'stock', 'tests', 'packages', 'reports', 'ai-dashboard', 'audit', 'outsourced', 'doctors', 'dues', 'discounts', 'onlinepay', 'panels', 'expenses', 'finance', 'profit', 'whatsapp', 'sms', 'email', 'downloads', 'subscription', 'settings'];
     var visible = NAV.filter(function (n) { return n.key !== 'profile' && (!App.featureOn || App.featureOn(n.key)) && can(n.key, s.role) && (!n.saas || saasOn()) && (!n.cloudOnly || (!!(window.DB && DB.isCloud && DB.isCloud()) && !(window.labposDesktop && window.labposDesktop.isDesktop))); })
       .sort(function (x, y) { return ORDER.indexOf(x.key) - ORDER.indexOf(y.key); });
     visible = groupSidebarNav(visible);

@@ -11,16 +11,24 @@ const aiCode = fs.readFileSync(path.join(root, 'assets/js/mod-ai-insights.js'), 
 console.log('--- Testing AI Recommendations Module & Doctor Dashboard Integration ---');
 
 // 1. VM Execution Test
+// 1. VM Execution Test
 let mockSettings = { aiInsightsRoles: ['admin', 'doctor', 'technician'] };
+const registeredRoutes = [];
+const mockStorage = {};
 const sandbox = {
   window: {},
   document: {
     createElement: () => ({ select: () => {}, value: '' }),
     querySelector: () => null,
     querySelectorAll: () => [],
+    getElementById: () => ({ innerHTML: '', querySelector: () => null, querySelectorAll: () => [] }),
     body: { appendChild: () => {}, removeChild: () => {} },
     addEventListener: () => {},
     removeEventListener: () => {}
+  },
+  localStorage: {
+    getItem: (k) => mockStorage[k] || null,
+    setItem: (k, v) => { mockStorage[k] = String(v); }
   },
   navigator: { clipboard: { writeText: () => Promise.resolve() } },
   console: console,
@@ -32,12 +40,16 @@ sandbox.App = {
   toast: () => {},
   modal: (title, html, opts) => {
     return () => {};
-  }
+  },
+  route: (p, fn) => { registeredRoutes.push(p); }
 };
 sandbox.DB = {
   get: (table, id) => {
     if (table === 'settings' && id === 'main') return mockSettings;
     return null;
+  },
+  set: (table, id, val) => {
+    if (table === 'settings' && id === 'main') mockSettings = val;
   },
   all: () => []
 };
@@ -638,8 +650,120 @@ assert(mapHtml.includes('Organ Stress Index'), 'Body map card must render stress
 
 console.log('✓ Ultra-Advanced Feature 8: Interactive Human Anatomy Organ Impact Map successfully evaluated 8 physiological systems and rendered SVG projections');
 
+// 25. Test Pro Feature: AI Intelligence Control Center & Central Management Dashboard
+console.log('\n--- Testing Ultra-Advanced Feature 9: AI Management Dashboard & Central Control Center ---');
+assert(AI.DEFAULT_CONFIG, 'AI.DEFAULT_CONFIG must be exported');
+assert(AI.DEFAULT_CONFIG.modules, 'DEFAULT_CONFIG must have modules flags');
+assert(AI.DEFAULT_CONFIG.panicThresholds, 'DEFAULT_CONFIG must have panic cutoffs');
+assert(AI.DEFAULT_CONFIG.doctorBranding, 'DEFAULT_CONFIG must have doctor branding');
+
+// Config retrieval & defaults
+const initialCfg = AI.getAiConfig();
+assert.equal(initialCfg.modules.solutions5, true, 'Default 5 solutions module must be active');
+assert.equal(initialCfg.modules.panicSos, true, 'Default Panic SOS module must be active');
+assert.equal(initialCfg.panicThresholds.plt, 20000, 'Default Platelet cutoff is 20,000');
+assert.equal(initialCfg.doctorBranding.name, 'Consultant Physician', 'Default doctor branding is Consultant Physician');
+assert(initialCfg.roles.includes('doctor'), 'Doctor role is mandatory');
+assert(initialCfg.roles.includes('admin'), 'Admin role is mandatory');
+
+// Save modified config
+const customCfg = JSON.parse(JSON.stringify(initialCfg));
+customCfg.panicThresholds.plt = 25000;
+customCfg.doctorBranding.name = 'Dr. Fatima Zahra (MBBS, FCPS)';
+customCfg.doctorBranding.pmdc = '55123-P';
+customCfg.modules.geneticGuard = true;
+const saveResult = AI.saveAiConfig(customCfg);
+assert.equal(saveResult, true, 'saveAiConfig must succeed');
+assert.equal(mockSettings.aiConfig.panicThresholds.plt, 25000, 'mockSettings must reflect new platelet cutoff');
+assert.equal(mockSettings.aiConfig.doctorBranding.name, 'Dr. Fatima Zahra (MBBS, FCPS)', 'mockSettings must reflect new doctor name');
+
+// Verify checkPanicValues uses updated threshold
+const testPltReport = {
+  pt: { name: 'Thrombocytopenic Patient', age: 30 },
+  groups: [{ test: { name: 'CBC' }, res: { values: { plt: 22000 } } }]
+};
+const panicResultWith25k = AI.checkPanicValues(testPltReport);
+assert.equal(panicResultWith25k.isPanic, true, 'Plt 22,000 must trigger panic when cutoff is 25,000');
+
+// Verify panicSos toggle off disables panics
+customCfg.modules.panicSos = false;
+AI.saveAiConfig(customCfg);
+const panicOffResult = AI.checkPanicValues(testPltReport);
+assert.equal(panicOffResult.isPanic, false, 'Panic must not trigger when panicSos module is disabled');
+
+// Restore panicSos
+customCfg.modules.panicSos = true;
+AI.saveAiConfig(customCfg);
+
+// Verify Digital Rx Pad Branding
+const dummyRxAnalysis = {
+  patient: { name: 'Tariq Butt', age: 50 },
+  invoice: { id: 'INV-RX-1' },
+  doctor: {},
+  solutions: { medications: [{ items: [{ drug: 'Tab. Paracetamol 500mg', dosage: 'TDS' }] }] }
+};
+const rxPadHtml = AI.generateRxPadHtml(dummyRxAnalysis);
+assert(rxPadHtml.includes('Dr. Fatima Zahra (MBBS, FCPS)'), 'Prescription pad must render configured doctor name');
+assert(rxPadHtml.includes('55123-P'), 'Prescription pad must render configured PMDC reg #');
+
+// Stats counters
+const statsBefore = AI.getAiStats();
+assert.equal(typeof statsBefore.analyzed, 'number', 'analyzed stat must be numeric');
+AI.recordAiStat('analyzed');
+const statsAfter = AI.getAiStats();
+assert.equal(statsAfter.analyzed, statsBefore.analyzed + 1, 'analyzed counter must increment by 1');
+
+// Clinical Sandbox Simulation
+let simulatedModalOpened = false;
+const originalShowModal = AI.showModal;
+AI.showModal = (invId, data) => {
+  simulatedModalOpened = true;
+  assert(data && data.pt && data.pt.name.includes('Simulated'), 'Simulated data must have simulated patient name');
+  return originalShowModal(invId, data);
+};
+AI.simulateAnalysis('dengue');
+assert.equal(simulatedModalOpened, true, 'simulateAnalysis(dengue) must launch showModal');
+AI.showModal = originalShowModal;
+
+// AI Dashboard Rendering
+let renderedHtml = '';
+const mockContainer = {
+  get innerHTML() { return renderedHtml; },
+  set innerHTML(v) { renderedHtml = v; },
+  querySelector: () => null,
+  querySelectorAll: () => []
+};
+sandbox.document.getElementById = (id) => (id === 'aiViewTest' ? mockContainer : null);
+AI.renderDashboard('aiViewTest');
+assert(renderedHtml.includes('Optix AI Clinical Intelligence Engine'), 'Dashboard must render title');
+assert(renderedHtml.includes('ai-dash-kpi'), 'Dashboard must render KPI cards');
+assert(renderedHtml.includes('Subsystem Toggles'), 'Dashboard must render subsystem toggles tab');
+assert(renderedHtml.includes('Emergency Panic Cutoff Limits'), 'Dashboard must render panic cutoffs panel');
+assert(renderedHtml.includes('Digital Rx Pad Credentials & Branding'), 'Dashboard must render branding panel');
+assert(renderedHtml.includes('Role Permissions Matrix'), 'Dashboard must render permissions panel');
+assert(renderedHtml.includes('Clinical Sandbox & Live Analysis Simulator'), 'Dashboard must render simulation cards');
+assert(renderedHtml.includes('MANDATORY (LOCKED ON)'), 'Doctor role must be displayed as permanently locked mandatory');
+
+// Router Registration
+assert(registeredRoutes.includes('#/ai-dashboard') || registeredRoutes.includes('/ai-dashboard'), 'ai-dashboard route must be registered');
+
+// File Parity & System Integration Checks
+const appJsCode = fs.readFileSync(path.join(root, 'assets/js/app.js'), 'utf8');
+assert(appJsCode.includes("'ai-dashboard': ['admin', 'doctor', 'technician']"), 'app.js PERMS must grant doctor and admin ai-dashboard access');
+assert(appJsCode.includes("seg === 'ai-dashboard'"), 'app.js routeKey must map ai-dashboard');
+assert(appJsCode.includes("key: 'ai-dashboard'"), 'app.js NAV must include ai-dashboard');
+
+const adminJsCode = fs.readFileSync(path.join(root, 'assets/js/mod-admin.js'), 'utf8');
+assert(adminJsCode.includes("id: 'ai'"), 'mod-admin.js must have ai settings tab');
+assert(adminJsCode.includes("'ai'"), 'mod-admin.js SET_TABS must include ai');
+
+const portalJsCode = fs.readFileSync(path.join(root, 'assets/js/mod-portal.js'), 'utf8');
+assert(portalJsCode.includes('#/ai-dashboard'), 'mod-portal.js must provide doctor shortcut to ai-dashboard');
+
+console.log('✓ Ultra-Advanced Feature 9: AI Management Dashboard & Central Control Center fully verified with zero regressions');
+
 console.log('\n============================================================');
-console.log('ALL 24 TEST SUITES PASSED! ULTRA-ADVANCED HOSPITAL-GRADE AI VERIFIED WITH ZERO REGRESSIONS.');
+console.log('ALL 25 TEST SUITES PASSED! ULTRA-ADVANCED HOSPITAL-GRADE AI VERIFIED WITH ZERO REGRESSIONS.');
 console.log('============================================================\n');
 
 

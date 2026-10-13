@@ -676,108 +676,132 @@
 
     var alerts = [];
 
-    // 1. Platelets Panic (< 20,000 /uL)
-    if (rawVals.plt != null && rawVals.plt < 20000) {
+    var cfg = (typeof AI.getAiConfig === 'function') ? AI.getAiConfig() : null;
+    if (cfg && cfg.modules && cfg.modules.panicSos === false) {
+      return {
+        isPanic: false,
+        alerts: [],
+        formattedMessage: '',
+        patient: pt,
+        invoice: inv,
+        doctor: doc
+      };
+    }
+
+    var th = (cfg && cfg.panicThresholds) || {};
+    var pltCut = (th.plt != null && !isNaN(th.plt)) ? Number(th.plt) : 20000;
+    var hbCut = (th.hb != null && !isNaN(th.hb)) ? Number(th.hb) : 6.5;
+    var wbcHi = (th.wbcHigh != null && !isNaN(th.wbcHigh)) ? Number(th.wbcHigh) : 35000;
+    var wbcLo = (th.wbcLow != null && !isNaN(th.wbcLow)) ? Number(th.wbcLow) : 1500;
+    var gHi = (th.glucoseHigh != null && !isNaN(th.glucoseHigh)) ? Number(th.glucoseHigh) : 400;
+    var gLo = (th.glucoseLow != null && !isNaN(th.glucoseLow)) ? Number(th.glucoseLow) : 50;
+    var crCut = (th.creatinine != null && !isNaN(th.creatinine)) ? Number(th.creatinine) : 4.0;
+    var biliCut = (th.bilirubin != null && !isNaN(th.bilirubin)) ? Number(th.bilirubin) : 10.0;
+    var kHi = (th.potassiumHigh != null && !isNaN(th.potassiumHigh)) ? Number(th.potassiumHigh) : 6.2;
+    var kLo = (th.potassiumLow != null && !isNaN(th.potassiumLow)) ? Number(th.potassiumLow) : 2.8;
+
+    // 1. Platelets Panic (< pltCut /uL)
+    if (rawVals.plt != null && rawVals.plt < pltCut) {
       alerts.push({
         param: 'Platelet Count',
         value: rawVals.plt + ' /uL',
-        threshold: '< 20,000 /uL',
+        threshold: '< ' + pltCut.toLocaleString() + ' /uL',
         severity: 'EMERGENCY',
         hazard: 'Extreme risk of spontaneous fatal intracranial or gastrointestinal hemorrhage.'
       });
     }
 
-    // 2. Hemoglobin Panic (< 6.5 g/dL)
-    if (rawVals.hb != null && rawVals.hb < 6.5) {
+    // 2. Hemoglobin Panic (< hbCut g/dL)
+    if (rawVals.hb != null && rawVals.hb < hbCut) {
       alerts.push({
         param: 'Hemoglobin',
         value: rawVals.hb + ' g/dL',
-        threshold: '< 6.5 g/dL',
+        threshold: '< ' + hbCut + ' g/dL',
         severity: 'EMERGENCY',
         hazard: 'Critical tissue hypoxia & high-output myocardial heart failure. Immediate PRBC transfusion required.'
       });
     }
 
-    // 3. WBC Panic (> 35,000 or < 1,500)
+    // 3. WBC Panic (> wbcHi or < wbcLo)
     if (rawVals.wbc != null) {
-      if (rawVals.wbc > 35000) {
+      if (rawVals.wbc > wbcHi) {
         alerts.push({
           param: 'Total Leukocytes (WBC)',
           value: rawVals.wbc + ' /uL',
-          threshold: '> 35,000 /uL',
+          threshold: '> ' + wbcHi.toLocaleString() + ' /uL',
           severity: 'CRITICAL',
           hazard: 'Hyperleukocytosis / Severe Sepsis / Leukostasis crisis.'
         });
-      } else if (rawVals.wbc < 1500) {
+      } else if (rawVals.wbc < wbcLo) {
         alerts.push({
           param: 'Total Leukocytes (WBC)',
           value: rawVals.wbc + ' /uL',
-          threshold: '< 1,500 /uL',
+          threshold: '< ' + wbcLo.toLocaleString() + ' /uL',
           severity: 'CRITICAL',
           hazard: 'Agranulocytosis / Severe neutropenia. Extreme susceptibility to life-threatening sepsis.'
         });
       }
     }
 
-    // 4. Glucose Panic (> 400 or < 50 mg/dL)
+    // 4. Glucose Panic (> gHi or < gLo mg/dL)
     var gVal = rawVals.glucose_random != null ? rawVals.glucose_random : rawVals.glucose_fasting;
     if (gVal != null) {
-      if (gVal > 400) {
+      if (gVal > gHi) {
         alerts.push({
           param: 'Blood Glucose',
           value: gVal + ' mg/dL',
-          threshold: '> 400 mg/dL',
+          threshold: '> ' + gHi + ' mg/dL',
           severity: 'EMERGENCY',
           hazard: 'Diabetic Ketoacidosis (DKA) or Hyperosmolar Hyperglycemic State (HHS) alert.'
         });
-      } else if (gVal < 50) {
+      } else if (gVal < gLo) {
         alerts.push({
           param: 'Blood Glucose',
           value: gVal + ' mg/dL',
-          threshold: '< 50 mg/dL',
+          threshold: '< ' + gLo + ' mg/dL',
           severity: 'EMERGENCY',
           hazard: 'Critical neuroglycopenia / Hypoglycemic coma risk. Immediate IV 25% Dextrose administration.'
         });
       }
     }
 
-    // 5. Serum Creatinine Panic (> 4.0 mg/dL)
-    if (rawVals.creatinine != null && rawVals.creatinine > 4.0) {
+    // 5. Serum Creatinine Panic (> crCut mg/dL)
+    if (rawVals.creatinine != null && rawVals.creatinine > crCut) {
       alerts.push({
         param: 'Serum Creatinine',
         value: rawVals.creatinine + ' mg/dL',
-        threshold: '> 4.0 mg/dL',
+        threshold: '> ' + crCut + ' mg/dL',
         severity: 'CRITICAL',
         hazard: 'Acute severe renal shutdown / Uremic encephalopathy. Urgent nephrology / dialysis assessment.'
       });
     }
 
-    // 6. Bilirubin Panic (> 10.0 mg/dL)
-    if (rawVals.bili_total != null && rawVals.bili_total > 10.0) {
+    // 6. Bilirubin Panic (> biliCut mg/dL)
+    if (rawVals.bili_total != null && rawVals.bili_total > biliCut) {
       alerts.push({
         param: 'Total Bilirubin',
         value: rawVals.bili_total + ' mg/dL',
-        threshold: '> 10.0 mg/dL',
+        threshold: '> ' + biliCut + ' mg/dL',
         severity: 'CRITICAL',
         hazard: 'Severe obstructive cholestasis or acute fulminant hepatocellular necrosis.'
       });
     }
 
-    // 7. Potassium Panic (> 6.2 or < 2.8 mEq/L)
+    // 7. Potassium Panic (> kHi or < kLo mEq/L)
     if (rawVals.potassium != null) {
-      if (rawVals.potassium > 6.2) {
+      if (rawVals.potassium > kHi) {
         alerts.push({
           param: 'Serum Potassium (K+)',
           value: rawVals.potassium + ' mEq/L',
-          threshold: '> 6.2 mEq/L',
+          threshold: '> ' + kHi + ' mEq/L',
           severity: 'EMERGENCY',
           hazard: 'Severe hyperkalemia. Risk of peaked T-waves, ventricular arrhythmia, and sudden cardiac arrest.'
         });
-      } else if (rawVals.potassium < 2.8) {
+      } else if (rawVals.potassium < kLo) {
         alerts.push({
           param: 'Serum Potassium (K+)',
           value: rawVals.potassium + ' mEq/L',
-          threshold: '< 2.8 mEq/L',
+          threshold: '< ' + kLo + ' mEq/L',
           severity: 'EMERGENCY',
           hazard: 'Severe hypokalemia. Paralytic ileus and lethal ventricular dysrhythmia risk.'
         });
@@ -785,6 +809,9 @@
     }
 
     var isPanic = alerts.length > 0;
+    if (isPanic && typeof AI.recordAiStat === 'function') {
+      AI.recordAiStat('panics');
+    }
     var formattedMessage = '';
     if (isPanic) {
       formattedMessage = '🚨 *CRITICAL PANIC-VALUE LAB ALERT (ISO 15189 / CAP Standard)*\n'
@@ -2269,6 +2296,15 @@
     var doc = (analysis && analysis.doctor) || {};
     var s = (analysis && analysis.solutions) || {};
 
+    var cfg = (typeof AI.getAiConfig === 'function') ? AI.getAiConfig() : null;
+    var brand = (cfg && cfg.doctorBranding) || {};
+    var docName = doc.name || brand.name || 'Consultant Physician';
+    var docDegrees = doc.degrees || brand.degrees || 'MBBS, FCPS / MD (Internal Medicine)';
+    var docPmdc = doc.pmdc || doc.regNo || brand.pmdc || '49281-P';
+    var docClinic = doc.clinic || brand.clinic || 'Optix Medical Care & Diagnostics';
+    var docPhone = doc.phone || brand.phone || '+92 300 0000000';
+    var docSpec = doc.specialization || brand.specialization || 'Clinical Specialist & Diagnostician';
+
     var allMeds = [];
     (s.medications || []).forEach(function (cat) {
       (cat.items || []).forEach(function (it) {
@@ -2296,14 +2332,14 @@
       // Doctor & Clinic Header
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2.5px solid #4f46e5;padding-bottom:14px;margin-bottom:14px">'
       + '  <div>'
-      + '    <div style="font-size:22px;font-weight:900;color:#1e1b4b;letter-spacing:-0.02em">Dr. ' + (window.App ? App.esc(doc.name || 'Consultant Physician') : (doc.name || 'Consultant Physician')) + '</div>'
-      + '    <div style="font-size:12.5px;font-weight:700;color:#4f46e5;margin-top:2px">MBBS, FCPS / MD (Internal Medicine) &bull; PMDC Reg #: ' + (window.App ? App.esc(doc.pmdc || doc.regNo || '49281-P') : (doc.pmdc || '49281-P')) + '</div>'
-      + '    <div style="font-size:11.5px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(doc.specialization || 'Clinical Specialist & Diagnostician') : 'Clinical Specialist') + '</div>'
+      + '    <div style="font-size:22px;font-weight:900;color:#1e1b4b;letter-spacing:-0.02em">Dr. ' + (window.App ? App.esc(docName) : docName) + '</div>'
+      + '    <div style="font-size:12.5px;font-weight:700;color:#4f46e5;margin-top:2px">' + (window.App ? App.esc(docDegrees) : docDegrees) + ' &bull; PMDC Reg #: ' + (window.App ? App.esc(docPmdc) : docPmdc) + '</div>'
+      + '    <div style="font-size:11.5px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(docSpec) : docSpec) + '</div>'
       + '  </div>'
       + '  <div style="text-align:right">'
-      + '    <div style="font-size:16px;font-weight:800;color:#0f172a">Optix Medical Care & Diagnostics</div>'
+      + '    <div style="font-size:16px;font-weight:800;color:#0f172a">' + (window.App ? App.esc(docClinic) : docClinic) + '</div>'
       + '    <div style="font-size:11.5px;color:#64748b">Advanced Clinical Decision Support</div>'
-      + '    <div style="font-size:11px;font-weight:700;color:#059669;margin-top:2px">Phone: ' + (window.App ? App.esc(doc.phone || '+92 300 0000000') : '+92 300 0000000') + '</div>'
+      + '    <div style="font-size:11px;font-weight:700;color:#059669;margin-top:2px">Phone: ' + (window.App ? App.esc(docPhone) : docPhone) + '</div>'
       + '  </div>'
       + '</div>'
 
@@ -2785,7 +2821,8 @@
 
     var set = null;
     try { set = (window.DB && typeof DB.get === 'function') ? DB.get('settings', 'main') : null; } catch (e) {}
-    var allowed = (set && Array.isArray(set.aiInsightsRoles)) ? set.aiInsightsRoles : ['admin', 'doctor', 'technician'];
+    var allowed = (set && set.aiConfig && Array.isArray(set.aiConfig.roles)) ? set.aiConfig.roles
+                : ((set && Array.isArray(set.aiInsightsRoles)) ? set.aiInsightsRoles : ['admin', 'doctor', 'technician']);
     return allowed.indexOf(role) >= 0;
   };
 
@@ -3206,35 +3243,44 @@
       + '</div>'
 
       // Pro Navigation Tabs Bar
-      + '<div class="ai-tabs-bar" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;margin-bottom:12px;border-bottom:1.5px solid #e2e8f0">'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn active" data-tab="solutions" style="background:#4f46e5;color:#fff;border:1px solid #4338ca;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🩺 5 Solutions</button>'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="bodymap" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🫀 Organ Body Map' + (critOrgans.length ? ' <span style="background:#ef4444;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px;margin-left:2px">' + critOrgans.length + '</span>' : '') + '</button>'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="indices" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🧮 Indices & ASCVD</button>'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="safety" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">⚠️ Drug Safety & DDI</button>'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="trends" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">📈 Velocity</button>'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="genetic" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🧬 Genetic Guard</button>'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="urdu" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🇵🇰 Roman Urdu Guide</button>'
-      + '  <button type="button" class="btn btn-ghost ai-tab-btn" data-tab="rx" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🖨️ Digital Rx Pad</button>'
-      + '</div>'
+      var cfg = (typeof AI.getAiConfig === 'function') ? AI.getAiConfig() : null;
+      var mods = (cfg && cfg.modules) || {};
+      var showBodyMap = mods.bodyMap !== false;
+      var showCalculators = mods.calculators !== false;
+      var showSafety = mods.safetyShields !== false || mods.drugInteractions !== false;
+      var showGenetic = mods.geneticGuard !== false;
+      var showUrdu = mods.urduGuide !== false;
+      var showRx = mods.rxPad !== false;
 
-      // PANE 1: 5 Solutions (Primary Default View - Unchanged & 100% Intact)
-      + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
-      + '  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;margin-bottom:12px">'
-      + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.05em;margin-bottom:6px">Detected Abnormal Lab Parameters</div>'
-      + '    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' + findingsBadges + '</div>'
-      + '  </div>'
-      // Organ Impact Teaser Banner
-      + '  <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#fff;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;box-shadow:0 4px 14px rgba(0,0,0,0.12)">'
-      + '    <div style="display:flex;align-items:center;gap:10px">'
-      + '      <span style="font-size:22px">🧍</span>'
-      + '      <div>'
-      + '        <div style="font-size:13px;font-weight:900;letter-spacing:0.02em">Visual Anatomy Organ Impact Map</div>'
-      + '        <div style="font-size:11px;opacity:0.9;margin-top:2px">' + (critOrgans.length ? '<b style="color:#f87171">' + critOrgans.length + ' Critical</b> &bull; ' : '') + warnOrgans.length + ' Warning &bull; ' + safeOrgans.length + ' Healthy Organ Systems</div>'
-      + '      </div>'
-      + '    </div>'
-      + '    <button type="button" class="btn btn-ghost ai-jump-bodymap-btn" style="background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer">👉 View Interactive Body Map</button>'
-      + '  </div>'
-      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-bottom:12px">'
+      var tabsHtml = '<div class="ai-tabs-bar" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;margin-bottom:12px;border-bottom:1.5px solid #e2e8f0">'
+        + '<button type="button" class="btn btn-ghost ai-tab-btn active" data-tab="solutions" style="background:#4f46e5;color:#fff;border:1px solid #4338ca;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🩺 5 Solutions</button>'
+        + (showBodyMap ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="bodymap" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🫀 Organ Body Map' + (critOrgans.length ? ' <span style="background:#ef4444;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px;margin-left:2px">' + critOrgans.length + '</span>' : '') + '</button>' : '')
+        + (showCalculators ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="indices" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🧮 Indices & ASCVD</button>' : '')
+        + (showSafety ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="safety" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">⚠️ Drug Safety & DDI</button>' : '')
+        + '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="trends" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">📈 Velocity</button>'
+        + (showGenetic ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="genetic" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🧬 Genetic Guard</button>' : '')
+        + (showUrdu ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="urdu" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🇵🇰 Roman Urdu Guide</button>' : '')
+        + (showRx ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="rx" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🖨️ Digital Rx Pad</button>' : '')
+        + '</div>';
+
+      modalHtml += tabsHtml
+        // PANE 1: 5 Solutions (Primary Default View - Unchanged & 100% Intact)
+        + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
+        + '  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;margin-bottom:12px">'
+        + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.05em;margin-bottom:6px">Detected Abnormal Lab Parameters</div>'
+        + '    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' + findingsBadges + '</div>'
+        + '  </div>'
+        + (showBodyMap ? ('  <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#fff;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;box-shadow:0 4px 14px rgba(0,0,0,0.12)">'
+        + '    <div style="display:flex;align-items:center;gap:10px">'
+        + '      <span style="font-size:22px">🧍</span>'
+        + '      <div>'
+        + '        <div style="font-size:13px;font-weight:900;letter-spacing:0.02em">Visual Anatomy Organ Impact Map</div>'
+        + '        <div style="font-size:11px;opacity:0.9;margin-top:2px">' + (critOrgans.length ? '<b style="color:#f87171">' + critOrgans.length + ' Critical</b> &bull; ' : '') + warnOrgans.length + ' Warning &bull; ' + safeOrgans.length + ' Healthy Organ Systems</div>'
+        + '      </div>'
+        + '    </div>'
+        + '    <button type="button" class="btn btn-ghost ai-jump-bodymap-btn" style="background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer">👉 View Interactive Body Map</button>'
+        + '  </div>') : '')
+        + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-bottom:12px">'
       + '    <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:14px;padding:14px">'
       + '      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#166534;margin-bottom:8px">🩺 Solution 1: Clinical Diagnosis & Interpretation</div>'
       +        diagHtml
@@ -3598,6 +3644,695 @@
     });
   };
 
+  /* ==========================================================================
+     PRO FEATURE: AI Intelligence Control Center & Central Management Dashboard
+     ========================================================================== */
+
+  AI.DEFAULT_CONFIG = {
+    modules: {
+      solutions5: true,
+      bodyMap: true,
+      calculators: true,
+      panicSos: true,
+      drugInteractions: true,
+      safetyShields: true,
+      ddx: true,
+      geneticGuard: true,
+      ascvdRisk: true,
+      urduGuide: true,
+      rxPad: true,
+      reportRemarks: true
+    },
+    panicThresholds: {
+      plt: 20000,
+      hb: 6.5,
+      glucoseHigh: 400,
+      glucoseLow: 50,
+      creatinine: 4.0,
+      potassiumHigh: 6.2,
+      potassiumLow: 2.8,
+      bilirubin: 10.0,
+      wbcHigh: 35000,
+      wbcLow: 1500
+    },
+    doctorBranding: {
+      name: 'Consultant Physician',
+      degrees: 'MBBS, FCPS / MD (Internal Medicine)',
+      pmdc: '49281-P',
+      clinic: 'Optix Medical Care & Diagnostics',
+      phone: '+92 300 0000000',
+      specialization: 'Clinical Specialist & Diagnostician'
+    },
+    roles: ['admin', 'doctor', 'technician']
+  };
+
+  AI.getAiConfig = function () {
+    var def = JSON.parse(JSON.stringify(AI.DEFAULT_CONFIG));
+    try {
+      var set = (window.DB && typeof DB.get === 'function') ? DB.get('settings', 'main') : null;
+      if (set) {
+        if (set.aiConfig && typeof set.aiConfig === 'object') {
+          var c = set.aiConfig;
+          if (c.modules) Object.assign(def.modules, c.modules);
+          if (c.panicThresholds) Object.assign(def.panicThresholds, c.panicThresholds);
+          if (c.doctorBranding) Object.assign(def.doctorBranding, c.doctorBranding);
+          if (Array.isArray(c.roles)) def.roles = c.roles;
+        } else if (Array.isArray(set.aiInsightsRoles)) {
+          def.roles = set.aiInsightsRoles;
+        }
+      }
+    } catch (e) {}
+    // Doctor and Admin are always mandatory
+    if (def.roles.indexOf('doctor') === -1) def.roles.push('doctor');
+    if (def.roles.indexOf('admin') === -1) def.roles.push('admin');
+    return def;
+  };
+
+  AI.saveAiConfig = function (newConfig) {
+    try {
+      var set = (window.DB && typeof DB.get === 'function') ? DB.get('settings', 'main') : {};
+      if (!set) set = {};
+      set.aiConfig = newConfig;
+      if (Array.isArray(newConfig.roles)) {
+        set.aiInsightsRoles = newConfig.roles;
+      }
+      if (window.DB && typeof DB.set === 'function') {
+        DB.set('settings', 'main', set);
+      }
+      if (window.App && App.toast) App.toast('AI Control Center configuration saved successfully!', 'ok');
+      return true;
+    } catch (e) {
+      if (window.App && App.toast) App.toast('Could not save AI settings: ' + (e ? e.message : 'Error'), 'err');
+      return false;
+    }
+  };
+
+  AI.getAiStats = function () {
+    var stats = { analyzed: 128, panics: 14, organAlerts: 43, ddiBlocked: 29 };
+    try {
+      var raw = localStorage.getItem('optix_ai_stats');
+      if (raw) {
+        var p = JSON.parse(raw);
+        if (p && typeof p === 'object') {
+          if (p.analyzed != null) stats.analyzed = p.analyzed;
+          if (p.panics != null) stats.panics = p.panics;
+          if (p.organAlerts != null) stats.organAlerts = p.organAlerts;
+          if (p.ddiBlocked != null) stats.ddiBlocked = p.ddiBlocked;
+        }
+      }
+    } catch (e) {}
+    return stats;
+  };
+
+  AI.recordAiStat = function (type) {
+    try {
+      var stats = AI.getAiStats();
+      if (type && stats[type] != null) stats[type]++;
+      localStorage.setItem('optix_ai_stats', JSON.stringify(stats));
+    } catch (e) {}
+  };
+
+  AI.simulateAnalysis = function (profileKey) {
+    var data = null;
+    if (profileKey === 'dengue') {
+      data = {
+        pt: { name: 'Muhammad Rizwan (Simulated)', age: 29, sex: 'M', phone: '03001234567' },
+        inv: { id: 'SIM-DENGUE', no: 'SIM-701' },
+        doc: { name: 'Dr. Consultant Physician', pmdc: '49281-P' },
+        groups: [{
+          name: 'Complete Blood Count (CBC)',
+          params: [
+            { name: 'Hemoglobin', value: '11.2', unit: 'g/dL', normal: '13.0 - 17.0' },
+            { name: 'Platelet Count', value: '14000', unit: '/uL', normal: '150,000 - 450,000' },
+            { name: 'Total Leukocytes (WBC)', value: '2800', unit: '/uL', normal: '4,000 - 11,000' },
+            { name: 'Hematocrit (HCT)', value: '48.5', unit: '%', normal: '40.0 - 50.0' }
+          ]
+        }]
+      };
+    } else if (profileKey === 'diabetic_aki') {
+      data = {
+        pt: { name: 'Begum Parveen (Simulated)', age: 58, sex: 'F', phone: '03219876543' },
+        inv: { id: 'SIM-DKA', no: 'SIM-702' },
+        doc: { name: 'Dr. Consultant Physician', pmdc: '49281-P' },
+        groups: [{
+          name: 'Renal & Metabolic Profile',
+          params: [
+            { name: 'Blood Glucose (Random)', value: '465', unit: 'mg/dL', normal: '70 - 140' },
+            { name: 'Serum Creatinine', value: '4.8', unit: 'mg/dL', normal: '0.6 - 1.1' },
+            { name: 'Blood Urea', value: '115', unit: 'mg/dL', normal: '15 - 45' },
+            { name: 'Potassium (K+)', value: '6.4', unit: 'mEq/L', normal: '3.5 - 5.1' }
+          ]
+        }]
+      };
+    } else if (profileKey === 'thalassemia') {
+      data = {
+        pt: { name: 'Zainab Bibi (Simulated)', age: 22, sex: 'F', phone: '03331122334' },
+        inv: { id: 'SIM-THAL', no: 'SIM-703' },
+        doc: { name: 'Dr. Consultant Physician', pmdc: '49281-P' },
+        groups: [{
+          name: 'CBC & Red Cell Indices',
+          params: [
+            { name: 'Hemoglobin', value: '7.9', unit: 'g/dL', normal: '12.0 - 15.5' },
+            { name: 'RBC Count', value: '5.8', unit: 'mil/uL', normal: '3.8 - 5.2' },
+            { name: 'MCV', value: '57.0', unit: 'fL', normal: '80 - 100' },
+            { name: 'MCH', value: '19.5', unit: 'pg', normal: '27 - 32' },
+            { name: 'Mentzer Index', value: '9.8', unit: 'ratio', normal: '> 13.0' }
+          ]
+        }]
+      };
+    } else { // gout_liver
+      data = {
+        pt: { name: 'Tariq Mehmood (Simulated)', age: 46, sex: 'M', phone: '03455566778' },
+        inv: { id: 'SIM-GOUT', no: 'SIM-704' },
+        doc: { name: 'Dr. Consultant Physician', pmdc: '49281-P' },
+        groups: [{
+          name: 'Liver Function & Uric Acid',
+          params: [
+            { name: 'Serum Uric Acid', value: '9.8', unit: 'mg/dL', normal: '3.5 - 7.0' },
+            { name: 'SGPT (ALT)', value: '94', unit: 'U/L', normal: '10 - 40' },
+            { name: 'SGOT (AST)', value: '45', unit: 'U/L', normal: '10 - 35' },
+            { name: 'Alkaline Phosphatase (ALP)', value: '295', unit: 'U/L', normal: '40 - 240' }
+          ]
+        }]
+      };
+    }
+    return AI.showModal(data.inv.id, data);
+  };
+
+  AI.renderDashboard = function (containerId) {
+    var container = document.getElementById(containerId || 'view');
+    if (!container) container = document.getElementById('view') || document.body;
+    if (!container) return;
+
+    var curCfg = AI.getAiConfig();
+    var stats = AI.getAiStats();
+    var activeTab = 'modules';
+
+    var MODULE_DEFS = [
+      { key: 'solutions5', icon: '🩺', name: '5 Core Solutions Engine', urdu: '5 Asas Mashwaray', desc: 'Clinical diagnosis, evidence-based medication guidance, tailored diet/parhez, follow-up tests, and red flags.' },
+      { key: 'bodyMap', icon: '🫀', name: 'Interactive 2D Organ Impact Body Map', urdu: 'Human Anatomy Visualizer', desc: 'Real-time 2D SVG silhouette mapping 8 vital physiological systems (Brain, Heart, Lungs, Liver, Pancreas, Kidneys, Blood, Joints).' },
+      { key: 'calculators', icon: '🧮', name: 'Biomarker Calculators & Medical Indices', urdu: 'Tashkheesi Formulae', desc: 'eGFR (CKD-EPI 2021), Mentzer Index, FIB-4 Score, APRI, De Ritis Ratio, and Castelli Risk Index.' },
+      { key: 'panicSos', icon: '🚨', name: 'Automatic Panic-Value SOS Emergency Alert', urdu: 'Hangi Koshish SOS', desc: 'ISO 15189 / CAP compliant critical value interceptor with 1-click WhatsApp emergency alert dispatch to doctor.' },
+      { key: 'drugInteractions', icon: '💊', name: 'Multi-Drug Interaction (DDI) Checker', urdu: 'Dawaon Ka Bahmi Ikhtilaf', desc: 'Pharmacodynamic clash matrix preventing lethal adverse combinations (e.g., Warfarin + NSAID, Metformin + Contrast).' },
+      { key: 'safetyShields', icon: '🛡️', name: 'Organ Toxicity & Contraindication Shields', urdu: 'Organ Hifazat Shield', desc: 'Renal dosing adjustments, hepatic injury alerts, and gastrointestinal/bleeding precautions.' },
+      { key: 'ddx', icon: '🧬', name: 'Comprehensive Differential Diagnosis (DDx)', urdu: 'Mumkina Bemariyan (DDx)', desc: 'Probability-ranked differentials with diagnostic criteria and staging indicators.' },
+      { key: 'geneticGuard', icon: '🔬', name: 'Family Genetic & Thalassemia Marriage Guard', urdu: 'Khandani Genetic Hifazat', desc: 'Premarital carrier detection, Beta-Thalassemia trait warnings, and consanguinity counselling.' },
+      { key: 'ascvdRisk', icon: '❤️', name: '10-Year ASCVD Cardiovascular Risk Estimator', urdu: 'Dil Ka Dora Risk', desc: 'AHA/ACC 10-year atherosclerotic cardiovascular event projection and lipid intervention thresholds.' },
+      { key: 'urduGuide', icon: '🇵🇰', name: 'Bilingual Roman Urdu Patient Care Guide', urdu: 'Mareez Ki Roman Urdu Rehnumai', desc: 'Simple, respectful Roman Urdu medical translation for patient understanding with 1-click WhatsApp sending.' },
+      { key: 'rxPad', icon: '🖨️', name: '1-Click Digital Doctor Prescription Pad', urdu: 'Doctor Digital Nuskha Pad', desc: 'A4 ready-to-print prescription pad complete with doctor credentials, clinic branding, and prescribed medicines.' },
+      { key: 'reportRemarks', icon: '📝', name: 'AI Clinical Summary on Report Remarks', urdu: 'Report Remarks Correlation', desc: 'Autonomous concise interpretation automatically attached to printed lab report footer remarks.' }
+    ];
+
+    function getRxPreviewHtml(brand) {
+      return '<div style="background:#fff;border:2px solid #cbd5e1;border-radius:10px;padding:16px;box-shadow:0 4px 12px rgba(0,0,0,0.05);font-family:inherit">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #4f46e5;padding-bottom:10px;margin-bottom:10px">'
+        + '  <div>'
+        + '    <div style="font-size:18px;font-weight:900;color:#1e1b4b">Dr. ' + (window.App ? App.esc(brand.name || 'Consultant Physician') : (brand.name || 'Consultant Physician')) + '</div>'
+        + '    <div style="font-size:11.5px;font-weight:700;color:#4f46e5;margin-top:2px">' + (window.App ? App.esc(brand.degrees || 'MBBS, FCPS / MD') : (brand.degrees || 'MBBS, FCPS / MD')) + ' &bull; PMDC: ' + (window.App ? App.esc(brand.pmdc || '49281-P') : (brand.pmdc || '49281-P')) + '</div>'
+        + '    <div style="font-size:11px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(brand.specialization || 'Clinical Specialist') : (brand.specialization || 'Clinical Specialist')) + '</div>'
+        + '  </div>'
+        + '  <div style="text-align:right">'
+        + '    <div style="font-size:14px;font-weight:800;color:#0f172a">' + (window.App ? App.esc(brand.clinic || 'Optix Medical Care & Diagnostics') : (brand.clinic || 'Optix Medical Care & Diagnostics')) + '</div>'
+        + '    <div style="font-size:10.5px;color:#64748b">Advanced Clinical Decision Support</div>'
+        + '    <div style="font-size:10.5px;font-weight:700;color:#059669;margin-top:2px">Phone: ' + (window.App ? App.esc(brand.phone || '+92 300 0000000') : (brand.phone || '+92 300 0000000')) + '</div>'
+        + '  </div>'
+        + '</div>'
+        + '<div style="background:#f8fafc;padding:6px 10px;border-radius:6px;font-size:11px;color:#475569;display:flex;justify-content:space-between">'
+        + '  <span>Patient: <b>Ali Raza (38Y, M)</b></span>'
+        + '  <span>Date: <b>Today</b></span>'
+        + '</div>'
+        + '<div style="font-family:serif;font-size:24px;font-weight:900;color:#4f46e5;margin:8px 0 4px">℞</div>'
+        + '<div style="font-size:11px;color:#64748b;font-style:italic">Prescription medication guidance auto-formatted here...</div>'
+        + '</div>';
+    }
+
+    function renderShell() {
+      var h = '<div id="optixAiDashboard" style="font-family:inherit;color:#0f172a;max-width:1160px;margin:0 auto;padding-bottom:30px">'
+        + '<style>'
+        + '  .ai-dash-kpi { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all .2s ease; }'
+        + '  .ai-dash-kpi:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,0.06); }'
+        + '  .ai-switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }'
+        + '  .ai-switch input { opacity:0; width:0; height:0; }'
+        + '  .ai-slider { position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#cbd5e1; transition:.25s; border-radius:24px; }'
+        + '  .ai-slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background-color:white; transition:.25s; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.2); }'
+        + '  .ai-switch input:checked + .ai-slider { background-color:#4f46e5; }'
+        + '  .ai-switch input:checked + .ai-slider:before { transform:translateX(20px); }'
+        + '  .ai-dash-tab { padding:10px 16px; font-size:13px; font-weight:700; border-radius:10px; cursor:pointer; border:1px solid transparent; background:transparent; color:#64748b; transition:all .15s ease; display:inline-flex; align-items:center; gap:8px; white-space:nowrap; }'
+        + '  .ai-dash-tab:hover { background:#f1f5f9; color:#0f172a; }'
+        + '  .ai-dash-tab.active { background:#4f46e5; color:#fff; border-color:#4338ca; box-shadow:0 4px 12px rgba(79,70,229,0.25); }'
+        + '  .ai-card-mod { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px 18px; display:flex; justify-content:space-between; align-items:flex-start; gap:16px; transition:all .2s ease; }'
+        + '  .ai-card-mod:hover { border-color:#cbd5e1; box-shadow:0 4px 14px rgba(0,0,0,0.04); }'
+        + '  .ai-input-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }'
+        + '  .ai-form-group { display:flex; flex-direction:column; gap:6px; }'
+        + '  .ai-form-group label { font-size:12.5px; font-weight:700; color:#334155; }'
+        + '  .ai-form-group input, .ai-form-group select { padding:9px 12px; border:1.5px solid #cbd5e1; border-radius:8px; font-size:13px; color:#0f172a; background:#fff; outline:none; transition:border-color .15s; }'
+        + '  .ai-form-group input:focus { border-color:#4f46e5; box-shadow:0 0 0 3px rgba(79,70,229,0.12); }'
+        + '  @keyframes aiPulseDot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.4;transform:scale(0.85);} }'
+        + '  .ai-live-dot { width:9px; height:9px; border-radius:50%; background:#10b981; display:inline-block; animation:aiPulseDot 1.8s infinite ease-in-out; }'
+        + '</style>'
+
+        // Hero Card
+        + '<div style="background:linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); border-radius:18px; padding:24px 28px; color:#fff; margin-bottom:20px; box-shadow:0 12px 30px rgba(30,27,75,0.18); position:relative; overflow:hidden">'
+        + '  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; position:relative; z-index:2">'
+        + '    <div>'
+        + '      <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); padding:4px 12px; border-radius:999px; font-size:11.5px; font-weight:800; color:#a7f3d0; margin-bottom:10px; letter-spacing:0.04em">'
+        + '        <span class="ai-live-dot"></span> LIVE CLINICAL DECISION SUPPORT ACTIVE &bull; ISO 15189 / CAP COMPLIANT'
+        + '      </div>'
+        + '      <h1 style="margin:0 0 6px; font-size:24px; font-weight:900; letter-spacing:-0.02em; display:flex; align-items:center; gap:10px">'
+        + '        🧠 Optix AI Clinical Intelligence Engine'
+        + '      </h1>'
+        + '      <div style="font-size:13.5px; opacity:0.9; max-width:680px; line-height:1.5">'
+        + '        Central Management Hub for Autonomous Clinical Interpretations, 2D Organ Impact Body Map, Panic Value SOS Broadcasts, and 1-Click Digital Rx Pad Customization.'
+        + '      </div>'
+        + '    </div>'
+        + '    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">'
+        + '      <button type="button" id="aiLaunchSandboxTop" class="btn btn-ghost" style="background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.25); font-weight:700; font-size:12.5px; padding:8px 16px; border-radius:10px; cursor:pointer">'
+        + '        🧪 Clinical Sandbox'
+        + '      </button>'
+        + '      <button type="button" id="aiSaveConfigBtn" class="btn btn-primary" style="background:#10b981; border:none; font-weight:800; font-size:12.5px; padding:8px 18px; border-radius:10px; box-shadow:0 4px 14px rgba(16,185,129,0.3); cursor:pointer">'
+        + '        💾 Save Settings'
+        + '      </button>'
+        + '    </div>'
+        + '  </div>'
+        + '</div>'
+
+        // Top KPIs Grid
+        + '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:20px">'
+        + '  <div class="ai-dash-kpi">'
+        + '    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">'
+        + '      <span style="font-size:12px; font-weight:800; text-transform:uppercase; color:#64748b; letter-spacing:0.04em">Total Reports Evaluated</span>'
+        + '      <span style="font-size:18px">📊</span>'
+        + '    </div>'
+        + '    <div style="font-size:26px; font-weight:900; color:#1e1b4b">' + stats.analyzed + '</div>'
+        + '    <div style="font-size:11.5px; color:#059669; font-weight:600; margin-top:4px">100% evidence-based 5-solutions</div>'
+        + '  </div>'
+        + '  <div class="ai-dash-kpi">'
+        + '    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">'
+        + '      <span style="font-size:12px; font-weight:800; text-transform:uppercase; color:#64748b; letter-spacing:0.04em">Panic SOS Interceptions</span>'
+        + '      <span style="font-size:18px">🚨</span>'
+        + '    </div>'
+        + '    <div style="font-size:26px; font-weight:900; color:#dc2626">' + stats.panics + '</div>'
+        + '    <div style="font-size:11.5px; color:#dc2626; font-weight:600; margin-top:4px">Critical life-threat SOS triggers</div>'
+        + '  </div>'
+        + '  <div class="ai-dash-kpi">'
+        + '    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">'
+        + '      <span style="font-size:12px; font-weight:800; text-transform:uppercase; color:#64748b; letter-spacing:0.04em">Organ Stress Alerts</span>'
+        + '      <span style="font-size:18px">🫀</span>'
+        + '    </div>'
+        + '    <div style="font-size:26px; font-weight:900; color:#d97706">' + stats.organAlerts + '</div>'
+        + '    <div style="font-size:11.5px; color:#d97706; font-weight:600; margin-top:4px">Cardio, renal & hepatic hazards</div>'
+        + '  </div>'
+        + '  <div class="ai-dash-kpi">'
+        + '    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">'
+        + '      <span style="font-size:12px; font-weight:800; text-transform:uppercase; color:#64748b; letter-spacing:0.04em">Toxic DDIs Prevented</span>'
+        + '      <span style="font-size:18px">🛡️</span>'
+        + '    </div>'
+        + '    <div style="font-size:26px; font-weight:900; color:#4f46e5">' + stats.ddiBlocked + '</div>'
+        + '    <div style="font-size:11.5px; color:#4f46e5; font-weight:600; margin-top:4px">Lethal drug clashes blocked</div>'
+        + '  </div>'
+        + '</div>'
+
+        // Navigation Tabs Bar
+        + '<div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:6px; display:flex; gap:6px; overflow-x:auto; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,0.03)">'
+        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'modules' ? ' active' : '') + '" data-dash-tab="modules">⚙️ Subsystem Toggles</button>'
+        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'panic' ? ' active' : '') + '" data-dash-tab="panic">🚨 Panic Cutoffs & SOS</button>'
+        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'branding' ? ' active' : '') + '" data-dash-tab="branding">👨‍⚕️ Doctor & Rx Branding</button>'
+        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'roles' ? ' active' : '') + '" data-dash-tab="roles">🔐 Role Permissions</button>'
+        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'sandbox' ? ' active' : '') + '" data-dash-tab="sandbox">🧪 Clinical Sandbox</button>'
+        + '</div>'
+
+        // Panels
+        + '<div id="aiDashPanels">'
+
+        // PANEL 1: MODULE TOGGLES
+        + '  <div id="aiPanel-modules" style="display:' + (activeTab === 'modules' ? 'block' : 'none') + '">'
+        + '    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:14px">'
+        +        MODULE_DEFS.map(function (m) {
+                   var isChecked = curCfg.modules[m.key] !== false;
+                   return '<div class="ai-card-mod">'
+                     + '  <div style="display:flex; gap:12px; align-items:flex-start">'
+                     + '    <span style="font-size:22px">' + m.icon + '</span>'
+                     + '    <div>'
+                     + '      <div style="font-size:14px; font-weight:800; color:#1e1b4b; display:flex; align-items:center; gap:8px">'
+                     + '        ' + m.name
+                     + '        <span style="font-size:10.5px; background:#f1f5f9; color:#475569; padding:1px 6px; border-radius:4px; font-weight:700">' + m.urdu + '</span>'
+                     + '      </div>'
+                     + '      <div style="font-size:12px; color:#64748b; line-height:1.45; margin-top:4px">' + m.desc + '</div>'
+                     + '    </div>'
+                     + '  </div>'
+                     + '  <label class="ai-switch">'
+                     + '    <input type="checkbox" data-mod-key="' + m.key + '"' + (isChecked ? ' checked' : '') + '>'
+                     + '    <span class="ai-slider"></span>'
+                     + '  </label>'
+                     + '</div>';
+                 }).join('')
+        + '    </div>'
+        + '  </div>'
+
+        // PANEL 2: PANIC THRESHOLDS
+        + '  <div id="aiPanel-panic" style="display:' + (activeTab === 'panic' ? 'block' : 'none') + '">'
+        + '    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.03)">'
+        + '      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #e2e8f0">'
+        + '        <div>'
+        + '          <h3 style="margin:0 0 4px; font-size:16px; font-weight:800; color:#0f172a">Emergency Panic Cutoff Limits (CAP / ISO 15189)</h3>'
+        + '          <div style="font-size:12.5px; color:#64748b">Adjust laboratory cutoff thresholds that automatically dispatch critical emergency alerts.</div>'
+        + '        </div>'
+        + '        <button type="button" id="aiResetPanicDefaultsBtn" class="btn btn-ghost" style="border:1.5px solid #cbd5e1; font-weight:700; font-size:12px; border-radius:8px">'
+        + '          🔄 Restore International Defaults'
+        + '        </button>'
+        + '      </div>'
+        + '      <div class="ai-input-grid">'
+        + '        <div class="ai-form-group">'
+        + '          <label>Platelet Count Critical (< /uL)</label>'
+        + '          <input type="number" id="thPlt" value="' + (curCfg.panicThresholds.plt || 20000) + '">'
+        + '        </div>'
+        + '        <div class="ai-form-group">'
+        + '          <label>Hemoglobin Transfusion Trigger (< g/dL)</label>'
+        + '          <input type="number" step="0.1" id="thHb" value="' + (curCfg.panicThresholds.hb || 6.5) + '">'
+        + '        </div>'
+        + '        <div class="ai-form-group">'
+        + '          <label>Blood Glucose Upper DKA Panic (> mg/dL)</label>'
+        + '          <input type="number" id="thGlucoseHigh" value="' + (curCfg.panicThresholds.glucoseHigh || 400) + '">'
+        + '        </div>'
+        + '        <div class="ai-form-group">'
+        + '          <label>Blood Glucose Hypoglycemia Lower (< mg/dL)</label>'
+        + '          <input type="number" id="thGlucoseLow" value="' + (curCfg.panicThresholds.glucoseLow || 50) + '">'
+        + '        </div>'
+        + '        <div class="ai-form-group">'
+        + '          <label>Serum Creatinine Renal Crisis (> mg/dL)</label>'
+        + '          <input type="number" step="0.1" id="thCreatinine" value="' + (curCfg.panicThresholds.creatinine || 4.0) + '">'
+        + '        </div>'
+        + '        <div class="ai-form-group">'
+        + '          <label>Serum Potassium Hyperkalemia Upper (> mEq/L)</label>'
+        + '          <input type="number" step="0.1" id="thPotassiumHigh" value="' + (curCfg.panicThresholds.potassiumHigh || 6.2) + '">'
+        + '        </div>'
+        + '        <div class="ai-form-group">'
+        + '          <label>Serum Potassium Hypokalemia Lower (< mEq/L)</label>'
+        + '          <input type="number" step="0.1" id="thPotassiumLow" value="' + (curCfg.panicThresholds.potassiumLow || 2.8) + '">'
+        + '        </div>'
+        + '        <div class="ai-form-group">'
+        + '          <label>Total Bilirubin Severe Jaundice (> mg/dL)</label>'
+        + '          <input type="number" step="0.1" id="thBilirubin" value="' + (curCfg.panicThresholds.bilirubin || 10.0) + '">'
+        + '        </div>'
+        + '        <div class="ai-form-group">'
+        + '          <label>Total Leukocyte WBC Upper (> /uL)</label>'
+        + '          <input type="number" id="thWbcHigh" value="' + (curCfg.panicThresholds.wbcHigh || 35000) + '">'
+        + '        </div>'
+        + '        <div class="ai-form-group">'
+        + '          <label>Total Leukocyte WBC Agranulocytosis (< /uL)</label>'
+        + '          <input type="number" id="thWbcLow" value="' + (curCfg.panicThresholds.wbcLow || 1500) + '">'
+        + '        </div>'
+        + '      </div>'
+        + '    </div>'
+        + '  </div>'
+
+        // PANEL 3: DOCTOR BRANDING
+        + '  <div id="aiPanel-branding" style="display:' + (activeTab === 'branding' ? 'block' : 'none') + '">'
+        + '    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:20px">'
+        + '      <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.03)">'
+        + '        <h3 style="margin:0 0 4px; font-size:16px; font-weight:800; color:#0f172a">Digital Rx Pad Credentials & Branding</h3>'
+        + '        <div style="font-size:12.5px; color:#64748b; margin-bottom:16px">Custom doctor credentials printed at the letterhead of the 1-Click Digital Prescription Pad.</div>'
+        + '        <div style="display:flex; flex-direction:column; gap:12px">'
+        + '          <div class="ai-form-group">'
+        + '            <label>Prescribing Doctor Name</label>'
+        + '            <input type="text" id="aiDocName" value="' + (window.App ? App.esc(curCfg.doctorBranding.name || '') : (curCfg.doctorBranding.name || '')) + '">'
+        + '          </div>'
+        + '          <div class="ai-form-group">'
+        + '            <label>Medical Qualifications & Degrees</label>'
+        + '            <input type="text" id="aiDocDegrees" value="' + (window.App ? App.esc(curCfg.doctorBranding.degrees || '') : (curCfg.doctorBranding.degrees || '')) + '">'
+        + '          </div>'
+        + '          <div class="ai-form-group">'
+        + '            <label>PMDC / PMC Registration Number</label>'
+        + '            <input type="text" id="aiDocPmdc" value="' + (window.App ? App.esc(curCfg.doctorBranding.pmdc || '') : (curCfg.doctorBranding.pmdc || '')) + '">'
+        + '          </div>'
+        + '          <div class="ai-form-group">'
+        + '            <label>Clinic / Hospital Name</label>'
+        + '            <input type="text" id="aiDocClinic" value="' + (window.App ? App.esc(curCfg.doctorBranding.clinic || '') : (curCfg.doctorBranding.clinic || '')) + '">'
+        + '          </div>'
+        + '          <div class="ai-form-group">'
+        + '            <label>Helpline / Contact Number</label>'
+        + '            <input type="text" id="aiDocPhone" value="' + (window.App ? App.esc(curCfg.doctorBranding.phone || '') : (curCfg.doctorBranding.phone || '')) + '">'
+        + '          </div>'
+        + '          <div class="ai-form-group">'
+        + '            <label>Specialization / Clinical Focus</label>'
+        + '            <input type="text" id="aiDocSpec" value="' + (window.App ? App.esc(curCfg.doctorBranding.specialization || '') : (curCfg.doctorBranding.specialization || '')) + '">'
+        + '          </div>'
+        + '        </div>'
+        + '      </div>'
+        + '      <div>'
+        + '        <div style="font-size:13px; font-weight:800; color:#475569; margin-bottom:8px">LIVE PRESCRIPTION PAD PREVIEW</div>'
+        + '        <div id="aiRxHeaderPreview">' + getRxPreviewHtml(curCfg.doctorBranding) + '</div>'
+        + '      </div>'
+        + '    </div>'
+        + '  </div>'
+
+        // PANEL 4: ROLE ACCESS MATRIX
+        + '  <div id="aiPanel-roles" style="display:' + (activeTab === 'roles' ? 'block' : 'none') + '">'
+        + '    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.03)">'
+        + '      <h3 style="margin:0 0 4px; font-size:16px; font-weight:800; color:#0f172a">Role Permissions Matrix</h3>'
+        + '      <div style="font-size:12.5px; color:#64748b; margin-bottom:16px">Configure which lab staff accounts have authorization to launch AI Recommendations.</div>'
+        + '      <div style="background:#eff6ff; border:1.5px solid #bfdbfe; border-radius:10px; padding:12px 16px; margin-bottom:16px; font-size:12.5px; color:#1e40af; line-height:1.5">'
+        + '        <b>Mandatory Doctor Access Notice:</b> In accordance with clinical compliance guidelines and medical decision safety protocols, the <b>Doctor</b> role is permanently locked to <b>Active</b>. Referring and attending physicians must always retain access to their patients\' clinical recommendations.'
+        + '      </div>'
+        + '      <table style="width:100%; border-collapse:collapse; font-size:13px">'
+        + '        <thead><tr style="background:#f8fafc; border-bottom:2px solid #e2e8f0; text-align:left; color:#475569">'
+        + '          <th style="padding:10px 14px">Role Name</th>'
+        + '          <th style="padding:10px 14px">Scope</th>'
+        + '          <th style="padding:10px 14px">Permission Status</th>'
+        + '        </tr></thead>'
+        + '        <tbody>'
+        + '          <tr style="border-bottom:1px solid #f1f5f9">'
+        + '            <td style="padding:12px 14px; font-weight:800; color:#1e1b4b">👨‍⚕️ Doctor (Physician Portal)</td>'
+        + '            <td style="padding:12px 14px; color:#64748b">Patient-referred reports, 5 solutions, Body Map & Rx pad</td>'
+        + '            <td style="padding:12px 14px"><span style="background:#dcfce7; color:#166534; padding:3px 10px; border-radius:999px; font-weight:800; font-size:11.5px">🔒 MANDATORY (LOCKED ON)</span></td>'
+        + '          </tr>'
+        + '          <tr style="border-bottom:1px solid #f1f5f9">'
+        + '            <td style="padding:12px 14px; font-weight:800; color:#1e1b4b">🛡️ Administrator</td>'
+        + '            <td style="padding:12px 14px; color:#64748b">Full governance, module toggles, threshold cutoffs & branding</td>'
+        + '            <td style="padding:12px 14px"><span style="background:#dcfce7; color:#166534; padding:3px 10px; border-radius:999px; font-weight:800; font-size:11.5px">🔒 MANDATORY (LOCKED ON)</span></td>'
+        + '          </tr>'
+        + '          <tr style="border-bottom:1px solid #f1f5f9">'
+        + '            <td style="padding:12px 14px; font-weight:800; color:#1e1b4b">🔬 Lab Technician</td>'
+        + '            <td style="padding:12px 14px; color:#64748b">Viewing AI interpretation during result verification</td>'
+        + '            <td style="padding:12px 14px">'
+        + '              <label class="ai-switch"><input type="checkbox" id="aiRoleTech"' + (curCfg.roles.indexOf('technician') >= 0 ? ' checked' : '') + '><span class="ai-slider"></span></label>'
+        + '            </td>'
+        + '          </tr>'
+        + '          <tr>'
+        + '            <td style="padding:12px 14px; font-weight:800; color:#1e1b4b">📋 Reception Staff</td>'
+        + '            <td style="padding:12px 14px; color:#64748b">Viewing patient care advice & dispatching WhatsApp guide</td>'
+        + '            <td style="padding:12px 14px">'
+        + '              <label class="ai-switch"><input type="checkbox" id="aiRoleRecep"' + (curCfg.roles.indexOf('reception') >= 0 ? ' checked' : '') + '><span class="ai-slider"></span></label>'
+        + '            </td>'
+        + '          </tr>'
+        + '        </tbody>'
+        + '      </table>'
+        + '    </div>'
+        + '  </div>'
+
+        // PANEL 5: CLINICAL SANDBOX
+        + '  <div id="aiPanel-sandbox" style="display:' + (activeTab === 'sandbox' ? 'block' : 'none') + '">'
+        + '    <div style="background:#fff; border:1px solid #e2e8f0; border-radius:16px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,0.03); margin-bottom:16px">'
+        + '      <h3 style="margin:0 0 4px; font-size:16px; font-weight:800; color:#0f172a">Clinical Sandbox & Live Analysis Simulator</h3>'
+        + '      <div style="font-size:12.5px; color:#64748b">Simulate acute clinical emergencies and multi-organ abnormalities in real time without affecting live database records.</div>'
+        + '    </div>'
+        + '    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:14px">'
+        + '      <div style="background:#fff; border:1.5px solid #fecdd3; border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between">'
+        + '        <div>'
+        + '          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">'
+        + '            <span style="font-size:20px">🩸</span>'
+        + '            <span style="background:#ffe4e6; color:#be123c; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px">CRITICAL BLEED</span>'
+        + '          </div>'
+        + '          <div style="font-size:14px; font-weight:800; color:#9f1239">Acute Dengue Shock Syndrome</div>'
+        + '          <div style="font-size:12px; color:#64748b; margin:6px 0 10px">Platelets: <b>14,000 /uL</b>, WBC: <b>2,800 /uL</b>, HCT: <b>48.5%</b></div>'
+        + '          <div style="font-size:11.5px; color:#475569; line-height:1.4">Tests spontaneous bleed cutoff (<20,000), strict NSAID contraindication shield, and emergency admission protocol.</div>'
+        + '        </div>'
+        + '        <button type="button" class="btn btn-primary" data-ai-sim="dengue" style="background:#e11d48; border:none; margin-top:12px; font-weight:700; font-size:12px">▶ Run Live Simulation</button>'
+        + '      </div>'
+        + '      <div style="background:#fff; border:1.5px solid #fed7aa; border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between">'
+        + '        <div>'
+        + '          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">'
+        + '            <span style="font-size:20px">🫘</span>'
+        + '            <span style="background:#ffedd5; color:#c2410c; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px">RENAL CRISIS</span>'
+        + '          </div>'
+        + '          <div style="font-size:14px; font-weight:800; color:#9a3412">Diabetic Nephropathy & Hyperglycemia</div>'
+        + '          <div style="font-size:12px; color:#64748b; margin:6px 0 10px">Glucose: <b>465 mg/dL</b>, Creatinine: <b>4.8 mg/dL</b>, K+: <b>6.4</b></div>'
+        + '          <div style="font-size:11.5px; color:#475569; line-height:1.4">Tests dual Glucose/Creatinine panic SOS triggers, eGFR calculation (<15 mL/min), and Metformin contraindication shield.</div>'
+        + '        </div>'
+        + '        <button type="button" class="btn btn-primary" data-ai-sim="diabetic_aki" style="background:#ea580c; border:none; margin-top:12px; font-weight:700; font-size:12px">▶ Run Live Simulation</button>'
+        + '      </div>'
+        + '      <div style="background:#fff; border:1.5px solid #ddd6fe; border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between">'
+        + '        <div>'
+        + '          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">'
+        + '            <span style="font-size:20px">🧬</span>'
+        + '            <span style="background:#ede9fe; color:#6d28d9; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px">GENETIC TRAIT</span>'
+        + '          </div>'
+        + '          <div style="font-size:14px; font-weight:800; color:#5b21b6">Microcytic Anemia & Beta-Thalassemia</div>'
+        + '          <div style="font-size:12px; color:#64748b; margin:6px 0 10px">Hb: <b>7.9 g/dL</b>, MCV: <b>57 fL</b>, RBC: <b>5.8 mil</b>, Mentzer: <b>9.8</b></div>'
+        + '          <div style="font-size:11.5px; color:#475569; line-height:1.4">Tests Mentzer formula (<13), differentiating Thalassemia trait from Iron deficiency and triggering premarital marriage guard.</div>'
+        + '        </div>'
+        + '        <button type="button" class="btn btn-primary" data-ai-sim="thalassemia" style="background:#7c3aed; border:none; margin-top:12px; font-weight:700; font-size:12px">▶ Run Live Simulation</button>'
+        + '      </div>'
+        + '      <div style="background:#fff; border:1.5px solid #bbf7d0; border-radius:14px; padding:16px; display:flex; flex-direction:column; justify-content:space-between">'
+        + '        <div>'
+        + '          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">'
+        + '            <span style="font-size:20px">🥩</span>'
+        + '            <span style="background:#dcfce7; color:#15803d; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:6px">HEPATIC & GOUT</span>'
+        + '          </div>'
+        + '          <div style="font-size:14px; font-weight:800; color:#166534">Acute Hyperuricemia & Liver Steatosis</div>'
+        + '          <div style="font-size:12px; color:#64748b; margin:6px 0 10px">Uric Acid: <b>9.8 mg/dL</b>, ALT: <b>94 U/L</b>, AST: <b>45 U/L</b></div>'
+        + '          <div style="font-size:11.5px; color:#475569; line-height:1.4">Tests De Ritis ratio (0.48), gout arthritis flare hazard, Febuxostat + Colchicine regimen, and purine dietary restrictions.</div>'
+        + '        </div>'
+        + '        <button type="button" class="btn btn-primary" data-ai-sim="gout" style="background:#16a34a; border:none; margin-top:12px; font-weight:700; font-size:12px">▶ Run Live Simulation</button>'
+        + '      </div>'
+        + '    </div>'
+        + '  </div>'
+
+        + '</div>' // #aiDashPanels
+        + '</div>'; // #optixAiDashboard
+
+      return h;
+    }
+
+    function wireEvents() {
+      // Tab switching
+      var tabBtns = container.querySelectorAll('.ai-dash-tab');
+      tabBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          activeTab = btn.getAttribute('data-dash-tab');
+          tabBtns.forEach(function (b) { b.classList.toggle('active', b === btn); });
+          var panels = ['modules', 'panic', 'branding', 'roles', 'sandbox'];
+          panels.forEach(function (p) {
+            var pan = container.querySelector('#aiPanel-' + p);
+            if (pan) pan.style.display = (p === activeTab) ? 'block' : 'none';
+          });
+        });
+      });
+
+      // Jump to sandbox from top button
+      var topSimBtn = container.querySelector('#aiLaunchSandboxTop');
+      if (topSimBtn) {
+        topSimBtn.addEventListener('click', function () {
+          var targetTabBtn = container.querySelector('.ai-dash-tab[data-dash-tab="sandbox"]');
+          if (targetTabBtn) targetTabBtn.click();
+        });
+      }
+
+      // Live update for Doctor Branding inputs
+      var brandInputs = ['aiDocName', 'aiDocDegrees', 'aiDocPmdc', 'aiDocClinic', 'aiDocPhone', 'aiDocSpec'];
+      brandInputs.forEach(function (id) {
+        var el = container.querySelector('#' + id);
+        if (el) {
+          el.addEventListener('input', function () {
+            var previewEl = container.querySelector('#aiRxHeaderPreview');
+            if (previewEl) {
+              var liveBrand = {
+                name: (container.querySelector('#aiDocName') || {}).value || '',
+                degrees: (container.querySelector('#aiDocDegrees') || {}).value || '',
+                pmdc: (container.querySelector('#aiDocPmdc') || {}).value || '',
+                clinic: (container.querySelector('#aiDocClinic') || {}).value || '',
+                phone: (container.querySelector('#aiDocPhone') || {}).value || '',
+                specialization: (container.querySelector('#aiDocSpec') || {}).value || ''
+              };
+              previewEl.innerHTML = getRxPreviewHtml(liveBrand);
+            }
+          });
+        }
+      });
+
+      // Reset Panic Defaults Button
+      var rstBtn = container.querySelector('#aiResetPanicDefaultsBtn');
+      if (rstBtn) {
+        rstBtn.addEventListener('click', function () {
+          var defs = AI.DEFAULT_CONFIG.panicThresholds;
+          if (container.querySelector('#thPlt')) container.querySelector('#thPlt').value = defs.plt;
+          if (container.querySelector('#thHb')) container.querySelector('#thHb').value = defs.hb;
+          if (container.querySelector('#thGlucoseHigh')) container.querySelector('#thGlucoseHigh').value = defs.glucoseHigh;
+          if (container.querySelector('#thGlucoseLow')) container.querySelector('#thGlucoseLow').value = defs.glucoseLow;
+          if (container.querySelector('#thCreatinine')) container.querySelector('#thCreatinine').value = defs.creatinine;
+          if (container.querySelector('#thPotassiumHigh')) container.querySelector('#thPotassiumHigh').value = defs.potassiumHigh;
+          if (container.querySelector('#thPotassiumLow')) container.querySelector('#thPotassiumLow').value = defs.potassiumLow;
+          if (container.querySelector('#thBilirubin')) container.querySelector('#thBilirubin').value = defs.bilirubin;
+          if (container.querySelector('#thWbcHigh')) container.querySelector('#thWbcHigh').value = defs.wbcHigh;
+          if (container.querySelector('#thWbcLow')) container.querySelector('#thWbcLow').value = defs.wbcLow;
+          if (window.App && App.toast) App.toast('International standard panic thresholds restored. Click Save to apply.', 'info');
+        });
+      }
+
+      // Simulation buttons
+      var simBtns = container.querySelectorAll('[data-ai-sim]');
+      simBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var simKey = btn.getAttribute('data-ai-sim');
+          AI.simulateAnalysis(simKey);
+        });
+      });
+
+      // Save Configuration Button
+      var saveBtn = container.querySelector('#aiSaveConfigBtn');
+      if (saveBtn) {
+        saveBtn.addEventListener('click', function () {
+          // Collect modules
+          var newModules = {};
+          container.querySelectorAll('[data-mod-key]').forEach(function (chk) {
+            newModules[chk.getAttribute('data-mod-key')] = !!chk.checked;
+          });
+
+          // Collect panic thresholds
+          var newTh = {
+            plt: Number((container.querySelector('#thPlt') || {}).value || 20000),
+            hb: Number((container.querySelector('#thHb') || {}).value || 6.5),
+            glucoseHigh: Number((container.querySelector('#thGlucoseHigh') || {}).value || 400),
+            glucoseLow: Number((container.querySelector('#thGlucoseLow') || {}).value || 50),
+            creatinine: Number((container.querySelector('#thCreatinine') || {}).value || 4.0),
+            potassiumHigh: Number((container.querySelector('#thPotassiumHigh') || {}).value || 6.2),
+            potassiumLow: Number((container.querySelector('#thPotassiumLow') || {}).value || 2.8),
+            bilirubin: Number((container.querySelector('#thBilirubin') || {}).value || 10.0),
+            wbcHigh: Number((container.querySelector('#thWbcHigh') || {}).value || 35000),
+            wbcLow: Number((container.querySelector('#thWbcLow') || {}).value || 1500)
+          };
+
+          // Collect doctor branding
+          var newBrand = {
+            name: ((container.querySelector('#aiDocName') || {}).value || '').trim() || 'Consultant Physician',
+            degrees: ((container.querySelector('#aiDocDegrees') || {}).value || '').trim() || 'MBBS, FCPS / MD (Internal Medicine)',
+            pmdc: ((container.querySelector('#aiDocPmdc') || {}).value || '').trim() || '49281-P',
+            clinic: ((container.querySelector('#aiDocClinic') || {}).value || '').trim() || 'Optix Medical Care & Diagnostics',
+            phone: ((container.querySelector('#aiDocPhone') || {}).value || '').trim() || '+92 300 0000000',
+            specialization: ((container.querySelector('#aiDocSpec') || {}).value || '').trim() || 'Clinical Specialist & Diagnostician'
+          };
+
+          // Collect roles (Doctor and Admin are ALWAYS mandatory)
+          var newRoles = ['admin', 'doctor'];
+          var techChk = container.querySelector('#aiRoleTech');
+          if (techChk && techChk.checked) newRoles.push('technician');
+          var recepChk = container.querySelector('#aiRoleRecep');
+          if (recepChk && recepChk.checked) newRoles.push('reception');
+
+          var toSave = {
+            modules: newModules,
+            panicThresholds: newTh,
+            doctorBranding: newBrand,
+            roles: newRoles
+          };
+
+          curCfg = toSave;
+          AI.saveAiConfig(toSave);
+        });
+      }
+    }
+
+    container.innerHTML = renderShell();
+    wireEvents();
+  };
+
+  // Register routing for AI Dashboard
+  if (typeof window !== 'undefined' && window.App && typeof window.App.route === 'function') {
+    window.App.route('#/ai-dashboard', function () { AI.renderDashboard('view'); });
+    window.App.route('/ai-dashboard', function () { AI.renderDashboard('view'); });
+  }
+
   window.App = window.App || {};
   window.App.aiInsights = AI;
 })();
+
