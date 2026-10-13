@@ -1163,7 +1163,8 @@
         '<div class="form-grid" style="margin-top:12px"><div>' +
         '<label class="label">Remarks (optional)</label>' +
         '<input class="input" id="resRemarks" value="' + App.esc(existing['Remarks'] || '') + '" placeholder="e.g. Sample hemolyzed, repeat advised">' +
-        '</div></div>';
+        '</div></div>' +
+        ((test && test.note) ? '<div style="margin-top:12px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #2f6df6;border-radius:6px;font-size:12.5px;line-height:1.45;color:#334155"><b style="color:#1b2a4a">Clinical Note:</b> ' + App.esc(test.note) + '</div>' : '');
     } else {
       var ft = existing['Result'] != null ? String(existing['Result']) : '';
       body =

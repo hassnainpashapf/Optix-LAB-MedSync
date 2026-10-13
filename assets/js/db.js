@@ -341,6 +341,7 @@
       'HBA1C': [{ name: 'HbA1c', unit: '%', ref: '< 5.7', type: 'number' }],
       'OGTT': [
         { name: 'Glucose – Fasting', unit: 'mg/dL', ref: '70–100', type: 'number' },
+        { name: 'Glucose – 1 Hour', unit: 'mg/dL', ref: '< 180', type: 'number' },
         { name: 'Glucose – 2 Hour', unit: 'mg/dL', ref: '< 140', type: 'number' }
       ],
       'LIPID': [
@@ -382,7 +383,74 @@
         { name: 'Epithelial Cells', unit: '/hpf', ref: 'Few', type: 'text' }
       ],
       'UCUL': [{ name: 'Culture Result', unit: '', ref: 'No growth', type: 'text' }],
-      'UPT': [{ name: 'Result', unit: '', ref: '', type: 'text' }]
+      'UPT': [{ name: 'Result', unit: '', ref: '', type: 'text' }],
+      'SEMEN': [
+        { name: 'Volume', unit: 'mL', ref: '1.5–5.0', type: 'number' },
+        { name: 'Liquefaction Time', unit: 'min', ref: '< 30', type: 'number' },
+        { name: 'pH', unit: '', ref: '7.2–8.0', type: 'number' },
+        { name: 'Total Sperm Count', unit: 'million/mL', ref: '>= 15', type: 'number' },
+        { name: 'Rapid Progressive (Grade A)', unit: '%', ref: '>= 25', type: 'number' },
+        { name: 'Slow Progressive (Grade B)', unit: '%', ref: '>= 15', type: 'number' },
+        { name: 'Non-Progressive (Grade C)', unit: '%', ref: '< 15', type: 'number' },
+        { name: 'Immotile (Grade D)', unit: '%', ref: '< 50', type: 'number' },
+        { name: 'Normal Morphology', unit: '%', ref: '>= 4', type: 'number' },
+        { name: 'Pus Cells', unit: '/hpf', ref: 'Nil - 2', type: 'text' }
+      ],
+      'SPEP': [
+        { name: 'Total Protein', unit: 'g/dL', ref: '6.0–8.3', type: 'number' },
+        { name: 'Albumin', unit: 'g/dL', ref: '3.5–5.2', type: 'number' },
+        { name: 'Alpha 1 Globulin', unit: 'g/dL', ref: '0.1–0.3', type: 'number' },
+        { name: 'Alpha 2 Globulin', unit: 'g/dL', ref: '0.6–1.0', type: 'number' },
+        { name: 'Beta Globulin', unit: 'g/dL', ref: '0.7–1.2', type: 'number' },
+        { name: 'Gamma Globulin', unit: 'g/dL', ref: '0.7–1.6', type: 'number' },
+        { name: 'A/G Ratio', unit: '', ref: '1.1–2.2', type: 'number' },
+        { name: 'M-Spike', unit: '', ref: 'Not Observed', type: 'text' }
+      ],
+      'TROP': [
+        { name: 'Troponin I (0 Hr)', unit: 'ng/mL', ref: '< 0.04', type: 'number' },
+        { name: 'Troponin I (3 Hr)', unit: 'ng/mL', ref: '< 0.04', type: 'number' },
+        { name: 'CK-MB', unit: 'U/L', ref: '< 25', type: 'number' }
+      ]
+    };
+    var TEST_NOTES = {
+      'CBC': 'Automated cell counter analysis. Reference ranges are based on age and gender. Peripheral blood smear examination is recommended in case of abnormal cell counts or suspected hematological conditions.',
+      'ESR': 'Westergren method. ESR is a non-specific indicator of active inflammation, infection, or tissue necrosis. Mildly elevated levels may be observed in pregnancy, advanced age, and anemia.',
+      'HB': 'Cyanmethemoglobin method. Hemoglobin levels below reference range indicate anemia. Further evaluation with iron profile, RBC indices, or hemoglobin electrophoresis is advised if indicated.',
+      'PLT': 'Automated impedance count. In unexpected thrombocytopenia, rule out EDTA-induced pseudothrombocytopenia by peripheral smear review or sodium citrate collection.',
+      'BGRP': 'Determined by standard hemagglutination (tube & slide) method. Rh(D) negative individuals should receive Rh-negative blood products. Rh-negative females of childbearing potential should be monitored for anti-D antibodies.',
+      'PTINR': 'Reference INR: 0.9–1.1. Recommended therapeutic target for oral anticoagulant therapy (Warfarin) is 2.0–3.0; for mechanical heart valves is 2.5–3.5. Critical alert: INR > 4.5.',
+      'RETIC': 'Reticulocyte count reflects active bone marrow erythropoiesis. Elevated counts indicate bone marrow response to hemolysis or blood loss. Depressed counts suggest hypoplasia or ineffective erythropoiesis.',
+      'LFT': 'Serum bilirubin total > 2.0 mg/dL may produce clinical jaundice. Markedly elevated ALT/AST indicates hepatocellular injury. Elevated Alkaline Phosphatase suggests cholestatic or bone disease. Clinical and radiological correlation advised.',
+      'RFT': 'Serum creatinine is a specific indicator of renal clearance. Elevated levels reflect reduced glomerular filtration rate. Dietary protein intake, muscle mass, and hydration state should be clinically correlated.',
+      'ELEC': 'Electrolyte balance is vital for neuromuscular, cardiac, and fluid homeostasis. Hemolyzed specimens can cause falsely elevated potassium levels. Immediate clinical correlation is recommended for critical values.',
+      'CA': 'Total calcium varies with serum albumin. Albumin-corrected calcium = Measured Calcium + [0.8 × (4.0 - Albumin)]. Free/ionized calcium is recommended in patients with dysproteinemia or critical illness.',
+      'UA': 'Hyperuricemia (> 7.0 mg/dL in males, > 6.0 mg/dL in females) is associated with gout, renal calculi, and metabolic syndrome. However, acute gout attacks may occur with normal serum uric acid levels.',
+      'CRP': 'C-Reactive Protein is an acute-phase reactant. Levels rise rapidly in bacterial infections, acute inflammation, and tissue injury, and fall promptly with recovery. Non-specific marker.',
+      'FBS': 'ADA Diagnostic Criteria: Normal: 70–99 mg/dL; Impaired Fasting Glucose (Pre-diabetes): 100–125 mg/dL; Diabetes Mellitus: ≥ 126 mg/dL (requires confirmation on a subsequent day). 8–10 hours fasting required.',
+      'RBS': 'Random blood glucose ≥ 200 mg/dL in the presence of classic diabetic symptoms (polyuria, polydipsia, unexplained weight loss) is diagnostic of diabetes mellitus.',
+      'HBA1C': 'ADA Guidelines: Normal: < 5.7%; Pre-diabetes: 5.7–6.4%; Diabetes Mellitus: ≥ 6.5%. Therapeutic target for most non-pregnant adult diabetics is < 7.0%. Reflects average glycemic control over the preceding 2–3 months.',
+      'OGTT': 'Standard 75g oral glucose load. ADA Criteria (2 hr post-load): Normal: < 140 mg/dL; Impaired Glucose Tolerance: 140–199 mg/dL; Diabetes Mellitus: ≥ 200 mg/dL. Patient must remain rested during the test.',
+      'LIPID': 'ATP III Guidelines: Total Cholesterol < 200 mg/dL (Desirable); Triglycerides < 150 mg/dL (Normal); HDL > 40 mg/dL (Male) / > 50 mg/dL (Female); LDL < 100 mg/dL (Optimal). 10–12 hours overnight fasting required.',
+      'CHOL': 'Desirable: < 200 mg/dL; Borderline high: 200–239 mg/dL; High: ≥ 240 mg/dL. Should be interpreted alongside HDL and LDL for cardiovascular risk evaluation.',
+      'TG': 'Normal: < 150 mg/dL; Borderline high: 150–199 mg/dL; High: 200–499 mg/dL; Very high: ≥ 500 mg/dL (increased risk of acute pancreatitis). 12-hour fasting required.',
+      'HBSAG': 'Qualitative screening for Hepatitis B surface antigen. Non-reactive indicates absence of detectable antigen. Reactive results should be confirmed with quantitative ELISA/PCR and clinical evaluation.',
+      'AHCV': 'Screening for antibodies against Hepatitis C Virus. Non-reactive indicates no detectable antibodies. Reactive results reflect past or current infection; confirmatory HCV RNA (PCR) is recommended.',
+      'HIV': 'Screening test for HIV-1/HIV-2 antibodies and/or p24 antigen. Non-reactive result does not exclude infection during the window period. All initially reactive specimens must be confirmed according to national guidelines.',
+      'NS1': 'Dengue NS1 antigen is typically detectable from Day 1 to Day 5–7 after fever onset. Negative result does not exclude dengue; antibody testing (Dengue IgM/IgG) and serial platelet monitoring are advised.',
+      'WIDAL': 'Rapid slide agglutination test for Salmonella enterica. Significant titers: S. Typhi O ≥ 1:160, H ≥ 1:160. Single elevated titers should be interpreted with caution in endemic areas; blood culture is the diagnostic gold standard.',
+      'TYPHI': 'IgM positivity indicates acute or recent typhoid fever. IgG positivity suggests previous infection or vaccination. Both IgM and IgG positive indicate early convalescent or reinfection. Clinical correlation recommended.',
+      'TSH': 'Third-generation TSH assay is the primary sensitive screening tool for thyroid dysfunction. High TSH with low free T4 suggests primary hypothyroidism; low TSH with high free T4 suggests primary hyperthyroidism.',
+      'TFT': 'Comprehensive thyroid panel. Evaluates primary and secondary thyroid disorders. Normal values: T3: 0.8–2.0 ng/mL, T4: 5.1–14.1 µg/dL, TSH: 0.27–4.2 µIU/mL. Euthyroid sick syndrome and medications may affect levels.',
+      'TESTO': 'Blood sample should be collected in the morning (7:00 AM–10:00 AM) when testosterone levels peak. Values fluctuate with age, diurnal rhythm, and physical stress. Low levels warrant free testosterone and gonadotropin evaluation.',
+      'VITD': 'Deficient: < 20 ng/mL; Insufficient: 21–29 ng/mL; Sufficient: 30–100 ng/mL; Potential toxicity: > 100 ng/mL. Vitamin D is essential for calcium absorption, bone mineralization, and immune modulation.',
+      'B12': 'Reference range: 200–900 pg/mL. Levels < 200 pg/mL indicate deficiency, commonly associated with megaloblastic anemia, neuropathy, or malabsorption. Borderline values (200–300 pg/mL) may benefit from MMA testing.',
+      'FERR': 'Serum ferritin reflects total body iron stores. Levels < 30 ng/mL indicate iron deficiency anemia. Ferritin is an acute-phase reactant and may be elevated in liver disease, inflammation, or malignancy.',
+      'URE': 'Clean-catch midstream urine sample is required. Pus cells > 5/HPF suggest urinary tract infection; microscopic hematuria warrants further urological assessment. Correlate with urine culture if indicated.',
+      'UCUL': 'Colony count ≥ 10^5 CFU/mL of a single uropathogen indicates significant bacteriuria. Antibiotic susceptibility testing performed according to CLSI guidelines. Ensure sample was collected before antibiotic therapy.',
+      'UPT': 'Qualitative detection of human Chorionic Gonadotropin (hCG). Sensitivity: 25 mIU/mL. First morning urine is recommended. Negative result with missed period warrants retesting in 48–72 hours or serum Beta-hCG.',
+      'SEMEN': 'WHO Laboratory Manual for the Examination of Human Semen guidelines. Abstinence period of 2–7 days required. Complete collection of the ejaculate is essential for accurate volume and count evaluation.',
+      'SPEP': 'Serum Protein Electrophoresis. Monoclonal bands (M-spike) require confirmation by immunofixation electrophoresis (IFE) and serum free light chain (sFLC) assay to evaluate plasma cell dyscrasias.',
+      'TROP': 'High-sensitivity Troponin I. Serial measurements (at 0, 3, and 6 hours) are recommended in patients with suspected Acute Coronary Syndrome (ACS) to evaluate significant rise or fall.'
     };
     var T = [
       ['CBC', 'Complete Blood Count', 'Hematology', 800, 'Blood', 'Same day', []],
@@ -419,7 +487,10 @@
       ['FERR', 'Ferritin', 'Hormones', 1400, 'Serum', 'Same day', []],
       ['URE', 'Urine Routine Examination', 'Urine', 400, 'Urine', 'Same day', []],
       ['UCUL', 'Urine Culture & Sensitivity', 'Urine', 1500, 'Urine', '2 days', []],
-      ['UPT', 'Urine Pregnancy Test', 'Urine', 500, 'Urine', 'Same day', []]
+      ['UPT', 'Urine Pregnancy Test', 'Urine', 500, 'Urine', 'Same day', []],
+      ['SEMEN', 'Semen Analysis', 'Special', 1000, 'Semen', 'Same day', []],
+      ['SPEP', 'Serum Protein Electrophoresis', 'Special', 2000, 'Serum', '2 days', []],
+      ['TROP', 'Troponin I Serial (Cardiac)', 'Cardiac', 1800, 'Serum', 'Same day', []]
     ];
     T.forEach(function (t) {
       put('tests', {
@@ -430,6 +501,7 @@
         sampleType: t[4],
         tat: t[5],
         active: true,
+        note: TEST_NOTES[t[0]] || '',
         aliases: t[0] === 'TYPHI' ? ['Typhoid', 'Typhoid (IgG-IgM)', 'Typhidot', 'Typhoid Rapid', 'Typhi'] : undefined,
         params: TP[t[0]] || t[6]
       });
@@ -687,6 +759,109 @@
         });
         save(store);
       }
+    }
+    /* existing installs: ensure all tests have standard clinical notes and enhanced graph params */
+    if (store && Array.isArray(store.tests)) {
+      var _tUpdated = false;
+      var _notesMap = {
+        'CBC': 'Automated cell counter analysis. Reference ranges are based on age and gender. Peripheral blood smear examination is recommended in case of abnormal cell counts or suspected hematological conditions.',
+        'ESR': 'Westergren method. ESR is a non-specific indicator of active inflammation, infection, or tissue necrosis. Mildly elevated levels may be observed in pregnancy, advanced age, and anemia.',
+        'HB': 'Cyanmethemoglobin method. Hemoglobin levels below reference range indicate anemia. Further evaluation with iron profile, RBC indices, or hemoglobin electrophoresis is advised if indicated.',
+        'PLT': 'Automated impedance count. In unexpected thrombocytopenia, rule out EDTA-induced pseudothrombocytopenia by peripheral smear review or sodium citrate collection.',
+        'BGRP': 'Determined by standard hemagglutination (tube & slide) method. Rh(D) negative individuals should receive Rh-negative blood products. Rh-negative females of childbearing potential should be monitored for anti-D antibodies.',
+        'PTINR': 'Reference INR: 0.9–1.1. Recommended therapeutic target for oral anticoagulant therapy (Warfarin) is 2.0–3.0; for mechanical heart valves is 2.5–3.5. Critical alert: INR > 4.5.',
+        'RETIC': 'Reticulocyte count reflects active bone marrow erythropoiesis. Elevated counts indicate bone marrow response to hemolysis or blood loss. Depressed counts suggest hypoplasia or ineffective erythropoiesis.',
+        'LFT': 'Serum bilirubin total > 2.0 mg/dL may produce clinical jaundice. Markedly elevated ALT/AST indicates hepatocellular injury. Elevated Alkaline Phosphatase suggests cholestatic or bone disease. Clinical and radiological correlation advised.',
+        'RFT': 'Serum creatinine is a specific indicator of renal clearance. Elevated levels reflect reduced glomerular filtration rate. Dietary protein intake, muscle mass, and hydration state should be clinically correlated.',
+        'ELEC': 'Electrolyte balance is vital for neuromuscular, cardiac, and fluid homeostasis. Hemolyzed specimens can cause falsely elevated potassium levels. Immediate clinical correlation is recommended for critical values.',
+        'CA': 'Total calcium varies with serum albumin. Albumin-corrected calcium = Measured Calcium + [0.8 × (4.0 - Albumin)]. Free/ionized calcium is recommended in patients with dysproteinemia or critical illness.',
+        'UA': 'Hyperuricemia (> 7.0 mg/dL in males, > 6.0 mg/dL in females) is associated with gout, renal calculi, and metabolic syndrome. However, acute gout attacks may occur with normal serum uric acid levels.',
+        'CRP': 'C-Reactive Protein is an acute-phase reactant. Levels rise rapidly in bacterial infections, acute inflammation, and tissue injury, and fall promptly with recovery. Non-specific marker.',
+        'FBS': 'ADA Diagnostic Criteria: Normal: 70–99 mg/dL; Impaired Fasting Glucose (Pre-diabetes): 100–125 mg/dL; Diabetes Mellitus: ≥ 126 mg/dL (requires confirmation on a subsequent day). 8–10 hours fasting required.',
+        'RBS': 'Random blood glucose ≥ 200 mg/dL in the presence of classic diabetic symptoms (polyuria, polydipsia, unexplained weight loss) is diagnostic of diabetes mellitus.',
+        'HBA1C': 'ADA Guidelines: Normal: < 5.7%; Pre-diabetes: 5.7–6.4%; Diabetes Mellitus: ≥ 6.5%. Therapeutic target for most non-pregnant adult diabetics is < 7.0%. Reflects average glycemic control over the preceding 2–3 months.',
+        'OGTT': 'Standard 75g oral glucose load. ADA Criteria (2 hr post-load): Normal: < 140 mg/dL; Impaired Glucose Tolerance: 140–199 mg/dL; Diabetes Mellitus: ≥ 200 mg/dL. Patient must remain rested during the test.',
+        'LIPID': 'ATP Ill Guidelines: Total Cholesterol < 200 mg/dL (Desirable); Triglycerides < 150 mg/dL (Normal); HDL > 40 mg/dL (Male) / > 50 mg/dL (Female); LDL < 100 mg/dL (Optimal). 10–12 hours overnight fasting required.',
+        'CHOL': 'Desirable: < 200 mg/dL; Borderline high: 200–239 mg/dL; High: ≥ 240 mg/dL. Should be interpreted alongside HDL and LDL for cardiovascular risk evaluation.',
+        'TG': 'Normal: < 150 mg/dL; Borderline high: 150–199 mg/dL; High: 200–499 mg/dL; Very high: ≥ 500 mg/dL (increased risk of acute pancreatitis). 12-hour fasting required.',
+        'HBSAG': 'Qualitative screening for Hepatitis B surface antigen. Non-reactive indicates absence of detectable antigen. Reactive results should be confirmed with quantitative ELISA/PCR and clinical evaluation.',
+        'AHCV': 'Screening for antibodies against Hepatitis C Virus. Non-reactive indicates no detectable antibodies. Reactive results reflect past or current infection; confirmatory HCV RNA (PCR) is recommended.',
+        'HIV': 'Screening test for HIV-1/HIV-2 antibodies and/or p24 antigen. Non-reactive result does not exclude infection during the window period. All initially reactive specimens must be confirmed according to national guidelines.',
+        'NS1': 'Dengue NS1 antigen is typically detectable from Day 1 to Day 5–7 after fever onset. Negative result does not exclude dengue; antibody testing (Dengue IgM/IgG) and serial platelet monitoring are advised.',
+        'WIDAL': 'Rapid slide agglutination test for Salmonella enterica. Significant titers: S. Typhi O ≥ 1:160, H ≥ 1:160. Single elevated titers should be interpreted with caution in endemic areas; blood culture is the diagnostic gold standard.',
+        'TYPHI': 'IgM positivity indicates acute or recent typhoid fever. IgG positivity suggests previous infection or vaccination. Both IgM and IgG positive indicate early convalescent or reinfection. Clinical correlation recommended.',
+        'TSH': 'Third-generation TSH assay is the primary sensitive screening tool for thyroid dysfunction. High TSH with low free T4 suggests primary hypothyroidism; low TSH with high free T4 suggests primary hyperthyroidism.',
+        'TFT': 'Comprehensive thyroid panel. Evaluates primary and secondary thyroid disorders. Normal values: T3: 0.8–2.0 ng/mL, T4: 5.1–14.1 µg/dL, TSH: 0.27–4.2 µIU/mL. Euthyroid sick syndrome and medications may affect levels.',
+        'TESTO': 'Blood sample should be collected in the morning (7:00 AM–10:00 AM) when testosterone levels peak. Values fluctuate with age, diurnal rhythm, and physical stress. Low levels warrant free testosterone and gonadotropin evaluation.',
+        'VITD': 'Deficient: < 20 ng/mL; Insufficient: 21–29 ng/mL; Sufficient: 30–100 ng/mL; Potential toxicity: > 100 ng/mL. Vitamin D is essential for calcium absorption, bone mineralization, and immune modulation.',
+        'B12': 'Reference range: 200–900 pg/mL. Levels < 200 pg/mL indicate deficiency, commonly associated with megaloblastic anemia, neuropathy, or malabsorption. Borderline values (200–300 pg/mL) may benefit from MMA testing.',
+        'FERR': 'Serum ferritin reflects total body iron stores. Levels < 30 ng/mL indicate iron deficiency anemia. Ferritin is an acute-phase reactant and may be elevated in liver disease, inflammation, or malignancy.',
+        'URE': 'Clean-catch midstream urine sample is required. Pus cells > 5/HPF suggest urinary tract infection; microscopic hematuria warrants further urological assessment. Correlate with urine culture if indicated.',
+        'UCUL': 'Colony count ≥ 10^5 CFU/mL of a single uropathogen indicates significant bacteriuria. Antibiotic susceptibility testing performed according to CLSI guidelines. Ensure sample was collected before antibiotic therapy.',
+        'UPT': 'Qualitative detection of human Chorionic Gonadotropin (hCG). Sensitivity: 25 mIU/mL. First morning urine is recommended. Negative result with missed period warrants retesting in 48–72 hours or serum Beta-hCG.',
+        'SEMEN': 'WHO Laboratory Manual for the Examination of Human Semen guidelines. Abstinence period of 2–7 days required. Complete collection of the ejaculate is essential for accurate volume and count evaluation.',
+        'SPEP': 'Serum Protein Electrophoresis. Monoclonal bands (M-spike) require confirmation by immunofixation electrophoresis (IFE) and serum free light chain (sFLC) assay to evaluate plasma cell dyscrasias.',
+        'TROP': 'High-sensitivity Troponin I. Serial measurements (at 0, 3, and 6 hours) are recommended in patients with suspected Acute Coronary Syndrome (ACS) to evaluate significant rise or fall.'
+      };
+      store.tests.forEach(function (t) {
+        var code = (t.code || '').toUpperCase();
+        var stdNote = _notesMap[code];
+        if (!stdNote) {
+          var nm = (t.name || '').toLowerCase();
+          if (/complete blood count|\bcbc\b/i.test(nm)) stdNote = _notesMap['CBC'];
+          else if (/erythrocyte sedimentation|\besr\b/i.test(nm)) stdNote = _notesMap['ESR'];
+          else if (/hemoglobin|\bhb\b/i.test(nm)) stdNote = _notesMap['HB'];
+          else if (/platelet count|\bplt\b/i.test(nm)) stdNote = _notesMap['PLT'];
+          else if (/blood group/i.test(nm)) stdNote = _notesMap['BGRP'];
+          else if (/pt\s*\/?\s*inr|prothrombin/i.test(nm)) stdNote = _notesMap['PTINR'];
+          else if (/reticulocyte/i.test(nm)) stdNote = _notesMap['RETIC'];
+          else if (/liver function|\blft\b/i.test(nm)) stdNote = _notesMap['LFT'];
+          else if (/renal function|kidney function|\brft\b|\bkft\b/i.test(nm)) stdNote = _notesMap['RFT'];
+          else if (/electrolytes/i.test(nm)) stdNote = _notesMap['ELEC'];
+          else if (/calcium/i.test(nm)) stdNote = _notesMap['CA'];
+          else if (/uric acid/i.test(nm)) stdNote = _notesMap['UA'];
+          else if (/c-reactive protein|\bcrp\b/i.test(nm)) stdNote = _notesMap['CRP'];
+          else if (/fasting blood glucose|fasting blood sugar|\bfbs\b/i.test(nm)) stdNote = _notesMap['FBS'];
+          else if (/random blood glucose|random blood sugar|\brbs\b/i.test(nm)) stdNote = _notesMap['RBS'];
+          else if (/hba1c|glycated/i.test(nm)) stdNote = _notesMap['HBA1C'];
+          else if (/glucose tolerance|\bogtt\b/i.test(nm)) stdNote = _notesMap['OGTT'];
+          else if (/lipid profile|lipid panel/i.test(nm)) stdNote = _notesMap['LIPID'];
+          else if (/cholesterol/i.test(nm)) stdNote = _notesMap['CHOL'];
+          else if (/triglyceride/i.test(nm)) stdNote = _notesMap['TG'];
+          else if (/hbsag|hepatitis b/i.test(nm)) stdNote = _notesMap['HBSAG'];
+          else if (/anti-hcv|hepatitis c/i.test(nm)) stdNote = _notesMap['AHCV'];
+          else if (/\bhiv\b/i.test(nm)) stdNote = _notesMap['HIV'];
+          else if (/dengue\s*ns1/i.test(nm)) stdNote = _notesMap['NS1'];
+          else if (/widal/i.test(nm)) stdNote = _notesMap['WIDAL'];
+          else if (/typhoid|typhidot/i.test(nm)) stdNote = _notesMap['TYPHI'];
+          else if (/thyroid profile|\btft\b/i.test(nm)) stdNote = _notesMap['TFT'];
+          else if (/\btsh\b/i.test(nm)) stdNote = _notesMap['TSH'];
+          else if (/testosterone/i.test(nm)) stdNote = _notesMap['TESTO'];
+          else if (/vitamin d/i.test(nm)) stdNote = _notesMap['VITD'];
+          else if (/vitamin b12|b-12/i.test(nm)) stdNote = _notesMap['B12'];
+          else if (/ferritin/i.test(nm)) stdNote = _notesMap['FERR'];
+          else if (/urine routine|\bure\b/i.test(nm)) stdNote = _notesMap['URE'];
+          else if (/urine culture|\bucul\b/i.test(nm)) stdNote = _notesMap['UCUL'];
+          else if (/urine pregnancy|\bupt\b/i.test(nm)) stdNote = _notesMap['UPT'];
+          else if (/semen/i.test(nm)) stdNote = _notesMap['SEMEN'];
+          else if (/electrophoresis|\bspep\b/i.test(nm)) stdNote = _notesMap['SPEP'];
+          else if (/troponin/i.test(nm)) stdNote = _notesMap['TROP'];
+        }
+        if (stdNote && (!t.note || !t.note.trim())) {
+          t.note = stdNote;
+          _tUpdated = true;
+        }
+        if (code === 'OGTT' || /glucose tolerance/i.test(t.name || '')) {
+          if (Array.isArray(t.params)) {
+            var _has1H = t.params.some(function (p) { return /1\s*hour|60\s*min/i.test(p.name || ''); });
+            if (!_has1H) {
+              t.params.splice(1, 0, { name: 'Glucose – 1 Hour', unit: 'mg/dL', ref: '< 180', type: 'number' });
+              _tUpdated = true;
+            }
+          }
+        }
+      });
+      if (_tUpdated) save(store);
     }
   }
 

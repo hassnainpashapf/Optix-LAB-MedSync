@@ -680,7 +680,59 @@ var TEST_TEMPLATES = {
   'Cardiac Enzymes': [
     { name: 'CK-MB', unit: 'ng/mL', ref: '0 - 5', type: 'number' },
     { name: 'Troponin I', unit: 'ng/mL', ref: '< 0.04', type: 'number' }
+  ],
+  'Oral Glucose Tolerance Test (OGTT)': [
+    { name: 'Glucose (Fasting)', unit: 'mg/dL', ref: '70 - 100', type: 'number' },
+    { name: 'Glucose (1 Hour)', unit: 'mg/dL', ref: '< 180', type: 'number' },
+    { name: 'Glucose (2 Hour)', unit: 'mg/dL', ref: '< 140', type: 'number' }
+  ],
+  'Semen Analysis': [
+    { name: 'Volume', unit: 'mL', ref: '1.5 - 5.0', type: 'number' },
+    { name: 'Liquefaction Time', unit: 'min', ref: '< 30', type: 'number' },
+    { name: 'pH', unit: '', ref: '7.2 - 8.0', type: 'number' },
+    { name: 'Total Sperm Count', unit: 'million/mL', ref: '>= 15', type: 'number' },
+    { name: 'Rapid Progressive (Grade A)', unit: '%', ref: '>= 25', type: 'number' },
+    { name: 'Slow Progressive (Grade B)', unit: '%', ref: '>= 15', type: 'number' },
+    { name: 'Non-Progressive (Grade C)', unit: '%', ref: '< 15', type: 'number' },
+    { name: 'Immotile (Grade D)', unit: '%', ref: '< 50', type: 'number' },
+    { name: 'Normal Morphology', unit: '%', ref: '>= 4', type: 'number' },
+    { name: 'Pus Cells', unit: '/HPF', ref: '0 - 2', type: 'text' }
+  ],
+  'Serum Protein Electrophoresis (SPEP)': [
+    { name: 'Total Protein', unit: 'g/dL', ref: '6.0 - 8.3', type: 'number' },
+    { name: 'Albumin', unit: 'g/dL', ref: '3.5 - 5.2', type: 'number' },
+    { name: 'Alpha 1 Globulin', unit: 'g/dL', ref: '0.1 - 0.3', type: 'number' },
+    { name: 'Alpha 2 Globulin', unit: 'g/dL', ref: '0.6 - 1.0', type: 'number' },
+    { name: 'Beta Globulin', unit: 'g/dL', ref: '0.7 - 1.2', type: 'number' },
+    { name: 'Gamma Globulin', unit: 'g/dL', ref: '0.7 - 1.6', type: 'number' },
+    { name: 'A/G Ratio', unit: '', ref: '1.1 - 2.2', type: 'number' },
+    { name: 'M-Spike', unit: '', ref: 'Not Observed', type: 'text' }
   ]
+};
+
+var TEMPLATE_NOTES = {
+  'CBC': 'Automated cell counter analysis. Reference ranges are based on age and gender. Peripheral blood smear examination is recommended in case of abnormal cell counts or suspected hematological conditions.',
+  'Lipid Profile': 'ATP III Guidelines: Total Cholesterol < 200 mg/dL (Desirable); Triglycerides < 150 mg/dL (Normal); HDL > 40 mg/dL (Male) / > 50 mg/dL (Female); LDL < 100 mg/dL (Optimal). 10–12 hours overnight fasting required.',
+  'Liver Function (LFT)': 'Serum bilirubin total > 2.0 mg/dL may produce clinical jaundice. Markedly elevated ALT/AST indicates hepatocellular injury. Elevated Alkaline Phosphatase suggests cholestatic or bone disease. Clinical and radiological correlation advised.',
+  'Kidney Function (RFT)': 'Serum creatinine is a specific indicator of renal clearance. Elevated levels reflect reduced glomerular filtration rate. Dietary protein intake, muscle mass, and hydration state should be clinically correlated.',
+  'Thyroid Profile': 'Comprehensive thyroid panel. Evaluates primary and secondary thyroid disorders. Normal values: T3: 0.8–2.0 ng/mL, T4: 5.1–14.1 µg/dL, TSH: 0.27–4.2 µIU/mL. Euthyroid sick syndrome and medications may affect levels.',
+  'Blood Sugar': 'ADA Diagnostic Criteria: Normal: 70–99 mg/dL (Fasting); Impaired Fasting Glucose: 100–125 mg/dL; Diabetes Mellitus: ≥ 126 mg/dL. Random blood sugar ≥ 200 mg/dL with symptoms is diagnostic of diabetes.',
+  'HbA1c': 'ADA Guidelines: Normal: < 5.7%; Pre-diabetes: 5.7–6.4%; Diabetes Mellitus: ≥ 6.5%. Therapeutic target for most non-pregnant adult diabetics is < 7.0%. Reflects average glycemic control over the preceding 2–3 months.',
+  'Oral Glucose Tolerance Test (OGTT)': 'Standard 75g oral glucose load. ADA Criteria (2 hr post-load): Normal: < 140 mg/dL; Impaired Glucose Tolerance: 140–199 mg/dL; Diabetes Mellitus: ≥ 200 mg/dL. Patient must remain rested during the test.',
+  'Urine Complete Examination': 'Clean-catch midstream urine sample is required. Pus cells > 5/HPF suggest urinary tract infection; microscopic hematuria warrants further urological assessment. Correlate with urine culture if indicated.',
+  'Hepatitis B (HBsAg)': 'Qualitative screening for Hepatitis B surface antigen. Non-reactive indicates absence of detectable antigen. Reactive results should be confirmed with quantitative ELISA/PCR and clinical evaluation.',
+  'Hepatitis C (Anti-HCV)': 'Screening for antibodies against Hepatitis C Virus. Non-reactive indicates no detectable antibodies. Reactive results reflect past or current infection; confirmatory HCV RNA (PCR) is recommended.',
+  'HIV (Anti-HIV)': 'Screening test for HIV-1/HIV-2 antibodies and/or p24 antigen. Non-reactive result does not exclude infection during the window period. All initially reactive specimens must be confirmed according to national guidelines.',
+  'Dengue Profile': 'Dengue NS1 antigen is typically detectable from Day 1 to Day 5–7 after fever onset. Negative result does not exclude dengue; antibody testing (Dengue IgM/IgG) and serial platelet monitoring are advised.',
+  'Widal Test': 'Rapid slide agglutination test for Salmonella enterica. Significant titers: S. Typhi O ≥ 1:160, H ≥ 1:160. Single elevated titers should be interpreted with caution in endemic areas; blood culture is the diagnostic gold standard.',
+  'Coagulation (PT/INR)': 'Reference INR: 0.9–1.1. Recommended therapeutic target for oral anticoagulant therapy (Warfarin) is 2.0–3.0; for mechanical heart valves is 2.5–3.5. Critical alert: INR > 4.5.',
+  'Serum Electrolytes Extended': 'Electrolyte balance is vital for neuromuscular, cardiac, and fluid homeostasis. Hemolyzed specimens can cause falsely elevated potassium levels. Immediate clinical correlation is recommended for critical values.',
+  'Vitamin D': 'Deficient: < 20 ng/mL; Insufficient: 21–29 ng/mL; Sufficient: 30–100 ng/mL; Potential toxicity: > 100 ng/mL. Vitamin D is essential for calcium absorption, bone mineralization, and immune modulation.',
+  'Vitamin B12': 'Reference range: 200–900 pg/mL. Levels < 200 pg/mL indicate deficiency, commonly associated with megaloblastic anemia, neuropathy, or malabsorption. Borderline values (200–300 pg/mL) may benefit from MMA testing.',
+  'Iron Studies': 'Serum ferritin reflects total body iron stores. Levels < 30 ng/mL indicate iron deficiency anemia. Ferritin is an acute-phase reactant and may be elevated in liver disease, inflammation, or malignancy.',
+  'Cardiac Enzymes': 'High-sensitivity Troponin I. Serial measurements (at 0, 3, and 6 hours) are recommended in patients with suspected Acute Coronary Syndrome (ACS) to evaluate significant rise or fall.',
+  'Semen Analysis': 'WHO Laboratory Manual for the Examination of Human Semen guidelines. Abstinence period of 2–7 days required. Complete collection of the ejaculate is essential for accurate volume and count evaluation.',
+  'Serum Protein Electrophoresis (SPEP)': 'Serum Protein Electrophoresis. Monoclonal bands (M-spike) require confirmation by immunofixation electrophoresis (IFE) and serum free light chain (sFLC) assay to evaluate plasma cell dyscrasias.'
 };
 
 /* Templates never enter invoices directly. A matching saved test keeps its
@@ -1004,6 +1056,10 @@ function testModal(t) {
       if (!tpl) { App.toast('Select a template first', 'err'); return; }
       rowsBox.innerHTML = '';
       tpl.forEach(function (p) { addRow(p); });
+      var noteInput = m.querySelector('#tm-note');
+      if (noteInput && !noteInput.value.trim() && TEMPLATE_NOTES && TEMPLATE_NOTES[key]) {
+        noteInput.value = TEMPLATE_NOTES[key];
+      }
       App.toast(tpl.length + ' parameters loaded from "' + key + '"');
     });
 

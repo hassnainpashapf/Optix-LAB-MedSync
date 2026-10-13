@@ -148,6 +148,127 @@ var TEST_GRAPH_CONFIG = [
       { label: "Basal", re: "basal" },
       { label: "Nadir", re: "nadir" }
     ]
+  },
+  {
+    // Dexamethasone Suppression Test (DST)
+    nameRe: "Dexamethasone Suppression|\\bDST\\b",
+    title: "Cortisol (ug/dL) — Dexamethasone Suppression",
+    unit: "ug/dL",
+    refLo: 1.8,
+    refHi: 19.4,
+    x: [
+      { label: "Basal / 8 AM", re: "basal|pre|0\\s*hr" },
+      { label: "Post-Dex",     re: "post|dex|after|8\\s*am" }
+    ]
+  },
+  {
+    // Serial Cardiac Markers / Troponin Trend
+    nameRe: "Troponin.*Serial|Serial Troponin|Cardiac Markers|Cardiac Enzymes",
+    title: "Troponin I (ng/mL) — Serial Trend",
+    unit: "ng/mL",
+    refLo: 0,
+    refHi: 0.04,
+    x: [
+      { label: "0 Hour", re: "0\\s*hr|baseline|admission" },
+      { label: "3 Hour", re: "3\\s*hr" },
+      { label: "6 Hour", re: "6\\s*hr" }
+    ]
+  },
+  {
+    // Urea Breath Test (14C / 13C UBT for H. Pylori)
+    nameRe: "Urea Breath|\\bUBT\\b",
+    title: "Urea Breath Test (DOB) vs Time",
+    unit: "DOB",
+    refLo: 0,
+    refHi: 4.0,
+    x: [
+      { label: "Baseline (0 min)", re: "0\\s*min|baseline|pre" },
+      { label: "20 min Post-Urea", re: "20\\s*min|30\\s*min|post" }
+    ]
+  },
+  {
+    // Lipid Profile Overview
+    nameRe: "Lipid Profile|Lipid Panel",
+    title: "Lipid Profile (mg/dL) Overview",
+    unit: "mg/dL",
+    refLo: 40,
+    refHi: 200,
+    x: [
+      { label: "Total Chol",    re: "total\\s*chol" },
+      { label: "Triglycerides", re: "triglyceride" },
+      { label: "HDL",           re: "\\bhdl\\b" },
+      { label: "LDL",           re: "\\bldl\\b" }
+    ]
+  },
+  {
+    // Serum Electrolytes Balance
+    nameRe: "Serum Electrolytes|Electrolyte Panel|Electrolytes",
+    title: "Serum Electrolytes (mmol/L)",
+    unit: "mmol/L",
+    refLo: 3.5,
+    refHi: 145,
+    x: [
+      { label: "Sodium",      re: "sodium" },
+      { label: "Potassium",   re: "potassium" },
+      { label: "Chloride",    re: "chloride" },
+      { label: "Bicarbonate", re: "bicarbonate" }
+    ]
+  },
+  {
+    // Thyroid Profile Hormones Pattern
+    nameRe: "Thyroid Profile|\\bTFT\\b",
+    title: "Thyroid Profile Hormones",
+    unit: "Level",
+    refLo: 0.27,
+    refHi: 14.1,
+    x: [
+      { label: "T3",  re: "\\bt3\\b" },
+      { label: "T4",  re: "\\bt4\\b" },
+      { label: "TSH", re: "\\btsh\\b" }
+    ]
+  },
+  {
+    // Semen Analysis Motility Distribution
+    nameRe: "Semen Analysis|Seminogram",
+    title: "Sperm Motility Distribution (%)",
+    unit: "%",
+    refLo: 0,
+    refHi: 100,
+    x: [
+      { label: "Rapid (A)",    re: "rapid|grade\\s*a" },
+      { label: "Slow (B)",     re: "slow|sluggish|grade\\s*b" },
+      { label: "Non-Prog (C)", re: "non-?prog|grade\\s*c" },
+      { label: "Immotile (D)", re: "immotile|grade\\s*d" }
+    ]
+  },
+  {
+    // Serum Protein Electrophoresis Fractions
+    nameRe: "Serum Protein Electrophoresis|\\bSPEP\\b",
+    title: "Protein Electrophoresis Fractions (g/dL)",
+    unit: "g/dL",
+    refLo: 0.1,
+    refHi: 5.5,
+    x: [
+      { label: "Albumin", re: "albumin" },
+      { label: "Alpha 1", re: "alpha\\s*1" },
+      { label: "Alpha 2", re: "alpha\\s*2" },
+      { label: "Beta",    re: "beta" },
+      { label: "Gamma",   re: "gamma" }
+    ]
+  },
+  {
+    // Complete Blood Count (Differential Leucocyte Distribution)
+    nameRe: "Complete Blood Count|\\bCBC\\b|Differential.*Leucocyte|\\bDLC\\b",
+    title: "Differential Leucocyte Distribution (%)",
+    unit: "%",
+    refLo: 1,
+    refHi: 75,
+    x: [
+      { label: "Neutrophils", re: "neutrophil" },
+      { label: "Lymphocytes", re: "lymphocyte" },
+      { label: "Monocytes",   re: "monocyte" },
+      { label: "Eosinophils", re: "eosinophil" }
+    ]
   }
 ];
 
