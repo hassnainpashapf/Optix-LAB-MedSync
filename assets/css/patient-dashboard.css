@@ -1,0 +1,73 @@
+#ptPatientDashboard{color:#1b2a4a;margin:8px 0;font-family:inherit;background:#f8fafb;border-radius:22px;padding:18px}
+#ptPatientDashboard .pd-layout{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(300px,1fr);gap:20px;align-items:start}
+#ptPatientDashboard .pd-card{background:#fff;border:1px solid #e8edf3;border-radius:18px;padding:17px 19px;min-width:0}
+#ptPatientDashboard .pd-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+#ptPatientDashboard .pd-avatar{width:43px;height:43px;flex:0 0 43px;display:grid;place-items:center;border-radius:50%;background:#eaf3ff;color:#4a8bc9;font-size:14px;font-weight:700}
+#ptPatientDashboard h2{margin:0;font-size:20px;line-height:1.4;overflow-wrap:anywhere}
+#ptPatientDashboard h3{margin:0;font-size:13px;font-weight:600;line-height:1.5}
+#ptPatientDashboard .pd-header p,#ptPatientDashboard .pd-sub{margin:4px 0 0;color:#8b9aab;font-size:11px}
+#ptPatientDashboard .pd-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 18px;margin:0}
+#ptPatientDashboard .pd-field{min-width:0}
+#ptPatientDashboard dt{margin:0;color:#8b9aab;font-size:10px;line-height:1.5}
+#ptPatientDashboard dd{margin:3px 0 0;font-size:12px;line-height:1.5;overflow-wrap:anywhere;white-space:pre-wrap}
+#ptPatientDashboard .pd-lower{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+#ptPatientDashboard .pd-list{display:grid;gap:12px;margin:14px 0 0}
+#ptPatientDashboard .pd-list .pd-field{padding-bottom:10px;border-bottom:1px dashed #edf1f5}
+#ptPatientDashboard .pd-list .pd-field:last-child{border-bottom:0;padding-bottom:0}
+#ptPatientDashboard .pd-stack{display:grid;gap:12px}
+#ptPatientDashboard .pd-notes{font-size:11px;line-height:1.65;color:#75879c;margin:10px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:120px;overflow-y:auto}
+#ptPatientDashboard .pd-visual{min-width:0}
+#ptPatientDashboard .pd-art{height:420px;position:relative;overflow:hidden}
+#ptPatientDashboard .pd-art img{width:118%;max-width:470px;position:absolute;top:-10px;left:50%;transform:translateX(-50%);transform-origin:center;user-select:none}
+#ptPatientDashboard .pd-zoom{position:absolute;left:4px;top:175px;display:grid;gap:8px}
+#ptPatientDashboard .pd-zoom button{width:33px;height:33px;border:0;border-radius:50%;background:#fff;color:#70869b;font-size:19px;cursor:pointer}
+#ptPatientDashboard .pd-callout{position:absolute;left:37%;bottom:25px;right:0;background:#fff;border:1px solid #eef2f5;border-radius:16px;padding:12px 14px;box-shadow:0 8px 22px #63839e0c}
+#ptPatientDashboard .pd-callout strong{display:block;font-size:12px;margin-bottom:4px}
+#ptPatientDashboard .pd-callout span{font-size:10px;color:#8496a8;overflow-wrap:anywhere}
+#ptPatientDashboard .pd-options{display:flex;justify-content:center;gap:10px;margin:5px 0 0}
+#ptPatientDashboard .pd-options button{background:#fff;border:1px solid #e6edf5;border-radius:16px;width:88px;padding:9px 12px;color:#6f849b;font:inherit;font-size:11px;cursor:pointer}
+#ptPatientDashboard .pd-options span{display:block;font-size:29px;color:#4a8bc9;margin-bottom:5px}
+#ptPatientDashboard .pd-options button.active{background:#edf5ff;border-color:#c2daf5}
+#ptPatientDashboard .pd-caption{text-align:center;font-size:9px;color:#99a8b5;margin:10px 0 0}
+#ptPatientDashboard .pd-highlight{outline:2px solid #c2daf5}
+#ptPatientDashboard button:focus-visible{outline:3px solid #9ec1ef;outline-offset:3px}
+
+@media(max-width:1000px){#ptPatientDashboard .pd-layout{grid-template-columns:1fr}#ptPatientDashboard .pd-visual{max-width:440px;width:100%;margin:auto}#ptPatientDashboard .pd-art{height:430px}}
+@media(max-width:600px){#ptPatientDashboard{padding:12px}#ptPatientDashboard .pd-card{padding:15px}#ptPatientDashboard .pd-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#ptPatientDashboard .pd-lower{grid-template-columns:1fr}#ptPatientDashboard h2{font-size:18px}}
+
+#ptPatientDashboard .pd-test-label{display:block;font-size:10px;color:#72849a;margin-bottom:5px}
+#ptPatientDashboard .pd-test-select{width:100%;border:1px solid #dce7f2;background:#fff;color:#1b2a4a;border-radius:10px;padding:9px;font:inherit;font-size:12px;margin-bottom:8px}
+#ptPatientDashboard .pd-body-frame{position:absolute;width:216px;height:310px;left:50%;margin-left:-108px;top:0;transform-origin:center}
+#ptPatientDashboard .pd-body-frame img{position:static;width:100%;height:100%;max-width:none;transform:none;object-fit:contain;border-radius:12px}
+#ptPatientDashboard .pd-body-markers{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#ptPatientDashboard .pd-body-markers ellipse{fill:#3585ff55;stroke:#1978ed;stroke-width:.7}
+#ptPatientDashboard .pd-body-markers.pd-abnormal ellipse{fill:#ff1d3555;stroke:#c90024;stroke-width:1}
+#ptPatientDashboard .pd-callout{left:8%;right:8%;bottom:0;padding:9px 12px;max-height:120px;overflow:auto}
+#ptPatientDashboard .pd-callout.pd-abnormal{border-color:#f6b3bd}
+#ptPatientDashboard .pd-callout.pd-abnormal strong{color:#b91c36}
+#ptPatientDashboard .pd-callout p{font-size:10px;line-height:1.5;margin:5px 0 0;color:#b91c36}
+#ptPatientDashboard .pd-caption{line-height:1.6}
+#ptPatientDashboard select:focus-visible{outline:3px solid #9ec1ef;outline-offset:2px}
+
+/* Recorded details and labels must stay legible on the pale cards. */
+#ptPatientDashboard dt,#ptPatientDashboard .pd-header p,#ptPatientDashboard .pd-sub{color:#4b5d74;font-size:11px}
+#ptPatientDashboard dd{color:#172b45;font-weight:500}
+#ptPatientDashboard .pd-notes{color:#40546c;font-size:12px}
+#ptPatientDashboard .pd-test-label{color:#40546c;font-size:11px}
+#ptPatientDashboard .pd-callout span{color:#40546c;font-size:11px}
+#ptPatientDashboard .pd-caption{color:#52647a;font-size:11px}
+#ptPatientDashboard .pd-options button{color:#354d68;font-size:12px}
+
+#ptPatientDashboard .pd-profile-shell{display:grid;grid-template-columns:170px minmax(0,1fr);gap:18px;align-items:start}
+#ptPatientDashboard .pd-patient-menu{background:#fff;border:1px solid #e1e9f2;border-radius:18px;padding:16px 12px;position:sticky;top:18px;min-width:0}
+#ptPatientDashboard .pd-menu-patient{display:flex;align-items:center;flex-direction:column;text-align:center;gap:8px;padding:2px 0 16px;border-bottom:1px solid #edf1f6}
+#ptPatientDashboard .pd-menu-patient strong{color:#172b45;font-size:13px;overflow-wrap:anywhere;max-width:100%}
+#ptPatientDashboard .pd-menu-patient small{color:#52647a;font-size:11px}
+#ptPatientDashboard .pd-patient-menu nav{display:grid;gap:5px;margin:14px 0}
+#ptPatientDashboard .pd-patient-menu button{display:flex;align-items:center;gap:9px;background:transparent;border:1px solid transparent;border-radius:10px;text-align:left;padding:10px;color:#354d68;font:inherit;font-size:12px;cursor:pointer;width:100%}
+#ptPatientDashboard .pd-patient-menu button span{color:#397fbc;font-size:18px;width:20px;text-align:center;flex:none}
+#ptPatientDashboard .pd-patient-menu button:hover,#ptPatientDashboard .pd-patient-menu button.active{background:#eaf3ff;border-color:#d4e6fb;color:#205da1}
+#ptPatientDashboard .pd-menu-back{display:block;border-top:1px solid #edf1f6;padding:13px 8px 0;color:#205da1;font-size:11px;text-decoration:none}
+@media(max-width:1100px) and (min-width:701px){#ptPatientDashboard .pd-profile-shell{grid-template-columns:150px minmax(0,1fr);gap:12px}}
+@media(max-width:700px){#ptPatientDashboard .pd-profile-shell{grid-template-columns:1fr}#ptPatientDashboard .pd-patient-menu{position:static;padding:12px}#ptPatientDashboard .pd-menu-patient{flex-direction:row;text-align:left;padding:0 0 10px;flex-wrap:wrap}#ptPatientDashboard .pd-menu-patient small{margin-left:auto}#ptPatientDashboard .pd-patient-menu nav{display:flex;overflow-x:auto;margin:10px 0 0}#ptPatientDashboard .pd-patient-menu button{width:auto;flex:none}#ptPatientDashboard .pd-menu-back{display:none}}
+@media print{#ptPatientDashboard .pd-patient-menu{display:none}#ptPatientDashboard .pd-profile-shell{display:block}}
