@@ -31,7 +31,7 @@
 #ptPatientDashboard .pd-caption{text-align:center;font-size:9px;color:#99a8b5;margin:10px 0 0}
 #ptPatientDashboard .pd-highlight{outline:2px solid #c2daf5}
 #ptPatientDashboard button:focus-visible{outline:3px solid #9ec1ef;outline-offset:3px}
-@media(min-width:1001px){body:has(#ptPatientDashboard) #sidebar{display:flex!important}}
+
 @media(max-width:1000px){#ptPatientDashboard .pd-layout{grid-template-columns:1fr}#ptPatientDashboard .pd-visual{max-width:440px;width:100%;margin:auto}#ptPatientDashboard .pd-art{height:430px}}
 @media(max-width:600px){#ptPatientDashboard{padding:12px}#ptPatientDashboard .pd-card{padding:15px}#ptPatientDashboard .pd-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#ptPatientDashboard .pd-lower{grid-template-columns:1fr}#ptPatientDashboard h2{font-size:18px}}
 
@@ -48,3 +48,22 @@
 #ptPatientDashboard .pd-callout p{font-size:10px;line-height:1.5;margin:5px 0 0;color:#b91c36}
 #ptPatientDashboard .pd-caption{line-height:1.6}
 #ptPatientDashboard select:focus-visible{outline:3px solid #9ec1ef;outline-offset:2px}
+
+/* Keep the profile navigation visible on desktop and landscape tablets. */
+@media screen and (min-width:768px){
+  body:has(#ptPatientDashboard) #sidebar{display:flex!important;visibility:visible;transform:none;position:sticky;top:0}
+}
+@media screen and (min-width:768px) and (max-width:900px){
+  body:has(#ptPatientDashboard) #sidebar{width:208px;min-width:208px;box-shadow:none;transition:none}
+  body.side-open:has(#ptPatientDashboard){overflow:auto}
+  body.side-open:has(#ptPatientDashboard)::after{display:none}
+  body:has(#ptPatientDashboard) .side-close{display:none}
+}
+/* Recorded details and labels must stay legible on the pale cards. */
+#ptPatientDashboard dt,#ptPatientDashboard .pd-header p,#ptPatientDashboard .pd-sub{color:#4b5d74;font-size:11px}
+#ptPatientDashboard dd{color:#172b45;font-weight:500}
+#ptPatientDashboard .pd-notes{color:#40546c;font-size:12px}
+#ptPatientDashboard .pd-test-label{color:#40546c;font-size:11px}
+#ptPatientDashboard .pd-callout span{color:#40546c;font-size:11px}
+#ptPatientDashboard .pd-caption{color:#52647a;font-size:11px}
+#ptPatientDashboard .pd-options button{color:#354d68;font-size:12px}

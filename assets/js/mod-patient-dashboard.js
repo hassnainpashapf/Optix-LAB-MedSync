@@ -85,7 +85,12 @@
     if (!host || !host.isConnected) return false;
     if (!document.getElementById('ptDashboardStyles')) {
       var link = document.createElement('link');link.id='ptDashboardStyles';link.rel='stylesheet';
-      link.href='assets/css/patient-dashboard.css?v='+encodeURIComponent(window.__ASSET_V||'296');document.head.appendChild(link);
+      link.href='assets/css/patient-dashboard.css?v='+encodeURIComponent(window.__ASSET_V||'297');document.head.appendChild(link);
+    }
+    // Patient profiles open with the existing desktop navigation expanded.
+    if(window.matchMedia && window.matchMedia('(min-width:768px)').matches){
+      document.body.classList.remove('side-collapsed');
+      var toggle=document.getElementById('navToggle');if(toggle)toggle.setAttribute('aria-expanded','true');
     }
     host.innerHTML=render(patient);
     var image=host.querySelector('.pd-body-frame'),zoom=1;
