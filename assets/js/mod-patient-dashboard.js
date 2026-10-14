@@ -1712,6 +1712,224 @@
       '</div>';
   }
 
+  /* Render Dedicated Visual Laboratory Test Anatomy & Organ Systems Page */
+  function renderTestAnatomyPage(patient, tests, labData) {
+    tests = tests || [];
+    var regionCounters = {
+      liver: 0,
+      kidneys: 0,
+      heart: 0,
+      lungs: 0,
+      thyroid: 0,
+      pancreas: 0,
+      blood: 0,
+      general: 0
+    };
+
+    var abnormalCount = 0;
+    var normalCount = 0;
+    var pendingCount = 0;
+
+    tests.forEach(function (t) {
+      if (t.region && regionCounters[t.region] != null) {
+        regionCounters[t.region]++;
+      } else {
+        regionCounters.general++;
+      }
+      if (t.status === 'abnormal') abnormalCount++;
+      else if (t.status === 'within') normalCount++;
+      else pendingCount++;
+    });
+
+    var optionsHtml = tests.length ? tests.map(function (test, index) {
+      return '<option value="' + index + '">' + esc(test.name) + ' · ' + esc(test.date ? String(test.date).slice(0, 10) : 'Date not recorded') + '</option>';
+    }).join('') : '<option>No ordered tests</option>';
+
+    var testsCardsHtml = '';
+    if (tests.length) {
+      testsCardsHtml = tests.map(function (t, idx) {
+        var isAbnormal = t.status === 'abnormal';
+        var isWithin = t.status === 'within';
+        var stBadge = isAbnormal
+          ? '<span class="badge b-red" style="font-weight:700">🔴 Abnormal</span>'
+          : (isWithin ? '<span class="badge b-ready" style="font-weight:700">🟢 Normal</span>' : '<span class="badge b-warn" style="font-weight:700">⏳ Pending</span>');
+
+        var organIcons = {
+          liver: '🫀',
+          kidneys: '🫘',
+          heart: '❤️',
+          lungs: '🫁',
+          thyroid: '🦋',
+          pancreas: '🥞',
+          blood: '🩸',
+          general: '🧪'
+        };
+        var oIcon = organIcons[t.region] || '🧪';
+        var regName = (regions[t.region] ? regions[t.region].name : 'General');
+
+        var flagsHtml = '';
+        if (t.flags && t.flags.length) {
+          flagsHtml = '<div style="margin-top:6px;padding:6px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#991b1b">' +
+            t.flags.map(function (f) { return '<div>⚠️ ' + esc(f) + '</div>'; }).join('') +
+            '</div>';
+        }
+
+        return '<div class="pd-anatomy-test-card" data-pd-test-idx="' + idx + '" style="padding:12px 14px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:12px;margin-bottom:10px;cursor:pointer;transition:all 0.15s ease">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
+          '  <div style="display:flex;align-items:center;gap:8px">' +
+          '    <span style="font-size:20px">' + oIcon + '</span>' +
+          '    <div>' +
+          '      <strong style="font-size:13.5px;color:#0f172a;display:block">' + esc(t.name) + '</strong>' +
+          '      <small style="color:#64748b;font-size:11px">' + esc(regName) + ' · ' + esc(t.date ? String(t.date).slice(0, 10) : 'Recorded') + '</small>' +
+          '    </div>' +
+          '  </div>' +
+          '  <div>' + stBadge + '</div>' +
+          '</div>' +
+          flagsHtml +
+          '</div>';
+      }).join('');
+    } else {
+      testsCardsHtml = '<div style="padding:32px 16px;text-align:center;color:#64748b;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px">' +
+        '<div style="font-size:28px;margin-bottom:6px">🧪</div>' +
+        '<strong style="color:#334155;font-size:13px">No Ordered Tests Found</strong>' +
+        '<p style="margin:4px 0 0;font-size:11.5px">When tests are ordered or reported, anatomical mapping will be displayed here.</p>' +
+        '</div>';
+    }
+
+    return '<div class="pd-layout-anatomy" id="pdAnatomy" style="display:none">' +
+      '<div class="pd-anatomy-page-wrap">' +
+      '<div class="vitals-card" style="margin-bottom:16px">' +
+      '  <div class="vitals-card-head" style="margin-bottom:0">' +
+      '    <div>' +
+      '      <h3 style="display:flex;align-items:center;gap:8px;font-size:18px;font-weight:800;color:#0f172a;margin:0">' +
+      '        <span>◎</span><span>Visual Laboratory Test Anatomy &amp; Organ Systems Correlation</span>' +
+      '      </h3>' +
+      '      <p class="pd-sub" style="margin-top:4px;font-size:12px;color:#475569">' +
+      '        Full-body anatomical projection mapping each diagnostic test to its biological organ target and physiological boundaries.' +
+      '      </p>' +
+      '    </div>' +
+      '    <div style="display:flex;align-items:center;gap:10px">' +
+      '      <span class="badge b-ready" style="font-size:12px;font-weight:700;padding:6px 12px">' + tests.length + ' Test' + (tests.length === 1 ? '' : 's') + '</span>' +
+      '      <button type="button" class="btn btn-ghost btn-sm" data-pd-switch="pdOverview" style="font-size:12px;font-weight:600">← Back to Overview</button>' +
+      '    </div>' +
+      '  </div>' +
+      '</div>' +
+
+      '<div class="pd-trends-kpi-grid" style="margin-bottom:16px">' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#eff6ff;color:#2563eb">◎</span><span class="kpi-badge" style="background:#eff6ff;color:#1d4ed8">Monitored</span></div>' +
+      '    <div class="kpi-value">' + tests.length + '</div>' +
+      '    <div class="kpi-label">Diagnostic Tests</div>' +
+      '    <div class="kpi-sub">Total lab tests analyzed</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#ecfdf5;color:#059669">🟢</span><span class="kpi-badge improved">Normal</span></div>' +
+      '    <div class="kpi-value" style="color:#059669">' + normalCount + '</div>' +
+      '    <div class="kpi-label">Within Reference Range</div>' +
+      '    <div class="kpi-sub">Safe physiological status</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#fef2f2;color:#dc2626">🔴</span><span class="kpi-badge deteriorated">Abnormal</span></div>' +
+      '    <div class="kpi-value" style="color:#dc2626">' + abnormalCount + '</div>' +
+      '    <div class="kpi-label">Outside Reference Range</div>' +
+      '    <div class="kpi-sub">Requires doctor consultation</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#fffbeb;color:#d97706">⏳</span><span class="kpi-badge" style="background:#fef3c7;color:#92400e">Pending</span></div>' +
+      '    <div class="kpi-value" style="color:#d97706">' + pendingCount + '</div>' +
+      '    <div class="kpi-label">Awaiting Results</div>' +
+      '    <div class="kpi-sub">In laboratory processing</div>' +
+      '  </div>' +
+      '</div>' +
+
+      '<div class="pd-anatomy-grid">' +
+      '  <div class="vitals-card pd-visual" style="padding:20px">' +
+      '    <div style="margin-bottom:12px">' +
+      '      <label class="pd-test-label" for="pdTestSelect" style="font-weight:700;font-size:12.5px;color:#0f172a;display:block;margin-bottom:4px">Select test anatomy</label>' +
+      '      <p style="margin:0 0 8px;font-size:11px;color:#64748b">Choose a laboratory test to project onto the anatomical body map:</p>' +
+      '      <select id="pdTestSelect" class="pd-test-select" aria-label="Select test anatomy" style="width:100%;font-size:13px;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px;background:#ffffff">' +
+      optionsHtml +
+      '      </select>' +
+      '    </div>' +
+
+      '    <div class="pd-art" style="height:480px;position:relative;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:16px;overflow:hidden">' +
+      '      <div data-pd-anatomy>' +
+      anatomy(tests[0]) +
+      '      </div>' +
+      '      <div class="pd-zoom">' +
+      '        <button type="button" data-pd-zoom="in" aria-label="Zoom in">+</button>' +
+      '        <button type="button" data-pd-reset aria-label="Reset image">↔</button>' +
+      '        <button type="button" data-pd-zoom="out" aria-label="Zoom out">−</button>' +
+      '      </div>' +
+      '    </div>' +
+
+      '    <p class="pd-caption" style="margin-top:14px;font-size:11.5px;color:#64748b;line-height:1.6;text-align:center">' +
+      '      <span style="color:#0284c7;font-weight:700">Blue</span>: test-related area · <span style="color:#dc2626;font-weight:700">Red</span>: abnormal report value.<br>' +
+      '      Illustration only; not an exact disease location or a patient scan.' +
+      '    </p>' +
+      '  </div>' +
+
+      '  <div style="display:flex;flex-direction:column;gap:16px">' +
+      '    <div class="vitals-card">' +
+      '      <div class="vitals-card-head" style="margin-bottom:12px">' +
+      '        <div>' +
+      '          <h3 style="display:flex;align-items:center;gap:8px"><span>🗺️</span><span>Target Organ Systems Breakdown</span></h3>' +
+      '          <p class="pd-sub" style="margin-top:2px">Biological body regions correlated with this patient\'s tests</p>' +
+      '        </div>' +
+      '      </div>' +
+      '      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:10px">' +
+      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
+      '          <div style="font-size:20px;margin-bottom:2px">🫀</div>' +
+      '          <strong style="font-size:12px;color:#0f172a;display:block">Liver / Hepatic</strong>' +
+      '          <span style="font-size:11px;color:#64748b">' + regionCounters.liver + ' Test' + (regionCounters.liver === 1 ? '' : 's') + '</span>' +
+      '        </div>' +
+      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
+      '          <div style="font-size:20px;margin-bottom:2px">🫘</div>' +
+      '          <strong style="font-size:12px;color:#0f172a;display:block">Kidneys / Renal</strong>' +
+      '          <span style="font-size:11px;color:#64748b">' + regionCounters.kidneys + ' Test' + (regionCounters.kidneys === 1 ? '' : 's') + '</span>' +
+      '        </div>' +
+      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
+      '          <div style="font-size:20px;margin-bottom:2px">❤️</div>' +
+      '          <strong style="font-size:12px;color:#0f172a;display:block">Heart / Cardiac</strong>' +
+      '          <span style="font-size:11px;color:#64748b">' + regionCounters.heart + ' Test' + (regionCounters.heart === 1 ? '' : 's') + '</span>' +
+      '        </div>' +
+      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
+      '          <div style="font-size:20px;margin-bottom:2px">🫁</div>' +
+      '          <strong style="font-size:12px;color:#0f172a;display:block">Lungs / Pulm.</strong>' +
+      '          <span style="font-size:11px;color:#64748b">' + regionCounters.lungs + ' Test' + (regionCounters.lungs === 1 ? '' : 's') + '</span>' +
+      '        </div>' +
+      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
+      '          <div style="font-size:20px;margin-bottom:2px">🥞</div>' +
+      '          <strong style="font-size:12px;color:#0f172a;display:block">Pancreas / Sugar</strong>' +
+      '          <span style="font-size:11px;color:#64748b">' + regionCounters.pancreas + ' Test' + (regionCounters.pancreas === 1 ? '' : 's') + '</span>' +
+      '        </div>' +
+      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
+      '          <div style="font-size:20px;margin-bottom:2px">🩸</div>' +
+      '          <strong style="font-size:12px;color:#0f172a;display:block">Blood / Hematology</strong>' +
+      '          <span style="font-size:11px;color:#64748b">' + regionCounters.blood + ' Test' + (regionCounters.blood === 1 ? '' : 's') + '</span>' +
+      '        </div>' +
+      '      </div>' +
+      '    </div>' +
+
+      '    <div class="vitals-card">' +
+      '      <div class="vitals-card-head" style="margin-bottom:12px">' +
+      '        <div>' +
+      '          <h3 style="display:flex;align-items:center;gap:8px"><span>📋</span><span>Patient Diagnostic Tests Anatomical Directory</span></h3>' +
+      '          <p class="pd-sub" style="margin-top:2px">Click any test to immediately focus the anatomical body projection</p>' +
+      '        </div>' +
+      '        <span class="badge b-ready" style="font-size:11px;font-weight:700">' + tests.length + ' Available</span>' +
+      '      </div>' +
+      '      <div style="max-height:360px;overflow-y:auto;padding-right:4px">' +
+      testsCardsHtml +
+      '      </div>' +
+      '    </div>' +
+
+      '  </div>' +
+      '</div>' +
+      '</div>' +
+      '</div>';
+  }
+
   /* Render Primary Patient Vitals Dashboard */
   function render(patient) {
     var tests=testsFor(patient);
@@ -1912,9 +2130,17 @@
       '        </div>' +
       '      </div>' +
 
-      // Visual Laboratory Test Anatomy Correlator
-      '      <div class="pd-visual" id="pdAnatomy" style="margin-top:16px"><label class="pd-test-label" for="pdTestSelect">Test anatomy</label><select id="pdTestSelect" class="pd-test-select" aria-label="Select test anatomy">'+(tests.length?tests.map(function(test,index){return '<option value="'+index+'">'+esc(test.name)+' · '+esc(test.date?String(test.date).slice(0,10):'Date not recorded')+'</option>';}).join(''):'<option>No ordered tests</option>')+'</select><div class="pd-art"><div data-pd-anatomy>'+anatomy(tests[0])+'</div><div class="pd-zoom"><button type="button" data-pd-zoom="in" aria-label="Zoom in">+</button><button type="button" data-pd-reset aria-label="Reset image">↔</button><button type="button" data-pd-zoom="out" aria-label="Zoom out">−</button></div></div>'+
-      '      <p class="pd-caption">Blue: test-related area · Red: abnormal report value.<br>Illustration only; not an exact disease location or a patient scan.</p></div>' +
+      // Link to Dedicated Test Anatomy Page
+      '      <div class="vitals-card" style="margin-top:14px;padding:12px 14px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between" data-pd-switch="pdAnatomy" title="Open Test Anatomy">' +
+      '        <div style="display:flex;align-items:center;gap:10px">' +
+      '          <span style="font-size:22px">◎</span>' +
+      '          <div>' +
+      '            <strong style="color:#0369a1;font-size:12.5px;display:block">Visual Test Anatomy Page</strong>' +
+      '            <p style="margin:2px 0 0;font-size:11px;color:#0284c7">Explore interactive organ systems &amp; body map</p>' +
+      '          </div>' +
+      '        </div>' +
+      '        <span class="badge b-ready" style="font-size:11px;font-weight:700">Open Page →</span>' +
+      '      </div>' +
       '    </div>' +
       '  </div>' +
       '</div>' +
@@ -1923,6 +2149,9 @@
       '<div class="pd-layout-trends" id="pdTrends" style="display:none">' +
       renderLongitudinalTrendsPage(labData, patient) +
       '</div>' +
+
+      // Dedicated Visual Laboratory Test Anatomy Page
+      renderTestAnatomyPage(patient, tests, labData) +
       '</div>' +
       '</section>';
   }
@@ -2157,22 +2386,39 @@
 
       if (sectionId === 'pdTrends') {
         if (overviewEl) overviewEl.style.display = 'none';
+        if (anatomyEl) anatomyEl.style.display = 'none';
         if (trendsEl) trendsEl.style.display = 'block';
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else if (sectionId === 'pdOverview') {
         if (trendsEl) trendsEl.style.display = 'none';
+        if (anatomyEl) anatomyEl.style.display = 'none';
         if (overviewEl) overviewEl.style.display = 'block';
         window.scrollTo({ top: 0, behavior: 'smooth' });
       } else if (sectionId === 'pdAnatomy') {
+        if (overviewEl) overviewEl.style.display = 'none';
         if (trendsEl) trendsEl.style.display = 'none';
-        if (overviewEl) overviewEl.style.display = 'block';
-        if (anatomyEl) {
-          anatomyEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          anatomyEl.classList.add('pd-highlight');
-          setTimeout(function(){ anatomyEl.classList.remove('pd-highlight'); }, 1200);
-        }
+        if (anatomyEl) anatomyEl.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }
+
+    // Wire clickable test cards in the anatomy directory
+    host.querySelectorAll('[data-pd-test-idx]').forEach(function(card) {
+      card.addEventListener('click', function() {
+        var idx = card.getAttribute('data-pd-test-idx');
+        var sel = host.querySelector('#pdTestSelect');
+        if (sel) {
+          sel.value = idx;
+          var evt = new Event('change', { bubbles: true });
+          sel.dispatchEvent(evt);
+        }
+        host.querySelectorAll('[data-pd-test-idx]').forEach(function(c) {
+          var isCur = c === card;
+          c.style.borderColor = isCur ? '#0284c7' : '#edf2f7';
+          c.style.background = isCur ? '#f0f9ff' : '#ffffff';
+        });
+      });
+    });
 
     host.querySelectorAll('[data-pd-section]').forEach(function(button){
       button.addEventListener('click', function(){

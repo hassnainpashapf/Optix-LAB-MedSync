@@ -1823,3 +1823,27 @@
   padding: 11px 14px;
   margin-top: 10px;
 }
+
+/* Dedicated Visual Test Anatomy Page */
+#ptPatientDashboard .pd-layout-anatomy {
+  width: 100%;
+}
+
+#ptPatientDashboard .pd-anatomy-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 992px) {
+  #ptPatientDashboard .pd-anatomy-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+#ptPatientDashboard .pd-anatomy-test-card:hover {
+  border-color: #0284c7 !important;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
+}
+

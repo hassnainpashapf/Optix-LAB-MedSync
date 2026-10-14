@@ -157,5 +157,19 @@ assert.ok(html.includes('pd-individual-biomarkers-section'), 'Individual Biomark
 assert.ok(!html.includes('vitals-trends-preview-card'), 'Biomarker Trends preview banner cleanly removed from Overview');
 assert.ok(html.includes('btnLaunchTrendsDoctorAI'), 'Full AI Analysis button moved to top patient header');
 
-console.log('✓ All 6 verification checks for Dedicated Biomarker Trends Page, Individual Biomarker Trend Graphs, SVG Trajectory Graph, and Delta Velocity Bars PASSED CLEANLY!\n');
+// 7. Verify Dedicated Test Anatomy Page, Navigation & Organ System Mapping:
+assert.ok(html.includes('data-pd-section="pdAnatomy"'), 'Header navigation button for Test Anatomy present');
+assert.ok(html.includes('Test Anatomy'), 'Header navigation button label present');
+assert.ok(html.includes('id="pdAnatomy"'), 'Dedicated pdAnatomy page section present');
+assert.ok(html.includes('class="pd-layout-anatomy"'), 'Dedicated pd-layout-anatomy class present');
+assert.ok(html.includes('Visual Laboratory Test Anatomy &amp; Organ Systems Correlation'), 'Test Anatomy page title present');
+assert.ok(html.includes('Select test anatomy'), 'Test anatomy selector label present');
+assert.ok(html.includes('id="pdTestSelect"'), 'Test anatomy dropdown present');
+assert.ok(html.includes('patient-body-reference.png'), 'Patient body reference image present in anatomy');
+assert.ok(html.includes('Target Organ Systems Breakdown'), 'Organ systems breakdown section present');
+assert.ok(html.includes('Patient Diagnostic Tests Anatomical Directory'), 'Diagnostic tests directory present');
+assert.ok(html.includes('pd-anatomy-test-card'), 'Anatomy test cards present in directory');
+
+console.log('✓ All 7 verification checks for Dedicated Biomarker Trends Page, Dedicated Test Anatomy Page, and 3D Models PASSED CLEANLY!\n');
+
 
