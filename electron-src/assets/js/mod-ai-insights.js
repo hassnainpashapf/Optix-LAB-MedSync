@@ -4216,7 +4216,6 @@
         + '<div class="ai-tabs-bar" role="group" aria-label="AI dashboard sections">'
         + '  <button type="button" class="ai-dash-tab' + (activeTab === 'modules' ? ' active' : '') + '" data-dash-tab="modules" aria-controls="aiPanel-modules" aria-pressed="' + (activeTab === 'modules' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">⚙️</span><span class="ai-dash-tab-title">Subsystem Toggles</span></button>'
         + '  <button type="button" class="ai-dash-tab' + (activeTab === 'panic' ? ' active' : '') + '" data-dash-tab="panic" aria-controls="aiPanel-panic" aria-pressed="' + (activeTab === 'panic' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🚨</span><span class="ai-dash-tab-title">Emergency Panic Cutoff Limits</span></button>'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'roles' ? ' active' : '') + '" data-dash-tab="roles" aria-controls="aiPanel-roles" aria-pressed="' + (activeTab === 'roles' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🔐</span><span class="ai-dash-tab-title">Role Permissions Matrix</span></button>'
         + '  <button type="button" class="ai-dash-tab' + (activeTab === 'sandbox' ? ' active' : '') + '" data-dash-tab="sandbox" aria-controls="aiPanel-sandbox" aria-pressed="' + (activeTab === 'sandbox' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🧪</span><span class="ai-dash-tab-title">Clinical Sandbox & Live Analysis Simulator</span></button>'
         + '</div>'
 
@@ -4359,58 +4358,7 @@
 
 
 
-        // PANEL 4: ROLE ACCESS MATRIX
-        + '  <div id="aiPanel-roles" style="display:' + (activeTab === 'roles' ? 'block' : 'none') + '">'
-        + '    <div class="card">'
-        + '      <div class="card-h">'
-        + '        <div>'
-        + '          <h3>Role Permissions Matrix</h3>'
-        + '          <div style="font-size:12px;color:var(--muted,#64748b);margin-top:3px">Configure team permissions and visibility for AI clinical features</div>'
-        + '        </div>'
-        + '      </div>'
-        + '      <div class="card-b">'
-        + '        <div style="background:var(--brand-soft,#ebf4f8);border:1px solid var(--brand-line,#c7d8e8);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:var(--brand,#131845);display:flex;align-items:center;gap:10px">'
-        + '          <span style="font-size:16px">ℹ️</span>'
-        + '          <span><b>Safety Policy:</b> Doctor and Administrator roles are permanently locked active for medical verification.</span>'
-        + '        </div>'
-        + '        <div class="tbl-wrap" style="border:1px solid var(--bd,#cbd5e1);border-radius:10px;overflow:hidden">'
-        + '          <table class="table" style="margin:0">'
-        + '            <thead><tr>'
-        + '              <th style="padding:12px 18px">Role Name</th>'
-        + '              <th style="padding:12px 18px">Access Scope</th>'
-        + '              <th style="padding:12px 18px;text-align:right">Permission Status</th>'
-        + '            </tr></thead>'
-        + '            <tbody>'
-        + '              <tr>'
-        + '                <td style="padding:14px 18px;font-weight:700;color:var(--ink,#0f1e2e)">👨‍⚕️ Doctor (Physician Portal)</td>'
-        + '                <td style="padding:14px 18px;color:var(--muted,#64748b);font-size:13px">Full 5-solution clinical insights, digital Rx pad & order generation</td>'
-        + '                <td style="padding:14px 18px;text-align:right"><span class="badge b-paid" style="font-size:11px;font-weight:700">🔒 MANDATORY (LOCKED ON)</span></td>'
-        + '              </tr>'
-        + '              <tr>'
-        + '                <td style="padding:14px 18px;font-weight:700;color:var(--ink,#0f1e2e)">🛡️ Administrator</td>'
-        + '                <td style="padding:14px 18px;color:var(--muted,#64748b);font-size:13px">Subsystems governance, threshold setup, audit tracking & role controls</td>'
-        + '                <td style="padding:14px 18px;text-align:right"><span class="badge b-paid" style="font-size:11px;font-weight:700">🔒 MANDATORY (LOCKED ON)</span></td>'
-        + '              </tr>'
-        + '              <tr>'
-        + '                <td style="padding:14px 18px;font-weight:700;color:var(--ink,#0f1e2e)">🔬 Lab Technician</td>'
-        + '                <td style="padding:14px 18px;color:var(--muted,#64748b);font-size:13px">Result verification review, panic flags & organ impact projections</td>'
-        + '                <td style="padding:14px 18px;text-align:right">'
-        + '                  <label class="ai-switch"><input type="checkbox" id="aiRoleTech"' + (curCfg.roles.indexOf('technician') >= 0 ? ' checked' : '') + '><span class="ai-slider"></span></label>'
-        + '                </td>'
-        + '              </tr>'
-        + '              <tr>'
-        + '                <td style="padding:14px 18px;font-weight:700;color:var(--ink,#0f1e2e)">📋 Reception Staff</td>'
-        + '                <td style="padding:14px 18px;color:var(--muted,#64748b);font-size:13px">Roman Urdu patient care guide, dietary notes & WhatsApp care advice</td>'
-        + '                <td style="padding:14px 18px;text-align:right">'
-        + '                  <label class="ai-switch"><input type="checkbox" id="aiRoleRecep"' + (curCfg.roles.indexOf('reception') >= 0 ? ' checked' : '') + '><span class="ai-slider"></span></label>'
-        + '                </td>'
-        + '              </tr>'
-        + '            </tbody>'
-        + '          </table>'
-        + '        </div>'
-        + '      </div>'
-        + '    </div>'
-        + '  </div>'
+
 
         // PANEL 5: CLINICAL SANDBOX
         + '  <div id="aiPanel-sandbox" style="display:' + (activeTab === 'sandbox' ? 'block' : 'none') + '">'
@@ -4493,7 +4441,7 @@
         btn.addEventListener('click', function () {
           activeTab = btn.getAttribute('data-dash-tab');
           tabBtns.forEach(function (b) { b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
-          var panels = ['modules', 'panic', 'roles', 'sandbox'];
+          var panels = ['modules', 'panic', 'sandbox'];
           panels.forEach(function (p) {
             var pan = container.querySelector('#aiPanel-' + p);
             if (pan) pan.style.display = (p === activeTab) ? 'block' : 'none';
@@ -4610,11 +4558,12 @@
           }
 
           // Collect roles (Doctor and Admin are ALWAYS mandatory)
-          var newRoles = ['admin', 'doctor'];
-          var techChk = container.querySelector('#aiRoleTech');
-          if (techChk && techChk.checked) newRoles.push('technician');
-          var recepChk = container.querySelector('#aiRoleRecep');
-          if (recepChk && recepChk.checked) newRoles.push('reception');
+          var newRoles = (curCfg && Array.isArray(curCfg.roles)) ? curCfg.roles : ['admin', 'doctor', 'technician'];
+          if (container.querySelector('#aiRoleTech')) {
+            newRoles = ['admin', 'doctor'];
+            if ((container.querySelector('#aiRoleTech') || {}).checked) newRoles.push('technician');
+            if ((container.querySelector('#aiRoleRecep') || {}).checked) newRoles.push('reception');
+          }
 
           var toSave = {
             modules: newModules,

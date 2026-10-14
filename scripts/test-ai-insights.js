@@ -777,9 +777,8 @@ assert(renderedHtml.includes('ai-dash-kpi'), 'Dashboard must render KPI cards');
 assert(renderedHtml.includes('Subsystem Toggles'), 'Dashboard must render subsystem toggles tab');
 assert(renderedHtml.includes('Emergency Panic Cutoff Limits'), 'Dashboard must render panic cutoffs panel');
 assert(!renderedHtml.includes('Digital Rx Pad Credentials & Branding'), 'Digital Rx Pad branding panel cleanly removed as requested');
-assert(renderedHtml.includes('Role Permissions Matrix'), 'Dashboard must render permissions panel');
+assert(!renderedHtml.includes('Role Permissions Matrix'), 'Role Permissions Matrix cleanly moved from AI Dashboard to Users & Roles as requested');
 assert(renderedHtml.includes('Clinical Sandbox & Live Analysis Simulator'), 'Dashboard must render simulation cards');
-assert(renderedHtml.includes('MANDATORY (LOCKED ON)'), 'Doctor role must be displayed as permanently locked mandatory');
 
 // Router Registration
 assert(registeredRoutes.includes('#/ai-dashboard') || registeredRoutes.includes('/ai-dashboard'), 'ai-dashboard route must be registered');
@@ -793,6 +792,8 @@ assert(appJsCode.includes("key: 'ai-dashboard'"), 'app.js NAV must include ai-da
 const adminJsCode = fs.readFileSync(path.join(root, 'assets/js/mod-admin.js'), 'utf8');
 assert(adminJsCode.includes("id: 'ai'"), 'mod-admin.js must have ai settings tab');
 assert(adminJsCode.includes("'ai'"), 'mod-admin.js SET_TABS must include ai');
+assert(adminJsCode.includes('Role Permissions Matrix'), 'Users & Roles in mod-admin.js must house Role Permissions Matrix');
+assert(adminJsCode.includes('Doctor Account') && adminJsCode.includes('Mandatory'), 'Doctor role must be displayed as permanently locked mandatory');
 
 const portalJsCode = fs.readFileSync(path.join(root, 'assets/js/mod-portal.js'), 'utf8');
 assert(portalJsCode.includes('#/ai-dashboard'), 'mod-portal.js must provide doctor shortcut to ai-dashboard');

@@ -3888,34 +3888,51 @@
         var aiRoles = Array.isArray(mainSettings.aiInsightsRoles) ? mainSettings.aiInsightsRoles : ['admin', 'doctor', 'technician'];
         var techChecked = aiRoles.indexOf('technician') >= 0;
         var recepChecked = aiRoles.indexOf('reception') >= 0;
-        return '<div style="margin-top:22px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:14px;padding:16px 18px">'
-          + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">'
+        return '<div style="margin-top:24px;background:#ffffff;border:1.5px solid #cbd5e1;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,23,42,0.04)">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">'
           + '<div>'
           + '<div style="display:flex;align-items:center;gap:8px">'
-          + '<h3 style="margin:0;font-size:16px;color:#1e293b">🤖 AI Doctor Recommendations (5 Solutions) Permissions</h3>'
-          + '<span class="badge b-paid" style="font-size:11px">Role Access</span>'
+          + '<h3 style="margin:0;font-size:16px;font-weight:700;color:#0f172a">🔐 Role Permissions Matrix (AI Clinical Intelligence &amp; Recommendations)</h3>'
+          + '<span class="badge b-paid" style="font-size:11px;font-weight:700">Governance</span>'
           + '</div>'
-          + '<p class="muted" style="font-size:12.5px;margin:4px 0 0">Control which staff roles can view and use the AI Clinical Decision Support tool on lab reports.</p>'
+          + '<p class="muted" style="font-size:12.5px;margin:3px 0 0">Configure team permissions and visibility for AI diagnostic tools, panic alerts, and clinical decision support.</p>'
           + '</div>'
-          + '<button class="btn btn-primary btn-sm" id="btnSaveAiPerms" style="background:#4f46e5;font-weight:700">Save AI Permissions</button>'
+          + '<button class="btn btn-primary btn-sm" id="btnSaveAiPerms" style="background:#131845;font-weight:700;padding:7px 16px">Save AI Permissions</button>'
           + '</div>'
-          + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px">'
-          + '<div style="background:#fff;border:1px solid #bbf7d0;border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:10px">'
-          + '<input type="checkbox" checked disabled style="width:17px;height:17px;margin-top:2px;accent-color:#16a34a">'
-          + '<div><b style="color:#166534">Doctor Account</b> <span class="badge b-paid" style="font-size:10px;margin-left:4px">Mandatory</span><div class="muted" style="font-size:11.5px;margin-top:2px">Always enabled for referring & attending doctors.</div></div>'
-          + '</div>'
-          + '<div style="background:#fff;border:1px solid #bbf7d0;border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:10px">'
-          + '<input type="checkbox" checked disabled style="width:17px;height:17px;margin-top:2px;accent-color:#16a34a">'
-          + '<div><b style="color:#166534">Admin Account</b> <span class="badge b-paid" style="font-size:10px;margin-left:4px">Full Access</span><div class="muted" style="font-size:11.5px;margin-top:2px">Full administrative access and permission control.</div></div>'
-          + '</div>'
-          + '<label style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:10px;cursor:pointer">'
-          + '<input type="checkbox" id="aiPermTech"' + (techChecked ? ' checked' : '') + ' style="width:17px;height:17px;margin-top:2px;accent-color:#4f46e5">'
-          + '<div><b style="color:#0f172a">Technician</b><div class="muted" style="font-size:11.5px;margin-top:2px">Lab technologists entering & validating results.</div></div>'
-          + '</label>'
-          + '<label style="background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;align-items:flex-start;gap:10px;cursor:pointer">'
-          + '<input type="checkbox" id="aiPermRecep"' + (recepChecked ? ' checked' : '') + ' style="width:17px;height:17px;margin-top:2px;accent-color:#4f46e5">'
-          + '<div><b style="color:#0f172a">Reception</b><div class="muted" style="font-size:11.5px;margin-top:2px">Front desk & intake staff viewing patient reports.</div></div>'
-          + '</label>'
+          + '<div class="tbl-wrap" style="border:1px solid #cbd5e1;border-radius:10px;overflow:hidden">'
+          + '<table class="table" style="margin:0">'
+          + '<thead><tr>'
+          + '<th style="padding:10px 16px">Role Name</th>'
+          + '<th style="padding:10px 16px">Access Scope</th>'
+          + '<th style="padding:10px 16px;text-align:right">Permission Status</th>'
+          + '</tr></thead>'
+          + '<tbody>'
+          + '<tr>'
+          + '<td style="padding:12px 16px;font-weight:700;color:#0f172a">👨‍⚕️ Doctor Account (Physician Portal)</td>'
+          + '<td style="padding:12px 16px;color:#64748b;font-size:13px">Full 5-solution clinical insights, digital Rx pad &amp; order generation</td>'
+          + '<td style="padding:12px 16px;text-align:right"><span class="badge b-paid" style="font-size:11px;font-weight:700">🔒 Mandatory (Locked ON)</span></td>'
+          + '</tr>'
+          + '<tr>'
+          + '<td style="padding:12px 16px;font-weight:700;color:#0f172a">🛡️ Admin Account</td>'
+          + '<td style="padding:12px 16px;color:#64748b;font-size:13px">Subsystems governance, threshold setup, audit tracking &amp; role controls</td>'
+          + '<td style="padding:12px 16px;text-align:right"><span class="badge b-paid" style="font-size:11px;font-weight:700">🔒 Mandatory (Locked ON)</span></td>'
+          + '</tr>'
+          + '<tr>'
+          + '<td style="padding:12px 16px;font-weight:700;color:#0f172a">🔬 Lab Technician</td>'
+          + '<td style="padding:12px 16px;color:#64748b;font-size:13px">Result verification review, panic flags &amp; organ impact projections</td>'
+          + '<td style="padding:12px 16px;text-align:right">'
+          + '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="aiPermTech"' + (techChecked ? ' checked' : '') + ' style="width:17px;height:17px;accent-color:#131845"> <span style="font-size:12.5px;font-weight:600">' + (techChecked ? 'Enabled' : 'Disabled') + '</span></label>'
+          + '</td>'
+          + '</tr>'
+          + '<tr>'
+          + '<td style="padding:12px 16px;font-weight:700;color:#0f172a">📋 Reception Staff</td>'
+          + '<td style="padding:12px 16px;color:#64748b;font-size:13px">Roman Urdu patient care guide, dietary notes &amp; WhatsApp care advice</td>'
+          + '<td style="padding:12px 16px;text-align:right">'
+          + '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="aiPermRecep"' + (recepChecked ? ' checked' : '') + ' style="width:17px;height:17px;accent-color:#131845"> <span style="font-size:12.5px;font-weight:600">' + (recepChecked ? 'Enabled' : 'Disabled') + '</span></label>'
+          + '</td>'
+          + '</tr>'
+          + '</tbody>'
+          + '</table>'
           + '</div>'
           + '</div>';
       })()
@@ -3930,8 +3947,16 @@
         if ((document.getElementById('aiPermRecep') || {}).checked) roles.push('reception');
         var st = DB.get('settings', 'main') || {};
         st.aiInsightsRoles = roles;
+        if (!st.aiConfig || typeof st.aiConfig !== 'object') st.aiConfig = {};
+        st.aiConfig.roles = roles;
         DB.update('settings', 'main', st);
-        App.toast('AI Recommendations permissions saved.');
+        if (window.App && App.aiInsights && typeof App.aiInsights.saveAiConfig === 'function') {
+          var cfg = App.aiInsights.getAiConfig ? App.aiInsights.getAiConfig() : {};
+          cfg.roles = roles;
+          App.aiInsights.saveAiConfig(cfg);
+        }
+        App.toast('Role Permissions Matrix updated successfully.');
+        renderSetUsers();
       });
     }
 
