@@ -984,7 +984,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdContact','Contact','☎'],['pdIdentity','Identity','👤'],['pdNotes','Notes','☷'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span><span>'+item[1]+'</span></button>';
       }).join('') +
       '  </nav>' +
