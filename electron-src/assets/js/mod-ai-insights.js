@@ -4174,20 +4174,7 @@
         + '  }'
         + '  #optixAiDashboard .ai-btn-ghost:hover { background: #f8fafc; border-color: #94a3b8; color: var(--ink, #0f1e2e); }'
         + '</style>'
-        + '<!-- Optix AI Clinical Intelligence Engine -->'
-        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">'
-        + '  <div>'
-        + '    <h2 style="font-size:20px;font-weight:800;color:var(--brand-d,#0d0f36);margin:0;display:flex;align-items:center;gap:10px">'
-        + '      <span style="display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);font-size:18px">🧠</span>'
-        + '      Optix AI Clinical Intelligence Engine'
-        + '    </h2>'
-        + '    <p style="font-size:12.5px;color:var(--muted,#64748b);margin:3px 0 0">Central diagnostic automation, panic cutoffs & clinical decision support governance</p>'
-        + '  </div>'
-        + '  <button type="button" id="aiSaveConfigBtnTop" class="ai-btn-primary ai-save-config-btn" style="min-width:140px">'
-        + '    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
-        + '    <span>Save Settings</span>'
-        + '  </button>'
-        + '</div>'
+
 
         // Top 4 Stat Cards
         + '<div class="stat-grid" style="margin-bottom:24px">'
