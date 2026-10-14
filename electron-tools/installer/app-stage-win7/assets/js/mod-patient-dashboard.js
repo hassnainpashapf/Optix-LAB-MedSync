@@ -997,7 +997,7 @@
 
     var organIcons = { liver: '🫀', lung: '🫁', heart: '❤️', kidneys: '🫘', brain: '🧠', pancreas: '🥞', blood: '🩸' };
 
-    var cardsHtml = comps.map(function (c) {
+    var listHtml = comps.map(function (c) {
       var icon = organIcons[c.organ] || '🧪';
       var isImp = c.badgeClass === 'improved';
       var isDet = c.badgeClass === 'deteriorated';
@@ -1025,18 +1025,15 @@
 
       var barColor = isImp ? '#10b981' : (isDet ? '#ef4444' : '#64748b');
 
-      return '<div class="pd-delta-card">' +
-        '  <div class="pd-delta-card-head">' +
-        '    <div>' +
-        '      <div style="font-weight:700;font-size:13.5px;color:#0f172a;display:flex;align-items:center;gap:6px">' +
-        '        <span>' + icon + '</span><span>' + esc(c.paramName) + '</span>' +
-        '      </div>' +
-        '      <small style="color:#64748b;font-size:11px">' + esc(c.testName) + ' · Normal: ' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + '</small>' +
+      return '<div class="pd-delta-card pd-delta-list-row">' +
+        '  <div class="pd-delta-col-info">' +
+        '    <div style="font-weight:700;font-size:13.5px;color:#0f172a;display:flex;align-items:center;gap:6px">' +
+        '      <span>' + icon + '</span><span>' + esc(c.paramName) + '</span>' +
         '    </div>' +
-        '    <span class="vitals-trend-badge ' + c.badgeClass + '">' + esc(c.statusLabel) + '</span>' +
+        '    <small style="color:#64748b;font-size:11px;display:block;margin-top:2px">' + esc(c.testName) + ' · Normal: ' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + '</small>' +
         '  </div>' +
 
-        '  <div class="pd-delta-values-row">' +
+        '  <div class="pd-delta-values-row" style="margin:0">' +
         '    <div class="pd-delta-val-box">' +
         '      <small>Previous (' + esc(c.prevDate) + ')</small>' +
         '      <strong>' + esc(c.prevVal) + (c.unit ? ' ' + esc(c.unit) : '') + '</strong>' +
@@ -1050,15 +1047,21 @@
         '    </div>' +
         '  </div>' +
 
-        '  <div class="pd-delta-range-track">' +
-        '    <div class="pd-delta-normal-zone" style="left:20%;width:60%" title="Reference Range"></div>' +
+        '  <div class="pd-delta-col-track" style="display:flex;flex-direction:column;gap:4px">' +
+        '    <div class="pd-delta-range-track" style="margin:0">' +
+        '      <div class="pd-delta-normal-zone" style="left:20%;width:60%" title="Reference Range"></div>' +
         (c.prevVal !== '—' ? ('<div class="pd-delta-marker prev" style="left:' + prevDotPct + '%" title="Previous: ' + esc(c.prevVal) + '"></div>') : '') +
-        '    <div class="pd-delta-marker cur" style="left:' + fillPct + '%;background:' + barColor + '" title="Current: ' + esc(c.curVal) + '"></div>' +
+        '      <div class="pd-delta-marker cur" style="left:' + fillPct + '%;background:' + barColor + '" title="Current: ' + esc(c.curVal) + '"></div>' +
+        '    </div>' +
+        '    <div class="pd-delta-range-labels" style="margin:0">' +
+        '      <span>Below Ref</span>' +
+        '      <span style="color:#047857;font-weight:700">Optimal Zone</span>' +
+        '      <span>Above Ref</span>' +
+        '    </div>' +
         '  </div>' +
-        '  <div class="pd-delta-range-labels">' +
-        '    <span>Below Ref</span>' +
-        '    <span style="color:#047857;font-weight:700">Optimal Zone</span>' +
-        '    <span>Above Ref</span>' +
+
+        '  <div class="pd-delta-col-badge" style="text-align:right">' +
+        '    <span class="vitals-trend-badge ' + c.badgeClass + '">' + esc(c.statusLabel) + '</span>' +
         '  </div>' +
         '</div>';
     }).join('');
@@ -1071,8 +1074,14 @@
       '  </div>' +
       '  <span class="badge b-ready" style="font-size:11px;font-weight:700">' + comps.length + ' Biomarkers</span>' +
       '</div>' +
-      '<div class="pd-delta-grid">' +
-      cardsHtml +
+      '<div class="pd-delta-list-head">' +
+      '  <div>Biomarker / Test</div>' +
+      '  <div>Previous → Latest</div>' +
+      '  <div>Physiological Safe Zone</div>' +
+      '  <div style="text-align:right">Clinical Trend</div>' +
+      '</div>' +
+      '<div class="pd-delta-list pd-delta-grid">' +
+      listHtml +
       '</div>' +
       '</div>';
   }

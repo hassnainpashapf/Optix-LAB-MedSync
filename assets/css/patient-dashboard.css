@@ -1265,29 +1265,48 @@
   opacity: 1;
 }
 
-/* Delta Velocity Bars Grid */
+/* Delta Velocity Bars List */
+#ptPatientDashboard .pd-delta-list,
 #ptPatientDashboard .pd-delta-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-  margin-top: 14px;
-}
-
-#ptPatientDashboard .pd-delta-card {
-  background: #ffffff;
-  border: 1.5px solid #edf2f7;
-  border-radius: 14px;
-  padding: 16px 18px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
   display: flex;
   flex-direction: column;
   gap: 10px;
-  transition: all 0.2s ease;
+  margin-top: 12px;
 }
 
-#ptPatientDashboard .pd-delta-card:hover {
+#ptPatientDashboard .pd-delta-list-head {
+  display: grid;
+  grid-template-columns: 240px minmax(210px, 240px) 1fr 130px;
+  gap: 16px;
+  padding: 8px 18px 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 12px;
+}
+
+#ptPatientDashboard .pd-delta-card,
+#ptPatientDashboard .pd-delta-list-row {
+  background: #ffffff;
+  border: 1.5px solid #edf2f7;
+  border-radius: 12px;
+  padding: 12px 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  display: grid;
+  grid-template-columns: 240px minmax(210px, 240px) 1fr 130px;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.15s ease;
+}
+
+#ptPatientDashboard .pd-delta-card:hover,
+#ptPatientDashboard .pd-delta-list-row:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.04);
+  border-color: #cbd5e1;
+  background: #fbfcfe;
 }
 
 #ptPatientDashboard .pd-delta-card-head {
@@ -1409,8 +1428,16 @@
   #ptPatientDashboard .pd-trends-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-  #ptPatientDashboard .pd-delta-grid {
+  #ptPatientDashboard .pd-delta-list-head {
+    display: none;
+  }
+  #ptPatientDashboard .pd-delta-card,
+  #ptPatientDashboard .pd-delta-list-row {
     grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  #ptPatientDashboard .pd-delta-col-badge {
+    text-align: left !important;
   }
 }
 
