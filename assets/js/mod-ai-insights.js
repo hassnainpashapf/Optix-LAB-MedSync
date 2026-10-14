@@ -3020,9 +3020,9 @@
       : '<span style="color:#059669;font-weight:700;font-size:12px">✅ All tested parameters within normal reference ranges</span>';
 
     // Solution 1 HTML (Diagnosis & Findings + DDx in Bullet Points)
-    var diagHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
+    var diagHtml = '<ul style="margin:0;padding-left:18px;font-size:13px;color:#334155;line-height:1.65">'
       + s.diagnosis.map(function (di) {
-          return '<li style="margin-bottom:8px">'
+          return '<li style="margin-bottom:10px">'
             + '<b style="color:#0f172a">' + (window.App ? App.esc(di.title) : di.title) + ':</b> '
             + '<span>' + (window.App ? App.esc(di.detail) : di.detail) + '</span>'
             + '</li>';
@@ -3032,21 +3032,21 @@
     if (ddx.length) {
       var ddxSnippets = ddx.map(function (dm) {
         return dm.candidates.map(function (c) {
-          return '<li style="margin-bottom:4px"><b>' + (window.App ? App.esc(c.disease) : c.disease) + ':</b> '
+          return '<li style="margin-bottom:5px"><b>' + (window.App ? App.esc(c.disease) : c.disease) + ':</b> '
             + '<span style="color:#64748b">(' + (window.App ? App.esc(c.confirmatoryTest) : c.confirmatoryTest) + ')</span> '
             + '<span style="background:#ebf4f8;color:#131845;border:1px solid #c7d8e8;padding:1px 6px;border-radius:4px;font-weight:700;font-size:10.5px">' + c.probability + '% Match</span></li>';
         }).join('');
       }).join('');
-      diagHtml += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #e2e8f0">'
-        + '<div style="font-size:11px;font-weight:800;color:#131845;text-transform:uppercase;margin-bottom:4px">Differential Diagnosis (DDx):</div>'
-        + '<ul style="margin:0;padding-left:18px;font-size:12px;color:#475569;line-height:1.5">'
+      diagHtml += '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0">'
+        + '<div style="font-size:11.5px;font-weight:800;color:#131845;text-transform:uppercase;margin-bottom:6px">Differential Diagnosis (DDx):</div>'
+        + '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#475569;line-height:1.55">'
         + ddxSnippets
         + '</ul>'
         + '</div>';
     }
 
     // Solution 2 HTML (Medications + DDI in Bullet Points)
-    var medsHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
+    var medsHtml = '<ul style="margin:0;padding-left:18px;font-size:13px;color:#334155;line-height:1.65">'
       + s.medications.map(function (m) {
           var items = m.items.map(function (it) {
             return '<div style="margin-bottom:4px">'
@@ -3055,7 +3055,7 @@
               + (it.note ? '<div style="font-size:11.5px;color:#64748b;margin-top:1px">' + (window.App ? App.esc(it.note) : it.note) + '</div>' : '')
               + '</div>';
           }).join('');
-          return '<li style="margin-bottom:8px">'
+          return '<li style="margin-bottom:10px">'
             + '<div style="font-weight:700;color:#059669;font-size:12px;text-transform:uppercase;margin-bottom:3px">' + (window.App ? App.esc(m.category) : m.category) + '</div>'
             + items
             + '</li>';
@@ -3067,37 +3067,37 @@
         return '<li style="margin-bottom:4px;color:#b91c1c"><b>' + (window.App ? App.esc(di.pair) : di.pair) + ':</b> '
           + (window.App ? App.esc(di.solution || di.mechanism) : (di.solution || di.mechanism)) + '</li>';
       }).join('');
-      medsHtml += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #fecaca">'
-        + '<div style="font-size:11px;font-weight:800;color:#dc2626;text-transform:uppercase;margin-bottom:4px">⚠️ Drug Conflicts (DDI):</div>'
-        + '<ul style="margin:0;padding-left:18px;font-size:11.5px;line-height:1.5">'
+      medsHtml += '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #fecaca">'
+        + '<div style="font-size:11.5px;font-weight:800;color:#dc2626;text-transform:uppercase;margin-bottom:6px">⚠️ Drug Conflicts (DDI):</div>'
+        + '<ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.5">'
         + ddiSnippets
         + '</ul>'
         + '</div>';
     }
 
     // Solution 3 HTML (Diet & Lifestyle Plan in Bullet Points)
-    var dietHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
-      + s.diet.map(function (d) { return '<li style="margin-bottom:8px">' + (window.App ? App.esc(d) : d) + '</li>'; }).join('')
+    var dietHtml = '<ul style="margin:0;padding-left:18px;font-size:13px;color:#334155;line-height:1.65">'
+      + s.diet.map(function (d) { return '<li style="margin-bottom:10px">' + (window.App ? App.esc(d) : d) + '</li>'; }).join('')
       + '</ul>';
 
     // Solution 4 HTML (Follow-up Tests in Bullet Points)
-    var testsHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
+    var testsHtml = '<ul style="margin:0;padding-left:18px;font-size:13px;color:#334155;line-height:1.65">'
       + s.tests.map(function (t) {
           var cleanName = t.replace(/\.$/, '');
           var ptId = pt.id || (inv && inv.patientId) || '';
-          return '<li style="margin-bottom:8px">'
+          return '<li style="margin-bottom:10px">'
             + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
             + '  <span>' + (window.App ? App.esc(cleanName) : cleanName) + '</span>'
-            + '  <button type="button" class="btn btn-ghost ai-order-test-btn" data-testname="' + (window.App ? App.esc(cleanName) : cleanName) + '" data-ptid="' + (window.App ? App.esc(ptId) : ptId) + '" style="font-size:11px;font-weight:600;color:#131845;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;background:#ffffff;white-space:nowrap;cursor:pointer">➕ Order</button>'
+            + '  <button type="button" class="btn btn-ghost ai-order-test-btn" data-testname="' + (window.App ? App.esc(cleanName) : cleanName) + '" data-ptid="' + (window.App ? App.esc(ptId) : ptId) + '" style="font-size:11.5px;font-weight:600;color:#131845;border:1px solid #cbd5e1;padding:3px 10px;border-radius:7px;background:#ffffff;white-space:nowrap;cursor:pointer">➕ Order</button>'
             + '</div>'
             + '</li>';
         }).join('')
       + '</ul>';
 
     // Solution 5 HTML (Red Flags in Bullet Points)
-    var redflagsHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#991b1b;line-height:1.6">'
+    var redflagsHtml = '<ul style="margin:0;padding-left:18px;font-size:13px;color:#991b1b;line-height:1.65">'
       + s.redflags.map(function (rf) {
-          return '<li style="margin-bottom:8px;font-weight:600">'
+          return '<li style="margin-bottom:10px;font-weight:600">'
             + (window.App ? App.esc(rf) : rf)
             + '</li>';
         }).join('')
@@ -3397,36 +3397,36 @@
 
     var html = ''
       + tabsHtml
-      // PANE 1: 5 Solutions (Clean Unified Medical Cards)
+      // PANE 1: 5 Solutions (Clean Unified Medical Cards - Big & Spacious)
       + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
-      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:14px">'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03);display:flex;flex-direction:column;height:310px;box-sizing:border-box">'
-      + '      <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:6px;flex-shrink:0"><span>🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
-      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:4px">'
+      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;margin-bottom:16px">'
+      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,30,46,0.05);display:flex;flex-direction:column;height:420px;box-sizing:border-box">'
+      + '      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
+      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:6px">'
       +          diagHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03);display:flex;flex-direction:column;height:310px;box-sizing:border-box">'
-      + '      <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:6px;flex-shrink:0"><span>💊</span><span>Solution 2: Prescription & Medication Guidance</span></div>'
-      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:4px">'
+      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,30,46,0.05);display:flex;flex-direction:column;height:420px;box-sizing:border-box">'
+      + '      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">💊</span><span>Solution 2: Prescription & Medication Guidance</span></div>'
+      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:6px">'
       +          medsHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03);display:flex;flex-direction:column;height:310px;box-sizing:border-box">'
-      + '      <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:6px;flex-shrink:0"><span>🥗</span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
-      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:4px">'
+      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,30,46,0.05);display:flex;flex-direction:column;height:420px;box-sizing:border-box">'
+      + '      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">🥗</span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
+      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:6px">'
       +          dietHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03);display:flex;flex-direction:column;height:310px;box-sizing:border-box">'
-      + '      <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:6px;flex-shrink:0"><span>🔬</span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
-      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:4px">'
+      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,30,46,0.05);display:flex;flex-direction:column;height:420px;box-sizing:border-box">'
+      + '      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">🔬</span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
+      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:6px">'
       +          testsHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1px solid #fed7aa;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03);display:flex;flex-direction:column;height:310px;box-sizing:border-box">'
-      + '      <div style="font-size:13.5px;font-weight:800;color:#c2410c;margin-bottom:12px;display:flex;align-items:center;gap:6px;flex-shrink:0"><span>⚠️</span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
-      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:4px">'
+      + '    <div style="background:#ffffff;border:1.5px solid #fed7aa;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,30,46,0.05);display:flex;flex-direction:column;height:420px;box-sizing:border-box">'
+      + '      <div style="font-size:15px;font-weight:800;color:#c2410c;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">⚠️</span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
+      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:6px">'
       +          redflagsHtml
       + '      </div>'
       + '    </div>'
