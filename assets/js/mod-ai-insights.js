@@ -1698,61 +1698,58 @@
     return organs;
   };
 
-  /* Render Single Organ Deep-Dive Card */
+  /* Render Single Organ Deep-Dive Card (Theme Harmonized) */
   AI.renderSingleOrganCard = function (org) {
     if (!org) return '';
     var isCrit = org.status === 'critical';
     var isWarn = org.status === 'warning';
     var isSafe = org.status === 'normal';
-    var cardBorder = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#cbd5e1'));
-    var cardBg = '#ffffff';
     var badgeBg = isCrit ? '#fee2e2' : (isWarn ? '#fef3c7' : (isSafe ? '#ecfdf5' : '#f1f5f9'));
     var badgeColor = isCrit ? '#991b1b' : (isWarn ? '#92400e' : (isSafe ? '#047857' : '#475569'));
+    var badgeBorder = isCrit ? '#fca5a5' : (isWarn ? '#fde68a' : (isSafe ? '#bbf7d0' : '#cbd5e1'));
     var badgeText = isCrit ? '🚨 CRITICAL STRESS' : (isWarn ? '⚠️ WARNING / STRESSED' : (isSafe ? '✅ OPTIMAL / HEALTHY' : '⚪ UNTESTED IN PANEL'));
 
     var markersHtml = '';
     if (org.markers && org.markers.length) {
-      markersHtml = '<div style="margin-bottom:12px">'
-        + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em;margin-bottom:6px">Tested Organ Biomarkers</div>'
-        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:6px">'
+      markersHtml = '<div style="margin-bottom:14px">'
+        + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em;margin-bottom:8px">Tested Organ Biomarkers</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">'
         + org.markers.map(function (m) {
             var mCrit = m.status === 'critical';
             var mWarn = m.status === 'warning';
-            var mBorder = mCrit ? '#fca5a5' : (mWarn ? '#fde68a' : '#cbd5e1');
-            var mBg = '#ffffff';
             var mColor = mCrit ? '#dc2626' : (mWarn ? '#d97706' : '#0f172a');
-            return '<div style="background:' + mBg + ';border:1px solid ' + mBorder + ';border-radius:8px;padding:6px 10px">'
+            return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px">'
               + '<div style="font-size:11px;color:#64748b">' + (window.App ? App.esc(m.name) : m.name) + '</div>'
-              + '<div style="font-size:13px;font-weight:800;color:' + mColor + '">' + (window.App ? App.esc(m.val) : m.val) + '</div>'
-              + (m.note ? '<div style="font-size:10.5px;color:#475569;margin-top:1px">' + (window.App ? App.esc(m.note) : m.note) + '</div>' : '')
+              + '<div style="font-size:14px;font-weight:800;color:' + mColor + '">' + (window.App ? App.esc(m.val) : m.val) + '</div>'
+              + (m.note ? '<div style="font-size:11px;color:#475569;margin-top:2px">' + (window.App ? App.esc(m.note) : m.note) + '</div>' : '')
               + '</div>';
           }).join('')
         + '</div>'
         + '</div>';
     } else {
-      markersHtml = '<div style="font-size:11.5px;color:#64748b;background:#ffffff;padding:8px 10px;border-radius:8px;border:1px dashed #cbd5e1;margin-bottom:12px">No direct parameters tested for this organ in current laboratory order.</div>';
+      markersHtml = '<div style="font-size:12px;color:#64748b;background:#ffffff;padding:10px 12px;border-radius:8px;border:1px dashed #cbd5e1;margin-bottom:14px">No direct parameters tested for this organ in current laboratory order.</div>';
     }
 
     var gaugeColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#94a3b8'));
 
-    return '<div style="background:' + cardBg + ';border:1px solid #e2e8f0;border-left:4px solid ' + cardBorder + ';border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.05);transition:all 0.2s ease">'
+    return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:14px;padding:20px;box-shadow:0 1px 3px rgba(15,30,46,0.04);transition:all 0.2s ease">'
       // Header
-      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
       + '  <div style="display:flex;align-items:center;gap:10px">'
       + '    <span style="font-size:32px">' + org.icon + '</span>'
       + '    <div>'
-      + '      <div style="font-size:16px;font-weight:900;color:#0f172a">' + (window.App ? App.esc(org.name) : org.name) + '</div>'
-      + '      <div style="font-size:12px;font-weight:700;color:#131845">' + (window.App ? App.esc(org.urduName) : org.urduName) + '</div>'
+      + '      <div style="font-size:17px;font-weight:800;color:#131845">' + (window.App ? App.esc(org.name) : org.name) + '</div>'
+      + '      <div style="font-size:12px;font-weight:600;color:#64748b">' + (window.App ? App.esc(org.urduName) : org.urduName) + '</div>'
       + '    </div>'
       + '  </div>'
-      + '  <span style="background:' + badgeBg + ';color:' + badgeColor + ';border:1px solid ' + cardBorder + ';font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px">' + badgeText + '</span>'
+      + '  <span style="background:' + badgeBg + ';color:' + badgeColor + ';border:1px solid ' + badgeBorder + ';font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px">' + badgeText + '</span>'
       + '</div>'
 
       // Organ Stress Level Gauge
-      + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px">'
-      + '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11.5px">'
+      + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin-bottom:14px">'
+      + '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:12px">'
       + '    <span style="font-weight:700;color:#334155">Organ Stress Index:</span>'
-      + '    <span style="font-weight:900;color:' + gaugeColor + '">' + org.stressScore + '% Stress</span>'
+      + '    <span style="font-weight:800;color:' + gaugeColor + '">' + org.stressScore + '% Stress</span>'
       + '  </div>'
       + '  <div style="width:100%;height:8px;background:#e2e8f0;border-radius:999px;overflow:hidden">'
       + '    <div style="width:' + org.stressScore + '%;height:100%;background:' + gaugeColor + ';border-radius:999px;transition:width 0.4s ease"></div>'
@@ -1763,23 +1760,23 @@
       + markersHtml
 
       // Pathological Hazard / Stress Mechanism
-      + '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid ' + cardBorder + ';border-radius:6px;padding:10px 12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
-      + '  <div style="font-size:11.5px;font-weight:800;color:' + (isCrit ? '#991b1b' : (isWarn ? '#92400e' : '#1e293b')) + ';text-transform:uppercase;margin-bottom:3px">⚠️ Pathophysiological Stress & Hazard:</div>'
-      + '  <div style="font-size:12.5px;color:#334155;line-height:1.5">' + (window.App ? App.esc(org.hazard) : org.hazard) + '</div>'
+      + '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:3px solid #131845;border-radius:8px;padding:12px 14px;margin-bottom:12px">'
+      + '  <div style="font-size:12px;font-weight:700;color:#131845;text-transform:uppercase;margin-bottom:3px">⚠️ Pathophysiological Stress & Hazard:</div>'
+      + '  <div style="font-size:13px;color:#334155;line-height:1.55">' + (window.App ? App.esc(org.hazard) : org.hazard) + '</div>'
       + '</div>'
 
       // Clinical Action Plan
-      + '<div style="background:#ffffff;border:1px solid #bbf7d0;border-left:4px solid #10b981;border-radius:6px;padding:10px 12px">'
-      + '  <div style="font-size:11.5px;font-weight:800;color:#047857;text-transform:uppercase;margin-bottom:3px">💡 Evidence-Based Clinical Protection Plan:</div>'
-      + '  <div style="font-size:12.5px;color:#1e293b;line-height:1.5;font-weight:600">' + (window.App ? App.esc(org.action) : org.action) + '</div>'
+      + '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:3px solid #059669;border-radius:8px;padding:12px 14px">'
+      + '  <div style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;margin-bottom:3px">💡 Evidence-Based Clinical Protection Plan:</div>'
+      + '  <div style="font-size:13px;color:#0f172a;line-height:1.55;font-weight:600">' + (window.App ? App.esc(org.action) : org.action) + '</div>'
       + '</div>'
       + '</div>';
   };
 
-  /* Render Interactive Body Map HTML */
+  /* Render Interactive Body Map HTML (Theme Harmonized) */
   AI.renderBodyMapHtml = function (analysis) {
     var organs = (analysis && analysis.organMap) || [];
-    if (!organs.length) return '<div style="padding:20px;text-align:center;color:#64748b">No organ map data available.</div>';
+    if (!organs.length) return '<div style="padding:24px;text-align:center;color:#64748b;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px">No organ map data available.</div>';
 
     var activeOrganId = organs[0].id;
     var critOne = organs.filter(function (o) { return o.status === 'critical'; })[0];
@@ -1788,15 +1785,9 @@
     else if (warnOne) activeOrganId = warnOne.id;
 
     var selectorButtons = organs.map(function (o) {
-      var isCrit = o.status === 'critical';
-      var isWarn = o.status === 'warning';
-      var isSafe = o.status === 'normal';
-      var btnBorder = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#cbd5e1'));
-      var btnBg = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : (isSafe ? '#f0fdf4' : '#ffffff'));
-      var btnColor = isCrit ? '#b91c1c' : (isWarn ? '#b45309' : (isSafe ? '#15803d' : '#475569'));
       var isAct = o.id === activeOrganId;
 
-      return '<button type="button" class="btn btn-ghost ai-organ-select-btn' + (isAct ? ' active' : '') + '" data-organ-id="' + o.id + '" style="border:1.5px solid ' + (isAct ? '#131845' : btnBorder) + ';background:' + (isAct ? '#ebf4f8' : btnBg) + ';color:' + (isAct ? '#131845' : btnColor) + ';font-weight:700;font-size:11.5px;padding:6px 8px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;white-space:nowrap">'
+      return '<button type="button" class="btn ai-organ-select-btn' + (isAct ? ' active' : '') + '" data-organ-id="' + o.id + '" style="border:1px solid ' + (isAct ? '#131845' : '#cbd5e1') + ';background:' + (isAct ? '#131845' : '#ffffff') + ';color:' + (isAct ? '#ffffff' : '#1e293b') + ';font-weight:700;font-size:12px;padding:7px 10px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;white-space:nowrap;box-shadow:0 1px 2px rgba(15,30,46,0.04);transition:all .15s ease">'
         + '<span>' + o.icon + '</span> <span>' + (window.App ? App.esc(o.name.split(' ')[0]) : o.name.split(' ')[0]) + '</span>'
         + '</button>';
     }).join('');
@@ -1805,14 +1796,15 @@
       var isCrit = o.status === 'critical';
       var isWarn = o.status === 'warning';
       var isSafe = o.status === 'normal';
-      var pulseColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#64748b'));
-      var coreBg = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#475569'));
+      var pulseColor = isCrit ? '#dc2626' : (isWarn ? '#d97706' : (isSafe ? '#16a34a' : '#64748b'));
+      var coreBg = isCrit ? '#fee2e2' : (isWarn ? '#fef3c7' : (isSafe ? '#ecfdf5' : '#f1f5f9'));
+      var coreStroke = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#cbd5e1'));
       var isAct = o.id === activeOrganId;
 
       return '<g class="ai-organ-beacon" data-organ-id="' + o.id + '" style="cursor:pointer" transform="translate(0,0)">'
-        + (isCrit ? '<circle cx="' + o.svgX + '" cy="' + o.svgY + '" r="22" fill="none" stroke="' + pulseColor + '" stroke-width="1.5" opacity="0.6"><animate attributeName="r" values="16;25;16" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.8;0.1;0.8" dur="2s" repeatCount="indefinite"/></circle>' : '')
-        + (isWarn ? '<circle cx="' + o.svgX + '" cy="' + o.svgY + '" r="19" fill="none" stroke="' + pulseColor + '" stroke-width="1.2" opacity="0.5"/>' : '')
-        + '<circle class="ai-beacon-ring" cx="' + o.svgX + '" cy="' + o.svgY + '" r="16" fill="' + (isAct ? '#ffffff' : coreBg) + '" stroke="' + (isAct ? '#131845' : '#ffffff') + '" stroke-width="' + (isAct ? '3' : '2') + '" filter="url(' + (isCrit ? '#glowCrit' : (isWarn ? '#glowWarn' : '#glowSafe')) + ')" />'
+        + (isCrit ? '<circle cx="' + o.svgX + '" cy="' + o.svgY + '" r="22" fill="none" stroke="' + pulseColor + '" stroke-width="1.5" opacity="0.4"><animate attributeName="r" values="16;24;16" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.6;0.1;0.6" dur="2s" repeatCount="indefinite"/></circle>' : '')
+        + (isWarn ? '<circle cx="' + o.svgX + '" cy="' + o.svgY + '" r="19" fill="none" stroke="' + pulseColor + '" stroke-width="1.2" opacity="0.4"/>' : '')
+        + '<circle class="ai-beacon-ring" cx="' + o.svgX + '" cy="' + o.svgY + '" r="16" fill="' + (isAct ? '#131845' : coreBg) + '" stroke="' + (isAct ? '#131845' : coreStroke) + '" stroke-width="' + (isAct ? '2.5' : '1.5') + '" filter="url(' + (isCrit ? '#glowCrit' : (isWarn ? '#glowWarn' : '#glowSafe')) + ')" />'
         + '<text x="' + o.svgX + '" y="' + (o.svgY + 4) + '" text-anchor="middle" font-size="11" pointer-events="none">' + o.icon + '</text>'
         + '</g>';
     }).join('');
@@ -1820,44 +1812,43 @@
     var activeOrganObj = organs.filter(function (o) { return o.id === activeOrganId; })[0] || organs[0];
     var detailCardHtml = AI.renderSingleOrganCard(activeOrganObj);
 
-    return '<div class="ai-bodymap-wrapper" style="margin-bottom:12px">'
-      + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+    return '<div class="ai-bodymap-wrapper" style="margin-bottom:16px">'
+      + '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:14px 18px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
       + '  <div>'
-      + '    <div style="font-size:14px;font-weight:900;color:#0f172a">🫀 Interactive Human Body Anatomy Map (Organ Impact Visualizer)</div>'
-      + '    <div style="font-size:11.5px;color:#64748b">Click any glowing organ on the body silhouette to inspect organ-specific biomarkers and clinical protection rules</div>'
+      + '    <div style="font-size:15px;font-weight:800;color:#131845">🫀 Organ Impact Map</div>'
+      + '    <div style="font-size:12px;color:#64748b;margin-top:2px">Interactive physiological systems and clinical protection rules</div>'
       + '  </div>'
       + '  <div style="display:flex;gap:6px;font-size:11px;font-weight:700">'
-      + '    <span style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:2px 8px;border-radius:6px">🔴 Critical</span>'
-      + '    <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:2px 8px;border-radius:6px">🟡 Warning</span>'
-      + '    <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;padding:2px 8px;border-radius:6px">🟢 Normal</span>'
-      + '    <span style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px">⚪ Untested</span>'
+      + '    <span style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:3px 8px;border-radius:6px">Critical</span>'
+      + '    <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:3px 8px;border-radius:6px">Warning</span>'
+      + '    <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;padding:3px 8px;border-radius:6px">Normal</span>'
       + '  </div>'
       + '</div>'
 
       + '<div class="ai-bodymap-layout" style="display:grid;grid-template-columns:300px 1fr;gap:16px;align-items:start">'
-      // Left: SVG Silhouette
-      + '  <div style="background:linear-gradient(180deg,#0f172a 0%,#1e293b 100%);border:2px solid #334155;border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,0.18)">'
+      // Left: SVG Silhouette (Theme Harmonized)
+      + '  <div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:14px;padding:16px 12px;text-align:center;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
       + '    <svg viewBox="0 0 320 500" width="100%" height="auto" style="max-height:480px;display:block;margin:0 auto;overflow:visible">'
       + '      <defs>'
       + '        <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">'
-      + '          <stop offset="0%" stop-color="#334155" stop-opacity="0.8"/>'
-      + '          <stop offset="100%" stop-color="#1e293b" stop-opacity="0.95"/>'
+      + '          <stop offset="0%" stop-color="#f1f5f9" stop-opacity="0.95"/>'
+      + '          <stop offset="100%" stop-color="#e2e8f0" stop-opacity="0.95"/>'
       + '        </linearGradient>'
-      + '        <filter id="glowCrit" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="5" flood-color="#ef4444" flood-opacity="0.9"/></filter>'
-      + '        <filter id="glowWarn" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#f59e0b" flood-opacity="0.8"/></filter>'
-      + '        <filter id="glowSafe" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#10b981" flood-opacity="0.7"/></filter>'
+      + '        <filter id="glowCrit" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#ef4444" flood-opacity="0.5"/></filter>'
+      + '        <filter id="glowWarn" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="3" flood-color="#f59e0b" flood-opacity="0.5"/></filter>'
+      + '        <filter id="glowSafe" x="-50%" y="-50%" width="200%" height="200%"><feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#10b981" flood-opacity="0.4"/></filter>'
       + '      </defs>'
       // Human Body Silhouette
-      + '      <circle cx="160" cy="52" r="26" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1.5"/>'
+      + '      <circle cx="160" cy="52" r="26" fill="url(#bodyGrad)" stroke="#cbd5e1" stroke-width="1.5"/>'
       + '      <path d="M152,78 L168,78 L171,94 L149,94 Z" fill="url(#bodyGrad)"/>'
-      + '      <path d="M110,105 C110,95 130,94 160,94 C190,94 210,95 210,105 L222,165 L204,180 L200,285 L120,285 L116,180 L98,165 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1.5"/>'
-      + '      <path d="M98,165 L80,260 L80,310 L94,310 L98,260 L114,180 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1"/>'
-      + '      <path d="M222,165 L240,260 L240,310 L226,310 L222,260 L206,180 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1"/>'
-      + '      <path d="M120,285 L200,285 L208,375 L192,490 L170,490 L174,360 L160,315 L146,360 L150,490 L128,490 L112,375 Z" fill="url(#bodyGrad)" stroke="#475569" stroke-width="1.5"/>'
-      + '      <line x1="160" y1="80" x2="160" y2="315" stroke="#475569" stroke-dasharray="3,3" stroke-width="1" opacity="0.6"/>'
+      + '      <path d="M110,105 C110,95 130,94 160,94 C190,94 210,95 210,105 L222,165 L204,180 L200,285 L120,285 L116,180 L98,165 Z" fill="url(#bodyGrad)" stroke="#cbd5e1" stroke-width="1.5"/>'
+      + '      <path d="M98,165 L80,260 L80,310 L94,310 L98,260 L114,180 Z" fill="url(#bodyGrad)" stroke="#cbd5e1" stroke-width="1"/>'
+      + '      <path d="M222,165 L240,260 L240,310 L226,310 L222,260 L206,180 Z" fill="url(#bodyGrad)" stroke="#cbd5e1" stroke-width="1"/>'
+      + '      <path d="M120,285 L200,285 L208,375 L192,490 L170,490 L174,360 L160,315 L146,360 L150,490 L128,490 L112,375 Z" fill="url(#bodyGrad)" stroke="#cbd5e1" stroke-width="1.5"/>'
+      + '      <line x1="160" y1="80" x2="160" y2="315" stroke="#cbd5e1" stroke-dasharray="3,3" stroke-width="1" opacity="0.6"/>'
       +        beaconsSvg
       + '    </svg>'
-      + '    <div style="margin-top:10px;font-size:11px;color:#94a3b8">Interactive Bio-Anatomical Projection</div>'
+      + '    <div style="margin-top:10px;font-size:11.5px;color:#64748b;font-weight:600">Bio-Anatomical Projection</div>'
       + '  </div>'
 
       // Right: Selector Bar + Active Card
@@ -3131,20 +3122,20 @@
       var cvdBorder = isHighCvd ? '#f87171' : (ascvdRisk.riskScore >= 7.5 ? '#fde68a' : '#bbf7d0');
       var cvdColor = isHighCvd ? '#dc2626' : (ascvdRisk.riskScore >= 7.5 ? '#d97706' : '#16a34a');
 
-      indicesHtml += '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid ' + cvdColor + ';border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px">'
+      indicesHtml += '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
         + '  <div>'
-        + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">Cardiovascular / AHA-ACC 2019 Guideline</div>'
-        + '    <div style="font-size:15px;font-weight:900;color:#0f1e2e">🫀 10-Year ASCVD Heart Attack & Stroke Risk</div>'
-        + '    <div style="font-size:11.5px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(ascvdRisk.details) : ascvdRisk.details) + '</div>'
+        + '    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">Cardiovascular / AHA-ACC Guideline</div>'
+        + '    <div style="font-size:15.5px;font-weight:800;color:#131845;margin-top:2px">🫀 10-Year ASCVD Heart Attack & Stroke Risk</div>'
+        + '    <div style="font-size:12px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(ascvdRisk.details) : ascvdRisk.details) + '</div>'
         + '  </div>'
         + '  <div style="text-align:right">'
-        + '    <div style="font-size:22px;font-weight:900;color:' + cvdColor + '">' + ascvdRisk.riskScore + '% <span style="font-size:11px;font-weight:700;color:#64748b">10-Yr Risk</span></div>'
+        + '    <div style="font-size:22px;font-weight:800;color:' + cvdColor + '">' + ascvdRisk.riskScore + '% <span style="font-size:11px;font-weight:600;color:#64748b">10-Yr Risk</span></div>'
         + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#ffffff;border:1px solid ' + cvdBorder + ';color:' + cvdColor + '">' + (window.App ? App.esc(ascvdRisk.tier) : ascvdRisk.tier) + '</span>'
         + '  </div>'
         + '</div>'
-        + '<div style="font-size:12px;color:#334155;line-height:1.45;margin-top:6px;padding-top:6px;border-top:1px dashed #e2e8f0">'
-        + '  <b>Clinical Recommendation:</b> ' + (window.App ? App.esc(ascvdRisk.recommendation) : ascvdRisk.recommendation)
+        + '<div style="font-size:12.5px;color:#334155;line-height:1.55;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">'
+        + '  <b style="color:#0f172a">Clinical Recommendation:</b> ' + (window.App ? App.esc(ascvdRisk.recommendation) : ascvdRisk.recommendation)
         + '</div>'
         + '</div>';
     }
@@ -3156,39 +3147,39 @@
         var cardBorder = isCrit ? '#fca5a5' : (isWarn ? '#fde68a' : '#bbf7d0');
         var scoreColor = isCrit ? '#dc2626' : (isWarn ? '#d97706' : '#16a34a');
 
-        return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid ' + scoreColor + ';border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px">'
+        return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
           + '  <div>'
-          + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">' + (window.App ? App.esc(ind.category) : ind.category) + '</div>'
-          + '    <div style="font-size:14.5px;font-weight:900;color:#0f1e2e">' + (window.App ? App.esc(ind.name) : ind.name) + '</div>'
-          + '    <div style="font-size:11px;color:#64748b;margin-top:2px">Formula: ' + (window.App ? App.esc(ind.formula) : ind.formula) + '</div>'
+          + '    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">' + (window.App ? App.esc(ind.category) : ind.category) + '</div>'
+          + '    <div style="font-size:15px;font-weight:800;color:#131845;margin-top:2px">' + (window.App ? App.esc(ind.name) : ind.name) + '</div>'
+          + '    <div style="font-size:11.5px;color:#64748b;margin-top:2px">Formula: ' + (window.App ? App.esc(ind.formula) : ind.formula) + '</div>'
           + '  </div>'
           + '  <div style="text-align:right">'
-          + '    <div style="font-size:20px;font-weight:900;color:' + scoreColor + '">' + ind.score + ' <span style="font-size:11.5px;font-weight:600;color:#64748b">' + ind.unit + '</span></div>'
+          + '    <div style="font-size:20px;font-weight:800;color:' + scoreColor + '">' + ind.score + ' <span style="font-size:11.5px;font-weight:600;color:#64748b">' + ind.unit + '</span></div>'
           + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#ffffff;border:1px solid ' + cardBorder + ';color:' + scoreColor + '">' + (window.App ? App.esc(ind.statusLabel) : ind.statusLabel) + '</span>'
           + '  </div>'
           + '</div>'
-          + '<div style="font-size:12.5px;color:#334155;line-height:1.45;margin-top:6px;padding-top:6px;border-top:1px dashed #e2e8f0">'
-          + '  <b>Interpretation:</b> ' + (window.App ? App.esc(ind.interpretation) : ind.interpretation) + '<br>'
-          + '  <b>Clinical Action:</b> ' + (window.App ? App.esc(ind.recommendation) : ind.recommendation)
+          + '<div style="font-size:12.5px;color:#334155;line-height:1.55;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">'
+          + '  <b style="color:#0f172a">Interpretation:</b> ' + (window.App ? App.esc(ind.interpretation) : ind.interpretation) + '<br>'
+          + '  <b style="color:#0f172a">Clinical Action:</b> ' + (window.App ? App.esc(ind.recommendation) : ind.recommendation)
           + '</div>'
           + '</div>';
       }).join('');
     }
 
-    // Tab 3: Drug Safety & DDI Shield HTML
+    // Tab 3: Drug Safety & DDI Shield HTML (Theme Harmonized)
     var safetyHtml = '';
     if (drugInteractions.length) {
-      safetyHtml += '<div style="background:#ffffff;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-        + '<div style="font-size:13.5px;font-weight:900;color:#991b1b;margin-bottom:8px">💊 Multi-Drug Pharmacokinetic / Pharmacodynamic Conflict Matrix</div>'
+      safetyHtml += '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+        + '<div style="font-size:14.5px;font-weight:800;color:#131845;margin-bottom:12px">💊 Drug Interactions & Clash Matrix (DDI)</div>'
         + drugInteractions.map(function (di) {
-            return '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;margin-bottom:6px">'
+            return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:3px solid #dc2626;border-radius:8px;padding:12px 14px;margin-bottom:8px">'
               + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'
-              + '  <b style="color:#b91c1c;font-size:12.5px">⚡ ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
-              + '  <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;text-transform:uppercase">' + di.severity + '</span>'
+              + '  <b style="color:#b91c1c;font-size:13px">⚡ ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
+              + '  <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase">' + di.severity + '</span>'
               + '</div>'
-              + '<div style="font-size:12px;color:#475569;margin-top:3px">' + (window.App ? App.esc(di.mechanism) : di.mechanism) + '</div>'
-              + '<div style="font-size:11.5px;color:#047857;font-weight:700;margin-top:3px">💡 Recommendation: ' + (window.App ? App.esc(di.solution) : di.solution) + '</div>'
+              + '<div style="font-size:12px;color:#475569;margin-top:4px;line-height:1.45">' + (window.App ? App.esc(di.mechanism) : di.mechanism) + '</div>'
+              + '<div style="font-size:12px;color:#047857;font-weight:700;margin-top:4px">💡 Recommendation: ' + (window.App ? App.esc(di.solution) : di.solution) + '</div>'
               + '</div>';
           }).join('')
         + '</div>';
@@ -3197,36 +3188,35 @@
     if (drugSafety.length) {
       safetyHtml += drugSafety.map(function (ds) {
         var isCrit = ds.status === 'critical';
-        var border = isCrit ? '#dc2626' : '#d97706';
 
         var contraHtml = ds.contraindications.map(function (c) {
-          return '<li style="margin-bottom:3px"><b>🚫 CONTRAINDICATED:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
+          return '<li style="margin-bottom:4px"><b style="color:#dc2626">🚫 CONTRAINDICATED:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
         }).join('');
         var cautionsHtml = ds.cautions.map(function (c) {
-          return '<li style="margin-bottom:3px"><b>⚠️ CAUTION:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
+          return '<li style="margin-bottom:4px"><b style="color:#d97706">⚠️ CAUTION:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
         }).join('');
         var safeHtml = ds.safeAlternatives.map(function (sAlt) {
-          return '<li style="margin-bottom:3px;color:#047857"><b>💡 SAFE ALTERNATIVE:</b> ' + (window.App ? App.esc(sAlt) : sAlt) + '</li>';
+          return '<li style="margin-bottom:4px;color:#047857"><b style="color:#047857">💡 SAFE ALTERNATIVE:</b> ' + (window.App ? App.esc(sAlt) : sAlt) + '</li>';
         }).join('');
 
-        return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid ' + border + ';border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-          + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
-          + '  <span style="font-size:22px">' + ds.icon + '</span>'
+        return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+          + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+          + '  <span style="font-size:24px">' + ds.icon + '</span>'
           + '  <div>'
-          + '    <div style="font-size:14px;font-weight:900;color:' + (isCrit ? '#991b1b' : '#92400e') + '">' + (window.App ? App.esc(ds.title) : ds.title) + '</div>'
-          + '    <div style="font-size:11.5px;color:#64748b">Trigger: ' + (window.App ? App.esc(ds.trigger) : ds.trigger) + '</div>'
+          + '    <div style="font-size:15px;font-weight:800;color:#131845">' + (window.App ? App.esc(ds.title) : ds.title) + '</div>'
+          + '    <div style="font-size:11.5px;color:#64748b;margin-top:1px">Trigger: ' + (window.App ? App.esc(ds.trigger) : ds.trigger) + '</div>'
           + '  </div>'
           + '</div>'
-          + '<ul style="margin:8px 0 0;padding-left:18px;font-size:12px;color:#334155;line-height:1.5">'
+          + '<ul style="margin:8px 0 0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
           + contraHtml + cautionsHtml + safeHtml
           + '</ul>'
           + '</div>';
       }).join('');
     } else if (!drugInteractions.length) {
-      safetyHtml = '<div style="padding:20px;text-align:center;color:#059669;background:#ffffff;border:1px solid #bbf7d0;border-left:4px solid #059669;border-radius:12px;font-weight:700">✅ All organ safety shields green. No renal, hepatic, or hematological drug contraindications detected.</div>';
+      safetyHtml = '<div style="padding:22px;text-align:center;color:#059669;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;font-weight:700">✅ All organ safety shields green. No renal, hepatic, or hematological drug contraindications detected.</div>';
     }
 
-    // Tab 4: Historical Velocity Trends HTML
+    // Tab 4: Historical Velocity Trends HTML (Theme Harmonized)
     var trendsHtml = '';
     if (historicalDelta.hasHistory && historicalDelta.comparisons.length) {
       var prevInv = historicalDelta.prevInvoice;
@@ -3234,106 +3224,108 @@
       var compRows = historicalDelta.comparisons.map(function (c) {
         var dirIco = c.dir === 'up' ? '▲' : (c.dir === 'down' ? '▼' : '➖');
         var dirColor = c.alert ? '#dc2626' : (c.dir === 'up' ? '#2563eb' : (c.dir === 'down' ? '#d97706' : '#64748b'));
-        return '<tr style="border-bottom:1px solid #e2e8f0;background:' + (c.alert ? '#fff1f2' : '#fff') + '">'
-          + '<td style="padding:10px 8px;font-weight:700;color:#0f172a">' + (window.App ? App.esc(c.name) : c.name) + '</td>'
-          + '<td style="padding:10px 8px;color:#64748b">' + c.prevVal + ' ' + (window.App ? App.esc(c.unit) : c.unit) + '</td>'
-          + '<td style="padding:10px 8px;font-weight:800;color:#0f172a">' + c.curVal + ' ' + (window.App ? App.esc(c.unit) : c.unit) + '</td>'
-          + '<td style="padding:10px 8px;font-weight:800;color:' + dirColor + '">' + dirIco + ' ' + (c.diff > 0 ? '+' : '') + c.diff + ' (' + (c.pct > 0 ? '+' : '') + c.pct + '%)</td>'
-          + '<td style="padding:10px 8px;font-size:11.5px;color:' + (c.alert ? '#991b1b;font-weight:700' : '#475569') + '">' + (c.alert ? (window.App ? App.esc(c.alert) : c.alert) : 'Stable / Standard course') + '</td>'
+        return '<tr style="border-bottom:1px solid #f1f5f9;background:#ffffff">'
+          + '<td style="padding:10px 12px;font-weight:700;color:#0f172a">' + (window.App ? App.esc(c.name) : c.name) + '</td>'
+          + '<td style="padding:10px 12px;color:#64748b">' + c.prevVal + ' ' + (window.App ? App.esc(c.unit) : c.unit) + '</td>'
+          + '<td style="padding:10px 12px;font-weight:800;color:#0f172a">' + c.curVal + ' ' + (window.App ? App.esc(c.unit) : c.unit) + '</td>'
+          + '<td style="padding:10px 12px;font-weight:800;color:' + dirColor + '">' + dirIco + ' ' + (c.diff > 0 ? '+' : '') + c.diff + ' (' + (c.pct > 0 ? '+' : '') + c.pct + '%)</td>'
+          + '<td style="padding:10px 12px;font-size:12px;color:' + (c.alert ? '#b91c1c;font-weight:700' : '#64748b') + '">' + (c.alert ? (window.App ? App.esc(c.alert) : c.alert) : 'Stable / Standard course') + '</td>'
           + '</tr>';
       }).join('');
 
-      trendsHtml = '<div style="margin-bottom:12px">'
-        + '<div style="font-size:12px;color:#475569;margin-bottom:8px">Comparing with previous invoice <b>#' + (window.App ? App.esc(prevInv.no || prevInv.id) : (prevInv.no || prevInv.id)) + '</b> on <b>' + prevDate + '</b>:</div>'
+      trendsHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+        + '<div style="font-size:13px;color:#475569;margin-bottom:12px">Comparing with previous invoice <b>#' + (window.App ? App.esc(prevInv.no || prevInv.id) : (prevInv.no || prevInv.id)) + '</b> on <b>' + prevDate + '</b>:</div>'
+        + '<div style="overflow-x:auto">'
         + '<table style="width:100%;border-collapse:collapse;font-size:12.5px;text-align:left;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden">'
-        + '  <thead><tr style="background:#f8fafc;color:#475569;font-size:11.5px;text-transform:uppercase">'
-        + '    <th style="padding:8px">Parameter</th><th style="padding:8px">Previous</th><th style="padding:8px">Current</th><th style="padding:8px">Delta Change</th><th style="padding:8px">Velocity Flag</th>'
+        + '  <thead><tr style="background:#f8fafc;color:#1e293b;font-size:11.5px;font-weight:700;text-transform:uppercase;border-bottom:1.5px solid #cbd5e1">'
+        + '    <th style="padding:10px 12px">Parameter</th><th style="padding:10px 12px">Previous</th><th style="padding:10px 12px">Current</th><th style="padding:10px 12px">Delta Change</th><th style="padding:10px 12px">Velocity Flag</th>'
         + '  </tr></thead>'
         + '  <tbody>' + compRows + '</tbody>'
         + '</table>'
+        + '</div>'
         + '</div>';
     } else {
-      trendsHtml = '<div style="padding:24px;text-align:center;color:#64748b;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0">'
-        + '<div style="font-size:24px;margin-bottom:4px">📊</div>'
-        + '<b style="color:#0f1e2e">Initial Baseline Profile</b>'
-        + '<div style="font-size:12px;margin-top:4px">No previous historical invoices found for this patient in database. Current results establish the baseline for future delta velocity tracking.</div>'
+      trendsHtml = '<div style="padding:28px 20px;text-align:center;color:#64748b;background:#ffffff;border-radius:12px;border:1px solid #cbd5e1;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+        + '<div style="font-size:28px;margin-bottom:6px">📊</div>'
+        + '<b style="color:#0f1e2e;font-size:15px">Initial Baseline Profile</b>'
+        + '<div style="font-size:12.5px;color:#64748b;margin-top:4px">No previous historical invoices found for this patient in database. Current results establish the baseline for future delta velocity tracking.</div>'
         + '</div>';
     }
 
-    // Tab 5: Family Genetic & Marriage Guard HTML
+    // Tab 5: Family Genetic & Marriage Guard HTML (Theme Harmonized)
     var geneticHtml = '';
     if (geneticGuard.length) {
       geneticHtml = geneticGuard.map(function (g) {
-        return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid #7c3aed;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+        return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
           + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-          + '  <div style="font-size:15px;font-weight:900;color:#131845">' + (window.App ? App.esc(g.title) : g.title) + '</div>'
-          + '  <span style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800">' + (window.App ? App.esc(g.severity) : g.severity) + '</span>'
+          + '  <div style="font-size:15.5px;font-weight:800;color:#131845">' + (window.App ? App.esc(g.title) : g.title) + '</div>'
+          + '  <span style="background:#f1f5f9;color:#131845;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">' + (window.App ? App.esc(g.severity) : g.severity) + '</span>'
           + '</div>'
-          + '<div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px">' + (window.App ? App.esc(g.summary) : g.summary) + '</div>'
-          + '<div style="background:#f8fafc;border-left:4px solid #7c3aed;padding:8px 12px;border-radius:6px;font-size:12px;color:#4c1d95;margin-bottom:8px">'
-          + '  <b>Inheritance Hazard:</b> ' + (window.App ? App.esc(g.geneticRisk) : g.geneticRisk)
+          + '<div style="font-size:13px;color:#334155;line-height:1.55;margin-bottom:10px">' + (window.App ? App.esc(g.summary) : g.summary) + '</div>'
+          + '<div style="background:#f8fafc;border-left:3px solid #131845;padding:10px 14px;border-radius:6px;font-size:12.5px;color:#1e293b;margin-bottom:10px">'
+          + '  <b style="color:#131845">Inheritance Hazard:</b> ' + (window.App ? App.esc(g.geneticRisk) : g.geneticRisk)
           + '</div>'
-          + '<div style="font-size:12px;color:#047857;font-weight:700">' + (window.App ? App.esc(g.mandatoryAction) : g.mandatoryAction) + '</div>'
-          + '<div style="font-size:11.5px;color:#64748b;margin-top:4px">' + (window.App ? App.esc(g.familyAction) : g.familyAction) + '</div>'
+          + '<div style="font-size:12.5px;color:#047857;font-weight:700">' + (window.App ? App.esc(g.mandatoryAction) : g.mandatoryAction) + '</div>'
+          + '<div style="font-size:12px;color:#64748b;margin-top:4px">' + (window.App ? App.esc(g.familyAction) : g.familyAction) + '</div>'
           + '</div>';
       }).join('');
     } else {
-      geneticHtml = '<div style="padding:20px;text-align:center;color:#059669;background:#ffffff;border:1px solid #bbf7d0;border-left:4px solid #059669;border-radius:12px;font-weight:700">🧬 No high-risk familial carrier traits (such as Beta-Thalassemia or early onset monogenic diabetes) detected in current report.</div>';
+      geneticHtml = '<div style="padding:22px;text-align:center;color:#059669;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;font-weight:700">🧬 No high-risk familial carrier traits (such as Beta-Thalassemia or early onset monogenic diabetes) detected in current report.</div>';
     }
 
-    // Tab 6: Roman Urdu Patient Care Guide HTML
-    var urduHtml = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;border-bottom:1px solid #e2e8f0;padding-bottom:10px">'
+    // Tab 6: Roman Urdu Patient Care Guide HTML (Theme Harmonized)
+    var urduHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:20px 24px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;border-bottom:1px solid #f1f5f9;padding-bottom:12px">'
       + '  <div>'
-      + '    <div style="font-size:15px;font-weight:900;color:#0f1e2e">🇵🇰 Mareez Ke Liye Rehnumai (Roman Urdu Guide)</div>'
-      + '    <div style="font-size:11.5px;color:#64748b">Asan zaban mein bimari ki wazahat, khurak, parhez aur dawai ka tareeqa</div>'
+      + '    <div style="font-size:16px;font-weight:800;color:#131845">🇵🇰 Mareez Ke Liye Rehnumai (Roman Urdu Guide)</div>'
+      + '    <div style="font-size:12px;color:#64748b;margin-top:2px">Asan zaban mein bimari ki wazahat, khurak, parhez aur dawai ka tareeqa</div>'
       + '  </div>'
-      + '  <div style="display:flex;gap:6px">'
-      + '    <button type="button" class="btn btn-ghost" id="aiCopyUrduGuide" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer">📋 Copy Urdu</button>'
-      + '    <button type="button" class="btn btn-ghost" id="aiWaUrduGuide" style="color:#059669;border:1px solid #a7f3d0;background:#ffffff;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer">💬 WhatsApp to Patient</button>'
+      + '  <div style="display:flex;gap:8px">'
+      + '    <button type="button" class="btn ai-action-btn" id="aiCopyUrduGuide" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer">📋 Copy Urdu</button>'
+      + '    <button type="button" class="btn ai-action-btn" id="aiWaUrduGuide" style="color:#059669;border:1.5px solid #10b981;background:#ffffff;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer">💬 WhatsApp to Patient</button>'
       + '  </div>'
       + '</div>'
-      + '<div style="margin-bottom:12px">'
-      + '  <div style="font-size:12.5px;font-weight:800;color:#131845;margin-bottom:4px">1. 🩺 Bemari Ki Wazahat:</div>'
-      + '  <ul style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.55">'
-      +      urduGuide.wazahat.map(function (w) { return '<li style="margin-bottom:3px">' + (window.App ? App.esc(w) : w) + '</li>'; }).join('')
+      + '<div style="margin-bottom:14px">'
+      + '  <div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">1. 🩺 Bemari Ki Wazahat:</div>'
+      + '  <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
+      +      urduGuide.wazahat.map(function (w) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(w) : w) + '</li>'; }).join('')
       + '  </ul>'
       + '</div>'
-      + '<div style="margin-bottom:12px">'
-      + '  <div style="font-size:12.5px;font-weight:800;color:#d97706;margin-bottom:4px">2. 🍲 Khurak Aur Parhez:</div>'
-      + '  <div style="font-size:12px;color:#166534;font-weight:700;margin-bottom:2px">Kya Khayein:</div>'
-      + '  <ul style="margin:0 0 6px;padding-left:18px;font-size:12px;color:#334155;line-height:1.55">'
-      +      (urduGuide.khurak.length ? urduGuide.khurak.map(function (k) { return '<li style="margin-bottom:3px">' + (window.App ? App.esc(k) : k) + '</li>'; }).join('') : '<li>Saaf mutawazan khurak aur ubla hua paani.</li>')
+      + '<div style="margin-bottom:14px">'
+      + '  <div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">2. 🍲 Khurak Aur Parhez:</div>'
+      + '  <div style="font-size:12px;color:#166534;font-weight:700;margin-bottom:4px">Kya Khayein:</div>'
+      + '  <ul style="margin:0 0 8px;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
+      +      (urduGuide.khurak.length ? urduGuide.khurak.map(function (k) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(k) : k) + '</li>'; }).join('') : '<li>Saaf mutawazan khurak aur ubla hua paani.</li>')
       + '  </ul>'
-      + '  <div style="font-size:12px;color:#991b1b;font-weight:700;margin-bottom:2px">Kin Cheezon Se Parhez Karein:</div>'
-      + '  <ul style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.55">'
-      +      (urduGuide.parhez.length ? urduGuide.parhez.map(function (p) { return '<li style="margin-bottom:3px">' + (window.App ? App.esc(p) : p) + '</li>'; }).join('') : '<li>Talay hue aur masalay-dar khanon se parhez.</li>')
+      + '  <div style="font-size:12px;color:#991b1b;font-weight:700;margin-bottom:4px">Kin Cheezon Se Parhez Karein:</div>'
+      + '  <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
+      +      (urduGuide.parhez.length ? urduGuide.parhez.map(function (p) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(p) : p) + '</li>'; }).join('') : '<li>Talay hue aur masalay-dar khanon se parhez.</li>')
       + '  </ul>'
       + '</div>'
-      + (urduGuide.dawaiSchedule.length ? ('<div style="margin-bottom:12px">'
-          + '<div style="font-size:12.5px;font-weight:800;color:#047857;margin-bottom:4px">3. 💊 Dawai Lene Ka Tareeqa:</div>'
-          + '<ul style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.55">'
-          + urduGuide.dawaiSchedule.map(function (ds) { return '<li style="margin-bottom:3px"><b>' + (window.App ? App.esc(ds.waqt) : ds.waqt) + ':</b> ' + (window.App ? App.esc(ds.dawai) : ds.dawai) + '</li>'; }).join('')
+      + (urduGuide.dawaiSchedule.length ? ('<div style="margin-bottom:14px">'
+          + '<div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">3. 💊 Dawai Lene Ka Tareeqa:</div>'
+          + '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
+          + urduGuide.dawaiSchedule.map(function (ds) { return '<li style="margin-bottom:4px"><b>' + (window.App ? App.esc(ds.waqt) : ds.waqt) + ':</b> ' + (window.App ? App.esc(ds.dawai) : ds.dawai) + '</li>'; }).join('')
           + '</ul>'
           + '</div>') : '')
       + '<div style="margin-bottom:8px">'
-      + '  <div style="font-size:12.5px;font-weight:800;color:#991b1b;margin-bottom:4px">4. ⚠️ Khatray Ki Alamaat (Kab Foran Emergency Jayein):</div>'
-      + '  <ul style="margin:0;padding-left:18px;font-size:12px;color:#991b1b;line-height:1.55">'
-      +      urduGuide.khatraAlamaat.map(function (ka) { return '<li style="margin-bottom:3px">' + (window.App ? App.esc(ka) : ka) + '</li>'; }).join('')
+      + '  <div style="font-size:13px;font-weight:800;color:#dc2626;margin-bottom:6px">4. ⚠️ Khatray Ki Alamaat (Kab Foran Emergency Jayein):</div>'
+      + '  <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#b91c1c;line-height:1.65">'
+      +      urduGuide.khatraAlamaat.map(function (ka) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(ka) : ka) + '</li>'; }).join('')
       + '  </ul>'
       + '</div>'
       + '</div>';
 
-    // Tab 7: Digital Rx Pad Preview HTML
+    // Tab 7: Digital Rx Pad Preview HTML (Theme Harmonized)
     var rxPadPreviewHtml = '<div style="margin-bottom:14px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
       + '  <div style="display:flex;align-items:center;gap:8px">'
-      + '    <button type="button" class="btn btn-ghost" id="aiVoiceDictateBtn" style="border:1.5px solid #131845;color:#131845;background:#ffffff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;cursor:pointer">'
+      + '    <button type="button" class="btn ai-action-btn" id="aiVoiceDictateBtn" style="border:1.5px solid #131845;color:#131845;background:#ffffff;font-weight:700;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;cursor:pointer">'
       + '      <span id="aiVoiceMicIcon">🎙️</span> <span id="aiVoiceMicText">Bol Kar Likhain (Voice Dictate)</span>'
       + '    </button>'
       + '    <span id="aiVoiceStatusText" style="font-size:11px;color:#64748b;font-weight:600"></span>'
       + '  </div>'
-      + '  <button type="button" class="btn btn-primary" id="aiPrintRxPadDirect" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;padding:6px 14px;border-radius:8px;cursor:pointer">🖨️ Print Digital Rx Pad</button>'
+      + '  <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPadDirect" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;padding:8px 18px;border-radius:8px;cursor:pointer">🖨️ Print Digital Rx Pad</button>'
       + '</div>'
       + AI.generateRxPadHtml(analysis)
       + '</div>';
