@@ -151,7 +151,7 @@ assert.ok(html.includes('data-inv-id="INV-OCT"'), 'Launch AI button wired to lat
 assert.ok(html.includes('data-pd-section="pdTrends"'), 'Header navigation button for Biomarker Trends present');
 assert.ok(html.includes('Biomarker Trends'), 'Header navigation button label present');
 assert.ok(html.includes('id="pdTrends"'), 'Dedicated pdTrends page section present');
-assert.ok(html.includes('pd-trends-header-card'), 'Trends page header card present');
+assert.ok(!html.includes('pd-trends-header-card'), 'Trends page redundant header card cleanly removed');
 assert.ok(html.includes('pd-trends-kpi-grid'), 'Trends page KPI summary grid present');
 assert.ok(html.includes('Tracked Biomarkers'), 'Tracked Biomarkers KPI card present');
 assert.ok(html.includes('Positive Recovery'), 'Positive Recovery KPI card present');
@@ -162,7 +162,7 @@ assert.ok(html.includes('PREVIOUS: 2026-09-10'), 'Previous date milestone marker
 assert.ok(html.includes('CURRENT: 2026-10-14'), 'Current date milestone marker present in graph');
 assert.ok(html.includes('pd-trends-variance-card'), 'Biomarker Variance & Delta Velocity card present');
 assert.ok(!html.includes('vitals-trends-preview-card'), 'Biomarker Trends preview banner cleanly removed from Overview');
-assert.ok(html.includes('data-pd-switch="pdOverview"'), 'Back button from Trends page to Vitals Overview present');
+assert.ok(html.includes('btnLaunchTrendsDoctorAI'), 'Full AI Analysis button moved to top patient header');
 
 console.log('✓ All 6 verification checks for Dedicated Biomarker Trends Page, SVG Trajectory Graph, and Delta Velocity Bars PASSED CLEANLY!\n');
 

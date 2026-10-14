@@ -1124,29 +1124,6 @@
     var curDate = curInv ? (curInv.createdAt ? String(curInv.createdAt).slice(0, 10) : 'Current Visit') : 'Current Visit';
 
     return '<div class="pd-trends-page-wrap">' +
-      // Header Card
-      '<div class="vitals-card pd-trends-header-card">' +
-      '  <div class="pd-trends-header-main">' +
-      '    <div class="pd-trends-header-title">' +
-      '      <div style="display:flex;align-items:center;gap:12px">' +
-      '        <span style="font-size:28px">📈</span>' +
-      '        <div>' +
-      '          <h2 style="margin:0;font-size:18px;font-weight:800;color:#0f172a">Biomarker Trends &amp; Longitudinal Test Comparison</h2>' +
-      '          <p style="margin:3px 0 0;font-size:12.5px;color:#64748b">' +
-      '            Patient chronological trajectory &amp; variance tracking (Previous: <strong style="color:#334155">' + esc(prevDate) + '</strong> vs Latest: <strong style="color:#2563eb">' + esc(curDate) + '</strong>)' +
-      '          </p>' +
-      '        </div>' +
-      '      </div>' +
-      '    </div>' +
-      '    <div class="pd-trends-header-actions">' +
-      '      <button type="button" class="btn btn-ghost btn-sm" data-pd-switch="pdOverview" style="font-weight:700">' +
-      '        ← Back to Vitals Overview' +
-      '      </button>' +
-      (curInv ? ('<button type="button" class="btn btn-primary btn-sm" id="btnLaunchTrendsDoctorAI" data-inv-id="' + esc(curInv.id) + '" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🤖 Full AI Analysis</button>') : '') +
-      '    </div>' +
-      '  </div>' +
-      '</div>' +
-
       // Top Metric KPI Summary Cards (4 Cards)
       '<div class="pd-trends-kpi-grid">' +
       '  <div class="pd-trends-kpi-card">' +
@@ -1458,6 +1435,8 @@
 
     var curOrg = ORGAN_DATA['lung'];
     var curDay = DAYS_DATA[4]; // 13 Wed default matching screenshot
+    var activeInv = labData.currentInvoice || labData.pastInvoice;
+    var activeInvId = activeInv ? (activeInv.id || activeInv.no || '') : '';
 
     var datePillsHtml = DAYS_DATA.map(function (d, idx) {
       var isAct = idx === 4;
@@ -1496,6 +1475,7 @@
       }).join('') +
       '  </nav>' +
       '  <div class="pd-header-actions">' +
+      '    <button type="button" class="btn btn-primary btn-sm" id="btnLaunchTrendsDoctorAI" data-inv-id="' + esc(activeInvId) + '" style="font-weight:700;display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true">🤖</span> Full AI Analysis</button>' +
       '    <button type="button" class="btn btn-ghost btn-sm" id="pt-edit"><span aria-hidden="true">✏️</span> Edit Details</button>' +
       '    <button type="button" class="btn btn-danger btn-sm" id="pt-del"><span aria-hidden="true">🗑️</span> Delete</button>' +
       '  </div>' +
