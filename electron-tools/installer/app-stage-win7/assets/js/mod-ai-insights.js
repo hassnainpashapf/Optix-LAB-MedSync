@@ -3364,10 +3364,6 @@
       + tabsHtml
       // PANE 1: 5 Solutions (Clean Unified Medical Cards)
       + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
-      + '  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
-      + '    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.04em;margin-bottom:6px">Abnormal Parameters:</div>'
-      + '    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">' + findingsBadges + '</div>'
-      + '  </div>'
       + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;margin-bottom:14px">'
       + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03);display:flex;flex-direction:column;height:310px;box-sizing:border-box">'
       + '      <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:6px;flex-shrink:0"><span>🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
