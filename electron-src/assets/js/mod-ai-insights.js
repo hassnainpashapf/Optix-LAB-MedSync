@@ -3396,7 +3396,6 @@
       + '</div>';
 
     var html = ''
-      + panicBannerHtml
       + tabsHtml
       // PANE 1: 5 Solutions (Clean Unified Medical Cards)
       + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
