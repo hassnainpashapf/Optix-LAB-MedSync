@@ -1512,8 +1512,8 @@
       // Patient Demographics & Profile Header
       '        <div class="pd-header" style="margin-bottom:14px;padding-bottom:12px;border-bottom:1.5px solid #edf2f7">' +
       '          <div>' +
-      '            <h3>Patient Details Overview</h3>' +
-      '            <p class="pd-sub">Clinical demographic record &amp; patient profile</p>' +
+      '            <h3 style="font-size:18px;font-weight:800;color:#0f172a;margin:0;letter-spacing:-0.02em">Patient Details Overview</h3>' +
+      '            <p class="pd-sub" style="margin-top:3px;color:#334155;font-size:12px;font-weight:600">Clinical demographic record &amp; patient profile</p>' +
       '          </div>' +
       '          <span class="pd-avatar" aria-hidden="true">' + esc(initials) + '</span>' +
       '        </div>' +
