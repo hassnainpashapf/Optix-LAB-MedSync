@@ -4003,28 +4003,15 @@
         + '  .ai-live-dot { width:9px; height:9px; border-radius:50%; background:#10b981; display:inline-block; animation:aiPulseDot 1.8s infinite ease-in-out; }'
         + '</style>'
 
-        // Hero Card
-        + '<div style="background:linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); border-radius:18px; padding:24px 28px; color:#fff; margin-bottom:20px; box-shadow:0 12px 30px rgba(30,27,75,0.18); position:relative; overflow:hidden">'
-        + '  <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; position:relative; z-index:2">'
-        + '    <div>'
-        + '      <div style="display:inline-flex; align-items:center; gap:8px; background:rgba(16,185,129,0.2); border:1px solid rgba(16,185,129,0.4); padding:4px 12px; border-radius:999px; font-size:11.5px; font-weight:800; color:#a7f3d0; margin-bottom:10px; letter-spacing:0.04em">'
-        + '        <span class="ai-live-dot"></span> LIVE CLINICAL DECISION SUPPORT ACTIVE &bull; ISO 15189 / CAP COMPLIANT'
-        + '      </div>'
-        + '      <h1 style="margin:0 0 6px; font-size:24px; font-weight:900; letter-spacing:-0.02em; display:flex; align-items:center; gap:10px">'
-        + '        🧠 Optix AI Clinical Intelligence Engine'
-        + '      </h1>'
-        + '      <div style="font-size:13.5px; opacity:0.9; max-width:680px; line-height:1.5">'
-        + '        Central Management Hub for Autonomous Clinical Interpretations, 2D Organ Impact Body Map, Panic Value SOS Broadcasts, and 1-Click Digital Rx Pad Customization.'
-        + '      </div>'
-        + '    </div>'
-        + '    <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap">'
-        + '      <button type="button" id="aiLaunchSandboxTop" class="btn btn-ghost" style="background:rgba(255,255,255,0.15); color:#fff; border:1px solid rgba(255,255,255,0.25); font-weight:700; font-size:12.5px; padding:8px 16px; border-radius:10px; cursor:pointer">'
-        + '        🧪 Clinical Sandbox'
-        + '      </button>'
-        + '      <button type="button" id="aiSaveConfigBtn" class="btn btn-primary" style="background:#10b981; border:none; font-weight:800; font-size:12.5px; padding:8px 18px; border-radius:10px; box-shadow:0 4px 14px rgba(16,185,129,0.3); cursor:pointer">'
-        + '        💾 Save Settings'
-        + '      </button>'
-        + '    </div>'
+        // Clean Title Bar (Hero Banner removed as requested)
+        + '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px">'
+        + '  <div style="display:flex; align-items:center; gap:12px">'
+        + '    <h1 style="margin:0; font-size:22px; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px">'
+        + '      🧠 Optix AI Clinical Intelligence Engine'
+        + '    </h1>'
+        + '    <span style="display:inline-flex; align-items:center; gap:6px; background:#ecfdf5; border:1px solid #a7f3d0; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700; color:#059669">'
+        + '      <span class="ai-live-dot"></span> Active'
+        + '    </span>'
         + '  </div>'
         + '</div>'
 
@@ -4064,13 +4051,23 @@
         + '  </div>'
         + '</div>'
 
-        // Navigation Tabs Bar
-        + '<div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:6px; display:flex; gap:6px; overflow-x:auto; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,0.03)">'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'modules' ? ' active' : '') + '" data-dash-tab="modules">⚙️ Subsystem Toggles</button>'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'panic' ? ' active' : '') + '" data-dash-tab="panic">🚨 Panic Cutoffs & SOS</button>'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'branding' ? ' active' : '') + '" data-dash-tab="branding">👨‍⚕️ Doctor & Rx Branding</button>'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'roles' ? ' active' : '') + '" data-dash-tab="roles">🔐 Role Permissions</button>'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'sandbox' ? ' active' : '') + '" data-dash-tab="sandbox">🧪 Clinical Sandbox</button>'
+        // Navigation Tabs Bar with Action Buttons on the right
+        + '<div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,0.03)">'
+        + '  <div style="display:flex; gap:6px; overflow-x:auto; flex:1; min-width:280px">'
+        + '    <button type="button" class="ai-dash-tab' + (activeTab === 'modules' ? ' active' : '') + '" data-dash-tab="modules">⚙️ Subsystem Toggles</button>'
+        + '    <button type="button" class="ai-dash-tab' + (activeTab === 'panic' ? ' active' : '') + '" data-dash-tab="panic">🚨 Panic Cutoffs & SOS</button>'
+        + '    <button type="button" class="ai-dash-tab' + (activeTab === 'branding' ? ' active' : '') + '" data-dash-tab="branding">👨‍⚕️ Doctor & Rx Branding</button>'
+        + '    <button type="button" class="ai-dash-tab' + (activeTab === 'roles' ? ' active' : '') + '" data-dash-tab="roles">🔐 Role Permissions</button>'
+        + '    <button type="button" class="ai-dash-tab' + (activeTab === 'sandbox' ? ' active' : '') + '" data-dash-tab="sandbox">🧪 Clinical Sandbox</button>'
+        + '  </div>'
+        + '  <div style="display:flex; align-items:center; gap:8px; margin-left:auto">'
+        + '    <button type="button" id="aiLaunchSandboxTop" class="btn btn-ghost" style="border:1.5px solid #cbd5e1; color:#334155; font-weight:700; font-size:12px; padding:7px 14px; border-radius:8px; cursor:pointer">'
+        + '      🧪 Clinical Sandbox'
+        + '    </button>'
+        + '    <button type="button" id="aiSaveConfigBtn" class="btn btn-primary ai-save-config-btn" style="background:#10b981; border:none; color:#fff; font-weight:800; font-size:12.5px; padding:7px 18px; border-radius:8px; box-shadow:0 2px 8px rgba(16,185,129,0.3); cursor:pointer">'
+        + '      💾 Save Settings'
+        + '    </button>'
+        + '  </div>'
         + '</div>'
 
         // Panels
@@ -4301,6 +4298,19 @@
         + '  </div>'
 
         + '</div>' // #aiDashPanels
+        + '  <div style="margin-top:20px; padding:14px 18px; background:#fff; border:1px solid #e2e8f0; border-radius:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; box-shadow:0 1px 3px rgba(0,0,0,0.03)">'
+        + '    <div style="font-size:12.5px; color:#64748b; font-weight:600">'
+        + '      Clinical thresholds, branding, and role changes update in real time.'
+        + '    </div>'
+        + '    <div style="display:flex; align-items:center; gap:8px">'
+        + '      <button type="button" id="aiLaunchSandboxBtm" class="btn btn-ghost" style="border:1.5px solid #cbd5e1; color:#334155; font-weight:700; font-size:12px; padding:8px 16px; border-radius:8px; cursor:pointer">'
+        + '        🧪 Clinical Sandbox'
+        + '      </button>'
+        + '      <button type="button" id="aiSaveConfigBtnBtm" class="btn btn-primary ai-save-config-btn" style="background:#10b981; border:none; color:#fff; font-weight:800; font-size:12.5px; padding:8px 20px; border-radius:8px; box-shadow:0 2px 8px rgba(16,185,129,0.3); cursor:pointer">'
+        + '        💾 Save Settings'
+        + '      </button>'
+        + '    </div>'
+        + '  </div>'
         + '</div>'; // #optixAiDashboard
 
       return h;
@@ -4321,14 +4331,14 @@
         });
       });
 
-      // Jump to sandbox from top button
-      var topSimBtn = container.querySelector('#aiLaunchSandboxTop');
-      if (topSimBtn) {
-        topSimBtn.addEventListener('click', function () {
+      // Jump to sandbox from buttons
+      var simTrigBtns = container.querySelectorAll('#aiLaunchSandboxTop, #aiLaunchSandboxBtm');
+      simTrigBtns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
           var targetTabBtn = container.querySelector('.ai-dash-tab[data-dash-tab="sandbox"]');
           if (targetTabBtn) targetTabBtn.click();
         });
-      }
+      });
 
       // Live update for Doctor Branding inputs
       var brandInputs = ['aiDocName', 'aiDocDegrees', 'aiDocPmdc', 'aiDocClinic', 'aiDocPhone', 'aiDocSpec'];
@@ -4380,9 +4390,9 @@
         });
       });
 
-      // Save Configuration Button
-      var saveBtn = container.querySelector('#aiSaveConfigBtn');
-      if (saveBtn) {
+      // Save Configuration Buttons (Nav Bar & Bottom Action Bar)
+      var saveBtns = container.querySelectorAll('.ai-save-config-btn, #aiSaveConfigBtn, #aiSaveConfigBtnBtm');
+      saveBtns.forEach(function (saveBtn) {
         saveBtn.addEventListener('click', function () {
           // Collect modules
           var newModules = {};
@@ -4431,7 +4441,7 @@
           curCfg = toSave;
           AI.saveAiConfig(toSave);
         });
-      }
+      });
     }
 
     container.innerHTML = renderShell();
