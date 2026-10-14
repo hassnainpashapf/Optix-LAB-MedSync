@@ -4147,6 +4147,25 @@
 
     function renderShell() {
       var escFn = (window.App && App.esc) ? App.esc : function (s) { return String(s || '').replace(/[&<>"']/g, ''); };
+      var STAT_TINTS = {
+        brand: { sc: '#0284c7', line: '#6fa6cf', soft: '#ebf4f9', circle: '#ddecf5' },
+        blue:  { sc: '#2563eb', line: '#7aa7e6', soft: '#e7f0fe', circle: '#dde9fb' },
+        amber: { sc: '#d97706', line: '#e0b25c', soft: '#fef4e2', circle: '#fde8c8' },
+        green: { sc: '#16a34a', line: '#5fbf8a', soft: '#e6f7f0', circle: '#d8f2e4' },
+        red:   { sc: '#dc2626', line: '#e08080', soft: '#fdecec', circle: '#fad2d2' }
+      };
+
+      function renderKpiCard(icon, tint, label, value, sub, raw) {
+        var c = STAT_TINTS[tint] || STAT_TINTS.blue;
+        return '<div class="stat ai-dash-kpi" data-tint="' + tint + '" style="--sc:' + c.sc + ';--sc-line:' + c.line + ';--sc-soft:' + c.soft + ';display:flex;flex-direction:column;justify-content:space-between;height:128px;min-height:128px;box-sizing:border-box;position:relative;background:linear-gradient(55deg,#ffffff 52%,' + c.soft + ' 52%);border:0;border-radius:14px;padding:14px 16px;box-shadow:0 2px 8px rgba(15,23,42,.04);overflow:hidden">'
+          + '<div style="position:absolute;top:-30px;right:-30px;width:90px;height:90px;border-radius:50%;background:' + c.circle + ';opacity:0.65;pointer-events:none"></div>'
+          + '<div class="stat-ico" style="position:relative;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:' + c.sc + ';background:linear-gradient(135deg,' + c.soft + ' 0%,#ffffff 160%);box-shadow:inset 0 0 0 1px ' + c.line + ',0 1px 3px rgba(15,30,46,.06);margin-bottom:6px;flex:0 0 auto">' + icon + '</div>'
+          + '<div class="lb" style="position:relative;font-size:10.5px;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:3px;flex:0 0 auto">' + escFn(label) + '</div>'
+          + '<div class="vl" data-count="' + raw + '" style="position:relative;font-size:22px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap;margin:0 0 4px 0;flex:0 0 auto">' + value + '</div>'
+          + '<div class="dl" style="position:relative;font-size:11.5px;color:var(--muted);font-weight:500;margin-top:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto">' + sub + '</div>'
+          + '</div>';
+      }
+
       var h = '<div id="optixAiDashboard" class="page" aria-label="Optix AI Clinical Intelligence Engine" style="font-family:inherit;color:var(--ink,#0f1e2e);max-width:1420px;width:100%;margin:0 auto;padding-bottom:30px">'
         + '<style>'
         + '  #optixAiDashboard { font-family: inherit; color: var(--ink, #0f1e2e); }'
@@ -4155,35 +4174,6 @@
         + '  }'
         + '  @media(max-width:1100px) { #optixAiDashboard .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }'
         + '  @media(max-width:560px) { #optixAiDashboard .stat-grid { grid-template-columns: 1fr; gap: 10px; } }'
-        + '  #optixAiDashboard .stat.ai-dash-kpi {'
-        + '    background: #ffffff !important; border: 1.5px solid var(--bd, #cbd5e1) !important; border-radius: 12px !important;'
-        + '    padding: 14px 18px 12px !important; height: auto !important; min-height: 108px !important; box-shadow: 0 1px 3px rgba(15,30,46,0.04) !important;'
-        + '    display: flex !important; flex-direction: column !important; justify-content: space-between !important; align-items: flex-start !important;'
-        + '    position: relative !important; overflow: visible !important;'
-        + '    transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease !important; animation: none !important;'
-        + '  }'
-        + '  #optixAiDashboard .stat.ai-dash-kpi::before { display: none !important; }'
-        + '  #optixAiDashboard .stat.ai-dash-kpi:hover {'
-        + '    transform: translateY(-1px) !important; box-shadow: 0 4px 14px rgba(19,24,69,0.08) !important; border-color: #94a3b8 !important;'
-        + '  }'
-        + '  #optixAiDashboard .stat-ico {'
-        + '    width: 36px !important; height: 36px !important; border-radius: 9px !important; display: grid !important;'
-        + '    place-items: center !important; flex: none !important; margin-bottom: 8px !important;'
-        + '    background: var(--brand-soft, #ebf4f8) !important; color: var(--brand, #131845) !important; border: 1px solid var(--brand-line, #c7d8e8) !important;'
-        + '  }'
-        + '  #optixAiDashboard .stat-ico svg { width: 18px !important; height: 18px !important; stroke-width: 2.2 !important; }'
-        + '  #optixAiDashboard .stat .lb {'
-        + '    font-size: 11px !important; font-weight: 700 !important; text-transform: uppercase !important; letter-spacing: 0.04em !important;'
-        + '    color: var(--muted, #64748b) !important; margin-bottom: 2px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important;'
-        + '  }'
-        + '  #optixAiDashboard .stat .vl {'
-        + '    font-size: 24px !important; font-weight: 700 !important; color: var(--ink, #0f1e2e) !important; line-height: 1.15 !important;'
-        + '    margin: 1px 0 2px 0 !important; letter-spacing: -0.02em !important; font-variant-numeric: tabular-nums !important;'
-        + '  }'
-        + '  #optixAiDashboard .stat .dl {'
-        + '    font-size: 11.5px !important; color: var(--muted, #64748b) !important; font-weight: 500 !important; margin-top: auto !important;'
-        + '    white-space: normal !important; line-height: 1.25 !important;'
-        + '  }'
         + '  #optixAiDashboard .ai-tabs-bar {'
         + '    display: flex; gap: 10px; margin-bottom: 20px;'
         + '    background: transparent; padding: 0; border: none; box-shadow: none;'
@@ -4206,12 +4196,12 @@
         + '  #optixAiDashboard .ai-dash-icon { display: inline-flex; align-items: center; justify-content: center; font-size: 15px; }'
         + '  #optixAiDashboard .ai-dash-tab.active .ai-dash-icon { color: #ffffff; }'
         + '  #optixAiDashboard .ai-dash-tab-title { font-size: 13px; white-space: nowrap; }'
-        + '  #optixAiDashboard .card { background: #ffffff; border: 1px solid var(--bd, #cbd5e1); border-radius: 12px; box-shadow: 0 1px 3px rgba(15,30,46,0.04); margin-bottom: 16px; overflow: hidden; }'
-        + '  #optixAiDashboard .card-h { padding: 10px 16px; border-bottom: 1px solid var(--line2, #eef3f8); display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #ffffff; }'
-        + '  #optixAiDashboard .card-h h3 { font-size: 14px; font-weight: 700; color: var(--ink, #0f1e2e); margin: 0; }'
-        + '  #optixAiDashboard .card-b { padding: 14px 16px; }'
+        + '  #optixAiDashboard .card { background: #ffffff; border: 2px solid var(--bd, #cbd5e1); border-radius: 14px; box-shadow: 0 2px 8px rgba(15,23,42,0.04); margin-bottom: 18px; overflow: hidden; }'
+        + '  #optixAiDashboard .card-h { padding: 14px 20px; border-bottom: 1px solid var(--line2, #eef3f8); display: flex; align-items: center; justify-content: space-between; gap: 10px; background: #ffffff; }'
+        + '  #optixAiDashboard .card-h h3 { font-size: 15px; font-weight: 700; color: var(--ink, #0f1e2e); margin: 0; }'
+        + '  #optixAiDashboard .card-b { padding: 18px 20px; }'
         + '  #optixAiDashboard .ai-card-mod {'
-        + '    background: #ffffff; border: 1px solid var(--bd, #cbd5e1); border-radius: 10px; padding: 10px 14px;'
+        + '    background: #ffffff; border: 1.5px solid var(--bd, #cbd5e1); border-radius: 12px; padding: 12px 16px;'
         + '    display: flex; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 1px 3px rgba(15,30,46,0.04);'
         + '    min-height: 58px; transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;'
         + '  }'
@@ -4292,38 +4282,38 @@
 
         // Top 4 Stat Cards
         + '<div class="stat-grid" style="margin-bottom:20px">'
-        + '  <div class="stat ai-dash-kpi" style="min-height:108px;height:auto;padding:14px 18px 12px;overflow:visible">'
-        + '    <div class="stat-ico" style="width:36px;height:36px;margin-bottom:8px">'
-        + '      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
-        + '    </div>'
-        + '    <div class="lb" style="font-size:11px;font-weight:700">Analyses</div>'
-        + '    <div class="vl" data-count="' + stats.analyzed + '" style="font-size:24px;font-weight:700">' + stats.analyzed + '</div>'
-        + '    <div class="dl" style="font-size:11.5px;color:var(--muted,#64748b)">Total evaluations</div>'
-        + '  </div>'
-        + '  <div class="stat ai-dash-kpi" style="min-height:108px;height:auto;padding:14px 18px 12px;overflow:visible">'
-        + '    <div class="stat-ico" style="width:36px;height:36px;margin-bottom:8px">'
-        + '      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
-        + '    </div>'
-        + '    <div class="lb" style="font-size:11px;font-weight:700">Critical Alerts</div>'
-        + '    <div class="vl" data-count="' + stats.panics + '" style="font-size:24px;font-weight:700">' + stats.panics + '</div>'
-        + '    <div class="dl" style="font-size:11.5px;color:var(--muted,#64748b)">Emergency flags</div>'
-        + '  </div>'
-        + '  <div class="stat ai-dash-kpi" style="min-height:108px;height:auto;padding:14px 18px 12px;overflow:visible">'
-        + '    <div class="stat-ico" style="width:36px;height:36px;margin-bottom:8px">'
-        + '      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
-        + '    </div>'
-        + '    <div class="lb" style="font-size:11px;font-weight:700">Organ Warnings</div>'
-        + '    <div class="vl" data-count="' + stats.organAlerts + '" style="font-size:24px;font-weight:700">' + stats.organAlerts + '</div>'
-        + '    <div class="dl" style="font-size:11.5px;color:var(--muted,#64748b)">High risk systems</div>'
-        + '  </div>'
-        + '  <div class="stat ai-dash-kpi" style="min-height:108px;height:auto;padding:14px 18px 12px;overflow:visible">'
-        + '    <div class="stat-ico" style="width:36px;height:36px;margin-bottom:8px">'
-        + '      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
-        + '    </div>'
-        + '    <div class="lb" style="font-size:11px;font-weight:700">DDI Conflicts</div>'
-        + '    <div class="vl" data-count="' + stats.ddiBlocked + '" style="font-size:24px;font-weight:700">' + stats.ddiBlocked + '</div>'
-        + '    <div class="dl" style="font-size:11.5px;color:var(--muted,#64748b)">Drug interaction blocks</div>'
-        + '  </div>'
+        +   renderKpiCard(
+              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+              'brand',
+              'Analyses',
+              stats.analyzed,
+              'Total evaluations',
+              stats.analyzed
+            )
+        +   renderKpiCard(
+              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+              'red',
+              'Critical Alerts',
+              stats.panics,
+              'Emergency flags',
+              stats.panics
+            )
+        +   renderKpiCard(
+              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+              'amber',
+              'Organ Warnings',
+              stats.organAlerts,
+              'High risk systems',
+              stats.organAlerts
+            )
+        +   renderKpiCard(
+              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+              'blue',
+              'DDI Conflicts',
+              stats.ddiBlocked,
+              'Drug interaction blocks',
+              stats.ddiBlocked
+            )
         + '</div>'
 
         // Tabs Bar
