@@ -3364,6 +3364,23 @@
       + '    background: #131845 !important; border-color: #131845 !important; color: #ffffff !important; font-weight: 800;'
       + '    box-shadow: 0 3px 8px rgba(19,24,69,0.22) !important; transform: none;'
       + '  }'
+      + '  .ai-action-btn {'
+      + '    appearance: none; -webkit-appearance: none;'
+      + '    border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e293b; font-size: 13px; font-weight: 700;'
+      + '    padding: 8px 16px; min-height: 38px; border-radius: 9px; cursor: pointer; transition: all .15s ease;'
+      + '    white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-family: inherit;'
+      + '    box-shadow: 0 1px 3px rgba(15,23,42,0.06); line-height: 1.2;'
+      + '  }'
+      + '  .ai-action-btn:hover {'
+      + '    background: #f8fafc; border-color: #94a3b8; color: #0f172a; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(15,23,42,0.09);'
+      + '  }'
+      + '  .ai-action-btn-primary {'
+      + '    background: #131845 !important; border-color: #131845 !important; color: #ffffff !important; font-weight: 800;'
+      + '    box-shadow: 0 3px 8px rgba(19,24,69,0.22) !important;'
+      + '  }'
+      + '  .ai-action-btn-primary:hover {'
+      + '    background: #0d1238 !important; border-color: #0d1238 !important; color: #ffffff !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(19,24,69,0.3) !important;'
+      + '  }'
       + '</style>';
 
     var tabsHtml = tabsStyle
@@ -3816,15 +3833,15 @@
 
     var topBarHtml = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
       + '<div style="display:flex;align-items:center;gap:8px">'
-      + '  <button type="button" class="btn btn-ghost" id="aiPageBackBtn" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer">← Back</button>'
+      + '  <button type="button" class="btn ai-action-btn" id="aiPageBackBtn" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;min-height:38px;border-radius:9px;font-size:13px;cursor:pointer;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">← Back</button>'
       + '  <div style="font-size:12.5px;color:#64748b;font-weight:600"><span>Clinical Decision Support</span> <span style="color:#cbd5e1">/</span> <b style="color:#0f1e2e">AI Clinical Recommendations</b></div>'
       + '</div>'
-      + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
-      + '  <button type="button" class="btn btn-ghost" id="aiCopyPrescription" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">📋 Copy Solutions</button>'
-      + '  <button type="button" class="btn btn-ghost" id="aiAttachReportRemarks" style="border:1px solid #131845;background:#ffffff;color:#131845;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">📄 Attach Remarks</button>'
-      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn btn-ghost" id="aiWaDoctor" style="color:#059669;border:1px solid #a7f3d0;background:#ffffff;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">💬 WhatsApp Doctor</button>' : '')
-      + '  <button type="button" class="btn btn-ghost" id="aiPrintSlip" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">🖨️ Print Summary</button>'
-      + '  <button type="button" class="btn btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;font-size:12px;padding:6px 14px;border-radius:7px;cursor:pointer">🖨️ Print Rx Pad</button>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      + '  <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📋 Copy Solutions</button>'
+      + '  <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks" style="border:1.5px solid #131845;background:#ffffff;color:#131845;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📄 Attach Remarks</button>'
+      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="color:#059669;border:1.5px solid #10b981;background:#ffffff;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">💬 WhatsApp Doctor</button>' : '')
+      + '  <button type="button" class="btn ai-action-btn" id="aiPrintSlip" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">🖨️ Print Summary</button>'
+      + '  <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:13px;padding:8px 18px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 3px 8px rgba(19,24,69,0.22);font-family:inherit">🖨️ Print Rx Pad</button>'
       + '</div>'
       + '</div>';
 
@@ -3917,14 +3934,14 @@
     var bodyHtml = '<div style="max-width:940px;font-family:inherit">'
       + modalHeaderHtml
       + AI.buildRecommendationsContent(analysis, { isPage: false })
-      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px">'
-      + '  <button type="button" class="btn btn-ghost" id="aiModalClose" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">Close</button>'
-      + '  <div style="display:flex;gap:6px;flex-wrap:wrap">'
-      + '    <button type="button" class="btn btn-ghost" id="aiCopyPrescription" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">📋 Copy Solutions</button>'
-      + '    <button type="button" class="btn btn-ghost" id="aiAttachReportRemarks" style="border:1px solid #131845;background:#ffffff;color:#131845;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">📄 Attach Remarks</button>'
-      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn btn-ghost" id="aiWaDoctor" style="color:#059669;border:1px solid #a7f3d0;background:#ffffff;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">💬 WhatsApp Doctor</button>' : '')
-      + '    <button type="button" class="btn btn-ghost" id="aiPrintSlip" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">🖨️ Print Summary</button>'
-      + '    <button type="button" class="btn btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;font-size:12px;padding:6px 14px;border-radius:7px;cursor:pointer">🖨️ Print Rx Pad</button>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:10px;border-top:1px solid #e2e8f0">'
+      + '  <button type="button" class="btn ai-action-btn" id="aiModalClose" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">Close</button>'
+      + '  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
+      + '    <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📋 Copy Solutions</button>'
+      + '    <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks" style="border:1.5px solid #131845;background:#ffffff;color:#131845;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📄 Attach Remarks</button>'
+      + (doc && (doc.phone || doc.whatsapp) ? '    <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="color:#059669;border:1.5px solid #10b981;background:#ffffff;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">💬 WhatsApp Doctor</button>' : '')
+      + '    <button type="button" class="btn ai-action-btn" id="aiPrintSlip" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">🖨️ Print Summary</button>'
+      + '    <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:13px;padding:8px 18px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 3px 8px rgba(19,24,69,0.22);font-family:inherit">🖨️ Print Rx Pad</button>'
       + '  </div>'
       + '</div>'
       + '</div>';
