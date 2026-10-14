@@ -147,18 +147,18 @@ assert.ok(!html.includes('Early Ambulation'), 'Rehab items cleanly removed');
 assert.ok(!html.includes('vitals-rehab-progress-bar-wrap'), 'Rehabilitation progress bar cleanly removed');
 console.log('✓ Daily Rehabilitation Plan cleanly removed as requested');
 
-// 4. Test Lung Capacity Efficiency and Medication Adherence
-assert.ok(html.includes('Lung Capacity Efficiency'), 'Lung Capacity Efficiency title present');
-assert.ok(html.includes('Moderate Risk'), 'Moderate risk tag present');
-assert.ok(html.includes('79%'), 'Score 79% present');
+// 4. Test Clean Removal of Simulated Lung Capacity Efficiency (79% Moderate Risk) and Verification of Real Diagnostic Test Effect & Medication Adherence
+assert.ok(!html.includes('Lung Capacity Efficiency'), 'Lung Capacity Efficiency cleanly removed');
+assert.ok(!html.includes('vitals-big-score'), 'Simulated big score cleanly removed');
+assert.ok(!html.includes('vitals-progress-track'), 'Simulated progress track cleanly removed');
 assert.ok(html.includes('Medication Adherence'), 'Medication Adherence present');
 assert.ok(html.includes('Ventolin'), 'Ventolin med present');
 assert.ok(html.includes('Pulmicort'), 'Pulmicort med present');
 assert.ok(html.includes('Mucosolvan'), 'Mucosolvan med present');
-assert.ok(html.includes('organTestEffectBox'), 'Diagnostic Test Effect container present in Lung Capacity Efficiency');
+assert.ok(html.includes('organTestEffectBox'), 'Diagnostic Test Effect container present');
 assert.ok(html.includes('Lab Tests Diagnostic Effect'), 'Lab Tests Diagnostic Effect label present');
 assert.ok(html.includes('Complete Blood Count'), 'Relevant patient test present in Diagnostic Effect');
-console.log('✓ Organ Capacity Efficiency (79% Moderate Risk), Medication Adherence, and Lab Tests Diagnostic Effect verified');
+console.log('✓ Simulated Organ Capacity Efficiency (79% Moderate Risk) cleanly removed, Lab Tests Diagnostic Effect and Medication Adherence verified');
 
 // 5. Test Right Stage: Anatomical Organ & Carousel
 assert.ok(html.includes('vitals-stage-card'), 'Interactive organ stage card present');

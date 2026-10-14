@@ -994,7 +994,7 @@
       }).join('');
     }
 
-    return '<div class="organ-test-effect-card" style="margin-top:12px;padding:12px 14px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,0.02)">' +
+    return '<div class="organ-test-effect-card" style="margin-top:4px;padding:12px 14px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,0.02)">' +
       '  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap">' +
       '    <div style="display:flex;align-items:center;gap:6px">' +
       '      <span style="font-size:14px" aria-hidden="true">🩺</span>' +
@@ -2044,24 +2044,17 @@
       renderPatientTestsListHtml(oldTests) +
       '        </div>' +
 
-      // Sub-card 2: Capacity Efficiency & Medication Adherence
+      // Sub-card 2: Diagnostic Laboratory Tests Effect & Medication Adherence
       '        <div class="vitals-card">' +
-      '          <div class="vitals-efficiency-section">' +
-      '            <div class="vitals-card-head" style="margin-bottom:6px">' +
-      '              <h3 id="organEffTitle">' + esc(curOrg.effTitle) + '</h3>' +
-      '              <button class="card-action-btn" type="button" title="Efficiency options">⋮</button>' +
+      '          <div class="vitals-card-head" style="margin-bottom:10px">' +
+      '            <div>' +
+      '              <h3>Lab Tests Diagnostic Effect</h3>' +
+      '              <p class="pd-sub" style="margin-top:2px">Clinical organ impact from laboratory test findings</p>' +
       '            </div>' +
-      '            <div class="vitals-risk-tag ' + curOrg.riskClass + '" id="organRiskTag">' + esc(curOrg.risk) + '</div>' +
-      '            <div class="vitals-big-score" id="organScoreVal">' + curOrg.score + '%</div>' +
-      '            <div class="vitals-progress-track">' +
-      '              <div class="vitals-progress-fill" id="organProgressFill" style="width:' + curOrg.score + '%;background:' + curOrg.barGrad + '"></div>' +
-      '            </div>' +
-      '            <div class="vitals-progress-labels">' +
-      '              <span>0</span><span>100%</span>' +
-      '            </div>' +
-      '            <div class="organ-test-effect-container" id="organTestEffectBox">' +
+      '            <button class="card-action-btn" type="button" title="Diagnostic options">⋮</button>' +
+      '          </div>' +
+      '          <div class="organ-test-effect-container" id="organTestEffectBox">' +
       renderOrganTestEffectInnerHtml('lung', patient, labData) +
-      '            </div>' +
       '          </div>' +
 
       // Medication Adherence section
