@@ -738,6 +738,10 @@
         '<button class="btn btn-ghost" id="pt-edit">Edit Details</button>' +
         '<button class="btn btn-danger" id="pt-del">Delete</button></div>' : '') + '</div>' +
 
+      '<div id="ptPatientDashboardHost"></div>' +
+      '<details id="ptPatientRecords" open style="margin-top:18px"><summary style="padding:12px;cursor:pointer;color:#6485a6">All patient records, billing &amp; lab result entry</summary>' +
+      '<div id="ptClinicalOverview"></div>' +
+
       '<div class="card pt-profile"><div class="card-b pt-profile-in">' +
       avatarHTML(p.name, 72) +
       '<div class="pt-id-block"><h2>' + App.esc(p.name) + ' <span class="badge b-id mono">' + App.esc(p.id) + '</span></h2>' +
@@ -784,9 +788,28 @@
           '<th class="num">Total</th><th class="num">Paid</th><th class="num">Due</th><th>Status</th><th></th></tr></thead>' +
           '<tbody>' + invRows + '</tbody></table></div>'
         : App.empty('No invoices yet for this patient.')) +
-      '</div></div>';
+      '</div></div></details>';
 
     paint(html, function () {
+      var dashboardHost = document.getElementById('ptPatientDashboardHost');
+      if (dashboardHost && (App.patientDashboard || typeof App.loadScript === 'function')) {
+        var dashboardReady = App.patientDashboard ? Promise.resolve() : App.loadScript('assets/js/mod-patient-dashboard.js');
+        dashboardReady.then(function () {
+          if (dashboardHost.isConnected && App.patientDashboard && App.patientDashboard.mount(dashboardHost, p)) {
+            var records = document.getElementById('ptPatientRecords');
+            if (records) records.open = false;
+          }
+        }).catch(function () { /* original details remain open if the dashboard cannot load */ });
+      }
+      var clinicalHost = document.getElementById('ptClinicalOverview');
+      if (clinicalHost && App.aiInsights && App.aiInsights.canAccess()) {
+        var clinicalReady = App.patientClinical ? Promise.resolve() : App.loadScript('assets/js/mod-patient-clinical.js');
+        clinicalReady.then(function () {
+          if (clinicalHost.isConnected && App.patientClinical) App.patientClinical.mount(clinicalHost, p);
+        }).catch(function () {
+          if (clinicalHost.isConnected) clinicalHost.innerHTML = '<p class="muted">Clinical overview could not load. Patient reports remain available below.</p>';
+        });
+      }
       /* lab test actions: enter result / view / print */
       function ensureResultsMod(cb) {
         if (App.enterLabResult && App.viewLabReport && App.printLabReport) { cb(); return; }

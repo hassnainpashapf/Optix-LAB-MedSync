@@ -435,9 +435,8 @@
     /* Recent Patients — Patient lab records table */
     function ptAvatar(name, i) {
       var initials = (name || '?').trim().split(/\s+/).map(function (w) { return w[0]; }).slice(0, 2).join('').toUpperCase();
-      var colors = ['#2563eb', '#7c3aed', '#db2777', '#059669', '#d97706', '#dc2626', '#0284c7', '#16a34a'];
-      var bg = colors[(i || 0) % colors.length];
-      return '<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:' + bg + ';color:#fff;font-size:13.5px;font-weight:700;flex:none;letter-spacing:-.3px">' + App.esc(initials) + '</span>';
+      var bg = '#eaf3ff';
+      return '<span style="display:inline-flex;align-items:center;justify-content:center;width:40px;height:40px;border-radius:50%;background:' + bg + ';color:#4a8bc9;font-size:13.5px;font-weight:700;flex:none;letter-spacing:-.3px">' + App.esc(initials) + '</span>';
     }
 
     function genderBadge(g) {

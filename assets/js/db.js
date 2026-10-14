@@ -1134,6 +1134,33 @@
       return copy(row);
     },
 
+    // AI settings require confirmed persistence; do not mutate the local cache before the server accepts them.
+    saveAiConfig: function (patch) {
+      if (sessRole() !== 'admin') return Promise.reject(new Error('Only an admin can change AI settings.'));
+      var targetLab = currentLabId;
+      var next = Object.assign({}, copy(store.settings), copy(patch), { id: 'main' });
+      if (!remote) {
+        if (cloud) return Promise.reject(new Error('Connect to the server before saving AI settings.'));
+        var previous = store.settings;
+        store.settings = next;
+        try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { store.settings = previous; return Promise.reject(e); }
+        return Promise.resolve(copy(next));
+      }
+      var ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      var timer = ctl ? setTimeout(function () { ctl.abort(); }, 10000) : null;
+      inflight++;
+      return Promise.resolve().then(function () {
+        return fetch(API + '/api/settings/main', { method: 'PUT', headers: authHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(next), signal: ctl ? ctl.signal : undefined });
+      }).then(function (r) {
+        if (!r.ok) {
+          if (r.status === 401) fireAuthError();
+          return r.json().catch(function () { return {}; }).then(function (j) { throw new Error(j.error || 'AI settings were not saved (' + r.status + ').'); });
+        }
+        if (currentLabId === targetLab) store.settings = next;
+        return copy(next);
+      }).finally(function () { inflight--; if (timer) clearTimeout(timer); });
+    },
+
     update: function (table, id, patch) {
       if (table === 'settings') {
         if (id !== 'main') return null;

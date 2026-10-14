@@ -1,0 +1,25 @@
+'use strict';
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const path = require('node:path');
+const rules = fs.readFileSync(path.join(__dirname,'../assets/js/mod-ai-insights.js'),'utf8');
+const code = fs.readFileSync(path.join(__dirname,'../assets/js/mod-patient-clinical.js'),'utf8');
+const test = {id:'lft',params:[{id:'alt',name:'ALT'},{id:'ast',name:'AST'},{id:'bili',name:'Total Bilirubin'}]};
+const sandbox = {console,localStorage:{getItem:()=>null},App:{esc:String,route:()=>{}},DB:{get:(table,id)=>table==='tests'&&id==='lft'?test:null},document:{},setTimeout};
+sandbox.window=sandbox;vm.createContext(sandbox);vm.runInContext(rules,sandbox);vm.runInContext(code,sandbox);
+const clinical=sandbox.App.patientClinical;
+const deniedHost={isConnected:true,innerHTML:'must clear'};clinical.mount(deniedHost,{id:'private'});assert.equal(deniedHost.innerHTML,'');
+const p={id:'p1',name:'Fixture',age:40,gender:'male'};
+const invs=[{id:'old',patientId:'p1',createdAt:'2026-01-01'},{id:'new',patientId:'p1',createdAt:'2026-02-01'},{id:'other',patientId:'p2',createdAt:'2026-03-01'},{id:'draft',patientId:'p1',createdAt:'2026-04-01'}];
+const results=[{invoiceId:'old',testId:'lft',status:'ready',values:{alt:180,ast:100,bili:3}},{invoiceId:'new',testId:'lft',status:'ready',values:{alt:20,ast:21,bili:.7}},{invoiceId:'other',testId:'lft',status:'ready',values:{alt:990}},{invoiceId:'draft',testId:'lft',status:'pending',values:{alt:999}}];
+let m=clinical.reportFor(p,invs,results);
+assert.equal(m.inv.id,'new');assert.equal(m.available.length,2);assert.equal(m.data.groups.length,1);assert.equal(m.data.groups[0].res.values.alt,20);assert(!m.reports.some(i=>i.patientId==='p2'));
+m=clinical.reportFor(p,invs,results,'old');assert.equal(m.inv.id,'old');assert.equal(m.selected.id,'liver');assert.equal(m.selected.status,'warning');assert.equal(m.data.groups[0].res.values.alt,180);
+const empty=clinical.reportFor({id:'missing'},invs,results);assert.equal(empty.inv,null);assert.equal(empty.selected,null);assert.equal(empty.organs.length,0);
+const duplicate=results.concat([{invoiceId:'new',testId:'lft',status:'ready',reportedAt:'2026-02-02',values:{alt:44}}]);assert.equal(clinical.reportFor(p,invs,duplicate).data.groups[0].res.values.alt,44);
+for(const id of ['liver','lungs','heart','kidneys','brain','pancreas','blood','joints']) {const meshes=clinical.anatomy(id);assert(meshes.length);for(const mesh of meshes){assert(mesh.faces.length>0);assert(mesh.vertices.every(v=>v.every(Number.isFinite)));assert(mesh.faces.every(f=>f.every(i=>i>=0&&i<mesh.vertices.length)));}}
+const body=clinical.fullBody([{id:'liver',status:'warning'},{id:'kidneys',status:'critical'}]);assert(body.some(p=>p.organ==='liver'&&p.tint[0]===226));assert(body.some(p=>p.organ==='kidneys'&&p.tint[0]===223));assert(body.some(p=>p.organ===null&&p.alpha<1));
+assert.equal(clinical.bestOrgan([{id:'liver',status:'untested'},{id:'kidneys',status:'critical'}]).id,'kidneys');
+assert(code.includes('not patient imaging or a confirmed diagnosis'));
+console.log('Patient clinical overview: report isolation, ready-only results, liver auto-selection, empty data, duplicate resolution and 8 finite 3D meshes passed.');
