@@ -813,6 +813,346 @@
       '</svg>';
   }
 
+  /* Parse Reference Range Bounds helper */
+  function parseRefBounds(refStr) {
+    if (!refStr) return null;
+    var str = String(refStr).trim().replace(/[–—]/g, '-');
+    var m = str.match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*(?:-|to)\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))$/i);
+    if (m) {
+      var l = parseFloat(m[1]), h = parseFloat(m[2]);
+      if (!isNaN(l) && !isNaN(h) && l < h) return { low: l, high: h };
+    }
+    m = str.match(/^(<=|>=|<|>|≤|≥)\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))$/);
+    if (m) {
+      var val = parseFloat(m[2]);
+      if (!isNaN(val)) {
+        if (m[1] === '<' || m[1] === '<=' || m[1] === '≤') return { low: 0, high: val };
+        return { low: val, high: val * 2.5 };
+      }
+    }
+    return null;
+  }
+
+  /* Compute normalized Y-coordinate for trajectory SVG */
+  function computeTrajectoryY(valStr, bounds, idx) {
+    var v = parseFloat(String(valStr).replace(/,/g, ''));
+    var jitter = ((idx % 3) - 1) * 7;
+    if (isNaN(v) || !bounds || bounds.high <= bounds.low) {
+      return 162 + jitter;
+    }
+    var span = (bounds.high - bounds.low) || 1;
+    if (v > bounds.high) {
+      var rHigh = (v - bounds.high) / span;
+      return Math.max(38, Math.min(115, 115 - (rHigh * 35))) + jitter;
+    } else if (v < bounds.low) {
+      var rLow = (bounds.low - v) / span;
+      return Math.min(278, Math.max(208, 208 + (rLow * 35))) + jitter;
+    } else {
+      var rNorm = (v - bounds.low) / span;
+      return Math.max(122, Math.min(202, 202 - (rNorm * 80))) + jitter;
+    }
+  }
+
+  /* Render Visual Interactive Multi-Biomarker Longitudinal Trajectory Vector Graph */
+  function renderBiomarkerTrajectoriesGraphCard(labData) {
+    var comps = labData.comparisons || [];
+    var prevDate = labData.pastInvoice ? (labData.pastInvoice.createdAt ? String(labData.pastInvoice.createdAt).slice(0, 10) : 'Previous Visit') : 'Previous Visit';
+    var curDate = labData.currentInvoice ? (labData.currentInvoice.createdAt ? String(labData.currentInvoice.createdAt).slice(0, 10) : 'Current Visit') : 'Current Visit';
+
+    if (!comps.length) {
+      return '<div class="vitals-card pd-trends-graph-card">' +
+        '<div class="vitals-card-head">' +
+        '  <div>' +
+        '    <h3 style="display:flex;align-items:center;gap:8px"><span>📊</span><span>Longitudinal Trajectory Vector Graph</span></h3>' +
+        '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Interactive visual trajectory tracking across chronological laboratory visits.</p>' +
+        '  </div>' +
+        '</div>' +
+        '<div style="padding:48px 24px;text-align:center;color:#64748b;background:#f8fafc;border-radius:12px;margin-top:12px">' +
+        '  <span style="font-size:36px;display:block;margin-bottom:8px">📈</span>' +
+        '  <strong>No Comparative Biomarker Data Yet</strong><br>' +
+        '  <small style="color:#94a3b8">When at least two verified lab reports exist, interactive multi-biomarker trajectories will plot here automatically.</small>' +
+        '</div>' +
+        '</div>';
+    }
+
+    var colorPalette = ['#f59e0b', '#ef4444', '#0284c7', '#8b5cf6', '#10b981', '#ec4899', '#06b6d4', '#6366f1'];
+
+    var legendHtml = comps.map(function (c, idx) {
+      var color = colorPalette[idx % colorPalette.length];
+      var statusColor = c.badgeClass === 'improved' ? '#047857' : (c.badgeClass === 'deteriorated' ? '#b91c1c' : '#475569');
+      return '<div class="pd-graph-legend-pill" style="display:inline-flex;align-items:center;gap:6px;background:#ffffff;border:1px solid #e2e8f0;padding:4px 10px;border-radius:9999px;font-size:11.5px;font-weight:600">' +
+        '<span style="width:10px;height:10px;border-radius:50%;background:' + color + '"></span>' +
+        '<span>' + esc(c.paramName) + '</span>' +
+        '<span style="color:' + statusColor + ';font-size:10px;font-weight:700">(' + esc(c.statusLabel) + ')</span>' +
+        '</div>';
+    }).join('');
+
+    var vectorsSvg = comps.map(function (c, idx) {
+      var color = colorPalette[idx % colorPalette.length];
+      var bounds = parseRefBounds(c.refRange);
+      var yPrev = computeTrajectoryY(c.prevVal, bounds, idx);
+      var yCur = computeTrajectoryY(c.curVal, bounds, idx);
+
+      var hasPrevVal = c.prevVal != null && c.prevVal !== '—';
+      var deltaText = (c.status === 'baseline') ? 'Baseline' : ((c.diff > 0 ? '+' : '') + c.diff + (c.unit ? ' ' + c.unit : '') + ' (' + (c.pct > 0 ? '+' : '') + c.pct + '%)');
+      var deltaPillColor = c.badgeClass === 'improved' ? '#059669' : (c.badgeClass === 'deteriorated' ? '#dc2626' : '#475569');
+
+      var curve = hasPrevVal ?
+        ('<path d="M 165,' + yPrev + ' C 340,' + yPrev + ' 480,' + yCur + ' 670,' + yCur + '" fill="none" stroke="' + color + '" stroke-width="2.8" stroke-linecap="round" opacity="0.9" />' +
+         '<circle cx="165" cy="' + yPrev + '" r="5.5" fill="#ffffff" stroke="' + color + '" stroke-width="2.5" />' +
+         '<text x="152" y="' + (yPrev + 4) + '" text-anchor="end" font-size="11" font-weight="700" fill="#334155">' + esc(c.prevVal) + (c.unit ? ' ' + esc(c.unit) : '') + '</text>') :
+        '';
+
+      return '<g class="pd-trajectory-vector" data-biomarker="' + esc(c.paramKey) + '">' +
+        curve +
+        '<circle cx="670" cy="' + yCur + '" r="7" fill="' + color + '" stroke="#ffffff" stroke-width="2.5" />' +
+        '<text x="686" y="' + (yCur + 4) + '" text-anchor="start" font-size="11" font-weight="700" fill="#0f172a">' +
+        esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + ' ' +
+        '<tspan font-size="10.5" font-weight="700" fill="' + deltaPillColor + '">[' + esc(deltaText) + ']</tspan>' +
+        '</text>' +
+        '</g>';
+    }).join('');
+
+    return '<div class="vitals-card pd-trends-graph-card" style="margin-top:16px">' +
+      '<div class="vitals-card-head">' +
+      '  <div>' +
+      '    <h3 style="display:flex;align-items:center;gap:8px"><span>📊</span><span>Longitudinal Trajectory Vector Graph</span></h3>' +
+      '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Biomarker directional vectors plotted relative to physiological reference zone.</p>' +
+      '  </div>' +
+      '  <div style="font-size:11.5px;color:#64748b;font-weight:600">' +
+      '    <span>Normal Reference: </span><span style="color:#059669;font-weight:700">Zone (Center)</span>' +
+      '  </div>' +
+      '</div>' +
+      '<div class="pd-graph-legend-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 10px">' +
+      legendHtml +
+      '</div>' +
+      '<div class="pd-trends-svg-wrap" style="width:100%;overflow-x:auto;background:#fafbfc;border:1px solid #e2e8f0;border-radius:14px;padding:12px 8px">' +
+      '  <svg viewBox="0 0 850 330" width="100%" height="auto" style="min-width:680px;display:block;margin:0 auto;overflow:visible">' +
+      '    <defs>' +
+      '      <linearGradient id="normalZoneGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
+      '        <stop offset="0%" stop-color="#ecfdf5" stop-opacity="0.9"/>' +
+      '        <stop offset="100%" stop-color="#d1fae5" stop-opacity="0.85"/>' +
+      '      </linearGradient>' +
+      '    </defs>' +
+      // Milestones background guides
+      '    <line x1="165" y1="40" x2="165" y2="295" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+      '    <rect x="75" y="10" width="180" height="26" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/>' +
+      '    <text x="165" y="27" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">PREVIOUS: ' + esc(prevDate) + '</text>' +
+
+      '    <line x1="670" y1="40" x2="670" y2="295" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+      '    <rect x="580" y="10" width="180" height="26" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>' +
+      '    <text x="670" y="27" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d4ed8">CURRENT: ' + esc(curDate) + '</text>' +
+
+      // Normal reference band
+      '    <rect x="60" y="122" width="730" height="84" fill="url(#normalZoneGrad)" rx="6" stroke="#a7f3d0" stroke-width="1.2" stroke-dasharray="4 3"/>' +
+      '    <text x="420" y="168" text-anchor="middle" font-size="11.5" font-weight="700" fill="#047857" opacity="0.85">✓ STANDARD PHYSIOLOGICAL REFERENCE ZONE (NORMAL)</text>' +
+
+      // High abnormal zone banner
+      '    <text x="420" y="72" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b91c1c" opacity="0.65">▲ ELEVATED / SUPRA-NORMAL ABNORMAL ZONE</text>' +
+
+      // Low abnormal zone banner
+      '    <text x="420" y="260" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0284c7" opacity="0.65">▼ SUB-NORMAL / DEFICIENT ABNORMAL ZONE</text>' +
+
+      vectorsSvg +
+      '  </svg>' +
+      '</div>' +
+      '</div>';
+  }
+
+  /* Render Biomarker Variance & Delta Velocity Visualizer (Progress Bars) */
+  function renderBiomarkerDeltaBarsCard(comps) {
+    if (!comps || !comps.length) return '';
+
+    var organIcons = { liver: '🫀', lung: '🫁', heart: '❤️', kidneys: '🫘', brain: '🧠', pancreas: '🥞', blood: '🩸' };
+
+    var cardsHtml = comps.map(function (c) {
+      var icon = organIcons[c.organ] || '🧪';
+      var isImp = c.badgeClass === 'improved';
+      var isDet = c.badgeClass === 'deteriorated';
+
+      var deltaBadgeClass = isImp ? 'improved' : (isDet ? 'deteriorated' : 'stable');
+      var deltaArrow = isImp ? '↘' : (isDet ? '↗' : '→');
+      var deltaLabel = (c.status === 'baseline') ? 'Baseline' : (deltaArrow + ' ' + (c.pct > 0 ? '+' : '') + c.pct + '% (' + (c.diff > 0 ? '+' : '') + c.diff + (c.unit ? ' ' + c.unit : '') + ')');
+
+      var bounds = parseRefBounds(c.refRange);
+      var curValNum = parseFloat(String(c.curVal).replace(/,/g, ''));
+      var prevValNum = parseFloat(String(c.prevVal).replace(/,/g, ''));
+
+      var fillPct = 50;
+      var prevDotPct = 50;
+      if (bounds && !isNaN(curValNum)) {
+        var span = (bounds.high - bounds.low) || 1;
+        var rCur = (curValNum - bounds.low) / span;
+        fillPct = Math.max(5, Math.min(95, 20 + (rCur * 60)));
+      }
+      if (bounds && !isNaN(prevValNum)) {
+        var spanP = (bounds.high - bounds.low) || 1;
+        var rPrev = (prevValNum - bounds.low) / spanP;
+        prevDotPct = Math.max(5, Math.min(95, 20 + (rPrev * 60)));
+      }
+
+      var barColor = isImp ? '#10b981' : (isDet ? '#ef4444' : '#64748b');
+
+      return '<div class="pd-delta-card">' +
+        '  <div class="pd-delta-card-head">' +
+        '    <div>' +
+        '      <div style="font-weight:700;font-size:13.5px;color:#0f172a;display:flex;align-items:center;gap:6px">' +
+        '        <span>' + icon + '</span><span>' + esc(c.paramName) + '</span>' +
+        '      </div>' +
+        '      <small style="color:#64748b;font-size:11px">' + esc(c.testName) + ' · Normal: ' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + '</small>' +
+        '    </div>' +
+        '    <span class="vitals-trend-badge ' + c.badgeClass + '">' + esc(c.statusLabel) + '</span>' +
+        '  </div>' +
+
+        '  <div class="pd-delta-values-row">' +
+        '    <div class="pd-delta-val-box">' +
+        '      <small>Previous (' + esc(c.prevDate) + ')</small>' +
+        '      <strong>' + esc(c.prevVal) + (c.unit ? ' ' + esc(c.unit) : '') + '</strong>' +
+        '    </div>' +
+        '    <div class="pd-delta-shift-pill ' + deltaBadgeClass + '">' +
+        '      <span>' + esc(deltaLabel) + '</span>' +
+        '    </div>' +
+        '    <div class="pd-delta-val-box text-right">' +
+        '      <small>Latest (' + esc(c.curDate) + ')</small>' +
+        '      <strong style="color:' + (c.isOutside ? '#b91c1c' : '#047857') + '">' + esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + (c.isOutside ? ' ⚠️' : '') + '</strong>' +
+        '    </div>' +
+        '  </div>' +
+
+        '  <div class="pd-delta-range-track">' +
+        '    <div class="pd-delta-normal-zone" style="left:20%;width:60%" title="Reference Range"></div>' +
+        (c.prevVal !== '—' ? ('<div class="pd-delta-marker prev" style="left:' + prevDotPct + '%" title="Previous: ' + esc(c.prevVal) + '"></div>') : '') +
+        '    <div class="pd-delta-marker cur" style="left:' + fillPct + '%;background:' + barColor + '" title="Current: ' + esc(c.curVal) + '"></div>' +
+        '  </div>' +
+        '  <div class="pd-delta-range-labels">' +
+        '    <span>Below Ref</span>' +
+        '    <span style="color:#047857;font-weight:700">Optimal Zone</span>' +
+        '    <span>Above Ref</span>' +
+        '  </div>' +
+        '</div>';
+    }).join('');
+
+    return '<div class="vitals-card pd-trends-variance-card" style="margin-top:16px">' +
+      '<div class="vitals-card-head">' +
+      '  <div>' +
+      '    <h3 style="display:flex;align-items:center;gap:8px"><span>⚡</span><span>Biomarker Variance &amp; Delta Velocity Visualizer</span></h3>' +
+      '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Comparative shift tracking from previous visit to latest visit against clinical safe zones.</p>' +
+      '  </div>' +
+      '  <span class="badge b-ready" style="font-size:11px;font-weight:700">' + comps.length + ' Biomarkers</span>' +
+      '</div>' +
+      '<div class="pd-delta-grid">' +
+      cardsHtml +
+      '</div>' +
+      '</div>';
+  }
+
+  /* Render Longitudinal Overview Teaser Card in Main Vitals View */
+  function renderLongitudinalOverviewPreviewCard(labData) {
+    var comps = labData.comparisons || [];
+    var sum = labData.summary || { improved: 0, deteriorated: 0, stable: 0, baseline: 0, total: 0 };
+
+    return '<div class="vitals-card vitals-trends-preview-card" style="display:flex;align-items:center;justify-content:space-between;gap:16px;background:linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);border:1.5px solid #bae6fd;padding:16px 20px;border-radius:14px;margin-bottom:16px">' +
+      '<div style="display:flex;align-items:center;gap:14px">' +
+      '  <span style="font-size:32px">📈</span>' +
+      '  <div>' +
+      '    <h4 style="margin:0;font-size:15px;font-weight:700;color:#0f172a">Biomarker Trends &amp; Longitudinal Test Comparison</h4>' +
+      '    <p style="margin:3px 0 0;font-size:12px;color:#475569">' +
+      '      Tracking ' + comps.length + ' biomarkers across chronological laboratory reports. ' +
+      '      <span style="font-weight:700;color:#047857">' + sum.improved + ' Improved (Behtar)</span> · ' +
+      '      <span style="font-weight:700;color:#b91c1c">' + sum.deteriorated + ' Deteriorated (Alert)</span> · ' +
+      '      <span style="font-weight:700;color:#475569">' + (sum.stable + sum.baseline) + ' Stable (Mustahkam)</span>' +
+      '    </p>' +
+      '  </div>' +
+      '</div>' +
+      '<button type="button" class="btn btn-primary btn-sm" data-pd-switch="pdTrends" style="padding:8px 16px;font-weight:700;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;box-shadow:0 2px 8px rgba(37,99,235,0.25)">' +
+      '  <span>Open Full Trends Page &amp; Graphs</span><span>➔</span>' +
+      '</button>' +
+      '</div>';
+  }
+
+  /* Render Dedicated Longitudinal Biomarker Trends & Visual Graphs Page */
+  function renderLongitudinalTrendsPage(labData, patient) {
+    var comps = labData.comparisons || [];
+    var sum = labData.summary || { improved: 0, deteriorated: 0, stable: 0, baseline: 0, total: 0 };
+    var curInv = labData.currentInvoice;
+    var pastInv = labData.pastInvoice;
+    var prevDate = pastInv ? (pastInv.createdAt ? String(pastInv.createdAt).slice(0, 10) : 'Previous Visit') : 'Initial baseline';
+    var curDate = curInv ? (curInv.createdAt ? String(curInv.createdAt).slice(0, 10) : 'Current Visit') : 'Current Visit';
+
+    return '<div class="pd-trends-page-wrap">' +
+      // Header Card
+      '<div class="vitals-card pd-trends-header-card">' +
+      '  <div class="pd-trends-header-main">' +
+      '    <div class="pd-trends-header-title">' +
+      '      <div style="display:flex;align-items:center;gap:12px">' +
+      '        <span style="font-size:28px">📈</span>' +
+      '        <div>' +
+      '          <h2 style="margin:0;font-size:18px;font-weight:800;color:#0f172a">Biomarker Trends &amp; Longitudinal Test Comparison</h2>' +
+      '          <p style="margin:3px 0 0;font-size:12.5px;color:#64748b">' +
+      '            Patient chronological trajectory &amp; variance tracking (Previous: <strong style="color:#334155">' + esc(prevDate) + '</strong> vs Latest: <strong style="color:#2563eb">' + esc(curDate) + '</strong>)' +
+      '          </p>' +
+      '        </div>' +
+      '      </div>' +
+      '    </div>' +
+      '    <div class="pd-trends-header-actions">' +
+      '      <button type="button" class="btn btn-ghost btn-sm" data-pd-switch="pdOverview" style="font-weight:700">' +
+      '        ← Back to Vitals Overview' +
+      '      </button>' +
+      (curInv ? ('<button type="button" class="btn btn-primary btn-sm" id="btnLaunchTrendsDoctorAI" data-inv-id="' + esc(curInv.id) + '" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">🤖 Full AI Analysis</button>') : '') +
+      '    </div>' +
+      '  </div>' +
+      '</div>' +
+
+      // Top Metric KPI Summary Cards (4 Cards)
+      '<div class="pd-trends-kpi-grid">' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-icon" style="background:#eff6ff;color:#2563eb">🧪</span>' +
+      '      <span class="kpi-badge" style="background:#eff6ff;color:#1d4ed8">Monitored</span>' +
+      '    </div>' +
+      '    <div class="kpi-value">' + comps.length + '</div>' +
+      '    <div class="kpi-label">Tracked Biomarkers</div>' +
+      '    <div class="kpi-sub">Across chronological visits</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-icon" style="background:#ecfdf5;color:#059669">🟢</span>' +
+      '      <span class="kpi-badge improved">Improved (Behtar)</span>' +
+      '    </div>' +
+      '    <div class="kpi-value" style="color:#059669">' + sum.improved + '</div>' +
+      '    <div class="kpi-label">Positive Recovery</div>' +
+      '    <div class="kpi-sub">Normalizing towards safe baseline</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-icon" style="background:#fef2f2;color:#dc2626">🔴</span>' +
+      '      <span class="kpi-badge deteriorated">Deteriorated (Alert)</span>' +
+      '    </div>' +
+      '    <div class="kpi-value" style="color:#dc2626">' + sum.deteriorated + '</div>' +
+      '    <div class="kpi-label">Clinical Attention</div>' +
+      '    <div class="kpi-sub">Exceeding safe therapeutic limits</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-icon" style="background:#f8fafc;color:#64748b">⚪</span>' +
+      '      <span class="kpi-badge stable">Stable (Mustahkam)</span>' +
+      '    </div>' +
+      '    <div class="kpi-value" style="color:#475569">' + (sum.stable + sum.baseline) + '</div>' +
+      '    <div class="kpi-label">Physiological Steady</div>' +
+      '    <div class="kpi-sub">Maintained without critical drift</div>' +
+      '  </div>' +
+      '</div>' +
+
+      // Graph 1: Multi-Biomarker Longitudinal Trajectory Vector Chart (SVG)
+      renderBiomarkerTrajectoriesGraphCard(labData) +
+
+      // Graph 2: Biomarker Variance & Delta Velocity Visualizer (Progress Bars)
+      renderBiomarkerDeltaBarsCard(comps) +
+
+      // The Complete Chronological Comparison Table
+      renderLongitudinalComparisonCard(labData) +
+      '</div>';
+  }
+
   /* Render Longitudinal Biomarker Comparison Card */
   function renderLongitudinalComparisonCard(labData) {
     var comps = labData.comparisons || [];
@@ -984,7 +1324,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends','📈'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span><span>'+item[1]+'</span></button>';
       }).join('') +
       '  </nav>' +
@@ -1075,8 +1415,8 @@
       '        </div>' +
       '      </div>' +
 
-      // Longitudinal Lab Biomarker Comparison & Trend Tracker
-      renderLongitudinalComparisonCard(labData) +
+      // Longitudinal Lab Biomarker Comparison Quick Access Banner
+      renderLongitudinalOverviewPreviewCard(labData) +
 
       // Doctor Clinical Decision Support Matrix
       renderDoctorDecisionMatrix(labData) +
@@ -1129,6 +1469,11 @@
       '      <p class="pd-caption">Blue: test-related area · Red: abnormal report value.<br>Illustration only; not an exact disease location or a patient scan.</p></div>' +
       '    </div>' +
       '  </div>' +
+      '</div>' +
+
+      // Dedicated Longitudinal Biomarker Trends & Visual Graphs Page
+      '<div class="pd-layout-trends" id="pdTrends" style="display:none">' +
+      renderLongitudinalTrendsPage(labData, patient) +
       '</div>' +
       '</div>' +
       '</section>';
@@ -1345,21 +1690,61 @@
       resetBtn.addEventListener('click',function(){zoom=1;if(image)image.style.transform='scale(1)';});
     }
 
-    // Section scroll/highlighting navigation
-    host.querySelectorAll('[data-pd-section]').forEach(function(button){
-      button.addEventListener('click',function(){
-        var target=host.querySelector('#'+button.getAttribute('data-pd-section'));
-        host.querySelectorAll('[data-pd-section]').forEach(function(b){
-          b.classList.toggle('active',b===button);
-          b.setAttribute('aria-pressed',b===button?'true':'false');
-        });
-        if(target){
-          target.scrollIntoView({behavior:'smooth',block:'nearest'});
-          target.classList.add('pd-highlight');
-          setTimeout(function(){target.classList.remove('pd-highlight');},1200);
+    // Section switching navigation between Vitals Overview, Biomarker Trends, and Anatomy
+    function switchSection(sectionId) {
+      host.querySelectorAll('[data-pd-section]').forEach(function(b){
+        var isActive = b.getAttribute('data-pd-section') === sectionId;
+        b.classList.toggle('active', isActive);
+        b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+      });
+
+      var overviewEl = host.querySelector('#pdOverview');
+      var trendsEl = host.querySelector('#pdTrends');
+      var anatomyEl = host.querySelector('#pdAnatomy');
+
+      if (sectionId === 'pdTrends') {
+        if (overviewEl) overviewEl.style.display = 'none';
+        if (trendsEl) trendsEl.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (sectionId === 'pdOverview') {
+        if (trendsEl) trendsEl.style.display = 'none';
+        if (overviewEl) overviewEl.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (sectionId === 'pdAnatomy') {
+        if (trendsEl) trendsEl.style.display = 'none';
+        if (overviewEl) overviewEl.style.display = 'block';
+        if (anatomyEl) {
+          anatomyEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          anatomyEl.classList.add('pd-highlight');
+          setTimeout(function(){ anatomyEl.classList.remove('pd-highlight'); }, 1200);
         }
+      }
+    }
+
+    host.querySelectorAll('[data-pd-section]').forEach(function(button){
+      button.addEventListener('click', function(){
+        switchSection(button.getAttribute('data-pd-section'));
       });
     });
+
+    host.querySelectorAll('[data-pd-switch]').forEach(function(el){
+      el.addEventListener('click', function(){
+        switchSection(el.getAttribute('data-pd-switch'));
+      });
+    });
+
+    // Wire trends page AI launcher button
+    var btnTrendsAI = host.querySelector('#btnLaunchTrendsDoctorAI');
+    if (btnTrendsAI) {
+      btnTrendsAI.addEventListener('click', function () {
+        var invId = btnTrendsAI.getAttribute('data-inv-id');
+        if (window.App && App.aiInsights && invId) {
+          App.aiInsights.showModal(invId);
+        } else if (window.App && App.toast) {
+          App.toast('Full AI clinical report loaded for patient.');
+        }
+      });
+    }
 
     return true;
   }

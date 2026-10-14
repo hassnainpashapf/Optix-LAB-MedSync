@@ -147,4 +147,22 @@ assert.ok(html.includes('Avoid NSAIDs (Ibuprofen, Diclofenac, Mefenamic acid)'),
 assert.ok(html.includes('btnLaunchFullDoctorAI'), 'Launch AI button present');
 assert.ok(html.includes('data-inv-id="INV-OCT"'), 'Launch AI button wired to latest invoice INV-OCT');
 
-console.log('✓ All 5 verification checks for Longitudinal Delta, 3D Body Map, and Doctor Decision Matrix PASSED CLEANLY!\n');
+// 6. Verify Dedicated Biomarker Trends Page, Navigation Button & Visual Graphs:
+assert.ok(html.includes('data-pd-section="pdTrends"'), 'Header navigation button for Biomarker Trends present');
+assert.ok(html.includes('Biomarker Trends'), 'Header navigation button label present');
+assert.ok(html.includes('id="pdTrends"'), 'Dedicated pdTrends page section present');
+assert.ok(html.includes('pd-trends-header-card'), 'Trends page header card present');
+assert.ok(html.includes('pd-trends-kpi-grid'), 'Trends page KPI summary grid present');
+assert.ok(html.includes('Tracked Biomarkers'), 'Tracked Biomarkers KPI card present');
+assert.ok(html.includes('Positive Recovery'), 'Positive Recovery KPI card present');
+assert.ok(html.includes('pd-trends-graph-card'), 'Longitudinal Trajectory Vector Graph card present');
+assert.ok(html.includes('Longitudinal Trajectory Vector Graph'), 'Trajectory graph title present');
+assert.ok(html.includes('STANDARD PHYSIOLOGICAL REFERENCE ZONE (NORMAL)'), 'Normal reference zone banner present in SVG');
+assert.ok(html.includes('PREVIOUS: 2026-09-10'), 'Previous date milestone marker present in graph');
+assert.ok(html.includes('CURRENT: 2026-10-14'), 'Current date milestone marker present in graph');
+assert.ok(html.includes('pd-trends-variance-card'), 'Biomarker Variance & Delta Velocity card present');
+assert.ok(html.includes('Biomarker Variance &amp; Delta Velocity Visualizer'), 'Delta Velocity visualizer title present');
+assert.ok(html.includes('data-pd-switch="pdTrends"'), 'Quick-jump button from Vitals Overview to Trends page present');
+
+console.log('✓ All 6 verification checks for Dedicated Biomarker Trends Page, SVG Trajectory Graph, and Delta Velocity Bars PASSED CLEANLY!\n');
+

@@ -1118,3 +1118,310 @@
   }
 }
 
+/* ==========================================================================
+   Dedicated Biomarker Trends & Longitudinal Graphs Page Styles (#pdTrends)
+   ========================================================================== */
+#ptPatientDashboard .pd-layout-trends {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#ptPatientDashboard .pd-trends-page-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#ptPatientDashboard .pd-trends-header-card {
+  background: #ffffff;
+  border: 1.5px solid #edf2f7;
+  border-radius: 16px;
+  padding: 18px 22px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+#ptPatientDashboard .pd-trends-header-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+#ptPatientDashboard .pd-trends-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* KPI Summary Cards Grid */
+#ptPatientDashboard .pd-trends-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+#ptPatientDashboard .pd-trends-kpi-card {
+  background: #ffffff;
+  border: 1.5px solid #edf2f7;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+#ptPatientDashboard .pd-trends-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.06);
+}
+
+#ptPatientDashboard .pd-trends-kpi-card .kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+#ptPatientDashboard .pd-trends-kpi-card .kpi-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+#ptPatientDashboard .pd-trends-kpi-card .kpi-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+#ptPatientDashboard .pd-trends-kpi-card .kpi-badge.improved {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+#ptPatientDashboard .pd-trends-kpi-card .kpi-badge.deteriorated {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+#ptPatientDashboard .pd-trends-kpi-card .kpi-badge.stable {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+#ptPatientDashboard .pd-trends-kpi-card .kpi-value {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1.1;
+}
+
+#ptPatientDashboard .pd-trends-kpi-card .kpi-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+#ptPatientDashboard .pd-trends-kpi-card .kpi-sub {
+  font-size: 11px;
+  color: #64748b;
+}
+
+/* Trajectory Graph Card */
+#ptPatientDashboard .pd-trends-graph-card {
+  background: #ffffff;
+  border: 1.5px solid #edf2f7;
+  border-radius: 16px;
+  padding: 18px 22px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+#ptPatientDashboard .pd-trends-svg-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#ptPatientDashboard .pd-trajectory-vector {
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+}
+
+#ptPatientDashboard .pd-trajectory-vector:hover {
+  opacity: 1;
+}
+
+/* Delta Velocity Bars Grid */
+#ptPatientDashboard .pd-delta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+#ptPatientDashboard .pd-delta-card {
+  background: #ffffff;
+  border: 1.5px solid #edf2f7;
+  border-radius: 14px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
+}
+
+#ptPatientDashboard .pd-delta-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.05);
+}
+
+#ptPatientDashboard .pd-delta-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+#ptPatientDashboard .pd-delta-values-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+
+#ptPatientDashboard .pd-delta-val-box small {
+  display: block;
+  font-size: 10.5px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+#ptPatientDashboard .pd-delta-val-box strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+#ptPatientDashboard .pd-delta-shift-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+#ptPatientDashboard .pd-delta-shift-pill.improved {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+#ptPatientDashboard .pd-delta-shift-pill.deteriorated {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+#ptPatientDashboard .pd-delta-shift-pill.stable {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+#ptPatientDashboard .pd-delta-range-track {
+  position: relative;
+  width: 100%;
+  height: 8px;
+  background: #e2e8f0;
+  border-radius: 9999px;
+  overflow: visible;
+  margin: 4px 0 2px;
+}
+
+#ptPatientDashboard .pd-delta-normal-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: #bbf7d0;
+  border-radius: 9999px;
+}
+
+#ptPatientDashboard .pd-delta-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+}
+
+#ptPatientDashboard .pd-delta-marker.prev {
+  width: 10px;
+  height: 10px;
+  background: #94a3b8;
+  border: 2px solid #ffffff;
+  z-index: 2;
+}
+
+#ptPatientDashboard .pd-delta-marker.cur {
+  width: 14px;
+  height: 14px;
+  border: 2.5px solid #ffffff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  z-index: 3;
+}
+
+#ptPatientDashboard .pd-delta-range-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+#ptPatientDashboard .vitals-trends-preview-card {
+  transition: all 0.2s ease;
+}
+
+#ptPatientDashboard .vitals-trends-preview-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
+}
+
+@media (max-width: 960px) {
+  #ptPatientDashboard .pd-trends-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  #ptPatientDashboard .pd-delta-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 580px) {
+  #ptPatientDashboard .pd-trends-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  #ptPatientDashboard .pd-trends-header-main {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+
