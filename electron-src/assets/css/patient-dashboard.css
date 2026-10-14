@@ -49,16 +49,6 @@
 #ptPatientDashboard .pd-caption{line-height:1.6}
 #ptPatientDashboard select:focus-visible{outline:3px solid #9ec1ef;outline-offset:2px}
 
-/* Keep the profile navigation visible on desktop and landscape tablets. */
-@media screen and (min-width:768px){
-  body:has(#ptPatientDashboard) #sidebar{display:flex!important;visibility:visible;transform:none;position:sticky;top:0}
-}
-@media screen and (min-width:768px) and (max-width:900px){
-  body:has(#ptPatientDashboard) #sidebar{width:208px;min-width:208px;box-shadow:none;transition:none}
-  body.side-open:has(#ptPatientDashboard){overflow:auto}
-  body.side-open:has(#ptPatientDashboard)::after{display:none}
-  body:has(#ptPatientDashboard) .side-close{display:none}
-}
 /* Recorded details and labels must stay legible on the pale cards. */
 #ptPatientDashboard dt,#ptPatientDashboard .pd-header p,#ptPatientDashboard .pd-sub{color:#4b5d74;font-size:11px}
 #ptPatientDashboard dd{color:#172b45;font-weight:500}
@@ -67,3 +57,17 @@
 #ptPatientDashboard .pd-callout span{color:#40546c;font-size:11px}
 #ptPatientDashboard .pd-caption{color:#52647a;font-size:11px}
 #ptPatientDashboard .pd-options button{color:#354d68;font-size:12px}
+
+#ptPatientDashboard .pd-profile-shell{display:grid;grid-template-columns:170px minmax(0,1fr);gap:18px;align-items:start}
+#ptPatientDashboard .pd-patient-menu{background:#fff;border:1px solid #e1e9f2;border-radius:18px;padding:16px 12px;position:sticky;top:18px;min-width:0}
+#ptPatientDashboard .pd-menu-patient{display:flex;align-items:center;flex-direction:column;text-align:center;gap:8px;padding:2px 0 16px;border-bottom:1px solid #edf1f6}
+#ptPatientDashboard .pd-menu-patient strong{color:#172b45;font-size:13px;overflow-wrap:anywhere;max-width:100%}
+#ptPatientDashboard .pd-menu-patient small{color:#52647a;font-size:11px}
+#ptPatientDashboard .pd-patient-menu nav{display:grid;gap:5px;margin:14px 0}
+#ptPatientDashboard .pd-patient-menu button{display:flex;align-items:center;gap:9px;background:transparent;border:1px solid transparent;border-radius:10px;text-align:left;padding:10px;color:#354d68;font:inherit;font-size:12px;cursor:pointer;width:100%}
+#ptPatientDashboard .pd-patient-menu button span{color:#397fbc;font-size:18px;width:20px;text-align:center;flex:none}
+#ptPatientDashboard .pd-patient-menu button:hover,#ptPatientDashboard .pd-patient-menu button.active{background:#eaf3ff;border-color:#d4e6fb;color:#205da1}
+#ptPatientDashboard .pd-menu-back{display:block;border-top:1px solid #edf1f6;padding:13px 8px 0;color:#205da1;font-size:11px;text-decoration:none}
+@media(max-width:1100px) and (min-width:701px){#ptPatientDashboard .pd-profile-shell{grid-template-columns:150px minmax(0,1fr);gap:12px}}
+@media(max-width:700px){#ptPatientDashboard .pd-profile-shell{grid-template-columns:1fr}#ptPatientDashboard .pd-patient-menu{position:static;padding:12px}#ptPatientDashboard .pd-menu-patient{flex-direction:row;text-align:left;padding:0 0 10px;flex-wrap:wrap}#ptPatientDashboard .pd-menu-patient small{margin-left:auto}#ptPatientDashboard .pd-patient-menu nav{display:flex;overflow-x:auto;margin:10px 0 0}#ptPatientDashboard .pd-patient-menu button{width:auto;flex:none}#ptPatientDashboard .pd-menu-back{display:none}}
+@media print{#ptPatientDashboard .pd-patient-menu{display:none}#ptPatientDashboard .pd-profile-shell{display:block}}
