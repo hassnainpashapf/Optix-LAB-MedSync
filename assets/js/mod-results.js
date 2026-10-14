@@ -3332,27 +3332,12 @@
       ? '<button type="button" class="btn btn-primary" id="rvAiInsights" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,58,237,.35)">🤖 AI Doctor Recommendations (5 Solutions)</button>'
       : '';
     var htmlContent = previewQr(reportHtml(d), invoiceId);
-    var activeBlobUrl = null;
     var close = App.modal('Lab Report — ' + App.esc(d.inv.no),
       '<div class="rv-box" style="position:relative">' +
-        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:8px;flex-wrap:wrap">' +
-          '<div style="display:inline-flex;gap:6px;align-items:center">' +
-            '<button type="button" class="btn btn-sm btn-primary" id="rvTogglePdf" style="height:32px;padding:0 14px;font-size:12.5px;font-weight:700">📄 PDF View (Per Page)</button>' +
-            '<button type="button" class="btn btn-sm btn-ghost" id="rvToggleHtml" style="height:32px;padding:0 14px;font-size:12.5px;font-weight:600">🌐 Web View</button>' +
-          '</div>' +
-          '<span style="font-size:12px;color:var(--muted);font-weight:600" id="rvStatusTx">Loading exact A4 pages…</span>' +
-        '</div>' +
-        '<div id="rvPdfFrameWrap" style="width:100%;height:68vh;min-height:500px;border-radius:12px;overflow:hidden;background:#525659;display:flex;align-items:center;justify-content:center">' +
-          '<div id="rvPdfSpin" style="color:#fff;font-size:13.5px;display:flex;align-items:center;gap:10px">' +
-            '<span style="width:20px;height:20px;border:2.5px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;display:inline-block;animation:rvSpin .8s linear infinite"></span>' +
-            'Rendering PDF pages…' +
-          '</div>' +
-        '</div>' +
-        '<div id="rvHtmlFrameWrap" class="report-preview" style="display:none;max-height:68vh;overflow:auto;border-radius:12px;padding:18px;background:#525659">' +
+        '<div id="rvHtmlFrameWrap" class="report-preview" style="max-height:75vh;overflow:auto;border-radius:12px;padding:18px;background:#525659">' +
           htmlContent +
         '</div>' +
       '</div>' +
-      '<style>@keyframes rvSpin{to{transform:rotate(360deg)}}</style>' +
       '<div id="rvWaHist" style="margin-top:12px">' + waHistoryHtml(invoiceId) + '</div>' +
       '<div id="rvSmsHist" style="margin-top:6px"></div>' +
       '<div id="rvAuto" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>' +
@@ -3367,56 +3352,9 @@
         '<button class="btn btn-primary" id="rvPrint">' + PRINT_ICON + ' Print Report <span style="opacity:.7;font-weight:500;font-size:11px;margin-left:4px">Ctrl+P</span></button>' +
       '</div>',
       { wide: true,
-        onClose: function () {
-          if (activeBlobUrl && /^blob:/.test(activeBlobUrl)) {
-            try { URL.revokeObjectURL(activeBlobUrl); } catch (x) {}
-          }
-        },
         onOpen: function (ov, close) {
           document.getElementById('rvClose').addEventListener('click', close);
           document.getElementById('rvPrint').addEventListener('click', function () { close(); printReportChoice(invoiceId); });
-          var pdfWrap = ov.querySelector('#rvPdfFrameWrap');
-          var htmlWrap = ov.querySelector('#rvHtmlFrameWrap');
-          var btnPdf = ov.querySelector('#rvTogglePdf');
-          var btnHtml = ov.querySelector('#rvToggleHtml');
-          var statusTx = ov.querySelector('#rvStatusTx');
-
-          function switchToPdf() {
-            if (pdfWrap) pdfWrap.style.display = 'block';
-            if (htmlWrap) htmlWrap.style.display = 'none';
-            if (btnPdf) btnPdf.className = 'btn btn-sm btn-primary';
-            if (btnHtml) btnHtml.className = 'btn btn-sm btn-ghost';
-            if (statusTx) statusTx.textContent = 'Showing exact A4 pages';
-          }
-          function switchToHtml() {
-            if (pdfWrap) pdfWrap.style.display = 'none';
-            if (htmlWrap) htmlWrap.style.display = 'block';
-            if (btnPdf) btnPdf.className = 'btn btn-sm btn-ghost';
-            if (btnHtml) btnHtml.className = 'btn btn-sm btn-primary';
-            if (statusTx) statusTx.textContent = 'Showing Web HTML preview';
-          }
-
-          if (btnPdf) btnPdf.addEventListener('click', switchToPdf);
-          if (btnHtml) btnHtml.addEventListener('click', switchToHtml);
-
-          buildReportPdfBlobUrl(invoiceId).then(function (res) {
-            if (!document.body.contains(ov)) {
-              if (res && res.blobUrl && /^blob:/.test(res.blobUrl)) {
-                try { URL.revokeObjectURL(res.blobUrl); } catch (x) {}
-              }
-              return;
-            }
-            if (res && res.blobUrl && pdfWrap) {
-              activeBlobUrl = res.blobUrl;
-              pdfWrap.innerHTML = '<iframe src="' + res.blobUrl + '#toolbar=0&navpanes=0&scrollbar=1" style="width:100%;height:100%;min-height:500px;border:none;display:block;background:#525659" title="Report PDF Preview"></iframe>';
-              switchToPdf();
-            } else {
-              switchToHtml();
-            }
-          }).catch(function (e) {
-            console.error('PDF preview build error:', e);
-            switchToHtml();
-          });
           shareStatus().then(function (st) { /* Email / Slack buttons appear only when the server can send them */
             var slot = document.getElementById('rvShare'); if (!slot || !document.body.contains(ov)) return;
             var h = '', off = st.email ? '' : ' disabled title="Email sending is not set up on this server yet" style="opacity:.5;cursor:not-allowed"';
