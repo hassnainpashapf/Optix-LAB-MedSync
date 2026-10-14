@@ -1100,6 +1100,132 @@
     }
   }
 
+  /* Compute normalized Y-coordinate for an individual biomarker graph */
+  function computeIndividualGraphY(valStr, bounds) {
+    var v = parseFloat(String(valStr).replace(/,/g, ''));
+    if (isNaN(v) || !bounds || bounds.high <= bounds.low) {
+      return 60;
+    }
+    var span = (bounds.high - bounds.low) || 1;
+    if (v > bounds.high) {
+      var rHigh = (v - bounds.high) / span;
+      return Math.max(16, Math.min(36, 36 - (rHigh * 15)));
+    } else if (v < bounds.low) {
+      var rLow = (bounds.low - v) / span;
+      return Math.min(104, Math.max(84, 84 + (rLow * 15)));
+    } else {
+      var rNorm = (v - bounds.low) / span;
+      return Math.max(44, Math.min(76, 76 - (rNorm * 32)));
+    }
+  }
+
+  /* Render Individual Biomarker Trend Graphs (1 clean, separate graph per biomarker) */
+  function renderIndividualBiomarkerGraphsSection(comps, prevDate, curDate) {
+    if (!comps || !comps.length) return '';
+
+    var organIcons = { liver: '🫀', lung: '🫁', heart: '❤️', kidneys: '🫘', brain: '🧠', pancreas: '🥞', blood: '🩸' };
+
+    var cardsHtml = comps.map(function (c) {
+      var icon = organIcons[c.organ] || '🧪';
+      var isImp = c.badgeClass === 'improved';
+      var isDet = c.badgeClass === 'deteriorated';
+      var valNum = parseFloat(String(c.curVal).replace(/,/g, ''));
+      var isCrit = c.status === 'deteriorated' && (
+        (!isNaN(valNum) && valNum < 50000 && /plt|platelet/i.test(c.paramName)) ||
+        (!isNaN(valNum) && valNum < 7.0 && /hb|hemoglobin/i.test(c.paramName)) ||
+        (!isNaN(valNum) && valNum > 3.0 && /creat|creatinine/i.test(c.paramName))
+      );
+
+      var badgeClass = isCrit ? 'b-red' : (isImp ? 'b-ready' : (isDet ? 'b-red' : 'b-warn'));
+      var badgeText = isCrit ? '🚨 Critical Drop' : (isImp ? '✓ Pehle se Behtar (' + (c.pct > 0 ? '+' : '') + c.pct + '%)' : (isDet ? '⚠️ Pehle se Kharab (' + (c.pct > 0 ? '+' : '') + c.pct + '%)' : '⚖️ Pehle se Stable'));
+      var strokeColor = isCrit ? '#dc2626' : (isImp ? '#10b981' : (isDet ? '#ef4444' : '#64748b'));
+
+      var bounds = parseRefBounds(c.refRange);
+      var yPrev = computeIndividualGraphY(c.prevVal, bounds);
+      var yCur = computeIndividualGraphY(c.curVal, bounds);
+
+      var curveSvg = (c.prevVal != null && c.prevVal !== '—') ?
+        ('<path d="M 75,' + yPrev + ' C 200,' + yPrev + ' 220,' + yCur + ' 345,' + yCur + '" fill="none" stroke="' + strokeColor + '" stroke-width="3" stroke-linecap="round" />' +
+         '<circle cx="75" cy="' + yPrev + '" r="5" fill="#ffffff" stroke="' + strokeColor + '" stroke-width="2.5" />' +
+         '<text x="75" y="' + (yPrev > 55 ? yPrev - 9 : yPrev + 17) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#475569">' + esc(c.prevVal) + '</text>') :
+        '';
+
+      var clinicalUrduNote = '';
+      if (isCrit) {
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11.5px;color:#991b1b">' +
+          '<strong>⚠️ Critical Alert:</strong> Value alarming threshold par chali gayi hai. Fori doctor consultation aur repeat lab order zaroori hai.</div>';
+      } else if (isImp) {
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11.5px;color:#166534">' +
+          '<strong>✓ Positive Effect:</strong> Pehle test ke muqablay mein behtar ho raha hai aur normal reference limits ki taraf recovery show kar raha hai.</div>';
+      } else if (isDet) {
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:11.5px;color:#92400e">' +
+          '<strong>⚠️ Adverse Effect:</strong> Pichlay test se value kharab (elevated) hui hai. Safe physiological limits se bahar strain hai.</div>';
+      } else {
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:11.5px;color:#475569">' +
+          '<strong>⚖️ Stable:</strong> Pehle test ke muqablay mein baseline maintain hai, koi sudden decline note nahi hua.</div>';
+      }
+
+      return '<div class="vitals-card" style="padding:16px 18px;border:1.5px solid #edf2f7;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,0.03);display:flex;flex-direction:column;justify-content:space-between">' +
+        '  <div>' +
+        '    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px">' +
+        '      <div>' +
+        '        <div style="font-weight:800;font-size:15px;color:#0f172a;display:flex;align-items:center;gap:7px">' +
+        '          <span style="font-size:16px">' + icon + '</span><span>' + esc(c.paramName) + '</span>' +
+        '        </div>' +
+        '        <small style="color:#64748b;font-size:11.5px">' + esc(c.testName) + ' · Normal: <strong>' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + '</strong></small>' +
+        '      </div>' +
+        '      <span class="badge ' + badgeClass + '" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap">' + esc(badgeText) + '</span>' +
+        '    </div>' +
+
+        '    <div style="display:flex;align-items:center;gap:12px;background:#f8fafc;padding:8px 12px;border-radius:10px;border:1px solid #e2e8f0;margin:10px 0 12px">' +
+        '      <div style="flex:1">' +
+        '        <div style="font-size:10.5px;color:#64748b;font-weight:600">Pehle (' + esc(c.prevDate) + ')</div>' +
+        '        <strong style="font-size:13.5px;color:#334155">' + esc(c.prevVal) + (c.unit ? ' ' + esc(c.unit) : '') + '</strong>' +
+        '      </div>' +
+        '      <div style="font-size:14px;color:#94a3b8">➔</div>' +
+        '      <div style="flex:1;text-align:right">' +
+        '        <div style="font-size:10.5px;color:#64748b;font-weight:600">Latest (' + esc(c.curDate) + ')</div>' +
+        '        <strong style="font-size:14.5px;color:' + (c.isOutside ? '#dc2626' : '#059669') + '">' + esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + (c.isOutside ? ' ⚠️' : ' ✓') + '</strong>' +
+        '      </div>' +
+        '    </div>' +
+
+        '    <div style="background:#fafbfc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 6px">' +
+        '      <svg viewBox="0 0 420 120" width="100%" height="auto" style="display:block;margin:0 auto;overflow:visible">' +
+        '        <!-- Reference normal zone -->' +
+        '        <rect x="20" y="40" width="380" height="40" rx="6" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1" stroke-dasharray="3 3"/>' +
+        '        <text x="210" y="64" text-anchor="middle" font-size="10.5" font-weight="700" fill="#047857" opacity="0.85">✓ NORMAL SAFE ZONE (' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + ')</text>' +
+
+        '        <!-- Milestone guides -->' +
+        '        <line x1="75" y1="12" x2="75" y2="108" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="3 2"/>' +
+        '        <line x1="345" y1="12" x2="345" y2="108" stroke="#93c5fd" stroke-width="1.2" stroke-dasharray="3 2"/>' +
+        '        <text x="75" y="116" text-anchor="middle" font-size="9.5" font-weight="600" fill="#64748b">Prev: ' + esc(c.prevDate) + '</text>' +
+        '        <text x="345" y="116" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8">Now: ' + esc(c.curDate) + '</text>' +
+
+        curveSvg +
+        '        <circle cx="345" cy="' + yCur + '" r="6" fill="' + strokeColor + '" stroke="#ffffff" stroke-width="2.5"/>' +
+        '        <text x="345" y="' + (yCur > 55 ? yCur - 10 : yCur + 18) + '" text-anchor="middle" font-size="11.5" font-weight="800" fill="' + (c.isOutside ? '#dc2626' : '#059669') + '">' + esc(c.curVal) + '</text>' +
+        '      </svg>' +
+        '    </div>' +
+        '  </div>' +
+
+        clinicalUrduNote +
+        '</div>';
+    }).join('');
+
+    return '<div class="pd-individual-biomarkers-section" style="margin-top:16px">' +
+      '<div class="vitals-card-head" style="margin-bottom:10px">' +
+      '  <div>' +
+      '    <h3 style="display:flex;align-items:center;gap:8px"><span>🔬</span><span>Individual Biomarker Trend Graphs</span></h3>' +
+      '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Har parameter ka alag alag clean graph — pehle se normal hai ya critical hai asaani se dekhein.</p>' +
+      '  </div>' +
+      '  <span class="badge b-ready" style="font-size:11px;font-weight:700">' + comps.length + ' Individual Graphs</span>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:14px">' +
+      cardsHtml +
+      '</div>' +
+      '</div>';
+  }
+
   /* Render Visual Interactive Multi-Biomarker Longitudinal Trajectory Vector Graph */
   function renderBiomarkerTrajectoriesGraphCard(labData) {
     var comps = labData.comparisons || [];
@@ -1150,6 +1276,16 @@
         '</g>';
     }).join('');
 
+    var legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">' +
+      comps.map(function (c, idx) {
+        var color = colorPalette[idx % colorPalette.length];
+        return '<span style="display:inline-flex;align-items:center;gap:5px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;color:#334155">' +
+          '<span style="width:8px;height:8px;border-radius:50%;background:' + color + '"></span>' +
+          esc(c.paramName) +
+          '</span>';
+      }).join('') +
+      '</div>';
+
     return '<div class="vitals-card pd-trends-graph-card" style="margin-top:16px">' +
       '<div class="vitals-card-head">' +
       '  <div>' +
@@ -1160,6 +1296,7 @@
       '    <span>Normal Reference: </span><span style="color:#059669;font-weight:700">Zone (Center)</span>' +
       '  </div>' +
       '</div>' +
+      legendHtml +
       '<div class="pd-trends-svg-wrap" style="width:100%;overflow-x:auto;background:#fafbfc;border:1px solid #e2e8f0;border-radius:14px;padding:12px 8px;margin-top:14px">' +
       '  <svg viewBox="0 0 850 330" width="100%" height="auto" style="min-width:680px;display:block;margin:0 auto;overflow:visible">' +
       '    <defs>' +
@@ -1361,6 +1498,9 @@
       '    <div class="kpi-sub">Maintained without critical drift</div>' +
       '  </div>' +
       '</div>' +
+
+      // Individual Clean Biomarker Trend Graphs (1 separate graph per biomarker - simple and clear)
+      renderIndividualBiomarkerGraphsSection(comps, prevDate, curDate) +
 
       // Graph 1: Multi-Biomarker Longitudinal Trajectory Vector Chart (SVG)
       renderBiomarkerTrajectoriesGraphCard(labData) +

@@ -152,8 +152,10 @@ assert.ok(html.includes('STANDARD PHYSIOLOGICAL REFERENCE ZONE (NORMAL)'), 'Norm
 assert.ok(html.includes('PREVIOUS: 2026-09-10'), 'Previous date milestone marker present in graph');
 assert.ok(html.includes('CURRENT: 2026-10-14'), 'Current date milestone marker present in graph');
 assert.ok(html.includes('pd-trends-variance-card'), 'Biomarker Variance & Delta Velocity card present');
+assert.ok(html.includes('Individual Biomarker Trend Graphs'), 'Individual Biomarker Trend Graphs grid present');
+assert.ok(html.includes('pd-individual-biomarkers-section'), 'Individual Biomarker section container present');
 assert.ok(!html.includes('vitals-trends-preview-card'), 'Biomarker Trends preview banner cleanly removed from Overview');
 assert.ok(html.includes('btnLaunchTrendsDoctorAI'), 'Full AI Analysis button moved to top patient header');
 
-console.log('✓ All 6 verification checks for Dedicated Biomarker Trends Page, SVG Trajectory Graph, and Delta Velocity Bars PASSED CLEANLY!\n');
+console.log('✓ All 6 verification checks for Dedicated Biomarker Trends Page, Individual Biomarker Trend Graphs, SVG Trajectory Graph, and Delta Velocity Bars PASSED CLEANLY!\n');
 
