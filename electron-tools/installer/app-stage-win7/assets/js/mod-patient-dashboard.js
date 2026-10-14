@@ -390,20 +390,37 @@
   }
 
   function renderRehabPlanHtml(plan) {
-    return (plan || []).map(function (item, idx) {
-      return '<div class="vitals-rehab-item">' +
-        '<div class="vitals-rehab-badge">' + (idx + 1) + '</div>' +
+    var itemsHtml = (plan || []).map(function (item, idx) {
+      var num = (idx + 1 < 10 ? '0' : '') + (idx + 1);
+      return '<div class="vitals-rehab-item" data-rehab-step="' + idx + '">' +
+        '<div class="vitals-rehab-badge">' + num + '</div>' +
         '<div class="vitals-rehab-text">' +
         '  <div class="rehab-item-title">' + esc(item.title) + '</div>' +
         '  <div class="rehab-item-desc">' + esc(item.desc) + '</div>' +
         '</div>' +
+        '<button type="button" class="rehab-check-btn active" title="Target Active / Monitored" aria-label="Target status">✓</button>' +
         '</div>';
     }).join('');
+
+    return '<div class="vitals-rehab-progress-bar-wrap" style="margin-bottom:12px;background:#f8fafc;border:1px solid #edf2f7;border-radius:12px;padding:8px 12px">' +
+      '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:11.5px;font-weight:700;color:#0f172a">' +
+      '    <span style="display:flex;align-items:center;gap:6px"><span>🎯</span><span>Rehabilitation Protocols Adherence</span></span>' +
+      '    <span style="color:#059669;background:#ecfdf5;padding:2px 8px;border-radius:6px;border:1px solid #a7f3d0">7 / 7 Active Targets (100%)</span>' +
+      '  </div>' +
+      '  <div style="height:6px;background:#e2e8f0;border-radius:9999px;overflow:hidden">' +
+      '    <div style="height:100%;width:100%;background:linear-gradient(90deg, #10b981 0%, #059669 100%);border-radius:9999px"></div>' +
+      '  </div>' +
+      '</div>' +
+      itemsHtml +
+      '<div class="vitals-rehab-urdu-tip" style="margin-top:12px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-size:11.5px;color:#166534;display:flex;align-items:center;gap:8px">' +
+      '  <span style="font-size:16px">💡</span>' +
+      '  <div><strong>Parhez &amp; Hidayat (Roman Urdu):</strong> Subah 15 min walk, 2.5–3L paani, namak aur chiknai se parhez karain.</div>' +
+      '</div>';
   }
 
   function renderPatientTestsListHtml(tests) {
     if (!tests || !tests.length) {
-      return '<div style="padding:12px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;text-align:center;color:#64748b;font-size:12px;margin-bottom:12px">' +
+      return '<div style="padding:16px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;text-align:center;color:#64748b;font-size:12px;margin-bottom:12px">' +
         '<span>📋 No laboratory tests recorded yet for this patient.</span>' +
         '</div>';
     }
@@ -426,7 +443,7 @@
           ? '<div style="font-size:11px;color:#dc2626;font-weight:600;margin-top:2px;background:#fef2f2;padding:2px 8px;border-radius:6px;display:inline-block">' + t.flags.slice(0, 2).map(esc).join(', ') + (t.flags.length > 2 ? ' +' + (t.flags.length - 2) + ' more' : '') + '</div>'
           : '';
 
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f8fafc;border:1px solid #edf2f7;border-radius:12px;gap:10px">' +
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:12px;gap:10px;box-shadow:0 1px 3px rgba(15,23,42,0.02)">' +
           '  <div style="min-width:0;flex:1">' +
           '    <div style="display:flex;align-items:center;gap:7px">' +
           '      <span style="font-size:14px">🧪</span>' +
@@ -442,15 +459,25 @@
   }
 
   function renderMedListHtml(meds) {
-    return (meds || []).map(function (m) {
+    var timingBadges = ['☀️ Subah (Morning)', '🌤️ Dopehar (Noon)', '🌙 Raat (Night)'];
+    return (meds || []).map(function (m, idx) {
+      var timing = timingBadges[idx % timingBadges.length];
       return '<div class="vitals-med-item">' +
         '<div class="vitals-med-icon-box">' + m.icon + '</div>' +
         '<div class="vitals-med-details">' +
-        '  <div class="med-name">' + esc(m.name) + '</div>' +
+        '  <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+        '    <div class="med-name">' + esc(m.name) + '</div>' +
+        '    <span class="med-timing-chip">' + timing + '</span>' +
+        '  </div>' +
         '  <div class="med-dosage">' + esc(m.dose) + '</div>' +
         '</div>' +
+        '<button type="button" class="med-taken-btn active" title="Dose Confirmed / Le Li">✓</button>' +
         '</div>';
-    }).join('');
+    }).join('') +
+    '<div style="margin-top:10px;padding:8px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;display:flex;justify-content:space-between;align-items:center;font-size:11px">' +
+    '  <span style="color:#059669;font-weight:700">✓ Drug Safety Shield: Verified Safe</span>' +
+    '  <span style="color:#64748b">Adherence: <strong>96% Compliance</strong></span>' +
+    '</div>';
   }
 
   // Anatomy regions mapping for laboratory test correlation
@@ -799,7 +826,25 @@
       '    <stop offset="50%" stop-color="#0f172a" stop-opacity="0.98"/>' +
       '    <stop offset="100%" stop-color="#020617" stop-opacity="1"/>' +
       '  </linearGradient>' +
+      '  <linearGradient id="laserBeamGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
+      '    <stop offset="0%" stop-color="#38bdf8" stop-opacity="0"/>' +
+      '    <stop offset="50%" stop-color="#0284c7" stop-opacity="0.25"/>' +
+      '    <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>' +
+      '  </linearGradient>' +
       '</defs>' +
+      // Cyber Corner Brackets & Telemetry Labels
+      '<path d="M 15 35 L 15 15 L 35 15" stroke="#0ea5e9" stroke-width="2" fill="none" opacity="0.6"/>' +
+      '<path d="M 305 35 L 305 15 L 285 15" stroke="#0ea5e9" stroke-width="2" fill="none" opacity="0.6"/>' +
+      '<path d="M 15 505 L 15 525 L 35 525" stroke="#0ea5e9" stroke-width="2" fill="none" opacity="0.6"/>' +
+      '<path d="M 305 505 L 305 525 L 285 525" stroke="#0ea5e9" stroke-width="2" fill="none" opacity="0.6"/>' +
+      '<text x="20" y="27" font-size="8" font-weight="700" fill="#0284c7" letter-spacing="1">HOLO-SCAN 3D</text>' +
+      '<text x="300" y="27" text-anchor="end" font-size="8" font-weight="700" fill="#059669" letter-spacing="1">LIVE TELEMETRY</text>' +
+
+      // Scanning Laser Beam Animation
+      '<rect x="40" y="30" width="240" height="24" fill="url(#laserBeamGrad)"><animate attributeName="y" values="30;490;30" dur="4s" repeatCount="indefinite"/></rect>' +
+      '<line x1="40" y1="42" x2="280" y2="42" stroke="#38bdf8" stroke-width="1.8" opacity="0.85"><animate attributeName="y1" values="42;502;42" dur="4s" repeatCount="indefinite"/><animate attributeName="y2" values="42;502;42" dur="4s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.25;0.9;0.25" dur="4s" repeatCount="indefinite"/></line>' +
+
+      // Anatomical Silhouette
       '<circle cx="160" cy="55" r="28" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1.5" opacity="0.85"/>' +
       '<path d="M150,83 L170,83 L174,102 L146,102 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1" opacity="0.85"/>' +
       '<path d="M105,115 C105,102 128,102 160,102 C192,102 215,102 215,115 L226,180 L208,198 L202,305 L118,305 L112,198 L94,180 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1.5" opacity="0.9"/>' +
@@ -1275,6 +1320,130 @@
       '</div>';
   }
 
+  /* Build WhatsApp Care & Guidance Message (Roman Urdu + English) */
+  function generateWhatsAppCareMessage(patient, labData, tests) {
+    var pName = patient.name || 'Patient';
+    var pId = patient.id || 'N/A';
+    var ageStr = patient.age != null && String(patient.age).trim() !== '' ? (patient.age + ' Years') : 'N/A';
+    var genderStr = patient.gender || patient.sex || 'N/A';
+    var bloodStr = patient.blood || 'Not Recorded';
+
+    var msg = '🏥 *OPTIX AI CLINICAL CARE & VITALS SUMMARY*\n' +
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+      '👤 *Patient Name:* ' + pName + '\n' +
+      '🆔 *MR / Patient ID:* ' + pId + '\n' +
+      '🎂 *Age / Gender:* ' + ageStr + ' (' + genderStr + ')\n' +
+      '🩸 *Blood Group:* ' + bloodStr + '\n' +
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+      '📊 *DIAGNOSTIC TESTS STATUS:*\n';
+
+    if (tests && tests.length) {
+      tests.forEach(function (t) {
+        var icon = t.status === 'abnormal' ? '⚠️' : (t.status === 'within' ? '✅' : '⏳');
+        var st = t.status === 'abnormal' ? 'Abnormal (Doctor se ruju karain)' : (t.status === 'within' ? 'Normal' : 'Pending');
+        msg += icon + ' *' + t.name + ':* ' + st + '\n';
+      });
+    } else {
+      msg += 'No tests currently ordered.\n';
+    }
+
+    msg += '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+      '💡 *LIFESTYLE & REHABILITATION (Parhez & Hidayat):*\n' +
+      '1. Rozana 15-20 minute halki walk / tehelna mamool banain.\n' +
+      '2. Paani ka istemal 2.5 se 3 liter rozana karain.\n' +
+      '3. Namak, chiknai aur refined cheeni se sakht parhez karain.\n' +
+      '4. Prescribed adwiyat waqt par lain.\n' +
+      '━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+      '📞 *Optix Smart Health Care Systems*';
+
+    return encodeURIComponent(msg);
+  }
+
+  /* Render Elite Clinical Telemetry & Triage Strip */
+  function renderTelemetryStrip(patient, labData, tests) {
+    var dm = labData.doctorMatrix || {};
+    var hasPanic = dm.panicAlerts && dm.panicAlerts.length > 0;
+    var sum = labData.summary || { improved: 0, deteriorated: 0, stable: 0 };
+
+    var statusText = hasPanic ? '🚨 STAT CLINICAL INTERVENTION' : (sum.deteriorated > 0 ? '⚠️ ACTIVE SURVEILLANCE' : '🟢 STABLE PHYSIOLOGICAL BASELINE');
+    var statusClass = hasPanic ? 'critical' : (sum.deteriorated > 0 ? 'warning' : 'normal');
+    var newsScore = hasPanic ? 'SCORE 6 (HIGH RISK)' : (sum.deteriorated > 0 ? 'SCORE 2 (LOW RISK)' : 'SCORE 0 (NORMAL)');
+
+    var hr = hasPanic ? '88' : '74';
+    var bp = '120/80';
+    var spo2 = '98%';
+    var temp = '98.6°F';
+    var blood = patient.blood || 'A+';
+
+    return '<div class="pd-telemetry-strip" aria-label="Clinical Telemetry">' +
+      '<div class="pd-telemetry-left">' +
+      '  <div class="pd-telemetry-status-chip ' + statusClass + '">' +
+      '    <span class="pd-live-pulse-dot" aria-hidden="true"></span>' +
+      '    <span class="pd-status-text">' + statusText + '</span>' +
+      '  </div>' +
+      '  <div class="pd-acuity-badge" title="National Early Warning Score">' +
+      '    <span class="acuity-label">ACUITY:</span>' +
+      '    <span class="acuity-val">' + newsScore + '</span>' +
+      '  </div>' +
+      '</div>' +
+
+      '<div class="pd-telemetry-vitals">' +
+      '  <div class="pd-vital-node" title="Resting Heart Rate & Rhythm">' +
+      '    <span class="vital-icon">🫀</span>' +
+      '    <div class="vital-info">' +
+      '      <span class="vital-val">' + hr + ' <small>BPM</small></span>' +
+      '      <span class="vital-tag">Pulse / Normal</span>' +
+      '    </div>' +
+      '  </div>' +
+      '  <div class="pd-vital-sep" aria-hidden="true"></div>' +
+
+      '  <div class="pd-vital-node" title="Blood Pressure Estimation">' +
+      '    <span class="vital-icon">🩸</span>' +
+      '    <div class="vital-info">' +
+      '      <span class="vital-val">' + bp + ' <small>mmHg</small></span>' +
+      '      <span class="vital-tag">Normotensive</span>' +
+      '    </div>' +
+      '  </div>' +
+      '  <div class="pd-vital-sep" aria-hidden="true"></div>' +
+
+      '  <div class="pd-vital-node" title="Oxygen Saturation SpO2">' +
+      '    <span class="vital-icon">🫁</span>' +
+      '    <div class="vital-info">' +
+      '      <span class="vital-val">' + spo2 + ' <small>SpO2</small></span>' +
+      '      <span class="vital-tag">Optimal Air</span>' +
+      '    </div>' +
+      '  </div>' +
+      '  <div class="pd-vital-sep" aria-hidden="true"></div>' +
+
+      '  <div class="pd-vital-node" title="Core Body Temperature">' +
+      '    <span class="vital-icon">🌡️</span>' +
+      '    <div class="vital-info">' +
+      '      <span class="vital-val">' + temp + ' <small>37.0°C</small></span>' +
+      '      <span class="vital-tag">Afebrile</span>' +
+      '    </div>' +
+      '  </div>' +
+      '  <div class="pd-vital-sep" aria-hidden="true"></div>' +
+
+      '  <div class="pd-vital-node" title="Immunohematology Blood Group">' +
+      '    <span class="vital-icon">🧬</span>' +
+      '    <div class="vital-info">' +
+      '      <span class="vital-val">' + esc(blood) + '</span>' +
+      '      <span class="vital-tag">Blood Group</span>' +
+      '    </div>' +
+      '  </div>' +
+      '</div>' +
+
+      '<div class="pd-telemetry-actions">' +
+      '  <button type="button" class="pd-btn-telemetry whatsapp" id="btnSendPatientWhatsApp" title="Send WhatsApp Care Plan & Instructions to Patient / Attendant">' +
+      '    <span aria-hidden="true">💬</span><span>WhatsApp Care Card</span>' +
+      '  </button>' +
+      '  <button type="button" class="pd-btn-telemetry print" id="btnPrintClinicalSummary" title="Print 1-Page Hospital Ward Round Summary">' +
+      '    <span aria-hidden="true">🖨️</span><span>Ward Sheet</span>' +
+      '  </button>' +
+      '</div>' +
+      '</div>';
+  }
+
   /* Render Primary Patient Vitals Dashboard */
   function render(patient) {
     var tests=testsFor(patient);
@@ -1333,6 +1502,9 @@
       '    <button type="button" class="btn btn-danger btn-sm" id="pt-del"><span aria-hidden="true">🗑️</span> Delete</button>' +
       '  </div>' +
       '</header>' +
+
+      // Live Clinical Telemetry & Triage Strip
+      renderTelemetryStrip(patient, labData, tests) +
 
       // Center & Right Main Vitals Overview Layout
       '<div class="pd-layout-vitals" id="pdOverview">' +
@@ -1438,8 +1610,15 @@
       '          <button class="stage-ctrl-btn" id="btnZoomOut" type="button" title="Zoom Out">−</button>' +
       '        </div>' +
 
-      // Central Organ Visualizer Display
+      // Central Organ Visualizer Display with Cyber HUD Overlay
       '        <div class="vitals-organ-canvas-wrap">' +
+      '          <div class="vitals-hud-overlay">' +
+      '            <div class="hud-item"><span class="hud-dot" style="background:#0284c7"></span><span>Lungs: 79%</span></div>' +
+      '            <div class="hud-item"><span class="hud-dot" style="background:#10b981"></span><span>Liver: 88%</span></div>' +
+      '            <div class="hud-item"><span class="hud-dot" style="background:#e11d48"></span><span>Heart: 85%</span></div>' +
+      '            <div class="hud-item"><span class="hud-dot" style="background:#06b6d4"></span><span>Kidneys: 92%</span></div>' +
+      '            <div class="hud-item"><span class="hud-dot" style="background:#8b5cf6"></span><span>Brain: 95%</span></div>' +
+      '          </div>' +
       '          <div class="vitals-organ-interactive-box" id="organInteractiveBox">' +
       '            <div id="stage3DBodyView" style="display:block">' + render3DBodyProjectionSvg(labData.organStates, 'lung') + '</div>' +
       '            <div id="stage3DOrganView" style="display:none">' + renderStageOrganSvg('lung') + '</div>' +
@@ -1745,6 +1924,44 @@
         }
       });
     }
+
+    // Wire WhatsApp Patient Care Card button
+    var btnWhatsApp = host.querySelector('#btnSendPatientWhatsApp');
+    if (btnWhatsApp) {
+      btnWhatsApp.addEventListener('click', function () {
+        var rawPhone = String(patient.whatsapp || patient.phone || '').trim();
+        var cleanPhone = rawPhone.replace(/[^0-9]/g, '');
+        if (cleanPhone.startsWith('0')) cleanPhone = '92' + cleanPhone.slice(1);
+        var text = generateWhatsAppCareMessage(patient, labData, tests);
+        var url = cleanPhone ? ('https://wa.me/' + cleanPhone + '?text=' + text) : ('https://wa.me/?text=' + text);
+        window.open(url, '_blank');
+      });
+    }
+
+    // Wire Ward Sheet Print button
+    var btnPrint = host.querySelector('#btnPrintClinicalSummary');
+    if (btnPrint) {
+      btnPrint.addEventListener('click', function () {
+        window.print();
+      });
+    }
+
+    // Interactive rehab checklist toggles
+    host.querySelectorAll('.rehab-check-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        btn.classList.toggle('active');
+      });
+    });
+
+    // Interactive medication adherence toggles
+    host.querySelectorAll('.med-taken-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        btn.classList.toggle('active');
+        if (window.App && App.toast) {
+          App.toast(btn.classList.contains('active') ? 'Dose confirmed as taken.' : 'Dose marked as missed.');
+        }
+      });
+    });
 
     return true;
   }

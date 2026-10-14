@@ -1424,4 +1424,287 @@
   }
 }
 
+/* ==========================================================================
+   Elite Clinical Telemetry & Triage Strip Styles
+   ========================================================================== */
+#ptPatientDashboard .pd-telemetry-strip {
+  background: #ffffff;
+  border: 1.5px solid #edf2f7;
+  border-radius: 16px;
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
+  flex-wrap: wrap;
+}
+
+#ptPatientDashboard .pd-telemetry-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+#ptPatientDashboard .pd-telemetry-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+#ptPatientDashboard .pd-telemetry-status-chip.normal {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+#ptPatientDashboard .pd-telemetry-status-chip.warning {
+  background: #fffbeb;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+#ptPatientDashboard .pd-telemetry-status-chip.critical {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  animation: pulseCrit 2s infinite ease-in-out;
+}
+
+@keyframes pulseCrit {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+  50% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+}
+
+#ptPatientDashboard .pd-live-pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+
+#ptPatientDashboard .pd-acuity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #334155;
+}
+
+#ptPatientDashboard .pd-telemetry-vitals {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#ptPatientDashboard .pd-vital-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+}
+
+#ptPatientDashboard .vital-icon {
+  font-size: 18px;
+}
+
+#ptPatientDashboard .vital-val {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #0f172a;
+  display: block;
+  line-height: 1.1;
+}
+
+#ptPatientDashboard .vital-val small {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+}
+
+#ptPatientDashboard .vital-tag {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+#ptPatientDashboard .pd-vital-sep {
+  width: 1px;
+  height: 22px;
+  background: #e2e8f0;
+  flex-shrink: 0;
+}
+
+#ptPatientDashboard .pd-telemetry-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+#ptPatientDashboard .pd-btn-telemetry {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+#ptPatientDashboard .pd-btn-telemetry.whatsapp {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+#ptPatientDashboard .pd-btn-telemetry.whatsapp:hover {
+  background: #d1fae5;
+  transform: translateY(-1px);
+}
+
+#ptPatientDashboard .pd-btn-telemetry.print {
+  background: #f1f5f9;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+#ptPatientDashboard .pd-btn-telemetry.print:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+/* 3D Stage Cyber HUD Overlay */
+#ptPatientDashboard .vitals-hud-overlay {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 10;
+  flex-wrap: wrap;
+}
+
+#ptPatientDashboard .hud-item {
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#ptPatientDashboard .hud-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Interactive Checklist & Medication Buttons */
+#ptPatientDashboard .rehab-check-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: transparent;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+#ptPatientDashboard .rehab-check-btn.active {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+#ptPatientDashboard .med-timing-chip {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+#ptPatientDashboard .med-taken-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: transparent;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+#ptPatientDashboard .med-taken-btn.active {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+/* Print Sheet Styling for Hospital Ward Rounds */
+@media print {
+  #ptPatientDashboard .pd-patient-menu,
+  #ptPatientDashboard .pd-telemetry-actions,
+  #ptPatientDashboard .pd-trends-header-actions,
+  #ptPatientDashboard .vitals-stage-controls,
+  #ptPatientDashboard .vitals-3d-toggle-bar,
+  #ptPatientDashboard .vitals-organ-carousel,
+  #ptPatientDashboard .pd-zoom {
+    display: none !important;
+  }
+  #ptPatientDashboard {
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+  #ptPatientDashboard .vitals-card {
+    box-shadow: none !important;
+    border: 1px solid #cbd5e1 !important;
+    page-break-inside: avoid;
+  }
+}
+
+
 

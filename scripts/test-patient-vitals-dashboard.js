@@ -175,7 +175,15 @@ assert.ok(html.includes('data-organ-pill="lung"'), 'Lung thumbnail present in ca
 assert.ok(html.includes('data-organ-pill="heart"'), 'Heart thumbnail present in carousel');
 assert.ok(html.includes('data-organ-pill="kidneys"'), 'Kidneys thumbnail present in carousel');
 assert.ok(html.includes('data-organ-pill="brain"'), 'Brain thumbnail present in carousel');
-console.log('✓ Anatomical Organ Stage, Zoom controls, Warning card, and 5-Organ Carousel verified');
+// 6. Test Elite Hospital Telemetry Strip, Cyber HUD, and WhatsApp Integration
+assert.ok(html.includes('pd-telemetry-strip'), 'Live Clinical Telemetry strip present');
+assert.ok(html.includes('btnSendPatientWhatsApp'), 'WhatsApp Patient Care Card button present');
+assert.ok(html.includes('btnPrintClinicalSummary'), 'Clinical Rounds Sheet print button present');
+assert.ok(html.includes('vitals-hud-overlay'), 'Cyber HUD telemetry overlay on 3D stage present');
+assert.ok(html.includes('vitals-rehab-progress-bar-wrap'), 'Rehabilitation protocol progress bar present');
+assert.ok(html.includes('vitals-rehab-urdu-tip'), 'Bilingual Roman Urdu lifestyle tip present');
+assert.ok(html.includes('med-timing-chip'), 'Medication dose schedule timing chips present');
+console.log('✓ Elite Clinical Telemetry Strip, Cyber HUD, and WhatsApp Patient Care Card verified');
 
 console.log('\n============================================================');
 console.log('ALL NEXURA CARE PATIENT VITALS DASHBOARD TESTS PASSED CLEANLY!');
