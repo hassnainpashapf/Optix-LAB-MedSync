@@ -3833,7 +3833,6 @@
     var topBarHtml = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
       + '<div style="display:flex;align-items:center;gap:8px">'
       + '  <button type="button" class="btn ai-action-btn" id="aiPageBackBtn" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;min-height:38px;border-radius:9px;font-size:13px;cursor:pointer;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">← Back</button>'
-      + '  <div style="font-size:12.5px;color:#64748b;font-weight:600"><span>Clinical Decision Support</span> <span style="color:#cbd5e1">/</span> <b style="color:#0f1e2e">AI Clinical Recommendations</b></div>'
       + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
       + '  <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📋 Copy Solutions</button>'
