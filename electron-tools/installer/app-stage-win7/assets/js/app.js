@@ -8,7 +8,7 @@
     grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
     receipt: '<path d="M6 2h12v20l-3-2-3 2-3-2-3 2z"/><path d="M9 7h6M9 11h6"/>',
     file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/>',
-    wallet: '<path d="M20 7H4a2 2 0 0 1 0-4h14v4"/><path d="M4 7v12a2 2 0 0 0 2 2h14V7"/><circle cx="17" cy="14" r="1.4"/>',
+    wallet: '<path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/><path d="M15 9h5a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2h-5a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z"/><circle cx="18" cy="12" r="1"/>',
     users: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
     flask: '<path d="M9 3h6M10 3v6L4.5 19a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 9V3"/><path d="M7.5 15h9"/>',
     steth: '<path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6 6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.2.2 0 1 0 .3.3"/><path d="M8 15v1a6 6 0 0 0 6 6 6 6 0 0 0 6-6v-4"/><circle cx="20" cy="10" r="2"/>',
@@ -1047,28 +1047,30 @@
       '.tb-menu-danger{color:var(--red)}' +
       '.tb-menu-danger:hover{background:var(--red-soft)}' +
       '.tb-menu-danger svg{color:var(--red)}' +
-      '.tb-qa{display:flex;gap:8px;align-items:center;margin-right:6px}' +
-      '.tb-qa .tb-qab{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0!important;border-radius:50%!important;border:1px solid #e2e8f0!important;background:#fff!important;color:#1b2a4a!important;box-shadow:0 1px 2px rgba(15,23,42,0.05)!important;text-decoration:none;cursor:pointer;flex:none;transition:all .15s ease}' +
+      '.tb-qa{display:flex;gap:8px;align-items:center;margin-right:0}' +
+      '.tb-qa .tb-qab,.tb-icon-btn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0!important;border-radius:50%!important;border:1px solid #e2e8f0!important;background:#fff!important;color:#1b2a4a!important;box-shadow:0 1px 2px rgba(15,23,42,0.05)!important;text-decoration:none;cursor:pointer;flex:none;transition:all .15s ease;position:relative}' +
       '.tb-qa .tb-classic{background:#fff!important;border:1px solid #e2e8f0!important;color:#1b2a4a!important;box-shadow:0 1px 2px rgba(15,23,42,0.05)!important;transform:none!important}' +
-      '.tb-qa .tb-classic:hover,.tb-qa .tb-qab:hover{background:#f8fafc!important;border-color:#cbd5e1!important;color:#2563eb!important;box-shadow:0 3px 8px rgba(15,23,42,0.08)!important;transform:translateY(-1px)!important}' +
-      '.tb-qa .tb-classic svg,.tb-qa .tb-qab svg{color:inherit!important;width:18px!important;height:18px!important;flex:none}' +
-      '@media(max-width:768px){.tb-qa{gap:6px;margin-right:4px}.tb-qa .tb-qab{width:34px;height:34px}.tb-qa .tb-qab svg{width:16px!important;height:16px!important}}' +
-      '@media(max-width:480px){.tb-qa{gap:4px}.tb-qa .tb-qab{width:32px;height:32px}.tb-qa .tb-qab svg{width:15px!important;height:15px!important}}' +
+      '.tb-qa .tb-classic:hover,.tb-qa .tb-qab:hover,.tb-icon-btn:hover{background:#f8fafc!important;border-color:#cbd5e1!important;color:#2563eb!important;box-shadow:0 3px 8px rgba(15,23,42,0.08)!important;transform:translateY(-1px)!important}' +
+      '.tb-qa .tb-classic svg,.tb-qa .tb-qab svg,.tb-icon-btn svg{color:inherit!important;width:18px!important;height:18px!important;flex:none}' +
+      '@media(max-width:768px){.tb-qa{gap:6px;margin-right:0}.tb-qa .tb-qab,.tb-icon-btn{width:34px;height:34px}.tb-qa .tb-qab svg,.tb-icon-btn svg{width:16px!important;height:16px!important}}' +
+      '@media(max-width:480px){.tb-qa{gap:4px}.tb-qa .tb-qab,.tb-icon-btn{width:32px;height:32px}.tb-qa .tb-qab svg,.tb-icon-btn svg{width:15px!important;height:15px!important}}' +
       '</style>' +
        '<button type="button" class="btn btn-ghost btn-sm nav-toggle" id="navToggle" aria-label="Toggle navigation" aria-controls="sidebar" aria-expanded="false" title="Toggle navigation">' + icon('menu', 18) + '</button>' +
        '<button type="button" class="tb-nb" id="tbBack" aria-label="Back" title="Back"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>' +
        '<button type="button" class="tb-nb" id="tbFwd" aria-label="Forward" title="Forward"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>' +
        '<div class="tb-crumb"><span class="tb-crumb-ic">' + (activeKey === 'dashboard' ? _gridSvg : icon((navItem && navItem.icon) || 'grid', 16)) + '</span><h1 class="page-title">' + esc(activeKey === 'dashboard' ? 'Dashboard' : _pageTitle) + '</h1></div>' +
        '<div class="top-right">' +
-       '<div class="tb-qa">' + tbQa + '</div>' +
+       '<div class="tb-qa">' +
+       tbQa +
        '<div class="tb-crit-wrap" id="tbCritWrap" style="display:none">' +
-       '<button type="button" class="tb-icon-btn tb-crit-btn" id="tbCritBtn" aria-label="Critical Results" title="Critical Results" aria-haspopup="true" aria-expanded="false">' +
-       '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
+       '<button type="button" class="btn btn-sm tb-qab tb-classic tb-icon-btn tb-crit-btn" id="tbCritBtn" aria-label="Critical Results" title="Critical Results" aria-haspopup="true" aria-expanded="false">' +
+       '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>' +
        '<span class="tb-crit-badge" id="tbCritBadge">0</span></button>' +
        '<div class="tb-crit-menu" id="tbCritMenu" hidden></div></div>' +
-       '<button type="button" class="tb-icon-btn" id="tbMsgBtn" aria-label="Messages" title="Messages"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="4"/><path d="M8 10h8M8 14h5"/></svg><span class="tb-dot"></span></button>' +
-       (can('downloads', s.role) ? '<a class="btn btn-sm tb-icon tb-icon-btn" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 16) + '</a>' : '') +
-       '<a class="tb-icon-btn tb-bell" id="notificationBell" href="#/notifications" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0112 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg><span class="tb-dot" id="notificationCount"></span></a>' +
+       '<button type="button" class="btn btn-sm tb-qab tb-classic tb-icon-btn" id="tbMsgBtn" aria-label="Messages" title="Messages"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="4"/><path d="M8 10h8M8 14h5"/></svg><span class="tb-dot"></span></button>' +
+       (can('downloads', s.role) ? '<a class="btn btn-sm tb-qab tb-classic tb-icon-btn" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 18) + '</a>' : '') +
+       '<a class="btn btn-sm tb-qab tb-classic tb-icon-btn tb-bell" id="notificationBell" href="#/notifications" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0112 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg><span class="tb-dot" id="notificationCount"></span></a>' +
+       '</div>' +
        '<span class="tb-vsep"></span>' +
        '<div class="tb-acct">' +
        '<button class="tb-avatar tb-chip" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false"><span class="tb-av">' + _avatarInner + '</span>' +
