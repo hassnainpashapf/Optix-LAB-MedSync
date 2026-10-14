@@ -478,9 +478,427 @@
       '<div class="pd-callout '+(red?'pd-abnormal':'')+'"><strong>'+esc(region.name)+'</strong><span>'+esc(status)+'</span>'+(entry.flags.length?'<p>'+entry.flags.map(esc).join('<br>')+'</p>':'')+'</div>';
   }
 
+  /* Determine if a biomarker is one where a lower value is clinically better */
+  function isLowerBetter(key, name) {
+    var s = (String(key || '') + ' ' + String(name || '')).toLowerCase();
+    if (/\b(hb|hemoglobin|haemoglobin|platelet|plt|egfr|hdl|albumin|rbc|vit|vitamin|iron)\b/.test(s)) {
+      return false;
+    }
+    return true;
+  }
+
+  /* Analyze patient's chronological laboratory test results and longitudinal trends */
+  function analyzePatientLabHistory(patient) {
+    var result = {
+      hasTests: false,
+      hasHistory: false,
+      currentInvoice: null,
+      pastInvoice: null,
+      comparisons: [],
+      summary: { improved: 0, deteriorated: 0, stable: 0, baseline: 0, total: 0 },
+      organStates: {
+        liver: { id: 'liver', name: 'Liver', icon: '🫀', status: 'normal', findings: [], alert: null, score: 88, diffNote: '' },
+        lung: { id: 'lung', name: 'Lungs', icon: '🫁', status: 'normal', findings: [], alert: null, score: 79, diffNote: '' },
+        heart: { id: 'heart', name: 'Heart', icon: '❤️', status: 'normal', findings: [], alert: null, score: 85, diffNote: '' },
+        kidneys: { id: 'kidneys', name: 'Kidneys', icon: '🫘', status: 'normal', findings: [], alert: null, score: 92, diffNote: '' },
+        brain: { id: 'brain', name: 'Brain', icon: '🧠', status: 'normal', findings: [], alert: null, score: 95, diffNote: '' },
+        pancreas: { id: 'pancreas', name: 'Pancreas', icon: '🥞', status: 'normal', findings: [], alert: null, score: 90, diffNote: '' },
+        blood: { id: 'blood', name: 'Hematology', icon: '🩸', status: 'normal', findings: [], alert: null, score: 84, diffNote: '' }
+      },
+      doctorMatrix: {
+        etiology: [],
+        panicAlerts: [],
+        contraindications: [],
+        recommendations: []
+      }
+    };
+
+    if (!patient || !patient.id || !window.DB || typeof DB.all !== 'function') {
+      return result;
+    }
+
+    var allInvs = (DB.all('invoices') || []).filter(function (inv) {
+      return inv.patientId === patient.id;
+    }).sort(function (a, b) {
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+
+    var allResults = DB.all('results') || [];
+
+    var readyInvs = allInvs.filter(function (inv) {
+      return allResults.some(function (r) {
+        return (r.invoiceId === inv.id || r.invoiceId === inv.no) && r.status === 'ready';
+      });
+    });
+
+    if (!readyInvs.length) {
+      return result;
+    }
+
+    result.hasTests = true;
+    result.currentInvoice = readyInvs[0];
+    if (readyInvs.length > 1) {
+      result.hasHistory = true;
+      result.pastInvoice = readyInvs[1];
+    }
+
+    var curResMap = {};
+    allResults.filter(function (r) {
+      return (r.invoiceId === readyInvs[0].id || r.invoiceId === readyInvs[0].no) && r.status === 'ready';
+    }).forEach(function (r) {
+      curResMap[r.testId] = r;
+    });
+
+    var prevResMap = {};
+    if (result.pastInvoice) {
+      allResults.filter(function (r) {
+        return (r.invoiceId === result.pastInvoice.id || r.invoiceId === result.pastInvoice.no) && r.status === 'ready';
+      }).forEach(function (r) {
+        prevResMap[r.testId] = r;
+      });
+    }
+
+    var seenParams = {};
+    (readyInvs[0].items || []).forEach(function (item) {
+      var test = DB.get('tests', item.testId) || {};
+      var curRes = curResMap[item.testId];
+      if (!curRes) return;
+
+      var prevRes = prevResMap[item.testId];
+      var params = Array.isArray(test.params) ? test.params : (Array.isArray(test.fields) ? test.fields : []);
+
+      if (!params.length && curRes.values) {
+        params = Object.keys(curRes.values).map(function (k) {
+          return { id: k, name: k, unit: '' };
+        });
+      }
+
+      params.forEach(function (param) {
+        var pKey = param.id || param.name;
+        if (seenParams[pKey]) return;
+        seenParams[pKey] = true;
+
+        var curVal = curRes.values ? (curRes.values[param.id] != null ? curRes.values[param.id] : curRes.values[param.name]) : null;
+        if (curVal == null || String(curVal).trim() === '') return;
+
+        var prevVal = (prevRes && prevRes.values) ? (prevRes.values[param.id] != null ? prevRes.values[param.id] : prevRes.values[param.name]) : null;
+
+        var ref = reference(param, patient);
+        var curOut = outsideRange(curVal, ref);
+
+        var curNum = parseFloat(curVal);
+        var prevNum = prevVal != null ? parseFloat(prevVal) : NaN;
+        var hasCurNum = !isNaN(curNum);
+        var hasPrevNum = !isNaN(prevNum);
+
+        var diff = 0;
+        var pct = 0;
+        var status = 'baseline';
+        var badgeClass = 'baseline';
+        var statusLabel = 'Initial Baseline';
+        var dirClass = 'same';
+
+        if (hasCurNum && hasPrevNum) {
+          diff = Math.round((curNum - prevNum) * 100) / 100;
+          pct = prevNum !== 0 ? Math.round(((diff / prevNum) * 100) * 10) / 10 : 0;
+          dirClass = diff > 0 ? 'up' : (diff < 0 ? 'down' : 'same');
+
+          var lowerBetter = isLowerBetter(param.id, param.name);
+          if (Math.abs(diff) < 0.001 || Math.abs(pct) < 1.5) {
+            status = 'stable';
+            badgeClass = 'stable';
+            statusLabel = 'Stable (Mustahkam)';
+            result.summary.stable++;
+          } else {
+            var improved = lowerBetter ? (diff < 0) : (diff > 0);
+            if (improved) {
+              status = 'improved';
+              badgeClass = 'improved';
+              statusLabel = 'Improved (Behtar)';
+              result.summary.improved++;
+            } else {
+              status = 'deteriorated';
+              badgeClass = 'deteriorated';
+              statusLabel = 'Deteriorated (Kharab)';
+              result.summary.deteriorated++;
+            }
+          }
+        } else {
+          status = 'baseline';
+          badgeClass = 'baseline';
+          statusLabel = 'Initial Baseline';
+          result.summary.baseline++;
+        }
+        result.summary.total++;
+
+        var organKey = regionFor({ name: (test.name || '') + ' ' + (param.name || ''), code: test.code });
+        if (organKey === 'lungs') organKey = 'lung';
+        if (!result.organStates[organKey]) organKey = 'blood';
+
+        var org = result.organStates[organKey];
+        if (curOut === true) {
+          if (org.status !== 'critical') org.status = 'warning';
+          org.findings.push((param.name || param.id) + ': ' + curVal + (param.unit ? ' ' + param.unit : '') + ' (Ref: ' + ref + ')');
+          if (status === 'deteriorated') {
+            org.diffNote = 'Elevated vs previous (' + (diff > 0 ? '+' : '') + diff + ')';
+          } else if (status === 'improved') {
+            org.diffNote = 'Improving towards normal (' + (diff > 0 ? '+' : '') + diff + ')';
+          }
+        }
+
+        if (hasCurNum) {
+          var k = (param.id || param.name).toLowerCase();
+          if ((k.indexOf('plt') >= 0 || k.indexOf('platelet') >= 0) && curNum < 50000) {
+            org.status = 'critical';
+            result.doctorMatrix.panicAlerts.push('Severe Thrombocytopenia (Platelets: ' + curVal + ' /uL): High hemorrhage threat. Strict avoidance of NSAIDs and IM injections.');
+          }
+          if ((k.indexOf('hb') >= 0 || k.indexOf('hemoglobin') >= 0) && curNum < 7.0) {
+            org.status = 'critical';
+            result.doctorMatrix.panicAlerts.push('Critical Anemia (Hb: ' + curVal + ' g/dL): Severe oxygen transport compromise. Immediate packed cell transfusion evaluation indicated.');
+          }
+          if ((k.indexOf('creat') >= 0 || k.indexOf('creatinine') >= 0) && curNum > 3.0) {
+            org.status = 'critical';
+            result.doctorMatrix.panicAlerts.push('Severe Renal Failure / AKI (Creatinine: ' + curVal + ' mg/dL): Uremic retention. Urgent nephrology consultation.');
+          }
+          if ((k.indexOf('alt') >= 0 || k.indexOf('sgpt') >= 0) && curNum > 250) {
+            org.status = 'critical';
+            result.doctorMatrix.panicAlerts.push('Acute Hepatic Cytolysis (ALT: ' + curVal + ' U/L): Marked hepatocellular injury. Screen for viral hepatitis and hepatotoxins.');
+          }
+          if ((k.indexOf('glucose') >= 0 || k.indexOf('sugar') >= 0) && (curNum > 350 || curNum < 50)) {
+            org.status = 'critical';
+            result.doctorMatrix.panicAlerts.push('Glycemic Emergency (Blood Glucose: ' + curVal + ' mg/dL): ' + (curNum < 50 ? 'Severe Neuroglycopenia' : 'Hyperosmolar state') + '. Urgent intervention required.');
+          }
+        }
+
+        result.comparisons.push({
+          testName: test.name || item.name || 'Laboratory Test',
+          paramName: param.name || param.id,
+          paramKey: param.id || param.name,
+          unit: param.unit || '',
+          organ: organKey,
+          prevVal: prevVal != null ? prevVal : '—',
+          prevDate: result.pastInvoice ? (result.pastInvoice.createdAt ? String(result.pastInvoice.createdAt).slice(0, 10) : 'Past visit') : 'Initial visit',
+          curVal: curVal,
+          curDate: readyInvs[0].createdAt ? String(readyInvs[0].createdAt).slice(0, 10) : 'Latest',
+          refRange: ref || 'Standard',
+          isOutside: curOut === true,
+          diff: diff,
+          pct: pct,
+          dirClass: dirClass,
+          status: status,
+          badgeClass: badgeClass,
+          statusLabel: statusLabel
+        });
+      });
+    });
+
+    var liverOrg = result.organStates.liver;
+    if (liverOrg && (liverOrg.status === 'warning' || liverOrg.status === 'critical')) {
+      result.doctorMatrix.etiology.push('Transaminitis / Hepatic Cytolysis: Elevated liver enzymes indicating hepatocellular irritation.');
+      result.doctorMatrix.contraindications.push('Avoid Hepatotoxic medications: Limit Paracetamol (max 2g/day), avoid high-dose statins.');
+      result.doctorMatrix.recommendations.push('Order Ultrasound Upper Abdomen & Viral Hepatitis Serology (HBsAg, Anti-HCV).');
+    }
+
+    var kidneyOrg = result.organStates.kidneys;
+    if (kidneyOrg && (kidneyOrg.status === 'warning' || kidneyOrg.status === 'critical')) {
+      result.doctorMatrix.etiology.push('Impaired Renal Clearance: Elevated serum nitrogenous markers / Creatinine elevation.');
+      result.doctorMatrix.contraindications.push('Avoid NSAIDs (Ibuprofen, Diclofenac, Mefenamic acid). Adjust dosage of renally cleared antibiotics.');
+      result.doctorMatrix.recommendations.push('Recheck Serum Creatinine & Electrolytes (Na+, K+) in 48–72 hours. Maintain adequate hydration.');
+    }
+
+    var bloodOrg = result.organStates.blood;
+    if (bloodOrg && (bloodOrg.status === 'warning' || bloodOrg.status === 'critical')) {
+      result.doctorMatrix.etiology.push('Hematologic Variation: Abnormal peripheral red cell or platelet counts requiring surveillance.');
+      result.doctorMatrix.recommendations.push('Evaluate Peripheral Blood Smear (PBS) & Ferritin levels if microcytic anemia is present.');
+    }
+
+    if (!result.doctorMatrix.etiology.length) {
+      result.doctorMatrix.etiology.push('All evaluated laboratory biomarkers are currently within physiological reference parameters.');
+      result.doctorMatrix.recommendations.push('Routine annual wellness check-up and standard preventive health maintenance.');
+    }
+
+    return result;
+  }
+
+  /* Render 3D-styled Anatomical Human Body Projection SVG with Active Organ Hotspot Beacons */
+  function render3DBodyProjectionSvg(organStates, selectedKey) {
+    organStates = organStates || {};
+    var organs = [
+      { id: 'brain', name: 'Brain & CNS', icon: '🧠', x: 160, y: 55 },
+      { id: 'lung', name: 'Lungs', icon: '🫁', x: 160, y: 135 },
+      { id: 'heart', name: 'Heart', icon: '❤️', x: 180, y: 148 },
+      { id: 'liver', name: 'Liver', icon: '🫀', x: 132, y: 186 },
+      { id: 'pancreas', name: 'Pancreas', icon: '🥞', x: 160, y: 202 },
+      { id: 'kidneys', name: 'Kidneys', icon: '🫘', x: 160, y: 232 },
+      { id: 'blood', name: 'Hematology', icon: '🩸', x: 120, y: 285 }
+    ];
+
+    var beaconsSvg = organs.map(function (o) {
+      var state = organStates[o.id] || { status: 'untested' };
+      var isCrit = state.status === 'critical';
+      var isWarn = state.status === 'warning';
+      var isSafe = state.status === 'normal';
+      var isAct = o.id === selectedKey;
+
+      var pulseColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#64748b'));
+      var coreColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#334155'));
+
+      return '<g class="vitals-organ-beacon-svg" data-organ-beacon="' + o.id + '" style="cursor:pointer">' +
+        (isCrit ? '<circle cx="' + o.x + '" cy="' + o.y + '" r="22" fill="none" stroke="' + pulseColor + '" stroke-width="1.8" opacity="0.8"><animate attributeName="r" values="16;28;16" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0.1;0.9" dur="2s" repeatCount="indefinite"/></circle>' : '') +
+        (isWarn ? '<circle cx="' + o.x + '" cy="' + o.y + '" r="20" fill="none" stroke="' + pulseColor + '" stroke-width="1.5" opacity="0.6"/>' : '') +
+        '<circle cx="' + o.x + '" cy="' + o.y + '" r="' + (isAct ? '16' : '14') + '" fill="' + coreColor + '" stroke="' + (isAct ? '#ffffff' : '#e2e8f0') + '" stroke-width="' + (isAct ? '3' : '1.5') + '"/>' +
+        '<text x="' + o.x + '" y="' + (o.y + 4) + '" text-anchor="middle" font-size="11" pointer-events="none">' + o.icon + '</text>' +
+        (isCrit || isWarn ? '<rect x="' + (o.x + 18) + '" y="' + (o.y - 10) + '" width="74" height="20" rx="4" fill="' + (isCrit ? '#7f1d1d' : '#78350f') + '" stroke="' + pulseColor + '" stroke-width="1"/><text x="' + (o.x + 55) + '" y="' + (o.y + 4) + '" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">' + (isCrit ? 'CRITICAL' : 'ISSUE') + '</text>' : '') +
+        '</g>';
+    }).join('');
+
+    return '<svg viewBox="0 0 320 540" width="100%" height="auto" style="max-height:490px;display:block;margin:0 auto;overflow:visible">' +
+      '<defs>' +
+      '  <linearGradient id="bodyMeshGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
+      '    <stop offset="0%" stop-color="#1e293b" stop-opacity="0.95"/>' +
+      '    <stop offset="50%" stop-color="#0f172a" stop-opacity="0.98"/>' +
+      '    <stop offset="100%" stop-color="#020617" stop-opacity="1"/>' +
+      '  </linearGradient>' +
+      '</defs>' +
+      '<circle cx="160" cy="55" r="28" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1.5" opacity="0.85"/>' +
+      '<path d="M150,83 L170,83 L174,102 L146,102 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1" opacity="0.85"/>' +
+      '<path d="M105,115 C105,102 128,102 160,102 C192,102 215,102 215,115 L226,180 L208,198 L202,305 L118,305 L112,198 L94,180 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1.5" opacity="0.9"/>' +
+      '<path d="M94,180 L76,280 L76,335 L90,335 L94,280 L110,198 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1" opacity="0.8"/>' +
+      '<path d="M226,180 L244,280 L244,335 L230,335 L226,280 L210,198 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1" opacity="0.8"/>' +
+      '<path d="M118,305 L202,305 L212,400 L195,520 L172,520 L176,380 L160,335 L144,380 L148,520 L125,520 L108,400 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1.5" opacity="0.9"/>' +
+      '<line x1="160" y1="85" x2="160" y2="335" stroke="#0ea5e9" stroke-dasharray="3,3" stroke-width="1" opacity="0.4"/>' +
+      '<circle cx="160" cy="140" r="34" fill="none" stroke="#0ea5e9" stroke-dasharray="2,3" stroke-width="0.8" opacity="0.3"/>' +
+      '<circle cx="160" cy="225" r="26" fill="none" stroke="#0ea5e9" stroke-dasharray="2,3" stroke-width="0.8" opacity="0.3"/>' +
+      beaconsSvg +
+      '</svg>';
+  }
+
+  /* Render Longitudinal Biomarker Comparison Card */
+  function renderLongitudinalComparisonCard(labData) {
+    var comps = labData.comparisons || [];
+    var sum = labData.summary || { improved: 0, deteriorated: 0, stable: 0, baseline: 0, total: 0 };
+
+    var rowsHtml = '';
+    if (comps.length) {
+      rowsHtml = comps.map(function (c) {
+        var organIcons = { liver: '🫀', lung: '🫁', heart: '❤️', kidneys: '🫘', brain: '🧠', pancreas: '🥞', blood: '🩸' };
+        var oIcon = organIcons[c.organ] || '🧪';
+        var diffText = (c.status === 'baseline') ? '<span class="vitals-diff-val same">Baseline</span>' :
+          ('<span class="vitals-diff-val ' + c.dirClass + '">' + (c.diff > 0 ? '+' : '') + c.diff + (c.unit ? ' ' + c.unit : '') + ' (' + (c.pct > 0 ? '+' : '') + c.pct + '%)</span>');
+
+        var valCurHtml = c.isOutside ? ('<strong style="color:#b91c1c">' + esc(c.curVal) + ' ' + esc(c.unit) + ' ⚠️</strong>') : ('<strong>' + esc(c.curVal) + ' ' + esc(c.unit) + '</strong>');
+        var valPrevHtml = esc(c.prevVal) + (c.prevVal !== '—' && c.unit ? ' ' + esc(c.unit) : '');
+
+        return '<tr>' +
+          '  <td>' +
+          '    <div style="font-weight:700;display:flex;align-items:center;gap:6px">' +
+          '      <span>' + oIcon + '</span><span>' + esc(c.paramName) + '</span>' +
+          '    </div>' +
+          '    <small style="color:#64748b;font-size:11px">' + esc(c.testName) + '</small>' +
+          '  </td>' +
+          '  <td>' + valPrevHtml + '<br><small style="color:#94a3b8;font-size:10px">' + esc(c.prevDate) + '</small></td>' +
+          '  <td>' + valCurHtml + '<br><small style="color:#94a3b8;font-size:10px">' + esc(c.curDate) + '</small></td>' +
+          '  <td><span style="color:#475569;font-size:11.5px">' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + '</span></td>' +
+          '  <td>' + diffText + '</td>' +
+          '  <td><span class="vitals-trend-badge ' + c.badgeClass + '">' + esc(c.statusLabel) + '</span></td>' +
+          '</tr>';
+      }).join('');
+    } else {
+      rowsHtml = '<tr><td colspan="6" style="padding:24px;text-align:center;color:#64748b">' +
+        'No completed laboratory reports found for this patient yet.<br>' +
+        '<small style="color:#94a3b8">Once lab tests are entered and verified, previous vs current comparison and delta trends will automatically appear here.</small>' +
+        '</td></tr>';
+    }
+
+    return '<div class="vitals-card vitals-comparison-card" id="vitalsLabComparisonSection">' +
+      '<div class="vitals-card-head">' +
+      '  <div>' +
+      '    <h3 style="display:flex;align-items:center;gap:8px"><span>📈</span><span>Biomarker Trends &amp; Longitudinal Test Comparison</span></h3>' +
+      '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Tracking patient improvement across chronological laboratory reports.</p>' +
+      '  </div>' +
+      '  <div class="vitals-comp-summary-pills">' +
+      '    <span class="vitals-sum-pill improved">🟢 ' + sum.improved + ' Improved (Behtar)</span>' +
+      '    <span class="vitals-sum-pill deteriorated">🔴 ' + sum.deteriorated + ' Deteriorated (Alert)</span>' +
+      '    <span class="vitals-sum-pill stable">⚪ ' + sum.stable + ' Stable (Mustahkam)</span>' +
+      (sum.baseline > 0 ? ('<span class="vitals-sum-pill" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">🔵 ' + sum.baseline + ' Baseline</span>') : '') +
+      '  </div>' +
+      '</div>' +
+      '<div class="vitals-comp-table-wrap">' +
+      '  <table class="vitals-comp-table">' +
+      '    <thead>' +
+      '      <tr>' +
+      '        <th>Biomarker / Test</th>' +
+      '        <th>Previous Result</th>' +
+      '        <th>Current Result</th>' +
+      '        <th>Normal Range</th>' +
+      '        <th>Variance (Δ)</th>' +
+      '        <th>Clinical Status &amp; Trend</th>' +
+      '      </tr>' +
+      '    </thead>' +
+      '    <tbody>' +
+      rowsHtml +
+      '    </tbody>' +
+      '  </table>' +
+      '</div>' +
+      '</div>';
+  }
+
+  /* Render Doctor Clinical Decision Support Matrix */
+  function renderDoctorDecisionMatrix(labData) {
+    var dm = labData.doctorMatrix || { etiology: [], panicAlerts: [], contraindications: [], recommendations: [] };
+    var hasPanic = dm.panicAlerts && dm.panicAlerts.length > 0;
+    var inv = labData.currentInvoice;
+
+    var etiologyHtml = (dm.etiology && dm.etiology.length) ?
+      ('<ul class="matrix-list">' + dm.etiology.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>') :
+      '<p style="margin:0;font-size:12px;color:#64748b">No active clinical disease patterns identified from current lab values.</p>';
+
+    var panicHtml = hasPanic ?
+      ('<div style="color:#b91c1c;font-weight:700;margin-bottom:6px">⚠️ STAT EMERGENCY THRESHOLD EXCEEDED</div>' +
+       '<ul class="matrix-list" style="color:#991b1b">' + dm.panicAlerts.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>') :
+      '<p style="margin:0;font-size:12px;color:#166534">✓ No acute panic values detected. Physiological markers within monitored thresholds.</p>';
+
+    var safetyHtml = (dm.contraindications && dm.contraindications.length) ?
+      ('<ul class="matrix-list">' + dm.contraindications.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>') :
+      '<p style="margin:0;font-size:12px;color:#64748b">No organ-specific drug contraindications flagged for current profile.</p>';
+
+    var recsHtml = (dm.recommendations && dm.recommendations.length) ?
+      ('<ul class="matrix-list">' + dm.recommendations.map(function (r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul>') :
+      '<p style="margin:0;font-size:12px;color:#64748b">Standard periodic follow-up advised.</p>';
+
+    return '<div class="vitals-card vitals-doctor-matrix" id="vitalsDoctorDecisionSection">' +
+      '<div class="vitals-card-head">' +
+      '  <div>' +
+      '    <h3 style="display:flex;align-items:center;gap:8px"><span>👨‍⚕️</span><span>Doctor Clinical Decision Support &amp; Action Matrix</span></h3>' +
+      '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Evidence-based clinical insights, emergency alerts, and prescription safety contraindications.</p>' +
+      '  </div>' +
+      (inv ? ('<button type="button" class="btn btn-primary" id="btnLaunchFullDoctorAI" data-inv-id="' + esc(inv.id) + '" style="padding:6px 12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px">🤖 Open Full AI Insights &amp; Rx</button>') : '') +
+      '</div>' +
+      '<div class="doctor-matrix-grid">' +
+      '  <div class="doctor-matrix-box etiology-box">' +
+      '    <div class="matrix-box-head"><span>🔬</span><strong>Clinical Findings &amp; Probable Etiology</strong></div>' +
+      etiologyHtml +
+      '  </div>' +
+      '  <div class="doctor-matrix-box panic-box ' + (hasPanic ? 'has-panic' : '') + '">' +
+      '    <div class="matrix-box-head"><span>🚨</span><strong>Critical Red Flags &amp; Panic Thresholds</strong></div>' +
+      panicHtml +
+      '  </div>' +
+      '  <div class="doctor-matrix-box safety-box">' +
+      '    <div class="matrix-box-head"><span>🛡️</span><strong>Prescription Safety &amp; Contraindicated Drugs</strong></div>' +
+      safetyHtml +
+      '  </div>' +
+      '  <div class="doctor-matrix-box action-box">' +
+      '    <div class="matrix-box-head"><span>📋</span><strong>Recommended Confirmatory Orders &amp; Action Plan</strong></div>' +
+      recsHtml +
+      '  </div>' +
+      '</div>' +
+      '</div>';
+  }
+
   /* Render Primary Patient Vitals Dashboard */
   function render(patient) {
     var tests=testsFor(patient);
+    var labData = analyzePatientLabHistory(patient);
     var doctor = patient.doctorId ? (DB.get('doctors', patient.doctorId) || {}).name : '';
     var registered = patient.createdAt ? (App.dt ? App.dt(patient.createdAt) : patient.createdAt) : '';
     var initials = String(patient.name || '?').trim().split(/\s+/).slice(0, 2).map(function (word) { return word[0] || ''; }).join('').toUpperCase();
@@ -621,6 +1039,12 @@
       '        </div>' +
       '      </div>' +
 
+      // Longitudinal Lab Biomarker Comparison & Trend Tracker
+      renderLongitudinalComparisonCard(labData) +
+
+      // Doctor Clinical Decision Support Matrix
+      renderDoctorDecisionMatrix(labData) +
+
       // Collapsible Demographics Bar (Overview Card)
       '      <div class="pd-card" style="margin-top:16px">' +
       '        <div class="pd-header"><div><h3>Patient Details Overview</h3><p class="pd-sub">Clinical demographic record</p></div><span class="pd-avatar" aria-hidden="true">' + esc(initials) + '</span></div>' +
@@ -640,6 +1064,12 @@
       // RIGHT COLUMN: INTERACTIVE ORGAN ANATOMICAL MODEL STAGE (~40%)
       '    <div class="vitals-right-col">' +
       '      <div class="vitals-stage-card">' +
+      // 3D View Mode Toggle Bar
+      '        <div class="vitals-3d-toggle-bar">' +
+      '          <button class="vitals-3d-toggle-btn active" id="btnMode3DBody" type="button">🧍 3D Full Body Scan</button>' +
+      '          <button class="vitals-3d-toggle-btn" id="btnMode3DOrgan" type="button">🫁 3D Organ Focus</button>' +
+      '        </div>' +
+
       // Floating Zoom Controls
       '        <div class="vitals-stage-controls">' +
       '          <button class="stage-ctrl-btn" id="btnZoomIn" type="button" title="Zoom In">+</button>' +
@@ -650,7 +1080,8 @@
       // Central Organ Visualizer Display
       '        <div class="vitals-organ-canvas-wrap">' +
       '          <div class="vitals-organ-interactive-box" id="organInteractiveBox">' +
-      renderStageOrganSvg('lung') +
+      '            <div id="stage3DBodyView" style="display:block">' + render3DBodyProjectionSvg(labData.organStates, 'lung') + '</div>' +
+      '            <div id="stage3DOrganView" style="display:none">' + renderStageOrganSvg('lung') + '</div>' +
       '          </div>' +
       '        </div>' +
 
@@ -690,6 +1121,7 @@
     }
     host.innerHTML=render(patient);
 
+    var labData = analyzePatientLabHistory(patient);
     var curOrganKey = 'lung';
     var curDayIdx = 4;
     var organZoom = 1.0;
@@ -733,7 +1165,7 @@
     var dayNext = host.querySelector('#btnDayNext');
     if (dayNext) dayNext.addEventListener('click', function () { updateDay(curDayIdx + 1); });
 
-    // Organ Selection in Carousel
+    // Organ Selection in Carousel and 3D Model
     function switchOrgan(key) {
       if (!ORGAN_DATA[key]) return;
       curOrganKey = key;
@@ -743,19 +1175,28 @@
         pill.classList.toggle('active', pill.getAttribute('data-organ-pill') === key);
       });
 
-      var box = host.querySelector('#organInteractiveBox');
-      if (box) {
-        box.style.opacity = '0.3';
-        setTimeout(function () {
-          box.innerHTML = renderStageOrganSvg(key);
-          box.style.opacity = '1';
-        }, 150);
+      var bodySvgWrap = host.querySelector('#stage3DBodyView');
+      if (bodySvgWrap) {
+        bodySvgWrap.innerHTML = render3DBodyProjectionSvg(labData.organStates, key);
+        wireBodyBeacons();
       }
 
+      var organSvgWrap = host.querySelector('#stage3DOrganView');
+      if (organSvgWrap) {
+        organSvgWrap.innerHTML = renderStageOrganSvg(key);
+      }
+
+      var customDesc = (labData.organStates[key] && labData.organStates[key].findings.length) ?
+        (org.name + ' Issue Detected: ' + labData.organStates[key].findings.join(', ') + ' (' + (labData.organStates[key].diffNote || 'Abnormal') + '). Clinical vigilance required.') :
+        org.warningDesc;
+      var customTitle = (labData.organStates[key] && labData.organStates[key].findings.length) ?
+        ('⚠️ Alert: ' + org.name + ' Findings') :
+        org.warningTitle;
+
       var wTitle = host.querySelector('#warningBadgeTitle');
-      if (wTitle) wTitle.textContent = org.warningTitle;
+      if (wTitle) wTitle.textContent = customTitle;
       var wDesc = host.querySelector('#warningBadgeDesc');
-      if (wDesc) wDesc.textContent = org.warningDesc;
+      if (wDesc) wDesc.textContent = customDesc;
 
       var effTitle = host.querySelector('#organEffTitle');
       if (effTitle) effTitle.textContent = org.effTitle;
@@ -801,6 +1242,51 @@
       var nxt = (idx + 1) % organKeys.length;
       switchOrgan(organKeys[nxt]);
     });
+
+    // 3D View Mode Switcher
+    var btnModeBody = host.querySelector('#btnMode3DBody');
+    var btnModeOrgan = host.querySelector('#btnMode3DOrgan');
+    var stageBody = host.querySelector('#stage3DBodyView');
+    var stageOrgan = host.querySelector('#stage3DOrganView');
+
+    if (btnModeBody && btnModeOrgan) {
+      btnModeBody.addEventListener('click', function () {
+        btnModeBody.classList.add('active');
+        btnModeOrgan.classList.remove('active');
+        if (stageBody) stageBody.style.display = 'block';
+        if (stageOrgan) stageOrgan.style.display = 'none';
+      });
+
+      btnModeOrgan.addEventListener('click', function () {
+        btnModeOrgan.classList.add('active');
+        btnModeBody.classList.remove('active');
+        if (stageBody) stageBody.style.display = 'none';
+        if (stageOrgan) stageOrgan.style.display = 'block';
+      });
+    }
+
+    function wireBodyBeacons() {
+      host.querySelectorAll('[data-organ-beacon]').forEach(function (beacon) {
+        beacon.addEventListener('click', function () {
+          var orgId = beacon.getAttribute('data-organ-beacon');
+          if (orgId) switchOrgan(orgId);
+        });
+      });
+    }
+    wireBodyBeacons();
+
+    // Wire up Doctor AI Action Button
+    var btnDoctorAI = host.querySelector('#btnLaunchFullDoctorAI');
+    if (btnDoctorAI) {
+      btnDoctorAI.addEventListener('click', function () {
+        var invId = btnDoctorAI.getAttribute('data-inv-id');
+        if (window.App && App.aiInsights && invId) {
+          App.aiInsights.showModal(invId);
+        } else if (window.App && App.toast) {
+          App.toast('Full AI clinical report loaded for patient.');
+        }
+      });
+    }
 
     // Zoom Controls on Organ Visualizer
     var boxEl = host.querySelector('#organInteractiveBox');
