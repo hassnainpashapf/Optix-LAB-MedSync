@@ -1482,8 +1482,6 @@
       // Top Horizontal Patient Navigation Header Bar
       '<header class="pd-patient-menu" aria-label="Patient menu">' +
       '  <div class="pd-header-left">' +
-      '    <a href="#/patients" class="pd-menu-back">← All Patients</a>' +
-      '    <div class="pd-header-vsep" aria-hidden="true"></div>' +
       '    <div class="pd-menu-patient">' +
       '      <span class="pd-avatar" aria-hidden="true">' + esc(initials) + '</span>' +
       '      <div class="pd-menu-meta">' +
