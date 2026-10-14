@@ -811,49 +811,30 @@
       var coreColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#334155'));
 
       return '<g class="vitals-organ-beacon-svg" data-organ-beacon="' + o.id + '" style="cursor:pointer">' +
-        (isCrit ? '<circle cx="' + o.x + '" cy="' + o.y + '" r="22" fill="none" stroke="' + pulseColor + '" stroke-width="1.8" opacity="0.8"><animate attributeName="r" values="16;28;16" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.9;0.1;0.9" dur="2s" repeatCount="indefinite"/></circle>' : '') +
-        (isWarn ? '<circle cx="' + o.x + '" cy="' + o.y + '" r="20" fill="none" stroke="' + pulseColor + '" stroke-width="1.5" opacity="0.6"/>' : '') +
-        '<circle cx="' + o.x + '" cy="' + o.y + '" r="' + (isAct ? '16' : '14') + '" fill="' + coreColor + '" stroke="' + (isAct ? '#ffffff' : '#e2e8f0') + '" stroke-width="' + (isAct ? '3' : '1.5') + '"/>' +
-        '<text x="' + o.x + '" y="' + (o.y + 4) + '" text-anchor="middle" font-size="11" pointer-events="none">' + o.icon + '</text>' +
-        (isCrit || isWarn ? '<rect x="' + (o.x + 18) + '" y="' + (o.y - 10) + '" width="74" height="20" rx="4" fill="' + (isCrit ? '#7f1d1d' : '#78350f') + '" stroke="' + pulseColor + '" stroke-width="1"/><text x="' + (o.x + 55) + '" y="' + (o.y + 4) + '" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">' + (isCrit ? 'CRITICAL' : 'ISSUE') + '</text>' : '') +
+        (isCrit ? '<circle cx="' + o.x + '" cy="' + o.y + '" r="19" fill="none" stroke="' + pulseColor + '" stroke-width="1.5" opacity="0.4"/>' : '') +
+        (isWarn ? '<circle cx="' + o.x + '" cy="' + o.y + '" r="18" fill="none" stroke="' + pulseColor + '" stroke-width="1.2" opacity="0.3"/>' : '') +
+        '<circle cx="' + o.x + '" cy="' + o.y + '" r="' + (isAct ? '15' : '13') + '" fill="' + coreColor + '" stroke="' + (isAct ? '#ffffff' : '#e2e8f0') + '" stroke-width="' + (isAct ? '2.5' : '1.5') + '"/>' +
+        '<text x="' + o.x + '" y="' + (o.y + 4) + '" text-anchor="middle" font-size="10.5" pointer-events="none">' + o.icon + '</text>' +
+        (isCrit || isWarn ? '<rect x="' + (o.x + 16) + '" y="' + (o.y - 9) + '" width="54" height="18" rx="4" fill="' + (isCrit ? '#ef4444' : '#f59e0b') + '"/><text x="' + (o.x + 43) + '" y="' + (o.y + 3) + '" text-anchor="middle" font-size="9" font-weight="700" fill="#ffffff">' + (isCrit ? 'CRITICAL' : 'ISSUE') + '</text>' : '') +
         '</g>';
     }).join('');
 
-    return '<svg viewBox="0 0 320 540" width="100%" height="auto" style="max-height:490px;display:block;margin:0 auto;overflow:visible">' +
+    return '<svg viewBox="0 0 320 540" width="100%" height="auto" style="max-height:480px;display:block;margin:0 auto;overflow:visible">' +
       '<defs>' +
       '  <linearGradient id="bodyMeshGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
-      '    <stop offset="0%" stop-color="#1e293b" stop-opacity="0.95"/>' +
-      '    <stop offset="50%" stop-color="#0f172a" stop-opacity="0.98"/>' +
-      '    <stop offset="100%" stop-color="#020617" stop-opacity="1"/>' +
-      '  </linearGradient>' +
-      '  <linearGradient id="laserBeamGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
-      '    <stop offset="0%" stop-color="#38bdf8" stop-opacity="0"/>' +
-      '    <stop offset="50%" stop-color="#0284c7" stop-opacity="0.25"/>' +
-      '    <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>' +
+      '    <stop offset="0%" stop-color="#334155" stop-opacity="0.95"/>' +
+      '    <stop offset="100%" stop-color="#1e293b" stop-opacity="0.98"/>' +
       '  </linearGradient>' +
       '</defs>' +
-      // Cyber Corner Brackets & Telemetry Labels
-      '<path d="M 15 35 L 15 15 L 35 15" stroke="#0ea5e9" stroke-width="2" fill="none" opacity="0.6"/>' +
-      '<path d="M 305 35 L 305 15 L 285 15" stroke="#0ea5e9" stroke-width="2" fill="none" opacity="0.6"/>' +
-      '<path d="M 15 505 L 15 525 L 35 525" stroke="#0ea5e9" stroke-width="2" fill="none" opacity="0.6"/>' +
-      '<path d="M 305 505 L 305 525 L 285 525" stroke="#0ea5e9" stroke-width="2" fill="none" opacity="0.6"/>' +
-      '<text x="20" y="27" font-size="8" font-weight="700" fill="#0284c7" letter-spacing="1">HOLO-SCAN 3D</text>' +
-      '<text x="300" y="27" text-anchor="end" font-size="8" font-weight="700" fill="#059669" letter-spacing="1">LIVE TELEMETRY</text>' +
 
-      // Scanning Laser Beam Animation
-      '<rect x="40" y="30" width="240" height="24" fill="url(#laserBeamGrad)"><animate attributeName="y" values="30;490;30" dur="4s" repeatCount="indefinite"/></rect>' +
-      '<line x1="40" y1="42" x2="280" y2="42" stroke="#38bdf8" stroke-width="1.8" opacity="0.85"><animate attributeName="y1" values="42;502;42" dur="4s" repeatCount="indefinite"/><animate attributeName="y2" values="42;502;42" dur="4s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.25;0.9;0.25" dur="4s" repeatCount="indefinite"/></line>' +
-
-      // Anatomical Silhouette
-      '<circle cx="160" cy="55" r="28" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1.5" opacity="0.85"/>' +
-      '<path d="M150,83 L170,83 L174,102 L146,102 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1" opacity="0.85"/>' +
-      '<path d="M105,115 C105,102 128,102 160,102 C192,102 215,102 215,115 L226,180 L208,198 L202,305 L118,305 L112,198 L94,180 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1.5" opacity="0.9"/>' +
-      '<path d="M94,180 L76,280 L76,335 L90,335 L94,280 L110,198 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1" opacity="0.8"/>' +
-      '<path d="M226,180 L244,280 L244,335 L230,335 L226,280 L210,198 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1" opacity="0.8"/>' +
-      '<path d="M118,305 L202,305 L212,400 L195,520 L172,520 L176,380 L160,335 L144,380 L148,520 L125,520 L108,400 Z" fill="url(#bodyMeshGrad)" stroke="#38bdf8" stroke-width="1.5" opacity="0.9"/>' +
-      '<line x1="160" y1="85" x2="160" y2="335" stroke="#0ea5e9" stroke-dasharray="3,3" stroke-width="1" opacity="0.4"/>' +
-      '<circle cx="160" cy="140" r="34" fill="none" stroke="#0ea5e9" stroke-dasharray="2,3" stroke-width="0.8" opacity="0.3"/>' +
-      '<circle cx="160" cy="225" r="26" fill="none" stroke="#0ea5e9" stroke-dasharray="2,3" stroke-width="0.8" opacity="0.3"/>' +
+      // Anatomical Silhouette - Clean Medical Aesthetic
+      '<circle cx="160" cy="55" r="28" fill="url(#bodyMeshGrad)" stroke="#94a3b8" stroke-width="1.2" opacity="0.9"/>' +
+      '<path d="M150,83 L170,83 L174,102 L146,102 Z" fill="url(#bodyMeshGrad)" stroke="#94a3b8" stroke-width="1" opacity="0.9"/>' +
+      '<path d="M105,115 C105,102 128,102 160,102 C192,102 215,102 215,115 L226,180 L208,198 L202,305 L118,305 L112,198 L94,180 Z" fill="url(#bodyMeshGrad)" stroke="#94a3b8" stroke-width="1.2" opacity="0.92"/>' +
+      '<path d="M94,180 L76,280 L76,335 L90,335 L94,280 L110,198 Z" fill="url(#bodyMeshGrad)" stroke="#94a3b8" stroke-width="1" opacity="0.85"/>' +
+      '<path d="M226,180 L244,280 L244,335 L230,335 L226,280 L210,198 Z" fill="url(#bodyMeshGrad)" stroke="#94a3b8" stroke-width="1" opacity="0.85"/>' +
+      '<path d="M118,305 L202,305 L212,400 L195,520 L172,520 L176,380 L160,335 L144,380 L148,520 L125,520 L108,400 Z" fill="url(#bodyMeshGrad)" stroke="#94a3b8" stroke-width="1.2" opacity="0.92"/>' +
+      '<line x1="160" y1="85" x2="160" y2="335" stroke="#94a3b8" stroke-dasharray="3,3" stroke-width="1" opacity="0.3"/>' +
       beaconsSvg +
       '</svg>';
   }
