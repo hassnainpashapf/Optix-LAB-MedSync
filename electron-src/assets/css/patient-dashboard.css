@@ -71,3 +71,613 @@
 @media(max-width:1100px) and (min-width:701px){#ptPatientDashboard .pd-profile-shell{grid-template-columns:150px minmax(0,1fr);gap:12px}}
 @media(max-width:700px){#ptPatientDashboard .pd-profile-shell{grid-template-columns:1fr}#ptPatientDashboard .pd-patient-menu{position:static;padding:12px}#ptPatientDashboard .pd-menu-patient{flex-direction:row;text-align:left;padding:0 0 10px;flex-wrap:wrap}#ptPatientDashboard .pd-menu-patient small{margin-left:auto}#ptPatientDashboard .pd-patient-menu nav{display:flex;overflow-x:auto;margin:10px 0 0}#ptPatientDashboard .pd-patient-menu button{width:auto;flex:none}#ptPatientDashboard .pd-menu-back{display:none}}
 @media print{#ptPatientDashboard .pd-patient-menu{display:none}#ptPatientDashboard .pd-profile-shell{display:block}}
+
+/* ==========================================================================
+   Nexura Care Vitals Overview & Interactive Organ Visualizer Layout
+   ========================================================================== */
+#ptPatientDashboard .pd-layout-vitals {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+#ptPatientDashboard .vitals-breadcrumb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+#ptPatientDashboard .vitals-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #64748b;
+}
+#ptPatientDashboard .vitals-nav-arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+#ptPatientDashboard .vitals-nav-arrow:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+#ptPatientDashboard .vitals-bc-item {
+  color: #64748b;
+  text-decoration: none;
+  font-weight: 500;
+}
+#ptPatientDashboard .vitals-bc-item:hover {
+  color: #2563eb;
+}
+#ptPatientDashboard .vitals-bc-sep {
+  color: #94a3b8;
+  font-size: 11px;
+}
+#ptPatientDashboard .vitals-bc-curr {
+  color: #1e293b;
+  font-weight: 600;
+}
+
+#ptPatientDashboard .vitals-header-title-block {
+  margin-bottom: 8px;
+}
+#ptPatientDashboard .vitals-header-title-block h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 4px;
+  letter-spacing: -0.015em;
+}
+#ptPatientDashboard .vitals-header-title-block p {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 0;
+}
+
+#ptPatientDashboard .vitals-main-grid {
+  display: grid;
+  grid-template-columns: 1.18fr 0.82fr;
+  gap: 20px;
+  align-items: stretch;
+}
+@media (max-width: 1080px) {
+  #ptPatientDashboard .vitals-main-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+#ptPatientDashboard .vitals-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 20px 22px;
+  box-shadow: 0 2px 8px rgba(15,23,42,0.03);
+  position: relative;
+  box-sizing: border-box;
+}
+
+#ptPatientDashboard .vitals-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+#ptPatientDashboard .vitals-card-head h3 {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+#ptPatientDashboard .vitals-card-head .card-action-btn {
+  background: transparent;
+  border: 0;
+  color: #94a3b8;
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+}
+#ptPatientDashboard .vitals-card-head .card-action-btn:hover {
+  color: #475569;
+  background: #f1f5f9;
+}
+
+#ptPatientDashboard .vitals-month-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  border-radius: 20px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+#ptPatientDashboard .vitals-timeline-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 6px;
+  overflow-x: auto;
+}
+#ptPatientDashboard .vitals-timeline-arrow {
+  background: transparent;
+  border: 0;
+  color: #64748b;
+  font-size: 15px;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+#ptPatientDashboard .vitals-timeline-arrow:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+#ptPatientDashboard .vitals-day-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+  min-width: 48px;
+}
+#ptPatientDashboard .vitals-day-pill .day-num {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+#ptPatientDashboard .vitals-day-pill .day-name {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+  margin-top: 2px;
+}
+#ptPatientDashboard .vitals-day-pill:hover:not(.active) {
+  background: #f8fafc;
+}
+#ptPatientDashboard .vitals-day-pill.active {
+  background: #2563eb;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.28);
+}
+#ptPatientDashboard .vitals-day-pill.active .day-num {
+  color: #ffffff;
+}
+#ptPatientDashboard .vitals-day-pill.active .day-name {
+  color: #dbeafe;
+}
+
+#ptPatientDashboard .vitals-stress-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 20px;
+  align-items: center;
+}
+@media (max-width: 600px) {
+  #ptPatientDashboard .vitals-stress-row {
+    grid-template-columns: 1fr;
+  }
+}
+#ptPatientDashboard .vitals-radial-gauge-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 130px;
+  height: 130px;
+  margin: 0 auto;
+}
+#ptPatientDashboard .vitals-gauge-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+#ptPatientDashboard .vitals-gauge-inner .gauge-pct {
+  font-size: 24px;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+}
+#ptPatientDashboard .vitals-gauge-inner .gauge-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 3px;
+  text-align: center;
+  max-width: 80px;
+}
+
+#ptPatientDashboard .vitals-stress-info h4 {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px;
+}
+#ptPatientDashboard .vitals-stress-info p {
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+#ptPatientDashboard .vitals-peak-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#ptPatientDashboard .vitals-stat-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+#ptPatientDashboard .vitals-stat-lbl {
+  font-weight: 700;
+  color: #1e293b;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 105px;
+}
+#ptPatientDashboard .vitals-stat-val {
+  color: #475569;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+#ptPatientDashboard .vitals-stat-sep {
+  color: #cbd5e1;
+}
+
+#ptPatientDashboard .vitals-subcards-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 20px;
+}
+@media (max-width: 720px) {
+  #ptPatientDashboard .vitals-subcards-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+#ptPatientDashboard .vitals-subcard-subtitle {
+  font-size: 11.5px;
+  color: #64748b;
+  margin: -10px 0 14px;
+}
+#ptPatientDashboard .vitals-rehab-list {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+#ptPatientDashboard .vitals-rehab-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+#ptPatientDashboard .vitals-rehab-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+#ptPatientDashboard .vitals-rehab-text .rehab-item-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.25;
+}
+#ptPatientDashboard .vitals-rehab-text .rehab-item-desc {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.35;
+  margin-top: 2px;
+}
+
+#ptPatientDashboard .vitals-efficiency-section {
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 16px;
+}
+#ptPatientDashboard .vitals-risk-tag {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #0284c7;
+  margin-bottom: 4px;
+}
+#ptPatientDashboard .vitals-risk-tag.moderate {
+  color: #d97706;
+}
+#ptPatientDashboard .vitals-risk-tag.critical {
+  color: #dc2626;
+}
+#ptPatientDashboard .vitals-risk-tag.normal {
+  color: #059669;
+}
+#ptPatientDashboard .vitals-big-score {
+  font-size: 32px;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+  margin: 4px 0 10px;
+}
+#ptPatientDashboard .vitals-progress-track {
+  height: 14px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+#ptPatientDashboard .vitals-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #38bdf8 0%, #2563eb 100%);
+  transition: width 0.4s ease;
+}
+#ptPatientDashboard .vitals-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  margin-top: 5px;
+}
+
+#ptPatientDashboard .vitals-med-list {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+#ptPatientDashboard .vitals-med-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  padding: 8px 12px;
+}
+#ptPatientDashboard .vitals-med-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+#ptPatientDashboard .vitals-med-details .med-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.2;
+}
+#ptPatientDashboard .vitals-med-details .med-dosage {
+  font-size: 11px;
+  color: #64748b;
+  margin-top: 1px;
+}
+
+#ptPatientDashboard .vitals-stage-card {
+  background: radial-gradient(ellipse at 50% 40%, rgba(238,246,255,0.85) 0%, rgba(248,250,252,0.95) 60%, #ffffff 100%);
+  border: 1px solid #e2e8f0;
+  border-radius: 24px;
+  position: relative;
+  min-height: 560px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 22px;
+  box-shadow: 0 4px 16px rgba(15,23,42,0.04);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+#ptPatientDashboard .vitals-stage-controls {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+#ptPatientDashboard .stage-ctrl-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  color: #475569;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+#ptPatientDashboard .stage-ctrl-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+#ptPatientDashboard .vitals-organ-canvas-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  min-height: 360px;
+  user-select: none;
+}
+#ptPatientDashboard .vitals-organ-interactive-box {
+  width: 100%;
+  max-width: 340px;
+  height: 380px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+
+#ptPatientDashboard .vitals-floating-warning {
+  position: absolute;
+  bottom: 96px;
+  right: 20px;
+  z-index: 25;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 14px;
+  padding: 12px 14px;
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.04);
+  max-width: 240px;
+  transition: all 0.3s ease;
+}
+#ptPatientDashboard .vitals-warning-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #dc2626;
+  margin-bottom: 4px;
+}
+#ptPatientDashboard .vitals-warning-desc {
+  font-size: 11px;
+  color: #475569;
+  line-height: 1.4;
+  margin: 0;
+}
+
+#ptPatientDashboard .vitals-organ-carousel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 10px;
+  z-index: 20;
+}
+#ptPatientDashboard .vitals-carousel-nav {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  color: #64748b;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+#ptPatientDashboard .vitals-carousel-nav:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+#ptPatientDashboard .vitals-carousel-track {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#ptPatientDashboard .vitals-organ-pill {
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 66px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+#ptPatientDashboard .vitals-organ-pill .organ-thumb-svg {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#ptPatientDashboard .vitals-organ-pill .organ-pill-label {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #64748b;
+}
+#ptPatientDashboard .vitals-organ-pill:hover:not(.active) {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  transform: translateY(-1px);
+}
+#ptPatientDashboard .vitals-organ-pill.active {
+  border-color: #2563eb;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.2);
+  transform: translateY(-2px);
+  background: #ffffff;
+}
+#ptPatientDashboard .vitals-organ-pill.active .organ-pill-label {
+  color: #2563eb;
+  font-weight: 700;
+}
+

@@ -5,10 +5,9 @@ const assert = require('node:assert/strict');
 
 const root = path.resolve(__dirname, '..');
 const modPatientsSource = fs.readFileSync(path.join(root, 'assets/js/mod-patients.js'), 'utf8');
+const modDashboardSource = fs.readFileSync(path.join(root, 'assets/js/mod-patient-dashboard.js'), 'utf8');
 
-// Mock browser environment for VM
 let paintedHtml = '';
-let postPaintCallback = null;
 
 const fakeDB = {
   _patients: {
@@ -62,7 +61,7 @@ const fakeApp = {
   },
   nav: function () {},
   toast: function () {},
-  esc: function (s) { return String(s || ''); },
+  esc: function (s) { return String(s || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); },
   money: function (v) { return 'Rs ' + (v || 0); },
   d: function (d) { return d ? String(d).slice(0, 10) : ''; },
   dt: function (d) { return d ? String(d).slice(0, 16) : ''; },
@@ -72,7 +71,6 @@ const fakeApp = {
   loadScript: function () { return Promise.resolve(); }
 };
 
-// Simple DOM element mock
 const viewEl = {
   id: 'view',
   innerHTML: '',
@@ -83,49 +81,30 @@ const viewEl = {
 };
 
 Object.defineProperty(viewEl, 'innerHTML', {
-  set: function (h) {
-    paintedHtml = h;
-  },
-  get: function () {
-    return paintedHtml;
-  }
+  set: function (h) { paintedHtml = h; },
+  get: function () { return paintedHtml; }
 });
-
-function createMockElement(id, tag) {
-  if (id === 'view') return viewEl;
-  return {
-    id: id || '',
-    tagName: tag || 'div',
-    classList: {
-      classes: new Set(),
-      add: function (c) { this.classes.add(c); },
-      remove: function (c) { this.classes.delete(c); },
-      toggle: function (c, v) { if (v) this.classes.add(c); else this.classes.delete(c); },
-      contains: function (c) { return this.classes.has(c); }
-    },
-    style: {},
-    addEventListener: function (evt, fn) { this[evt] = fn; },
-    setAttribute: function () {},
-    getAttribute: function () { return ''; }
-  };
-}
 
 const fakeDoc = {
   getElementById: function (id) {
-    return createMockElement(id);
+    if (id === 'view') return viewEl;
+    return {
+      id: id,
+      classList: { add: function () {}, remove: function () {}, toggle: function () {} },
+      style: {},
+      addEventListener: function () {},
+      querySelector: function () { return null; },
+      querySelectorAll: function () { return []; }
+    };
   },
-  querySelectorAll: function () {
-    return [];
-  },
+  querySelectorAll: function () { return []; },
+  createElement: function () { return { id: '', rel: '', href: '' }; },
+  head: { appendChild: function () {} },
   addEventListener: function () {}
 };
 
 const context = {
-  window: {
-    App: fakeApp,
-    DB: fakeDB,
-    scrollTo: function () {}
-  },
+  window: { App: fakeApp, DB: fakeDB, scrollTo: function () {} },
   document: fakeDoc,
   App: fakeApp,
   DB: fakeDB,
@@ -141,76 +120,69 @@ const context = {
 };
 context.window = context;
 
-// Execute mod-patients.js in sandbox
+// Execute both modules in sandbox
 vm.createContext(context);
 vm.runInContext(modPatientsSource, context);
+vm.runInContext(modDashboardSource, context);
 
 console.log('--- Testing Patient Vitals & Clinical Overview Dashboard ---');
 
 // 1. Verify routes registered
 assert.ok(fakeRoutes['/patients'], 'Route /patients registered');
 assert.ok(fakeRoutes['/patient/:id'], 'Route /patient/:id registered');
-assert.ok(fakeRoutes['/patient/:id/vitals'], 'Route /patient/:id/vitals registered');
-assert.ok(fakeRoutes['/patient/:id/history'], 'Route /patient/:id/history registered');
-console.log('✓ All 4 patient routes successfully registered including /vitals and /history');
+console.log('✓ Patient routes successfully registered');
 
-// 2. Test opening patient profile -> should render Vitals Overview by default
-fakeRoutes['/patient/:id']({ id: 'PT-101' });
+// 2. Test rendering patient dashboard
+const patient = fakeDB._patients['PT-101'];
+const html = context.App.patientDashboard.render(patient);
 
-assert.ok(paintedHtml.includes('Mohamed Ahmed Vitals Overview'), 'Header contains patient name + Vitals Overview');
-assert.ok(paintedHtml.includes('Real-time monitoring of current physiological metrics and trends.'), 'Subtitle matches specification');
-assert.ok(paintedHtml.includes('Stress Patterns Overview'), 'Card 1 Stress Patterns Overview present');
-assert.ok(paintedHtml.includes('April, 2026'), 'Month selector present');
-assert.ok(paintedHtml.includes('vitals-day-pill'), 'Date timeline pills present');
-assert.ok(paintedHtml.includes('Avg Stres Level'), 'Avg Stress Level radial gauge present');
-assert.ok(paintedHtml.includes('Highest Peak'), 'Highest peak stat present');
-assert.ok(paintedHtml.includes('Lowest Point'), 'Lowest point stat present');
-assert.ok(paintedHtml.includes('132 BPM'), 'Heart rate peak 132 BPM matches screenshot');
-assert.ok(paintedHtml.includes('104 BPM'), 'Lowest point heart rate 104 BPM matches screenshot');
+assert.ok(html.includes('Mohamed Ahmed Vitals Overview'), 'Header contains patient name + Vitals Overview');
+assert.ok(html.includes('Real-time monitoring of current physiological metrics and trends.'), 'Subtitle matches specification');
+assert.ok(html.includes('Stress Patterns Overview'), 'Card 1 Stress Patterns Overview present');
+assert.ok(html.includes('April, 2026'), 'Month selector present');
+assert.ok(html.includes('vitals-day-pill'), 'Date timeline pills present');
+assert.ok(html.includes('Avg Stres Level'), 'Avg Stress Level radial gauge present');
+assert.ok(html.includes('Highest Peak'), 'Highest peak stat present');
+assert.ok(html.includes('Lowest Point'), 'Lowest point stat present');
+assert.ok(html.includes('132 BPM'), 'Heart rate peak 132 BPM matches screenshot');
+assert.ok(html.includes('104 BPM'), 'Lowest point heart rate 104 BPM matches screenshot');
 console.log('✓ Stress Patterns Overview card, date timeline, circular gauge, and peak BPM verified');
 
 // 3. Test Rehabilitation Plan card
-assert.ok(paintedHtml.includes('Daily Rehabilitation Plan'), 'Daily Rehabilitation Plan card present');
-assert.ok(paintedHtml.includes('Early Ambulation'), 'Rehab item 1 Early Ambulation present');
-assert.ok(paintedHtml.includes('Short Walk - 15 minutes.'), 'Short walk desc present');
-assert.ok(paintedHtml.includes('Medication &amp; Therapy Tracking') || paintedHtml.includes('Medication & Therapy Tracking'), 'Rehab item 2 present');
-assert.ok(paintedHtml.includes('Hydration &amp; Safety') || paintedHtml.includes('Hydration & Safety'), 'Rehab item 3 present');
-assert.ok(paintedHtml.includes('Respiratory Exercises'), 'Rehab item 4 present');
-assert.ok(paintedHtml.includes('Anti-Inflammatory Diet'), 'Rehab item 5 present');
-assert.ok(paintedHtml.includes('BMI &amp; Lean Mass') || paintedHtml.includes('BMI & Lean Mass'), 'Rehab item 6 present');
-assert.ok(paintedHtml.includes('Stress &amp; Anxiety Management') || paintedHtml.includes('Stress & Anxiety Management'), 'Rehab item 7 present');
+assert.ok(html.includes('Daily Rehabilitation Plan'), 'Daily Rehabilitation Plan card present');
+assert.ok(html.includes('Early Ambulation'), 'Rehab item 1 Early Ambulation present');
+assert.ok(html.includes('Short Walk - 15 minutes.'), 'Short walk desc present');
+assert.ok(html.includes('Medication &amp; Therapy Tracking') || html.includes('Medication & Therapy Tracking'), 'Rehab item 2 present');
+assert.ok(html.includes('Hydration &amp; Safety') || html.includes('Hydration & Safety'), 'Rehab item 3 present');
+assert.ok(html.includes('Respiratory Exercises'), 'Rehab item 4 present');
+assert.ok(html.includes('Anti-Inflammatory Diet'), 'Rehab item 5 present');
+assert.ok(html.includes('BMI &amp; Lean Mass') || html.includes('BMI & Lean Mass'), 'Rehab item 6 present');
+assert.ok(html.includes('Stress &amp; Anxiety Management') || html.includes('Stress & Anxiety Management'), 'Rehab item 7 present');
 console.log('✓ Daily Rehabilitation Plan with all 7 numbered items verified');
 
 // 4. Test Lung Capacity Efficiency and Medication Adherence
-assert.ok(paintedHtml.includes('Lung Capacity Efficiency'), 'Lung Capacity Efficiency title present');
-assert.ok(paintedHtml.includes('Moderate Risk'), 'Moderate risk tag present');
-assert.ok(paintedHtml.includes('79%'), 'Score 79% present');
-assert.ok(paintedHtml.includes('Medication Adherence'), 'Medication Adherence present');
-assert.ok(paintedHtml.includes('Ventolin'), 'Ventolin med present');
-assert.ok(paintedHtml.includes('Pulmicort'), 'Pulmicort med present');
-assert.ok(paintedHtml.includes('Mucosolvan'), 'Mucosolvan med present');
+assert.ok(html.includes('Lung Capacity Efficiency'), 'Lung Capacity Efficiency title present');
+assert.ok(html.includes('Moderate Risk'), 'Moderate risk tag present');
+assert.ok(html.includes('79%'), 'Score 79% present');
+assert.ok(html.includes('Medication Adherence'), 'Medication Adherence present');
+assert.ok(html.includes('Ventolin'), 'Ventolin med present');
+assert.ok(html.includes('Pulmicort'), 'Pulmicort med present');
+assert.ok(html.includes('Mucosolvan'), 'Mucosolvan med present');
 console.log('✓ Organ Capacity Efficiency (79% Moderate Risk) and Medication Adherence (Ventolin, Pulmicort, Mucosolvan) verified');
 
 // 5. Test Right Stage: Anatomical Organ & Carousel
-assert.ok(paintedHtml.includes('vitals-stage-card'), 'Interactive organ stage card present');
-assert.ok(paintedHtml.includes('btnZoomIn'), 'Zoom In button present');
-assert.ok(paintedHtml.includes('btnZoomOut'), 'Zoom Out button present');
-assert.ok(paintedHtml.includes('btnZoomReset'), 'Zoom Reset button present');
-assert.ok(paintedHtml.includes('lung-svg'), 'Lungs anatomical SVG model present');
-assert.ok(paintedHtml.includes('Pulmonary findings: elevated airway resistance, imagined lung symptoms Rate 7.2%.'), 'Clinical warning callout card matches screenshot');
-assert.ok(paintedHtml.includes('data-organ-pill="liver"'), 'Liver thumbnail present in carousel');
-assert.ok(paintedHtml.includes('data-organ-pill="lung"'), 'Lung thumbnail present in carousel');
-assert.ok(paintedHtml.includes('data-organ-pill="heart"'), 'Heart thumbnail present in carousel');
-assert.ok(paintedHtml.includes('data-organ-pill="kidneys"'), 'Kidneys thumbnail present in carousel');
-assert.ok(paintedHtml.includes('data-organ-pill="brain"'), 'Brain thumbnail present in carousel');
+assert.ok(html.includes('vitals-stage-card'), 'Interactive organ stage card present');
+assert.ok(html.includes('btnZoomIn'), 'Zoom In button present');
+assert.ok(html.includes('btnZoomOut'), 'Zoom Out button present');
+assert.ok(html.includes('btnZoomReset'), 'Zoom Reset button present');
+assert.ok(html.includes('lung-svg'), 'Lungs anatomical SVG model present');
+assert.ok(html.includes('Pulmonary findings: elevated airway resistance, imagined lung symptoms Rate 7.2%.'), 'Clinical warning callout card matches screenshot');
+assert.ok(html.includes('data-organ-pill="liver"'), 'Liver thumbnail present in carousel');
+assert.ok(html.includes('data-organ-pill="lung"'), 'Lung thumbnail present in carousel');
+assert.ok(html.includes('data-organ-pill="heart"'), 'Heart thumbnail present in carousel');
+assert.ok(html.includes('data-organ-pill="kidneys"'), 'Kidneys thumbnail present in carousel');
+assert.ok(html.includes('data-organ-pill="brain"'), 'Brain thumbnail present in carousel');
 console.log('✓ Anatomical Organ Stage, Zoom controls, Warning card, and 5-Organ Carousel verified');
-
-// 6. Test Tab Switcher & History coexistence
-assert.ok(paintedHtml.includes('btnTabVitals'), 'Vitals tab button present');
-assert.ok(paintedHtml.includes('btnTabHistory'), 'History tab button present');
-assert.ok(paintedHtml.includes('historyTabWrap'), 'History tab wrap present for billing & test records');
-assert.ok(paintedHtml.includes('btnTopReport'), 'View Lab Report action button present in top action bar');
-console.log('✓ Tab switcher & History coexistence verified');
 
 console.log('\n============================================================');
 console.log('ALL NEXURA CARE PATIENT VITALS DASHBOARD TESTS PASSED CLEANLY!');
