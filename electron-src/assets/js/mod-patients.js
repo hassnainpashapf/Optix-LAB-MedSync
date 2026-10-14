@@ -738,6 +738,8 @@
         '<button class="btn btn-ghost" id="pt-edit">Edit Details</button>' +
         '<button class="btn btn-danger" id="pt-del">Delete</button></div>' : '') + '</div>' +
 
+      '<div id="ptClinicalOverview"></div>' +
+
       '<div class="card pt-profile"><div class="card-b pt-profile-in">' +
       avatarHTML(p.name, 72) +
       '<div class="pt-id-block"><h2>' + App.esc(p.name) + ' <span class="badge b-id mono">' + App.esc(p.id) + '</span></h2>' +
@@ -756,8 +758,6 @@
       '</div>' +
       (p.notes ? '<div class="pt-notes" style="margin-top:10px;font-size:13px;color:#5b6b80">📝 ' + App.esc(p.notes) + '</div>' : '') +
       '</div></div></div>' +
-
-      '<div id="ptClinicalOverview"></div>' +
 
       '<div class="stat-grid stat-grid-3">' +
       '<div class="stat"><div class="stat-ic blue">🧾</div><div><div class="stat-v">' + st.visits + '</div><div class="stat-l">Total Visits</div></div></div>' +
