@@ -1501,9 +1501,6 @@
       '  </div>' +
       '</header>' +
 
-      // Live Clinical Telemetry & Triage Strip
-      renderTelemetryStrip(patient, labData, tests) +
-
       // Center & Right Main Vitals Overview Layout
       '<div class="pd-layout-vitals" id="pdOverview">' +
       // 2-Column Responsive Main Grid

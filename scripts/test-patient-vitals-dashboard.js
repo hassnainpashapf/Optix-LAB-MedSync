@@ -169,13 +169,13 @@ assert.ok(html.includes('data-organ-pill="lung"'), 'Lung thumbnail present in ca
 assert.ok(html.includes('data-organ-pill="heart"'), 'Heart thumbnail present in carousel');
 assert.ok(html.includes('data-organ-pill="kidneys"'), 'Kidneys thumbnail present in carousel');
 assert.ok(html.includes('data-organ-pill="brain"'), 'Brain thumbnail present in carousel');
-// 6. Test Elite Hospital Telemetry Strip, Cyber HUD, and WhatsApp Integration
-assert.ok(html.includes('pd-telemetry-strip'), 'Live Clinical Telemetry strip present');
-assert.ok(html.includes('btnSendPatientWhatsApp'), 'WhatsApp Patient Care Card button present');
-assert.ok(html.includes('btnPrintClinicalSummary'), 'Clinical Rounds Sheet print button present');
+// 6. Test Cyber HUD overlay and clean removal of Telemetry Strip
+assert.ok(!html.includes('pd-telemetry-strip'), 'Live Clinical Telemetry strip cleanly removed');
+assert.ok(!html.includes('btnSendPatientWhatsApp'), 'WhatsApp Care Card button cleanly removed with telemetry strip');
+assert.ok(!html.includes('btnPrintClinicalSummary'), 'Ward Sheet print button cleanly removed with telemetry strip');
 assert.ok(html.includes('vitals-hud-overlay'), 'Cyber HUD telemetry overlay on 3D stage present');
 assert.ok(html.includes('med-timing-chip'), 'Medication dose schedule timing chips present');
-console.log('✓ Elite Clinical Telemetry Strip, Cyber HUD, and WhatsApp Patient Care Card verified');
+console.log('✓ Live Clinical Telemetry Strip cleanly removed and Cyber HUD on 3D stage verified');
 
 console.log('\n============================================================');
 console.log('ALL NEXURA CARE PATIENT VITALS DASHBOARD TESTS PASSED CLEANLY!');
