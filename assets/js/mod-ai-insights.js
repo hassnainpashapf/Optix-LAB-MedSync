@@ -3348,15 +3348,34 @@
     var showUrdu = mods.urduGuide !== false;
     var showRx = mods.rxPad !== false;
 
-    var tabsHtml = '<div class="ai-tabs-bar" style="display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;margin-bottom:12px;border-bottom:1px solid #e2e8f0">'
-      + '<button type="button" class="btn btn-ghost ai-tab-btn active" data-tab="solutions" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🩺 5 Solutions</button>'
-      + (showBodyMap ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="bodymap" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🫀 Organ Map</button>' : '')
-      + (showCalculators ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="indices" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🧮 Indices</button>' : '')
-      + (showSafety ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="safety" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">⚠️ Drug Safety</button>' : '')
-      + '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="trends" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">📈 Velocity</button>'
-      + (showGenetic ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="genetic" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🧬 Genetic Guard</button>' : '')
-      + (showUrdu ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="urdu" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🇵🇰 Urdu Guide</button>' : '')
-      + (showRx ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="rx" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🖨️ Rx Pad</button>' : '')
+    var tabsStyle = '<style>'
+      + '  .ai-tabs-bar { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 14px; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; align-items: center; }'
+      + '  .ai-tab-btn {'
+      + '    appearance: none; -webkit-appearance: none;'
+      + '    border: 1.5px solid #cbd5e1; background: #ffffff; color: #1e293b; font-size: 13px; font-weight: 700;'
+      + '    padding: 8px 16px; min-height: 38px; border-radius: 9px; cursor: pointer; transition: all .15s ease;'
+      + '    white-space: nowrap; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-family: inherit;'
+      + '    box-shadow: 0 1px 3px rgba(15,23,42,0.06); line-height: 1.2;'
+      + '  }'
+      + '  .ai-tab-btn:hover:not(.active) {'
+      + '    background: #f8fafc; border-color: #94a3b8; color: #0f172a; transform: translateY(-1px); box-shadow: 0 3px 8px rgba(15,23,42,0.09);'
+      + '  }'
+      + '  .ai-tab-btn.active {'
+      + '    background: #131845 !important; border-color: #131845 !important; color: #ffffff !important; font-weight: 800;'
+      + '    box-shadow: 0 3px 8px rgba(19,24,69,0.22) !important; transform: none;'
+      + '  }'
+      + '</style>';
+
+    var tabsHtml = tabsStyle
+      + '<div class="ai-tabs-bar">'
+      + '<button type="button" class="btn ai-tab-btn active" data-tab="solutions"><span>🩺</span> <span>5 Solutions</span></button>'
+      + (showBodyMap ? '<button type="button" class="btn ai-tab-btn" data-tab="bodymap"><span>🫀</span> <span>Organ Map</span></button>' : '')
+      + (showCalculators ? '<button type="button" class="btn ai-tab-btn" data-tab="indices"><span>🧮</span> <span>Indices</span></button>' : '')
+      + (showSafety ? '<button type="button" class="btn ai-tab-btn" data-tab="safety"><span>⚠️</span> <span>Drug Safety</span></button>' : '')
+      + '<button type="button" class="btn ai-tab-btn" data-tab="trends"><span>📈</span> <span>Velocity</span></button>'
+      + (showGenetic ? '<button type="button" class="btn ai-tab-btn" data-tab="genetic"><span>🧬</span> <span>Genetic Guard</span></button>' : '')
+      + (showUrdu ? '<button type="button" class="btn ai-tab-btn" data-tab="urdu"><span>🇵🇰</span> <span>Urdu Guide</span></button>' : '')
+      + (showRx ? '<button type="button" class="btn ai-tab-btn" data-tab="rx"><span>🖨️</span> <span>Rx Pad</span></button>' : '')
       + '</div>';
 
     var html = ''
@@ -3469,16 +3488,12 @@
       btn.addEventListener('click', function () {
         var target = btn.getAttribute('data-tab');
         scopeEl.querySelectorAll('.ai-tab-btn').forEach(function (b) {
-          b.style.background = '#ffffff';
-          b.style.color = '#475569';
-          b.style.borderColor = '#cbd5e1';
-          b.style.boxShadow = 'none';
           b.classList.remove('active');
+          b.style.background = '';
+          b.style.color = '';
+          b.style.borderColor = '';
+          b.style.boxShadow = '';
         });
-        btn.style.background = '#131845';
-        btn.style.color = '#ffffff';
-        btn.style.borderColor = '#131845';
-        btn.style.boxShadow = '0 1px 3px rgba(19,24,69,0.18)';
         btn.classList.add('active');
 
         scopeEl.querySelectorAll('.ai-tab-pane').forEach(function (pane) {
