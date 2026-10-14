@@ -39,6 +39,7 @@
     scan: '<path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 8v8M11 8v8M15 8v8M18 8v8"/>',
     finance: '<rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9v.01M18 15v.01"/>',
     calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/>',
+    brain: '<path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 4.44-2.04z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-4.44-2.04z"/>',
     phone: '<rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><path d="M12 18h.01"/>'
   };
   function icon(name, size) {
@@ -111,7 +112,7 @@
         { key: 'backup', label: 'Backup', icon: 'download', route: '#/settings/backup' },
         { key: 'danger', label: 'Danger Zone', icon: 'alert', route: '#/settings/danger', danger: true }
       ] },
-    { key: 'ai-dashboard', label: 'AI Control Center', icon: 'shield', route: '#/ai-dashboard', color: '#6366f1', roles: ['admin', 'doctor', 'technician'] },
+    { key: 'ai-dashboard', label: 'AI Dashboard', icon: 'brain', route: '#/ai-dashboard', color: '#6366f1', roles: ['admin', 'doctor', 'technician'] },
     { key: 'profile',   label: 'Profile',    icon: 'users',     route: '#/profile',   color: '#64748b' }
   ];
   var PERMS = {
@@ -167,7 +168,7 @@
   /* Custom roles are made by the admin in Settings -> Users & Roles and live in settings.customRoles: [{id, name, pages:[...], money}].
      Admin-only areas (settings, users, audit log, subscription) can never be given to a custom role. */
   var ROLE_PAGES = [['dashboard', 'Dashboard'], ['patients', 'Patients & new invoice'], ['appointments', 'Appointments'], ['samples', 'Samples'], ['results', 'Lab Results'], ['tests', 'Tests Catalog'], ['packages', 'Health Packages & Deals'], ['invoices', 'Invoices'], ['dues', 'Dues'], ['discounts', 'Discounts'], ['onlinepay', 'Online Payments'], ['panels', 'Corporate clients'], ['outsourced', 'Outsourced tests'],
-    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Close Day (Cash Closing)'], ['profit', 'Profit & Loss Statement'], ['reports', 'Reports'], ['ai-dashboard', 'AI Control Center'], ['inventory', 'Inventory'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['sms', 'SIM Setting'], ['downloads', 'Downloads']];
+    ['doctors', 'Doctors & statements'], ['expenses', 'Expenses'], ['finance', 'Close Day (Cash Closing)'], ['profit', 'Profit & Loss Statement'], ['reports', 'Reports'], ['ai-dashboard', 'AI Dashboard'], ['inventory', 'Inventory'], ['stock', 'Stock'], ['email', 'Email'], ['whatsapp', 'WhatsApp'], ['sms', 'SIM Setting'], ['downloads', 'Downloads']];
   function roleDef(s) {
     s = s || session(); if (!s || s.role !== 'custom') return null;
     var set = null; try { set = DB.get('settings', 'main'); } catch (e) {}
@@ -177,6 +178,16 @@
   }
   function can(key, role) {
     if (key === 'notifications') return ['admin', 'reception', 'technician', 'custom'].indexOf(role) !== -1;
+    if (key === 'ai-dashboard' || key === 'ai') {
+      if (role === 'admin' || role === 'doctor') return true;
+      try {
+        var set = window.DB && typeof DB.get === 'function' ? DB.get('settings', 'main') : null;
+        var rList = (set && (set.aiInsightsRoles || (set.aiConfig && set.aiConfig.roles))) || (PERMS['ai-dashboard'] || []);
+        return rList.indexOf(role) !== -1;
+      } catch (e) {
+        return (PERMS['ai-dashboard'] || []).indexOf(role) !== -1;
+      }
+    }
     if (role === 'custom') {
       var d = roleDef(); if (!d) return false;
       if (key === 'profile') return true;
@@ -567,12 +578,14 @@
       else App.loadScript('assets/js/mod-portal.js').then(function () { if (/^#\/portal/.test(location.hash)) App.renderPortal(location.hash); }, function () { toast('Could not load the portal', 'err'); });
       return;
     }
-    /* a doctor's login: only the doctor dashboard (the server refuses everything else) */
+    /* a doctor's login: doctor dashboard or ai-dashboard */
     if (s && s.role === 'doctor') {
       ensureChatbot(); chatbotVisibility();
-      if (window.App && App.renderDoctorHome) App.renderDoctorHome();
-      else App.loadScript('assets/js/mod-portal.js').then(function () { App.renderDoctorHome(); }, function () { toast('Could not load the dashboard', 'err'); });
-      return;
+      if (hash !== '#/ai-dashboard' && hash !== '/ai-dashboard') {
+        if (window.App && App.renderDoctorHome) App.renderDoctorHome();
+        else App.loadScript('assets/js/mod-portal.js').then(function () { App.renderDoctorHome(); }, function () { toast('Could not load the dashboard', 'err'); });
+        return;
+      }
     }
     /* password reset pages work signed out (and signed in: the emailed link must always open) */
     if (hash === '#/forgot' || hash.indexOf('#/reset') === 0) {
@@ -888,7 +901,7 @@
       { label: 'Overview', keys: ['dashboard', 'branches'] },
       { label: 'Laboratory', keys: ['patients', 'appointments', 'samples', 'results', 'invoices', 'inventory-stock', 'tests', 'packages', 'folder:lab'] },
       { label: 'Finance', keys: ['folder:acct'] },
-      { label: 'Insights', keys: ['reports', 'audit'] },
+      { label: 'Insights', keys: ['reports', 'ai-dashboard', 'audit'] },
       { label: 'Communication', keys: ['folder:tools'] },
       { label: 'Account', keys: ['subscription', 'settings'] }
     ];

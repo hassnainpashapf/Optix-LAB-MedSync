@@ -245,7 +245,7 @@
   function barHtml() {
     var d = S.data; if (!d) return '';
     var role = (d.patient && d.doctor) ? (S.role || 'patient') : (d.doctor ? 'doctor' : 'patient');
-    var tabs = role === 'patient' ? [['home', '🏠', 'Home'], ['reports', '📄', 'Reports'], ['invoices', '🧾', 'Billing'], ['appointments', '🗓', 'Book']] : [['home', '🏠', 'Home'], ['patients', '👥', 'Patients'], ['commission', '💰', 'Commission']];
+    var tabs = role === 'patient' ? [['home', '🏠', 'Home'], ['reports', '📄', 'Reports'], ['invoices', '🧾', 'Billing'], ['appointments', '🗓', 'Book']] : [['home', '🏠', 'Home'], ['patients', '👥', 'Patients'], ['commission', '💰', 'Commission'], ['ai', '🧠', 'AI Dashboard']];
     return '<div class="pt-bar"><div>' + tabs.map(function (t) { return '<button data-v="' + t[0] + '" class="' + (S.view === t[0] ? 'on' : '') + '"><i>' + t[1] + '</i>' + t[2] + '</button>'; }).join('') + '</div></div>';
   }
 
@@ -372,7 +372,16 @@
         S.busy = false; S.note = 'Appointment requested. The lab will confirm the time.'; load();
       }, function (e) { S.busy = false; S.err = e.message; paint(); });
     });
-    Array.prototype.forEach.call(document.querySelectorAll('[data-v]'), function (b) { b.addEventListener('click', function () { S.view = b.getAttribute('data-v'); S.q = ''; S.filt = 'all'; paint(); window.scrollTo(0, 0); }); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-v]'), function (b) {
+      b.addEventListener('click', function () {
+        var v = b.getAttribute('data-v');
+        if (v === 'ai') {
+          location.hash = '#/ai-dashboard';
+          return;
+        }
+        S.view = v; S.q = ''; S.filt = 'all'; paint(); window.scrollTo(0, 0);
+      });
+    });
     Array.prototype.forEach.call(document.querySelectorAll('[data-role]'), function (b) { b.addEventListener('click', function () { S.role = b.getAttribute('data-role'); S.view = 'home'; S.q = ''; S.filt = 'all'; paint(); }); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-f]'), function (b) { b.addEventListener('click', function () { S.filt = b.getAttribute('data-f'); paint(); }); });
     Array.prototype.forEach.call(document.querySelectorAll('[data-doc-ai]'), function (b) {
