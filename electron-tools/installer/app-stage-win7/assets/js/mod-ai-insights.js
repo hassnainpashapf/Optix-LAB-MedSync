@@ -4181,18 +4181,7 @@
         + '  }'
         + '  #optixAiDashboard .ai-btn-ghost:hover { background: #edf2f7; color: #0f172a; border-color: #cbd5e1; }'
         + '</style>'
-        + '<div class="page-h" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:14px">'
-        + '  <div>'
-        + '    <h2 style="font-size:24px;font-weight:800;color:#0f172a;letter-spacing:-0.02em;margin:0 0 4px">Optix AI Clinical Intelligence Engine</h2>'
-        + '    <div class="sub" style="font-size:13px;color:#64748b;margin:0;font-weight:500">Clinical decision support, automated panic triggers & practice governance</div>'
-        + '  </div>'
-        + '  <div style="display:flex;align-items:center;gap:10px">'
-        + '    <button type="button" id="aiSaveConfigBtn" class="ai-btn-primary ai-save-config-btn">'
-        + '      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
-        + '      <span>Save Settings</span>'
-        + '    </button>'
-        + '  </div>'
-        + '</div>'
+        + '<!-- Optix AI Clinical Intelligence Engine -->'
 
         // Top 4 Stat Cards
         + '<div class="stat-grid" style="margin-bottom:24px">'
@@ -4548,6 +4537,16 @@
         + '  </div>'
 
         + '</div>' // #aiDashPanels
+        + '<div class="ai-dash-footer" style="display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding:16px 20px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:16px;box-shadow:0 4px 16px rgba(15,23,42,0.04);position:sticky;bottom:16px;z-index:20;flex-wrap:wrap;gap:12px">'
+        + '  <div style="font-size:12.5px;color:#64748b;font-weight:600;display:flex;align-items:center;gap:8px">'
+        + '    <span style="font-size:16px">🛡️</span>'
+        + '    <span>Review and verify all clinical rules and parameters before saving changes.</span>'
+        + '  </div>'
+        + '  <button type="button" id="aiSaveConfigBtn" class="ai-btn-primary ai-save-config-btn" style="min-width:160px">'
+        + '    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
+        + '    <span>Save Settings</span>'
+        + '  </button>'
+        + '</div>'
         + '</div>'; // #optixAiDashboard
 
       return h;
