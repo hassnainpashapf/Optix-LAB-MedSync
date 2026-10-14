@@ -757,6 +757,8 @@
       (p.notes ? '<div class="pt-notes" style="margin-top:10px;font-size:13px;color:#5b6b80">📝 ' + App.esc(p.notes) + '</div>' : '') +
       '</div></div></div>' +
 
+      '<div id="ptClinicalOverview"></div>' +
+
       '<div class="stat-grid stat-grid-3">' +
       '<div class="stat"><div class="stat-ic blue">🧾</div><div><div class="stat-v">' + st.visits + '</div><div class="stat-l">Total Visits</div></div></div>' +
       '<div class="stat"><div class="stat-ic teal">💳</div><div><div class="stat-v">' + App.money(st.spent) + '</div><div class="stat-l">Total Spent</div></div></div>' +
@@ -787,6 +789,15 @@
       '</div></div>';
 
     paint(html, function () {
+      var clinicalHost = document.getElementById('ptClinicalOverview');
+      if (clinicalHost && App.aiInsights && App.aiInsights.canAccess()) {
+        var clinicalReady = App.patientClinical ? Promise.resolve() : App.loadScript('assets/js/mod-patient-clinical.js');
+        clinicalReady.then(function () {
+          if (clinicalHost.isConnected && App.patientClinical) App.patientClinical.mount(clinicalHost, p);
+        }).catch(function () {
+          if (clinicalHost.isConnected) clinicalHost.innerHTML = '<p class="muted">Clinical overview could not load. Patient reports remain available below.</p>';
+        });
+      }
       /* lab test actions: enter result / view / print */
       function ensureResultsMod(cb) {
         if (App.enterLabResult && App.viewLabReport && App.printLabReport) { cb(); return; }
