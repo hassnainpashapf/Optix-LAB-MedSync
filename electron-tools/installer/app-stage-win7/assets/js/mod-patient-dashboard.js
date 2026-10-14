@@ -922,16 +922,6 @@
 
     var colorPalette = ['#f59e0b', '#ef4444', '#0284c7', '#8b5cf6', '#10b981', '#ec4899', '#06b6d4', '#6366f1'];
 
-    var legendHtml = comps.map(function (c, idx) {
-      var color = colorPalette[idx % colorPalette.length];
-      var statusColor = c.badgeClass === 'improved' ? '#047857' : (c.badgeClass === 'deteriorated' ? '#b91c1c' : '#475569');
-      return '<div class="pd-graph-legend-pill" style="display:inline-flex;align-items:center;gap:6px;background:#ffffff;border:1px solid #e2e8f0;padding:4px 10px;border-radius:9999px;font-size:11.5px;font-weight:600">' +
-        '<span style="width:10px;height:10px;border-radius:50%;background:' + color + '"></span>' +
-        '<span>' + esc(c.paramName) + '</span>' +
-        '<span style="color:' + statusColor + ';font-size:10px;font-weight:700">(' + esc(c.statusLabel) + ')</span>' +
-        '</div>';
-    }).join('');
-
     var vectorsSvg = comps.map(function (c, idx) {
       var color = colorPalette[idx % colorPalette.length];
       var bounds = parseRefBounds(c.refRange);
@@ -968,10 +958,7 @@
       '    <span>Normal Reference: </span><span style="color:#059669;font-weight:700">Zone (Center)</span>' +
       '  </div>' +
       '</div>' +
-      '<div class="pd-graph-legend-bar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 10px">' +
-      legendHtml +
-      '</div>' +
-      '<div class="pd-trends-svg-wrap" style="width:100%;overflow-x:auto;background:#fafbfc;border:1px solid #e2e8f0;border-radius:14px;padding:12px 8px">' +
+      '<div class="pd-trends-svg-wrap" style="width:100%;overflow-x:auto;background:#fafbfc;border:1px solid #e2e8f0;border-radius:14px;padding:12px 8px;margin-top:14px">' +
       '  <svg viewBox="0 0 850 330" width="100%" height="auto" style="min-width:680px;display:block;margin:0 auto;overflow:visible">' +
       '    <defs>' +
       '      <linearGradient id="normalZoneGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
