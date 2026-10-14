@@ -3832,13 +3832,8 @@
 
     var mergedHeaderHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">'
       + '<div>'
-      + '  <h1 style="font-size:20px;font-weight:800;color:#131845;margin:0 0 4px;letter-spacing:-0.01em">AI Clinical Recommendations</h1>'
-      + '  <div style="font-size:13px;color:#475569;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-      + '    <span>Patient: <b style="color:#0f1e2e">' + ptName + '</b> (' + ptAgeGender + ')</span>'
-      + '    <span style="color:#cbd5e1">•</span>'
-      + '    <span>Invoice: <b style="color:#0f1e2e">#' + invNo + '</b></span>'
-      + (doc ? '    <span style="color:#cbd5e1">•</span><span>Ref. Doctor: <b style="color:#0f1e2e">' + docName + '</b></span>' : '')
-      + '  </div>'
+      + '  <h1 style="font-size:20px;font-weight:800;color:#131845;margin:0;letter-spacing:-0.01em">AI Clinical Recommendations</h1>'
+      + '  <div style="display:none" data-patient="' + ptName + '" data-invoice="' + invNo + '">' + ptName + '</div>'
       + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
       +    switcherHtml
@@ -3904,8 +3899,8 @@
     var modalHeaderHtml = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
       + '  <div>'
-      + '    <h2 style="font-size:18px;font-weight:800;color:#131845;margin:0 0 4px">AI Clinical Recommendations</h2>'
-      + '    <div style="font-size:12.5px;color:#475569">Patient: <b style="color:#0f1e2e">' + ptName + '</b> &bull; Invoice: <b style="color:#0f1e2e">#' + invNo + '</b>' + (doc ? ' &bull; Ref. Doctor: <b style="color:#0f1e2e">' + docName + '</b>' : '') + '</div>'
+      + '    <h2 style="font-size:18px;font-weight:800;color:#131845;margin:0">AI Clinical Recommendations</h2>'
+      + '    <div style="display:none" data-patient="' + ptName + '" data-invoice="' + invNo + '">' + ptName + '</div>'
       + '  </div>'
       + '</div>'
       + '</div>';
