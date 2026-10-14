@@ -3399,34 +3399,34 @@
       + tabsHtml
       // PANE 1: 5 Solutions (Clean Unified Medical Cards - Big & Spacious)
       + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
-      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;margin-bottom:16px">'
-      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,30,46,0.05);display:flex;flex-direction:column;height:420px;box-sizing:border-box">'
-      + '      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
-      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:6px">'
+      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;margin-bottom:20px">'
+      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
+      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          diagHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,30,46,0.05);display:flex;flex-direction:column;height:420px;box-sizing:border-box">'
-      + '      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">💊</span><span>Solution 2: Prescription & Medication Guidance</span></div>'
-      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:6px">'
+      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">💊</span><span>Solution 2: Prescription & Medication Guidance</span></div>'
+      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          medsHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,30,46,0.05);display:flex;flex-direction:column;height:420px;box-sizing:border-box">'
-      + '      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">🥗</span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
-      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:6px">'
+      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🥗</span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
+      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          dietHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,30,46,0.05);display:flex;flex-direction:column;height:420px;box-sizing:border-box">'
-      + '      <div style="font-size:15px;font-weight:800;color:#0f172a;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">🔬</span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
-      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:6px">'
+      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🔬</span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
+      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          testsHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1.5px solid #fed7aa;border-radius:14px;padding:20px;box-shadow:0 2px 8px rgba(15,30,46,0.05);display:flex;flex-direction:column;height:420px;box-sizing:border-box">'
-      + '      <div style="font-size:15px;font-weight:800;color:#c2410c;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">⚠️</span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
-      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:6px">'
+      + '    <div style="background:#ffffff;border:1.5px solid #fed7aa;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#c2410c;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">⚠️</span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
+      + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          redflagsHtml
       + '      </div>'
       + '    </div>'
@@ -3847,7 +3847,7 @@
 
     var pageContentHtml = AI.buildRecommendationsContent(analysis, { isPage: true });
 
-    container.innerHTML = '<div class="ai-recommendations-page" style="padding:16px 24px 48px;max-width:1240px;margin:0 auto;font-family:inherit">'
+    container.innerHTML = '<div class="ai-recommendations-page" style="padding:16px 24px 48px;max-width:1480px;margin:0 auto;font-family:inherit">'
       + mergedHeaderHtml
       + pageContentHtml
       + '</div>';
@@ -3905,7 +3905,7 @@
       + '</div>'
       + '</div>';
 
-    var bodyHtml = '<div style="max-width:940px;font-family:inherit">'
+    var bodyHtml = '<div style="max-width:1280px;font-family:inherit">'
       + modalHeaderHtml
       + AI.buildRecommendationsContent(analysis, { isPage: false })
       + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:10px;border-top:1px solid #e2e8f0">'
