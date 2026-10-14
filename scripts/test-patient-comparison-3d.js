@@ -131,21 +131,12 @@ assert.ok(html.includes('stage3DOrganView'), '3D Organ focus view container pres
 assert.ok(html.includes('data-organ-beacon="liver"'), 'Liver 3D beacon present');
 assert.ok(html.includes('data-organ-beacon="kidneys"'), 'Kidneys 3D beacon present');
 
-// 4. Verify Doctor Decision Support Matrix
-assert.ok(html.includes('Doctor Clinical Decision Support &amp; Action Matrix'), 'Doctor Decision Matrix present');
-assert.ok(html.includes('Clinical Findings &amp; Probable Etiology'), 'Clinical Findings quadrant present');
-assert.ok(html.includes('Critical Red Flags &amp; Panic Thresholds'), 'Panic Thresholds quadrant present');
-assert.ok(html.includes('Prescription Safety &amp; Contraindicated Drugs'), 'Prescription Safety quadrant present');
-assert.ok(html.includes('Recommended Confirmatory Orders &amp; Action Plan'), 'Action Plan quadrant present');
-
-// 5. Verify Clinical Rules triggered by abnormal findings:
-// - Platelets < 50k triggered Severe Thrombocytopenia Panic Alert
-assert.ok(html.includes('Severe Thrombocytopenia (Platelets: 45000 /uL)'), 'Thrombocytopenia panic alert triggered');
-// - Renal strain triggered NSAID contraindication
-assert.ok(html.includes('Avoid NSAIDs (Ibuprofen, Diclofenac, Mefenamic acid)'), 'NSAID contraindication for renal impairment triggered');
-// - Launch AI button present with current invoice
-assert.ok(html.includes('btnLaunchFullDoctorAI'), 'Launch AI button present');
-assert.ok(html.includes('data-inv-id="INV-OCT"'), 'Launch AI button wired to latest invoice INV-OCT');
+// 4. Verify Doctor Decision Support Matrix cleanly removed as requested
+assert.ok(!html.includes('Doctor Clinical Decision Support &amp; Action Matrix'), 'Doctor Decision Matrix cleanly removed');
+assert.ok(!html.includes('vitals-doctor-matrix'), 'Doctor Decision Matrix container cleanly removed');
+assert.ok(!html.includes('btnLaunchFullDoctorAI'), 'Doctor Decision Matrix launch button cleanly removed');
+assert.ok(html.includes('btnLaunchTrendsDoctorAI'), 'Header Full AI Analysis button present');
+assert.ok(html.includes('data-inv-id="INV-OCT"'), 'Header Full AI Analysis button wired to latest invoice INV-OCT');
 
 // 6. Verify Dedicated Biomarker Trends Page, Navigation Button & Visual Graphs:
 assert.ok(html.includes('data-pd-section="pdTrends"'), 'Header navigation button for Biomarker Trends present');

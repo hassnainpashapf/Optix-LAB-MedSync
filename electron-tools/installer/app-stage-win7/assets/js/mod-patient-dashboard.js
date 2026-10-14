@@ -1246,55 +1246,8 @@
   }
 
   /* Render Doctor Clinical Decision Support Matrix */
-  function renderDoctorDecisionMatrix(labData) {
-    var dm = labData.doctorMatrix || { etiology: [], panicAlerts: [], contraindications: [], recommendations: [] };
-    var hasPanic = dm.panicAlerts && dm.panicAlerts.length > 0;
-    var inv = labData.currentInvoice;
-
-    var etiologyHtml = (dm.etiology && dm.etiology.length) ?
-      ('<ul class="matrix-list">' + dm.etiology.map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>') :
-      '<p style="margin:0;font-size:12px;color:#64748b">No active clinical disease patterns identified from current lab values.</p>';
-
-    var panicHtml = hasPanic ?
-      ('<div style="color:#b91c1c;font-weight:700;margin-bottom:6px">⚠️ STAT EMERGENCY THRESHOLD EXCEEDED</div>' +
-       '<ul class="matrix-list" style="color:#991b1b">' + dm.panicAlerts.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>') :
-      '<p style="margin:0;font-size:12px;color:#166534">✓ No acute panic values detected. Physiological markers within monitored thresholds.</p>';
-
-    var safetyHtml = (dm.contraindications && dm.contraindications.length) ?
-      ('<ul class="matrix-list">' + dm.contraindications.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>') :
-      '<p style="margin:0;font-size:12px;color:#64748b">No organ-specific drug contraindications flagged for current profile.</p>';
-
-    var recsHtml = (dm.recommendations && dm.recommendations.length) ?
-      ('<ul class="matrix-list">' + dm.recommendations.map(function (r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul>') :
-      '<p style="margin:0;font-size:12px;color:#64748b">Standard periodic follow-up advised.</p>';
-
-    return '<div class="vitals-card vitals-doctor-matrix" id="vitalsDoctorDecisionSection">' +
-      '<div class="vitals-card-head">' +
-      '  <div>' +
-      '    <h3 style="display:flex;align-items:center;gap:8px"><span>👨‍⚕️</span><span>Doctor Clinical Decision Support &amp; Action Matrix</span></h3>' +
-      '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Evidence-based clinical insights, emergency alerts, and prescription safety contraindications.</p>' +
-      '  </div>' +
-      (inv ? ('<button type="button" class="btn btn-primary" id="btnLaunchFullDoctorAI" data-inv-id="' + esc(inv.id) + '" style="padding:6px 12px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px">🤖 Open Full AI Insights &amp; Rx</button>') : '') +
-      '</div>' +
-      '<div class="doctor-matrix-grid">' +
-      '  <div class="doctor-matrix-box etiology-box">' +
-      '    <div class="matrix-box-head"><span>🔬</span><strong>Clinical Findings &amp; Probable Etiology</strong></div>' +
-      etiologyHtml +
-      '  </div>' +
-      '  <div class="doctor-matrix-box panic-box ' + (hasPanic ? 'has-panic' : '') + '">' +
-      '    <div class="matrix-box-head"><span>🚨</span><strong>Critical Red Flags &amp; Panic Thresholds</strong></div>' +
-      panicHtml +
-      '  </div>' +
-      '  <div class="doctor-matrix-box safety-box">' +
-      '    <div class="matrix-box-head"><span>🛡️</span><strong>Prescription Safety &amp; Contraindicated Drugs</strong></div>' +
-      safetyHtml +
-      '  </div>' +
-      '  <div class="doctor-matrix-box action-box">' +
-      '    <div class="matrix-box-head"><span>📋</span><strong>Recommended Confirmatory Orders &amp; Action Plan</strong></div>' +
-      recsHtml +
-      '  </div>' +
-      '</div>' +
-      '</div>';
+  function renderDoctorDecisionMatrix() {
+    return '';
   }
 
   /* Build WhatsApp Care & Guidance Message (Roman Urdu + English) */
@@ -1553,8 +1506,7 @@
       '        </div>' +
       '      </div>' +
 
-      // Doctor Clinical Decision Support Matrix
-      renderDoctorDecisionMatrix(labData) +
+
       '    </div>' +
 
       // RIGHT COLUMN: INTERACTIVE ORGAN ANATOMICAL MODEL STAGE (~40%)
