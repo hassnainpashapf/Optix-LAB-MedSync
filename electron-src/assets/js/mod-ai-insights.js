@@ -4149,57 +4149,19 @@
     var activeTab = 'modules';
 
     var MODULE_DEFS = [
-      { key: 'solutions5', icon: '🩺', name: '5 Core Solutions Engine', desc: 'Differential diagnosis, medication guidance, diet & red flags.' },
-      { key: 'bodyMap', icon: '🫀', name: '2D Organ Impact Map', desc: 'Visual 8-organ physiological impact projection.' },
-      { key: 'calculators', icon: '🧮', name: 'Clinical Calculators & Indices', desc: 'eGFR, Mentzer index, FIB-4 & ASCVD risk scores.' },
-      { key: 'panicSos', icon: '🚨', name: 'Panic-Value SOS Alerts', desc: 'Critical emergency thresholds & automated WhatsApp dispatch.' },
-      { key: 'drugInteractions', icon: '💊', name: 'Drug Interaction (DDI) Checker', desc: 'Multi-drug clash & adverse interaction matrix.' },
-      { key: 'safetyShields', icon: '🛡️', name: 'Organ Toxicity Safety Shields', desc: 'Renal, hepatic & hematology contraindications.' },
-      { key: 'ddx', icon: '🧬', name: 'Differential Diagnosis (DDx)', desc: 'Ranked disease differentials & diagnostic criteria.' },
-      { key: 'geneticGuard', icon: '🔬', name: 'Genetic & Marriage Guard', desc: 'Thalassemia trait & premarital risk warnings.' },
-      { key: 'ascvdRisk', icon: '❤️', name: '10-Year ASCVD Risk Estimator', desc: 'Cardiovascular heart attack probability calculation.' },
-      { key: 'urduGuide', icon: '🇵🇰', name: 'Roman Urdu Patient Guide', desc: 'Bilingual patient care & dietary instructions.' },
-      { key: 'rxPad', icon: '🖨️', name: 'Digital Doctor Prescription Pad', desc: '1-Click printable Rx pad with doctor credentials.' },
-      { key: 'reportRemarks', icon: '📝', name: 'AI Summary on Report Remarks', desc: 'Auto-attaches concise executive summary to report footer.' }
+      { key: 'solutions5', icon: '🩺', name: '5 Core Solutions', desc: 'Diagnosis, medications, diet & red flags.' },
+      { key: 'bodyMap', icon: '🫀', name: 'Organ Impact Map', desc: '8-system physiological impact visualizer.' },
+      { key: 'calculators', icon: '🧮', name: 'Clinical Calculators', desc: 'eGFR, Mentzer, FIB-4 & ASCVD scores.' },
+      { key: 'panicSos', icon: '🚨', name: 'Panic SOS Alerts', desc: 'Emergency limits & automated WhatsApp dispatch.' },
+      { key: 'drugInteractions', icon: '💊', name: 'Drug Interactions (DDI)', desc: 'Multi-drug clash & conflict detection.' },
+      { key: 'safetyShields', icon: '🛡️', name: 'Organ Toxicity Shields', desc: 'Renal, hepatic & hematology contraindications.' },
+      { key: 'ddx', icon: '🧬', name: 'Differential Diagnosis (DDx)', desc: 'Ranked candidate disease differentials.' },
+      { key: 'geneticGuard', icon: '🔬', name: 'Genetic & Marriage Guard', desc: 'Thalassemia & familial carrier risk.' },
+      { key: 'ascvdRisk', icon: '❤️', name: '10-Year ASCVD Risk', desc: 'Cardiovascular stroke & heart risk.' },
+      { key: 'urduGuide', icon: '🇵🇰', name: 'Roman Urdu Guide', desc: 'Bilingual patient care & diet instructions.' },
+      { key: 'rxPad', icon: '🖨️', name: 'Digital Prescription Pad', desc: 'Printable prescription pad with credentials.' },
+      { key: 'reportRemarks', icon: '📝', name: 'Report Remarks Summary', desc: 'Attaches AI summary to report footer.' }
     ];
-
-    function getRxPreviewHtml(brand) {
-      var escFn = (window.App && App.esc) ? App.esc : function (s) { return String(s || '').replace(/[&<>"']/g, ''); };
-      return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;box-shadow:0 4px 16px rgba(15,23,42,.06);font-family:inherit">'
-        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #2f6df6;padding-bottom:12px;margin-bottom:12px">'
-        + '  <div>'
-        + '    <div style="font-size:17px;font-weight:800;color:#1b2a4a">Dr. ' + escFn(brand.name || 'Consultant Physician') + '</div>'
-        + '    <div style="font-size:12px;font-weight:700;color:#2f6df6;margin-top:2px">' + escFn(brand.degrees || 'MBBS, FCPS / MD') + ' &bull; PMDC: ' + escFn(brand.pmdc || '49281-P') + '</div>'
-        + '    <div style="font-size:11.5px;color:#64748b;margin-top:2px">' + escFn(brand.specialization || 'Clinical Specialist') + '</div>'
-        + '  </div>'
-        + '  <div style="text-align:right">'
-        + '    <div style="font-size:14px;font-weight:700;color:#1b2a4a">' + escFn(brand.clinic || 'Optix Medical Care & Diagnostics') + '</div>'
-        + '    <div style="font-size:11px;font-weight:600;color:#16a34a;margin-top:2px">Tel: ' + escFn(brand.phone || '+92 300 0000000') + '</div>'
-        + '  </div>'
-        + '</div>'
-        + '<div style="background:#f8fafc;border:1px solid #eef2f6;padding:8px 12px;border-radius:8px;font-size:12px;color:#334155;display:flex;justify-content:space-between;margin-bottom:14px">'
-        + '  <span>Patient: <b>Ali Raza (38Y, Male)</b> &bull; MR#: <b>10948</b></span>'
-        + '  <span>Date: <b>' + (window.App && App.today ? App.today() : 'Today') + '</b></span>'
-        + '</div>'
-        + '<div style="font-family:serif;font-size:26px;font-weight:900;color:#2f6df6;margin-bottom:8px">℞</div>'
-        + '<div style="border:1px solid #eef2f6;border-radius:8px;overflow:hidden;margin-bottom:16px">'
-        + '  <table style="width:100%;font-size:12px;border-collapse:collapse;text-align:left">'
-        + '    <thead><tr style="background:#f8fafc;color:#64748b;border-bottom:1px solid #eef2f6"><th style="padding:6px 10px">Medication</th><th style="padding:6px 10px">Dosage</th><th style="padding:6px 10px">Instructions</th></tr></thead>'
-        + '    <tbody>'
-        + '      <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:7px 10px;font-weight:700;color:#1b2a4a">Cap. Ferrous Fumarate + Folic Acid</td><td style="padding:7px 10px;color:#334155">1 cap daily</td><td style="padding:7px 10px;color:#64748b">After breakfast with Vitamin C</td></tr>'
-        + '      <tr><td style="padding:7px 10px;font-weight:700;color:#1b2a4a">Tab. Paracetamol 500mg</td><td style="padding:7px 10px;color:#334155">1 tab SOS</td><td style="padding:7px 10px;color:#64748b">For fever / body aches (max 3/day)</td></tr>'
-        + '    </tbody>'
-        + '  </table>'
-        + '</div>'
-        + '<div style="display:flex;justify-content:space-between;align-items:flex-end;margin-top:16px;padding-top:10px;border-top:1px dashed #e2e8f0">'
-        + '  <span style="font-size:11px;color:#94a3b8">Valid for 30 days &bull; Generated via Optix AI Pad</span>'
-        + '  <div style="text-align:right">'
-        + '    <div style="font-size:12px;font-weight:700;color:#1b2a4a;border-bottom:1px solid #94a3b8;padding-bottom:2px;display:inline-block;min-width:140px">Dr. ' + escFn(brand.name || 'Physician') + '</div>'
-        + '    <div style="font-size:10.5px;color:#64748b;margin-top:2px">Authorized Signature & Stamp</div>'
-        + '  </div>'
-        + '</div>'
-        + '</div>';
-    }
 
     function renderShell() {
       var escFn = (window.App && App.esc) ? App.esc : function (s) { return String(s || '').replace(/[&<>"']/g, ''); };
@@ -4346,37 +4308,37 @@
 
         // Top 4 Stat Cards
         + '<div class="stat-grid" style="margin-bottom:24px">'
-        + '  <div class="stat ai-dash-kpi" style="min-height:180px;height:auto;padding:24px 26px 22px;overflow:visible">'
-        + '    <div class="stat-ico" style="width:48px;height:48px;margin-bottom:14px">'
-        + '      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
+        + '  <div class="stat ai-dash-kpi" style="min-height:160px;height:auto;padding:22px 24px;overflow:visible">'
+        + '    <div class="stat-ico" style="width:44px;height:44px;margin-bottom:12px">'
+        + '      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
         + '    </div>'
-        + '    <div class="lb" style="font-size:12px;font-weight:700">Analysis Views</div>'
-        + '    <div class="vl" data-count="' + stats.analyzed + '" style="font-size:34px;font-weight:800">' + stats.analyzed + '</div>'
-        + '    <div class="dl" style="font-size:13px;white-space:normal;line-height:1.35">Local activity count</div>'
+        + '    <div class="lb" style="font-size:12px;font-weight:700">Analyses</div>'
+        + '    <div class="vl" data-count="' + stats.analyzed + '" style="font-size:32px;font-weight:800">' + stats.analyzed + '</div>'
+        + '    <div class="dl" style="font-size:12.5px;color:var(--muted,#64748b)">Total evaluations</div>'
         + '  </div>'
-        + '  <div class="stat ai-dash-kpi" style="min-height:180px;height:auto;padding:24px 26px 22px;overflow:visible">'
-        + '    <div class="stat-ico" style="width:48px;height:48px;margin-bottom:14px">'
-        + '      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+        + '  <div class="stat ai-dash-kpi" style="min-height:160px;height:auto;padding:22px 24px;overflow:visible">'
+        + '    <div class="stat-ico" style="width:44px;height:44px;margin-bottom:12px">'
+        + '      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
         + '    </div>'
-        + '    <div class="lb" style="font-size:12px;font-weight:700">Critical Flag Views</div>'
-        + '    <div class="vl" data-count="' + stats.panics + '" style="font-size:34px;font-weight:800">' + stats.panics + '</div>'
-        + '    <div class="dl" style="font-size:13px;white-space:normal;line-height:1.35">Critical emergency thresholds</div>'
+        + '    <div class="lb" style="font-size:12px;font-weight:700">Critical Alerts</div>'
+        + '    <div class="vl" data-count="' + stats.panics + '" style="font-size:32px;font-weight:800">' + stats.panics + '</div>'
+        + '    <div class="dl" style="font-size:12.5px;color:var(--muted,#64748b)">Emergency flags</div>'
         + '  </div>'
-        + '  <div class="stat ai-dash-kpi" style="min-height:180px;height:auto;padding:24px 26px 22px;overflow:visible">'
-        + '    <div class="stat-ico" style="width:48px;height:48px;margin-bottom:14px">'
-        + '      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
+        + '  <div class="stat ai-dash-kpi" style="min-height:160px;height:auto;padding:22px 24px;overflow:visible">'
+        + '    <div class="stat-ico" style="width:44px;height:44px;margin-bottom:12px">'
+        + '      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
         + '    </div>'
-        + '    <div class="lb" style="font-size:12px;font-weight:700">Organ Flag Views</div>'
-        + '    <div class="vl" data-count="' + stats.organAlerts + '" style="font-size:34px;font-weight:800">' + stats.organAlerts + '</div>'
-        + '    <div class="dl" style="font-size:13px;white-space:normal;line-height:1.35">Organ risk warnings</div>'
+        + '    <div class="lb" style="font-size:12px;font-weight:700">Organ Warnings</div>'
+        + '    <div class="vl" data-count="' + stats.organAlerts + '" style="font-size:32px;font-weight:800">' + stats.organAlerts + '</div>'
+        + '    <div class="dl" style="font-size:12.5px;color:var(--muted,#64748b)">High risk systems</div>'
         + '  </div>'
-        + '  <div class="stat ai-dash-kpi" style="min-height:180px;height:auto;padding:24px 26px 22px;overflow:visible">'
-        + '    <div class="stat-ico" style="width:48px;height:48px;margin-bottom:14px">'
-        + '      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+        + '  <div class="stat ai-dash-kpi" style="min-height:160px;height:auto;padding:22px 24px;overflow:visible">'
+        + '    <div class="stat-ico" style="width:44px;height:44px;margin-bottom:12px">'
+        + '      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
         + '    </div>'
-        + '    <div class="lb" style="font-size:12px;font-weight:700">Interaction Flag Views</div>'
-        + '    <div class="vl" data-count="' + stats.ddiBlocked + '" style="font-size:34px;font-weight:800">' + stats.ddiBlocked + '</div>'
-        + '    <div class="dl" style="font-size:13px;white-space:normal;line-height:1.35">Analysis windows with flags</div>'
+        + '    <div class="lb" style="font-size:12px;font-weight:700">DDI Conflicts</div>'
+        + '    <div class="vl" data-count="' + stats.ddiBlocked + '" style="font-size:32px;font-weight:800">' + stats.ddiBlocked + '</div>'
+        + '    <div class="dl" style="font-size:12.5px;color:var(--muted,#64748b)">Drug interaction blocks</div>'
         + '  </div>'
         + '</div>'
 
@@ -4395,7 +4357,7 @@
         + '    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:12px">'
         + '      <div>'
         + '        <h3 style="margin:0;font-size:15px;font-weight:700;color:var(--ink,#0f1e2e)">Clinical Subsystems</h3>'
-        + '        <div style="font-size:12px;color:var(--muted,#64748b);margin-top:2px">Enable or disable specialized AI diagnostic and reporting engines</div>'
+        + '        <div style="font-size:12px;color:var(--muted,#64748b);margin-top:2px">Configure active AI diagnostic and safety modules</div>'
         + '      </div>'
         + '      <div style="display:flex;gap:8px">'
         + '        <button type="button" id="aiEnableAllMods" class="ai-btn-ghost">✓ Enable All</button>'
@@ -4427,8 +4389,8 @@
         + '    <div class="card">'
         + '      <div class="card-h">'
         + '        <div>'
-        + '          <h3>Emergency Panic Cutoff Limits (CAP / ISO 15189)</h3>'
-        + '          <div style="font-size:12px;color:var(--muted,#64748b);margin-top:3px">Automated WhatsApp alert triggers when patient values cross these critical safety boundaries</div>'
+        + '          <h3>Emergency Panic Cutoff Limits</h3>'
+        + '          <div style="font-size:12px;color:var(--muted,#64748b);margin-top:3px">Automated WhatsApp alerts trigger when patient values cross these critical safety boundaries.</div>'
         + '        </div>'
         + '        <button type="button" id="aiResetPanicDefaultsBtn" class="ai-btn-ghost">'
         + '          🔄 Restore Defaults'
@@ -4436,32 +4398,32 @@
         + '      </div>'
         + '      <div class="card-b">'
         + '        <div class="ai-sec-badge">'
-        + '          <span>🩸</span> Hematology & Hemostasis'
+        + '          <span>🩸</span> Hematology'
         + '        </div>'
         + '        <div class="ai-input-grid" style="margin-bottom:20px">'
         + '          <div class="ai-form-group">'
-        + '            <label>Platelet Critical Count</label>'
+        + '            <label>Platelets (Min)</label>'
         + '            <div style="position:relative;display:flex;align-items:center">'
         + '              <input type="number" class="input" id="thPlt" value="' + (curCfg.panicThresholds.plt || 20000) + '" style="padding-right:68px">'
         + '              <span class="ai-unit-tag">&lt; /uL</span>'
         + '            </div>'
         + '          </div>'
         + '          <div class="ai-form-group">'
-        + '            <label>Hemoglobin Transfusion Trigger</label>'
+        + '            <label>Hemoglobin (Hb Min)</label>'
         + '            <div style="position:relative;display:flex;align-items:center">'
         + '              <input type="number" step="0.1" class="input" id="thHb" value="' + (curCfg.panicThresholds.hb || 6.5) + '" style="padding-right:68px">'
         + '              <span class="ai-unit-tag">&lt; g/dL</span>'
         + '            </div>'
         + '          </div>'
         + '          <div class="ai-form-group">'
-        + '            <label>WBC Hyperleukocytosis Panic</label>'
+        + '            <label>WBC (Max)</label>'
         + '            <div style="position:relative;display:flex;align-items:center">'
         + '              <input type="number" class="input" id="thWbcHigh" value="' + (curCfg.panicThresholds.wbcHigh || 35000) + '" style="padding-right:68px">'
         + '              <span class="ai-unit-tag">&gt; /uL</span>'
         + '            </div>'
         + '          </div>'
         + '          <div class="ai-form-group">'
-        + '            <label>WBC Agranulocytosis Lower</label>'
+        + '            <label>WBC (Min)</label>'
         + '            <div style="position:relative;display:flex;align-items:center">'
         + '              <input type="number" class="input" id="thWbcLow" value="' + (curCfg.panicThresholds.wbcLow || 1500) + '" style="padding-right:68px">'
         + '              <span class="ai-unit-tag">&lt; /uL</span>'
@@ -4469,25 +4431,25 @@
         + '          </div>'
         + '        </div>'
         + '        <div class="ai-sec-badge">'
-        + '          <span>🧪</span> Blood Sugar & Liver'
+        + '          <span>🧪</span> Glucose & Liver'
         + '        </div>'
         + '        <div class="ai-input-grid" style="margin-bottom:20px">'
         + '          <div class="ai-form-group">'
-        + '            <label>Blood Glucose Upper (DKA Panic)</label>'
+        + '            <label>Glucose (Max)</label>'
         + '            <div style="position:relative;display:flex;align-items:center">'
         + '              <input type="number" class="input" id="thGlucoseHigh" value="' + (curCfg.panicThresholds.glucoseHigh || 400) + '" style="padding-right:78px">'
         + '              <span class="ai-unit-tag">&gt; mg/dL</span>'
         + '            </div>'
         + '          </div>'
         + '          <div class="ai-form-group">'
-        + '            <label>Blood Glucose Lower (Hypoglycemia)</label>'
+        + '            <label>Glucose (Min)</label>'
         + '            <div style="position:relative;display:flex;align-items:center">'
         + '              <input type="number" class="input" id="thGlucoseLow" value="' + (curCfg.panicThresholds.glucoseLow || 50) + '" style="padding-right:78px">'
         + '              <span class="ai-unit-tag">&lt; mg/dL</span>'
         + '            </div>'
         + '          </div>'
         + '          <div class="ai-form-group">'
-        + '            <label>Total Bilirubin (Severe Jaundice)</label>'
+        + '            <label>Total Bilirubin (Max)</label>'
         + '            <div style="position:relative;display:flex;align-items:center">'
         + '              <input type="number" step="0.1" class="input" id="thBilirubin" value="' + (curCfg.panicThresholds.bilirubin || 10.0) + '" style="padding-right:78px">'
         + '              <span class="ai-unit-tag">&gt; mg/dL</span>'
@@ -4495,25 +4457,25 @@
         + '          </div>'
         + '        </div>'
         + '        <div class="ai-sec-badge">'
-        + '          <span>🫘</span> Renal Crisis & Electrolytes'
+        + '          <span>🫘</span> Renal & Electrolytes'
         + '        </div>'
         + '        <div class="ai-input-grid">'
         + '          <div class="ai-form-group">'
-        + '            <label>Serum Creatinine (Renal Crisis)</label>'
+        + '            <label>Serum Creatinine (Max)</label>'
         + '            <div style="position:relative;display:flex;align-items:center">'
         + '              <input type="number" step="0.1" class="input" id="thCreatinine" value="' + (curCfg.panicThresholds.creatinine || 4.0) + '" style="padding-right:78px">'
         + '              <span class="ai-unit-tag">&gt; mg/dL</span>'
         + '            </div>'
         + '          </div>'
         + '          <div class="ai-form-group">'
-        + '            <label>Serum Potassium (Hyperkalemia Upper)</label>'
+        + '            <label>Potassium (Max)</label>'
         + '            <div style="position:relative;display:flex;align-items:center">'
         + '              <input type="number" step="0.1" class="input" id="thPotassiumHigh" value="' + (curCfg.panicThresholds.potassiumHigh || 6.2) + '" style="padding-right:78px">'
         + '              <span class="ai-unit-tag">&gt; mEq/L</span>'
         + '            </div>'
         + '          </div>'
         + '          <div class="ai-form-group">'
-        + '            <label>Serum Potassium (Hypokalemia Lower)</label>'
+        + '            <label>Potassium (Min)</label>'
         + '            <div style="position:relative;display:flex;align-items:center">'
         + '              <input type="number" step="0.1" class="input" id="thPotassiumLow" value="' + (curCfg.panicThresholds.potassiumLow || 2.8) + '" style="padding-right:78px">'
         + '              <span class="ai-unit-tag">&lt; mEq/L</span>'
@@ -4524,64 +4486,60 @@
         + '    </div>'
         + '  </div>'
 
-
-
-
-
-        // PANEL 5: CLINICAL SANDBOX
+        // PANEL 3: CLINICAL SANDBOX
         + '  <div id="aiPanel-sandbox" style="display:' + (activeTab === 'sandbox' ? 'block' : 'none') + '">'
         + '    <div style="margin-bottom:18px">'
         + '      <h3 style="margin:0;font-size:16px;font-weight:700;color:var(--ink,#0f1e2e)">Clinical Sandbox & Live Analysis Simulator</h3>'
-        + '      <div style="font-size:12.5px;color:var(--muted,#64748b);margin-top:3px">Test and verify diagnostic algorithms, drug interaction matrices, and panic SOS alerts with simulated patient profiles</div>'
+        + '      <div style="font-size:12.5px;color:var(--muted,#64748b);margin-top:3px">Test AI diagnostic algorithms and panic SOS alerts with simulated patient profiles.</div>'
         + '    </div>'
         + '    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">'
-        + '      <div class="ai-sim-card" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;justify-content:space-between;min-height:250px;box-shadow:0 1px 4px rgba(15,30,46,0.05);position:relative;overflow:hidden">'
+        + '      <div class="ai-sim-card" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;justify-content:space-between;min-height:230px;box-shadow:0 1px 4px rgba(15,30,46,0.05);position:relative;overflow:hidden">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-        + '            <div class="sim-ico-box" style="width:44px;height:44px;border-radius:12px;background:var(--brand-soft,#ebf4f8);border:1px solid var(--brand-line,#c7d8e8);color:var(--brand,#131845);display:grid;place-items:center;font-size:22px">🩸</div>'
+        + '            <div class="sim-ico-box" style="width:42px;height:42px;border-radius:11px;background:var(--brand-soft,#ebf4f8);border:1px solid var(--brand-line,#c7d8e8);color:var(--brand,#131845);display:grid;place-items:center;font-size:20px">🩸</div>'
         + '            <span class="badge" style="background:#f1f5f9;color:var(--ink2,#334155);border:1px solid #cbd5e1;font-size:11px;font-weight:700;border-radius:999px;padding:4px 10px;letter-spacing:0.04em">CRITICAL</span>'
         + '          </div>'
-        + '          <div class="sim-title" style="font-size:16px;font-weight:800;color:var(--ink,#0f1e2e);margin:10px 0 6px">Acute Dengue Shock Syndrome</div>'
-        + '          <div class="sim-stats" style="font-size:12.5px;color:var(--muted,#64748b);margin-bottom:12px;background:#f8fafc;padding:10px 14px;border-radius:9px;border:1px solid #eef2f6;line-height:1.4">Platelets: <b style="color:var(--ink,#0f1e2e)">14,000</b> &bull; WBC: <b style="color:var(--ink,#0f1e2e)">2,800</b> &bull; HCT: <b style="color:var(--ink,#0f1e2e)">48.5%</b></div>'
-        + '          <div class="sim-desc" style="font-size:12.5px;color:var(--muted,#64748b);line-height:1.5;margin-bottom:16px;flex:1">Tests automatic panic SOS triggers, fluid balance recommendations, and platelet crash alerts.</div>'
+        + '          <div class="sim-title" style="font-size:15px;font-weight:800;color:var(--ink,#0f1e2e);margin:8px 0 6px">Acute Dengue Shock</div>'
+        + '          <div class="sim-stats" style="font-size:12px;color:var(--muted,#64748b);margin-bottom:10px;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #eef2f6;line-height:1.4">Plt: <b style="color:var(--ink,#0f1e2e)">14,000</b> &bull; WBC: <b style="color:var(--ink,#0f1e2e)">2,800</b> &bull; HCT: <b style="color:var(--ink,#0f1e2e)">48.5%</b></div>'
+        + '          <div class="sim-desc" style="font-size:12px;color:var(--muted,#64748b);line-height:1.45;margin-bottom:14px;flex:1">Tests panic SOS alerts, fluid balance guidance, and platelet crash warnings.</div>'
         + '        </div>'
-        + '        <button type="button" class="btn btn-primary sim-btn" data-ai-sim="dengue" style="margin-top:auto;width:100%;border-radius:9px;font-weight:700;font-size:13.5px;padding:11px 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--brand-grad,linear-gradient(135deg,#5392ba 0%,#131845 60%,#0d0f36 100%));color:#ffffff;border:none;box-shadow:0 4px 12px -2px rgba(19,24,69,0.35);cursor:pointer">▶ Run Simulation</button>'
+        + '        <button type="button" class="btn btn-primary sim-btn" data-ai-sim="dengue" style="margin-top:auto;width:100%;border-radius:9px;font-weight:700;font-size:13px;padding:10px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--brand-grad,linear-gradient(135deg,#5392ba 0%,#131845 60%,#0d0f36 100%));color:#ffffff;border:none;box-shadow:0 4px 12px -2px rgba(19,24,69,0.35);cursor:pointer">▶ Run Simulation</button>'
         + '      </div>'
-        + '      <div class="ai-sim-card" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;justify-content:space-between;min-height:250px;box-shadow:0 1px 4px rgba(15,30,46,0.05);position:relative;overflow:hidden">'
+        + '      <div class="ai-sim-card" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;justify-content:space-between;min-height:230px;box-shadow:0 1px 4px rgba(15,30,46,0.05);position:relative;overflow:hidden">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-        + '            <div class="sim-ico-box" style="width:44px;height:44px;border-radius:12px;background:var(--brand-soft,#ebf4f8);border:1px solid var(--brand-line,#c7d8e8);color:var(--brand,#131845);display:grid;place-items:center;font-size:22px">🫘</div>'
+        + '            <div class="sim-ico-box" style="width:42px;height:42px;border-radius:11px;background:var(--brand-soft,#ebf4f8);border:1px solid var(--brand-line,#c7d8e8);color:var(--brand,#131845);display:grid;place-items:center;font-size:20px">🫘</div>'
         + '            <span class="badge" style="background:#f1f5f9;color:var(--ink2,#334155);border:1px solid #cbd5e1;font-size:11px;font-weight:700;border-radius:999px;padding:4px 10px;letter-spacing:0.04em">RENAL</span>'
         + '          </div>'
-        + '          <div class="sim-title" style="font-size:16px;font-weight:800;color:var(--ink,#0f1e2e);margin:10px 0 6px">Diabetic Nephropathy & AKI</div>'
-        + '          <div class="sim-stats" style="font-size:12.5px;color:var(--muted,#64748b);margin-bottom:12px;background:#f8fafc;padding:10px 14px;border-radius:9px;border:1px solid #eef2f6;line-height:1.4">Glucose: <b style="color:var(--ink,#0f1e2e)">465</b> &bull; Creatinine: <b style="color:var(--ink,#0f1e2e)">4.8</b> &bull; K+: <b style="color:var(--ink,#0f1e2e)">6.4</b></div>'
-        + '          <div class="sim-desc" style="font-size:12.5px;color:var(--muted,#64748b);line-height:1.5;margin-bottom:16px;flex:1">Tests organ safety shield (Metformin contraindication), hyperkalemia alerts & eGFR scoring.</div>'
+        + '          <div class="sim-title" style="font-size:15px;font-weight:800;color:var(--ink,#0f1e2e);margin:8px 0 6px">Diabetic Nephropathy & AKI</div>'
+        + '          <div class="sim-stats" style="font-size:12px;color:var(--muted,#64748b);margin-bottom:10px;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #eef2f6;line-height:1.4">Glucose: <b style="color:var(--ink,#0f1e2e)">465</b> &bull; Creatinine: <b style="color:var(--ink,#0f1e2e)">4.8</b> &bull; K+: <b style="color:var(--ink,#0f1e2e)">6.4</b></div>'
+        + '          <div class="sim-desc" style="font-size:12px;color:var(--muted,#64748b);line-height:1.45;margin-bottom:14px;flex:1">Tests organ safety shields, hyperkalemia alerts, and eGFR calculation.</div>'
         + '        </div>'
-        + '        <button type="button" class="btn btn-primary sim-btn" data-ai-sim="diabetic_aki" style="margin-top:auto;width:100%;border-radius:9px;font-weight:700;font-size:13.5px;padding:11px 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--brand-grad,linear-gradient(135deg,#5392ba 0%,#131845 60%,#0d0f36 100%));color:#ffffff;border:none;box-shadow:0 4px 12px -2px rgba(19,24,69,0.35);cursor:pointer">▶ Run Simulation</button>'
+        + '        <button type="button" class="btn btn-primary sim-btn" data-ai-sim="diabetic_aki" style="margin-top:auto;width:100%;border-radius:9px;font-weight:700;font-size:13px;padding:10px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--brand-grad,linear-gradient(135deg,#5392ba 0%,#131845 60%,#0d0f36 100%));color:#ffffff;border:none;box-shadow:0 4px 12px -2px rgba(19,24,69,0.35);cursor:pointer">▶ Run Simulation</button>'
         + '      </div>'
-        + '      <div class="ai-sim-card" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;justify-content:space-between;min-height:250px;box-shadow:0 1px 4px rgba(15,30,46,0.05);position:relative;overflow:hidden">'
+        + '      <div class="ai-sim-card" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;justify-content:space-between;min-height:230px;box-shadow:0 1px 4px rgba(15,30,46,0.05);position:relative;overflow:hidden">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-        + '            <div class="sim-ico-box" style="width:44px;height:44px;border-radius:12px;background:var(--brand-soft,#ebf4f8);border:1px solid var(--brand-line,#c7d8e8);color:var(--brand,#131845);display:grid;place-items:center;font-size:22px">🧬</div>'
+        + '            <div class="sim-ico-box" style="width:42px;height:42px;border-radius:11px;background:var(--brand-soft,#ebf4f8);border:1px solid var(--brand-line,#c7d8e8);color:var(--brand,#131845);display:grid;place-items:center;font-size:20px">🧬</div>'
         + '            <span class="badge" style="background:#f1f5f9;color:var(--ink2,#334155);border:1px solid #cbd5e1;font-size:11px;font-weight:700;border-radius:999px;padding:4px 10px;letter-spacing:0.04em">GENETIC</span>'
         + '          </div>'
-        + '          <div class="sim-title" style="font-size:16px;font-weight:800;color:var(--ink,#0f1e2e);margin:10px 0 6px">Beta-Thalassemia Trait</div>'
-        + '          <div class="sim-stats" style="font-size:12.5px;color:var(--muted,#64748b);margin-bottom:12px;background:#f8fafc;padding:10px 14px;border-radius:9px;border:1px solid #eef2f6;line-height:1.4">Hb: <b style="color:var(--ink,#0f1e2e)">7.9</b> &bull; MCV: <b style="color:var(--ink,#0f1e2e)">57 fL</b> &bull; Mentzer: <b style="color:var(--ink,#0f1e2e)">9.8</b></div>'
-        + '          <div class="sim-desc" style="font-size:12.5px;color:var(--muted,#64748b);line-height:1.5;margin-bottom:16px;flex:1">Tests Mentzer discrimination index, hemoglobinopathy advisory, and marriage guard matrix.</div>'
+        + '          <div class="sim-title" style="font-size:15px;font-weight:800;color:var(--ink,#0f1e2e);margin:8px 0 6px">Beta-Thalassemia Trait</div>'
+        + '          <div class="sim-stats" style="font-size:12px;color:var(--muted,#64748b);margin-bottom:10px;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #eef2f6;line-height:1.4">Hb: <b style="color:var(--ink,#0f1e2e)">7.9</b> &bull; MCV: <b style="color:var(--ink,#0f1e2e)">57 fL</b> &bull; Mentzer: <b style="color:var(--ink,#0f1e2e)">9.8</b></div>'
+        + '          <div class="sim-desc" style="font-size:12px;color:var(--muted,#64748b);line-height:1.45;margin-bottom:14px;flex:1">Tests Mentzer discrimination index and marriage guard advisory.</div>'
         + '        </div>'
-        + '        <button type="button" class="btn btn-primary sim-btn" data-ai-sim="thalassemia" style="margin-top:auto;width:100%;border-radius:9px;font-weight:700;font-size:13.5px;padding:11px 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--brand-grad,linear-gradient(135deg,#5392ba 0%,#131845 60%,#0d0f36 100%));color:#ffffff;border:none;box-shadow:0 4px 12px -2px rgba(19,24,69,0.35);cursor:pointer">▶ Run Simulation</button>'
+        + '        <button type="button" class="btn btn-primary sim-btn" data-ai-sim="thalassemia" style="margin-top:auto;width:100%;border-radius:9px;font-weight:700;font-size:13px;padding:10px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--brand-grad,linear-gradient(135deg,#5392ba 0%,#131845 60%,#0d0f36 100%));color:#ffffff;border:none;box-shadow:0 4px 12px -2px rgba(19,24,69,0.35);cursor:pointer">▶ Run Simulation</button>'
         + '      </div>'
-        + '      <div class="ai-sim-card" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;justify-content:space-between;min-height:250px;box-shadow:0 1px 4px rgba(15,30,46,0.05);position:relative;overflow:hidden">'
+        + '      <div class="ai-sim-card" style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;justify-content:space-between;min-height:230px;box-shadow:0 1px 4px rgba(15,30,46,0.05);position:relative;overflow:hidden">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-        + '            <div class="sim-ico-box" style="width:44px;height:44px;border-radius:12px;background:var(--brand-soft,#ebf4f8);border:1px solid var(--brand-line,#c7d8e8);color:var(--brand,#131845);display:grid;place-items:center;font-size:22px">🥩</div>'
+        + '            <div class="sim-ico-box" style="width:42px;height:42px;border-radius:11px;background:var(--brand-soft,#ebf4f8);border:1px solid var(--brand-line,#c7d8e8);color:var(--brand,#131845);display:grid;place-items:center;font-size:20px">🥩</div>'
         + '            <span class="badge" style="background:#f1f5f9;color:var(--ink2,#334155);border:1px solid #cbd5e1;font-size:11px;font-weight:700;border-radius:999px;padding:4px 10px;letter-spacing:0.04em">HEPATIC</span>'
         + '          </div>'
-        + '          <div class="sim-title" style="font-size:16px;font-weight:800;color:var(--ink,#0f1e2e);margin:10px 0 6px">Hyperuricemia & Liver Steatosis</div>'
-        + '          <div class="sim-stats" style="font-size:12.5px;color:var(--muted,#64748b);margin-bottom:12px;background:#f8fafc;padding:10px 14px;border-radius:9px;border:1px solid #eef2f6;line-height:1.4">Uric Acid: <b style="color:var(--ink,#0f1e2e)">9.8</b> &bull; ALT: <b style="color:var(--ink,#0f1e2e)">94</b> &bull; AST: <b style="color:var(--ink,#0f1e2e)">45</b></div>'
-        + '          <div class="sim-desc" style="font-size:12.5px;color:var(--muted,#64748b);line-height:1.5;margin-bottom:16px;flex:1">Tests purine dietary restrictions, De Ritis ratio (AST/ALT) and hepatoprotective therapy.</div>'
+        + '          <div class="sim-title" style="font-size:15px;font-weight:800;color:var(--ink,#0f1e2e);margin:8px 0 6px">Hyperuricemia & Liver Steatosis</div>'
+        + '          <div class="sim-stats" style="font-size:12px;color:var(--muted,#64748b);margin-bottom:10px;background:#f8fafc;padding:8px 12px;border-radius:8px;border:1px solid #eef2f6;line-height:1.4">Uric Acid: <b style="color:var(--ink,#0f1e2e)">9.8</b> &bull; ALT: <b style="color:var(--ink,#0f1e2e)">94</b> &bull; AST: <b style="color:var(--ink,#0f1e2e)">45</b></div>'
+        + '          <div class="sim-desc" style="font-size:12px;color:var(--muted,#64748b);line-height:1.45;margin-bottom:14px;flex:1">Tests purine dietary restrictions and De Ritis (AST/ALT) ratio analysis.</div>'
         + '        </div>'
-        + '        <button type="button" class="btn btn-primary sim-btn" data-ai-sim="gout" style="margin-top:auto;width:100%;border-radius:9px;font-weight:700;font-size:13.5px;padding:11px 18px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--brand-grad,linear-gradient(135deg,#5392ba 0%,#131845 60%,#0d0f36 100%));color:#ffffff;border:none;box-shadow:0 4px 12px -2px rgba(19,24,69,0.35);cursor:pointer">▶ Run Simulation</button>'
+        + '        <button type="button" class="btn btn-primary sim-btn" data-ai-sim="gout" style="margin-top:auto;width:100%;border-radius:9px;font-weight:700;font-size:13px;padding:10px 16px;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--brand-grad,linear-gradient(135deg,#5392ba 0%,#131845 60%,#0d0f36 100%));color:#ffffff;border:none;box-shadow:0 4px 12px -2px rgba(19,24,69,0.35);cursor:pointer">▶ Run Simulation</button>'
         + '      </div>'
         + '    </div>'
         + '  </div>'
@@ -4590,9 +4548,9 @@
         + '<div class="ai-dash-footer" style="display:flex;justify-content:space-between;align-items:center;margin-top:22px;padding:14px 20px;background:#ffffff;border:1px solid var(--bd,#cbd5e1);border-radius:12px;box-shadow:0 4px 14px rgba(15,30,46,0.06);position:sticky;bottom:16px;z-index:20;flex-wrap:wrap;gap:12px">'
         + '  <div style="font-size:12.5px;color:var(--muted,#64748b);font-weight:600;display:flex;align-items:center;gap:8px">'
         + '    <span style="font-size:16px">🛡️</span>'
-        + '    <span>Review and verify all clinical rules and parameters before saving changes.</span>'
+        + '    <span>Review settings before saving.</span>'
         + '  </div>'
-        + '  <button type="button" id="aiSaveConfigBtn" class="ai-btn-primary ai-save-config-btn" style="min-width:150px">'
+        + '  <button type="button" id="aiSaveConfigBtn" class="ai-btn-primary ai-save-config-btn" style="min-width:140px">'
         + '    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>'
         + '    <span>Save Settings</span>'
         + '  </button>'
@@ -4639,27 +4597,6 @@
       }
 
       // Live update for Doctor Branding inputs
-      var brandInputs = ['aiDocName', 'aiDocDegrees', 'aiDocPmdc', 'aiDocClinic', 'aiDocPhone', 'aiDocSpec'];
-      brandInputs.forEach(function (id) {
-        var el = container.querySelector('#' + id);
-        if (el) {
-          el.addEventListener('input', function () {
-            var previewEl = container.querySelector('#aiRxHeaderPreview');
-            if (previewEl) {
-              var liveBrand = {
-                name: (container.querySelector('#aiDocName') || {}).value || '',
-                degrees: (container.querySelector('#aiDocDegrees') || {}).value || '',
-                pmdc: (container.querySelector('#aiDocPmdc') || {}).value || '',
-                clinic: (container.querySelector('#aiDocClinic') || {}).value || '',
-                phone: (container.querySelector('#aiDocPhone') || {}).value || '',
-                specialization: (container.querySelector('#aiDocSpec') || {}).value || ''
-              };
-              previewEl.innerHTML = getRxPreviewHtml(liveBrand);
-            }
-          });
-        }
-      });
-
       // Reset Panic Defaults Button
       var rstBtn = container.querySelector('#aiResetPanicDefaultsBtn');
       if (rstBtn) {
