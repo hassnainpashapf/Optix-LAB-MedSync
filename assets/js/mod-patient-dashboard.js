@@ -948,6 +948,10 @@
         return '<button type="button" data-pd-section="'+item[0]+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span><span>'+item[1]+'</span></button>';
       }).join('') +
       '  </nav>' +
+      '  <div class="pd-header-actions">' +
+      '    <button type="button" class="btn btn-ghost btn-sm" id="pt-edit"><span aria-hidden="true">✏️</span> Edit Details</button>' +
+      '    <button type="button" class="btn btn-danger btn-sm" id="pt-del"><span aria-hidden="true">🗑️</span> Delete</button>' +
+      '  </div>' +
       '</header>' +
 
       // Center & Right Main Vitals Overview Layout

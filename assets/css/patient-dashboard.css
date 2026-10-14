@@ -1,4 +1,4 @@
-#ptPatientDashboard{color:#1b2a4a;margin:8px 0;font-family:inherit;background:#f8fafb;border-radius:22px;padding:18px}
+#ptPatientDashboard{color:#1b2a4a;margin:0 0 16px 0;font-family:inherit;background:#f8fafb;border-radius:22px;padding:16px}
 #ptPatientDashboard .pd-layout{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(300px,1fr);gap:20px;align-items:start}
 #ptPatientDashboard .pd-card{background:#fff;border:1px solid #e8edf3;border-radius:18px;padding:17px 19px;min-width:0}
 #ptPatientDashboard .pd-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
@@ -61,14 +61,14 @@
 #ptPatientDashboard .pd-profile-shell {
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
   width: 100%;
 }
 #ptPatientDashboard .pd-patient-menu {
   background: #ffffff;
   border: 1.5px solid #edf2f7;
-  border-radius: 18px;
-  padding: 12px 20px;
+  border-radius: 16px;
+  padding: 10px 18px;
   position: sticky;
   top: 10px;
   z-index: 30;
@@ -76,7 +76,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: 14px;
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03);
 }
 #ptPatientDashboard .pd-header-left {
@@ -202,20 +202,68 @@
 #ptPatientDashboard .pd-patient-menu button.active span {
   color: #ffffff;
 }
-@media (max-width: 1080px) {
+#ptPatientDashboard .pd-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+#ptPatientDashboard .pd-header-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+#ptPatientDashboard .pd-header-actions #pt-edit {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  color: #334155;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.02);
+}
+#ptPatientDashboard .pd-header-actions #pt-edit:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1d4ed8;
+  transform: translateY(-1px);
+}
+#ptPatientDashboard .pd-header-actions #pt-del {
+  background: #fff1f2;
+  border: 1.5px solid #fecdd3;
+  color: #e11d48;
+  box-shadow: 0 1px 3px rgba(225, 29, 72, 0.04);
+}
+#ptPatientDashboard .pd-header-actions #pt-del:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+  color: #be123c;
+  transform: translateY(-1px);
+}
+@media (max-width: 1140px) {
   #ptPatientDashboard .pd-patient-menu {
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: wrap;
     gap: 12px;
-    padding: 12px 16px;
+    padding: 10px 16px;
   }
   #ptPatientDashboard .pd-patient-menu nav {
+    order: 3;
+    width: 100%;
     overflow-x: auto;
     flex-wrap: nowrap;
-    padding-bottom: 2px;
+    padding-top: 8px;
+    border-top: 1px dashed #edf2f7;
   }
   #ptPatientDashboard .pd-patient-menu button {
     flex-shrink: 0;
+  }
+  #ptPatientDashboard .pd-header-actions {
+    margin-left: auto;
   }
 }
 @media (max-width: 640px) {
@@ -225,6 +273,10 @@
   #ptPatientDashboard .pd-header-left {
     flex-wrap: wrap;
     gap: 10px;
+  }
+  #ptPatientDashboard .pd-header-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 @media print {

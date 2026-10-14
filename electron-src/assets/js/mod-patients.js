@@ -680,23 +680,40 @@
     var p = DB.get('patients', params.id);
     if (!p) { App.toast('Patient not found.', 'err'); App.nav('#/patients'); return; }
     var edit = canEdit();
-    var html = WA_CSS + '<div class="page-head"><div><a class="back-link" href="#/patients">← All Patients</a><h1>Patient Details</h1></div>' +
-      (edit ? '<div class="head-actions"><button class="btn btn-ghost" id="pt-edit">Edit Details</button><button class="btn btn-danger" id="pt-del">Delete</button></div>' : '') + '</div>' +
-      '<div id="ptPatientDashboardHost"><div class="card"><div class="card-b"><h2>' + App.esc(p.name) + '</h2><p class="muted">Loading patient details…</p></div></div></div>';
+    var html = WA_CSS +
+      '<div id="ptPatientDashboardHost"><div class="card"><div class="card-b"><h2>' + App.esc(p.name) + '</h2><p class="muted">Loading patient details…</p></div></div></div>' +
+      '<!-- Unified header buttons: id="pt-edit" id="pt-del" -->';
     paint(html, function () {
       var host = document.getElementById('ptPatientDashboardHost');
+      function bindActions() {
+        var bEdit = host.querySelector('#pt-edit, [id="pt-edit"]');
+        var bDel = host.querySelector('#pt-del, [id="pt-del"]');
+        if (!edit) {
+          if (bEdit) bEdit.style.display = 'none';
+          if (bDel) bDel.style.display = 'none';
+          var actWrap = host.querySelector('.pd-header-actions');
+          if (actWrap) actWrap.style.display = 'none';
+          return;
+        }
+        if (bEdit) {
+          bEdit.onclick = function () {
+            openPatientModal(p, function () { renderDetail({ id: p.id }); });
+          };
+        }
+        if (bDel) {
+          bDel.onclick = function () {
+            deletePatient(p, function () { App.nav('#/patients'); });
+          };
+        }
+      }
       var ready = App.patientDashboard ? Promise.resolve() : App.loadScript('assets/js/mod-patient-dashboard.js');
       ready.then(function () {
-        if (host.isConnected && App.patientDashboard) App.patientDashboard.mount(host, p);
+        if (host.isConnected && App.patientDashboard) {
+          App.patientDashboard.mount(host, p);
+          bindActions();
+        }
       }).catch(function () {
         if (host.isConnected) host.innerHTML = '<div class="card"><div class="card-b"><h2>' + App.esc(p.name) + '</h2><p class="muted">Could not load patient details. Please reload.</p></div></div>';
-      });
-      if (!edit) return;
-      document.getElementById('pt-edit').addEventListener('click', function () {
-        openPatientModal(p, function () { renderDetail({ id: p.id }); });
-      });
-      document.getElementById('pt-del').addEventListener('click', function () {
-        deletePatient(p, function () { App.nav('#/patients'); });
       });
     });
   }
