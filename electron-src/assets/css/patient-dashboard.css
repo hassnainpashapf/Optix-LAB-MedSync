@@ -34,3 +34,17 @@
 @media(min-width:1001px){body:has(#ptPatientDashboard) #sidebar{display:flex!important}}
 @media(max-width:1000px){#ptPatientDashboard .pd-layout{grid-template-columns:1fr}#ptPatientDashboard .pd-visual{max-width:440px;width:100%;margin:auto}#ptPatientDashboard .pd-art{height:430px}}
 @media(max-width:600px){#ptPatientDashboard{padding:12px}#ptPatientDashboard .pd-card{padding:15px}#ptPatientDashboard .pd-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#ptPatientDashboard .pd-lower{grid-template-columns:1fr}#ptPatientDashboard h2{font-size:18px}}
+
+#ptPatientDashboard .pd-test-label{display:block;font-size:10px;color:#72849a;margin-bottom:5px}
+#ptPatientDashboard .pd-test-select{width:100%;border:1px solid #dce7f2;background:#fff;color:#1b2a4a;border-radius:10px;padding:9px;font:inherit;font-size:12px;margin-bottom:8px}
+#ptPatientDashboard .pd-body-frame{position:absolute;width:216px;height:310px;left:50%;margin-left:-108px;top:0;transform-origin:center}
+#ptPatientDashboard .pd-body-frame img{position:static;width:100%;height:100%;max-width:none;transform:none;object-fit:contain;border-radius:12px}
+#ptPatientDashboard .pd-body-markers{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#ptPatientDashboard .pd-body-markers ellipse{fill:#3585ff55;stroke:#1978ed;stroke-width:.7}
+#ptPatientDashboard .pd-body-markers.pd-abnormal ellipse{fill:#ff1d3555;stroke:#c90024;stroke-width:1}
+#ptPatientDashboard .pd-callout{left:8%;right:8%;bottom:0;padding:9px 12px;max-height:120px;overflow:auto}
+#ptPatientDashboard .pd-callout.pd-abnormal{border-color:#f6b3bd}
+#ptPatientDashboard .pd-callout.pd-abnormal strong{color:#b91c36}
+#ptPatientDashboard .pd-callout p{font-size:10px;line-height:1.5;margin:5px 0 0;color:#b91c36}
+#ptPatientDashboard .pd-caption{line-height:1.6}
+#ptPatientDashboard select:focus-visible{outline:3px solid #9ec1ef;outline-offset:2px}
