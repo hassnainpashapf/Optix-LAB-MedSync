@@ -3998,10 +3998,15 @@
       var h = '<div id="optixAiDashboard" class="page" aria-label="Optix AI Clinical Intelligence Engine" style="font-family:inherit;color:var(--ink,#1b2a4a);max-width:1200px;margin:0 auto;padding-bottom:30px">'
         + '<style>'
         + '  #optixAiDashboard { font-family: inherit; color: #1b2a4a; }'
-        + '  .ai-tabs-bar { display:flex; background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:4px; gap:4px; margin-bottom:22px; box-shadow:0 1px 3px rgba(15,23,42,0.04); overflow-x:auto; }'
-        + '  .ai-dash-tab { border:0; background:transparent; color:#64748b; font-size:13.5px; font-weight:600; padding:8px 16px; border-radius:10px; cursor:pointer; transition:all .15s ease; white-space:nowrap; display:inline-flex; align-items:center; gap:7px; font-family:inherit; }'
-        + '  .ai-dash-tab:hover { background:#f8fafc; color:#1b2a4a; }'
-        + '  .ai-dash-tab.active { background:#2f6df6 !important; color:#ffffff !important; box-shadow:0 4px 12px rgba(47,109,246,0.25) !important; }'
+        + '  #optixAiDashboard .ai-tabs-bar { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:22px; }'
+        + '  #optixAiDashboard .ai-dash-tab { min-height:86px; min-width:0; border:1px solid #dbe3ef; background:#fff; color:#1b2a4a; font-size:13.5px; font-weight:700; padding:16px; border-radius:16px; cursor:pointer; transition:background .15s ease,border-color .15s ease; white-space:normal; text-align:left; line-height:1.45; display:flex; align-items:center; gap:12px; font-family:inherit; box-shadow:0 2px 8px rgba(15,23,42,.04); }'
+        + '  #optixAiDashboard .ai-dash-icon { flex:0 0 42px; height:42px; display:grid; place-items:center; font-size:22px; background:#eef3ff; border-radius:12px; }'
+        + '  #optixAiDashboard .ai-dash-tab:hover { background:#f3f7ff; border-color:#8aaeff; }'
+        + '  #optixAiDashboard .ai-dash-tab:focus-visible { outline:3px solid #93b4ff; outline-offset:3px; }'
+        + '  #optixAiDashboard .ai-dash-tab.active { background:#2f6df6; border-color:#2f6df6; color:#fff; box-shadow:0 4px 12px rgba(47,109,246,.22); }'
+        + '  #optixAiDashboard .ai-dash-tab.active .ai-dash-icon { background:rgba(255,255,255,.18); }'
+        + '  @media(max-width:900px) { #optixAiDashboard .ai-tabs-bar { grid-template-columns:repeat(2,minmax(0,1fr)); } }'
+        + '  @media(max-width:540px) { #optixAiDashboard .ai-tabs-bar { grid-template-columns:1fr; gap:8px; } #optixAiDashboard .ai-dash-tab { min-height:68px; padding:12px; } }'
         + '  .ai-card-mod { background:#ffffff; border:1px solid #edf2f7; border-radius:16px; padding:16px 18px; display:flex; justify-content:space-between; align-items:center; gap:14px; box-shadow:0 2px 6px rgba(15,23,42,0.03); transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease; }'
         + '  .ai-card-mod:hover { transform:translateY(-2px); border-color:#cbd5e1; box-shadow:0 8px 24px rgba(15,23,42,0.07); }'
         + '  .ai-switch { position:relative; display:inline-block; width:44px; height:24px; flex-shrink:0; }'
@@ -4066,12 +4071,12 @@
         + '</div>'
 
         // Tabs Bar
-        + '<div class="ai-tabs-bar">'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'modules' ? ' active' : '') + '" data-dash-tab="modules">⚙️ Subsystem Toggles</button>'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'panic' ? ' active' : '') + '" data-dash-tab="panic">🚨 Emergency Panic Cutoff Limits</button>'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'branding' ? ' active' : '') + '" data-dash-tab="branding">👨‍⚕️ Digital Rx Pad Credentials & Branding</button>'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'roles' ? ' active' : '') + '" data-dash-tab="roles">🔐 Role Permissions Matrix</button>'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'sandbox' ? ' active' : '') + '" data-dash-tab="sandbox">🧪 Clinical Sandbox & Live Analysis Simulator</button>'
+        + '<div class="ai-tabs-bar" role="group" aria-label="AI dashboard sections">'
+        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'modules' ? ' active' : '') + '" data-dash-tab="modules" aria-controls="aiPanel-modules" aria-pressed="' + (activeTab === 'modules' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">⚙️</span><span>Subsystem Toggles</span></button>'
+        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'panic' ? ' active' : '') + '" data-dash-tab="panic" aria-controls="aiPanel-panic" aria-pressed="' + (activeTab === 'panic' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🚨</span><span>Emergency Panic Cutoff Limits</span></button>'
+        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'branding' ? ' active' : '') + '" data-dash-tab="branding" aria-controls="aiPanel-branding" aria-pressed="' + (activeTab === 'branding' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">👨‍⚕️</span><span>Digital Rx Pad Credentials & Branding</span></button>'
+        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'roles' ? ' active' : '') + '" data-dash-tab="roles" aria-controls="aiPanel-roles" aria-pressed="' + (activeTab === 'roles' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🔐</span><span>Role Permissions Matrix</span></button>'
+        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'sandbox' ? ' active' : '') + '" data-dash-tab="sandbox" aria-controls="aiPanel-sandbox" aria-pressed="' + (activeTab === 'sandbox' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🧪</span><span>Clinical Sandbox & Live Analysis Simulator</span></button>'
         + '</div>'
 
         // Panels
@@ -4379,7 +4384,7 @@
       tabBtns.forEach(function (btn) {
         btn.addEventListener('click', function () {
           activeTab = btn.getAttribute('data-dash-tab');
-          tabBtns.forEach(function (b) { b.classList.toggle('active', b === btn); });
+          tabBtns.forEach(function (b) { b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
           var panels = ['modules', 'panic', 'branding', 'roles', 'sandbox'];
           panels.forEach(function (p) {
             var pan = container.querySelector('#aiPanel-' + p);
