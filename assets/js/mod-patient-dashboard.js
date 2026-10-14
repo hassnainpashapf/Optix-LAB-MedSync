@@ -401,6 +401,46 @@
     }).join('');
   }
 
+  function renderPatientTestsListHtml(tests) {
+    if (!tests || !tests.length) {
+      return '<div style="padding:12px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;text-align:center;color:#64748b;font-size:12px;margin-bottom:12px">' +
+        '<span>📋 No laboratory tests recorded yet for this patient.</span>' +
+        '</div>';
+    }
+    return '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">' +
+      tests.slice(0, 5).map(function (t) {
+        var badgeCls = 'b-warn';
+        var badgeText = 'Pending';
+        if (t.status === 'abnormal') {
+          badgeCls = 'b-red';
+          badgeText = '⚠️ Abnormal';
+        } else if (t.status === 'within') {
+          badgeCls = 'b-ready';
+          badgeText = '✓ Normal';
+        } else if (t.status === 'unknown') {
+          badgeCls = 'b-warn';
+          badgeText = 'Incomplete';
+        }
+        var dateStr = t.date ? (App.d ? App.d(t.date) : String(t.date).slice(0, 10)) : 'Ordered';
+        var flagsHtml = (t.flags && t.flags.length)
+          ? '<div style="font-size:11px;color:#dc2626;font-weight:600;margin-top:2px;background:#fef2f2;padding:2px 8px;border-radius:6px;display:inline-block">' + t.flags.slice(0, 2).map(esc).join(', ') + (t.flags.length > 2 ? ' +' + (t.flags.length - 2) + ' more' : '') + '</div>'
+          : '';
+
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f8fafc;border:1px solid #edf2f7;border-radius:12px;gap:10px">' +
+          '  <div style="min-width:0;flex:1">' +
+          '    <div style="display:flex;align-items:center;gap:7px">' +
+          '      <span style="font-size:14px">🧪</span>' +
+          '      <strong style="font-size:12.5px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(t.name) + '</strong>' +
+          '      <small style="font-size:11px;color:#64748b">(' + esc(dateStr) + ')</small>' +
+          '    </div>' +
+          flagsHtml +
+          '  </div>' +
+          '  <span class="badge ' + badgeCls + '" style="font-size:11px;font-weight:700;flex-shrink:0">' + esc(badgeText) + '</span>' +
+          '</div>';
+      }).join('') +
+      '</div>';
+  }
+
   function renderMedListHtml(meds) {
     return (meds || []).map(function (m) {
       return '<div class="vitals-med-item">' +
@@ -983,15 +1023,24 @@
 
       // Sub-cards Row
       '      <div class="vitals-subcards-row">' +
-      // Sub-card 1: Daily Rehabilitation Plan
+      // Sub-card 1: Diagnostic Tests & Daily Rehabilitation Plan
       '        <div class="vitals-card">' +
-      '          <div class="vitals-card-head">' +
-      '            <h3>Daily Rehabilitation Plan</h3>' +
-      '            <button class="card-action-btn" type="button" title="Plan options">⋮</button>' +
+      '          <div class="vitals-card-head" style="margin-bottom:10px">' +
+      '            <div>' +
+      '              <h3>Diagnostic Tests &amp; Clinical Care</h3>' +
+      '              <p class="pd-sub" style="margin-top:2px">Patient test orders, diagnostic status &amp; daily rehabilitation targets</p>' +
+      '            </div>' +
+      '            <span class="badge b-ready" style="font-size:11px;font-weight:700">' + tests.length + ' Test' + (tests.length === 1 ? '' : 's') + '</span>' +
       '          </div>' +
-      '          <div class="vitals-subcard-subtitle" id="rehabSubtitle">' + esc(curOrg.rehabSub) + '</div>' +
-      '          <div class="vitals-rehab-list" id="rehabListWrap">' +
+      renderPatientTestsListHtml(tests) +
+      '          <div style="padding-top:12px;border-top:1.5px solid #edf2f7">' +
+      '            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+      '              <h4 style="margin:0;font-size:13px;font-weight:700;color:#0f172a">Daily Rehabilitation Plan</h4>' +
+      '              <span style="font-size:11px;color:#64748b;font-weight:600" id="rehabSubtitle">' + esc(curOrg.rehabSub) + '</span>' +
+      '            </div>' +
+      '            <div class="vitals-rehab-list" id="rehabListWrap">' +
       renderRehabPlanHtml(curOrg.rehabPlan) +
+      '            </div>' +
       '          </div>' +
       '        </div>' +
 
