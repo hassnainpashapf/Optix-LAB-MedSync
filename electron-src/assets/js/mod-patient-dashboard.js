@@ -1533,25 +1533,16 @@
 
       // Sub-cards Row
       '      <div class="vitals-subcards-row">' +
-      // Sub-card 1: Diagnostic Tests & Daily Rehabilitation Plan
+      // Sub-card 1: Diagnostic Laboratory Tests
       '        <div class="vitals-card">' +
       '          <div class="vitals-card-head" style="margin-bottom:10px">' +
       '            <div>' +
       '              <h3>Diagnostic Tests &amp; Clinical Care</h3>' +
-      '              <p class="pd-sub" style="margin-top:2px">Patient test orders, diagnostic status &amp; daily rehabilitation targets</p>' +
+      '              <p class="pd-sub" style="margin-top:2px">Patient laboratory test orders &amp; diagnostic status</p>' +
       '            </div>' +
       '            <span class="badge b-ready" style="font-size:11px;font-weight:700">' + tests.length + ' Test' + (tests.length === 1 ? '' : 's') + '</span>' +
       '          </div>' +
       renderPatientTestsListHtml(tests) +
-      '          <div style="padding-top:12px;border-top:1.5px solid #edf2f7">' +
-      '            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-      '              <h4 style="margin:0;font-size:13px;font-weight:700;color:#0f172a">Daily Rehabilitation Plan</h4>' +
-      '              <span style="font-size:11px;color:#64748b;font-weight:600" id="rehabSubtitle">' + esc(curOrg.rehabSub) + '</span>' +
-      '            </div>' +
-      '            <div class="vitals-rehab-list" id="rehabListWrap">' +
-      renderRehabPlanHtml(curOrg.rehabPlan) +
-      '            </div>' +
-      '          </div>' +
       '        </div>' +
 
       // Sub-card 2: Capacity Efficiency & Medication Adherence

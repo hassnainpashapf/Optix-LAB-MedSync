@@ -141,17 +141,11 @@ assert.ok(html.includes('Patient Details Overview'), 'Card 1 Patient Details Ove
 assert.ok(!html.includes('Stress Patterns Overview'), 'Stress Patterns Overview cleanly removed');
 console.log('✓ Patient Details Overview verified and Stress Patterns Overview cleanly removed');
 
-// 3. Test Rehabilitation Plan card
-assert.ok(html.includes('Daily Rehabilitation Plan'), 'Daily Rehabilitation Plan card present');
-assert.ok(html.includes('Early Ambulation'), 'Rehab item 1 Early Ambulation present');
-assert.ok(html.includes('Short Walk - 15 minutes.'), 'Short walk desc present');
-assert.ok(html.includes('Medication &amp; Therapy Tracking') || html.includes('Medication & Therapy Tracking'), 'Rehab item 2 present');
-assert.ok(html.includes('Hydration &amp; Safety') || html.includes('Hydration & Safety'), 'Rehab item 3 present');
-assert.ok(html.includes('Respiratory Exercises'), 'Rehab item 4 present');
-assert.ok(html.includes('Anti-Inflammatory Diet'), 'Rehab item 5 present');
-assert.ok(html.includes('BMI &amp; Lean Mass') || html.includes('BMI & Lean Mass'), 'Rehab item 6 present');
-assert.ok(html.includes('Stress &amp; Anxiety Management') || html.includes('Stress & Anxiety Management'), 'Rehab item 7 present');
-console.log('✓ Daily Rehabilitation Plan with all 7 numbered items verified');
+// 3. Verify Daily Rehabilitation Plan is cleanly removed
+assert.ok(!html.includes('Daily Rehabilitation Plan'), 'Daily Rehabilitation Plan cleanly removed');
+assert.ok(!html.includes('Early Ambulation'), 'Rehab items cleanly removed');
+assert.ok(!html.includes('vitals-rehab-progress-bar-wrap'), 'Rehabilitation progress bar cleanly removed');
+console.log('✓ Daily Rehabilitation Plan cleanly removed as requested');
 
 // 4. Test Lung Capacity Efficiency and Medication Adherence
 assert.ok(html.includes('Lung Capacity Efficiency'), 'Lung Capacity Efficiency title present');
@@ -180,8 +174,6 @@ assert.ok(html.includes('pd-telemetry-strip'), 'Live Clinical Telemetry strip pr
 assert.ok(html.includes('btnSendPatientWhatsApp'), 'WhatsApp Patient Care Card button present');
 assert.ok(html.includes('btnPrintClinicalSummary'), 'Clinical Rounds Sheet print button present');
 assert.ok(html.includes('vitals-hud-overlay'), 'Cyber HUD telemetry overlay on 3D stage present');
-assert.ok(html.includes('vitals-rehab-progress-bar-wrap'), 'Rehabilitation protocol progress bar present');
-assert.ok(html.includes('vitals-rehab-urdu-tip'), 'Bilingual Roman Urdu lifestyle tip present');
 assert.ok(html.includes('med-timing-chip'), 'Medication dose schedule timing chips present');
 console.log('✓ Elite Clinical Telemetry Strip, Cyber HUD, and WhatsApp Patient Care Card verified');
 
