@@ -776,7 +776,7 @@ assert(renderedHtml.includes('Optix AI Clinical Intelligence Engine'), 'Dashboar
 assert(renderedHtml.includes('ai-dash-kpi'), 'Dashboard must render KPI cards');
 assert(renderedHtml.includes('Subsystem Toggles'), 'Dashboard must render subsystem toggles tab');
 assert(renderedHtml.includes('Emergency Panic Cutoff Limits'), 'Dashboard must render panic cutoffs panel');
-assert(renderedHtml.includes('Digital Rx Pad Credentials & Branding'), 'Dashboard must render branding panel');
+assert(!renderedHtml.includes('Digital Rx Pad Credentials & Branding'), 'Digital Rx Pad branding panel cleanly removed as requested');
 assert(renderedHtml.includes('Role Permissions Matrix'), 'Dashboard must render permissions panel');
 assert(renderedHtml.includes('Clinical Sandbox & Live Analysis Simulator'), 'Dashboard must render simulation cards');
 assert(renderedHtml.includes('MANDATORY (LOCKED ON)'), 'Doctor role must be displayed as permanently locked mandatory');

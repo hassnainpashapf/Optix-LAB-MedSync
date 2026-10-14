@@ -4216,7 +4216,6 @@
         + '<div class="ai-tabs-bar" role="group" aria-label="AI dashboard sections">'
         + '  <button type="button" class="ai-dash-tab' + (activeTab === 'modules' ? ' active' : '') + '" data-dash-tab="modules" aria-controls="aiPanel-modules" aria-pressed="' + (activeTab === 'modules' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">⚙️</span><span class="ai-dash-tab-title">Subsystem Toggles</span></button>'
         + '  <button type="button" class="ai-dash-tab' + (activeTab === 'panic' ? ' active' : '') + '" data-dash-tab="panic" aria-controls="aiPanel-panic" aria-pressed="' + (activeTab === 'panic' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🚨</span><span class="ai-dash-tab-title">Emergency Panic Cutoff Limits</span></button>'
-        + '  <button type="button" class="ai-dash-tab' + (activeTab === 'branding' ? ' active' : '') + '" data-dash-tab="branding" aria-controls="aiPanel-branding" aria-pressed="' + (activeTab === 'branding' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">👨‍⚕️</span><span class="ai-dash-tab-title">Digital Rx Pad Credentials & Branding</span></button>'
         + '  <button type="button" class="ai-dash-tab' + (activeTab === 'roles' ? ' active' : '') + '" data-dash-tab="roles" aria-controls="aiPanel-roles" aria-pressed="' + (activeTab === 'roles' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🔐</span><span class="ai-dash-tab-title">Role Permissions Matrix</span></button>'
         + '  <button type="button" class="ai-dash-tab' + (activeTab === 'sandbox' ? ' active' : '') + '" data-dash-tab="sandbox" aria-controls="aiPanel-sandbox" aria-pressed="' + (activeTab === 'sandbox' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🧪</span><span class="ai-dash-tab-title">Clinical Sandbox & Live Analysis Simulator</span></button>'
         + '</div>'
@@ -4358,57 +4357,7 @@
         + '    </div>'
         + '  </div>'
 
-        // PANEL 3: DOCTOR BRANDING
-        + '  <div id="aiPanel-branding" style="display:' + (activeTab === 'branding' ? 'block' : 'none') + '">'
-        + '    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px">'
-        + '      <div class="card">'
-        + '        <div class="card-h">'
-        + '          <div>'
-        + '            <h3>Digital Rx Pad Credentials & Branding</h3>'
-        + '            <div style="font-size:12px;color:var(--muted,#64748b);margin-top:3px">Configures official branding displayed on clinical prescription outputs</div>'
-        + '          </div>'
-        + '        </div>'
-        + '        <div class="card-b" style="display:flex;flex-direction:column;gap:14px">'
-        + '          <div class="ai-form-group">'
-        + '            <label>Prescribing Doctor Name</label>'
-        + '            <input type="text" class="input" id="aiDocName" value="' + escFn(curCfg.doctorBranding.name || '') + '" placeholder="e.g. Dr. Tariq Mahmood">'
-        + '          </div>'
-        + '          <div class="ai-form-group">'
-        + '            <label>Qualifications & Degrees</label>'
-        + '            <input type="text" class="input" id="aiDocDegrees" value="' + escFn(curCfg.doctorBranding.degrees || '') + '" placeholder="e.g. MBBS, FCPS / MD">'
-        + '          </div>'
-        + '          <div class="ai-form-group">'
-        + '            <label>PMDC / PMC Registration Number</label>'
-        + '            <input type="text" class="input" id="aiDocPmdc" value="' + escFn(curCfg.doctorBranding.pmdc || '') + '" placeholder="e.g. 49281-P">'
-        + '          </div>'
-        + '          <div class="ai-form-group">'
-        + '            <label>Clinic / Hospital Name</label>'
-        + '            <input type="text" class="input" id="aiDocClinic" value="' + escFn(curCfg.doctorBranding.clinic || '') + '" placeholder="e.g. Optix Medical Care & Diagnostics">'
-        + '          </div>'
-        + '          <div class="ai-form-group">'
-        + '            <label>Contact Number</label>'
-        + '            <input type="text" class="input" id="aiDocPhone" value="' + escFn(curCfg.doctorBranding.phone || '') + '" placeholder="e.g. +92 300 0000000">'
-        + '          </div>'
-        + '          <div class="ai-form-group">'
-        + '            <label>Specialization / Clinical Focus</label>'
-        + '            <input type="text" class="input" id="aiDocSpec" value="' + escFn(curCfg.doctorBranding.specialization || '') + '" placeholder="e.g. Consultant Physician & Diagnostician">'
-        + '          </div>'
-        + '        </div>'
-        + '      </div>'
-        + '      <div class="card">'
-        + '        <div class="card-h" style="display:flex;justify-content:space-between;align-items:center">'
-        + '          <div>'
-        + '            <h3>Live Prescription Pad Preview</h3>'
-        + '            <div style="font-size:12px;color:var(--muted,#64748b);margin-top:3px">Instant real-time rendering of generated Rx output</div>'
-        + '          </div>'
-        + '          <span class="badge b-ready" style="font-size:11px;font-weight:700">Real-time</span>'
-        + '        </div>'
-        + '        <div class="card-b">'
-        + '          <div id="aiRxHeaderPreview">' + getRxPreviewHtml(curCfg.doctorBranding) + '</div>'
-        + '        </div>'
-        + '      </div>'
-        + '    </div>'
-        + '  </div>'
+
 
         // PANEL 4: ROLE ACCESS MATRIX
         + '  <div id="aiPanel-roles" style="display:' + (activeTab === 'roles' ? 'block' : 'none') + '">'
@@ -4544,7 +4493,7 @@
         btn.addEventListener('click', function () {
           activeTab = btn.getAttribute('data-dash-tab');
           tabBtns.forEach(function (b) { b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
-          var panels = ['modules', 'panic', 'branding', 'roles', 'sandbox'];
+          var panels = ['modules', 'panic', 'roles', 'sandbox'];
           panels.forEach(function (p) {
             var pan = container.querySelector('#aiPanel-' + p);
             if (pan) pan.style.display = (p === activeTab) ? 'block' : 'none';
@@ -4648,14 +4597,17 @@
           };
 
           // Collect doctor branding
-          var newBrand = {
-            name: ((container.querySelector('#aiDocName') || {}).value || '').trim() || 'Consultant Physician',
-            degrees: ((container.querySelector('#aiDocDegrees') || {}).value || '').trim() || 'MBBS, FCPS / MD (Internal Medicine)',
-            pmdc: ((container.querySelector('#aiDocPmdc') || {}).value || '').trim() || '49281-P',
-            clinic: ((container.querySelector('#aiDocClinic') || {}).value || '').trim() || 'Optix Medical Care & Diagnostics',
-            phone: ((container.querySelector('#aiDocPhone') || {}).value || '').trim() || '+92 300 0000000',
-            specialization: ((container.querySelector('#aiDocSpec') || {}).value || '').trim() || 'Clinical Specialist & Diagnostician'
-          };
+          var newBrand = (curCfg && curCfg.doctorBranding) || AI.DEFAULT_CONFIG.doctorBranding;
+          if (container.querySelector('#aiDocName')) {
+            newBrand = {
+              name: ((container.querySelector('#aiDocName') || {}).value || '').trim() || 'Consultant Physician',
+              degrees: ((container.querySelector('#aiDocDegrees') || {}).value || '').trim() || 'MBBS, FCPS / MD (Internal Medicine)',
+              pmdc: ((container.querySelector('#aiDocPmdc') || {}).value || '').trim() || '49281-P',
+              clinic: ((container.querySelector('#aiDocClinic') || {}).value || '').trim() || 'Optix Medical Care & Diagnostics',
+              phone: ((container.querySelector('#aiDocPhone') || {}).value || '').trim() || '+92 300 0000000',
+              specialization: ((container.querySelector('#aiDocSpec') || {}).value || '').trim() || 'Clinical Specialist & Diagnostician'
+            };
+          }
 
           // Collect roles (Doctor and Admin are ALWAYS mandatory)
           var newRoles = ['admin', 'doctor'];
