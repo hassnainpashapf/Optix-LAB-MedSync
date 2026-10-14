@@ -3896,35 +3896,35 @@
       // ---- the RESULT box (top-right of each section) ----
       function resultBox(bx, byy, patCode, patText, ddmm, invoiceNo, previous) {
         var cx = bx + RBW / 2, yy = byy + 5.5;
-        doc.setDrawColor(60, 60, 60); doc.setLineWidth(0.4);
+        doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5);
         doc.rect(bx, byy, RBW, BOX_H);                       // outer border
-        doc.setFillColor(GREY[0], GREY[1], GREY[2]);
-        doc.rect(bx, byy, RBW, 5.5, 'F');                    // grey RESULT strip
+        doc.setFillColor(191, 191, 191);                     // #bfbfbf grey RESULT strip matching Web View
+        doc.rect(bx, byy, RBW, 5.5, 'FD');
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-        doc.setTextColor(INK[0], INK[1], INK[2]);
+        doc.setTextColor(0, 0, 0);
         txt(previous ? 'PREVIOUS' : 'RESULT', cx, byy + 3.9, { align: 'center' });
         var valOnly = String(patText || '').replace(/^P\s*#\s*/i, '').trim();
         if (showBc) {
           drawBarcode(bx, yy + 1, RBW, 6.5, patCode);
           yy += 8.2;
           if (valOnly) {
-            doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
-            doc.setTextColor(INK[0], INK[1], INK[2]);
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+            doc.setTextColor(0, 0, 0);
             txt(valOnly, cx, yy + 2.2, { align: 'center' });
             yy += 3.2;
           }
         } else {
           yy += 1.5;
           if (valOnly) {
-            doc.setFont('helvetica', 'bold'); doc.setFontSize(8);
-            doc.setTextColor(INK[0], INK[1], INK[2]);
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
+            doc.setTextColor(0, 0, 0);
             txt(valOnly, cx, yy + 2.2, { align: 'center' });
             yy += 3.2;
           }
         }
         if (ddmm) {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(6.5);
-          doc.setTextColor(60, 60, 60);
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(7.5);
+          doc.setTextColor(40, 40, 40);
           txt(ddmm, cx, yy + 2.6, { align: 'center' });
         }
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
@@ -3933,18 +3933,18 @@
         });
       }
 
-      // ---- grey header bar: TEST | NORMAL VALUE | UNIT ----
+      // ---- Chughtai-style light blue header bar: TEST | NORMAL VALUE | UNIT ----
       function tableHead() {
         need(9);
-        doc.setFillColor(GREY[0], GREY[1], GREY[2]);
-        doc.setDrawColor(80, 80, 80); doc.setLineWidth(0.35);
-        doc.rect(M, y, CW, 7, 'FD');
+        doc.setFillColor(207, 228, 246); // #cfe4f6 Light blue matching Web View
+        doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5);
+        doc.rect(M, y, CW, 7.5, 'FD');
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-        doc.setTextColor(INK[0], INK[1], INK[2]);
-        txt('TEST', CX_TEST, y + 4.8);
-        txt('NORMAL VALUE', CX_REF, y + 4.8);
-        txt('UNIT', CX_UNIT, y + 4.8);
-        y += 7;
+        doc.setTextColor(11, 23, 64); // #0b1740 Deep Navy matching Web View
+        txt('TEST', CX_TEST + 1.5, y + 5.1, { charSpace: 0.6 });
+        txt('NORMAL VALUE', CX_REF, y + 5.1);
+        txt('UNIT', CX_UNIT, y + 5.1);
+        y += 7.5;
       }
 
       // ---- build one param row, wrapping every selected result column ----
@@ -4016,7 +4016,10 @@
           });
           y += LINE;
         }
-        y += 2.5;
+        // Crisp horizontal row divider line matching Web View's border-bottom: 1px solid #ddd
+        doc.setDrawColor(225, 225, 225); doc.setLineWidth(0.2);
+        doc.line(M, y + 0.8, W - M, y + 0.8);
+        y += 2.2;
         if (row.subs && row.subs.length) {
           row.subs.forEach(function (line) {
             tableNeed(5);
@@ -4085,18 +4088,27 @@
             return copy;
           });
         resultStart = W - M - resultCols.length * RBW;
-        CX_REF = M + (resultCols.length > 1 ? 40 : 55);
-        CX_UNIT = M + (resultCols.length > 1 ? 70 : 84);
+        if (resultCols.length > 2) {
+          CX_REF = M + 36;
+          CX_UNIT = M + 70;
+        } else if (resultCols.length > 1) {
+          CX_REF = M + 46;
+          CX_UNIT = M + 90;
+        } else {
+          CX_REF = M + 58;
+          CX_UNIT = M + 112;
+        }
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
         var idLines = 1;
         resultCols.forEach(function (c) { idLines = Math.max(idLines, doc.splitTextToSize(c.boxInvoiceNo, RBW - 3).length); });
         BOX_H = (showBc ? 23 : 16) + idLines * 3.2;
 
-        // Full-width section title above the selected result identifiers.
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5);
-        var titleLines = doc.splitTextToSize(
-          testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : ''), CW);
-        var titleH = titleLines.length * 6;
+        // Section title in Chughtai style: "{NAME} ({CODE}) REPORT"
+        var tTitle = testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : '');
+        if (!/report\s*:?\s*$/i.test(tTitle)) tTitle += ' REPORT';
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        var titleLines = doc.splitTextToSize(tTitle, CW);
+        var titleH = titleLines.length * 5.4;
 
         // Include parameters populated only in a selected previous report.
         var shown = params.filter(function (p) {
@@ -4112,22 +4124,17 @@
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
         var tnote = test.note || test.notes || '';
         if (tnote) {
-          noteLines = doc.splitTextToSize(String(tnote), CW - 4);
-        }
-        var remLines = null;
-        doc.setFont('helvetica', 'italic'); doc.setFontSize(9);
-        if (vals['Remarks']) {
-          remLines = doc.splitTextToSize('Remarks: ' + vals['Remarks'], CW - 4);
+          noteLines = doc.splitTextToSize(String(tnote), CW - 6);
         }
 
         need(Math.min(titleH, 12) + BOX_H + 18);
 
-        // Title, then current/previous RESULT boxes.
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5);
-        doc.setTextColor(INK[0], INK[1], INK[2]);
+        // Section Title in Chughtai Deep Navy [11, 23, 64] (#0b1740)
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+        doc.setTextColor(11, 23, 64);
         titleLines.forEach(function (tl) {
-          need(6); doc.setFont('helvetica', 'bold'); doc.setFontSize(11.5); doc.setTextColor(20, 20, 20);
-          txt(tl, M, y + 5); y += 6;
+          need(5.4); doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(11, 23, 64);
+          txt(tl, M, y + 4.6); y += 5.4;
         });
         resultCols.forEach(function (c) {
           c.identifierNotes.forEach(function (note) {
@@ -4139,35 +4146,78 @@
         drawResultBoxes();
         y += BOX_H + 2;
 
-        // Grey bar + rows.
+        // Chughtai light blue header bar + rows.
         tableHead();
         rows.forEach(tableRow);
 
         drawReportGraph(test, vals);
 
-        // Optional test-level note.
+        // Optional test-level note (boxed Chughtai style).
         if (noteLines) {
-          var noteH = (noteLines.length + 1) * 4.4 + 3;
+          var noteH = (noteLines.length + 1) * 4.2 + 4;
           if (noteH + 4 <= maxBodyY - M) {
             /* boxed note, kept together on one page */
             need(noteH + 3); y += 1.5;
             var noteTop = y;
-            doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.rect(M, noteTop, CW, noteH);
-            doc.setTextColor(40, 40, 40); y += 1.5;
-            doc.setFont('helvetica', 'bold'); doc.setFontSize(9); txt('Note:', M + 2, y + 4.4); y += 4.4;
-            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
-            noteLines.forEach(function (ln) { txt(ln, M + 2, y + 4.4); y += 4.4; });
+            doc.setFillColor(252, 252, 252);
+            doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3);
+            doc.rect(M, noteTop, CW, noteH, 'FD');
+            doc.setTextColor(20, 20, 20);
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(8.8);
+            txt('Note:', M + 3, noteTop + 4.2);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); doc.setTextColor(40, 40, 40);
+            noteLines.forEach(function (ln, i) {
+              txt(ln, M + 3, noteTop + 8.4 + i * 4.2);
+            });
             y = noteTop + noteH + 1;
           } else {
             bodyLines(['Note:'], 'bold', 9);
             bodyLines(noteLines, 'normal', 8.5);
           }
         }
-        // Remarks (existing behavior).
-        if (remLines) {
-          bodyLines(remLines, 'italic', 9);
+        // Remarks / AI Clinical Correlation (boxed Chughtai style).
+        if (vals['Remarks']) {
+          var remRaw = String(vals['Remarks']).trim();
+          var isAiNote = remRaw.indexOf('AI Clinical Correlation') >= 0;
+          var remHead = isAiNote ? 'Note (Clinical Correlation):' : 'Note:';
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2);
+          var remLinesOnly = doc.splitTextToSize(remRaw, CW - 8);
+          var remH = (remLinesOnly.length + 1) * 4.2 + 4;
+          if (remH + 4 <= maxBodyY - M) {
+            need(remH + 3); y += 1.5;
+            var remTop = y;
+            if (isAiNote) {
+              doc.setFillColor(248, 250, 252);
+              doc.setDrawColor(199, 210, 254); doc.setLineWidth(0.4);
+              doc.rect(M, remTop, CW, remH, 'FD');
+              doc.setFillColor(79, 70, 229);
+              doc.rect(M, remTop, 2.5, remH, 'F');
+              doc.setTextColor(55, 48, 163);
+              doc.setFont('helvetica', 'bold'); doc.setFontSize(8.8);
+              txt(remHead, M + 5, remTop + 4.2);
+              doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); doc.setTextColor(30, 41, 59);
+              remLinesOnly.forEach(function (ln, i) {
+                txt(ln, M + 5, remTop + 8.4 + i * 4.2);
+              });
+            } else {
+              doc.setFillColor(252, 252, 252);
+              doc.setDrawColor(200, 200, 200); doc.setLineWidth(0.3);
+              doc.rect(M, remTop, CW, remH, 'FD');
+              doc.setTextColor(20, 20, 20);
+              doc.setFont('helvetica', 'bold'); doc.setFontSize(8.8);
+              txt(remHead, M + 3, remTop + 4.2);
+              doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); doc.setTextColor(40, 40, 40);
+              remLinesOnly.forEach(function (ln, i) {
+                txt(ln, M + 3, remTop + 8.4 + i * 4.2);
+              });
+            }
+            y = remTop + remH + 1;
+          } else {
+            bodyLines([remHead], 'bold', 9);
+            bodyLines(remLinesOnly, 'normal', 8.5);
+          }
         }
-        y += 5;
+        y += 4;
       });
     })();
 
