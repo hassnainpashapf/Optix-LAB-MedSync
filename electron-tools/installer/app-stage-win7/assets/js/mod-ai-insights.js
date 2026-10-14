@@ -3019,83 +3019,89 @@
         }).join(' ')
       : '<span style="color:#059669;font-weight:700;font-size:12px">✅ All tested parameters within normal reference ranges</span>';
 
-    // Solution 1 HTML (Diagnosis & Findings + DDx)
-    var diagHtml = s.diagnosis.map(function (di) {
-      return '<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #f1f5f9">'
-        + '<div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:3px">🩺 ' + (window.App ? App.esc(di.title) : di.title) + '</div>'
-        + '<div style="font-size:12.5px;color:#475569;line-height:1.5">' + (window.App ? App.esc(di.detail) : di.detail) + '</div>'
-        + '</div>';
-    }).join('');
-
-    if (ddx.length) {
-      var ddxSnippets = ddx.map(function (dm) {
-        return dm.candidates.map(function (c) {
-          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed #e2e8f0;font-size:12px">'
-            + '<div><b style="color:#0f172a">' + (window.App ? App.esc(c.disease) : c.disease) + '</b> <span style="color:#64748b">(' + (window.App ? App.esc(c.confirmatoryTest) : c.confirmatoryTest) + ')</span></div>'
-            + '<span style="background:#ebf4f8;color:#131845;border:1px solid #c7d8e8;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px">' + c.probability + '% Match</span>'
-            + '</div>';
-        }).join('');
-      }).join('');
-      diagHtml += '<div style="margin-top:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px">'
-        + '<div style="font-size:11px;font-weight:800;color:#131845;text-transform:uppercase;margin-bottom:6px">🧠 Differential Diagnosis (DDx Matrix):</div>'
-        + ddxSnippets
-        + '</div>';
-    }
-
-    // Solution 2 HTML (Medications + DDI Alert)
-    var medsHtml = s.medications.map(function (m) {
-      var items = m.items.map(function (it) {
-        return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:3.5px solid #059669;border-radius:8px;padding:8px 12px;margin-bottom:6px">'
-          + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'
-          + '<b style="color:#0f172a;font-size:13px">' + (window.App ? App.esc(it.drug) : it.drug) + '</b>'
-          + '<span style="background:#ecfdf5;color:#047857;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">' + (window.App ? App.esc(it.dosage) : it.dosage) + '</span>'
-          + '</div>'
-          + (it.note ? '<div style="font-size:11.5px;color:#64748b;margin-top:3px">' + (window.App ? App.esc(it.note) : it.note) + '</div>' : '')
-          + '</div>';
-      }).join('');
-      return '<div style="margin-bottom:8px">'
-        + '<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#059669;letter-spacing:0.04em;margin-bottom:6px">' + (window.App ? App.esc(m.category) : m.category) + '</div>'
-        + items
-        + '</div>';
-    }).join('');
-
-    if (drugInteractions.length) {
-      var ddiSnippets = drugInteractions.map(function (di) {
-        var isCrit = di.severity === 'critical';
-        return '<div style="background:' + (isCrit ? '#fef2f2' : '#fffbeb') + ';border:1px solid ' + (isCrit ? '#fca5a5' : '#fde68a') + ';border-radius:6px;padding:6px 10px;margin-bottom:4px;font-size:11.5px">'
-          + '<b style="color:' + (isCrit ? '#b91c1c' : '#b45309') + '">⚠️ ' + (window.App ? App.esc(di.pair) : di.pair) + ':</b> '
-          + (window.App ? App.esc(di.mechanism) : di.mechanism)
-          + '<div style="color:#047857;font-weight:700;margin-top:2px">💡 ' + (window.App ? App.esc(di.solution) : di.solution) + '</div>'
-          + '</div>';
-      }).join('');
-      medsHtml += '<div style="margin-top:8px">'
-        + '<div style="font-size:11px;font-weight:800;color:#dc2626;text-transform:uppercase;margin-bottom:4px">💊 Drug-to-Drug Interaction (DDI) Conflict Alert:</div>'
-        + ddiSnippets
-        + '</div>';
-    }
-
-    // Solution 3 HTML (Diet & Lifestyle Plan)
-    var dietHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
-      + s.diet.map(function (d) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(d) : d) + '</li>'; }).join('')
-      + '</ul>';
-
-    // Solution 4 HTML (Follow-up Tests with 1-Tap Order Button)
-    var testsHtml = '<ul style="margin:0;padding-left:0;list-style:none;font-size:12.5px;color:#334155;line-height:1.6">'
-      + s.tests.map(function (t) {
-          var cleanName = t.replace(/\.$/, '');
-          var ptId = pt.id || (inv && inv.patientId) || '';
-          return '<li style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9">'
-            + '<div style="display:flex;align-items:flex-start;gap:6px"><span>🔬</span><span>' + (window.App ? App.esc(cleanName) : cleanName) + '</span></div>'
-            + '<button type="button" class="btn btn-ghost ai-order-test-btn" data-testname="' + (window.App ? App.esc(cleanName) : cleanName) + '" data-ptid="' + (window.App ? App.esc(ptId) : ptId) + '" style="font-size:11px;font-weight:700;color:#131845;border:1px solid #cbd5e1;padding:3px 9px;border-radius:6px;background:#ffffff;white-space:nowrap;cursor:pointer">➕ Order Test</button>'
+    // Solution 1 HTML (Diagnosis & Findings + DDx in Bullet Points)
+    var diagHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
+      + s.diagnosis.map(function (di) {
+          return '<li style="margin-bottom:8px">'
+            + '<b style="color:#0f172a">' + (window.App ? App.esc(di.title) : di.title) + ':</b> '
+            + '<span>' + (window.App ? App.esc(di.detail) : di.detail) + '</span>'
             + '</li>';
         }).join('')
       + '</ul>';
 
-    // Solution 5 HTML (Red Flags)
-    var redflagsHtml = s.redflags.map(function (rf) {
-      return '<div style="background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px;font-weight:600;color:#991b1b;line-height:1.45">'
-        + (window.App ? App.esc(rf) : rf) + '</div>';
-    }).join('');
+    if (ddx.length) {
+      var ddxSnippets = ddx.map(function (dm) {
+        return dm.candidates.map(function (c) {
+          return '<li style="margin-bottom:4px"><b>' + (window.App ? App.esc(c.disease) : c.disease) + ':</b> '
+            + '<span style="color:#64748b">(' + (window.App ? App.esc(c.confirmatoryTest) : c.confirmatoryTest) + ')</span> '
+            + '<span style="background:#ebf4f8;color:#131845;border:1px solid #c7d8e8;padding:1px 6px;border-radius:4px;font-weight:700;font-size:10.5px">' + c.probability + '% Match</span></li>';
+        }).join('');
+      }).join('');
+      diagHtml += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #e2e8f0">'
+        + '<div style="font-size:11px;font-weight:800;color:#131845;text-transform:uppercase;margin-bottom:4px">Differential Diagnosis (DDx):</div>'
+        + '<ul style="margin:0;padding-left:18px;font-size:12px;color:#475569;line-height:1.5">'
+        + ddxSnippets
+        + '</ul>'
+        + '</div>';
+    }
+
+    // Solution 2 HTML (Medications + DDI in Bullet Points)
+    var medsHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
+      + s.medications.map(function (m) {
+          var items = m.items.map(function (it) {
+            return '<div style="margin-bottom:4px">'
+              + '<b style="color:#0f172a">' + (window.App ? App.esc(it.drug) : it.drug) + '</b> '
+              + '<span style="background:#ecfdf5;color:#047857;border:1px solid #bbf7d0;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700">' + (window.App ? App.esc(it.dosage) : it.dosage) + '</span>'
+              + (it.note ? '<div style="font-size:11.5px;color:#64748b;margin-top:1px">' + (window.App ? App.esc(it.note) : it.note) + '</div>' : '')
+              + '</div>';
+          }).join('');
+          return '<li style="margin-bottom:8px">'
+            + '<div style="font-weight:700;color:#059669;font-size:12px;text-transform:uppercase;margin-bottom:3px">' + (window.App ? App.esc(m.category) : m.category) + '</div>'
+            + items
+            + '</li>';
+        }).join('')
+      + '</ul>';
+
+    if (drugInteractions.length) {
+      var ddiSnippets = drugInteractions.map(function (di) {
+        return '<li style="margin-bottom:4px;color:#b91c1c"><b>' + (window.App ? App.esc(di.pair) : di.pair) + ':</b> '
+          + (window.App ? App.esc(di.solution || di.mechanism) : (di.solution || di.mechanism)) + '</li>';
+      }).join('');
+      medsHtml += '<div style="margin-top:10px;padding-top:8px;border-top:1px dashed #fecaca">'
+        + '<div style="font-size:11px;font-weight:800;color:#dc2626;text-transform:uppercase;margin-bottom:4px">⚠️ Drug Conflicts (DDI):</div>'
+        + '<ul style="margin:0;padding-left:18px;font-size:11.5px;line-height:1.5">'
+        + ddiSnippets
+        + '</ul>'
+        + '</div>';
+    }
+
+    // Solution 3 HTML (Diet & Lifestyle Plan in Bullet Points)
+    var dietHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
+      + s.diet.map(function (d) { return '<li style="margin-bottom:8px">' + (window.App ? App.esc(d) : d) + '</li>'; }).join('')
+      + '</ul>';
+
+    // Solution 4 HTML (Follow-up Tests in Bullet Points)
+    var testsHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
+      + s.tests.map(function (t) {
+          var cleanName = t.replace(/\.$/, '');
+          var ptId = pt.id || (inv && inv.patientId) || '';
+          return '<li style="margin-bottom:8px">'
+            + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">'
+            + '  <span>' + (window.App ? App.esc(cleanName) : cleanName) + '</span>'
+            + '  <button type="button" class="btn btn-ghost ai-order-test-btn" data-testname="' + (window.App ? App.esc(cleanName) : cleanName) + '" data-ptid="' + (window.App ? App.esc(ptId) : ptId) + '" style="font-size:11px;font-weight:600;color:#131845;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;background:#ffffff;white-space:nowrap;cursor:pointer">➕ Order</button>'
+            + '</div>'
+            + '</li>';
+        }).join('')
+      + '</ul>';
+
+    // Solution 5 HTML (Red Flags in Bullet Points)
+    var redflagsHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#991b1b;line-height:1.6">'
+      + s.redflags.map(function (rf) {
+          return '<li style="margin-bottom:8px;font-weight:600">'
+            + (window.App ? App.esc(rf) : rf)
+            + '</li>';
+        }).join('')
+      + '</ul>';
 
     // Panic Value Banner
     var panicBannerHtml = '';
@@ -3362,27 +3368,27 @@
       + '    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.04em;margin-bottom:6px">Abnormal Parameters:</div>'
       + '    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">' + findingsBadges + '</div>'
       + '  </div>'
-      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-bottom:12px">'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
-      + '      <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span>🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
+      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:14px;margin-bottom:14px">'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '      <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span>🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
       +        diagHtml
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
-      + '      <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span>💊</span><span>Solution 2: Prescription & Medication Guidance</span></div>'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '      <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span>💊</span><span>Solution 2: Prescription & Medication Guidance</span></div>'
       +        medsHtml
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
-      + '      <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span>🥗</span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '      <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span>🥗</span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
       +        dietHtml
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
-      + '      <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span>🔬</span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '      <div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span>🔬</span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
       +        testsHtml
       + '    </div>'
-      + '  </div>'
-      + '  <div style="background:#ffffff;border:1px solid #fed7aa;border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
-      + '    <div style="font-size:13px;font-weight:800;color:#c2410c;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span>⚠️</span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
-      +      redflagsHtml
+      + '    <div style="background:#ffffff;border:1px solid #fed7aa;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '      <div style="font-size:13.5px;font-weight:800;color:#c2410c;margin-bottom:12px;display:flex;align-items:center;gap:6px"><span>⚠️</span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
+      +        redflagsHtml
+      + '    </div>'
       + '  </div>'
       + '</div>'
       // PANE 2: Medical Indices & ASCVD
