@@ -1573,9 +1573,6 @@
       '        </div>' +
       '      </div>' +
 
-      // Longitudinal Lab Biomarker Comparison Quick Access Banner
-      renderLongitudinalOverviewPreviewCard(labData) +
-
       // Doctor Clinical Decision Support Matrix
       renderDoctorDecisionMatrix(labData) +
       '    </div>' +

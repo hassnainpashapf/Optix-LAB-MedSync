@@ -161,8 +161,8 @@ assert.ok(html.includes('STANDARD PHYSIOLOGICAL REFERENCE ZONE (NORMAL)'), 'Norm
 assert.ok(html.includes('PREVIOUS: 2026-09-10'), 'Previous date milestone marker present in graph');
 assert.ok(html.includes('CURRENT: 2026-10-14'), 'Current date milestone marker present in graph');
 assert.ok(html.includes('pd-trends-variance-card'), 'Biomarker Variance & Delta Velocity card present');
-assert.ok(html.includes('Biomarker Variance &amp; Delta Velocity Visualizer'), 'Delta Velocity visualizer title present');
-assert.ok(html.includes('data-pd-switch="pdTrends"'), 'Quick-jump button from Vitals Overview to Trends page present');
+assert.ok(!html.includes('vitals-trends-preview-card'), 'Biomarker Trends preview banner cleanly removed from Overview');
+assert.ok(html.includes('data-pd-switch="pdOverview"'), 'Back button from Trends page to Vitals Overview present');
 
 console.log('✓ All 6 verification checks for Dedicated Biomarker Trends Page, SVG Trajectory Graph, and Delta Velocity Bars PASSED CLEANLY!\n');
 
