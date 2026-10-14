@@ -529,12 +529,6 @@
 
       // Center & Right Main Vitals Overview Layout
       '<div class="pd-layout-vitals" id="pdOverview">' +
-      // Patient Title & Subtitle matching Nexura Care
-      '  <div class="vitals-header-title-block">' +
-      '    <h2>' + esc(patient.name || 'Patient') + ' Vitals Overview</h2>' +
-      '    <p>Real-time monitoring of current physiological metrics and trends.</p>' +
-      '  </div>' +
-
       // 2-Column Responsive Main Grid
       '  <div class="vitals-main-grid">' +
       // LEFT COLUMN (~60%)

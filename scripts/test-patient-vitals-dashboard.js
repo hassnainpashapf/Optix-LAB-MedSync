@@ -136,8 +136,7 @@ console.log('✓ Patient routes successfully registered');
 const patient = fakeDB._patients['PT-101'];
 const html = context.App.patientDashboard.render(patient);
 
-assert.ok(html.includes('Mohamed Ahmed Vitals Overview'), 'Header contains patient name + Vitals Overview');
-assert.ok(html.includes('Real-time monitoring of current physiological metrics and trends.'), 'Subtitle matches specification');
+assert.ok(html.includes('Mohamed Ahmed'), 'Patient name present in left profile menu');
 assert.ok(html.includes('Stress Patterns Overview'), 'Card 1 Stress Patterns Overview present');
 assert.ok(html.includes('April, 2026'), 'Month selector present');
 assert.ok(html.includes('vitals-day-pill'), 'Date timeline pills present');
