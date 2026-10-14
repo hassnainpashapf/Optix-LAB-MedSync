@@ -511,22 +511,6 @@
     }).join('');
 
     return '<section id="ptPatientDashboard" aria-label="Patient details">' +
-      // Breadcrumb Header Bar
-      '<div class="vitals-breadcrumb-row">' +
-      '  <div class="vitals-breadcrumb">' +
-      '    <a class="vitals-nav-arrow" href="#/patients" title="Back to All Patients">←</a>' +
-      '    <span class="vitals-nav-arrow" style="opacity:0.4;cursor:default">→</span>' +
-      '    <span style="display:inline-flex;align-items:center;gap:6px;margin-left:4px">' +
-      '      <span>👥</span>' +
-      '      <a class="vitals-bc-item" href="#/patients">Patients</a>' +
-      '      <span class="vitals-bc-sep">></span>' +
-      '      <span class="vitals-bc-item">Patients Profile</span>' +
-      '      <span class="vitals-bc-sep">></span>' +
-      '      <span class="vitals-bc-curr">Vitals Overview</span>' +
-      '    </span>' +
-      '  </div>' +
-      '</div>' +
-
       '<div class="pd-profile-shell">' +
       // Left Sticky Patient Navigation Menu
       '<aside class="pd-patient-menu" aria-label="Patient menu">' +
