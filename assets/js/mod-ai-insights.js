@@ -1704,9 +1704,9 @@
     var isCrit = org.status === 'critical';
     var isWarn = org.status === 'warning';
     var isSafe = org.status === 'normal';
-    var badgeBg = isCrit ? '#fee2e2' : (isWarn ? '#fef3c7' : (isSafe ? '#ecfdf5' : '#f1f5f9'));
-    var badgeColor = isCrit ? '#991b1b' : (isWarn ? '#92400e' : (isSafe ? '#047857' : '#475569'));
-    var badgeBorder = isCrit ? '#fca5a5' : (isWarn ? '#fde68a' : (isSafe ? '#bbf7d0' : '#cbd5e1'));
+    var badgeBg = '#f8fafc';
+    var badgeColor = '#1e293b';
+    var badgeBorder = '#cbd5e1';
     var badgeText = isCrit ? '🚨 CRITICAL STRESS' : (isWarn ? '⚠️ WARNING / STRESSED' : (isSafe ? '✅ OPTIMAL / HEALTHY' : '⚪ UNTESTED IN PANEL'));
 
     var markersHtml = '';
@@ -1715,9 +1715,7 @@
         + '<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em;margin-bottom:8px">Tested Organ Biomarkers</div>'
         + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px">'
         + org.markers.map(function (m) {
-            var mCrit = m.status === 'critical';
-            var mWarn = m.status === 'warning';
-            var mColor = mCrit ? '#dc2626' : (mWarn ? '#d97706' : '#0f172a');
+            var mColor = '#0f172a';
             return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px">'
               + '<div style="font-size:11px;color:#64748b">' + (window.App ? App.esc(m.name) : m.name) + '</div>'
               + '<div style="font-size:14px;font-weight:800;color:' + mColor + '">' + (window.App ? App.esc(m.val) : m.val) + '</div>'
@@ -1730,7 +1728,7 @@
       markersHtml = '<div style="font-size:12px;color:#64748b;background:#ffffff;padding:10px 12px;border-radius:8px;border:1px dashed #cbd5e1;margin-bottom:14px">No direct parameters tested for this organ in current laboratory order.</div>';
     }
 
-    var gaugeColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#94a3b8'));
+    var gaugeColor = '#131845';
 
     return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:14px;padding:20px;box-shadow:0 1px 3px rgba(15,30,46,0.04);transition:all 0.2s ease">'
       // Header
@@ -1766,8 +1764,8 @@
       + '</div>'
 
       // Clinical Action Plan
-      + '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:3px solid #059669;border-radius:8px;padding:12px 14px">'
-      + '  <div style="font-size:12px;font-weight:700;color:#059669;text-transform:uppercase;margin-bottom:3px">💡 Evidence-Based Clinical Protection Plan:</div>'
+      + '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:3px solid #131845;border-radius:8px;padding:12px 14px">'
+      + '  <div style="font-size:12px;font-weight:700;color:#131845;text-transform:uppercase;margin-bottom:3px">💡 Evidence-Based Clinical Protection Plan:</div>'
       + '  <div style="font-size:13px;color:#0f172a;line-height:1.55;font-weight:600">' + (window.App ? App.esc(org.action) : org.action) + '</div>'
       + '</div>'
       + '</div>';
@@ -1795,16 +1793,15 @@
     var beaconsSvg = organs.map(function (o) {
       var isCrit = o.status === 'critical';
       var isWarn = o.status === 'warning';
-      var isSafe = o.status === 'normal';
-      var pulseColor = isCrit ? '#dc2626' : (isWarn ? '#d97706' : (isSafe ? '#16a34a' : '#64748b'));
-      var coreBg = isCrit ? '#fee2e2' : (isWarn ? '#fef3c7' : (isSafe ? '#ecfdf5' : '#f1f5f9'));
-      var coreStroke = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#cbd5e1'));
+      var pulseColor = '#94a3b8';
+      var coreBg = '#f8fafc';
+      var coreStroke = '#cbd5e1';
       var isAct = o.id === activeOrganId;
 
       return '<g class="ai-organ-beacon" data-organ-id="' + o.id + '" style="cursor:pointer" transform="translate(0,0)">'
         + (isCrit ? '<circle cx="' + o.svgX + '" cy="' + o.svgY + '" r="22" fill="none" stroke="' + pulseColor + '" stroke-width="1.5" opacity="0.4"><animate attributeName="r" values="16;24;16" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.6;0.1;0.6" dur="2s" repeatCount="indefinite"/></circle>' : '')
         + (isWarn ? '<circle cx="' + o.svgX + '" cy="' + o.svgY + '" r="19" fill="none" stroke="' + pulseColor + '" stroke-width="1.2" opacity="0.4"/>' : '')
-        + '<circle class="ai-beacon-ring" cx="' + o.svgX + '" cy="' + o.svgY + '" r="16" fill="' + (isAct ? '#131845' : coreBg) + '" stroke="' + (isAct ? '#131845' : coreStroke) + '" stroke-width="' + (isAct ? '2.5' : '1.5') + '" filter="url(' + (isCrit ? '#glowCrit' : (isWarn ? '#glowWarn' : '#glowSafe')) + ')" />'
+        + '<circle class="ai-beacon-ring" cx="' + o.svgX + '" cy="' + o.svgY + '" r="16" fill="' + (isAct ? '#131845' : coreBg) + '" stroke="' + (isAct ? '#131845' : coreStroke) + '" stroke-width="' + (isAct ? '2.5' : '1.5') + '" />'
         + '<text x="' + o.svgX + '" y="' + (o.svgY + 4) + '" text-anchor="middle" font-size="11" pointer-events="none">' + o.icon + '</text>'
         + '</g>';
     }).join('');
@@ -1819,9 +1816,9 @@
       + '    <div style="font-size:12px;color:#64748b;margin-top:2px">Interactive physiological systems and clinical protection rules</div>'
       + '  </div>'
       + '  <div style="display:flex;gap:6px;font-size:11px;font-weight:700">'
-      + '    <span style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;padding:3px 8px;border-radius:6px">Critical</span>'
-      + '    <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:3px 8px;border-radius:6px">Warning</span>'
-      + '    <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;padding:3px 8px;border-radius:6px">Normal</span>'
+      + '    <span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:3px 8px;border-radius:6px">Critical</span>'
+      + '    <span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:3px 8px;border-radius:6px">Warning</span>'
+      + '    <span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:3px 8px;border-radius:6px">Normal</span>'
       + '  </div>'
       + '</div>'
 
@@ -2998,17 +2995,14 @@
     var warnOrgans = organMap.filter(function (o) { return o.status === 'warning'; });
     var safeOrgans = organMap.filter(function (o) { return o.status === 'normal'; });
 
-    // Detected abnormal parameters badge strip
+    // Detected abnormal parameters badge strip (Calm & Clean Theme)
     var findingsBadges = findings.length
       ? findings.map(function (f) {
           var isCrit = f.status.indexOf('critical') >= 0;
-          var bg = isCrit ? '#fee2e2' : '#fef3c7';
-          var color = isCrit ? '#b91c1c' : '#b45309';
-          var border = isCrit ? '#fca5a5' : '#fde68a';
-          return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:700;background:' + bg + ';color:' + color + ';border:1px solid ' + border + '">'
-            + (isCrit ? '⚠️ ' : '⚡ ') + (window.App ? App.esc(f.paramName) : f.paramName) + ': ' + (window.App ? App.esc(f.value) : f.value) + ' ' + (window.App ? App.esc(f.unit) : f.unit) + ' (' + (window.App ? App.esc(f.note || f.status) : (f.note || f.status)) + ')</span>';
+          return '<span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:8px;font-size:12px;font-weight:600;background:#ffffff;color:#1e293b;border:1px solid #cbd5e1">'
+            + (isCrit ? '⚠️ ' : '⚡ ') + (window.App ? App.esc(f.paramName) : f.paramName) + ': <b style="color:#0f172a">' + (window.App ? App.esc(f.value) : f.value) + ' ' + (window.App ? App.esc(f.unit) : f.unit) + '</b> <span style="font-size:11px;color:#64748b">(' + (window.App ? App.esc(f.note || f.status) : (f.note || f.status)) + ')</span></span>';
         }).join(' ')
-      : '<span style="color:#059669;font-weight:700;font-size:12px">✅ All tested parameters within normal reference ranges</span>';
+      : '<span style="color:#334155;font-weight:700;font-size:12px">✅ All tested parameters within normal reference ranges</span>';
 
     // Solution 1 HTML (Diagnosis & Findings + DDx in Bullet Points)
     var diagHtml = '<ul style="margin:0;padding-left:18px;font-size:13px;color:#334155;line-height:1.65">'
@@ -3025,7 +3019,7 @@
         return dm.candidates.map(function (c) {
           return '<li style="margin-bottom:5px"><b>' + (window.App ? App.esc(c.disease) : c.disease) + ':</b> '
             + '<span style="color:#64748b">(' + (window.App ? App.esc(c.confirmatoryTest) : c.confirmatoryTest) + ')</span> '
-            + '<span style="background:#ebf4f8;color:#131845;border:1px solid #c7d8e8;padding:1px 6px;border-radius:4px;font-weight:700;font-size:10.5px">' + c.probability + '% Match</span></li>';
+            + '<span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:1px 6px;border-radius:4px;font-weight:700;font-size:10.5px">' + c.probability + '% Match</span></li>';
         }).join('');
       }).join('');
       diagHtml += '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #e2e8f0">'
@@ -3042,12 +3036,12 @@
           var items = m.items.map(function (it) {
             return '<div style="margin-bottom:4px">'
               + '<b style="color:#0f172a">' + (window.App ? App.esc(it.drug) : it.drug) + '</b> '
-              + '<span style="background:#ecfdf5;color:#047857;border:1px solid #bbf7d0;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700">' + (window.App ? App.esc(it.dosage) : it.dosage) + '</span>'
+              + '<span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:700">' + (window.App ? App.esc(it.dosage) : it.dosage) + '</span>'
               + (it.note ? '<div style="font-size:11.5px;color:#64748b;margin-top:1px">' + (window.App ? App.esc(it.note) : it.note) + '</div>' : '')
               + '</div>';
           }).join('');
           return '<li style="margin-bottom:10px">'
-            + '<div style="font-weight:700;color:#059669;font-size:12px;text-transform:uppercase;margin-bottom:3px">' + (window.App ? App.esc(m.category) : m.category) + '</div>'
+            + '<div style="font-weight:700;color:#131845;font-size:12px;text-transform:uppercase;margin-bottom:3px">' + (window.App ? App.esc(m.category) : m.category) + '</div>'
             + items
             + '</li>';
         }).join('')
@@ -3055,11 +3049,11 @@
 
     if (drugInteractions.length) {
       var ddiSnippets = drugInteractions.map(function (di) {
-        return '<li style="margin-bottom:4px;color:#b91c1c"><b>' + (window.App ? App.esc(di.pair) : di.pair) + ':</b> '
+        return '<li style="margin-bottom:4px;color:#334155"><b>' + (window.App ? App.esc(di.pair) : di.pair) + ':</b> '
           + (window.App ? App.esc(di.solution || di.mechanism) : (di.solution || di.mechanism)) + '</li>';
       }).join('');
-      medsHtml += '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #fecaca">'
-        + '<div style="font-size:11.5px;font-weight:800;color:#dc2626;text-transform:uppercase;margin-bottom:6px">⚠️ Drug Conflicts (DDI):</div>'
+      medsHtml += '<div style="margin-top:12px;padding-top:10px;border-top:1px dashed #cbd5e1">'
+        + '<div style="font-size:11.5px;font-weight:800;color:#131845;text-transform:uppercase;margin-bottom:6px">⚠️ Drug Conflicts (DDI):</div>'
         + '<ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.5">'
         + ddiSnippets
         + '</ul>'
@@ -3086,7 +3080,7 @@
       + '</ul>';
 
     // Solution 5 HTML (Red Flags in Bullet Points)
-    var redflagsHtml = '<ul style="margin:0;padding-left:18px;font-size:13px;color:#991b1b;line-height:1.65">'
+    var redflagsHtml = '<ul style="margin:0;padding-left:18px;font-size:13px;color:#334155;line-height:1.65">'
       + s.redflags.map(function (rf) {
           return '<li style="margin-bottom:10px;font-weight:600">'
             + (window.App ? App.esc(rf) : rf)
@@ -3094,34 +3088,30 @@
         }).join('')
       + '</ul>';
 
-    // Panic Value Banner
+    // Panic Value Banner (Calm & Clean Medical Theme)
     var panicBannerHtml = '';
     if (panicInfo.isPanic) {
       var panicDetails = panicInfo.alerts.map(function (a) {
         return '<b>' + (window.App ? App.esc(a.param) : a.param) + ' (' + (window.App ? App.esc(a.value) : a.value) + '):</b> ' + (window.App ? App.esc(a.hazard) : a.hazard);
       }).join(' &bull; ');
 
-      panicBannerHtml = '<div style="background:#b91c1c;color:#fff;border-radius:12px;padding:12px 18px;margin-bottom:16px;box-shadow:0 4px 14px rgba(185,28,28,0.25);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
+      panicBannerHtml = '<div style="background:#ffffff;border:1.5px solid #cbd5e1;border-left:4px solid #b91c1c;color:#0f172a;border-radius:12px;padding:14px 18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
         + '<div style="display:flex;align-items:center;gap:10px">'
-        + '  <span style="font-size:24px">🚨</span>'
+        + '  <span style="font-size:22px">🚨</span>'
         + '  <div>'
-        + '    <div style="font-size:13px;font-weight:900;letter-spacing:0.04em">CRITICAL PANIC-VALUE LAB ALERT (ISO 15189 / CAP Standard)</div>'
-        + '    <div style="font-size:11.5px;opacity:0.95;margin-top:2px">' + panicDetails + '</div>'
+        + '    <div style="font-size:13px;font-weight:800;color:#131845;letter-spacing:0.02em">CRITICAL PANIC-VALUE LAB ALERT (ISO 15189 / CAP Standard)</div>'
+        + '    <div style="font-size:12px;color:#475569;margin-top:2px">' + panicDetails + '</div>'
         + '  </div>'
         + '</div>'
         + '<div>'
-        + '  <button type="button" class="btn btn-ghost" id="aiSendPanicSos" style="background:#fff;color:#991b1b;font-weight:900;border:0;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer">💬 Send Panic SOS to Doctor</button>'
+        + '  <button type="button" class="btn ai-action-btn" id="aiSendPanicSos" style="background:#ffffff;color:#1e293b;border:1.5px solid #cbd5e1;font-weight:700;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer">💬 Send Panic SOS to Doctor</button>'
         + '</div>'
         + '</div>';
     }
 
-    // Tab 2: Medical Indices & ASCVD HTML
+    // Tab 2: Medical Indices & ASCVD HTML (Calm Theme)
     var indicesHtml = '';
     if (ascvdRisk) {
-      var isHighCvd = ascvdRisk.riskScore >= 20.0;
-      var cvdBorder = isHighCvd ? '#f87171' : (ascvdRisk.riskScore >= 7.5 ? '#fde68a' : '#bbf7d0');
-      var cvdColor = isHighCvd ? '#dc2626' : (ascvdRisk.riskScore >= 7.5 ? '#d97706' : '#16a34a');
-
       indicesHtml += '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
         + '  <div>'
@@ -3130,8 +3120,8 @@
         + '    <div style="font-size:12px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(ascvdRisk.details) : ascvdRisk.details) + '</div>'
         + '  </div>'
         + '  <div style="text-align:right">'
-        + '    <div style="font-size:22px;font-weight:800;color:' + cvdColor + '">' + ascvdRisk.riskScore + '% <span style="font-size:11px;font-weight:600;color:#64748b">10-Yr Risk</span></div>'
-        + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#ffffff;border:1px solid ' + cvdBorder + ';color:' + cvdColor + '">' + (window.App ? App.esc(ascvdRisk.tier) : ascvdRisk.tier) + '</span>'
+        + '    <div style="font-size:22px;font-weight:800;color:#131845">' + ascvdRisk.riskScore + '% <span style="font-size:11px;font-weight:600;color:#64748b">10-Yr Risk</span></div>'
+        + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#f8fafc;border:1px solid #cbd5e1;color:#1e293b">' + (window.App ? App.esc(ascvdRisk.tier) : ascvdRisk.tier) + '</span>'
         + '  </div>'
         + '</div>'
         + '<div style="font-size:12.5px;color:#334155;line-height:1.55;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">'
@@ -3142,11 +3132,6 @@
 
     if (indices.length) {
       indicesHtml += indices.map(function (ind) {
-        var isCrit = ind.status === 'critical';
-        var isWarn = ind.status === 'warning';
-        var cardBorder = isCrit ? '#fca5a5' : (isWarn ? '#fde68a' : '#bbf7d0');
-        var scoreColor = isCrit ? '#dc2626' : (isWarn ? '#d97706' : '#16a34a');
-
         return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
           + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
           + '  <div>'
@@ -3155,8 +3140,8 @@
           + '    <div style="font-size:11.5px;color:#64748b;margin-top:2px">Formula: ' + (window.App ? App.esc(ind.formula) : ind.formula) + '</div>'
           + '  </div>'
           + '  <div style="text-align:right">'
-          + '    <div style="font-size:20px;font-weight:800;color:' + scoreColor + '">' + ind.score + ' <span style="font-size:11.5px;font-weight:600;color:#64748b">' + ind.unit + '</span></div>'
-          + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#ffffff;border:1px solid ' + cardBorder + ';color:' + scoreColor + '">' + (window.App ? App.esc(ind.statusLabel) : ind.statusLabel) + '</span>'
+          + '    <div style="font-size:20px;font-weight:800;color:#131845">' + ind.score + ' <span style="font-size:11.5px;font-weight:600;color:#64748b">' + ind.unit + '</span></div>'
+          + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#f8fafc;border:1px solid #cbd5e1;color:#1e293b">' + (window.App ? App.esc(ind.statusLabel) : ind.statusLabel) + '</span>'
           + '  </div>'
           + '</div>'
           + '<div style="font-size:12.5px;color:#334155;line-height:1.55;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">'
@@ -3167,19 +3152,19 @@
       }).join('');
     }
 
-    // Tab 3: Drug Safety & DDI Shield HTML (Theme Harmonized)
+    // Tab 3: Drug Safety & DDI Shield HTML (Calm Theme)
     var safetyHtml = '';
     if (drugInteractions.length) {
       safetyHtml += '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
         + '<div style="font-size:14.5px;font-weight:800;color:#131845;margin-bottom:12px">💊 Drug Interactions & Clash Matrix (DDI)</div>'
         + drugInteractions.map(function (di) {
-            return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:3px solid #dc2626;border-radius:8px;padding:12px 14px;margin-bottom:8px">'
-              + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'
-              + '  <b style="color:#b91c1c;font-size:13px">⚡ ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
-              + '  <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase">' + di.severity + '</span>'
+            return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-left:3px solid #131845;border-radius:8px;padding:12px 14px;margin-bottom:8px">'
+              + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:gap:6px">'
+              + '  <b style="color:#131845;font-size:13px">⚡ ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
+              + '  <span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase">' + di.severity + '</span>'
               + '</div>'
               + '<div style="font-size:12px;color:#475569;margin-top:4px;line-height:1.45">' + (window.App ? App.esc(di.mechanism) : di.mechanism) + '</div>'
-              + '<div style="font-size:12px;color:#047857;font-weight:700;margin-top:4px">💡 Recommendation: ' + (window.App ? App.esc(di.solution) : di.solution) + '</div>'
+              + '<div style="font-size:12px;color:#1e293b;font-weight:700;margin-top:4px">💡 Recommendation: ' + (window.App ? App.esc(di.solution) : di.solution) + '</div>'
               + '</div>';
           }).join('')
         + '</div>';
@@ -3187,16 +3172,14 @@
 
     if (drugSafety.length) {
       safetyHtml += drugSafety.map(function (ds) {
-        var isCrit = ds.status === 'critical';
-
         var contraHtml = ds.contraindications.map(function (c) {
-          return '<li style="margin-bottom:4px"><b style="color:#dc2626">🚫 CONTRAINDICATED:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
+          return '<li style="margin-bottom:4px"><b style="color:#1e293b">🚫 CONTRAINDICATED:</b> <span style="color:#334155">' + (window.App ? App.esc(c) : c) + '</span></li>';
         }).join('');
         var cautionsHtml = ds.cautions.map(function (c) {
-          return '<li style="margin-bottom:4px"><b style="color:#d97706">⚠️ CAUTION:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
+          return '<li style="margin-bottom:4px"><b style="color:#1e293b">⚠️ CAUTION:</b> <span style="color:#334155">' + (window.App ? App.esc(c) : c) + '</span></li>';
         }).join('');
         var safeHtml = ds.safeAlternatives.map(function (sAlt) {
-          return '<li style="margin-bottom:4px;color:#047857"><b style="color:#047857">💡 SAFE ALTERNATIVE:</b> ' + (window.App ? App.esc(sAlt) : sAlt) + '</li>';
+          return '<li style="margin-bottom:4px"><b style="color:#1e293b">💡 SAFE ALTERNATIVE:</b> <span style="color:#334155">' + (window.App ? App.esc(sAlt) : sAlt) + '</span></li>';
         }).join('');
 
         return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
@@ -3213,7 +3196,7 @@
           + '</div>';
       }).join('');
     } else if (!drugInteractions.length) {
-      safetyHtml = '<div style="padding:22px;text-align:center;color:#059669;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;font-weight:700">✅ All organ safety shields green. No renal, hepatic, or hematological drug contraindications detected.</div>';
+      safetyHtml = '<div style="padding:22px;text-align:center;color:#334155;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;font-weight:700">✅ All organ safety shields green. No renal, hepatic, or hematological drug contraindications detected.</div>';
     }
 
     // Tab 4: Historical Velocity Trends HTML (Theme Harmonized)
@@ -3223,13 +3206,13 @@
       var prevDate = prevInv.date || prevInv.createdAt || 'Previous Date';
       var compRows = historicalDelta.comparisons.map(function (c) {
         var dirIco = c.dir === 'up' ? '▲' : (c.dir === 'down' ? '▼' : '➖');
-        var dirColor = c.alert ? '#dc2626' : (c.dir === 'up' ? '#2563eb' : (c.dir === 'down' ? '#d97706' : '#64748b'));
+        var dirColor = '#131845';
         return '<tr style="border-bottom:1px solid #f1f5f9;background:#ffffff">'
           + '<td style="padding:10px 12px;font-weight:700;color:#0f172a">' + (window.App ? App.esc(c.name) : c.name) + '</td>'
           + '<td style="padding:10px 12px;color:#64748b">' + c.prevVal + ' ' + (window.App ? App.esc(c.unit) : c.unit) + '</td>'
           + '<td style="padding:10px 12px;font-weight:800;color:#0f172a">' + c.curVal + ' ' + (window.App ? App.esc(c.unit) : c.unit) + '</td>'
           + '<td style="padding:10px 12px;font-weight:800;color:' + dirColor + '">' + dirIco + ' ' + (c.diff > 0 ? '+' : '') + c.diff + ' (' + (c.pct > 0 ? '+' : '') + c.pct + '%)</td>'
-          + '<td style="padding:10px 12px;font-size:12px;color:' + (c.alert ? '#b91c1c;font-weight:700' : '#64748b') + '">' + (c.alert ? (window.App ? App.esc(c.alert) : c.alert) : 'Stable / Standard course') + '</td>'
+          + '<td style="padding:10px 12px;font-size:12px;color:#475569">' + (c.alert ? (window.App ? App.esc(c.alert) : c.alert) : 'Stable / Standard course') + '</td>'
           + '</tr>';
       }).join('');
 
@@ -3265,12 +3248,12 @@
           + '<div style="background:#f8fafc;border-left:3px solid #131845;padding:10px 14px;border-radius:6px;font-size:12.5px;color:#1e293b;margin-bottom:10px">'
           + '  <b style="color:#131845">Inheritance Hazard:</b> ' + (window.App ? App.esc(g.geneticRisk) : g.geneticRisk)
           + '</div>'
-          + '<div style="font-size:12.5px;color:#047857;font-weight:700">' + (window.App ? App.esc(g.mandatoryAction) : g.mandatoryAction) + '</div>'
+          + '<div style="font-size:12.5px;color:#131845;font-weight:700">' + (window.App ? App.esc(g.mandatoryAction) : g.mandatoryAction) + '</div>'
           + '<div style="font-size:12px;color:#64748b;margin-top:4px">' + (window.App ? App.esc(g.familyAction) : g.familyAction) + '</div>'
           + '</div>';
       }).join('');
     } else {
-      geneticHtml = '<div style="padding:22px;text-align:center;color:#059669;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;font-weight:700">🧬 No high-risk familial carrier traits (such as Beta-Thalassemia or early onset monogenic diabetes) detected in current report.</div>';
+      geneticHtml = '<div style="padding:22px;text-align:center;color:#334155;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;font-weight:700">🧬 No high-risk familial carrier traits (such as Beta-Thalassemia or early onset monogenic diabetes) detected in current report.</div>';
     }
 
     // Tab 6: Roman Urdu Patient Care Guide HTML (Theme Harmonized)
@@ -3282,7 +3265,7 @@
       + '  </div>'
       + '  <div style="display:flex;gap:8px">'
       + '    <button type="button" class="btn ai-action-btn" id="aiCopyUrduGuide" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer">📋 Copy Urdu</button>'
-      + '    <button type="button" class="btn ai-action-btn" id="aiWaUrduGuide" style="color:#059669;border:1.5px solid #10b981;background:#ffffff;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer">💬 WhatsApp to Patient</button>'
+      + '    <button type="button" class="btn ai-action-btn" id="aiWaUrduGuide" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer">💬 WhatsApp to Patient</button>'
       + '  </div>'
       + '</div>'
       + '<div style="margin-bottom:14px">'
@@ -3293,11 +3276,11 @@
       + '</div>'
       + '<div style="margin-bottom:14px">'
       + '  <div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">2. 🍲 Khurak Aur Parhez:</div>'
-      + '  <div style="font-size:12px;color:#166534;font-weight:700;margin-bottom:4px">Kya Khayein:</div>'
+      + '  <div style="font-size:12px;color:#131845;font-weight:700;margin-bottom:4px">Kya Khayein:</div>'
       + '  <ul style="margin:0 0 8px;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
       +      (urduGuide.khurak.length ? urduGuide.khurak.map(function (k) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(k) : k) + '</li>'; }).join('') : '<li>Saaf mutawazan khurak aur ubla hua paani.</li>')
       + '  </ul>'
-      + '  <div style="font-size:12px;color:#991b1b;font-weight:700;margin-bottom:4px">Kin Cheezon Se Parhez Karein:</div>'
+      + '  <div style="font-size:12px;color:#131845;font-weight:700;margin-bottom:4px">Kin Cheezon Se Parhez Karein:</div>'
       + '  <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
       +      (urduGuide.parhez.length ? urduGuide.parhez.map(function (p) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(p) : p) + '</li>'; }).join('') : '<li>Talay hue aur masalay-dar khanon se parhez.</li>')
       + '  </ul>'
@@ -3309,8 +3292,8 @@
           + '</ul>'
           + '</div>') : '')
       + '<div style="margin-bottom:8px">'
-      + '  <div style="font-size:13px;font-weight:800;color:#dc2626;margin-bottom:6px">4. ⚠️ Khatray Ki Alamaat (Kab Foran Emergency Jayein):</div>'
-      + '  <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#b91c1c;line-height:1.65">'
+      + '  <div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">4. ⚠️ Khatray Ki Alamaat (Kab Foran Emergency Jayein):</div>'
+      + '  <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
       +      urduGuide.khatraAlamaat.map(function (ka) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(ka) : ka) + '</li>'; }).join('')
       + '  </ul>'
       + '</div>'
@@ -3392,32 +3375,32 @@
       // PANE 1: 5 Solutions (Clean Unified Medical Cards - Big & Spacious)
       + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
       + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;margin-bottom:20px">'
-      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
+      + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          diagHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">💊</span><span>Solution 2: Prescription & Medication Guidance</span></div>'
+      + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">💊</span><span>Solution 2: Prescription & Medication Guidance</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          medsHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🥗</span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
+      + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🥗</span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          dietHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1.5px solid #e2e8f0;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🔬</span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
+      + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🔬</span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          testsHtml
       + '      </div>'
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1.5px solid #fed7aa;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#c2410c;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">⚠️</span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
+      + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">⚠️</span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          redflagsHtml
       + '      </div>'
@@ -3831,7 +3814,7 @@
       +    switcherHtml
       + '  <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📋 Copy Solutions</button>'
       + '  <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks" style="border:1.5px solid #131845;background:#ffffff;color:#131845;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📄 Attach Remarks</button>'
-      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="color:#059669;border:1.5px solid #10b981;background:#ffffff;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">💬 WhatsApp Doctor</button>' : '')
+      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">💬 WhatsApp Doctor</button>' : '')
       + '  <button type="button" class="btn ai-action-btn" id="aiPrintSlip" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">🖨️ Print Summary</button>'
       + '  <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:13px;padding:8px 18px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 3px 8px rgba(19,24,69,0.22);font-family:inherit">🖨️ Print Rx Pad</button>'
       + '</div>'
@@ -4158,11 +4141,11 @@
     function renderShell() {
       var escFn = (window.App && App.esc) ? App.esc : function (s) { return String(s || '').replace(/[&<>"']/g, ''); };
       var STAT_TINTS = {
-        brand: { sc: '#0284c7', line: '#6fa6cf', soft: '#ebf4f9', circle: '#ddecf5' },
-        blue:  { sc: '#2563eb', line: '#7aa7e6', soft: '#e7f0fe', circle: '#dde9fb' },
-        amber: { sc: '#d97706', line: '#e0b25c', soft: '#fef4e2', circle: '#fde8c8' },
-        green: { sc: '#16a34a', line: '#5fbf8a', soft: '#e6f7f0', circle: '#d8f2e4' },
-        red:   { sc: '#dc2626', line: '#e08080', soft: '#fdecec', circle: '#fad2d2' }
+        brand: { sc: '#131845', line: '#cbd5e1', soft: '#f8fafc', circle: '#e2e8f0' },
+        blue:  { sc: '#131845', line: '#cbd5e1', soft: '#f8fafc', circle: '#e2e8f0' },
+        amber: { sc: '#131845', line: '#cbd5e1', soft: '#f8fafc', circle: '#e2e8f0' },
+        green: { sc: '#131845', line: '#cbd5e1', soft: '#f8fafc', circle: '#e2e8f0' },
+        red:   { sc: '#131845', line: '#cbd5e1', soft: '#f8fafc', circle: '#e2e8f0' }
       };
 
       function renderKpiCard(icon, tint, label, value, sub, raw) {
@@ -4270,17 +4253,17 @@
         + '  #optixAiDashboard .ai-sim-card .sim-btn {'
         + '    margin-top: 6px; width: 100%; border-radius: 6px; font-weight: 600; font-size: 11.5px; padding: 7px 10px;'
         + '    display: inline-flex; align-items: center; justify-content: center; gap: 5px; transition: all .15s ease; cursor: pointer;'
-        + '    background: var(--brand-grad, linear-gradient(135deg,#5392ba 0%,#131845 60%,#0d0f36 100%)); color: #ffffff; border: none;'
-        + '    box-shadow: 0 2px 6px -1px rgba(19,24,69,0.25);'
+        + '    background: #131845; color: #ffffff; border: none;'
+        + '    box-shadow: 0 1px 3px rgba(19,24,69,0.18);'
         + '  }'
-        + '  #optixAiDashboard .ai-sim-card .sim-btn:hover { filter: brightness(1.08); transform: translateY(-1px); }'
+        + '  #optixAiDashboard .ai-sim-card .sim-btn:hover { background: #0d1238; transform: translateY(-1px); }'
         + '  #optixAiDashboard .ai-btn-primary {'
         + '    display: inline-flex; align-items: center; justify-content: center; gap: 7px;'
-        + '    background: var(--brand-grad, linear-gradient(135deg,#5392ba 0%,#131845 60%,#0d0f36 100%)); color: #ffffff;'
+        + '    background: #131845; color: #ffffff;'
         + '    border: none; border-radius: 7px; padding: 8px 18px; font-weight: 700; font-size: 13px; cursor: pointer;'
-        + '    box-shadow: 0 2px 6px -1px rgba(19,24,69,0.25); transition: all .15s ease;'
+        + '    box-shadow: 0 1px 3px rgba(19,24,69,0.18); transition: all .15s ease;'
         + '  }'
-        + '  #optixAiDashboard .ai-btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }'
+        + '  #optixAiDashboard .ai-btn-primary:hover { background: #0d1238; transform: translateY(-1px); }'
         + '  #optixAiDashboard .ai-btn-ghost {'
         + '    background: #ffffff; border: 1px solid var(--bd, #cbd5e1); color: var(--ink2, #334155); border-radius: 6px; padding: 4px 10px;'
         + '    font-size: 11.5px; font-weight: 600; cursor: pointer; transition: all .15s ease;'
