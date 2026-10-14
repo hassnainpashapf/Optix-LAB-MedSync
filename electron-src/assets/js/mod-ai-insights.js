@@ -3830,20 +3830,7 @@
         + '</div>')
       : '';
 
-    var topBarHtml = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
-      + '<div style="display:flex;align-items:center;gap:8px">'
-      + '  <button type="button" class="btn ai-action-btn" id="aiPageBackBtn" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:8px 16px;min-height:38px;border-radius:9px;font-size:13px;cursor:pointer;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">← Back</button>'
-      + '</div>'
-      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-      + '  <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📋 Copy Solutions</button>'
-      + '  <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks" style="border:1.5px solid #131845;background:#ffffff;color:#131845;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📄 Attach Remarks</button>'
-      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="color:#059669;border:1.5px solid #10b981;background:#ffffff;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">💬 WhatsApp Doctor</button>' : '')
-      + '  <button type="button" class="btn ai-action-btn" id="aiPrintSlip" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">🖨️ Print Summary</button>'
-      + '  <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:13px;padding:8px 18px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 3px 8px rgba(19,24,69,0.22);font-family:inherit">🖨️ Print Rx Pad</button>'
-      + '</div>'
-      + '</div>';
-
-    var headerCardHtml = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+    var mergedHeaderHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">'
       + '<div>'
       + '  <h1 style="font-size:20px;font-weight:800;color:#131845;margin:0 0 4px;letter-spacing:-0.01em">AI Clinical Recommendations</h1>'
       + '  <div style="font-size:13px;color:#475569;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
@@ -3855,29 +3842,23 @@
       + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
       +    switcherHtml
+      + '  <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📋 Copy Solutions</button>'
+      + '  <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks" style="border:1.5px solid #131845;background:#ffffff;color:#131845;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📄 Attach Remarks</button>'
+      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="color:#059669;border:1.5px solid #10b981;background:#ffffff;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">💬 WhatsApp Doctor</button>' : '')
+      + '  <button type="button" class="btn ai-action-btn" id="aiPrintSlip" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">🖨️ Print Summary</button>'
+      + '  <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:13px;padding:8px 18px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 3px 8px rgba(19,24,69,0.22);font-family:inherit">🖨️ Print Rx Pad</button>'
       + '</div>'
       + '</div>';
 
     var pageContentHtml = AI.buildRecommendationsContent(analysis, { isPage: true });
 
     container.innerHTML = '<div class="ai-recommendations-page" style="padding:16px 24px 48px;max-width:1240px;margin:0 auto;font-family:inherit">'
-      + topBarHtml
-      + headerCardHtml
+      + mergedHeaderHtml
       + pageContentHtml
       + '</div>';
 
     AI.wireRecommendationsEvents(container, analysis, { isPage: true });
 
-    var backBtn = container.querySelector('#aiPageBackBtn');
-    if (backBtn) {
-      backBtn.addEventListener('click', function () {
-        if (window.history && window.history.length > 1) {
-          window.history.back();
-        } else if (window.App && typeof App.nav === 'function') {
-          App.nav('#/results');
-        }
-      });
-    }
 
     var switcher = container.querySelector('#aiPageInvoiceSwitcher');
     if (switcher) {
