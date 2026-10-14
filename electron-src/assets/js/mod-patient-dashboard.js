@@ -858,6 +858,156 @@
     return result;
   }
 
+  /* Diagnostic Effect of Patient Tests on Specific Organ System */
+  function getOrganTestEffectData(organKey, patient, labData) {
+    var orgKey = (organKey === 'lungs' ? 'lung' : organKey) || 'lung';
+    var lab = labData || { organStates: {}, comparisons: [], summary: {} };
+    var orgState = (lab.organStates && lab.organStates[orgKey]) ? lab.organStates[orgKey] : null;
+    var bloodState = (lab.organStates && lab.organStates['blood']) ? lab.organStates['blood'] : null;
+
+    var relevantComps = (lab.comparisons || []).filter(function (c) {
+      if (orgKey === 'lung') {
+        return c.organ === 'lung' || c.organ === 'lungs' || c.organ === 'blood';
+      }
+      return c.organ === orgKey;
+    });
+
+    var allPatientTests = getPatientOldTests(patient);
+    var relevantTests = allPatientTests.filter(function (t) {
+      var r = regionFor({ name: t.name, code: '' });
+      if (orgKey === 'lung') {
+        return r === 'lungs' || r === 'blood';
+      }
+      return r === orgKey;
+    });
+
+    var isCritical = false;
+    var isDeteriorated = false;
+    var isImproved = false;
+    var isAbnormal = false;
+    var isNormal = false;
+
+    if (orgState && orgState.status === 'critical') isCritical = true;
+    if (orgKey === 'lung' && bloodState && bloodState.status === 'critical') isCritical = true;
+
+    if (relevantComps.length > 0) {
+      var improvedCount = 0;
+      var deterioratedCount = 0;
+      var critCount = 0;
+      relevantComps.forEach(function (c) {
+        if (c.status === 'improved') improvedCount++;
+        if (c.status === 'deteriorated') deterioratedCount++;
+        if (c.curOut) isAbnormal = true;
+        var valNum = parseFloat(c.curVal);
+        if (!isNaN(valNum)) {
+          var k = (c.name || '').toLowerCase();
+          if ((k.indexOf('plt') >= 0 || k.indexOf('platelet') >= 0) && valNum < 50000) critCount++;
+          if ((k.indexOf('hb') >= 0 || k.indexOf('hemoglobin') >= 0) && valNum < 7.0) critCount++;
+          if ((k.indexOf('creat') >= 0 || k.indexOf('creatinine') >= 0) && valNum > 3.0) critCount++;
+        }
+      });
+      if (critCount > 0) isCritical = true;
+      if (deterioratedCount > 0) isDeteriorated = true;
+      if (improvedCount > 0 && deterioratedCount === 0 && !isCritical) isImproved = true;
+    } else if (relevantTests.length > 0) {
+      var hasAbnormalTest = relevantTests.some(function (t) { return t.status === 'abnormal'; });
+      if (hasAbnormalTest) isAbnormal = true;
+      else isNormal = true;
+    }
+
+    var badgeClass = 'b-ready';
+    var badgeText = 'Normal';
+    var toneTitle = '';
+    var toneDesc = '';
+
+    if (isCritical) {
+      badgeClass = 'b-red';
+      badgeText = '🚨 Critical (Khatarnak)';
+      toneTitle = 'Pehle se Critical / High Risk Alert';
+      toneDesc = 'Is patient ke karwaye gaye test results mein critical findings note hui hain. Pichlay record ke muqablay mein parameters alarming stage par hain aur fori doctor consultation darkaar hai.';
+    } else if (isDeteriorated) {
+      badgeClass = 'b-red';
+      badgeText = '⚠️ Pehle se Kharab (Deteriorated)';
+      toneTitle = 'Pehle Test se Deterioration / Kharabi';
+      toneDesc = 'Patient ke tests ka effect pehle test ke muqablay mein KHARAB (elevated strain) note hua hai. Biomarkers normal reference limits se door ho rahe hain.';
+    } else if (isImproved) {
+      badgeClass = 'b-ready';
+      badgeText = '✓ Pehle se Normal / Behtar (Improving)';
+      toneTitle = 'Pehle Test ke Muqablay mein Behtar (Normal ki taraf)';
+      toneDesc = 'Patient ke karwaye gaye tests ka effect positive hai. Pehle ke muqablay mein biomarkers behtar ho kar normal reference range ki taraf wapas aa rahe hain.';
+    } else if (isAbnormal) {
+      badgeClass = 'b-warn';
+      badgeText = '⚠️ Abnormal / Outside Range';
+      toneTitle = 'Test ka Asar: Abnormal / Elevated';
+      toneDesc = 'Latest diagnostic test parameters standard reference limits se bahar hain. Routine clinical follow-up aur medicine compliance zaroori hai.';
+    } else if (isNormal || relevantTests.length > 0) {
+      badgeClass = 'b-ready';
+      badgeText = '✓ Normal Baseline (Within Limits)';
+      toneTitle = 'Tests ka Asar: Normal Baseline';
+      toneDesc = 'Is patient ke karwaye gaye test results bilkul NORMAL aur healthy reference range ke andar hain. Koi acute respiratory strain ya infection detected nahi.';
+    } else {
+      badgeClass = 'b-warn';
+      badgeText = '⚖️ Moderate Baseline';
+      toneTitle = 'Baseline Monitoring';
+      toneDesc = 'Patient ki capacity baseline par monitor ki ja rahi hai. Mazeed tasdeeq ke liye correlative lab tests recommended hain.';
+    }
+
+    return {
+      badgeClass: badgeClass,
+      badgeText: badgeText,
+      toneTitle: toneTitle,
+      toneDesc: toneDesc,
+      relevantComps: relevantComps,
+      relevantTests: relevantTests
+    };
+  }
+
+  function renderOrganTestEffectInnerHtml(organKey, patient, labData) {
+    var data = getOrganTestEffectData(organKey, patient, labData);
+
+    var chipsHtml = '';
+    if (data.relevantComps && data.relevantComps.length > 0) {
+      chipsHtml = data.relevantComps.map(function (c) {
+        var isGood = c.status === 'improved';
+        var isBad = c.status === 'deteriorated';
+        var borderC = isGood ? '#bbf7d0' : (isBad ? '#fecaca' : '#cbd5e1');
+        var bgC = isGood ? '#f0fdf4' : (isBad ? '#fef2f2' : '#ffffff');
+        var textC = isGood ? '#15803d' : (isBad ? '#b91c1c' : '#334155');
+        var icon = isGood ? '📈' : (isBad ? '📉' : '⚖️');
+        var diffStr = c.diff !== 0 ? ' (' + (c.diff > 0 ? '+' : '') + c.diff + (c.pct ? ', ' + (c.pct > 0 ? '+' : '') + c.pct + '%' : '') + ')' : '';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:' + bgC + ';border:1px solid ' + borderC + ';border-radius:8px;font-size:11.5px;color:' + textC + '">' +
+          '  <span style="font-weight:700">' + icon + ' ' + esc(c.name) + ': ' + esc(c.prevVal) + ' → ' + esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + '</span>' +
+          '  <span style="font-weight:600;font-size:11px">' + esc(c.statusLabel) + diffStr + '</span>' +
+          '</div>';
+      }).join('');
+    } else if (data.relevantTests && data.relevantTests.length > 0) {
+      chipsHtml = data.relevantTests.slice(0, 3).map(function (t) {
+        var isAbn = t.status === 'abnormal';
+        var bgC = isAbn ? '#fef2f2' : '#f0fdf4';
+        var borderC = isAbn ? '#fecaca' : '#bbf7d0';
+        var textC = isAbn ? '#b91c1c' : '#15803d';
+        var icon = isAbn ? '⚠️' : '✓';
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:' + bgC + ';border:1px solid ' + borderC + ';border-radius:8px;font-size:11.5px;color:' + textC + '">' +
+          '  <span style="font-weight:700">' + icon + ' ' + esc(t.name) + '</span>' +
+          '  <span style="font-weight:600;font-size:11px">' + esc(t.statusLabel) + (t.date ? ' · ' + esc(t.date) : '') + '</span>' +
+          '</div>';
+      }).join('');
+    }
+
+    return '<div class="organ-test-effect-card" style="margin-top:12px;padding:12px 14px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,0.02)">' +
+      '  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;flex-wrap:wrap">' +
+      '    <div style="display:flex;align-items:center;gap:6px">' +
+      '      <span style="font-size:14px" aria-hidden="true">🩺</span>' +
+      '      <strong style="font-size:12px;color:#0f172a">Lab Tests Diagnostic Effect:</strong>' +
+      '    </div>' +
+      '    <span class="badge ' + data.badgeClass + '" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px">' + esc(data.badgeText) + '</span>' +
+      '  </div>' +
+      '  <div style="font-size:11.5px;font-weight:700;color:#1e293b;margin-bottom:3px">' + esc(data.toneTitle) + '</div>' +
+      '  <p style="margin:0 0 6px;font-size:11.5px;color:#475569;line-height:1.45">' + esc(data.toneDesc) + '</p>' +
+      (chipsHtml ? '<div style="display:flex;flex-direction:column;gap:5px;margin-top:6px">' + chipsHtml + '</div>' : '') +
+      '</div>';
+  }
+
   /* Render 3D-styled Anatomical Human Body Projection SVG with Active Organ Hotspot Beacons */
   function render3DBodyProjectionSvg(organStates, selectedKey) {
     organStates = organStates || {};
@@ -1551,6 +1701,9 @@
       '            <div class="vitals-progress-labels">' +
       '              <span>0</span><span>100%</span>' +
       '            </div>' +
+      '            <div class="organ-test-effect-container" id="organTestEffectBox">' +
+      renderOrganTestEffectInnerHtml('lung', patient, labData) +
+      '            </div>' +
       '          </div>' +
 
       // Medication Adherence section
@@ -1732,6 +1885,11 @@
       if (progFill) {
         progFill.style.width = org.score + '%';
         progFill.style.background = org.barGrad;
+      }
+
+      var effBox = host.querySelector('#organTestEffectBox');
+      if (effBox) {
+        effBox.innerHTML = renderOrganTestEffectInnerHtml(key, patient, labData);
       }
 
       var rSub = host.querySelector('#rehabSubtitle');
@@ -1948,6 +2106,7 @@
     regionFor: regionFor,
     testsFor: testsFor,
     getPatientOldTests: getPatientOldTests,
+    getOrganTestEffectData: getOrganTestEffectData,
     outsideRange: outsideRange
   };
 })();
