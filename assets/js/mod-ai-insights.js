@@ -1705,9 +1705,9 @@
     var isWarn = org.status === 'warning';
     var isSafe = org.status === 'normal';
     var cardBorder = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#cbd5e1'));
-    var cardBg = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : (isSafe ? '#f0fdf4' : '#f8fafc'));
-    var badgeBg = isCrit ? '#fee2e2' : (isWarn ? '#fef3c7' : (isSafe ? '#dcfce7' : '#f1f5f9'));
-    var badgeColor = isCrit ? '#991b1b' : (isWarn ? '#92400e' : (isSafe ? '#166534' : '#475569'));
+    var cardBg = '#ffffff';
+    var badgeBg = isCrit ? '#fee2e2' : (isWarn ? '#fef3c7' : (isSafe ? '#ecfdf5' : '#f1f5f9'));
+    var badgeColor = isCrit ? '#991b1b' : (isWarn ? '#92400e' : (isSafe ? '#047857' : '#475569'));
     var badgeText = isCrit ? '🚨 CRITICAL STRESS' : (isWarn ? '⚠️ WARNING / STRESSED' : (isSafe ? '✅ OPTIMAL / HEALTHY' : '⚪ UNTESTED IN PANEL'));
 
     var markersHtml = '';
@@ -1718,9 +1718,9 @@
         + org.markers.map(function (m) {
             var mCrit = m.status === 'critical';
             var mWarn = m.status === 'warning';
-            var mBorder = mCrit ? '#fca5a5' : (mWarn ? '#fde68a' : '#bbf7d0');
-            var mBg = mCrit ? '#fff1f2' : (mWarn ? '#fffbeb' : '#f0fdf4');
-            var mColor = mCrit ? '#dc2626' : (mWarn ? '#d97706' : '#16a34a');
+            var mBorder = mCrit ? '#fca5a5' : (mWarn ? '#fde68a' : '#cbd5e1');
+            var mBg = '#ffffff';
+            var mColor = mCrit ? '#dc2626' : (mWarn ? '#d97706' : '#0f172a');
             return '<div style="background:' + mBg + ';border:1px solid ' + mBorder + ';border-radius:8px;padding:6px 10px">'
               + '<div style="font-size:11px;color:#64748b">' + (window.App ? App.esc(m.name) : m.name) + '</div>'
               + '<div style="font-size:13px;font-weight:800;color:' + mColor + '">' + (window.App ? App.esc(m.val) : m.val) + '</div>'
@@ -1730,26 +1730,26 @@
         + '</div>'
         + '</div>';
     } else {
-      markersHtml = '<div style="font-size:11.5px;color:#64748b;background:#fff;padding:8px 10px;border-radius:8px;border:1px dashed #cbd5e1;margin-bottom:12px">No direct parameters tested for this organ in current laboratory order.</div>';
+      markersHtml = '<div style="font-size:11.5px;color:#64748b;background:#ffffff;padding:8px 10px;border-radius:8px;border:1px dashed #cbd5e1;margin-bottom:12px">No direct parameters tested for this organ in current laboratory order.</div>';
     }
 
     var gaugeColor = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#94a3b8'));
 
-    return '<div style="background:' + cardBg + ';border:2px solid ' + cardBorder + ';border-radius:14px;padding:16px;box-shadow:0 4px 16px rgba(0,0,0,0.04);transition:all 0.2s ease">'
+    return '<div style="background:' + cardBg + ';border:1px solid #e2e8f0;border-left:4px solid ' + cardBorder + ';border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.05);transition:all 0.2s ease">'
       // Header
       + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
       + '  <div style="display:flex;align-items:center;gap:10px">'
       + '    <span style="font-size:32px">' + org.icon + '</span>'
       + '    <div>'
       + '      <div style="font-size:16px;font-weight:900;color:#0f172a">' + (window.App ? App.esc(org.name) : org.name) + '</div>'
-      + '      <div style="font-size:12px;font-weight:700;color:#4f46e5">' + (window.App ? App.esc(org.urduName) : org.urduName) + '</div>'
+      + '      <div style="font-size:12px;font-weight:700;color:#131845">' + (window.App ? App.esc(org.urduName) : org.urduName) + '</div>'
       + '    </div>'
       + '  </div>'
       + '  <span style="background:' + badgeBg + ';color:' + badgeColor + ';border:1px solid ' + cardBorder + ';font-size:11px;font-weight:800;padding:4px 10px;border-radius:999px">' + badgeText + '</span>'
       + '</div>'
 
       // Organ Stress Level Gauge
-      + '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px">'
+      + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px;margin-bottom:12px">'
       + '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;font-size:11.5px">'
       + '    <span style="font-weight:700;color:#334155">Organ Stress Index:</span>'
       + '    <span style="font-weight:900;color:' + gaugeColor + '">' + org.stressScore + '% Stress</span>'
@@ -1763,13 +1763,13 @@
       + markersHtml
 
       // Pathological Hazard / Stress Mechanism
-      + '<div style="background:#fff;border-left:4px solid ' + cardBorder + ';border-radius:6px;padding:10px 12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,0.03)">'
+      + '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid ' + cardBorder + ';border-radius:6px;padding:10px 12px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
       + '  <div style="font-size:11.5px;font-weight:800;color:' + (isCrit ? '#991b1b' : (isWarn ? '#92400e' : '#1e293b')) + ';text-transform:uppercase;margin-bottom:3px">⚠️ Pathophysiological Stress & Hazard:</div>'
       + '  <div style="font-size:12.5px;color:#334155;line-height:1.5">' + (window.App ? App.esc(org.hazard) : org.hazard) + '</div>'
       + '</div>'
 
       // Clinical Action Plan
-      + '<div style="background:#fff;border:1px solid #bbf7d0;border-left:4px solid #10b981;border-radius:6px;padding:10px 12px">'
+      + '<div style="background:#ffffff;border:1px solid #bbf7d0;border-left:4px solid #10b981;border-radius:6px;padding:10px 12px">'
       + '  <div style="font-size:11.5px;font-weight:800;color:#047857;text-transform:uppercase;margin-bottom:3px">💡 Evidence-Based Clinical Protection Plan:</div>'
       + '  <div style="font-size:12.5px;color:#1e293b;line-height:1.5;font-weight:600">' + (window.App ? App.esc(org.action) : org.action) + '</div>'
       + '</div>'
@@ -1792,11 +1792,11 @@
       var isWarn = o.status === 'warning';
       var isSafe = o.status === 'normal';
       var btnBorder = isCrit ? '#ef4444' : (isWarn ? '#f59e0b' : (isSafe ? '#10b981' : '#cbd5e1'));
-      var btnBg = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : (isSafe ? '#f0fdf4' : '#f8fafc'));
+      var btnBg = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : (isSafe ? '#f0fdf4' : '#ffffff'));
       var btnColor = isCrit ? '#b91c1c' : (isWarn ? '#b45309' : (isSafe ? '#15803d' : '#475569'));
       var isAct = o.id === activeOrganId;
 
-      return '<button type="button" class="btn btn-ghost ai-organ-select-btn' + (isAct ? ' active' : '') + '" data-organ-id="' + o.id + '" style="border:1.5px solid ' + (isAct ? '#4f46e5' : btnBorder) + ';background:' + (isAct ? '#ede9fe' : btnBg) + ';color:' + (isAct ? '#4338ca' : btnColor) + ';font-weight:700;font-size:11.5px;padding:6px 8px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;white-space:nowrap">'
+      return '<button type="button" class="btn btn-ghost ai-organ-select-btn' + (isAct ? ' active' : '') + '" data-organ-id="' + o.id + '" style="border:1.5px solid ' + (isAct ? '#131845' : btnBorder) + ';background:' + (isAct ? '#ebf4f8' : btnBg) + ';color:' + (isAct ? '#131845' : btnColor) + ';font-weight:700;font-size:11.5px;padding:6px 8px;border-radius:8px;display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;white-space:nowrap">'
         + '<span>' + o.icon + '</span> <span>' + (window.App ? App.esc(o.name.split(' ')[0]) : o.name.split(' ')[0]) + '</span>'
         + '</button>';
     }).join('');
@@ -1812,7 +1812,7 @@
       return '<g class="ai-organ-beacon" data-organ-id="' + o.id + '" style="cursor:pointer" transform="translate(0,0)">'
         + (isCrit ? '<circle cx="' + o.svgX + '" cy="' + o.svgY + '" r="22" fill="none" stroke="' + pulseColor + '" stroke-width="1.5" opacity="0.6"><animate attributeName="r" values="16;25;16" dur="2s" repeatCount="indefinite"/><animate attributeName="opacity" values="0.8;0.1;0.8" dur="2s" repeatCount="indefinite"/></circle>' : '')
         + (isWarn ? '<circle cx="' + o.svgX + '" cy="' + o.svgY + '" r="19" fill="none" stroke="' + pulseColor + '" stroke-width="1.2" opacity="0.5"/>' : '')
-        + '<circle class="ai-beacon-ring" cx="' + o.svgX + '" cy="' + o.svgY + '" r="16" fill="' + (isAct ? '#ffffff' : coreBg) + '" stroke="' + (isAct ? '#4f46e5' : '#ffffff') + '" stroke-width="' + (isAct ? '3' : '2') + '" filter="url(' + (isCrit ? '#glowCrit' : (isWarn ? '#glowWarn' : '#glowSafe')) + ')" />'
+        + '<circle class="ai-beacon-ring" cx="' + o.svgX + '" cy="' + o.svgY + '" r="16" fill="' + (isAct ? '#ffffff' : coreBg) + '" stroke="' + (isAct ? '#131845' : '#ffffff') + '" stroke-width="' + (isAct ? '3' : '2') + '" filter="url(' + (isCrit ? '#glowCrit' : (isWarn ? '#glowWarn' : '#glowSafe')) + ')" />'
         + '<text x="' + o.svgX + '" y="' + (o.svgY + 4) + '" text-anchor="middle" font-size="11" pointer-events="none">' + o.icon + '</text>'
         + '</g>';
     }).join('');
@@ -2433,10 +2433,10 @@
 
     return '<div class="digital-rx-pad" style="max-width:800px;margin:0 auto;background:#fff;border:2px solid #cbd5e1;border-radius:12px;padding:24px 28px;box-shadow:0 8px 30px rgba(0,0,0,0.06);font-family:inherit;color:#1e293b">'
       // Doctor & Clinic Header
-      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2.5px solid #4f46e5;padding-bottom:14px;margin-bottom:14px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2.5px solid #131845;padding-bottom:14px;margin-bottom:14px">'
       + '  <div>'
-      + '    <div style="font-size:22px;font-weight:900;color:#1e1b4b;letter-spacing:-0.02em">Dr. ' + (window.App ? App.esc(docName) : docName) + '</div>'
-      + '    <div style="font-size:12.5px;font-weight:700;color:#4f46e5;margin-top:2px">' + (window.App ? App.esc(docDegrees) : docDegrees) + ' &bull; PMDC Reg #: ' + (window.App ? App.esc(docPmdc) : docPmdc) + '</div>'
+      + '    <div style="font-size:22px;font-weight:900;color:#131845;letter-spacing:-0.02em">Dr. ' + (window.App ? App.esc(docName) : docName) + '</div>'
+      + '    <div style="font-size:12.5px;font-weight:700;color:#131845;margin-top:2px">' + (window.App ? App.esc(docDegrees) : docDegrees) + ' &bull; PMDC Reg #: ' + (window.App ? App.esc(docPmdc) : docPmdc) + '</div>'
       + '    <div style="font-size:11.5px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(docSpec) : docSpec) + '</div>'
       + '  </div>'
       + '  <div style="text-align:right">'
@@ -2450,13 +2450,13 @@
       + '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:18px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:12.5px">'
       + '  <div>Patient: <b style="color:#0f172a">' + (window.App ? App.esc(pt.name || 'Patient') : (pt.name || 'Patient')) + '</b></div>'
       + '  <div>Age / Sex: <b>' + (window.App ? App.esc(pt.age ? pt.age + ' Y' : 'Adult') : (pt.age ? pt.age + ' Y' : 'Adult')) + ' / ' + (window.App ? App.esc(pt.sex || pt.gender || 'M') : (pt.sex || pt.gender || 'M')) + '</b></div>'
-      + '  <div>Invoice #: <b style="color:#4f46e5">#' + (window.App ? App.esc(inv.no || inv.id || 'N/A') : (inv.no || inv.id || 'N/A')) + '</b></div>'
+      + '  <div>Invoice #: <b style="color:#131845">#' + (window.App ? App.esc(inv.no || inv.id || 'N/A') : (inv.no || inv.id || 'N/A')) + '</b></div>'
       + '  <div>Date: <b>' + todayStr + '</b></div>'
       + '</div>'
 
       // Rx Symbol & Prescribed Drugs Table
       + '<div style="margin-bottom:18px">'
-      + '  <div style="font-family:serif;font-size:32px;font-weight:900;color:#4f46e5;line-height:1;margin-bottom:8px">℞</div>'
+      + '  <div style="font-family:serif;font-size:32px;font-weight:900;color:#131845;line-height:1;margin-bottom:8px">℞</div>'
       + '  <table style="width:100%;border-collapse:collapse;font-size:12.5px;text-align:left">'
       + '    <thead>'
       + '      <tr style="background:#f1f5f9;color:#475569;font-size:11.5px;text-transform:uppercase;letter-spacing:0.04em">'
@@ -2473,19 +2473,19 @@
 
       // Custom Spoken / Dictated Clinical Notes Area
       + '<div id="rxDictationNotesBox" style="background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:10px 12px;margin-bottom:18px;display:none">'
-      + '  <div style="font-size:11px;font-weight:800;color:#4f46e5;text-transform:uppercase;margin-bottom:4px">🎙️ Dictated Physician Notes:</div>'
+      + '  <div style="font-size:11px;font-weight:800;color:#131845;text-transform:uppercase;margin-bottom:4px">🎙️ Dictated Physician Notes:</div>'
       + '  <div id="rxDictationText" style="font-size:12.5px;color:#1e293b;line-height:1.45"></div>'
       + '</div>'
 
       // Instructions & Parhez Columns
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px">'
-      + '  <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px">'
-      + '    <div style="font-size:12px;font-weight:800;color:#92400e;text-transform:uppercase;margin-bottom:6px">🥗 Dietary Instructions & Parhez:</div>'
+      + '  <div style="background:#ffffff;border:1px solid #e2e8f0;border-left:3.5px solid #d97706;border-radius:8px;padding:12px">'
+      + '    <div style="font-size:12px;font-weight:800;color:#d97706;text-transform:uppercase;margin-bottom:6px">🥗 Dietary Instructions & Parhez:</div>'
       + '    <ul style="margin:0;padding-left:16px;font-size:11.5px;color:#451a03;line-height:1.5">' + (dietBullets || '<li>Standard balanced nutritional diet.</li>') + '</ul>'
       + '  </div>'
-      + '  <div style="background:#faf5ff;border:1px solid #e9d5ff;border-radius:8px;padding:12px">'
-      + '    <div style="font-size:12px;font-weight:800;color:#6b21a8;text-transform:uppercase;margin-bottom:6px">🔬 Recommended Follow-up Tests:</div>'
-      + '    <ul style="margin:0;padding-left:16px;font-size:11.5px;color:#3b0764;line-height:1.5">' + (testBullets || '<li>Routine follow-up in 4 weeks.</li>') + '</ul>'
+      + '  <div style="background:#ffffff;border:1px solid #e2e8f0;border-left:3.5px solid #2563eb;border-radius:8px;padding:12px">'
+      + '    <div style="font-size:12px;font-weight:800;color:#2563eb;text-transform:uppercase;margin-bottom:6px">🔬 Recommended Follow-up Tests:</div>'
+      + '    <ul style="margin:0;padding-left:16px;font-size:11.5px;color:#1e293b;line-height:1.5">' + (testBullets || '<li>Routine follow-up in 4 weeks.</li>') + '</ul>'
       + '  </div>'
       + '</div>'
 
@@ -2929,9 +2929,30 @@
     return allowed.indexOf(role) >= 0;
   };
 
-  /* Render Rich Modal with 5 Solutions + All Extended Pro Clinical Tabs */
-  AI.showModal = function (invoiceId, directData) {
+  /* AI Decision Support Stats Tracker */
+  AI._recordStatsForAnalysis = function (analysis) {
+    if (!analysis || !analysis.invoice) return;
+    var inv = analysis.invoice;
+    var panicInfo = analysis.panicInfo || { isPanic: false };
+    var organMap = analysis.organMap || [];
+    var critOrgans = organMap.filter(function (o) { return o.status === 'critical'; });
+    var warnOrgans = organMap.filter(function (o) { return o.status === 'warning'; });
+    var drugInteractions = analysis.drugInteractions || [];
+
+    if (String(inv.id || inv.no || '').indexOf('SIM-') !== 0) {
+      AI.recordAiStat('analyzed');
+      if (panicInfo.isPanic) AI.recordAiStat('panics');
+      if (critOrgans.length || warnOrgans.length) AI.recordAiStat('organAlerts');
+      if (drugInteractions.length) AI.recordAiStat('ddiBlocked');
+    }
+  };
+
+  /* Helper to resolve report data from invoiceId, cache, or database */
+  AI.getReportAnalysisData = function (invoiceId, directData) {
     var d = directData || null;
+    if (!d && AI._directDataCache && invoiceId && AI._directDataCache[String(invoiceId)]) {
+      d = AI._directDataCache[String(invoiceId)];
+    }
     if (!d) {
       try {
         if (window.reportData) d = window.reportData(invoiceId);
@@ -2941,14 +2962,17 @@
 
     if (!d) {
       var inv = (window.DB && typeof DB.get === 'function')
-        ? (DB.get('invoices', invoiceId) || (DB.all('invoices') || []).filter(function (x) { return x.no === invoiceId; })[0])
+        ? (invoiceId ? (DB.get('invoices', invoiceId) || (DB.all('invoices') || []).filter(function (x) { return x.no === invoiceId; })[0]) : null)
         : null;
-      if (!inv && !directData) { if (window.App && App.toast) App.toast('Invoice not found', 'err'); return; }
+      if (!inv && !directData && window.DB && typeof DB.all === 'function') {
+        var allInvs = (DB.all('invoices') || []).filter(function (x) { return x && (x.id || x.no); });
+        if (allInvs.length) inv = allInvs[allInvs.length - 1];
+      }
       if (inv) {
         var pt = (DB.get('patients', inv.patientId)) || {};
         var doc = inv.doctorId ? DB.get('doctors', inv.doctorId) : null;
         var tests = (DB.all('tests')) || [];
-        var results = (DB.all('results') || []).filter(function (r) { return r.invoiceId === invoiceId || r.invoiceId === inv.id; });
+        var results = (DB.all('results') || []).filter(function (r) { return r.invoiceId === inv.id || (inv.no && r.invoiceId === inv.no); });
         var groups = results.map(function (r) {
           var t = DB.get('tests', r.testId) || tests.filter(function (x) { return x.id === r.testId; })[0];
           return { test: t, res: r };
@@ -2956,10 +2980,14 @@
         d = { inv: inv, pt: pt, doc: doc, groups: groups };
       }
     }
+    return d;
+  };
 
-    if (!d) { if (window.App && App.toast) App.toast('Report data unavailable for AI analysis', 'err'); return; }
+  /* Build Harmonized Recommendations Content HTML (White Cards, Brand Navy, Crisp Badges) */
+  AI.buildRecommendationsContent = function (analysis, options) {
+    var opts = options || {};
+    var isPage = !!opts.isPage;
 
-    var analysis = AI.generate5Solutions(d);
     var pt = analysis.patient;
     var inv = analysis.invoice;
     var doc = analysis.doctor;
@@ -2974,58 +3002,50 @@
     var drugInteractions = analysis.drugInteractions || [];
     var geneticGuard = analysis.geneticGuard || [];
     var urduGuide = analysis.urduGuide || { wazahat: [], khurak: [], parhez: [], dawaiSchedule: [], khatraAlamaat: [], plainText: '' };
-    var reportNarrative = analysis.reportNarrative || '';
     var organMap = analysis.organMap || [];
     var critOrgans = organMap.filter(function (o) { return o.status === 'critical'; });
     var warnOrgans = organMap.filter(function (o) { return o.status === 'warning'; });
     var safeOrgans = organMap.filter(function (o) { return o.status === 'normal'; });
-    if (String(inv.id || inv.no || '').indexOf('SIM-') !== 0) {
-      AI.recordAiStat('analyzed');
-      if (panicInfo.isPanic) AI.recordAiStat('panics');
-      if (critOrgans.length || warnOrgans.length) AI.recordAiStat('organAlerts');
-      if (drugInteractions.length) AI.recordAiStat('ddiBlocked');
-    }
 
-
-    // Badges HTML
+    // Detected abnormal parameters badge strip
     var findingsBadges = findings.length
       ? findings.map(function (f) {
           var isCrit = f.status.indexOf('critical') >= 0;
           var bg = isCrit ? '#fee2e2' : '#fef3c7';
           var color = isCrit ? '#b91c1c' : '#b45309';
           var border = isCrit ? '#fca5a5' : '#fde68a';
-          return '<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:700;background:' + bg + ';color:' + color + ';border:1px solid ' + border + '">'
+          return '<span style="display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:999px;font-size:11.5px;font-weight:700;background:' + bg + ';color:' + color + ';border:1px solid ' + border + '">'
             + (isCrit ? '⚠️ ' : '⚡ ') + (window.App ? App.esc(f.paramName) : f.paramName) + ': ' + (window.App ? App.esc(f.value) : f.value) + ' ' + (window.App ? App.esc(f.unit) : f.unit) + ' (' + (window.App ? App.esc(f.note || f.status) : (f.note || f.status)) + ')</span>';
         }).join(' ')
       : '<span style="color:#059669;font-weight:700;font-size:12px">✅ All tested parameters within normal reference ranges</span>';
 
-    // Solution 1 HTML (with embedded DDx preview)
+    // Solution 1 HTML (Diagnosis & Findings + DDx)
     var diagHtml = s.diagnosis.map(function (di) {
-      return '<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid rgba(0,0,0,0.05)">'
-        + '<div style="font-size:13.5px;font-weight:800;color:#1e293b;margin-bottom:2px">🩺 ' + (window.App ? App.esc(di.title) : di.title) + '</div>'
-        + '<div style="font-size:12.5px;color:#475569;line-height:1.45">' + (window.App ? App.esc(di.detail) : di.detail) + '</div>'
+      return '<div style="margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #f1f5f9">'
+        + '<div style="font-size:13.5px;font-weight:800;color:#0f172a;margin-bottom:3px">🩺 ' + (window.App ? App.esc(di.title) : di.title) + '</div>'
+        + '<div style="font-size:12.5px;color:#475569;line-height:1.5">' + (window.App ? App.esc(di.detail) : di.detail) + '</div>'
         + '</div>';
     }).join('');
 
     if (ddx.length) {
       var ddxSnippets = ddx.map(function (dm) {
         return dm.candidates.map(function (c) {
-          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px dashed #e2e8f0;font-size:11.5px">'
-            + '<div><b style="color:#1e293b">' + (window.App ? App.esc(c.disease) : c.disease) + '</b> <span style="color:#64748b">(' + (window.App ? App.esc(c.confirmatoryTest) : c.confirmatoryTest) + ')</span></div>'
-            + '<span style="background:#e0e7ff;color:#4338ca;padding:1px 6px;border-radius:4px;font-weight:800;font-size:11px">' + c.probability + '% Match</span>'
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dashed #e2e8f0;font-size:12px">'
+            + '<div><b style="color:#0f172a">' + (window.App ? App.esc(c.disease) : c.disease) + '</b> <span style="color:#64748b">(' + (window.App ? App.esc(c.confirmatoryTest) : c.confirmatoryTest) + ')</span></div>'
+            + '<span style="background:#ebf4f8;color:#131845;border:1px solid #c7d8e8;padding:2px 8px;border-radius:4px;font-weight:800;font-size:11px">' + c.probability + '% Match</span>'
             + '</div>';
         }).join('');
       }).join('');
-      diagHtml += '<div style="margin-top:8px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px">'
-        + '<div style="font-size:11px;font-weight:800;color:#4338ca;text-transform:uppercase;margin-bottom:4px">🧠 Differential Diagnosis (DDx Matrix):</div>'
+      diagHtml += '<div style="margin-top:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px">'
+        + '<div style="font-size:11px;font-weight:800;color:#131845;text-transform:uppercase;margin-bottom:6px">🧠 Differential Diagnosis (DDx Matrix):</div>'
         + ddxSnippets
         + '</div>';
     }
 
-    // Solution 2 HTML (Medications + DDI Clash Alert)
+    // Solution 2 HTML (Medications + DDI Alert)
     var medsHtml = s.medications.map(function (m) {
       var items = m.items.map(function (it) {
-        return '<div style="background:#fff;border:1px solid #e2e8f0;border-left:3.5px solid #10b981;border-radius:8px;padding:8px 12px;margin-bottom:6px">'
+        return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:3.5px solid #059669;border-radius:8px;padding:8px 12px;margin-bottom:6px">'
           + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'
           + '<b style="color:#0f172a;font-size:13px">' + (window.App ? App.esc(it.drug) : it.drug) + '</b>'
           + '<span style="background:#ecfdf5;color:#047857;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700">' + (window.App ? App.esc(it.dosage) : it.dosage) + '</span>'
@@ -3054,9 +3074,9 @@
         + '</div>';
     }
 
-    // Solution 3 HTML (Diet & Lifestyle)
+    // Solution 3 HTML (Diet & Lifestyle Plan)
     var dietHtml = '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
-      + s.diet.map(function (d) { return '<li>' + (window.App ? App.esc(d) : d) + '</li>'; }).join('')
+      + s.diet.map(function (d) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(d) : d) + '</li>'; }).join('')
       + '</ul>';
 
     // Solution 4 HTML (Follow-up Tests with 1-Tap Order Button)
@@ -3066,43 +3086,25 @@
           var ptId = pt.id || (inv && inv.patientId) || '';
           return '<li style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #f1f5f9">'
             + '<div style="display:flex;align-items:flex-start;gap:6px"><span>🔬</span><span>' + (window.App ? App.esc(cleanName) : cleanName) + '</span></div>'
-            + '<button type="button" class="btn btn-ghost ai-order-test-btn" data-testname="' + (window.App ? App.esc(cleanName) : cleanName) + '" data-ptid="' + (window.App ? App.esc(ptId) : ptId) + '" style="font-size:11px;font-weight:700;color:#6b21a8;border:1px solid #d8b4fe;padding:2px 8px;border-radius:6px;background:#faf5ff;white-space:nowrap;cursor:pointer">➕ Order Test</button>'
+            + '<button type="button" class="btn btn-ghost ai-order-test-btn" data-testname="' + (window.App ? App.esc(cleanName) : cleanName) + '" data-ptid="' + (window.App ? App.esc(ptId) : ptId) + '" style="font-size:11px;font-weight:700;color:#131845;border:1px solid #cbd5e1;padding:3px 9px;border-radius:6px;background:#ffffff;white-space:nowrap;cursor:pointer">➕ Order Test</button>'
             + '</li>';
         }).join('')
       + '</ul>';
 
     // Solution 5 HTML (Red Flags)
     var redflagsHtml = s.redflags.map(function (rf) {
-      return '<div style="background:#fff1f2;border:1px solid #fecdd3;border-left:4px solid #e11d48;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px;font-weight:600;color:#9f1239;line-height:1.45">'
+      return '<div style="background:#fef2f2;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:8px;padding:8px 12px;margin-bottom:6px;font-size:12px;font-weight:600;color:#991b1b;line-height:1.45">'
         + (window.App ? App.esc(rf) : rf) + '</div>';
     }).join('');
 
-    // Plain text for Doctor Clipboard / WhatsApp
-    var plainText = '🤖 *OPTIX AI CLINICAL RECOMMENDATIONS*\n'
-      + 'Patient: ' + (pt.name || 'Patient') + ' (' + (pt.age ? pt.age + 'y, ' : '') + (pt.sex || pt.gender || '') + ')\n'
-      + 'Invoice: #' + (inv.no || inv.id) + '\n\n'
-      + '1. 🩺 *DIAGNOSIS & FINDINGS:*\n'
-      + s.diagnosis.map(function (x) { return '• ' + x.title + '\n  ' + x.detail; }).join('\n') + '\n\n'
-      + '2. 💊 *RECOMMENDED MEDICATIONS:*\n'
-      + s.medications.map(function (m) {
-          return m.items.map(function (it) { return '• ' + it.drug + ' (' + it.dosage + ')' + (it.note ? ' - ' + it.note : ''); }).join('\n');
-        }).join('\n') + '\n\n'
-      + '3. 🥗 *DIET & LIFESTYLE:*\n'
-      + s.diet.map(function (x) { return '• ' + x; }).join('\n') + '\n\n'
-      + '4. 🔬 *FOLLOW-UP TESTS:*\n'
-      + s.tests.map(function (x) { return '• ' + x; }).join('\n') + '\n\n'
-      + '5. ⚠️ *PRECAUTIONS & RED FLAGS:*\n'
-      + s.redflags.map(function (x) { return '• ' + x; }).join('\n') + '\n\n'
-      + '_Note: Clinical decision support for authorized medical practitioners only._';
-
-    // Panic Value Banner (CAP / ISO 15189)
+    // Panic Value Banner
     var panicBannerHtml = '';
     if (panicInfo.isPanic) {
       var panicDetails = panicInfo.alerts.map(function (a) {
         return '<b>' + (window.App ? App.esc(a.param) : a.param) + ' (' + (window.App ? App.esc(a.value) : a.value) + '):</b> ' + (window.App ? App.esc(a.hazard) : a.hazard);
       }).join(' &bull; ');
 
-      panicBannerHtml = '<div style="background:linear-gradient(135deg,#991b1b 0%,#b91c1c 100%);color:#fff;border-radius:12px;padding:12px 16px;margin-bottom:12px;box-shadow:0 6px 20px rgba(185,28,28,0.3);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
+      panicBannerHtml = '<div style="background:#b91c1c;color:#fff;border-radius:12px;padding:12px 18px;margin-bottom:16px;box-shadow:0 4px 14px rgba(185,28,28,0.25);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
         + '<div style="display:flex;align-items:center;gap:10px">'
         + '  <span style="font-size:24px">🚨</span>'
         + '  <div>'
@@ -3116,27 +3118,26 @@
         + '</div>';
     }
 
-    // --- TAB 2: Medical Indices & ASCVD HTML ---
+    // Tab 2: Medical Indices & ASCVD HTML
     var indicesHtml = '';
     if (ascvdRisk) {
       var isHighCvd = ascvdRisk.riskScore >= 20.0;
-      var cvdBg = isHighCvd ? '#fef2f2' : (ascvdRisk.riskScore >= 7.5 ? '#fffbeb' : '#f0fdf4');
       var cvdBorder = isHighCvd ? '#f87171' : (ascvdRisk.riskScore >= 7.5 ? '#fde68a' : '#bbf7d0');
       var cvdColor = isHighCvd ? '#dc2626' : (ascvdRisk.riskScore >= 7.5 ? '#d97706' : '#16a34a');
 
-      indicesHtml += '<div style="background:' + cvdBg + ';border:2px solid ' + cvdBorder + ';border-radius:12px;padding:14px;margin-bottom:12px">'
+      indicesHtml += '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid ' + cvdColor + ';border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px">'
         + '  <div>'
         + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">Cardiovascular / AHA-ACC 2019 Guideline</div>'
-        + '    <div style="font-size:14.5px;font-weight:900;color:#0f172a">🫀 10-Year ASCVD Heart Attack & Stroke Risk</div>'
-        + '    <div style="font-size:11px;color:#64748b;margin-top:1px">' + (window.App ? App.esc(ascvdRisk.details) : ascvdRisk.details) + '</div>'
+        + '    <div style="font-size:15px;font-weight:900;color:#0f1e2e">🫀 10-Year ASCVD Heart Attack & Stroke Risk</div>'
+        + '    <div style="font-size:11.5px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(ascvdRisk.details) : ascvdRisk.details) + '</div>'
         + '  </div>'
         + '  <div style="text-align:right">'
         + '    <div style="font-size:22px;font-weight:900;color:' + cvdColor + '">' + ascvdRisk.riskScore + '% <span style="font-size:11px;font-weight:700;color:#64748b">10-Yr Risk</span></div>'
-        + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#fff;border:1px solid ' + cvdBorder + ';color:' + cvdColor + '">' + (window.App ? App.esc(ascvdRisk.tier) : ascvdRisk.tier) + '</span>'
+        + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#ffffff;border:1px solid ' + cvdBorder + ';color:' + cvdColor + '">' + (window.App ? App.esc(ascvdRisk.tier) : ascvdRisk.tier) + '</span>'
         + '  </div>'
         + '</div>'
-        + '<div style="font-size:12px;color:#334155;line-height:1.45;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(0,0,0,0.08)">'
+        + '<div style="font-size:12px;color:#334155;line-height:1.45;margin-top:6px;padding-top:6px;border-top:1px dashed #e2e8f0">'
         + '  <b>Clinical Recommendation:</b> ' + (window.App ? App.esc(ascvdRisk.recommendation) : ascvdRisk.recommendation)
         + '</div>'
         + '</div>';
@@ -3147,22 +3148,21 @@
         var isCrit = ind.status === 'critical';
         var isWarn = ind.status === 'warning';
         var cardBorder = isCrit ? '#fca5a5' : (isWarn ? '#fde68a' : '#bbf7d0');
-        var cardBg = isCrit ? '#fef2f2' : (isWarn ? '#fffbeb' : '#f0fdf4');
         var scoreColor = isCrit ? '#dc2626' : (isWarn ? '#d97706' : '#16a34a');
 
-        return '<div style="background:' + cardBg + ';border:1.5px solid ' + cardBorder + ';border-radius:12px;padding:14px;margin-bottom:12px">'
+        return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid ' + scoreColor + ';border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
           + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:6px">'
           + '  <div>'
           + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">' + (window.App ? App.esc(ind.category) : ind.category) + '</div>'
-          + '    <div style="font-size:14px;font-weight:900;color:#0f172a">' + (window.App ? App.esc(ind.name) : ind.name) + '</div>'
-          + '    <div style="font-size:11px;color:#64748b;margin-top:1px">Formula: ' + (window.App ? App.esc(ind.formula) : ind.formula) + '</div>'
+          + '    <div style="font-size:14.5px;font-weight:900;color:#0f1e2e">' + (window.App ? App.esc(ind.name) : ind.name) + '</div>'
+          + '    <div style="font-size:11px;color:#64748b;margin-top:2px">Formula: ' + (window.App ? App.esc(ind.formula) : ind.formula) + '</div>'
           + '  </div>'
           + '  <div style="text-align:right">'
           + '    <div style="font-size:20px;font-weight:900;color:' + scoreColor + '">' + ind.score + ' <span style="font-size:11.5px;font-weight:600;color:#64748b">' + ind.unit + '</span></div>'
-          + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#fff;border:1px solid ' + cardBorder + ';color:' + scoreColor + '">' + (window.App ? App.esc(ind.statusLabel) : ind.statusLabel) + '</span>'
+          + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#ffffff;border:1px solid ' + cardBorder + ';color:' + scoreColor + '">' + (window.App ? App.esc(ind.statusLabel) : ind.statusLabel) + '</span>'
           + '  </div>'
           + '</div>'
-          + '<div style="font-size:12.5px;color:#334155;line-height:1.45;margin-top:6px;padding-top:6px;border-top:1px dashed rgba(0,0,0,0.08)">'
+          + '<div style="font-size:12.5px;color:#334155;line-height:1.45;margin-top:6px;padding-top:6px;border-top:1px dashed #e2e8f0">'
           + '  <b>Interpretation:</b> ' + (window.App ? App.esc(ind.interpretation) : ind.interpretation) + '<br>'
           + '  <b>Clinical Action:</b> ' + (window.App ? App.esc(ind.recommendation) : ind.recommendation)
           + '</div>'
@@ -3170,13 +3170,13 @@
       }).join('');
     }
 
-    // --- TAB 3: Drug Safety & DDI Shield HTML ---
+    // Tab 3: Drug Safety & DDI Shield HTML
     var safetyHtml = '';
     if (drugInteractions.length) {
-      safetyHtml += '<div style="background:#fff1f2;border:2px solid #fecdd3;border-radius:12px;padding:14px;margin-bottom:14px">'
-        + '<div style="font-size:13.5px;font-weight:900;color:#991b1b;margin-bottom:6px">💊 Multi-Drug Pharmacokinetic / Pharmacodynamic Conflict Matrix</div>'
+      safetyHtml += '<div style="background:#ffffff;border:1px solid #fecaca;border-left:4px solid #dc2626;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+        + '<div style="font-size:13.5px;font-weight:900;color:#991b1b;margin-bottom:8px">💊 Multi-Drug Pharmacokinetic / Pharmacodynamic Conflict Matrix</div>'
         + drugInteractions.map(function (di) {
-            return '<div style="background:#fff;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;margin-bottom:6px">'
+            return '<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;margin-bottom:6px">'
               + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px">'
               + '  <b style="color:#b91c1c;font-size:12.5px">⚡ ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
               + '  <span style="background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:800;text-transform:uppercase">' + di.severity + '</span>'
@@ -3191,8 +3191,7 @@
     if (drugSafety.length) {
       safetyHtml += drugSafety.map(function (ds) {
         var isCrit = ds.status === 'critical';
-        var border = isCrit ? '#ef4444' : '#f59e0b';
-        var bg = isCrit ? '#fef2f2' : '#fffbeb';
+        var border = isCrit ? '#dc2626' : '#d97706';
 
         var contraHtml = ds.contraindications.map(function (c) {
           return '<li style="margin-bottom:3px"><b>🚫 CONTRAINDICATED:</b> ' + (window.App ? App.esc(c) : c) + '</li>';
@@ -3204,7 +3203,7 @@
           return '<li style="margin-bottom:3px;color:#047857"><b>💡 SAFE ALTERNATIVE:</b> ' + (window.App ? App.esc(sAlt) : sAlt) + '</li>';
         }).join('');
 
-        return '<div style="background:' + bg + ';border:2px solid ' + border + ';border-radius:12px;padding:14px;margin-bottom:12px">'
+        return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid ' + border + ';border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
           + '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
           + '  <span style="font-size:22px">' + ds.icon + '</span>'
           + '  <div>'
@@ -3218,10 +3217,10 @@
           + '</div>';
       }).join('');
     } else if (!drugInteractions.length) {
-      safetyHtml = '<div style="padding:20px;text-align:center;color:#059669;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;font-weight:700">✅ All organ safety shields green. No renal, hepatic, or hematological drug contraindications detected.</div>';
+      safetyHtml = '<div style="padding:20px;text-align:center;color:#059669;background:#ffffff;border:1px solid #bbf7d0;border-left:4px solid #059669;border-radius:12px;font-weight:700">✅ All organ safety shields green. No renal, hepatic, or hematological drug contraindications detected.</div>';
     }
 
-    // --- TAB 4: Longitudinal Historical Trends HTML ---
+    // Tab 4: Historical Velocity Trends HTML
     var trendsHtml = '';
     if (historicalDelta.hasHistory && historicalDelta.comparisons.length) {
       var prevInv = historicalDelta.prevInvoice;
@@ -3248,24 +3247,24 @@
         + '</table>'
         + '</div>';
     } else {
-      trendsHtml = '<div style="padding:24px;text-align:center;color:#64748b;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">'
+      trendsHtml = '<div style="padding:24px;text-align:center;color:#64748b;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0">'
         + '<div style="font-size:24px;margin-bottom:4px">📊</div>'
-        + '<b>Initial Baseline Profile</b>'
-        + '<div style="font-size:12px;margin-top:4px">No previous historical invoices found for this patient in database. Current results will establish the baseline for future delta velocity tracking.</div>'
+        + '<b style="color:#0f1e2e">Initial Baseline Profile</b>'
+        + '<div style="font-size:12px;margin-top:4px">No previous historical invoices found for this patient in database. Current results establish the baseline for future delta velocity tracking.</div>'
         + '</div>';
     }
 
-    // --- TAB 5: Family Genetic & Marriage Guard HTML ---
+    // Tab 5: Family Genetic & Marriage Guard HTML
     var geneticHtml = '';
     if (geneticGuard.length) {
       geneticHtml = geneticGuard.map(function (g) {
-        return '<div style="background:#f5f3ff;border:2px solid #ddd6fe;border-radius:12px;padding:16px;margin-bottom:12px">'
+        return '<div style="background:#ffffff;border:1px solid #e2e8f0;border-left:4px solid #7c3aed;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
           + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-          + '  <div style="font-size:15px;font-weight:900;color:#5b21b6">' + (window.App ? App.esc(g.title) : g.title) + '</div>'
-          + '  <span style="background:#ede9fe;color:#6d28d9;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800">' + (window.App ? App.esc(g.severity) : g.severity) + '</span>'
+          + '  <div style="font-size:15px;font-weight:900;color:#131845">' + (window.App ? App.esc(g.title) : g.title) + '</div>'
+          + '  <span style="background:#f5f3ff;color:#6d28d9;border:1px solid #ddd6fe;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800">' + (window.App ? App.esc(g.severity) : g.severity) + '</span>'
           + '</div>'
           + '<div style="font-size:12.5px;color:#1e293b;line-height:1.5;margin-bottom:8px">' + (window.App ? App.esc(g.summary) : g.summary) + '</div>'
-          + '<div style="background:#fff;border-left:4px solid #7c3aed;padding:8px 12px;border-radius:6px;font-size:12px;color:#4c1d95;margin-bottom:8px">'
+          + '<div style="background:#f8fafc;border-left:4px solid #7c3aed;padding:8px 12px;border-radius:6px;font-size:12px;color:#4c1d95;margin-bottom:8px">'
           + '  <b>Inheritance Hazard:</b> ' + (window.App ? App.esc(g.geneticRisk) : g.geneticRisk)
           + '</div>'
           + '<div style="font-size:12px;color:#047857;font-weight:700">' + (window.App ? App.esc(g.mandatoryAction) : g.mandatoryAction) + '</div>'
@@ -3273,491 +3272,660 @@
           + '</div>';
       }).join('');
     } else {
-      geneticHtml = '<div style="padding:20px;text-align:center;color:#059669;background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:10px;font-weight:700">🧬 No high-risk familial carrier traits (such as Beta-Thalassemia or early onset monogenic diabetes) detected in current report.</div>';
+      geneticHtml = '<div style="padding:20px;text-align:center;color:#059669;background:#ffffff;border:1px solid #bbf7d0;border-left:4px solid #059669;border-radius:12px;font-weight:700">🧬 No high-risk familial carrier traits (such as Beta-Thalassemia or early onset monogenic diabetes) detected in current report.</div>';
     }
 
-    // --- TAB 6: Roman Urdu Patient Care Guide HTML ---
-    var urduHtml = '<div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:12px;padding:16px;margin-bottom:12px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;border-bottom:1px solid #e2e8f0;padding-bottom:8px">'
+    // Tab 6: Roman Urdu Patient Care Guide HTML
+    var urduHtml = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;border-bottom:1px solid #e2e8f0;padding-bottom:10px">'
       + '  <div>'
-      + '    <div style="font-size:15px;font-weight:900;color:#0f172a">🇵🇰 Mareez Ke Liye Rehnumai (Roman Urdu Guide)</div>'
+      + '    <div style="font-size:15px;font-weight:900;color:#0f1e2e">🇵🇰 Mareez Ke Liye Rehnumai (Roman Urdu Guide)</div>'
       + '    <div style="font-size:11.5px;color:#64748b">Asan zaban mein bimari ki wazahat, khurak, parhez aur dawai ka tareeqa</div>'
       + '  </div>'
       + '  <div style="display:flex;gap:6px">'
-      + '    <button type="button" class="btn btn-ghost" id="aiCopyUrduGuide" style="border:1px solid #cbd5e1;font-size:11.5px;font-weight:700">📋 Copy Urdu</button>'
-      + '    <button type="button" class="btn btn-ghost" id="aiWaUrduGuide" style="color:#059669;border:1px solid #a7f3d0;font-size:11.5px;font-weight:700">💬 WhatsApp to Patient</button>'
+      + '    <button type="button" class="btn btn-ghost" id="aiCopyUrduGuide" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer">📋 Copy Urdu</button>'
+      + '    <button type="button" class="btn btn-ghost" id="aiWaUrduGuide" style="color:#059669;border:1px solid #a7f3d0;background:#ffffff;font-size:11.5px;font-weight:700;padding:5px 10px;border-radius:6px;cursor:pointer">💬 WhatsApp to Patient</button>'
       + '  </div>'
       + '</div>'
       + '<div style="margin-bottom:12px">'
-      + '  <div style="font-size:12.5px;font-weight:800;color:#4338ca;margin-bottom:4px">1. 🩺 Bemari Ki Wazahat:</div>'
+      + '  <div style="font-size:12.5px;font-weight:800;color:#131845;margin-bottom:4px">1. 🩺 Bemari Ki Wazahat:</div>'
       + '  <ul style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.55">'
-      +      urduGuide.wazahat.map(function (w) { return '<li>' + (window.App ? App.esc(w) : w) + '</li>'; }).join('')
+      +      urduGuide.wazahat.map(function (w) { return '<li style="margin-bottom:3px">' + (window.App ? App.esc(w) : w) + '</li>'; }).join('')
       + '  </ul>'
       + '</div>'
       + '<div style="margin-bottom:12px">'
-      + '  <div style="font-size:12.5px;font-weight:800;color:#92400e;margin-bottom:4px">2. 🍲 Khurak Aur Parhez:</div>'
+      + '  <div style="font-size:12.5px;font-weight:800;color:#d97706;margin-bottom:4px">2. 🍲 Khurak Aur Parhez:</div>'
       + '  <div style="font-size:12px;color:#166534;font-weight:700;margin-bottom:2px">Kya Khayein:</div>'
       + '  <ul style="margin:0 0 6px;padding-left:18px;font-size:12px;color:#334155;line-height:1.55">'
-      +      (urduGuide.khurak.length ? urduGuide.khurak.map(function (k) { return '<li>' + (window.App ? App.esc(k) : k) + '</li>'; }).join('') : '<li>Saaf mutawazan khurak aur ubla hua paani.</li>')
+      +      (urduGuide.khurak.length ? urduGuide.khurak.map(function (k) { return '<li style="margin-bottom:3px">' + (window.App ? App.esc(k) : k) + '</li>'; }).join('') : '<li>Saaf mutawazan khurak aur ubla hua paani.</li>')
       + '  </ul>'
       + '  <div style="font-size:12px;color:#991b1b;font-weight:700;margin-bottom:2px">Kin Cheezon Se Parhez Karein:</div>'
       + '  <ul style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.55">'
-      +      (urduGuide.parhez.length ? urduGuide.parhez.map(function (p) { return '<li>' + (window.App ? App.esc(p) : p) + '</li>'; }).join('') : '<li>Talay hue aur masalay-dar khanon se parhez.</li>')
+      +      (urduGuide.parhez.length ? urduGuide.parhez.map(function (p) { return '<li style="margin-bottom:3px">' + (window.App ? App.esc(p) : p) + '</li>'; }).join('') : '<li>Talay hue aur masalay-dar khanon se parhez.</li>')
       + '  </ul>'
       + '</div>'
       + (urduGuide.dawaiSchedule.length ? ('<div style="margin-bottom:12px">'
           + '<div style="font-size:12.5px;font-weight:800;color:#047857;margin-bottom:4px">3. 💊 Dawai Lene Ka Tareeqa:</div>'
           + '<ul style="margin:0;padding-left:18px;font-size:12px;color:#334155;line-height:1.55">'
-          + urduGuide.dawaiSchedule.map(function (ds) { return '<li><b>' + (window.App ? App.esc(ds.waqt) : ds.waqt) + ':</b> ' + (window.App ? App.esc(ds.dawai) : ds.dawai) + '</li>'; }).join('')
+          + urduGuide.dawaiSchedule.map(function (ds) { return '<li style="margin-bottom:3px"><b>' + (window.App ? App.esc(ds.waqt) : ds.waqt) + ':</b> ' + (window.App ? App.esc(ds.dawai) : ds.dawai) + '</li>'; }).join('')
           + '</ul>'
           + '</div>') : '')
       + '<div style="margin-bottom:8px">'
       + '  <div style="font-size:12.5px;font-weight:800;color:#991b1b;margin-bottom:4px">4. ⚠️ Khatray Ki Alamaat (Kab Foran Emergency Jayein):</div>'
       + '  <ul style="margin:0;padding-left:18px;font-size:12px;color:#991b1b;line-height:1.55">'
-      +      urduGuide.khatraAlamaat.map(function (ka) { return '<li>' + (window.App ? App.esc(ka) : ka) + '</li>'; }).join('')
+      +      urduGuide.khatraAlamaat.map(function (ka) { return '<li style="margin-bottom:3px">' + (window.App ? App.esc(ka) : ka) + '</li>'; }).join('')
       + '  </ul>'
       + '</div>'
       + '</div>';
 
-    // --- TAB 7: Digital Rx Pad Preview with Voice Dictation HTML ---
-    var rxPadPreviewHtml = '<div style="margin-bottom:12px">'
-      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">'
-      + '  <div style="display:flex;align-items:center;gap:6px">'
-      + '    <button type="button" class="btn btn-ghost" id="aiVoiceDictateBtn" style="border:1.5px solid #6366f1;color:#4f46e5;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:6px">'
+    // Tab 7: Digital Rx Pad Preview HTML
+    var rxPadPreviewHtml = '<div style="margin-bottom:14px">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">'
+      + '  <div style="display:flex;align-items:center;gap:8px">'
+      + '    <button type="button" class="btn btn-ghost" id="aiVoiceDictateBtn" style="border:1.5px solid #131845;color:#131845;background:#ffffff;font-weight:700;font-size:12px;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;cursor:pointer">'
       + '      <span id="aiVoiceMicIcon">🎙️</span> <span id="aiVoiceMicText">Bol Kar Likhain (Voice Dictate)</span>'
       + '    </button>'
       + '    <span id="aiVoiceStatusText" style="font-size:11px;color:#64748b;font-weight:600"></span>'
       + '  </div>'
-      + '  <button type="button" class="btn btn-primary" id="aiPrintRxPadDirect" style="background:#4f46e5;font-weight:700">🖨️ Print Digital Rx Pad</button>'
+      + '  <button type="button" class="btn btn-primary" id="aiPrintRxPadDirect" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;padding:6px 14px;border-radius:8px;cursor:pointer">🖨️ Print Digital Rx Pad</button>'
       + '</div>'
       + AI.generateRxPadHtml(analysis)
       + '</div>';
 
-    // Modal Master HTML
-    var modalHtml = '<div style="max-width:940px;font-family:inherit">'
-      // Panic Banner
+    // Pro Navigation Tabs Bar
+    var cfg = (typeof AI.getAiConfig === 'function') ? AI.getAiConfig() : null;
+    var mods = (cfg && cfg.modules) || {};
+    var showBodyMap = mods.bodyMap !== false;
+    var showCalculators = mods.calculators !== false;
+    var showSafety = mods.safetyShields !== false || mods.drugInteractions !== false;
+    var showGenetic = mods.geneticGuard !== false;
+    var showUrdu = mods.urduGuide !== false;
+    var showRx = mods.rxPad !== false;
+
+    var tabsHtml = '<div class="ai-tabs-bar" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 12px;margin-bottom:14px;border-bottom:1px solid #e2e8f0">'
+      + '<button type="button" class="btn btn-ghost ai-tab-btn active" data-tab="solutions" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;box-shadow:0 1px 3px rgba(19,24,69,0.18);cursor:pointer">🩺 5 Solutions</button>'
+      + (showBodyMap ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="bodymap" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">🫀 Organ Body Map' + (critOrgans.length ? ' <span style="background:#ef4444;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px;margin-left:2px">' + critOrgans.length + '</span>' : '') + '</button>' : '')
+      + (showCalculators ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="indices" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">🧮 Indices & ASCVD</button>' : '')
+      + (showSafety ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="safety" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">⚠️ Drug Safety & DDI</button>' : '')
+      + '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="trends" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">📈 Velocity</button>'
+      + (showGenetic ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="genetic" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">🧬 Genetic Guard</button>' : '')
+      + (showUrdu ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="urdu" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">🇵🇰 Roman Urdu Guide</button>' : '')
+      + (showRx ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="rx" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">🖨️ Digital Rx Pad</button>' : '')
+      + '</div>';
+
+    var html = ''
       + panicBannerHtml
-
-      // Header Card
-      + '<div style="background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#fff;border-radius:14px;padding:16px 20px;margin-bottom:12px;box-shadow:0 8px 24px rgba(79,70,229,0.22)">'
-      + '  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">'
-      + '    <div>'
-      + '      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;opacity:0.85">Smart Medical Intelligence Pro (Hospital-Grade)</div>'
-      + '      <h2 style="font-size:20px;font-weight:800;margin:2px 0 4px">🤖 AI Doctor Recommendations & Clinical Intelligence</h2>'
-      + '      <div style="font-size:13px;opacity:0.95">Patient: <b>' + (window.App ? App.esc(pt.name || 'Ali Raza') : (pt.name || 'Ali Raza')) + '</b> &bull; Invoice: <b>#' + (window.App ? App.esc(inv.no || inv.id) : (inv.no || inv.id)) + '</b>' + (doc ? ' &bull; Ref. Doctor: <b>' + (window.App ? App.esc(doc.name) : doc.name) + '</b>' : '') + '</div>'
-      + '    </div>'
-      + '    <div style="background:rgba(255,255,255,0.18);padding:6px 12px;border-radius:10px;font-size:11.5px;font-weight:700;backdrop-filter:blur(4px)">'
-      + '      ⚡ Real-time Decision Support'
-      + '    </div>'
+      + tabsHtml
+      // PANE 1: 5 Solutions (Clean White Cards with Accent Borders)
+      + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
+      + '  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.05em;margin-bottom:8px">Detected Abnormal Lab Parameters</div>'
+      + '    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' + findingsBadges + '</div>'
       + '  </div>'
-      + '</div>'
-
-      // Pro Navigation Tabs Bar
-      var cfg = (typeof AI.getAiConfig === 'function') ? AI.getAiConfig() : null;
-      var mods = (cfg && cfg.modules) || {};
-      var showBodyMap = mods.bodyMap !== false;
-      var showCalculators = mods.calculators !== false;
-      var showSafety = mods.safetyShields !== false || mods.drugInteractions !== false;
-      var showGenetic = mods.geneticGuard !== false;
-      var showUrdu = mods.urduGuide !== false;
-      var showRx = mods.rxPad !== false;
-
-      var tabsHtml = '<div class="ai-tabs-bar" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 10px;margin-bottom:12px;border-bottom:1.5px solid #e2e8f0">'
-        + '<button type="button" class="btn btn-ghost ai-tab-btn active" data-tab="solutions" style="background:#4f46e5;color:#fff;border:1px solid #4338ca;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🩺 5 Solutions</button>'
-        + (showBodyMap ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="bodymap" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🫀 Organ Body Map' + (critOrgans.length ? ' <span style="background:#ef4444;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px;margin-left:2px">' + critOrgans.length + '</span>' : '') + '</button>' : '')
-        + (showCalculators ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="indices" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🧮 Indices & ASCVD</button>' : '')
-        + (showSafety ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="safety" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">⚠️ Drug Safety & DDI</button>' : '')
-        + '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="trends" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">📈 Velocity</button>'
-        + (showGenetic ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="genetic" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🧬 Genetic Guard</button>' : '')
-        + (showUrdu ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="urdu" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🇵🇰 Roman Urdu Guide</button>' : '')
-        + (showRx ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="rx" style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:700;font-size:12px;padding:6px 12px;border-radius:8px">🖨️ Digital Rx Pad</button>' : '')
-        + '</div>';
-
-      modalHtml += tabsHtml
-        // PANE 1: 5 Solutions (Primary Default View - Unchanged & 100% Intact)
-        + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
-        + '  <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;margin-bottom:12px">'
-        + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.05em;margin-bottom:6px">Detected Abnormal Lab Parameters</div>'
-        + '    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' + findingsBadges + '</div>'
-        + '  </div>'
-        + (showBodyMap ? ('  <div style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#fff;border-radius:12px;padding:10px 14px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;box-shadow:0 4px 14px rgba(0,0,0,0.12)">'
-        + '    <div style="display:flex;align-items:center;gap:10px">'
-        + '      <span style="font-size:22px">🧍</span>'
-        + '      <div>'
-        + '        <div style="font-size:13px;font-weight:900;letter-spacing:0.02em">Visual Anatomy Organ Impact Map</div>'
-        + '        <div style="font-size:11px;opacity:0.9;margin-top:2px">' + (critOrgans.length ? '<b style="color:#f87171">' + critOrgans.length + ' Critical</b> &bull; ' : '') + warnOrgans.length + ' Warning &bull; ' + safeOrgans.length + ' Healthy Organ Systems</div>'
-        + '      </div>'
-        + '    </div>'
-        + '    <button type="button" class="btn btn-ghost ai-jump-bodymap-btn" style="background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.3);font-size:11.5px;font-weight:700;padding:5px 12px;border-radius:8px;cursor:pointer">👉 View Interactive Body Map</button>'
-        + '  </div>') : '')
-        + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-bottom:12px">'
-      + '    <div style="background:#f0fdf4;border:1.5px solid #bbf7d0;border-radius:14px;padding:14px">'
-      + '      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#166534;margin-bottom:8px">🩺 Solution 1: Clinical Diagnosis & Interpretation</div>'
+      + (showBodyMap ? ('  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '    <div style="display:flex;align-items:center;gap:10px">'
+      + '      <span style="font-size:22px">🧍</span>'
+      + '      <div>'
+      + '        <div style="font-size:13px;font-weight:800;color:#0f172a">Visual Anatomy Organ Impact Map</div>'
+      + '        <div style="font-size:11.5px;color:#64748b;margin-top:2px">' + (critOrgans.length ? '<b style="color:#dc2626">' + critOrgans.length + ' Critical</b> &bull; ' : '') + warnOrgans.length + ' Warning &bull; ' + safeOrgans.length + ' Healthy Organ Systems</div>'
+      + '      </div>'
+      + '    </div>'
+      + '    <button type="button" class="btn btn-ghost ai-jump-bodymap-btn" style="background:#ffffff;color:#131845;border:1px solid #cbd5e1;font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer">👉 View Interactive Body Map</button>'
+      + '  </div>') : '')
+      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;margin-bottom:14px">'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:3.5px solid #131845;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '      <div style="font-size:12.5px;font-weight:800;text-transform:uppercase;color:#131845;margin-bottom:10px">🩺 Solution 1: Clinical Diagnosis & Interpretation</div>'
       +        diagHtml
       + '    </div>'
-      + '    <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:14px">'
-      + '      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#1e40af;margin-bottom:8px">💊 Solution 2: Prescription & Medication Guidance</div>'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:3.5px solid #059669;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '      <div style="font-size:12.5px;font-weight:800;text-transform:uppercase;color:#059669;margin-bottom:10px">💊 Solution 2: Prescription & Medication Guidance</div>'
       +        medsHtml
       + '    </div>'
-      + '    <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:14px;padding:14px">'
-      + '      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#92400e;margin-bottom:8px">🥗 Solution 3: Diet & Lifestyle Plan (Parhez)</div>'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:3.5px solid #d97706;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '      <div style="font-size:12.5px;font-weight:800;text-transform:uppercase;color:#d97706;margin-bottom:10px">🥗 Solution 3: Diet & Lifestyle Plan (Parhez)</div>'
       +        dietHtml
       + '    </div>'
-      + '    <div style="background:#faf5ff;border:1.5px solid #e9d5ff;border-radius:14px;padding:14px">'
-      + '      <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#6b21a8;margin-bottom:8px">🔬 Solution 4: Confirmatory Follow-up Tests</div>'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:3.5px solid #2563eb;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '      <div style="font-size:12.5px;font-weight:800;text-transform:uppercase;color:#2563eb;margin-bottom:10px">🔬 Solution 4: Confirmatory Follow-up Tests</div>'
       +        testsHtml
       + '    </div>'
       + '  </div>'
-      + '  <div style="background:#fff1f2;border:1.5px solid #fecdd3;border-radius:14px;padding:14px;margin-bottom:12px">'
-      + '    <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#9f1239;margin-bottom:8px">⚠️ Solution 5: Red Flags, Precautions & Specialist Referral</div>'
+      + '  <div style="background:#ffffff;border:1px solid #fecaca;border-top:3.5px solid #dc2626;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '    <div style="font-size:12.5px;font-weight:800;text-transform:uppercase;color:#dc2626;margin-bottom:10px">⚠️ Solution 5: Red Flags, Precautions & Specialist Referral</div>'
       +      redflagsHtml
       + '  </div>'
       + '</div>'
-
       // PANE 2: Medical Indices & ASCVD
       + '<div class="ai-tab-pane" id="aiPane-indices" style="display:none">'
       +   indicesHtml
       + '</div>'
-
       // PANE 3: Drug Safety & DDI Shield
       + '<div class="ai-tab-pane" id="aiPane-safety" style="display:none">'
       +   safetyHtml
       + '</div>'
-
       // PANE 4: Historical Velocity Trends
       + '<div class="ai-tab-pane" id="aiPane-trends" style="display:none">'
       +   trendsHtml
       + '</div>'
-
       // PANE 5: Family Genetic & Marriage Guard
       + '<div class="ai-tab-pane" id="aiPane-genetic" style="display:none">'
       +   geneticHtml
       + '</div>'
-
       // PANE 6: Roman Urdu Guide
       + '<div class="ai-tab-pane" id="aiPane-urdu" style="display:none">'
       +   urduHtml
       + '</div>'
-
       // PANE 7: Digital Rx Pad
       + '<div class="ai-tab-pane" id="aiPane-rx" style="display:none">'
       +   rxPadPreviewHtml
       + '</div>'
-
       // PANE 8: Interactive Organ Body Map
       + '<div class="ai-tab-pane" id="aiPane-bodymap" style="display:none">'
       +   AI.renderBodyMapHtml(analysis)
       + '</div>'
-
       // Medical Advisory Disclaimer
-      + '<div style="font-size:11px;color:#64748b;line-height:1.4;background:#f8fafc;padding:8px 12px;border-radius:8px;margin-bottom:14px">'
+      + '<div style="font-size:11px;color:#64748b;line-height:1.4;background:#ffffff;border:1px solid #e2e8f0;padding:10px 14px;border-radius:10px;margin-top:14px;margin-bottom:14px">'
       + '  <b>Medical Disclaimer:</b> AI Clinical Recommendations & Calculators are advisory decision-support tools for registered medical practitioners. Final clinical judgment and prescription authority rests solely with the attending doctor.'
-      + '</div>'
+      + '</div>';
 
-      // Master Toolbar
-      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">'
-      + '  <button type="button" class="btn btn-ghost" id="aiModalClose">Close</button>'
-      + '  <div style="display:flex;gap:6px;flex-wrap:wrap">'
-      + '    <button type="button" class="btn btn-ghost" id="aiCopyPrescription" style="border:1px solid #cbd5e1;font-weight:700">📋 Copy 5 Solutions</button>'
-      + '    <button type="button" class="btn btn-ghost" id="aiAttachReportRemarks" style="border:1px solid #a5b4fc;color:#4f46e5;font-weight:700">📄 Attach to Report Remarks</button>'
-      + (doc && (doc.phone || doc.whatsapp)
-          ? '  <button type="button" class="btn btn-ghost" id="aiWaDoctor" style="color:#059669;border:1px solid #a7f3d0;font-weight:700">💬 WhatsApp to Doctor</button>'
-          : '')
-      + '    <button type="button" class="btn btn-ghost" id="aiPrintSlip" style="border:1px solid #cbd5e1;font-weight:700">🖨️ Print Summary</button>'
-      + '    <button type="button" class="btn btn-primary" id="aiPrintRxPad" style="background:#4f46e5;font-weight:700">🖨️ Print Rx Pad</button>'
+    return html;
+  };
+
+  /* Wire Interactive Events for Tabs, Buttons, Voice Dictation & Body Map */
+  AI.wireRecommendationsEvents = function (scopeEl, analysis, options) {
+    if (!scopeEl) return;
+    var opts = options || {};
+    var inv = analysis.invoice || {};
+    var pt = analysis.patient || {};
+    var doc = analysis.doctor || null;
+    var s = analysis.solutions || {};
+    var panicInfo = analysis.panicInfo || { isPanic: false, alerts: [], formattedMessage: '' };
+    var reportNarrative = analysis.reportNarrative || '';
+    var organMap = analysis.organMap || [];
+    var urduGuide = analysis.urduGuide || { wazahat: [], khurak: [], parhez: [], dawaiSchedule: [], khatraAlamaat: [], plainText: '' };
+
+    // Plain text for Doctor Clipboard / WhatsApp
+    var plainText = '🤖 *OPTIX AI CLINICAL RECOMMENDATIONS*\n'
+      + 'Patient: ' + (pt.name || 'Patient') + ' (' + (pt.age ? pt.age + 'y, ' : '') + (pt.sex || pt.gender || '') + ')\n'
+      + 'Invoice: #' + (inv.no || inv.id) + '\n\n'
+      + '1. 🩺 *DIAGNOSIS & FINDINGS:*\n'
+      + (s.diagnosis || []).map(function (x) { return '• ' + x.title + '\n  ' + x.detail; }).join('\n') + '\n\n'
+      + '2. 💊 *RECOMMENDED MEDICATIONS:*\n'
+      + (s.medications || []).map(function (m) {
+          return (m.items || []).map(function (it) { return '• ' + it.drug + ' (' + it.dosage + ')' + (it.note ? ' - ' + it.note : ''); }).join('\n');
+        }).join('\n') + '\n\n'
+      + '3. 🥗 *DIET & LIFESTYLE:*\n'
+      + (s.diet || []).map(function (x) { return '• ' + x; }).join('\n') + '\n\n'
+      + '4. 🔬 *FOLLOW-UP TESTS:*\n'
+      + (s.tests || []).map(function (x) { return '• ' + x; }).join('\n') + '\n\n'
+      + '5. ⚠️ *PRECAUTIONS & RED FLAGS:*\n'
+      + (s.redflags || []).map(function (x) { return '• ' + x; }).join('\n') + '\n\n'
+      + '_Note: Clinical decision support for authorized medical practitioners only._';
+
+    // Tab Switching Logic
+    scopeEl.querySelectorAll('.ai-tab-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var target = btn.getAttribute('data-tab');
+        scopeEl.querySelectorAll('.ai-tab-btn').forEach(function (b) {
+          b.style.background = '#ffffff';
+          b.style.color = '#475569';
+          b.style.borderColor = '#cbd5e1';
+          b.style.boxShadow = 'none';
+          b.classList.remove('active');
+        });
+        btn.style.background = '#131845';
+        btn.style.color = '#ffffff';
+        btn.style.borderColor = '#131845';
+        btn.style.boxShadow = '0 1px 3px rgba(19,24,69,0.18)';
+        btn.classList.add('active');
+
+        scopeEl.querySelectorAll('.ai-tab-pane').forEach(function (pane) {
+          pane.style.display = 'none';
+        });
+        var targetPane = scopeEl.querySelector('#aiPane-' + target);
+        if (targetPane) targetPane.style.display = 'block';
+      });
+    });
+
+    // Panic SOS WhatsApp Button
+    var sosBtn = scopeEl.querySelector('#aiSendPanicSos');
+    if (sosBtn) {
+      sosBtn.addEventListener('click', function () {
+        if (String(inv.id || inv.no || '').indexOf('SIM-') === 0) { if (window.App && App.toast) App.toast('Simulation only: no message will be sent.', 'info'); return; }
+        var rawPh = (doc && (doc.whatsapp || doc.phone)) || '';
+        var ph = rawPh.replace(/[^0-9]/g, '');
+        if (ph.indexOf('0') === 0) ph = '92' + ph.slice(1);
+        var url = ph ? ('https://wa.me/' + ph + '?text=' + encodeURIComponent(panicInfo.formattedMessage))
+                     : ('https://wa.me/?text=' + encodeURIComponent(panicInfo.formattedMessage));
+        window.open(url, '_blank');
+      });
+    }
+
+    // Attach Summary to Printed Report Remarks Button
+    var attachBtn = scopeEl.querySelector('#aiAttachReportRemarks');
+    if (attachBtn) {
+      attachBtn.addEventListener('click', function () {
+        var targetId = (inv && (inv.id || inv.no)) || '';
+        var ok = AI.attachSummaryToReportRemarks(targetId, reportNarrative);
+        if (ok) {
+          attachBtn.innerHTML = '✅ Attached to Remarks!';
+          attachBtn.style.color = '#059669';
+          attachBtn.style.borderColor = '#10b981';
+          attachBtn.style.background = '#ecfdf5';
+        }
+      });
+    }
+
+    // Organ Body Map Selection & Jump Interactivity
+    var jumpBtn = scopeEl.querySelector('.ai-jump-bodymap-btn');
+    if (jumpBtn) {
+      jumpBtn.addEventListener('click', function () {
+        var bTab = scopeEl.querySelector('.ai-tab-btn[data-tab="bodymap"]');
+        if (bTab) bTab.click();
+      });
+    }
+
+    function selectOrgan(organId) {
+      var org = organMap.filter(function (x) { return x.id === organId; })[0];
+      if (!org) return;
+
+      var cardContainer = scopeEl.querySelector('#aiOrganDetailCard');
+      if (cardContainer) {
+        cardContainer.innerHTML = AI.renderSingleOrganCard(org);
+      }
+
+      scopeEl.querySelectorAll('.ai-organ-select-btn').forEach(function (btn) {
+        var bId = btn.getAttribute('data-organ-id');
+        if (bId === organId) {
+          btn.style.borderColor = '#131845';
+          btn.style.background = '#ebf4f8';
+          btn.style.color = '#131845';
+          btn.classList.add('active');
+        } else {
+          var targetOrg = organMap.filter(function (x) { return x.id === bId; })[0];
+          var isC = targetOrg && targetOrg.status === 'critical';
+          var isW = targetOrg && targetOrg.status === 'warning';
+          var isS = targetOrg && targetOrg.status === 'normal';
+          btn.style.borderColor = isC ? '#ef4444' : (isW ? '#f59e0b' : (isS ? '#10b981' : '#cbd5e1'));
+          btn.style.background = isC ? '#fef2f2' : (isW ? '#fffbeb' : (isS ? '#f0fdf4' : '#ffffff'));
+          btn.style.color = isC ? '#b91c1c' : (isW ? '#b45309' : (isS ? '#15803d' : '#475569'));
+          btn.classList.remove('active');
+        }
+      });
+
+      scopeEl.querySelectorAll('.ai-organ-beacon').forEach(function (beacon) {
+        var bId = beacon.getAttribute('data-organ-id');
+        var ring = beacon.querySelector('.ai-beacon-ring');
+        var targetOrg = organMap.filter(function (x) { return x.id === bId; })[0];
+        if (ring && targetOrg) {
+          var isC = targetOrg.status === 'critical';
+          var isW = targetOrg.status === 'warning';
+          var isS = targetOrg.status === 'normal';
+          var coreBg = isC ? '#ef4444' : (isW ? '#f59e0b' : (isS ? '#10b981' : '#475569'));
+          if (bId === organId) {
+            ring.setAttribute('fill', '#ffffff');
+            ring.setAttribute('stroke', '#131845');
+            ring.setAttribute('stroke-width', '3');
+          } else {
+            ring.setAttribute('fill', coreBg);
+            ring.setAttribute('stroke', '#ffffff');
+            ring.setAttribute('stroke-width', '2');
+          }
+        }
+      });
+    }
+
+    scopeEl.querySelectorAll('.ai-organ-select-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var orgId = btn.getAttribute('data-organ-id');
+        selectOrgan(orgId);
+      });
+    });
+
+    scopeEl.querySelectorAll('.ai-organ-beacon').forEach(function (beacon) {
+      beacon.addEventListener('click', function () {
+        var orgId = beacon.getAttribute('data-organ-id');
+        selectOrgan(orgId);
+      });
+    });
+
+    // Voice Dictation Button (Urdu & English Speech Recognition)
+    var voiceBtn = scopeEl.querySelector('#aiVoiceDictateBtn');
+    var voiceStatus = scopeEl.querySelector('#aiVoiceStatusText');
+    var dictBox = scopeEl.querySelector('#rxDictationNotesBox');
+    var dictTxt = scopeEl.querySelector('#rxDictationText');
+    var activeRecognizer = null;
+
+    if (voiceBtn) {
+      voiceBtn.addEventListener('click', function () {
+        if (activeRecognizer) {
+          try { activeRecognizer.stop(); } catch (e) {}
+          activeRecognizer = null;
+          voiceBtn.style.background = '#ffffff';
+          voiceBtn.style.color = '#131845';
+          if (voiceStatus) voiceStatus.textContent = '';
+          return;
+        }
+
+        if (!AI.isVoiceSupported()) {
+          if (window.App && App.toast) App.toast('Microphone voice dictation requires Google Chrome or Microsoft Edge.', 'err');
+          return;
+        }
+
+        voiceBtn.style.background = '#fee2e2';
+        voiceBtn.style.color = '#b91c1c';
+        if (voiceStatus) voiceStatus.textContent = '🔴 Listening (Bolain)...';
+
+        activeRecognizer = AI.startVoiceDictation({
+          lang: 'ur-PK',
+          onTranscript: function (text) {
+            if (dictBox) dictBox.style.display = 'block';
+            if (dictTxt) dictTxt.textContent = text;
+          },
+          onEnd: function () {
+            activeRecognizer = null;
+            voiceBtn.style.background = '#ffffff';
+            voiceBtn.style.color = '#131845';
+            if (voiceStatus) voiceStatus.textContent = '✓ Voice Captured';
+          },
+          onError: function () {
+            activeRecognizer = null;
+            voiceBtn.style.background = '#ffffff';
+            voiceBtn.style.color = '#131845';
+            if (voiceStatus) voiceStatus.textContent = '';
+          }
+        });
+      });
+    }
+
+    // 1-Tap Order Follow-Up Tests Buttons
+    scopeEl.querySelectorAll('.ai-order-test-btn').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var tName = b.getAttribute('data-testname');
+        var ptId = b.getAttribute('data-ptid');
+        AI.orderFollowupTest(tName, ptId);
+      });
+    });
+
+    // Copy 5 Solutions
+    var cpBtn = scopeEl.querySelector('#aiCopyPrescription');
+    if (cpBtn) {
+      cpBtn.addEventListener('click', function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(plainText).then(function () {
+            if (window.App && App.toast) App.toast('Prescription recommendations copied to clipboard!');
+          });
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = plainText;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (window.App && App.toast) App.toast('Prescription recommendations copied!');
+        }
+      });
+    }
+
+    // WhatsApp to Doctor
+    var waBtn = scopeEl.querySelector('#aiWaDoctor');
+    if (waBtn && doc) {
+      waBtn.addEventListener('click', function () {
+        var rawPh = doc.whatsapp || doc.phone || '';
+        var ph = rawPh.replace(/[^0-9]/g, '');
+        if (ph.indexOf('0') === 0) ph = '92' + ph.slice(1);
+        var url = 'https://wa.me/' + ph + '?text=' + encodeURIComponent(plainText);
+        window.open(url, '_blank');
+      });
+    }
+
+    // Copy Urdu Guide
+    var cpUrduBtn = scopeEl.querySelector('#aiCopyUrduGuide');
+    if (cpUrduBtn) {
+      cpUrduBtn.addEventListener('click', function () {
+        var uTxt = urduGuide.plainText || '';
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(uTxt).then(function () {
+            if (window.App && App.toast) App.toast('Roman Urdu Patient Guide copied to clipboard!');
+          });
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = uTxt;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (window.App && App.toast) App.toast('Roman Urdu Patient Guide copied!');
+        }
+      });
+    }
+
+    // WhatsApp Urdu Guide to Patient
+    var waUrduBtn = scopeEl.querySelector('#aiWaUrduGuide');
+    if (waUrduBtn) {
+      waUrduBtn.addEventListener('click', function () {
+        var rawPh = pt.phone || pt.mobile || pt.contact || '';
+        var ph = rawPh.replace(/[^0-9]/g, '');
+        if (ph.indexOf('0') === 0) ph = '92' + ph.slice(1);
+        var url = ph ? ('https://wa.me/' + ph + '?text=' + encodeURIComponent(urduGuide.plainText))
+                     : ('https://wa.me/?text=' + encodeURIComponent(urduGuide.plainText));
+        window.open(url, '_blank');
+      });
+    }
+
+    // Print Doctor Summary Slip
+    var prBtn = scopeEl.querySelector('#aiPrintSlip');
+    if (prBtn) {
+      prBtn.addEventListener('click', function () {
+        var printWin = window.open('', '_blank');
+        if (!printWin) { if (window.App && App.toast) App.toast('Pop-up blocked. Please allow pop-ups to print.', 'err'); return; }
+        printWin.document.write('<!DOCTYPE html><html><head><title>AI Clinical Summary - #' + (window.App ? App.esc(inv.no || inv.id) : (inv.no || inv.id)) + '</title>'
+          + '<style>'
+          + 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:20px;color:#111;font-size:13px;line-height:1.5}'
+          + 'h2{color:#131845;margin:0 0 4px}'
+          + '.box{border:1px solid #cbd5e1;border-radius:8px;padding:12px;margin-bottom:12px}'
+          + '.b-title{font-weight:800;font-size:12px;text-transform:uppercase;margin-bottom:6px;color:#131845}'
+          + '@media print{button{display:none}}'
+          + '</style></head><body>'
+          + '<h2>Optix AI Clinical Summary for Attending Doctor</h2>'
+          + '<div>Patient: <b>' + (window.App ? App.esc(pt.name || '') : (pt.name || '')) + '</b> (' + (window.App ? App.esc(pt.age ? pt.age + 'y, ' : '') : (pt.age ? pt.age + 'y, ' : '')) + (window.App ? App.esc(pt.sex || pt.gender || '') : (pt.sex || pt.gender || '')) + ') &bull; Invoice: <b>#' + (window.App ? App.esc(inv.no || inv.id) : (inv.no || inv.id)) + '</b></div>'
+          + '<hr style="border:0;border-top:1px solid #ddd;margin:12px 0">'
+          + '<div class="box"><div class="b-title">1. Clinical Findings & Probable Diagnosis</div>' + (s.diagnosis || []).map(function(d){ return '<div style="margin-bottom:6px"><b>' + (window.App ? App.esc(d.title) : d.title) + ':</b> ' + (window.App ? App.esc(d.detail) : d.detail) + '</div>'; }).join('') + '</div>'
+          + '<div class="box"><div class="b-title">2. Prescription & Medication Recommendations</div>' + (s.medications || []).map(function(m){ return '<div><b>' + (window.App ? App.esc(m.category) : m.category) + ':</b> ' + (m.items || []).map(function(it){ return it.drug + ' (' + it.dosage + ')'; }).join(', ') + '</div>'; }).join('') + '</div>'
+          + '<div class="box"><div class="b-title">3. Dietary & Lifestyle Plan</div>' + (s.diet || []).map(function(d){ return '<li>' + (window.App ? App.esc(d) : d) + '</li>'; }).join('') + '</div>'
+          + '<div class="box"><div class="b-title">4. Correlative Follow-Up Tests</div>' + (s.tests || []).map(function(t){ return '<li>' + (window.App ? App.esc(t) : t) + '</li>'; }).join('') + '</div>'
+          + '<div class="box"><div class="b-title">5. Precautions & Red Flags</div>' + (s.redflags || []).map(function(rf){ return '<div style="color:#991b1b;margin-bottom:4px">⚠️ ' + (window.App ? App.esc(rf) : rf) + '</div>'; }).join('') + '</div>'
+          + '<p style="font-size:11px;color:#666;margin-top:20px">Report generated automatically by Optix LAB MedSync AI Clinical Intelligence. Final clinical decisions rest with the prescribing doctor.</p>'
+          + '<script>window.onload=function(){window.print();};<\/script>'
+          + '</body></html>');
+        printWin.document.close();
+      });
+    }
+
+    // Print Digital Rx Pad
+    var prRxBtns = [scopeEl.querySelector('#aiPrintRxPad'), scopeEl.querySelector('#aiPrintRxPadDirect')];
+    prRxBtns.forEach(function (btn) {
+      if (btn) btn.addEventListener('click', function () { AI.printRxPad(analysis); });
+    });
+  };
+
+  /* Render Dedicated Full Page for AI Clinical Recommendations */
+  AI.renderRecommendationsPage = function (containerId, invoiceId, directData) {
+    var container = (typeof containerId === 'string' ? document.getElementById(containerId) : containerId)
+                 || document.getElementById('view') || (typeof document !== 'undefined' ? document.body : null);
+    if (!container) return;
+
+    var d = AI.getReportAnalysisData(invoiceId, directData);
+    if (!d) {
+      container.innerHTML = '<div style="padding:48px 24px;text-align:center;max-width:620px;margin:40px auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 1px 3px rgba(15,30,46,0.06)">'
+        + '<div style="font-size:38px;margin-bottom:12px">📋</div>'
+        + '<h2 style="font-size:19px;font-weight:800;color:#131845;margin-bottom:8px">No Report Selected for AI Recommendations</h2>'
+        + '<p style="color:#64748b;font-size:13px;line-height:1.55;margin-bottom:20px">Please select an invoice or patient test report from Lab Results or Invoices to view AI clinical recommendations and decision support.</p>'
+        + '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">'
+        + '  <button type="button" class="btn btn-primary" onclick="if(window.App&&App.nav)App.nav(\'#/results\')" style="background:#131845;color:#fff;font-weight:700;padding:8px 18px;border-radius:8px">Go to Lab Results</button>'
+        + '  <button type="button" class="btn btn-ghost" onclick="if(window.App&&App.nav)App.nav(\'#/ai-dashboard\')" style="border:1px solid #cbd5e1;background:#ffffff;font-weight:700;padding:8px 18px;border-radius:8px">Open AI Dashboard</button>'
+        + '</div>'
+        + '</div>';
+      return;
+    }
+
+    var analysis = AI.generate5Solutions(d);
+    var pt = analysis.patient;
+    var inv = analysis.invoice;
+    var doc = analysis.doctor;
+    AI._recordStatsForAnalysis(analysis);
+
+    var ptName = (window.App ? App.esc(pt.name || 'Patient') : (pt.name || 'Patient'));
+    var ptAgeGender = ((pt.age ? pt.age + 'y, ' : '') + (pt.sex || pt.gender || 'Adult'));
+    var invNo = (window.App ? App.esc(inv.no || inv.id || '') : (inv.no || inv.id || ''));
+    var docName = doc ? (window.App ? App.esc(doc.name || '') : (doc.name || '')) : '';
+
+    var recentInvs = (window.DB && typeof DB.all === 'function') ? (DB.all('invoices') || []).slice(-30).reverse() : [];
+    var invOptionsHtml = recentInvs.map(function (x) {
+      var isCur = (inv && (x.id === inv.id || x.no === inv.no || x.id === inv.no));
+      var ptObj = (window.DB && typeof DB.get === 'function') ? DB.get('patients', x.patientId) : null;
+      var ptLbl = ptObj ? (' - ' + (ptObj.name || 'Patient')) : '';
+      return '<option value="' + (x.id || x.no) + '"' + (isCur ? ' selected' : '') + '>#' + (x.no || x.id) + ptLbl + '</option>';
+    }).join('');
+
+    var switcherHtml = recentInvs.length > 1
+      ? ('<div style="display:flex;align-items:center;gap:8px">'
+        + '<span style="font-size:12px;color:#64748b;font-weight:600">Switch Report:</span>'
+        + '<select id="aiPageInvoiceSwitcher" style="padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#ffffff;font-size:12.5px;font-weight:600;color:#0f1e2e;cursor:pointer">'
+        + invOptionsHtml
+        + '</select>'
+        + '</div>')
+      : '';
+
+    var topBarHtml = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">'
+      + '<div style="display:flex;align-items:center;gap:10px">'
+      + '  <button type="button" class="btn btn-ghost" id="aiPageBackBtn" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;box-shadow:0 1px 3px rgba(15,30,46,0.04);cursor:pointer">← Back</button>'
+      + '  <div style="font-size:13px;color:#64748b;font-weight:600"><span>Clinical Decision Support</span> <span style="color:#cbd5e1">/</span> <b style="color:#0f1e2e">AI Clinical Recommendations</b></div>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      + '  <button type="button" class="btn btn-ghost" id="aiCopyPrescription" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer">📋 Copy 5 Solutions</button>'
+      + '  <button type="button" class="btn btn-ghost" id="aiAttachReportRemarks" style="border:1px solid #131845;background:#ffffff;color:#131845;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer">📄 Attach to Report Remarks</button>'
+      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn btn-ghost" id="aiWaDoctor" style="color:#059669;border:1px solid #a7f3d0;background:#ffffff;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer">💬 WhatsApp to Doctor</button>' : '')
+      + '  <button type="button" class="btn btn-ghost" id="aiPrintSlip" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer">🖨️ Print Summary</button>'
+      + '  <button type="button" class="btn btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;padding:7px 14px;border-radius:8px;cursor:pointer">🖨️ Print Rx Pad</button>'
+      + '</div>'
+      + '</div>';
+
+    var headerCardHtml = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:20px 24px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;box-shadow:0 1px 3px rgba(15,30,46,0.06)">'
+      + '<div>'
+      + '  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
+      + '    <span style="font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#131845;background:#ebf4f8;padding:3px 8px;border-radius:6px">Optix AI Clinical Intelligence Engine</span>'
+      + '    <span style="font-size:11px;font-weight:700;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;padding:2px 8px;border-radius:6px">● Hospital-Grade Pro</span>'
+      + '  </div>'
+      + '  <h1 style="font-size:22px;font-weight:800;color:#131845;margin:0 0 6px;letter-spacing:-0.02em">AI Clinical Recommendations</h1>'
+      + '  <div style="font-size:13.5px;color:#334155;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      + '    <span>Patient: <b style="color:#0f1e2e">' + ptName + '</b> (' + ptAgeGender + ')</span>'
+      + '    <span style="color:#cbd5e1">•</span>'
+      + '    <span>Invoice: <b style="color:#0f1e2e">#' + invNo + '</b></span>'
+      + (doc ? '    <span style="color:#cbd5e1">•</span><span>Ref. Doctor: <b style="color:#0f1e2e">' + docName + '</b></span>' : '')
+      + '  </div>'
+      + '</div>'
+      + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+      +    switcherHtml
+      + '</div>'
+      + '</div>';
+
+    var pageContentHtml = AI.buildRecommendationsContent(analysis, { isPage: true });
+
+    container.innerHTML = '<div class="ai-recommendations-page" style="padding:16px 24px 48px;max-width:1240px;margin:0 auto;font-family:inherit">'
+      + topBarHtml
+      + headerCardHtml
+      + pageContentHtml
+      + '</div>';
+
+    AI.wireRecommendationsEvents(container, analysis, { isPage: true });
+
+    var backBtn = container.querySelector('#aiPageBackBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', function () {
+        if (window.history && window.history.length > 1) {
+          window.history.back();
+        } else if (window.App && typeof App.nav === 'function') {
+          App.nav('#/results');
+        }
+      });
+    }
+
+    var switcher = container.querySelector('#aiPageInvoiceSwitcher');
+    if (switcher) {
+      switcher.addEventListener('change', function () {
+        var val = switcher.value;
+        if (val && window.App && typeof App.nav === 'function') {
+          App.nav('#/ai-recommendations/' + encodeURIComponent(val));
+        } else if (val) {
+          AI.renderRecommendationsPage(containerId, val);
+        }
+      });
+    }
+
+    try { window.scrollTo(0, 0); } catch (e) {}
+  };
+
+  /* Render Rich Modal with 5 Solutions + All Extended Pro Clinical Tabs (Headless Fallback) */
+  AI.showModal = function (invoiceId, directData) {
+    // If in live browser environment with #view and navigation, open the dedicated full page!
+    if (typeof window !== 'undefined' && window.App && typeof window.App.nav === 'function' && typeof document !== 'undefined' && document.getElementById('view')) {
+      if (directData) {
+        AI._directDataCache = AI._directDataCache || {};
+        AI._directDataCache[String(invoiceId)] = directData;
+      }
+      window.App.nav('#/ai-recommendations/' + encodeURIComponent(invoiceId || ''));
+      return;
+    }
+
+    var d = AI.getReportAnalysisData(invoiceId, directData);
+    if (!d) { if (window.App && App.toast) App.toast('Report data unavailable for AI analysis', 'err'); return; }
+
+    var analysis = AI.generate5Solutions(d);
+    AI._recordStatsForAnalysis(analysis);
+
+    var pt = analysis.patient;
+    var inv = analysis.invoice;
+    var doc = analysis.doctor;
+
+    var ptName = (window.App ? App.esc(pt.name || 'Patient') : (pt.name || 'Patient'));
+    var invNo = (window.App ? App.esc(inv.no || inv.id) : (inv.no || inv.id));
+    var docName = doc ? (window.App ? App.esc(doc.name) : doc.name) : '';
+
+    var modalHeaderHtml = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.06)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">'
+      + '  <div>'
+      + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#131845">Smart Medical Intelligence Pro (Hospital-Grade)</div>'
+      + '    <h2 style="font-size:19px;font-weight:800;color:#131845;margin:2px 0 4px">🤖 AI Doctor Recommendations & Clinical Intelligence</h2>'
+      + '    <div style="font-size:13px;color:#334155">Patient: <b style="color:#0f1e2e">' + ptName + '</b> &bull; Invoice: <b style="color:#0f1e2e">#' + invNo + '</b>' + (doc ? ' &bull; Ref. Doctor: <b style="color:#0f1e2e">' + docName + '</b>' : '') + '</div>'
+      + '  </div>'
+      + '  <div style="background:#ebf4f8;color:#131845;padding:6px 12px;border-radius:10px;font-size:11.5px;font-weight:700;border:1px solid #c7d8e8">'
+      + '    ⚡ Real-time Decision Support'
       + '  </div>'
       + '</div>'
       + '</div>';
 
-    App.modal('AI Clinical Recommendations', modalHtml, {
+    var bodyHtml = '<div style="max-width:940px;font-family:inherit">'
+      + modalHeaderHtml
+      + AI.buildRecommendationsContent(analysis, { isPage: false })
+      + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px">'
+      + '  <button type="button" class="btn btn-ghost" id="aiModalClose" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700">Close</button>'
+      + '  <div style="display:flex;gap:6px;flex-wrap:wrap">'
+      + '    <button type="button" class="btn btn-ghost" id="aiCopyPrescription" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700">📋 Copy 5 Solutions</button>'
+      + '    <button type="button" class="btn btn-ghost" id="aiAttachReportRemarks" style="border:1px solid #131845;background:#ffffff;color:#131845;font-weight:700">📄 Attach to Report Remarks</button>'
+      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn btn-ghost" id="aiWaDoctor" style="color:#059669;border:1px solid #a7f3d0;background:#ffffff;font-weight:700">💬 WhatsApp to Doctor</button>' : '')
+      + '    <button type="button" class="btn btn-ghost" id="aiPrintSlip" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700">🖨️ Print Summary</button>'
+      + '    <button type="button" class="btn btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700">🖨️ Print Rx Pad</button>'
+      + '  </div>'
+      + '</div>'
+      + '</div>';
+
+    App.modal('AI Clinical Recommendations', bodyHtml, {
       wide: true,
       onOpen: function (ov, close) {
         var cBtn = ov.querySelector('#aiModalClose');
         if (cBtn) cBtn.addEventListener('click', close);
-
-        // Tab Switching Logic
-        ov.querySelectorAll('.ai-tab-btn').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var target = btn.getAttribute('data-tab');
-            ov.querySelectorAll('.ai-tab-btn').forEach(function (b) {
-              b.style.background = '#f1f5f9';
-              b.style.color = '#475569';
-              b.style.borderColor = '#cbd5e1';
-              b.classList.remove('active');
-            });
-            btn.style.background = '#4f46e5';
-            btn.style.color = '#ffffff';
-            btn.style.borderColor = '#4338ca';
-            btn.classList.add('active');
-
-            ov.querySelectorAll('.ai-tab-pane').forEach(function (pane) {
-              pane.style.display = 'none';
-            });
-            var targetPane = ov.querySelector('#aiPane-' + target);
-            if (targetPane) targetPane.style.display = 'block';
-          });
-        });
-
-        // Panic SOS WhatsApp Button
-        var sosBtn = ov.querySelector('#aiSendPanicSos');
-        if (sosBtn) {
-          sosBtn.addEventListener('click', function () {
-            if (String(inv.id || inv.no || '').indexOf('SIM-') === 0) { if (App.toast) App.toast('Simulation only: no message will be sent.', 'info'); return; }
-            var rawPh = (doc && (doc.whatsapp || doc.phone)) || '';
-            var ph = rawPh.replace(/[^0-9]/g, '');
-            if (ph.indexOf('0') === 0) ph = '92' + ph.slice(1);
-            var url = ph ? ('https://wa.me/' + ph + '?text=' + encodeURIComponent(panicInfo.formattedMessage))
-                         : ('https://wa.me/?text=' + encodeURIComponent(panicInfo.formattedMessage));
-            window.open(url, '_blank');
-          });
-        }
-
-        // Attach Summary to Printed Report Remarks Button
-        var attachBtn = ov.querySelector('#aiAttachReportRemarks');
-        if (attachBtn) {
-          attachBtn.addEventListener('click', function () {
-            var targetId = (inv && (inv.id || inv.no)) || invoiceId;
-            var ok = AI.attachSummaryToReportRemarks(targetId, reportNarrative);
-            if (ok) {
-              attachBtn.innerHTML = '✅ Attached to Remarks!';
-              attachBtn.style.color = '#059669';
-              attachBtn.style.borderColor = '#10b981';
-              attachBtn.style.background = '#ecfdf5';
-            }
-          });
-        }
-
-        // Organ Body Map Selection & Jump Interactivity
-        var jumpBtn = ov.querySelector('.ai-jump-bodymap-btn');
-        if (jumpBtn) {
-          jumpBtn.addEventListener('click', function () {
-            var bTab = ov.querySelector('.ai-tab-btn[data-tab="bodymap"]');
-            if (bTab) bTab.click();
-          });
-        }
-
-        function selectOrgan(organId) {
-          var org = organMap.filter(function (x) { return x.id === organId; })[0];
-          if (!org) return;
-
-          var cardContainer = ov.querySelector('#aiOrganDetailCard');
-          if (cardContainer) {
-            cardContainer.innerHTML = AI.renderSingleOrganCard(org);
-          }
-
-          ov.querySelectorAll('.ai-organ-select-btn').forEach(function (btn) {
-            var bId = btn.getAttribute('data-organ-id');
-            if (bId === organId) {
-              btn.style.borderColor = '#4f46e5';
-              btn.style.background = '#ede9fe';
-              btn.style.color = '#4338ca';
-              btn.classList.add('active');
-            } else {
-              var targetOrg = organMap.filter(function (x) { return x.id === bId; })[0];
-              var isC = targetOrg && targetOrg.status === 'critical';
-              var isW = targetOrg && targetOrg.status === 'warning';
-              var isS = targetOrg && targetOrg.status === 'normal';
-              btn.style.borderColor = isC ? '#ef4444' : (isW ? '#f59e0b' : (isS ? '#10b981' : '#cbd5e1'));
-              btn.style.background = isC ? '#fef2f2' : (isW ? '#fffbeb' : (isS ? '#f0fdf4' : '#f8fafc'));
-              btn.style.color = isC ? '#b91c1c' : (isW ? '#b45309' : (isS ? '#15803d' : '#475569'));
-              btn.classList.remove('active');
-            }
-          });
-
-          ov.querySelectorAll('.ai-organ-beacon').forEach(function (beacon) {
-            var bId = beacon.getAttribute('data-organ-id');
-            var ring = beacon.querySelector('.ai-beacon-ring');
-            var targetOrg = organMap.filter(function (x) { return x.id === bId; })[0];
-            if (ring && targetOrg) {
-              var isC = targetOrg.status === 'critical';
-              var isW = targetOrg.status === 'warning';
-              var isS = targetOrg.status === 'normal';
-              var coreBg = isC ? '#ef4444' : (isW ? '#f59e0b' : (isS ? '#10b981' : '#475569'));
-              if (bId === organId) {
-                ring.setAttribute('fill', '#ffffff');
-                ring.setAttribute('stroke', '#4f46e5');
-                ring.setAttribute('stroke-width', '3');
-              } else {
-                ring.setAttribute('fill', coreBg);
-                ring.setAttribute('stroke', '#ffffff');
-                ring.setAttribute('stroke-width', '2');
-              }
-            }
-          });
-        }
-
-        ov.querySelectorAll('.ai-organ-select-btn').forEach(function (btn) {
-          btn.addEventListener('click', function () {
-            var orgId = btn.getAttribute('data-organ-id');
-            selectOrgan(orgId);
-          });
-        });
-
-        ov.querySelectorAll('.ai-organ-beacon').forEach(function (beacon) {
-          beacon.addEventListener('click', function () {
-            var orgId = beacon.getAttribute('data-organ-id');
-            selectOrgan(orgId);
-          });
-        });
-
-        // Voice Dictation Button (Urdu & English Speech Recognition)
-        var voiceBtn = ov.querySelector('#aiVoiceDictateBtn');
-        var voiceStatus = ov.querySelector('#aiVoiceStatusText');
-        var dictBox = ov.querySelector('#rxDictationNotesBox');
-        var dictTxt = ov.querySelector('#rxDictationText');
-        var activeRecognizer = null;
-
-        if (voiceBtn) {
-          voiceBtn.addEventListener('click', function () {
-            if (activeRecognizer) {
-              try { activeRecognizer.stop(); } catch (e) {}
-              activeRecognizer = null;
-              voiceBtn.style.background = '#fff';
-              voiceBtn.style.color = '#4f46e5';
-              if (voiceStatus) voiceStatus.textContent = '';
-              return;
-            }
-
-            if (!AI.isVoiceSupported()) {
-              if (App.toast) App.toast('Microphone voice dictation requires Google Chrome or Microsoft Edge.', 'err');
-              return;
-            }
-
-            voiceBtn.style.background = '#fee2e2';
-            voiceBtn.style.color = '#b91c1c';
-            if (voiceStatus) voiceStatus.textContent = '🔴 Listening (Bolain)...';
-
-            activeRecognizer = AI.startVoiceDictation({
-              lang: 'ur-PK',
-              onTranscript: function (text) {
-                if (dictBox) dictBox.style.display = 'block';
-                if (dictTxt) dictTxt.textContent = text;
-              },
-              onEnd: function () {
-                activeRecognizer = null;
-                voiceBtn.style.background = '#fff';
-                voiceBtn.style.color = '#4f46e5';
-                if (voiceStatus) voiceStatus.textContent = '✓ Voice Captured';
-              },
-              onError: function () {
-                activeRecognizer = null;
-                voiceBtn.style.background = '#fff';
-                voiceBtn.style.color = '#4f46e5';
-                if (voiceStatus) voiceStatus.textContent = '';
-              }
-            });
-          });
-        }
-
-        // 1-Tap Order Follow-Up Tests Buttons
-        ov.querySelectorAll('.ai-order-test-btn').forEach(function (b) {
-          b.addEventListener('click', function () {
-            var tName = b.getAttribute('data-testname');
-            var ptId = b.getAttribute('data-ptid');
-            AI.orderFollowupTest(tName, ptId);
-          });
-        });
-
-        // Copy 5 Solutions
-        var cpBtn = ov.querySelector('#aiCopyPrescription');
-        if (cpBtn) {
-          cpBtn.addEventListener('click', function () {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(plainText).then(function () {
-                if (App.toast) App.toast('Prescription recommendations copied to clipboard!');
-              });
-            } else {
-              var ta = document.createElement('textarea');
-              ta.value = plainText;
-              document.body.appendChild(ta);
-              ta.select();
-              document.execCommand('copy');
-              document.body.removeChild(ta);
-              if (App.toast) App.toast('Prescription recommendations copied!');
-            }
-          });
-        }
-
-        // WhatsApp to Doctor
-        var waBtn = ov.querySelector('#aiWaDoctor');
-        if (waBtn && doc) {
-          waBtn.addEventListener('click', function () {
-            var rawPh = doc.whatsapp || doc.phone || '';
-            var ph = rawPh.replace(/[^0-9]/g, '');
-            if (ph.indexOf('0') === 0) ph = '92' + ph.slice(1);
-            var url = 'https://wa.me/' + ph + '?text=' + encodeURIComponent(plainText);
-            window.open(url, '_blank');
-          });
-        }
-
-        // Copy Urdu Guide
-        var cpUrduBtn = ov.querySelector('#aiCopyUrduGuide');
-        if (cpUrduBtn) {
-          cpUrduBtn.addEventListener('click', function () {
-            var uTxt = urduGuide.plainText || '';
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-              navigator.clipboard.writeText(uTxt).then(function () {
-                if (App.toast) App.toast('Roman Urdu Patient Guide copied to clipboard!');
-              });
-            } else {
-              var ta = document.createElement('textarea');
-              ta.value = uTxt;
-              document.body.appendChild(ta);
-              ta.select();
-              document.execCommand('copy');
-              document.body.removeChild(ta);
-              if (App.toast) App.toast('Roman Urdu Patient Guide copied!');
-            }
-          });
-        }
-
-        // WhatsApp Urdu Guide to Patient
-        var waUrduBtn = ov.querySelector('#aiWaUrduGuide');
-        if (waUrduBtn) {
-          waUrduBtn.addEventListener('click', function () {
-            var rawPh = pt.phone || pt.mobile || pt.contact || '';
-            var ph = rawPh.replace(/[^0-9]/g, '');
-            if (ph.indexOf('0') === 0) ph = '92' + ph.slice(1);
-            var url = ph ? ('https://wa.me/' + ph + '?text=' + encodeURIComponent(urduGuide.plainText))
-                         : ('https://wa.me/?text=' + encodeURIComponent(urduGuide.plainText));
-            window.open(url, '_blank');
-          });
-        }
-
-        // Print Doctor Summary Slip (Unchanged)
-        var prBtn = ov.querySelector('#aiPrintSlip');
-        if (prBtn) {
-          prBtn.addEventListener('click', function () {
-            var printWin = window.open('', '_blank');
-            if (!printWin) { if (App.toast) App.toast('Pop-up blocked. Please allow pop-ups to print.', 'err'); return; }
-            printWin.document.write('<!DOCTYPE html><html><head><title>AI Clinical Summary - #' + (window.App ? App.esc(inv.no || inv.id) : (inv.no || inv.id)) + '</title>'
-              + '<style>'
-              + 'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;margin:20px;color:#111;font-size:13px;line-height:1.5}'
-              + 'h2{color:#4338ca;margin:0 0 4px}'
-              + '.box{border:1px solid #ccc;border-radius:8px;padding:12px;margin-bottom:12px}'
-              + '.b-title{font-weight:800;font-size:12px;text-transform:uppercase;margin-bottom:6px;color:#4338ca}'
-              + '@media print{button{display:none}}'
-              + '</style></head><body>'
-              + '<h2>Optix AI Clinical Summary for Attending Doctor</h2>'
-              + '<div>Patient: <b>' + (window.App ? App.esc(pt.name || '') : (pt.name || '')) + '</b> (' + (window.App ? App.esc(pt.age ? pt.age + 'y, ' : '') : (pt.age ? pt.age + 'y, ' : '')) + (window.App ? App.esc(pt.sex || pt.gender || '') : (pt.sex || pt.gender || '')) + ') &bull; Invoice: <b>#' + (window.App ? App.esc(inv.no || inv.id) : (inv.no || inv.id)) + '</b></div>'
-              + '<hr style="border:0;border-top:1px solid #ddd;margin:12px 0">'
-              + '<div class="box"><div class="b-title">1. Clinical Findings & Probable Diagnosis</div>' + diagHtml + '</div>'
-              + '<div class="box"><div class="b-title">2. Prescription & Medication Recommendations</div>' + medsHtml + '</div>'
-              + '<div class="box"><div class="b-title">3. Dietary & Lifestyle Plan</div>' + dietHtml + '</div>'
-              + '<div class="box"><div class="b-title">4. Correlative Follow-Up Tests</div>' + testsHtml + '</div>'
-              + '<div class="box"><div class="b-title">5. Precautions & Red Flags</div>' + redflagsHtml + '</div>'
-              + '<p style="font-size:11px;color:#666;margin-top:20px">Report generated automatically by Optix LAB MedSync AI Clinical Intelligence. Final clinical decisions rest with the prescribing doctor.</p>'
-              + '<script>window.onload=function(){window.print();};<\/script>'
-              + '</body></html>');
-            printWin.document.close();
-          });
-        }
-
-        // Print Digital Rx Pad
-        var prRxBtns = [ov.querySelector('#aiPrintRxPad'), ov.querySelector('#aiPrintRxPadDirect')];
-        prRxBtns.forEach(function (btn) {
-          if (btn) btn.addEventListener('click', function () { AI.printRxPad(analysis); });
-        });
+        AI.wireRecommendationsEvents(ov, analysis, { isPage: false, closeFn: close });
       }
     });
   };
@@ -4584,10 +4752,14 @@
     wireEvents();
   };
 
-  // Register routing for AI Dashboard
+  // Register routing for AI Dashboard & Recommendations
   if (typeof window !== 'undefined' && window.App && typeof window.App.route === 'function') {
     window.App.route('#/ai-dashboard', function () { AI.renderDashboard('view'); });
     window.App.route('/ai-dashboard', function () { AI.renderDashboard('view'); });
+    window.App.route('#/ai-recommendations/:id', function (p) { AI.renderRecommendationsPage('view', p ? p.id : null); });
+    window.App.route('/ai-recommendations/:id', function (p) { AI.renderRecommendationsPage('view', p ? p.id : null); });
+    window.App.route('#/ai-recommendations', function () { AI.renderRecommendationsPage('view'); });
+    window.App.route('/ai-recommendations', function () { AI.renderRecommendationsPage('view'); });
   }
 
   window.App = window.App || {};

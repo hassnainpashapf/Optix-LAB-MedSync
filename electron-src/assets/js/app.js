@@ -160,7 +160,7 @@
     if (seg === 'trends') seg = 'reports';
     if (seg === 'signatures') seg = 'settings';
     if (seg === 'online-payments') seg = 'onlinepay';
-    if (seg === 'ai-dashboard' || seg === 'ai') seg = 'ai-dashboard';
+    if (seg === 'ai-dashboard' || seg === 'ai' || seg === 'ai-recommendations') seg = 'ai-dashboard';
     if (seg === 'digest') seg = 'whatsapp';
     if (seg === 'close-day') seg = 'finance';
     return seg || 'dashboard';
@@ -581,7 +581,7 @@
     /* a doctor's login: doctor dashboard or ai-dashboard */
     if (s && s.role === 'doctor') {
       ensureChatbot(); chatbotVisibility();
-      if (hash !== '#/ai-dashboard' && hash !== '/ai-dashboard') {
+      if (hash !== '#/ai-dashboard' && hash !== '/ai-dashboard' && hash.indexOf('#/ai-recommendations') !== 0 && hash.indexOf('/ai-recommendations') !== 0) {
         if (window.App && App.renderDoctorHome) App.renderDoctorHome();
         else App.loadScript('assets/js/mod-portal.js').then(function () { App.renderDoctorHome(); }, function () { toast('Could not load the dashboard', 'err'); });
         return;

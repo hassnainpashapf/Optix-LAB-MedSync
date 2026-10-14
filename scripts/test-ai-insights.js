@@ -782,6 +782,25 @@ assert(renderedHtml.includes('Clinical Sandbox & Live Analysis Simulator'), 'Das
 
 // Router Registration
 assert(registeredRoutes.includes('#/ai-dashboard') || registeredRoutes.includes('/ai-dashboard'), 'ai-dashboard route must be registered');
+assert(registeredRoutes.includes('#/ai-recommendations') || registeredRoutes.includes('/ai-recommendations'), '#/ai-recommendations route must be registered');
+assert(registeredRoutes.includes('#/ai-recommendations/:id') || registeredRoutes.includes('/ai-recommendations/:id'), '#/ai-recommendations/:id route must be registered');
+
+// Dedicated Full Page View Verification
+assert.equal(typeof AI.renderRecommendationsPage, 'function', 'renderRecommendationsPage must be a function');
+const mockPageContainer = {
+  innerHTML: '',
+  querySelector: () => null,
+  querySelectorAll: () => []
+};
+AI.renderRecommendationsPage(mockPageContainer, 'inv_doc_1', directDoctorData);
+const pageHtml = mockPageContainer.innerHTML;
+assert(pageHtml.includes('ai-recommendations-page'), 'Recommendations must render full page container');
+assert(pageHtml.includes('AI Clinical Recommendations'), 'Recommendations page must render title');
+assert(pageHtml.includes('Doctor Patient'), 'Recommendations page must display patient name');
+assert(pageHtml.includes('Solution 1: Clinical Diagnosis & Interpretation'), 'Recommendations page must display 5 solutions');
+assert(!pageHtml.includes('#4f46e5'), 'Theme colors must be harmonized without mismatched #4f46e5');
+assert(!pageHtml.includes('#f0fdf4;border:1.5px solid #bbf7d0'), 'Solution 1 card must use clean white theme background instead of pastel green fill');
+console.log('✓ Dedicated AI Clinical Recommendations Full Page View & Theme Harmonization verified');
 
 // File Parity & System Integration Checks
 const appJsCode = fs.readFileSync(path.join(root, 'assets/js/app.js'), 'utf8');
