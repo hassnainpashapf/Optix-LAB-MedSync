@@ -3342,56 +3342,46 @@
     var showUrdu = mods.urduGuide !== false;
     var showRx = mods.rxPad !== false;
 
-    var tabsHtml = '<div class="ai-tabs-bar" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0 12px;margin-bottom:14px;border-bottom:1px solid #e2e8f0">'
-      + '<button type="button" class="btn btn-ghost ai-tab-btn active" data-tab="solutions" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;font-size:12px;padding:7px 14px;border-radius:8px;box-shadow:0 1px 3px rgba(19,24,69,0.18);cursor:pointer">🩺 5 Solutions</button>'
-      + (showBodyMap ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="bodymap" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">🫀 Organ Body Map' + (critOrgans.length ? ' <span style="background:#ef4444;color:#fff;padding:1px 6px;border-radius:999px;font-size:10px;margin-left:2px">' + critOrgans.length + '</span>' : '') + '</button>' : '')
-      + (showCalculators ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="indices" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">🧮 Indices & ASCVD</button>' : '')
-      + (showSafety ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="safety" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">⚠️ Drug Safety & DDI</button>' : '')
-      + '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="trends" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">📈 Velocity</button>'
-      + (showGenetic ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="genetic" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">🧬 Genetic Guard</button>' : '')
-      + (showUrdu ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="urdu" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">🇵🇰 Roman Urdu Guide</button>' : '')
-      + (showRx ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="rx" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:7px 14px;border-radius:8px;cursor:pointer">🖨️ Digital Rx Pad</button>' : '')
+    var tabsHtml = '<div class="ai-tabs-bar" style="display:flex;gap:6px;overflow-x:auto;padding:2px 0 10px;margin-bottom:12px;border-bottom:1px solid #e2e8f0">'
+      + '<button type="button" class="btn btn-ghost ai-tab-btn active" data-tab="solutions" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🩺 5 Solutions</button>'
+      + (showBodyMap ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="bodymap" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🫀 Organ Map</button>' : '')
+      + (showCalculators ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="indices" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🧮 Indices</button>' : '')
+      + (showSafety ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="safety" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">⚠️ Drug Safety</button>' : '')
+      + '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="trends" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">📈 Velocity</button>'
+      + (showGenetic ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="genetic" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🧬 Genetic Guard</button>' : '')
+      + (showUrdu ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="urdu" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🇵🇰 Urdu Guide</button>' : '')
+      + (showRx ? '<button type="button" class="btn btn-ghost ai-tab-btn" data-tab="rx" style="background:#ffffff;color:#475569;border:1px solid #cbd5e1;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">🖨️ Rx Pad</button>' : '')
       + '</div>';
 
     var html = ''
       + panicBannerHtml
       + tabsHtml
-      // PANE 1: 5 Solutions (Clean White Cards with Accent Borders)
+      // PANE 1: 5 Solutions (Clean Unified Medical Cards)
       + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
-      + '  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-      + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#64748b;letter-spacing:0.05em;margin-bottom:8px">Detected Abnormal Lab Parameters</div>'
-      + '    <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' + findingsBadges + '</div>'
+      + '  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.04em;margin-bottom:6px">Abnormal Parameters:</div>'
+      + '    <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center">' + findingsBadges + '</div>'
       + '  </div>'
-      + (showBodyMap ? ('  <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:12px 18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-      + '    <div style="display:flex;align-items:center;gap:10px">'
-      + '      <span style="font-size:22px">🧍</span>'
-      + '      <div>'
-      + '        <div style="font-size:13px;font-weight:800;color:#0f172a">Visual Anatomy Organ Impact Map</div>'
-      + '        <div style="font-size:11.5px;color:#64748b;margin-top:2px">' + (critOrgans.length ? '<b style="color:#dc2626">' + critOrgans.length + ' Critical</b> &bull; ' : '') + warnOrgans.length + ' Warning &bull; ' + safeOrgans.length + ' Healthy Organ Systems</div>'
-      + '      </div>'
-      + '    </div>'
-      + '    <button type="button" class="btn btn-ghost ai-jump-bodymap-btn" style="background:#ffffff;color:#131845;border:1px solid #cbd5e1;font-size:11.5px;font-weight:700;padding:6px 12px;border-radius:8px;cursor:pointer">👉 View Interactive Body Map</button>'
-      + '  </div>') : '')
-      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;margin-bottom:14px">'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:3.5px solid #131845;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-      + '      <div style="font-size:12.5px;font-weight:800;text-transform:uppercase;color:#131845;margin-bottom:10px">🩺 Solution 1: Clinical Diagnosis & Interpretation</div>'
+      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:12px;margin-bottom:12px">'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '      <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span>🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
       +        diagHtml
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:3.5px solid #059669;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-      + '      <div style="font-size:12.5px;font-weight:800;text-transform:uppercase;color:#059669;margin-bottom:10px">💊 Solution 2: Prescription & Medication Guidance</div>'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '      <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span>💊</span><span>Solution 2: Prescription & Medication Guidance</span></div>'
       +        medsHtml
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:3.5px solid #d97706;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-      + '      <div style="font-size:12.5px;font-weight:800;text-transform:uppercase;color:#d97706;margin-bottom:10px">🥗 Solution 3: Diet & Lifestyle Plan (Parhez)</div>'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '      <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span>🥗</span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
       +        dietHtml
       + '    </div>'
-      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-top:3.5px solid #2563eb;border-radius:14px;padding:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-      + '      <div style="font-size:12.5px;font-weight:800;text-transform:uppercase;color:#2563eb;margin-bottom:10px">🔬 Solution 4: Confirmatory Follow-up Tests</div>'
+      + '    <div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '      <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span>🔬</span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
       +        testsHtml
       + '    </div>'
       + '  </div>'
-      + '  <div style="background:#ffffff;border:1px solid #fecaca;border-top:3.5px solid #dc2626;border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-      + '    <div style="font-size:12.5px;font-weight:800;text-transform:uppercase;color:#dc2626;margin-bottom:10px">⚠️ Solution 5: Red Flags, Precautions & Specialist Referral</div>'
+      + '  <div style="background:#ffffff;border:1px solid #fed7aa;border-radius:12px;padding:14px 16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+      + '    <div style="font-size:13px;font-weight:800;color:#c2410c;margin-bottom:10px;display:flex;align-items:center;gap:6px"><span>⚠️</span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
       +      redflagsHtml
       + '  </div>'
       + '</div>'
@@ -3424,7 +3414,7 @@
       +   AI.renderBodyMapHtml(analysis)
       + '</div>'
       // Medical Advisory Disclaimer
-      + '<div style="font-size:11px;color:#64748b;line-height:1.4;background:#ffffff;border:1px solid #e2e8f0;padding:10px 14px;border-radius:10px;margin-top:14px;margin-bottom:14px">'
+      + '<div style="font-size:11px;color:#94a3b8;line-height:1.4;text-align:center;padding:10px 14px;margin-top:10px">'
       + '  <b>Medical Disclaimer:</b> AI Clinical Recommendations & Calculators are advisory decision-support tools for registered medical practitioners. Final clinical judgment and prescription authority rests solely with the attending doctor.'
       + '</div>';
 
@@ -3797,35 +3787,31 @@
         + '</div>')
       : '';
 
-    var topBarHtml = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">'
-      + '<div style="display:flex;align-items:center;gap:10px">'
-      + '  <button type="button" class="btn btn-ghost" id="aiPageBackBtn" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;box-shadow:0 1px 3px rgba(15,30,46,0.04);cursor:pointer">← Back</button>'
-      + '  <div style="font-size:13px;color:#64748b;font-weight:600"><span>Clinical Decision Support</span> <span style="color:#cbd5e1">/</span> <b style="color:#0f1e2e">AI Clinical Recommendations</b></div>'
+    var topBarHtml = '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px">'
+      + '<div style="display:flex;align-items:center;gap:8px">'
+      + '  <button type="button" class="btn btn-ghost" id="aiPageBackBtn" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700;display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer">← Back</button>'
+      + '  <div style="font-size:12.5px;color:#64748b;font-weight:600"><span>Clinical Decision Support</span> <span style="color:#cbd5e1">/</span> <b style="color:#0f1e2e">AI Clinical Recommendations</b></div>'
       + '</div>'
-      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
-      + '  <button type="button" class="btn btn-ghost" id="aiCopyPrescription" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer">📋 Copy 5 Solutions</button>'
-      + '  <button type="button" class="btn btn-ghost" id="aiAttachReportRemarks" style="border:1px solid #131845;background:#ffffff;color:#131845;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer">📄 Attach to Report Remarks</button>'
-      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn btn-ghost" id="aiWaDoctor" style="color:#059669;border:1px solid #a7f3d0;background:#ffffff;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer">💬 WhatsApp to Doctor</button>' : '')
-      + '  <button type="button" class="btn btn-ghost" id="aiPrintSlip" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700;padding:7px 12px;border-radius:8px;cursor:pointer">🖨️ Print Summary</button>'
-      + '  <button type="button" class="btn btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;padding:7px 14px;border-radius:8px;cursor:pointer">🖨️ Print Rx Pad</button>'
+      + '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">'
+      + '  <button type="button" class="btn btn-ghost" id="aiCopyPrescription" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">📋 Copy Solutions</button>'
+      + '  <button type="button" class="btn btn-ghost" id="aiAttachReportRemarks" style="border:1px solid #131845;background:#ffffff;color:#131845;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">📄 Attach Remarks</button>'
+      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn btn-ghost" id="aiWaDoctor" style="color:#059669;border:1px solid #a7f3d0;background:#ffffff;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">💬 WhatsApp Doctor</button>' : '')
+      + '  <button type="button" class="btn btn-ghost" id="aiPrintSlip" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">🖨️ Print Summary</button>'
+      + '  <button type="button" class="btn btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;font-size:12px;padding:6px 14px;border-radius:7px;cursor:pointer">🖨️ Print Rx Pad</button>'
       + '</div>'
       + '</div>';
 
-    var headerCardHtml = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:20px 24px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;box-shadow:0 1px 3px rgba(15,30,46,0.06)">'
+    var headerCardHtml = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:16px 20px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
       + '<div>'
-      + '  <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'
-      + '    <span style="font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:#131845;background:#ebf4f8;padding:3px 8px;border-radius:6px">Optix AI Clinical Intelligence Engine</span>'
-      + '    <span style="font-size:11px;font-weight:700;color:#059669;background:#ecfdf5;border:1px solid #a7f3d0;padding:2px 8px;border-radius:6px">● Hospital-Grade Pro</span>'
-      + '  </div>'
-      + '  <h1 style="font-size:22px;font-weight:800;color:#131845;margin:0 0 6px;letter-spacing:-0.02em">AI Clinical Recommendations</h1>'
-      + '  <div style="font-size:13.5px;color:#334155;display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      + '  <h1 style="font-size:20px;font-weight:800;color:#131845;margin:0 0 4px;letter-spacing:-0.01em">AI Clinical Recommendations</h1>'
+      + '  <div style="font-size:13px;color:#475569;display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
       + '    <span>Patient: <b style="color:#0f1e2e">' + ptName + '</b> (' + ptAgeGender + ')</span>'
       + '    <span style="color:#cbd5e1">•</span>'
       + '    <span>Invoice: <b style="color:#0f1e2e">#' + invNo + '</b></span>'
       + (doc ? '    <span style="color:#cbd5e1">•</span><span>Ref. Doctor: <b style="color:#0f1e2e">' + docName + '</b></span>' : '')
       + '  </div>'
       + '</div>'
-      + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
       +    switcherHtml
       + '</div>'
       + '</div>';
@@ -3892,15 +3878,11 @@
     var invNo = (window.App ? App.esc(inv.no || inv.id) : (inv.no || inv.id));
     var docName = doc ? (window.App ? App.esc(doc.name) : doc.name) : '';
 
-    var modalHeaderHtml = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;padding:16px 20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.06)">'
-      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">'
+    var modalHeaderHtml = '<div style="background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 18px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
       + '  <div>'
-      + '    <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#131845">Smart Medical Intelligence Pro (Hospital-Grade)</div>'
-      + '    <h2 style="font-size:19px;font-weight:800;color:#131845;margin:2px 0 4px">🤖 AI Doctor Recommendations & Clinical Intelligence</h2>'
-      + '    <div style="font-size:13px;color:#334155">Patient: <b style="color:#0f1e2e">' + ptName + '</b> &bull; Invoice: <b style="color:#0f1e2e">#' + invNo + '</b>' + (doc ? ' &bull; Ref. Doctor: <b style="color:#0f1e2e">' + docName + '</b>' : '') + '</div>'
-      + '  </div>'
-      + '  <div style="background:#ebf4f8;color:#131845;padding:6px 12px;border-radius:10px;font-size:11.5px;font-weight:700;border:1px solid #c7d8e8">'
-      + '    ⚡ Real-time Decision Support'
+      + '    <h2 style="font-size:18px;font-weight:800;color:#131845;margin:0 0 4px">AI Clinical Recommendations</h2>'
+      + '    <div style="font-size:12.5px;color:#475569">Patient: <b style="color:#0f1e2e">' + ptName + '</b> &bull; Invoice: <b style="color:#0f1e2e">#' + invNo + '</b>' + (doc ? ' &bull; Ref. Doctor: <b style="color:#0f1e2e">' + docName + '</b>' : '') + '</div>'
       + '  </div>'
       + '</div>'
       + '</div>';
@@ -3909,13 +3891,13 @@
       + modalHeaderHtml
       + AI.buildRecommendationsContent(analysis, { isPage: false })
       + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px">'
-      + '  <button type="button" class="btn btn-ghost" id="aiModalClose" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700">Close</button>'
+      + '  <button type="button" class="btn btn-ghost" id="aiModalClose" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:600;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer">Close</button>'
       + '  <div style="display:flex;gap:6px;flex-wrap:wrap">'
-      + '    <button type="button" class="btn btn-ghost" id="aiCopyPrescription" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700">📋 Copy 5 Solutions</button>'
-      + '    <button type="button" class="btn btn-ghost" id="aiAttachReportRemarks" style="border:1px solid #131845;background:#ffffff;color:#131845;font-weight:700">📄 Attach to Report Remarks</button>'
-      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn btn-ghost" id="aiWaDoctor" style="color:#059669;border:1px solid #a7f3d0;background:#ffffff;font-weight:700">💬 WhatsApp to Doctor</button>' : '')
-      + '    <button type="button" class="btn btn-ghost" id="aiPrintSlip" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:700">🖨️ Print Summary</button>'
-      + '    <button type="button" class="btn btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700">🖨️ Print Rx Pad</button>'
+      + '    <button type="button" class="btn btn-ghost" id="aiCopyPrescription" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">📋 Copy Solutions</button>'
+      + '    <button type="button" class="btn btn-ghost" id="aiAttachReportRemarks" style="border:1px solid #131845;background:#ffffff;color:#131845;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">📄 Attach Remarks</button>'
+      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn btn-ghost" id="aiWaDoctor" style="color:#059669;border:1px solid #a7f3d0;background:#ffffff;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">💬 WhatsApp Doctor</button>' : '')
+      + '    <button type="button" class="btn btn-ghost" id="aiPrintSlip" style="border:1px solid #cbd5e1;background:#ffffff;color:#0f1e2e;font-weight:600;font-size:12px;padding:6px 11px;border-radius:7px;cursor:pointer">🖨️ Print Summary</button>'
+      + '    <button type="button" class="btn btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1px solid #131845;font-weight:700;font-size:12px;padding:6px 14px;border-radius:7px;cursor:pointer">🖨️ Print Rx Pad</button>'
       + '  </div>'
       + '</div>'
       + '</div>';
