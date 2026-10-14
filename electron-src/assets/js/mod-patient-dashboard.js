@@ -979,46 +979,6 @@
       '          </div>' +
       '        </div>' +
 
-      // Integrated Stress Patterns Overview
-      '        <div style="margin-top:20px;padding-top:16px;border-top:1.5px solid #edf2f7">' +
-      '          <div class="vitals-card-head">' +
-      '            <div>' +
-      '              <h3>Stress Patterns Overview</h3>' +
-      '              <p class="pd-sub" style="margin-top:2px">Continuous physiological telemetry &amp; autonomic cardiovascular monitoring</p>' +
-      '            </div>' +
-      '            <div class="vitals-month-pill" id="btnMonthPicker">April, 2026 ▾</div>' +
-      '          </div>' +
-      '          <div class="vitals-timeline-strip">' +
-      '            <button class="vitals-timeline-arrow" id="btnDayPrev" type="button">‹</button>' +
-      '            <div style="display:flex;align-items:center;gap:6px;overflow-x:auto;flex:1;justify-content:space-around" id="vitalsDaysTrack">' +
-      datePillsHtml +
-      '            </div>' +
-      '            <button class="vitals-timeline-arrow" id="btnDayNext" type="button">›</button>' +
-      '          </div>' +
-      '          <div class="vitals-stress-row">' +
-      '            <div class="vitals-radial-gauge-box" id="gaugeBox">' +
-      renderRadialGaugeSvg(curDay.avg) +
-      '              <div class="vitals-gauge-inner">' +
-      '                <div class="gauge-pct" id="gaugePctText">' + curDay.avg + '%</div>' +
-      '                <div class="gauge-lbl">Avg Stres Level</div>' +
-      '              </div>' +
-      '            </div>' +
-      '            <div class="vitals-stress-info">' +
-      '              <h4>Daily Stress Trends</h4>' +
-      '              <p id="stressTrendsDesc">' + esc(curDay.desc) + '</p>' +
-      '              <div class="vitals-peak-stats">' +
-      '                <div class="vitals-stat-item">' +
-      '                  <span class="vitals-stat-lbl">↗ Highest Peak</span>' +
-      '                  <span class="vitals-stat-val" id="highestPeakVal"><span>' + curDay.peak + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.peakBpm + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.peakTime + '</span></span>' +
-      '                </div>' +
-      '                <div class="vitals-stat-item">' +
-      '                  <span class="vitals-stat-lbl">✓ Lowest Point</span>' +
-      '                  <span class="vitals-stat-val" id="lowestPointVal"><span>' + curDay.low + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.lowBpm + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.lowTime + '</span></span>' +
-      '                </div>' +
-      '              </div>' +
-      '            </div>' +
-      '          </div>' +
-      '        </div>' +
       '      </div>' +
 
       // Sub-cards Row

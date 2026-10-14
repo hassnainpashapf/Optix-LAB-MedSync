@@ -137,15 +137,9 @@ const patient = fakeDB._patients['PT-101'];
 const html = context.App.patientDashboard.render(patient);
 
 assert.ok(html.includes('Mohamed Ahmed'), 'Patient name present in left profile menu');
-assert.ok(html.includes('Stress Patterns Overview'), 'Card 1 Stress Patterns Overview present');
-assert.ok(html.includes('April, 2026'), 'Month selector present');
-assert.ok(html.includes('vitals-day-pill'), 'Date timeline pills present');
-assert.ok(html.includes('Avg Stres Level'), 'Avg Stress Level radial gauge present');
-assert.ok(html.includes('Highest Peak'), 'Highest peak stat present');
-assert.ok(html.includes('Lowest Point'), 'Lowest point stat present');
-assert.ok(html.includes('132 BPM'), 'Heart rate peak 132 BPM matches screenshot');
-assert.ok(html.includes('104 BPM'), 'Lowest point heart rate 104 BPM matches screenshot');
-console.log('✓ Stress Patterns Overview card, date timeline, circular gauge, and peak BPM verified');
+assert.ok(html.includes('Patient Details Overview'), 'Card 1 Patient Details Overview present');
+assert.ok(!html.includes('Stress Patterns Overview'), 'Stress Patterns Overview cleanly removed');
+console.log('✓ Patient Details Overview verified and Stress Patterns Overview cleanly removed');
 
 // 3. Test Rehabilitation Plan card
 assert.ok(html.includes('Daily Rehabilitation Plan'), 'Daily Rehabilitation Plan card present');
