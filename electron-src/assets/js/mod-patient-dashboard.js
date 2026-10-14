@@ -420,39 +420,45 @@
 
   function renderPatientTestsListHtml(tests) {
     if (!tests || !tests.length) {
-      return '<div style="padding:16px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;text-align:center;color:#64748b;font-size:12px;margin-bottom:12px">' +
-        '<span>📋 No laboratory tests recorded yet for this patient.</span>' +
+      return '<div style="padding:22px 16px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;text-align:center;color:#64748b;font-size:12px;margin-bottom:12px">' +
+        '<div style="font-size:22px;margin-bottom:4px">📋</div>' +
+        '<strong style="color:#334155;display:block;margin-bottom:2px">No Previous Tests Recorded</strong>' +
+        '<span style="font-size:11.5px">No laboratory tests or diagnostic orders recorded yet for this patient.</span>' +
         '</div>';
     }
-    return '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">' +
-      tests.slice(0, 5).map(function (t) {
-        var badgeCls = 'b-warn';
-        var badgeText = 'Pending';
-        if (t.status === 'abnormal') {
-          badgeCls = 'b-red';
-          badgeText = '⚠️ Abnormal';
-        } else if (t.status === 'within') {
-          badgeCls = 'b-ready';
-          badgeText = '✓ Normal';
-        } else if (t.status === 'unknown') {
-          badgeCls = 'b-warn';
-          badgeText = 'Incomplete';
+    return '<div class="pd-tests-scroll-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-height:320px;overflow-y:auto;padding-right:4px">' +
+      tests.map(function (t) {
+        var badgeCls = t.badgeCls || 'b-warn';
+        var badgeText = t.statusLabel || 'Pending';
+        if (!t.statusLabel) {
+          if (t.status === 'abnormal') {
+            badgeCls = 'b-red';
+            badgeText = 'Abnormal';
+          } else if (t.status === 'within' || t.status === 'ready') {
+            badgeCls = 'b-ready';
+            badgeText = 'Normal';
+          } else {
+            badgeCls = 'b-warn';
+            badgeText = 'Pending';
+          }
         }
-        var dateStr = t.date ? (App.d ? App.d(t.date) : String(t.date).slice(0, 10)) : 'Ordered';
-        var flagsHtml = (t.flags && t.flags.length)
-          ? '<div style="font-size:11px;color:#dc2626;font-weight:600;margin-top:2px;background:#fef2f2;padding:2px 8px;border-radius:6px;display:inline-block">' + t.flags.slice(0, 2).map(esc).join(', ') + (t.flags.length > 2 ? ' +' + (t.flags.length - 2) + ' more' : '') + '</div>'
+        var dateStr = t.date ? (App.d ? App.d(t.date) : String(t.date).slice(0, 10)) : 'Recorded';
+        var invoiceTag = t.invoiceNo
+          ? '<span style="color:#cbd5e1">•</span><span style="font-weight:600;color:#0284c7">' + esc(t.invoiceNo) + '</span>'
           : '';
 
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:12px;gap:10px;box-shadow:0 1px 3px rgba(15,23,42,0.02)">' +
+        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:10px;gap:12px;box-shadow:0 1px 2px rgba(15,23,42,0.02)">' +
           '  <div style="min-width:0;flex:1">' +
           '    <div style="display:flex;align-items:center;gap:7px">' +
-          '      <span style="font-size:14px">🧪</span>' +
-          '      <strong style="font-size:12.5px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(t.name) + '</strong>' +
-          '      <small style="font-size:11px;color:#64748b">(' + esc(dateStr) + ')</small>' +
+          '      <span style="font-size:13px;color:#475569" aria-hidden="true">🧪</span>' +
+          '      <strong style="font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(t.name) + '</strong>' +
           '    </div>' +
-          flagsHtml +
+          '    <div style="display:flex;align-items:center;gap:6px;margin-top:3px;font-size:11px;color:#64748b">' +
+          '      <span>📅 ' + esc(dateStr) + '</span>' +
+          invoiceTag +
+          '    </div>' +
           '  </div>' +
-          '  <span class="badge ' + badgeCls + '" style="font-size:11px;font-weight:700;flex-shrink:0">' + esc(badgeText) + '</span>' +
+          '  <span class="badge ' + badgeCls + '" style="font-size:11px;font-weight:700;flex-shrink:0;padding:3px 8px;border-radius:6px">' + esc(badgeText) + '</span>' +
           '</div>';
       }).join('') +
       '</div>';
@@ -534,6 +540,71 @@
       });
       entries.push({name:name,region:regionFor({name:name,code:test.code}),status:flags.length?'abnormal':!ready?'pending':checked>0&&checked===params.length&&populated===params.length?'within':'unknown',flags:flags,date:inv.createdAt||''});
     });});return entries;
+  }
+
+  function getPatientOldTests(patient) {
+    if (!patient || !patient.id) return [];
+    var invoices = (DB.all('invoices') || []).filter(function (inv) {
+      return inv && inv.patientId === patient.id;
+    }).sort(function (a, b) {
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+    var results = DB.all('results') || [];
+    var list = [];
+    invoices.forEach(function (inv) {
+      var invDate = inv.createdAt ? (App.d ? App.d(inv.createdAt) : String(inv.createdAt).slice(0, 10)) : 'Recorded';
+      var invNo = inv.no || (inv.id ? '#' + inv.id : '');
+      (inv.items || []).forEach(function (item) {
+        var test = (item.testId ? DB.get('tests', item.testId) : null) || {};
+        var testName = test.name || item.name || test.code || 'Diagnostic test';
+        var ready = results.filter(function (res) {
+          return res && res.invoiceId === inv.id && (res.testId === item.testId || (!item.testId && res.testName === testName));
+        }).sort(function (a, b) {
+          return String(b.reportedAt || b.updatedAt || '').localeCompare(String(a.reportedAt || a.updatedAt || ''));
+        })[0];
+
+        var status = 'pending';
+        var statusLabel = 'Pending';
+        var badgeCls = 'b-warn';
+        if (ready) {
+          if (ready.status === 'ready') {
+            status = 'ready';
+            statusLabel = 'Normal';
+            badgeCls = 'b-ready';
+            var params = Array.isArray(test.params) ? test.params : [];
+            var hasAbnormal = false;
+            params.forEach(function (param) {
+              var values = ready.values || {};
+              var val = values[param.id] != null ? values[param.id] : values[param.name];
+              var ref = reference(param, patient);
+              if (outsideRange(val, ref)) hasAbnormal = true;
+            });
+            if (hasAbnormal || ready.isAbnormal) {
+              status = 'abnormal';
+              statusLabel = 'Abnormal';
+              badgeCls = 'b-red';
+            }
+          } else if (ready.status === 'draft') {
+            status = 'pending';
+            statusLabel = 'In Progress';
+            badgeCls = 'b-warn';
+          }
+        }
+        list.push({
+          name: testName,
+          testId: item.testId,
+          invoiceId: inv.id,
+          invoiceNo: invNo,
+          date: invDate,
+          rawDate: inv.createdAt,
+          status: status,
+          statusLabel: statusLabel,
+          badgeCls: badgeCls,
+          price: item.price
+        });
+      });
+    });
+    return list;
   }
 
   function anatomy(entry) {
@@ -1354,6 +1425,19 @@
   /* Render Primary Patient Vitals Dashboard */
   function render(patient) {
     var tests=testsFor(patient);
+    var oldTests = getPatientOldTests(patient);
+    if (!oldTests.length && tests && tests.length) {
+      oldTests = tests.map(function (t) {
+        return {
+          name: t.name,
+          date: t.date ? (App.d ? App.d(t.date) : String(t.date).slice(0, 10)) : 'Recorded',
+          invoiceNo: '',
+          status: t.status,
+          statusLabel: t.status === 'abnormal' ? 'Abnormal' : t.status === 'within' ? 'Normal' : 'Pending',
+          badgeCls: t.status === 'abnormal' ? 'b-red' : t.status === 'within' ? 'b-ready' : 'b-warn'
+        };
+      });
+    }
     var labData = analyzePatientLabHistory(patient);
     var doctor = patient.doctorId ? (DB.get('doctors', patient.doctorId) || {}).name : '';
     var registered = patient.createdAt ? (App.dt ? App.dt(patient.createdAt) : patient.createdAt) : '';
@@ -1444,12 +1528,12 @@
       '        <div class="vitals-card">' +
       '          <div class="vitals-card-head" style="margin-bottom:10px">' +
       '            <div>' +
-      '              <h3>Diagnostic Tests &amp; Clinical Care</h3>' +
-      '              <p class="pd-sub" style="margin-top:2px">Patient laboratory test orders &amp; diagnostic status</p>' +
+      '              <h3>Diagnostic Tests</h3>' +
+      '              <p class="pd-sub" style="margin-top:2px">Patient previous laboratory tests &amp; order history</p>' +
       '            </div>' +
-      '            <span class="badge b-ready" style="font-size:11px;font-weight:700">' + tests.length + ' Test' + (tests.length === 1 ? '' : 's') + '</span>' +
+      '            <span class="badge b-ready" style="font-size:11px;font-weight:700">' + oldTests.length + ' Test' + (oldTests.length === 1 ? '' : 's') + '</span>' +
       '          </div>' +
-      renderPatientTestsListHtml(tests) +
+      renderPatientTestsListHtml(oldTests) +
       '        </div>' +
 
       // Sub-card 2: Capacity Efficiency & Medication Adherence
@@ -1863,6 +1947,7 @@
     mount: mount,
     regionFor: regionFor,
     testsFor: testsFor,
+    getPatientOldTests: getPatientOldTests,
     outsideRange: outsideRange
   };
 })();
