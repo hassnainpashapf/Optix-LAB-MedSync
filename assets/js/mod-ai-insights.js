@@ -3979,7 +3979,7 @@
     }
 
     function renderShell() {
-      var h = '<div id="optixAiDashboard" style="font-family:inherit;color:#0f172a;max-width:1160px;margin:0 auto;padding-bottom:30px">'
+      var h = '<div id="optixAiDashboard" aria-label="Optix AI Clinical Intelligence Engine" style="font-family:inherit;color:#0f172a;max-width:1160px;margin:0 auto;padding-bottom:30px">'
         + '<style>'
         + '  .ai-dash-kpi { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:18px 20px; box-shadow:0 1px 3px rgba(0,0,0,0.04); transition:all .2s ease; }'
         + '  .ai-dash-kpi:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,0.06); }'
@@ -4002,18 +4002,7 @@
         + '  @keyframes aiPulseDot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.4;transform:scale(0.85);} }'
         + '  .ai-live-dot { width:9px; height:9px; border-radius:50%; background:#10b981; display:inline-block; animation:aiPulseDot 1.8s infinite ease-in-out; }'
         + '</style>'
-
-        // Clean Title Bar (Hero Banner removed as requested)
-        + '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:18px">'
-        + '  <div style="display:flex; align-items:center; gap:12px">'
-        + '    <h1 style="margin:0; font-size:22px; font-weight:900; color:#0f172a; display:flex; align-items:center; gap:8px">'
-        + '      🧠 Optix AI Clinical Intelligence Engine'
-        + '    </h1>'
-        + '    <span style="display:inline-flex; align-items:center; gap:6px; background:#ecfdf5; border:1px solid #a7f3d0; padding:3px 10px; border-radius:999px; font-size:11.5px; font-weight:700; color:#059669">'
-        + '      <span class="ai-live-dot"></span> Active'
-        + '    </span>'
-        + '  </div>'
-        + '</div>'
+        + '<div style="margin-top:10px"></div>'
 
         // Top KPIs Grid
         + '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px; margin-bottom:20px">'
