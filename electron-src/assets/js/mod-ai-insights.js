@@ -407,7 +407,8 @@
   AI.calculateIndices = function (reportData, findings) {
     var rawVals = AI.extractRawValues(reportData);
     var pt = (reportData && (reportData.pt || reportData.pat || reportData.patient)) || {};
-    var age = parseFloat(pt.age) || 45;
+    var age = parseFloat(pt.age);
+    var hasAge = isFinite(age) && age >= 18;
     var sexStr = String(pt.sex || pt.gender || 'male').toLowerCase();
     var isFem = (sexStr === 'female' || sexStr === 'f');
 
@@ -441,7 +442,7 @@
     }
 
     // 2. eGFR (CKD-EPI 2021 Race-Free Equation)
-    if (rawVals.creatinine != null && rawVals.creatinine > 0) {
+    if (hasAge && ['male', 'm', 'female', 'f'].indexOf(String(pt.sex || pt.gender || '').toLowerCase()) >= 0 && rawVals.creatinine != null && rawVals.creatinine > 0) {
       var scr = rawVals.creatinine;
       var k = isFem ? 0.7 : 0.9;
       var alpha = isFem ? -0.241 : -0.302;
@@ -480,7 +481,7 @@
     }
 
     // 3. FIB-4 Liver Fibrosis Score
-    if (rawVals.ast != null && rawVals.alt != null && rawVals.plt != null && rawVals.alt > 0) {
+    if (hasAge && rawVals.ast != null && rawVals.alt != null && rawVals.plt != null && rawVals.alt > 0) {
       var pltNorm = rawVals.plt > 1000 ? (rawVals.plt / 1000) : rawVals.plt;
       if (pltNorm > 0) {
         var fib4Val = (age * rawVals.ast) / (pltNorm * Math.sqrt(rawVals.alt));
@@ -604,14 +605,18 @@
   AI.calculateAscvdRisk = function (reportData) {
     var rawVals = AI.extractRawValues(reportData);
     var pt = (reportData && (reportData.pt || reportData.pat || reportData.patient)) || {};
-    var age = parseFloat(pt.age) || 50;
+    var age = parseFloat(pt.age);
     var sexStr = String(pt.sex || pt.gender || 'male').toLowerCase();
     var isFem = (sexStr === 'female' || sexStr === 'f');
 
-    var chol = rawVals.cholesterol || 210;
-    var hdl = rawVals.hdl || 45;
-    var isDiabetic = !!(rawVals.glucose_fasting >= 126 || rawVals.glucose_random >= 200 || rawVals.hba1c >= 6.5);
-    var sbp = 130;
+    var chol = rawVals.cholesterol;
+    var hdl = rawVals.hdl;
+    var sbp = Number(pt.systolicBP);
+    // The existing equation supports untreated non-smokers only. Never substitute invented measurements or medical history.
+    if (!isFinite(age) || age < 40 || age > 79 || ['male', 'm', 'female', 'f'].indexOf(String(pt.sex || pt.gender || '').toLowerCase()) < 0 ||
+        !isFinite(chol) || chol <= 0 || !isFinite(hdl) || hdl <= 0 || !isFinite(sbp) || sbp <= 0 ||
+        pt.smoker !== false || pt.bpTreated !== false || typeof pt.diabetes !== 'boolean') return null;
+    var isDiabetic = pt.diabetes;
 
     var lnAge = Math.log(Math.max(age, 20));
     var lnTotChol = Math.log(Math.max(chol, 100));
@@ -809,9 +814,6 @@
     }
 
     var isPanic = alerts.length > 0;
-    if (isPanic && typeof AI.recordAiStat === 'function') {
-      AI.recordAiStat('panics');
-    }
     var formattedMessage = '';
     if (isPanic) {
       formattedMessage = '🚨 *CRITICAL PANIC-VALUE LAB ALERT (ISO 15189 / CAP Standard)*\n'
@@ -2977,6 +2979,13 @@
     var critOrgans = organMap.filter(function (o) { return o.status === 'critical'; });
     var warnOrgans = organMap.filter(function (o) { return o.status === 'warning'; });
     var safeOrgans = organMap.filter(function (o) { return o.status === 'normal'; });
+    if (String(inv.id || inv.no || '').indexOf('SIM-') !== 0) {
+      AI.recordAiStat('analyzed');
+      if (panicInfo.isPanic) AI.recordAiStat('panics');
+      if (critOrgans.length || warnOrgans.length) AI.recordAiStat('organAlerts');
+      if (drugInteractions.length) AI.recordAiStat('ddiBlocked');
+    }
+
 
     // Badges HTML
     var findingsBadges = findings.length
@@ -3493,6 +3502,7 @@
         var sosBtn = ov.querySelector('#aiSendPanicSos');
         if (sosBtn) {
           sosBtn.addEventListener('click', function () {
+            if (String(inv.id || inv.no || '').indexOf('SIM-') === 0) { if (App.toast) App.toast('Simulation only: no message will be sent.', 'info'); return; }
             var rawPh = (doc && (doc.whatsapp || doc.phone)) || '';
             var ph = rawPh.replace(/[^0-9]/g, '');
             if (ph.indexOf('0') === 0) ph = '92' + ph.slice(1);
@@ -3816,11 +3826,31 @@
     return def;
   };
 
+  AI.canConfigure = function () {
+    try { return JSON.parse(localStorage.getItem('labpos_session') || 'null').role === 'admin'; } catch (e) { return false; }
+  };
+
   AI.saveAiConfig = function (newConfig) {
     try {
+      if (!AI.canConfigure()) throw new Error('Only an admin can change AI settings.');
+      if (!newConfig || typeof newConfig !== 'object') throw new Error('Invalid AI settings.');
+      var th = newConfig.panicThresholds || {};
+      Object.keys(th).forEach(function (key) { if (typeof th[key] !== 'number' || !isFinite(th[key]) || th[key] <= 0) throw new Error('Thresholds must be positive, finite numbers.'); });
+      [['glucoseLow', 'glucoseHigh'], ['potassiumLow', 'potassiumHigh'], ['wbcLow', 'wbcHigh']].forEach(function (pair) {
+        if (th[pair[0]] != null && th[pair[1]] != null && th[pair[0]] >= th[pair[1]]) throw new Error('Lower thresholds must be below upper thresholds.');
+      });
       var patch = { aiConfig: newConfig };
       if (Array.isArray(newConfig.roles)) {
         patch.aiInsightsRoles = newConfig.roles;
+      }
+      if (window.DB && typeof DB.saveAiConfig === 'function') {
+        return DB.saveAiConfig(patch).then(function () {
+          if (App.toast) App.toast('AI settings saved.', 'ok');
+          return true;
+        }).catch(function (e) {
+          if (App.toast) App.toast('AI settings were not saved: ' + e.message, 'err');
+          return false;
+        });
       }
       if (window.DB && typeof DB.update === 'function') {
         DB.update('settings', 'main', patch);
@@ -3839,17 +3869,21 @@
     }
   };
 
+  function aiStatsKey() {
+    var lab = window.DB && typeof DB.currentLabId === 'function' ? DB.currentLabId() : 'default';
+    return 'optix_ai_stats_' + String(lab || 'default');
+  }
   AI.getAiStats = function () {
-    var stats = { analyzed: 128, panics: 14, organAlerts: 43, ddiBlocked: 29 };
+    var stats = { analyzed: 0, panics: 0, organAlerts: 0, ddiBlocked: 0 };
     try {
-      var raw = localStorage.getItem('optix_ai_stats');
+      var raw = localStorage.getItem(aiStatsKey());
       if (raw) {
         var p = JSON.parse(raw);
         if (p && typeof p === 'object') {
-          if (p.analyzed != null) stats.analyzed = p.analyzed;
-          if (p.panics != null) stats.panics = p.panics;
-          if (p.organAlerts != null) stats.organAlerts = p.organAlerts;
-          if (p.ddiBlocked != null) stats.ddiBlocked = p.ddiBlocked;
+          if (typeof p.analyzed === 'number' && isFinite(p.analyzed) && p.analyzed >= 0) stats.analyzed = Math.floor(p.analyzed);
+          if (typeof p.panics === 'number' && isFinite(p.panics) && p.panics >= 0) stats.panics = Math.floor(p.panics);
+          if (typeof p.organAlerts === 'number' && isFinite(p.organAlerts) && p.organAlerts >= 0) stats.organAlerts = Math.floor(p.organAlerts);
+          if (typeof p.ddiBlocked === 'number' && isFinite(p.ddiBlocked) && p.ddiBlocked >= 0) stats.ddiBlocked = Math.floor(p.ddiBlocked);
         }
       }
     } catch (e) {}
@@ -3860,7 +3894,7 @@
     try {
       var stats = AI.getAiStats();
       if (type && stats[type] != null) stats[type]++;
-      localStorage.setItem('optix_ai_stats', JSON.stringify(stats));
+      localStorage.setItem(aiStatsKey(), JSON.stringify(stats));
     } catch (e) {}
   };
 
@@ -3928,6 +3962,12 @@
         }]
       };
     }
+    // The analysis engine reads parameter values from res.values, not the sandbox's display-only value property.
+    data.groups = data.groups.map(function (group) {
+      var values = {};
+      var params = group.params.map(function (p, i) { var id = 'sim-' + i; values[id] = p.value; return Object.assign({}, p, { id: id }); });
+      return { test: { name: group.name, params: params }, res: { values: values } };
+    });
     return AI.showModal(data.inv.id, data);
   };
 
@@ -4040,15 +4080,15 @@
         + '    <div class="stat-ico">'
         + '      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>'
         + '    </div>'
-        + '    <div class="lb">Evaluated Reports</div>'
+        + '    <div class="lb">Analysis Views</div>'
         + '    <div class="vl" data-count="' + stats.analyzed + '">' + stats.analyzed + '</div>'
-        + '    <div class="dl">100% evidence-based</div>'
+        + '    <div class="dl">Local activity count</div>'
         + '  </div>'
         + '  <div class="stat ai-dash-kpi" data-tint="red" style="--sc:#dc2626;--sc-soft:#fef2f2">'
         + '    <div class="stat-ico">'
         + '      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
         + '    </div>'
-        + '    <div class="lb">Panic Interceptions</div>'
+        + '    <div class="lb">Critical Flag Views</div>'
         + '    <div class="vl" style="color:#dc2626 !important" data-count="' + stats.panics + '">' + stats.panics + '</div>'
         + '    <div class="dl">Critical emergency thresholds</div>'
         + '  </div>'
@@ -4056,7 +4096,7 @@
         + '    <div class="stat-ico">'
         + '      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'
         + '    </div>'
-        + '    <div class="lb">Organ Stress Alerts</div>'
+        + '    <div class="lb">Organ Flag Views</div>'
         + '    <div class="vl" style="color:#d97706 !important" data-count="' + stats.organAlerts + '">' + stats.organAlerts + '</div>'
         + '    <div class="dl">Organ risk warnings</div>'
         + '  </div>'
@@ -4064,9 +4104,9 @@
         + '    <div class="stat-ico">'
         + '      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
         + '    </div>'
-        + '    <div class="lb">Toxic DDIs Prevented</div>'
+        + '    <div class="lb">Interaction Flag Views</div>'
         + '    <div class="vl" style="color:#16a34a !important" data-count="' + stats.ddiBlocked + '">' + stats.ddiBlocked + '</div>'
-        + '    <div class="dl">Adverse clashes prevented</div>'
+        + '    <div class="dl">Analysis windows with flags</div>'
         + '  </div>'
         + '</div>'
 
@@ -4393,6 +4433,13 @@
         });
       });
 
+      if (!AI.canConfigure()) {
+        container.querySelectorAll('#aiDashPanels input, .ai-save-config-btn, #aiResetPanicDefaultsBtn, #aiEnableAllMods, #aiDisableAllMods').forEach(function (control) { control.disabled = true; });
+        var hint = document.createElement('p');
+        hint.className = 'muted'; hint.textContent = 'Read-only settings: only an admin can save changes. You can use the sandbox simulations.';
+        var bar = container.querySelector('.ai-tabs-bar'); if (bar) bar.insertAdjacentElement('afterend', hint);
+      }
+
       // Enable / Disable All helper buttons
       var enAllBtn = container.querySelector('#aiEnableAllMods');
       if (enAllBtn) {
@@ -4444,7 +4491,7 @@
           if (container.querySelector('#thBilirubin')) container.querySelector('#thBilirubin').value = defs.bilirubin;
           if (container.querySelector('#thWbcHigh')) container.querySelector('#thWbcHigh').value = defs.wbcHigh;
           if (container.querySelector('#thWbcLow')) container.querySelector('#thWbcLow').value = defs.wbcLow;
-          if (window.App && App.toast) App.toast('International standard panic thresholds restored. Click Save to apply.', 'info');
+          if (window.App && App.toast) App.toast('Default thresholds restored. Click Save to apply.', 'info');
         });
       }
 
@@ -4505,8 +4552,10 @@
             roles: newRoles
           };
 
-          curCfg = toSave;
-          AI.saveAiConfig(toSave);
+          saveBtns.forEach(function (b) { b.disabled = true; });
+          Promise.resolve(AI.saveAiConfig(toSave)).then(function (saved) {
+            if (saved) curCfg = toSave;
+          }).finally(function () { saveBtns.forEach(function (b) { b.disabled = !AI.canConfigure(); }); });
         });
       });
     }

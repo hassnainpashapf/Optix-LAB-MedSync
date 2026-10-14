@@ -14,7 +14,7 @@ console.log('--- Testing AI Recommendations Module & Doctor Dashboard Integratio
 // 1. VM Execution Test
 let mockSettings = { aiInsightsRoles: ['admin', 'doctor', 'technician'] };
 const registeredRoutes = [];
-const mockStorage = {};
+const mockStorage = { labpos_session: JSON.stringify({ role: 'admin' }) };
 const sandbox = {
   window: {},
   document: {
@@ -519,7 +519,7 @@ console.log('✓ Ultra-Advanced Feature 3: Differential Diagnosis (DDx) Matrix s
 // 20. Test Ultra-Advanced Feature: 10-Year ASCVD Cardiovascular Risk Calculator
 console.log('\n--- Testing Ultra-Advanced Feature 4: 10-Year ASCVD Heart Attack Risk ---');
 const cvdReport = {
-  pt: { name: 'Cardio Patient', age: 58, gender: 'male' },
+  pt: { name: 'Cardio Patient', age: 58, gender: 'male', systolicBP: 130, smoker: false, bpTreated: false, diabetes: true },
   inv: { id: 'inv_cvd_1' },
   groups: [
     { test: { name: 'Lipid Profile' }, res: { values: { cholesterol: 260, hdl: 36 } } },
@@ -752,6 +752,10 @@ const originalShowModal = AI.showModal;
 AI.showModal = (invId, data) => {
   simulatedModalOpened = true;
   assert(data && data.pt && data.pt.name.includes('Simulated'), 'Simulated data must have simulated patient name');
+  assert.equal(AI.extractRawValues(data).plt, 14000, 'sandbox platelets must reach the engine');
+  const priorPanics = AI.getAiStats().panics;
+  assert.equal(AI.checkPanicValues(data).isPanic, true, 'the dengue fixture must trigger its actual critical value');
+  assert.equal(AI.getAiStats().panics, priorPanics, 'sandbox must not increment live counters');
   return originalShowModal(invId, data);
 };
 AI.simulateAnalysis('dengue');
@@ -800,3 +804,6 @@ console.log('ALL 25 TEST SUITES PASSED! ULTRA-ADVANCED HOSPITAL-GRADE AI VERIFIE
 console.log('============================================================\n');
 
 
+
+assert.equal(AI.calculateAscvdRisk({pt:{age:58,gender:'male'},groups:cvdReport.groups}),null,'missing blood pressure and recorded history must not produce a risk estimate');
+assert(!AI.calculateIndices({pt:{},groups:ckdReport.groups}).some(x=>x.id==='egfr'),'missing age/sex must not be replaced with defaults for eGFR');
