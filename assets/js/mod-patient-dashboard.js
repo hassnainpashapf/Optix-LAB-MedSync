@@ -930,20 +930,25 @@
 
     return '<section id="ptPatientDashboard" aria-label="Patient details">' +
       '<div class="pd-profile-shell">' +
-      // Left Sticky Patient Navigation Menu
-      '<aside class="pd-patient-menu" aria-label="Patient menu">' +
-      '  <div class="pd-menu-patient">' +
-      '    <span class="pd-avatar" aria-hidden="true">' + esc(initials) + '</span>' +
-      '    <strong>' + esc(patient.name || 'Patient') + '</strong>' +
-      '    <small>' + esc(patient.id) + '</small>' +
+      // Top Horizontal Patient Navigation Header Bar
+      '<header class="pd-patient-menu" aria-label="Patient menu">' +
+      '  <div class="pd-header-left">' +
+      '    <a href="#/patients" class="pd-menu-back">← All Patients</a>' +
+      '    <div class="pd-header-vsep" aria-hidden="true"></div>' +
+      '    <div class="pd-menu-patient">' +
+      '      <span class="pd-avatar" aria-hidden="true">' + esc(initials) + '</span>' +
+      '      <div class="pd-menu-meta">' +
+      '        <strong>' + esc(patient.name || 'Patient') + '</strong>' +
+      '        <small>' + esc(patient.id) + '</small>' +
+      '      </div>' +
+      '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdContact','Contact','☎'],['pdIdentity','Identity','♙'],['pdNotes','Notes','☷'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
-        return '<button type="button" data-pd-section="'+item[0]+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span>'+item[1]+'</button>';
+      [['pdOverview','Vitals Overview','🧬'],['pdContact','Contact','☎'],['pdIdentity','Identity','👤'],['pdNotes','Notes','☷'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
+        return '<button type="button" data-pd-section="'+item[0]+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span><span>'+item[1]+'</span></button>';
       }).join('') +
       '  </nav>' +
-      '  <a href="#/patients" class="pd-menu-back">← All Patients</a>' +
-      '</aside>' +
+      '</header>' +
 
       // Center & Right Main Vitals Overview Layout
       '<div class="pd-layout-vitals" id="pdOverview">' +
