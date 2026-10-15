@@ -132,6 +132,10 @@ targetFiles.forEach(fileRel => {
   assert.ok(openedModal.html.includes('data-poredit='), 'Modal must include Edit report action button');
   assert.ok(openedModal.html.includes('id="porFilterMain"'), 'Modal must provide Filter Page button');
   assert.ok(openedModal.html.includes('id="porOpenProfile"'), 'Modal must provide Patient Profile button');
+  assert.ok(openedModal.html.includes('id="porBulkShare"'), 'Modal must provide Bulk Share Reports button at the top');
+  assert.ok(openedModal.html.includes('id="porSelectAll"'), 'Modal must provide Select All checkbox in table header');
+  assert.ok(openedModal.html.includes('class="porRowCheck"'), 'Modal must provide selection checkboxes in table rows');
+  assert.ok(code.includes('function openBulkShareModal('), 'Code must define openBulkShareModal');
 
   console.log('✓ ' + fileRel + ' PASSED!');
 });

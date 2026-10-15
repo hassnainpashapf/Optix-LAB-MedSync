@@ -4672,6 +4672,283 @@
     view.querySelectorAll('[data-od]').forEach(function (b) { b.addEventListener('click', function () { manageReport(b.getAttribute('data-od'), 'delete'); }); });
   }
 
+  /* ---------- Bulk Share modal for patient's old reports ---------- */
+  function openBulkShareModal(selectedGroups, pat) {
+    if (!selectedGroups || !selectedGroups.length) {
+      App.toast('No reports selected to share.', 'err');
+      return;
+    }
+    var patName = String((pat && pat.name) || '').trim();
+    var patPhone = String((pat && (pat.whatsapp || pat.phone)) || '').trim();
+    var waTo = waPhone(patPhone);
+    var s = DB.get('settings', 'main') || {};
+    var labName = s.labName || 'Clinical Laboratory';
+
+    // Doctor info if available across reports
+    var docMap = {};
+    selectedGroups.forEach(function (g) {
+      if (g.inv && g.inv.doctorId) {
+        var d = DB.get('doctors', g.inv.doctorId);
+        if (d && d.name) docMap[d.id] = d;
+      }
+    });
+    var docList = Object.keys(docMap).map(function (k) { return docMap[k]; });
+
+    function generateSummaryText() {
+      var lines = [];
+      lines.push('🏥 *' + labName + '*');
+      lines.push('Assalam-o-Alaikum *' + (patName || 'Valued Patient') + '*,');
+      lines.push('Here is the summary of your *' + selectedGroups.length + ' medical report' + (selectedGroups.length === 1 ? '' : 's') + '*:');
+      lines.push('----------------------------------------');
+
+      var base = 'https://labpos-api.150.230.52.29.sslip.io';
+      try { if (window.LABPOS_API) base = window.LABPOS_API; } catch (e) {}
+      base = String(base).replace(/\/+$/, '');
+
+      selectedGroups.forEach(function (g, idx) {
+        var inv = g.inv;
+        var vn = App.visitNos ? App.visitNos(inv) : {};
+        var invLabel = vn.labText || inv.no || inv.id;
+        var testList = g.rows.map(function (r) { return testName(r); }).filter(Boolean);
+        var testsStr = testList.slice(0, 3).join(', ') + (testList.length > 3 ? ' (+' + (testList.length - 3) + ' more)' : '');
+        var dateStr = App.d(inv.createdAt);
+        var billStatus = (+inv.due || 0) > 0.009 ? 'Due ' + App.money(inv.due) : 'Paid';
+
+        lines.push((idx + 1) + '️⃣ *' + invLabel + '* (' + dateStr + ')');
+        if (testsStr) lines.push('   🔬 Tests: ' + testsStr);
+        lines.push('   💳 Bill: ' + billStatus);
+        if (inv.reportPdfKey) {
+          lines.push('   🔗 View PDF: ' + base + '/r/' + inv.reportPdfKey);
+        }
+        lines.push('');
+      });
+
+      lines.push('----------------------------------------');
+      lines.push('For questions or appointments, please contact: ' + (s.labPhone || s.phone || 'our laboratory') + '. Shukriya!');
+      return lines.join('\n');
+    }
+
+    var defaultText = generateSummaryText();
+
+    var doctorShareHtml = '';
+    if (docList.length) {
+      doctorShareHtml =
+        '<div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px">' +
+          '<div style="font-weight:700;font-size:12.5px;color:#334155;margin-bottom:6px">Share with Referring Doctor:</div>' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+            docList.map(function (doc) {
+              var dPhone = waPhone(doc.whatsapp || doc.phone);
+              return '<button type="button" class="btn btn-ghost btn-sm porDocWa" data-dphone="' + App.esc(dPhone || '') + '" data-dname="' + App.esc(doc.name || 'Doctor') + '" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff">' +
+                WA_ICON + ' <span>' + App.esc(doc.name) + '</span>' +
+              '</button>';
+            }).join('') +
+          '</div>' +
+        '</div>';
+    }
+
+    var modalHtml =
+      '<div style="display:flex;flex-direction:column;gap:14px">' +
+        '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">' +
+          '<div>' +
+            '<div style="font-weight:700;color:#1e3a8a;font-size:15px;display:flex;align-items:center;gap:8px">' +
+              '<span>👤 ' + App.esc(patName || 'Patient') + '</span>' +
+              (patPhone ? '<span style="font-weight:600;font-size:13px;color:#2563eb;background:#dbeafe;padding:1px 8px;border-radius:10px">📱 ' + App.esc(patPhone) + '</span>' : '<span style="font-size:12px;color:#dc2626">No phone on file</span>') +
+            '</div>' +
+            '<div style="font-size:12.5px;color:#3b82f6;margin-top:3px">' +
+              selectedGroups.length + ' finished report' + (selectedGroups.length === 1 ? '' : 's') + ' selected for bulk sharing' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:6px">' +
+            '<span class="badge b-ready" style="font-size:12px;padding:4px 10px">Ready to Dispatch</span>' +
+          '</div>' +
+        '</div>' +
+
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px">' +
+          '<button type="button" class="btn btn-primary" id="bsWaBtn" style="font-weight:700;background:#16a34a;border:none;color:#fff;padding:10px 14px;box-shadow:0 2px 8px rgba(22,163,74,0.3);display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13px">' +
+            WA_ICON + ' <span>Share via WhatsApp</span>' +
+          '</button>' +
+          '<button type="button" class="btn" id="bsCopyBtn" style="font-weight:700;border:1.5px solid #cbd5e1;background:#fff;color:#0f172a;padding:10px 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13px">' +
+            '<span>📋</span> <span>Copy Summary Text</span>' +
+          '</button>' +
+          '<button type="button" class="btn" id="bsDlAllBtn" style="font-weight:700;border:1.5px solid #cbd5e1;background:#fff;color:#0f172a;padding:10px 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13px">' +
+            '<span>📥</span> <span>Download All PDFs</span>' +
+          '</button>' +
+          '<button type="button" class="btn" id="bsSmsBtn" style="font-weight:700;border:1.5px solid #cbd5e1;background:#fff;color:#0f172a;padding:10px 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13px">' +
+            '<span>📲</span> <span>Send SMS</span>' +
+          '</button>' +
+        '</div>' +
+
+        '<div>' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+            '<label style="font-weight:700;font-size:13px;color:#334155">Message Preview (Editable):</label>' +
+            '<span class="muted" style="font-size:11.5px">You can edit this text before sending</span>' +
+          '</div>' +
+          '<textarea id="bsMsgArea" class="input" style="width:100%;height:190px;font-family:monospace;font-size:12.5px;line-height:1.45;resize:vertical;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px;background:#fff;color:#0f172a">' + App.esc(defaultText) + '</textarea>' +
+        '</div>' +
+
+        doctorShareHtml +
+
+        '<div class="actions" style="margin-top:8px;display:flex;justify-content:flex-end">' +
+          '<button type="button" class="btn btn-ghost" id="bsClose" style="min-width:90px;font-weight:700">Close</button>' +
+        '</div>' +
+      '</div>';
+
+    App.modal('Bulk Share Reports — ' + App.esc(patName || 'Patient'), modalHtml, {
+      wide: true,
+      onOpen: function (bov, bClose) {
+        var closeBtn = bov.querySelector('#bsClose');
+        if (closeBtn) closeBtn.addEventListener('click', bClose);
+
+        var msgArea = bov.querySelector('#bsMsgArea');
+
+        function fallbackCopy(text) {
+          try {
+            if (msgArea) {
+              msgArea.select();
+              document.execCommand('copy');
+              App.toast('All reports summary copied to clipboard!');
+            }
+          } catch (e) {
+            App.toast('Could not copy automatically, please copy manually', 'err');
+          }
+        }
+
+        // Copy Text
+        var copyBtn = bov.querySelector('#bsCopyBtn');
+        if (copyBtn) {
+          copyBtn.addEventListener('click', function () {
+            var text = msgArea ? msgArea.value : defaultText;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+              navigator.clipboard.writeText(text).then(function () {
+                App.toast('All reports summary copied to clipboard!');
+              }).catch(function () {
+                fallbackCopy(text);
+              });
+            } else {
+              fallbackCopy(text);
+            }
+          });
+        }
+
+        // WhatsApp Share
+        var waBtn = bov.querySelector('#bsWaBtn');
+        if (waBtn) {
+          waBtn.addEventListener('click', function () {
+            var text = msgArea ? msgArea.value : defaultText;
+            var targetPhone = waTo;
+            if (!targetPhone) {
+              var inputPhone = prompt('Enter patient WhatsApp / mobile number (e.g. 03001234567):', patPhone || '');
+              if (!inputPhone) return;
+              targetPhone = waPhone(inputPhone);
+            }
+            if (!targetPhone) {
+              App.toast('Valid WhatsApp phone number required.', 'err');
+              return;
+            }
+
+            var waUrl = 'https://wa.me/' + encodeURIComponent(targetPhone) + '?text=' + encodeURIComponent(text);
+            window.open(waUrl, '_blank');
+
+            var cfg = waCfg();
+            if (waReady(cfg)) {
+              waSendText(cfg, targetPhone, text, function (err) {
+                if (!err) {
+                  App.toast('Dispatched via background WhatsApp queue');
+                }
+              });
+            }
+
+            App.toast('Opening WhatsApp for ' + (patName || 'patient') + '…');
+          });
+        }
+
+        // Send SMS
+        var smsBtn = bov.querySelector('#bsSmsBtn');
+        if (smsBtn) {
+          smsBtn.addEventListener('click', function () {
+            var text = msgArea ? msgArea.value : defaultText;
+            var targetPhone = waTo;
+            if (!targetPhone) {
+              var inputPhone = prompt('Enter patient mobile number (e.g. 03001234567):', patPhone || '');
+              if (!inputPhone) return;
+              targetPhone = waPhone(inputPhone);
+            }
+            if (!targetPhone) {
+              App.toast('Valid phone number required for SMS.', 'err');
+              return;
+            }
+
+            var cfg = smsCfg();
+            if (smsReady(cfg)) {
+              smsQueueSend(targetPhone, text, {
+                kind: 'bulk_report',
+                toName: patName || 'patient',
+                toRole: 'patient'
+              }).then(function () {
+                App.toast('Bulk report SMS queued for ' + (patName || 'patient'));
+              }).catch(function (err) {
+                App.toast('SMS queue error: ' + ((err && err.message) || err), 'err');
+              });
+            } else {
+              var smsUrl = 'sms:' + encodeURIComponent(targetPhone) + (App.isNative && App.isNative() ? '?body=' : '?&body=') + encodeURIComponent(text);
+              window.open(smsUrl, '_blank');
+              App.toast('Opened SMS messenger');
+            }
+          });
+        }
+
+        // Download All PDFs
+        var dlAllBtn = bov.querySelector('#bsDlAllBtn');
+        if (dlAllBtn) {
+          dlAllBtn.addEventListener('click', function () {
+            App.toast('Starting download of ' + selectedGroups.length + ' PDF report(s)…');
+            selectedGroups.forEach(function (g, i) {
+              setTimeout(function () {
+                downloadReportPdf(g.inv.id);
+              }, i * 500);
+            });
+          });
+        }
+
+        // Doctor WhatsApp buttons
+        bov.querySelectorAll('.porDocWa').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var dPhone = this.getAttribute('data-dphone');
+            var dName = this.getAttribute('data-dname');
+            var text = msgArea ? msgArea.value : defaultText;
+            if (!dPhone) {
+              var inputPhone = prompt('Enter WhatsApp number for ' + dName + ':', '');
+              if (!inputPhone) return;
+              dPhone = waPhone(inputPhone);
+            }
+            if (!dPhone) {
+              App.toast('Valid WhatsApp phone number required.', 'err');
+              return;
+            }
+            var waUrl = 'https://wa.me/' + encodeURIComponent(dPhone) + '?text=' + encodeURIComponent(text);
+            window.open(waUrl, '_blank');
+            App.toast('Opening WhatsApp for ' + dName + '…');
+          });
+        });
+
+        // Asynchronously check for cloud PDF keys
+        var missingKeys = selectedGroups.filter(function (g) { return !g.inv.reportPdfKey; });
+        if (missingKeys.length > 0) {
+          var updated = false;
+          Promise.all(missingKeys.map(function (g) {
+            return waReportLink(g.inv.id, true).then(function (url) {
+              if (url) { updated = true; }
+            }).catch(function () {});
+          })).then(function () {
+            if (updated && msgArea && document.body.contains(bov)) {
+              msgArea.value = generateSummaryText();
+            }
+          });
+        }
+      }
+    });
+  }
+
   /* ---------- Patient Old Reports modal: shows all finished reports for this patient ---------- */
   function openPatientOldReports(invoiceId) {
     var all = oldList();
@@ -4725,6 +5002,9 @@
           (metaDetails ? '<div class="muted" style="font-size:13px;margin-top:3px">' + App.esc(metaDetails) + '</div>' : '') +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<button type="button" class="btn btn-primary btn-sm" id="porBulkShare" style="font-size:12.5px;font-weight:700;display:inline-flex;align-items:center;gap:6px">' +
+            '<span>📤</span> <span>Bulk Share Reports</span> (<span id="porSelCount">' + patientReports.length + '</span>)' +
+          '</button>' +
           '<button type="button" class="btn btn-ghost btn-sm" id="porFilterMain" style="font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:5px;border:1px solid #cbd5e1;background:#fff">' +
             '<span>🔍</span> <span>Filter Page for ' + App.esc(patName.split(' ')[0] || 'Patient') + '</span>' +
           '</button>' +
@@ -4736,8 +5016,9 @@
 
     var tableHtml =
       '<div class="tbl-wrap" style="max-height:65vh;overflow:auto;border:1.5px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,0.03)">' +
-        '<table class="table" style="margin:0;font-size:13px;width:100%;min-width:920px">' +
+        '<table class="table" style="margin:0;font-size:13px;width:100%;min-width:960px">' +
           '<thead style="position:sticky;top:0;background:#f8fafc;z-index:2;box-shadow:0 1px 2px rgba(0,0,0,0.05)"><tr>' +
+            '<th style="width:40px;text-align:center"><input type="checkbox" id="porSelectAll" checked style="width:16px;height:16px;cursor:pointer" title="Select / Deselect All"></th>' +
             '<th style="min-width:140px">Report / Invoice</th>' +
             '<th style="min-width:115px">Registered</th>' +
             '<th style="min-width:240px">Tests Included</th>' +
@@ -4751,6 +5032,7 @@
             var names = g.rows.map(function (r) { return testName(r); }).filter(Boolean);
             var isCurrent = (inv.id === invoiceId);
             return '<tr' + (isCurrent ? ' style="background:#eff6ff"' : '') + '>' +
+              '<td style="text-align:center"><input type="checkbox" class="porRowCheck" value="' + App.esc(inv.id) + '" checked style="width:16px;height:16px;cursor:pointer"></td>' +
               '<td>' +
                 '<b>' + App.esc(vn.labText) + '</b>' +
                 '<div class="muted mono" style="font-size:11.5px">' + App.esc(inv.no || inv.id) + '</div>' +
@@ -4779,7 +5061,12 @@
     var footerHtml =
       '<div class="actions" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">' +
         '<div class="muted" style="font-size:12.5px">Showing all ' + patientReports.length + ' finished report' + (patientReports.length === 1 ? '' : 's') + ' on record for ' + App.esc(patName || 'this patient') + '.</div>' +
-        '<button type="button" class="btn btn-ghost" id="porClose" style="min-width:96px;font-weight:700">Close</button>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<button type="button" class="btn btn-primary btn-sm" id="porBtmBulkShare" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' +
+            '<span>📤</span> <span>Bulk Share Selected</span>' +
+          '</button>' +
+          '<button type="button" class="btn btn-ghost" id="porClose" style="min-width:96px;font-weight:700">Close</button>' +
+        '</div>' +
       '</div>';
 
     App.modal('Old Reports — ' + App.esc(patName || 'Patient'), headerSummary + tableHtml + footerHtml, {
@@ -4794,6 +5081,50 @@
         }
         var bClose = ov.querySelector('#porClose');
         if (bClose) bClose.addEventListener('click', close);
+
+        function updateSelCount() {
+          var checked = ov.querySelectorAll('.porRowCheck:checked');
+          var countSpan = ov.querySelector('#porSelCount');
+          if (countSpan) countSpan.textContent = checked.length;
+          var selectAll = ov.querySelector('#porSelectAll');
+          if (selectAll) {
+            var allChecks = ov.querySelectorAll('.porRowCheck');
+            selectAll.checked = allChecks.length > 0 && checked.length === allChecks.length;
+            selectAll.indeterminate = checked.length > 0 && checked.length < allChecks.length;
+          }
+        }
+
+        var selectAllEl = ov.querySelector('#porSelectAll');
+        if (selectAllEl) {
+          selectAllEl.addEventListener('change', function () {
+            var isChk = this.checked;
+            ov.querySelectorAll('.porRowCheck').forEach(function (c) { c.checked = isChk; });
+            updateSelCount();
+          });
+        }
+
+        ov.querySelectorAll('.porRowCheck').forEach(function (c) {
+          c.addEventListener('change', updateSelCount);
+        });
+
+        function triggerBulkShare() {
+          var checkedNodes = ov.querySelectorAll('.porRowCheck:checked');
+          var selectedIds = Array.from(checkedNodes).map(function (c) { return c.value; });
+          if (!selectedIds.length) {
+            App.toast('Please select at least 1 report to share', 'err');
+            return;
+          }
+          var selectedGroups = patientReports.filter(function (g) {
+            return selectedIds.indexOf(g.inv.id) >= 0;
+          });
+          openBulkShareModal(selectedGroups, pat);
+        }
+
+        var bBulkShare = ov.querySelector('#porBulkShare');
+        if (bBulkShare) bBulkShare.addEventListener('click', triggerBulkShare);
+
+        var btmBulkShare = ov.querySelector('#porBtmBulkShare');
+        if (btmBulkShare) btmBulkShare.addEventListener('click', triggerBulkShare);
 
         var bFilter = ov.querySelector('#porFilterMain');
         if (bFilter) {
