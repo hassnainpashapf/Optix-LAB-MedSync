@@ -586,14 +586,17 @@
   margin-top: 22px;
   width: 100%;
   box-sizing: border-box;
-  align-items: stretch;
+  align-items: start;
 }
 #ptPatientDashboard .vitals-subcards-row > .vitals-card {
   display: flex;
   flex-direction: column;
-  height: 100%;
   box-sizing: border-box;
   margin: 0;
+}
+#ptPatientDashboard .pd-tests-scroll-list {
+  max-height: none !important;
+  overflow-y: visible !important;
 }
 @media (max-width: 900px) {
   #ptPatientDashboard .vitals-subcards-row {

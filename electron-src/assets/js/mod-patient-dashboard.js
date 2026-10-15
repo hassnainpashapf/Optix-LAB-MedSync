@@ -426,7 +426,7 @@
         '<span style="font-size:11.5px">No laboratory tests or diagnostic orders recorded yet for this patient.</span>' +
         '</div>';
     }
-    return '<div class="pd-tests-scroll-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;max-height:320px;overflow-y:auto;padding-right:4px">' +
+    return '<div class="pd-tests-scroll-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;width:100%">' +
       tests.map(function (t) {
         var badgeCls = t.badgeCls || 'b-warn';
         var badgeText = t.statusLabel || 'Pending';
