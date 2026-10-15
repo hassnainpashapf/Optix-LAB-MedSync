@@ -1798,22 +1798,6 @@
 
     return '<div class="pd-layout-anatomy" id="pdAnatomy" style="display:none">' +
       '<div class="pd-anatomy-page-wrap">' +
-      '<div class="vitals-card" style="margin-bottom:16px">' +
-      '  <div class="vitals-card-head" style="margin-bottom:0">' +
-      '    <div>' +
-      '      <h3 style="display:flex;align-items:center;gap:8px;font-size:18px;font-weight:800;color:#0f172a;margin:0">' +
-      '        <span>◎</span><span>Visual Laboratory Test Anatomy &amp; Organ Systems Correlation</span>' +
-      '      </h3>' +
-      '      <p class="pd-sub" style="margin-top:4px;font-size:12px;color:#475569">' +
-      '        Full-body anatomical projection mapping each diagnostic test to its biological organ target and physiological boundaries.' +
-      '      </p>' +
-      '    </div>' +
-      '    <div style="display:flex;align-items:center;gap:10px">' +
-      '      <span class="badge b-ready" style="font-size:12px;font-weight:700;padding:6px 12px">' + tests.length + ' Test' + (tests.length === 1 ? '' : 's') + '</span>' +
-      '      <button type="button" class="btn btn-ghost btn-sm" data-pd-switch="pdOverview" style="font-size:12px;font-weight:600">← Back to Overview</button>' +
-      '    </div>' +
-      '  </div>' +
-      '</div>' +
 
       '<div class="pd-trends-kpi-grid" style="margin-bottom:16px">' +
       '  <div class="pd-trends-kpi-card">' +

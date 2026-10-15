@@ -162,7 +162,7 @@ assert.ok(html.includes('data-pd-section="pdAnatomy"'), 'Header navigation butto
 assert.ok(html.includes('Test Anatomy'), 'Header navigation button label present');
 assert.ok(html.includes('id="pdAnatomy"'), 'Dedicated pdAnatomy page section present');
 assert.ok(html.includes('class="pd-layout-anatomy"'), 'Dedicated pd-layout-anatomy class present');
-assert.ok(html.includes('Visual Laboratory Test Anatomy &amp; Organ Systems Correlation'), 'Test Anatomy page title present');
+assert.ok(!html.includes('Visual Laboratory Test Anatomy &amp; Organ Systems Correlation'), 'Test Anatomy redundant header card cleanly removed');
 assert.ok(html.includes('Select test anatomy'), 'Test anatomy selector label present');
 assert.ok(html.includes('id="pdTestSelect"'), 'Test anatomy dropdown present');
 assert.ok(html.includes('patient-body-reference.png'), 'Patient body reference image present in anatomy');
