@@ -59,6 +59,9 @@ a:focus-visible, button:focus-visible, .nav-it:focus-visible { outline: 3px soli
 body:not(.auth) .card, .card, .pt-card { border: 0 !important; border-radius: 20px !important; box-shadow: 0 2px 14px rgba(27, 42, 74, .08) !important; background: #fff !important; }
 .card-h { border-bottom: 1px solid #f0f3f8 !important; }
 .modal { border-radius: 28px; border: 1px solid var(--line); box-shadow: var(--sh-lg); }
+.modal-wide { width: 1180px !important; max-width: 96vw !important; }
+.modal-extra-wide { width: min(1360px, 96vw) !important; max-width: 96vw !important; }
+.modal-extra-wide .modal-b { max-height: calc(100vh - 120px) !important; }
 .modal-ov { background: rgba(27, 42, 74, .5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 .modal-f { background: #f8fafc; border-radius: 0 0 28px 28px; }
 

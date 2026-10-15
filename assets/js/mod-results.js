@@ -4763,16 +4763,16 @@
       '</div>';
 
     var tableHtml =
-      '<div class="tbl-wrap" style="max-height:60vh;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px">' +
-        '<table class="table" style="margin:0;font-size:13px">' +
+      '<div class="tbl-wrap" style="max-height:65vh;overflow:auto;border:1.5px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,0.03)">' +
+        '<table class="table" style="margin:0;font-size:13px;width:100%;min-width:920px">' +
           '<thead style="position:sticky;top:0;background:#f8fafc;z-index:2;box-shadow:0 1px 2px rgba(0,0,0,0.05)"><tr>' +
-            '<th>Report / Invoice</th>' +
-            '<th>Registered</th>' +
-            '<th>Tests Included</th>' +
-            '<th>Doctor</th>' +
-            '<th>Reported</th>' +
-            '<th>Bill</th>' +
-            '<th style="text-align:right">Actions</th>' +
+            '<th style="min-width:140px">Report / Invoice</th>' +
+            '<th style="min-width:115px">Registered</th>' +
+            '<th style="min-width:240px">Tests Included</th>' +
+            '<th style="min-width:110px">Doctor</th>' +
+            '<th style="min-width:145px">Reported</th>' +
+            '<th style="min-width:85px">Bill</th>' +
+            '<th style="text-align:right;min-width:320px">Actions</th>' +
           '</tr></thead>' +
           '<tbody>' + patientReports.map(function (g) {
             var inv = g.inv, vn = App.visitNos(inv), d = inv.doctorId ? DB.get('doctors', inv.doctorId) : null;
@@ -4785,7 +4785,7 @@
                 (isCurrent ? '<span style="font-size:10.5px;font-weight:700;color:#2563eb;background:#dbeafe;padding:1px 5px;border-radius:4px">Selected</span>' : '') +
               '</td>' +
               '<td>' + App.esc(App.d(inv.createdAt)) + '</td>' +
-              '<td style="max-width:240px">' +
+              '<td style="max-width:280px">' +
                 '<div style="font-weight:600;color:#1e293b">' + App.esc(names.slice(0, 3).join(', ')) + (names.length > 3 ? ' <span class="muted">+' + (names.length - 3) + ' more</span>' : '') + '</div>' +
                 '<div class="muted" style="font-size:11.5px">' + g.rows.length + ' test' + (g.rows.length === 1 ? '' : 's') + '</div>' +
               '</td>' +
@@ -4812,7 +4812,14 @@
 
     App.modal('Old Reports — ' + App.esc(patName || 'Patient'), headerSummary + tableHtml + footerHtml, {
       wide: true,
+      extraWide: true,
+      width: 'min(1360px, 96vw)',
       onOpen: function (ov, close) {
+        var m = ov.querySelector('.modal');
+        if (m) {
+          m.style.width = 'min(1360px, 96vw)';
+          m.style.maxWidth = '96vw';
+        }
         var bClose = ov.querySelector('#porClose');
         if (bClose) bClose.addEventListener('click', close);
 

@@ -349,8 +349,10 @@
       root = el('<div id="modal-root"></div>');
       document.body.appendChild(root);
     }
+    var cls = 'modal' + (opts.wide ? ' modal-wide' : '') + (opts.extraWide ? ' modal-extra-wide' : '') + (opts.cls ? ' ' + opts.cls : '');
+    var styleAttr = opts.width ? ' style="width:' + esc(opts.width) + ';max-width:96vw"' : '';
     var ov = el(
-      '<div class="modal-ov"><div class="modal' + (opts.wide ? ' modal-wide' : '') + '" role="dialog" aria-modal="true">' +
+      '<div class="modal-ov"><div class="' + cls + '"' + styleAttr + ' role="dialog" aria-modal="true">' +
       '<div class="modal-h"><h3>' + esc(title) + '</h3><button class="btn btn-ghost btn-sm modal-x" aria-label="Close">' + icon('x', 16) + '</button></div>' +
       '<div class="modal-b">' + bodyHTML + '</div></div></div>'
     );
