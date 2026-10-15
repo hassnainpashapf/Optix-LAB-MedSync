@@ -3353,10 +3353,10 @@
     }
     var canSeeAi = (!window.App || !App.aiInsights || typeof App.aiInsights.canAccess !== 'function') || App.aiInsights.canAccess();
     var aiBtnHtml = canSeeAi
-      ? '<button type="button" class="btn btn-primary" id="rvAiInsights" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,58,237,.35)">🤖 AI Doctor Recommendations (5 Solutions)</button>'
+      ? '<button type="button" class="btn btn-primary" id="rvAiInsights" style="font-weight:700">🤖 AI Doctor Recommendations (5 Solutions)</button>'
       : '';
     var topAiBtnHtml = canSeeAi
-      ? '<button type="button" class="btn btn-primary btn-sm" id="rvTopAiInsights" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,58,237,.3);display:inline-flex;align-items:center;gap:6px">' +
+      ? '<button type="button" class="btn btn-primary btn-sm" id="rvTopAiInsights" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' +
           '<span>🤖</span><span>AI Doctor Recommendations</span>' +
         '</button>'
       : '';
@@ -3373,7 +3373,7 @@
             PRINT_ICON + ' <span>Print Report</span>' +
             '<span style="opacity:.75;font-weight:600;font-size:10.5px;margin-left:2px;background:rgba(255,255,255,0.22);padding:1px 5px;border-radius:4px">Ctrl+P</span>' +
           '</button>' +
-          '<button type="button" class="btn btn-sm" id="rvTopDownloadPdf" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;background:#059669;color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;box-shadow:0 1px 3px rgba(5,150,105,0.25)">' +
+          '<button type="button" class="btn btn-primary btn-sm" id="rvTopDownloadPdf" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' +
             '<span>📥</span> <span>Download PDF</span>' +
           '</button>' +
           topAiBtnHtml +
