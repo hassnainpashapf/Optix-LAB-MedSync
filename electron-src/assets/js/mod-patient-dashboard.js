@@ -2004,7 +2004,6 @@
       '  </nav>' +
       '  <div class="pd-header-actions">' +
       '    <button type="button" class="btn btn-primary btn-sm" id="btnLaunchTrendsDoctorAI" data-inv-id="' + esc(activeInvId) + '" style="font-weight:700;display:inline-flex;align-items:center;gap:6px"><span aria-hidden="true">🤖</span> Full AI Analysis</button>' +
-      '    <button type="button" class="btn btn-ghost btn-sm" id="pt-edit"><span aria-hidden="true">✏️</span> Edit Details</button>' +
       '    <button type="button" class="btn btn-danger btn-sm" id="pt-del"><span aria-hidden="true">🗑️</span> Delete</button>' +
       '  </div>' +
       '</header>' +
