@@ -3408,19 +3408,10 @@
           htmlContent +
         '</div>' +
       '</div>' +
-      '<div id="rvWaHist" style="margin-top:12px">' + waHistoryHtml(invoiceId) + '</div>' +
-      '<div id="rvSmsHist" style="margin-top:6px"></div>' +
-      '<div id="rvAuto" style="margin-top:10px;font-size:13px;color:var(--muted)"></div>' +
-      '<div class="actions" style="margin-top:12px;flex-wrap:wrap;justify-content:flex-end;gap:8px">' +
-        '<button class="btn btn-ghost" id="rvClose">Close</button>' +
-        aiBtnHtml +
-        '<button class="btn btn-ghost" id="rvWaPatient">' + WA_ICON + ' Send to Patient (WhatsApp)</button>' +
-        docWaBtn +
-        '<button class="btn btn-ghost" id="rvSmsPatient">📲 Send SMS to Patient</button>' +
-        (d.doc ? '<button class="btn btn-ghost" id="rvSmsDoctor">📲 Send SMS to Doctor</button>' : '') +
-        '<span id="rvShare" style="display:contents"></span>' +
-        '<button class="btn btn-sm" id="rvDownloadPdf" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;background:#059669;color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer">📥 Download PDF</button>' +
-        '<button class="btn btn-primary" id="rvPrint">' + PRINT_ICON + ' Print Report <span style="opacity:.7;font-weight:500;font-size:11px;margin-left:4px">Ctrl+P</span></button>' +
+      '<div id="rvWaHist" style="margin-top:8px">' + waHistoryHtml(invoiceId) + '</div>' +
+      '<div id="rvSmsHist" style="margin-top:4px"></div>' +
+      '<div class="actions" style="margin-top:14px;display:flex;justify-content:flex-end">' +
+        '<button class="btn btn-ghost" id="rvClose" style="min-width:96px;font-weight:700">Close</button>' +
       '</div>',
       { wide: true,
         onOpen: function (ov, close) {
@@ -3495,25 +3486,38 @@
           var btmDlBtn = document.getElementById('rvDownloadPdf');
           if (btmDlBtn) btmDlBtn.addEventListener('click', handleDownloadPdf);
 
-          document.getElementById('rvClose').addEventListener('click', close);
-          document.getElementById('rvPrint').addEventListener('click', function () { close(); printReportChoice(invoiceId); });
+          var closeBtn = document.getElementById('rvClose');
+          if (closeBtn) closeBtn.addEventListener('click', close);
           var topPrint = document.getElementById('rvTopPrint');
           if (topPrint) topPrint.addEventListener('click', function () { close(); printReportChoice(invoiceId); });
+          var btmPrint = document.getElementById('rvPrint');
+          if (btmPrint) btmPrint.addEventListener('click', function () { close(); printReportChoice(invoiceId); });
 
           shareStatus().then(function (st) { /* Email / Slack buttons appear only when the server can send them */
-            var slot = document.getElementById('rvShare'); if (!slot || !document.body.contains(ov)) return;
-            var h = '', off = st.email ? '' : ' disabled title="Email sending is not set up on this server yet" style="opacity:.5;cursor:not-allowed"';
-            if (shareOn()) h += '<button class="btn btn-ghost" id="rvEmPat"' + off + '>&#9993; Email Patient</button>' + (d.doc ? '<button class="btn btn-ghost" id="rvEmDoc"' + off + '>&#9993; Email Doctor</button>' : '');
-            if (st.slack) h += '<button class="btn btn-ghost" id="rvSlack">Send to Slack</button>';
-            slot.innerHTML = h;
+            if (!document.body.contains(ov)) return;
+            var off = st.email ? '' : ' disabled title="Email sending is not set up on this server yet" style="opacity:.5;cursor:not-allowed"';
+            var slot = document.getElementById('rvShare');
+            if (slot) {
+              var h = '';
+              if (shareOn()) h += '<button class="btn btn-ghost" id="rvEmPat"' + off + '>&#9993; Email Patient</button>' + (d.doc ? '<button class="btn btn-ghost" id="rvEmDoc"' + off + '>&#9993; Email Doctor</button>' : '');
+              if (st.slack) h += '<button class="btn btn-ghost" id="rvSlack">Send to Slack</button>';
+              slot.innerHTML = h;
+              var b1 = document.getElementById('rvEmPat'); if (b1) b1.addEventListener('click', function () { emailReport(invoiceId, 'patient'); });
+              var b2 = document.getElementById('rvEmDoc'); if (b2) b2.addEventListener('click', function () { emailReport(invoiceId, 'doctor'); });
+              var b3 = document.getElementById('rvSlack'); if (b3) b3.addEventListener('click', function () { slackSend(invoiceId); });
+            }
 
             var topSlot = document.getElementById('rvTopShare');
             if (topSlot && shareOn()) {
               var topH = '<button class="btn btn-ghost btn-sm" id="rvTopEmPat"' + off + ' style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff"><span>✉️</span> <span>Email Patient</span></button>' +
                 (d.doc ? '<button class="btn btn-ghost btn-sm" id="rvTopEmDoc"' + off + ' style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff"><span>✉️</span> <span>Email Doctor</span></button>' : '');
+              if (st.slack) {
+                topH += '<button class="btn btn-ghost btn-sm" id="rvTopSlack" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff"><span>💬</span> <span>Slack</span></button>';
+              }
               topSlot.innerHTML = topH;
               var b1t = document.getElementById('rvTopEmPat'); if (b1t) b1t.addEventListener('click', function () { emailReport(invoiceId, 'patient'); });
               var b2t = document.getElementById('rvTopEmDoc'); if (b2t) b2t.addEventListener('click', function () { emailReport(invoiceId, 'doctor'); });
+              var b3t = document.getElementById('rvTopSlack'); if (b3t) b3t.addEventListener('click', function () { slackSend(invoiceId); });
             }
 
             var auto = document.getElementById('rvAuto');
@@ -3525,9 +3529,6 @@
               if (a1) a1.addEventListener('change', function () { try { DB.update('settings', 'main', { emailAuto: a1.checked }); App.toast(a1.checked ? 'Reports will be emailed to patients automatically (when they have an email on file)' : 'Automatic email to patients is off'); } catch (e) {} });
               if (a2) a2.addEventListener('change', function () { try { DB.update('settings', 'main', { emailAutoDoctor: a2.checked }); App.toast(a2.checked ? 'Reports will also be emailed to the referring doctor (when they have an email on file)' : 'Automatic email to doctors is off'); } catch (e) {} });
             }
-            var b1 = document.getElementById('rvEmPat'); if (b1) b1.addEventListener('click', function () { emailReport(invoiceId, 'patient'); });
-            var b2 = document.getElementById('rvEmDoc'); if (b2) b2.addEventListener('click', function () { emailReport(invoiceId, 'doctor'); });
-            var b3 = document.getElementById('rvSlack'); if (b3) b3.addEventListener('click', function () { slackSend(invoiceId); });
           });
           /* Ctrl+P / Cmd+P while the report is open prints this report (with the lab header) instead of the browser printing the whole page */
           function rvKey(e) {
@@ -3559,7 +3560,8 @@
               }
             });
           }
-          document.getElementById('rvWaPatient').addEventListener('click', function () { waManualSend(invoiceId, 'patient'); });
+          var btmWaPat = document.getElementById('rvWaPatient');
+          if (btmWaPat) btmWaPat.addEventListener('click', function () { waManualSend(invoiceId, 'patient'); });
           var topWa = document.getElementById('rvTopWaPatient');
           if (topWa) topWa.addEventListener('click', function () { waManualSend(invoiceId, 'patient'); });
 
@@ -3568,7 +3570,8 @@
           var topWdoc = document.getElementById('rvTopWaDoctor');
           if (topWdoc && !topWdoc.disabled) topWdoc.addEventListener('click', function () { waManualSend(invoiceId, 'doctor'); });
 
-          document.getElementById('rvSmsPatient').addEventListener('click', function () { smsManualSend(invoiceId, 'patient'); });
+          var btmSmsPat = document.getElementById('rvSmsPatient');
+          if (btmSmsPat) btmSmsPat.addEventListener('click', function () { smsManualSend(invoiceId, 'patient'); });
           var topSms = document.getElementById('rvTopSmsPatient');
           if (topSms) topSms.addEventListener('click', function () { smsManualSend(invoiceId, 'patient'); });
 
