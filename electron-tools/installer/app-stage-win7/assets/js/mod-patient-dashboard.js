@@ -1167,36 +1167,33 @@
         (!isNaN(valNum) && valNum > 3.0 && /creat|creatinine/i.test(c.paramName))
       );
 
-      var badgeStyle = isCrit ? 'background:#fff1f2;color:#9f1239;border:1px solid #fecdd3' :
-        (isImp ? 'background:#f0fdf4;color:#166534;border:1px solid #dcfce7' :
-        (isDet ? 'background:#fff7ed;color:#9a3412;border:1px solid #ffedd5' :
-        'background:#f8fafc;color:#475569;border:1px solid #e2e8f0'));
+      var badgeClass = isCrit ? 'b-red' : (isImp ? 'b-ready' : (isDet ? 'b-red' : 'b-warn'));
       var badgeText = isCrit ? '🚨 Critical Drop' : (isImp ? '✓ Pehle se Behtar (' + (c.pct > 0 ? '+' : '') + c.pct + '%)' : (isDet ? '⚠️ Pehle se Kharab (' + (c.pct > 0 ? '+' : '') + c.pct + '%)' : '⚖️ Pehle se Stable'));
-      var strokeColor = isCrit ? '#b91c1c' : (isImp ? '#0d9488' : (isDet ? '#b91c1c' : '#475569'));
+      var strokeColor = isCrit ? '#dc2626' : (isImp ? '#10b981' : (isDet ? '#ef4444' : '#64748b'));
 
       var bounds = parseRefBounds(c.refRange);
       var yPrev = computeIndividualGraphY(c.prevVal, bounds);
       var yCur = computeIndividualGraphY(c.curVal, bounds);
 
       var curveSvg = (c.prevVal != null && c.prevVal !== '—') ?
-        ('<path d="M 75,' + yPrev + ' C 200,' + yPrev + ' 220,' + yCur + ' 345,' + yCur + '" fill="none" stroke="' + strokeColor + '" stroke-width="2.2" stroke-linecap="round" opacity="0.85" />' +
-         '<circle cx="75" cy="' + yPrev + '" r="4.5" fill="#ffffff" stroke="' + strokeColor + '" stroke-width="2" />' +
-         '<text x="75" y="' + (yPrev > 55 ? yPrev - 9 : yPrev + 17) + '" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">' + esc(c.prevVal) + '</text>') :
+        ('<path d="M 75,' + yPrev + ' C 200,' + yPrev + ' 220,' + yCur + ' 345,' + yCur + '" fill="none" stroke="' + strokeColor + '" stroke-width="3" stroke-linecap="round" />' +
+         '<circle cx="75" cy="' + yPrev + '" r="5" fill="#ffffff" stroke="' + strokeColor + '" stroke-width="2.5" />' +
+         '<text x="75" y="' + (yPrev > 55 ? yPrev - 9 : yPrev + 17) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#475569">' + esc(c.prevVal) + '</text>') :
         '';
 
       var clinicalUrduNote = '';
       if (isCrit) {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #b91c1c;border-radius:6px;font-size:11.5px;color:#334155">' +
-          '<strong style="color:#991b1b">⚠️ Critical Alert:</strong> Value alarming threshold par chali gayi hai. Fori doctor consultation aur repeat lab order zaroori hai.</div>';
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11.5px;color:#991b1b">' +
+          '<strong>⚠️ Critical Alert:</strong> Value alarming threshold par chali gayi hai. Fori doctor consultation aur repeat lab order zaroori hai.</div>';
       } else if (isImp) {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #0d9488;border-radius:6px;font-size:11.5px;color:#334155">' +
-          '<strong style="color:#0f766e">✓ Positive Effect:</strong> Pehle test ke muqablay mein behtar ho raha hai aur normal reference limits ki taraf recovery show kar raha hai.</div>';
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11.5px;color:#166534">' +
+          '<strong>✓ Positive Effect:</strong> Pehle test ke muqablay mein behtar ho raha hai aur normal reference limits ki taraf recovery show kar raha hai.</div>';
       } else if (isDet) {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #d97706;border-radius:6px;font-size:11.5px;color:#334155">' +
-          '<strong style="color:#b45309">⚠️ Adverse Effect:</strong> Pichlay test se value kharab (elevated) hui hai. Safe physiological limits se bahar strain hai.</div>';
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:11.5px;color:#92400e">' +
+          '<strong>⚠️ Adverse Effect:</strong> Pichlay test se value kharab (elevated) hui hai. Safe physiological limits se bahar strain hai.</div>';
       } else {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #94a3b8;border-radius:6px;font-size:11.5px;color:#475569">' +
-          '<strong style="color:#334155">⚖️ Stable:</strong> Pehle test ke muqablay mein baseline maintain hai, koi sudden decline note nahi hua.</div>';
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:11.5px;color:#475569">' +
+          '<strong>⚖️ Stable:</strong> Pehle test ke muqablay mein baseline maintain hai, koi sudden decline note nahi hua.</div>';
       }
 
       return '<div class="vitals-card" style="padding:16px 18px;border:1.5px solid #edf2f7;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,0.03);display:flex;flex-direction:column;justify-content:space-between">' +
@@ -1208,7 +1205,7 @@
         '        </div>' +
         '        <small style="color:#64748b;font-size:11.5px">' + esc(c.testName) + ' · Normal: <strong>' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + '</strong></small>' +
         '      </div>' +
-        '      <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;white-space:nowrap;' + badgeStyle + '">' + esc(badgeText) + '</span>' +
+        '      <span class="badge ' + badgeClass + '" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap">' + esc(badgeText) + '</span>' +
         '    </div>' +
 
         '    <div style="display:flex;align-items:center;gap:12px;background:#f8fafc;padding:8px 12px;border-radius:10px;border:1px solid #e2e8f0;margin:10px 0 12px">' +
@@ -1219,25 +1216,25 @@
         '      <div style="font-size:14px;color:#94a3b8">➔</div>' +
         '      <div style="flex:1;text-align:right">' +
         '        <div style="font-size:10.5px;color:#64748b;font-weight:600">Latest (' + esc(c.curDate) + ')</div>' +
-        '        <strong style="font-size:14px;color:' + (c.isOutside ? '#b91c1c' : '#0f172a') + '">' + esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + (c.isOutside ? ' ⚠️' : '') + '</strong>' +
+        '        <strong style="font-size:14.5px;color:' + (c.isOutside ? '#dc2626' : '#059669') + '">' + esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + (c.isOutside ? ' ⚠️' : ' ✓') + '</strong>' +
         '      </div>' +
         '    </div>' +
 
         '    <div style="background:#fafbfc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 6px">' +
         '      <svg viewBox="0 0 420 120" width="100%" height="auto" style="display:block;margin:0 auto;overflow:visible">' +
-        '        <!-- Reference normal zone - subtle clean neutral band -->' +
-        '        <rect x="20" y="40" width="380" height="40" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3 3"/>' +
-        '        <text x="210" y="64" text-anchor="middle" font-size="10" font-weight="600" fill="#64748b">NORMAL SAFE ZONE (' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + ')</text>' +
+        '        <!-- Reference normal zone -->' +
+        '        <rect x="20" y="40" width="380" height="40" rx="6" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1" stroke-dasharray="3 3"/>' +
+        '        <text x="210" y="64" text-anchor="middle" font-size="10.5" font-weight="700" fill="#047857" opacity="0.85">✓ NORMAL SAFE ZONE (' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + ')</text>' +
 
         '        <!-- Milestone guides -->' +
-        '        <line x1="75" y1="12" x2="75" y2="108" stroke="#e2e8f0" stroke-width="1.2" stroke-dasharray="3 2"/>' +
-        '        <line x1="345" y1="12" x2="345" y2="108" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="3 2"/>' +
+        '        <line x1="75" y1="12" x2="75" y2="108" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="3 2"/>' +
+        '        <line x1="345" y1="12" x2="345" y2="108" stroke="#93c5fd" stroke-width="1.2" stroke-dasharray="3 2"/>' +
         '        <text x="75" y="116" text-anchor="middle" font-size="9.5" font-weight="600" fill="#64748b">Prev: ' + esc(c.prevDate) + '</text>' +
-        '        <text x="345" y="116" text-anchor="middle" font-size="9.5" font-weight="700" fill="#334155">Now: ' + esc(c.curDate) + '</text>' +
+        '        <text x="345" y="116" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8">Now: ' + esc(c.curDate) + '</text>' +
 
         curveSvg +
-        '        <circle cx="345" cy="' + yCur + '" r="5.5" fill="' + strokeColor + '" stroke="#ffffff" stroke-width="2"/>' +
-        '        <text x="345" y="' + (yCur > 55 ? yCur - 10 : yCur + 18) + '" text-anchor="middle" font-size="11.5" font-weight="700" fill="' + (c.isOutside ? '#b91c1c' : '#0f172a') + '">' + esc(c.curVal) + '</text>' +
+        '        <circle cx="345" cy="' + yCur + '" r="6" fill="' + strokeColor + '" stroke="#ffffff" stroke-width="2.5"/>' +
+        '        <text x="345" y="' + (yCur > 55 ? yCur - 10 : yCur + 18) + '" text-anchor="middle" font-size="11.5" font-weight="800" fill="' + (c.isOutside ? '#dc2626' : '#059669') + '">' + esc(c.curVal) + '</text>' +
         '      </svg>' +
         '    </div>' +
         '  </div>' +
@@ -1252,7 +1249,7 @@
       '    <h3 style="display:flex;align-items:center;gap:8px"><span>🔬</span><span>Individual Biomarker Trend Graphs</span></h3>' +
       '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Har parameter ka alag alag clean graph — pehle se normal hai ya critical hai asaani se dekhein.</p>' +
       '  </div>' +
-      '  <span style="font-size:11.5px;font-weight:600;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;padding:3px 10px;border-radius:6px">' + comps.length + ' Individual Graphs</span>' +
+      '  <span class="badge b-ready" style="font-size:11px;font-weight:700">' + comps.length + ' Individual Graphs</span>' +
       '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:14px">' +
       cardsHtml +
@@ -1344,7 +1341,7 @@
       filteredComps = filteredComps.slice(0, 8);
     }
 
-    var colorPalette = ['#475569', '#2563eb', '#0d9488', '#64748b', '#3b82f6', '#334155'];
+    var colorPalette = ['#2563eb', '#059669', '#dc2626', '#d97706', '#7c3aed', '#0284c7', '#db2777', '#0d9488'];
 
     // Map items with initial Y coordinates
     var items = filteredComps.map(function (c, idx) {
@@ -1372,35 +1369,35 @@
       var c = item.c;
       var color = item.color;
       var deltaText = (c.status === 'baseline' || isSingleVisit) ? 'Baseline' : ((c.diff > 0 ? '+' : '') + c.diff + (c.unit ? ' ' + c.unit : '') + ' (' + (c.pct > 0 ? '+' : '') + c.pct + '%)');
-      var deltaPillColor = (c.status === 'baseline' || isSingleVisit) ? '#64748b' : (c.badgeClass === 'improved' ? '#15803d' : (c.badgeClass === 'deteriorated' ? '#b91c1c' : '#64748b'));
+      var deltaPillColor = (c.status === 'baseline' || isSingleVisit) ? '#475569' : (c.badgeClass === 'improved' ? '#059669' : (c.badgeClass === 'deteriorated' ? '#dc2626' : '#475569'));
 
       var curve = '';
       if (item.hasPrevVal) {
-        curve = '<path d="M 175,' + item.yPrev + ' C 350,' + item.yPrev + ' 500,' + item.yCur + ' 670,' + item.yCur + '" fill="none" stroke="' + color + '" stroke-width="2.2" stroke-linecap="round" opacity="0.85" />' +
-          '<circle cx="175" cy="' + item.yPrev + '" r="4.5" fill="#ffffff" stroke="' + color + '" stroke-width="2" />' +
-          (Math.abs(item.labelYPrev - item.yPrev) > 3 ? ('<line x1="175" y1="' + item.yPrev + '" x2="160" y2="' + item.labelYPrev + '" stroke="' + color + '" stroke-width="1" stroke-dasharray="2 2" opacity="0.5"/>') : '') +
-          '<text x="154" y="' + (item.labelYPrev + 4) + '" text-anchor="end" font-size="11" font-weight="600">' +
-          '<tspan fill="#475569">' + esc(c.paramName) + ': </tspan>' +
+        curve = '<path d="M 175,' + item.yPrev + ' C 350,' + item.yPrev + ' 500,' + item.yCur + ' 670,' + item.yCur + '" fill="none" stroke="' + color + '" stroke-width="2.8" stroke-linecap="round" opacity="0.9" />' +
+          '<circle cx="175" cy="' + item.yPrev + '" r="5.5" fill="#ffffff" stroke="' + color + '" stroke-width="2.5" />' +
+          (Math.abs(item.labelYPrev - item.yPrev) > 3 ? ('<line x1="175" y1="' + item.yPrev + '" x2="160" y2="' + item.labelYPrev + '" stroke="' + color + '" stroke-width="1" stroke-dasharray="2 2" opacity="0.6"/>') : '') +
+          '<text x="154" y="' + (item.labelYPrev + 4) + '" text-anchor="end" font-size="11" font-weight="700">' +
+          '<tspan fill="#334155">' + esc(c.paramName) + ': </tspan>' +
           '<tspan fill="#0f172a">' + esc(c.prevVal) + (c.unit ? ' ' + esc(c.unit) : '') + '</tspan>' +
           '</text>';
       } else {
         // Baseline visit: Draw clean guideline connecting baseline milestone to current value
-        curve = '<path d="M 175,' + item.labelYCur + ' L 670,' + item.yCur + '" fill="none" stroke="' + color + '" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.45" />' +
-          '<circle cx="175" cy="' + item.labelYCur + '" r="4" fill="#ffffff" stroke="' + color + '" stroke-width="1.8" />' +
+        curve = '<path d="M 175,' + item.labelYCur + ' L 670,' + item.yCur + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-dasharray="4 3" opacity="0.5" />' +
+          '<circle cx="175" cy="' + item.labelYCur + '" r="4.5" fill="#ffffff" stroke="' + color + '" stroke-width="2" />' +
           '<text x="162" y="' + (item.labelYCur + 4) + '" text-anchor="end" font-size="10.5" font-weight="600" fill="#64748b">' + esc(c.paramName) + ' (Baseline)</text>';
       }
 
       var leaderLine = (Math.abs(item.labelYCur - item.yCur) > 3) ?
-        ('<line x1="670" y1="' + item.yCur + '" x2="686" y2="' + item.labelYCur + '" stroke="' + color + '" stroke-width="1" stroke-dasharray="2 2" opacity="0.5"/>') : '';
+        ('<line x1="670" y1="' + item.yCur + '" x2="686" y2="' + item.labelYCur + '" stroke="' + color + '" stroke-width="1.2" stroke-dasharray="2 2" opacity="0.65"/>') : '';
 
       return '<g class="pd-trajectory-vector" data-biomarker="' + esc(c.paramKey) + '">' +
         curve +
         leaderLine +
-        '<circle cx="670" cy="' + item.yCur + '" r="5.5" fill="' + color + '" stroke="#ffffff" stroke-width="2" />' +
+        '<circle cx="670" cy="' + item.yCur + '" r="6.5" fill="' + color + '" stroke="#ffffff" stroke-width="2.5" />' +
         '<text x="692" y="' + (item.labelYCur + 4) + '" text-anchor="start" font-size="11.5" font-weight="700">' +
         '<tspan fill="#0f172a">' + esc(c.paramName) + ': </tspan>' +
         '<tspan fill="' + (c.isOutside ? '#b91c1c' : '#334155') + '">' + esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + ' </tspan>' +
-        '<tspan font-size="10" font-weight="600" fill="' + deltaPillColor + '">[' + esc(deltaText) + ']</tspan>' +
+        '<tspan font-size="10" font-weight="700" fill="' + deltaPillColor + '">[' + esc(deltaText) + ']</tspan>' +
         '</text>' +
         '</g>';
     }).join('');
@@ -1408,25 +1405,32 @@
     var svgHeight = Math.max(340, 60 + (items.length * 28));
 
     return '<svg viewBox="0 0 920 ' + svgHeight + '" width="100%" height="auto" style="min-width:720px;display:block;margin:0 auto;overflow:visible">' +
-      // Normal reference band (Center Zone) - Clean, subtle slate background
-      '<rect x="60" y="122" width="800" height="84" fill="#f8fafc" rx="8" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="4 3"/>' +
-      '<text x="460" y="168" text-anchor="middle" font-size="11" font-weight="600" fill="#64748b" letter-spacing="0.5">STANDARD PHYSIOLOGICAL REFERENCE ZONE (NORMAL)</text>' +
+      '<defs>' +
+      '  <linearGradient id="normalZoneGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
+      '    <stop offset="0%" stop-color="#ecfdf5" stop-opacity="0.9"/>' +
+      '    <stop offset="100%" stop-color="#d1fae5" stop-opacity="0.85"/>' +
+      '  </linearGradient>' +
+      '</defs>' +
 
-      // High abnormal zone banner - Muted subtle indicator
-      '<text x="460" y="70" text-anchor="middle" font-size="10" font-weight="600" fill="#94a3b8" letter-spacing="0.5">▲ ELEVATED / SUPRA-NORMAL ABNORMAL ZONE</text>' +
+      // Normal reference band (Center Zone)
+      '<rect x="60" y="122" width="800" height="84" fill="url(#normalZoneGrad)" rx="8" stroke="#a7f3d0" stroke-width="1.2" stroke-dasharray="4 3"/>' +
+      '<text x="460" y="168" text-anchor="middle" font-size="11.5" font-weight="700" fill="#047857" opacity="0.9">✓ STANDARD PHYSIOLOGICAL REFERENCE ZONE (NORMAL)</text>' +
 
-      // Low abnormal zone banner - Muted subtle indicator
-      '<text x="460" y="260" text-anchor="middle" font-size="10" font-weight="600" fill="#94a3b8" letter-spacing="0.5">▼ SUB-NORMAL / DEFICIENT ABNORMAL ZONE</text>' +
+      // High abnormal zone banner
+      '<text x="460" y="70" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b91c1c" opacity="0.65">▲ ELEVATED / SUPRA-NORMAL ABNORMAL ZONE</text>' +
+
+      // Low abnormal zone banner
+      '<text x="460" y="260" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0284c7" opacity="0.65">▼ SUB-NORMAL / DEFICIENT ABNORMAL ZONE</text>' +
 
       // Previous milestone vertical guide
-      '<line x1="175" y1="40" x2="175" y2="' + (svgHeight - 20) + '" stroke="#e2e8f0" stroke-width="1.2" stroke-dasharray="4 3"/>' +
-      '<rect x="85" y="10" width="180" height="26" rx="6" fill="#f8fafc" stroke="#e2e8f0"/>' +
-      '<text x="175" y="27" text-anchor="middle" font-size="11.5" font-weight="600" fill="#475569">PREVIOUS: ' + esc(prevDate) + '</text>' +
+      '<line x1="175" y1="40" x2="175" y2="' + (svgHeight - 20) + '" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+      '<rect x="85" y="10" width="180" height="26" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/>' +
+      '<text x="175" y="27" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">PREVIOUS: ' + esc(prevDate) + '</text>' +
 
       // Current milestone vertical guide
-      '<line x1="670" y1="40" x2="670" y2="' + (svgHeight - 20) + '" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="4 3"/>' +
-      '<rect x="580" y="10" width="180" height="26" rx="6" fill="#f1f5f9" stroke="#cbd5e1"/>' +
-      '<text x="670" y="27" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1e293b">CURRENT: ' + esc(curDate) + '</text>' +
+      '<line x1="670" y1="40" x2="670" y2="' + (svgHeight - 20) + '" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+      '<rect x="580" y="10" width="180" height="26" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>' +
+      '<text x="670" y="27" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d4ed8">CURRENT: ' + esc(curDate) + '</text>' +
 
       vectorsSvg +
       '</svg>';
@@ -1467,9 +1471,9 @@
 
     var isSingleVisit = !labData.pastInvoice;
     var infoNoticeHtml = isSingleVisit ?
-      ('<div style="display:flex;align-items:flex-start;gap:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin-bottom:12px">' +
+      ('<div style="display:flex;align-items:flex-start;gap:10px;background:#eff6ff;border:1px solid #dbeafe;border-radius:10px;padding:10px 14px;margin-bottom:12px">' +
        '  <span style="font-size:16px;line-height:1.2">ℹ️</span>' +
-       '  <div style="font-size:12px;color:#334155;line-height:1.4">' +
+       '  <div style="font-size:12px;color:#1e40af;line-height:1.4">' +
        '    <strong>Initial Clinical Baseline Recorded (' + esc(curDate) + '):</strong> ' +
        '    Biomarkers are mapped into physiological reference zones. Directional trajectory shift vectors will connect here automatically once a subsequent visit is logged.' +
        '  </div>' +
@@ -1494,7 +1498,7 @@
 
       // Organ Filter Quick Buttons
       '<div class="pd-trajectory-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px">' +
-      '  <button type="button" class="btn btn-ghost btn-xs active" data-pd-traj="key" style="font-size:11.5px;padding:3px 10px;border-radius:6px;border:1px solid #334155;background:#f1f5f9;color:#0f172a;font-weight:700">⭐ Key Biomarkers</button>' +
+      '  <button type="button" class="btn btn-ghost btn-xs active" data-pd-traj="key" style="font-size:11.5px;padding:3px 10px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#1d4ed8;font-weight:700">⭐ Key Biomarkers</button>' +
       '  <button type="button" class="btn btn-ghost btn-xs" data-pd-traj="blood" style="font-size:11.5px;padding:3px 10px;border-radius:6px;border:1px solid #cbd5e1;font-weight:600">🩸 Blood (CBC)</button>' +
       '  <button type="button" class="btn btn-ghost btn-xs" data-pd-traj="liver" style="font-size:11.5px;padding:3px 10px;border-radius:6px;border:1px solid #cbd5e1;font-weight:600">🫀 Liver</button>' +
       '  <button type="button" class="btn btn-ghost btn-xs" data-pd-traj="kidneys" style="font-size:11.5px;padding:3px 10px;border-radius:6px;border:1px solid #cbd5e1;font-weight:600">🫘 Kidneys</button>' +
@@ -2730,9 +2734,9 @@
       trajChips.forEach(function (btn) {
         var isAct = btn.getAttribute('data-pd-traj') === filterVal;
         btn.classList.toggle('active', isAct);
-        btn.style.borderColor = isAct ? '#334155' : '#cbd5e1';
-        btn.style.background = isAct ? '#f1f5f9' : '#ffffff';
-        btn.style.color = isAct ? '#0f172a' : '#475569';
+        btn.style.borderColor = isAct ? '#2563eb' : '#cbd5e1';
+        btn.style.background = isAct ? '#eff6ff' : '#ffffff';
+        btn.style.color = isAct ? '#1d4ed8' : '#475569';
         btn.style.fontWeight = isAct ? '700' : '600';
       });
     }
