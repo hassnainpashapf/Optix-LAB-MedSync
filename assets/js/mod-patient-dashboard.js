@@ -1463,8 +1463,8 @@
       '<div class="pd-trends-kpi-grid">' +
       '  <div class="pd-trends-kpi-card">' +
       '    <div class="kpi-top">' +
-      '      <span class="kpi-icon" style="background:#eff6ff;color:#2563eb">🧪</span>' +
-      '      <span class="kpi-badge" style="background:#eff6ff;color:#1d4ed8">Monitored</span>' +
+      '      <span class="kpi-icon icon-monitored" style="background:#eff6ff;color:#2563eb"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.31a2 2 0 0 1-.37 1.17l-4.5 6.75A2 2 0 0 0 6.77 20h10.46a2 2 0 0 0 1.64-2.77l-4.5-6.75A2 2 0 0 1 14 9.31V2"></path><path d="M8.5 2h7"></path><path d="M7 16h10"></path></svg></span>' +
+      '      <span class="kpi-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe">Monitored</span>' +
       '    </div>' +
       '    <div class="kpi-value">' + comps.length + '</div>' +
       '    <div class="kpi-label">Tracked Biomarkers</div>' +
@@ -1472,7 +1472,7 @@
       '  </div>' +
       '  <div class="pd-trends-kpi-card">' +
       '    <div class="kpi-top">' +
-      '      <span class="kpi-icon" style="background:#ecfdf5;color:#059669">🟢</span>' +
+      '      <span class="kpi-icon icon-improved" style="background:#ecfdf5;color:#059669"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></span>' +
       '      <span class="kpi-badge improved">Improved (Behtar)</span>' +
       '    </div>' +
       '    <div class="kpi-value" style="color:#059669">' + sum.improved + '</div>' +
@@ -1481,7 +1481,7 @@
       '  </div>' +
       '  <div class="pd-trends-kpi-card">' +
       '    <div class="kpi-top">' +
-      '      <span class="kpi-icon" style="background:#fef2f2;color:#dc2626">🔴</span>' +
+      '      <span class="kpi-icon icon-alert" style="background:#fef2f2;color:#dc2626"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>' +
       '      <span class="kpi-badge deteriorated">Deteriorated (Alert)</span>' +
       '    </div>' +
       '    <div class="kpi-value" style="color:#dc2626">' + sum.deteriorated + '</div>' +
@@ -1490,7 +1490,7 @@
       '  </div>' +
       '  <div class="pd-trends-kpi-card">' +
       '    <div class="kpi-top">' +
-      '      <span class="kpi-icon" style="background:#f8fafc;color:#64748b">⚪</span>' +
+      '      <span class="kpi-icon icon-stable" style="background:#f1f5f9;color:#475569"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 16 12 8 9 14 6 12 2 12"></polyline></svg></span>' +
       '      <span class="kpi-badge stable">Stable (Mustahkam)</span>' +
       '    </div>' +
       '    <div class="kpi-value" style="color:#475569">' + (sum.stable + sum.baseline) + '</div>' +
@@ -1801,25 +1801,25 @@
 
       '<div class="pd-trends-kpi-grid" style="margin-bottom:16px">' +
       '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top"><span class="kpi-icon" style="background:#eff6ff;color:#2563eb">◎</span><span class="kpi-badge" style="background:#eff6ff;color:#1d4ed8">Monitored</span></div>' +
+      '    <div class="kpi-top"><span class="kpi-icon icon-monitored" style="background:#eff6ff;color:#2563eb"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg></span><span class="kpi-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe">Monitored</span></div>' +
       '    <div class="kpi-value">' + tests.length + '</div>' +
       '    <div class="kpi-label">Diagnostic Tests</div>' +
       '    <div class="kpi-sub">Total lab tests analyzed</div>' +
       '  </div>' +
       '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top"><span class="kpi-icon" style="background:#ecfdf5;color:#059669">🟢</span><span class="kpi-badge improved">Normal</span></div>' +
+      '    <div class="kpi-top"><span class="kpi-icon icon-improved" style="background:#ecfdf5;color:#059669"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></span><span class="kpi-badge improved">Normal</span></div>' +
       '    <div class="kpi-value" style="color:#059669">' + normalCount + '</div>' +
       '    <div class="kpi-label">Within Reference Range</div>' +
       '    <div class="kpi-sub">Safe physiological status</div>' +
       '  </div>' +
       '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top"><span class="kpi-icon" style="background:#fef2f2;color:#dc2626">🔴</span><span class="kpi-badge deteriorated">Abnormal</span></div>' +
+      '    <div class="kpi-top"><span class="kpi-icon icon-alert" style="background:#fef2f2;color:#dc2626"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span><span class="kpi-badge deteriorated">Abnormal</span></div>' +
       '    <div class="kpi-value" style="color:#dc2626">' + abnormalCount + '</div>' +
       '    <div class="kpi-label">Outside Reference Range</div>' +
       '    <div class="kpi-sub">Requires doctor consultation</div>' +
       '  </div>' +
       '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top"><span class="kpi-icon" style="background:#fffbeb;color:#d97706">⏳</span><span class="kpi-badge" style="background:#fef3c7;color:#92400e">Pending</span></div>' +
+      '    <div class="kpi-top"><span class="kpi-icon icon-pending" style="background:#fffbeb;color:#d97706"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span><span class="kpi-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a">Pending</span></div>' +
       '    <div class="kpi-value" style="color:#d97706">' + pendingCount + '</div>' +
       '    <div class="kpi-label">Awaiting Results</div>' +
       '    <div class="kpi-sub">In laboratory processing</div>' +
