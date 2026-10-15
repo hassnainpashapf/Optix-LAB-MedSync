@@ -13,14 +13,17 @@
 
   function keyFor(labId) { return 'labpos_db_' + labId; }
 
+  var cachedRegistry = null;
   function loadRegistry() {
+    if (cachedRegistry) return cachedRegistry;
     try {
       var r = JSON.parse(localStorage.getItem(REG_KEY) || 'null');
-      if (r && Array.isArray(r.labs)) return r;
+      if (r && Array.isArray(r.labs)) { cachedRegistry = r; return r; }
     } catch (e) {}
     return null;
   }
   function saveRegistry(reg) {
+    cachedRegistry = reg;
     try { localStorage.setItem(REG_KEY, JSON.stringify(reg)); } catch (e) {}
   }
   function labById(id) {
@@ -200,6 +203,25 @@
     catch (e) { /* quota — ignore, app continues in-memory */ }
   }
   function copy(o) { return o === undefined || o === null ? o : JSON.parse(JSON.stringify(o)); }
+
+  var indexCache = Object.create(null);
+  function invalidateCache(table) {
+    if (table) delete indexCache[table];
+    else indexCache = Object.create(null);
+  }
+  function getRowById(table, id) {
+    if (!store || !id) return null;
+    var map = indexCache[table];
+    if (!map) {
+      map = Object.create(null);
+      var rows = store[table] || [];
+      for (var i = 0; i < rows.length; i++) {
+        if (rows[i] && rows[i].id) map[rows[i].id] = rows[i];
+      }
+      indexCache[table] = map;
+    }
+    return map[id] || null;
+  }
 
   function pad(n, digits) {
     var s = String(n);
@@ -707,7 +729,8 @@
       save(store);
     }
     /* existing installs: ensure Typhoid (IgG-IgM) / Typhidot test has proper params, name, and search aliases */
-    if (store && Array.isArray(store.tests)) {
+    if (store && Array.isArray(store.tests) && !store._migratedTyphi) {
+      store._migratedTyphi = true;
       var _typhiT = null;
       for (var _ti = 0; _ti < store.tests.length; _ti++) {
         var _tt = store.tests[_ti];
@@ -761,7 +784,8 @@
       }
     }
     /* existing installs: ensure all tests have standard clinical notes and enhanced graph params */
-    if (store && Array.isArray(store.tests)) {
+    if (store && Array.isArray(store.tests) && !store._migratedNotesV2) {
+      store._migratedNotesV2 = true;
       var _tUpdated = false;
       var _notesMap = {
         'CBC': 'Automated cell counter analysis. Reference ranges are based on age and gender. Peripheral blood smear examination is recommended in case of abnormal cell counts or suspected hematological conditions.',
@@ -871,7 +895,9 @@
     var reg = ensureRegistry();
     var lab = labById(labId) || (reg.labs.length ? reg.labs[0] : null);
     if (!lab) return null;
+    if (currentLabId === lab.id && store) return copy(lab);
     currentLabId = lab.id;
+    invalidateCache();
     KEY = keyFor(lab.id);
     store = load();
     if (!store) {
@@ -881,7 +907,8 @@
     applyMigrations();
     /* auto-seed 5000 tests if catalog is loaded and fewer than 100 tests exist */
     try {
-      if (store && typeof TEST_CATALOG_5000 !== 'undefined' && TEST_CATALOG_5000.length) {
+      if (store && !store._catalog5kChecked && typeof TEST_CATALOG_5000 !== 'undefined' && TEST_CATALOG_5000.length) {
+        store._catalog5kChecked = true;
         var existingNames = {};
         (store.tests || []).forEach(function (t) { existingNames[(t.name || '').toLowerCase()] = 1; });
         if (Object.keys(existingNames).length < 100) {
@@ -958,7 +985,7 @@
       /* a doctor's login only ever sees the doctor dashboard: it must not (and cannot) download the lab's data */
       if (sessRole() === 'doctor') { cloud = true; remote = false; return Promise.resolve(true); }
       return loadDump().then(function (dump) {
-        store = dump; remote = true; cloud = true;
+        store = dump; remote = true; cloud = true; invalidateCache();
         return true;
       }).catch(function (err) {
         cloud = true; remote = false;
@@ -1056,7 +1083,7 @@
     /* use the session returned by signup (same as a login) */
     adoptSession: function (j) {
       try { localStorage.setItem(SESS_KEY, JSON.stringify({ token: j.token })); } catch (e) {}
-      return loadDump().then(function (dump) { store = dump; remote = true; cloud = true; return j; });
+      return loadDump().then(function (dump) { store = dump; remote = true; cloud = true; invalidateCache(); return j; });
     },
     changePassword: function (current, next) {
       return window.fetch(API + '/api/auth/change-password', {
@@ -1073,7 +1100,7 @@
     /* Pull fresh server data (other PCs' work). Skipped while our own writes are in flight. */
     refresh: function () {
       if (!remote || !API || inflight > 0) return Promise.resolve(false);
-      return loadDump().then(function (dump) { if (inflight === 0) { store = dump; return true; } return false; })
+      return loadDump().then(function (dump) { if (inflight === 0) { store = dump; invalidateCache(); return true; } return false; })
         .catch(function (e) { if (e && e.auth) fireAuthError(); return false; });
     },
     authHeaders: authHeaders,
@@ -1083,16 +1110,20 @@
     all: function (table) {
       if (table === 'settings') return [copy(store.settings)];
       if (ARRAY_TABLES.indexOf(table) < 0) return [];
-      return copy(store[table] || []);
+      var rows = store[table] || [];
+      var len = rows.length;
+      var out = new Array(len);
+      for (var i = 0; i < len; i++) {
+        var r = rows[i];
+        out[i] = (r && typeof r === 'object') ? Object.assign({}, r) : r;
+      }
+      return out;
     },
 
     get: function (table, id) {
       if (table === 'settings') return id === 'main' ? copy(store.settings) : null;
-      var rows = store[table] || [];
-      for (var i = 0; i < rows.length; i++) {
-        if (rows[i].id === id) return copy(rows[i]);
-      }
-      return null;
+      var r = getRowById(table, id);
+      return (r && typeof r === 'object') ? Object.assign({}, r) : r;
     },
 
     /* like insert, but with an id the caller chose (e.g. the invoice that carries its patient's number). Returns null when that id is already taken. */
@@ -1104,6 +1135,7 @@
       row.id = id;
       if (table === 'invoices' && !row.no) row.no = row.id;
       rows.push(row);
+      invalidateCache(table);
       persist();
       apiWrite('POST', table, null, row);
       return copy(row);
@@ -1115,6 +1147,7 @@
       row.id = nextId(store, table);
       if (table === 'invoices' && !row.no) row.no = row.id;
       (store[table] = store[table] || []).push(row);
+      invalidateCache(table);
       persist();
       apiWrite('POST', table, null, row);
       return copy(row);
@@ -1129,6 +1162,7 @@
       var at = -1;
       for (var i = 0; i < rows.length; i++) { if (rows[i].id === row.id) { at = i; break; } }
       if (at >= 0) rows[at] = row; else rows.push(row);
+      invalidateCache(table);
       persist();
       bulkWrite(table, row);
       return copy(row);
@@ -1177,6 +1211,7 @@
           Object.keys(patch || {}).forEach(function (k) {
             if (k !== 'id') rows[i][k] = copy(patch[k]);
           });
+          invalidateCache(table);
           persist();
           apiWrite('PUT', table, id, rows[i]);
           if (remote && table === 'users') delete rows[i].password; /* never keep plaintext in memory */
@@ -1190,7 +1225,7 @@
       if (table === 'settings' || ARRAY_TABLES.indexOf(table) < 0) return false;
       var rows = store[table] || [];
       for (var i = 0; i < rows.length; i++) {
-        if (rows[i].id === id) { rows.splice(i, 1); persist(); apiWrite('DELETE', table, id); return true; }
+        if (rows[i].id === id) { rows.splice(i, 1); invalidateCache(table); persist(); apiWrite('DELETE', table, id); return true; }
       }
       return false;
     },
@@ -1200,10 +1235,11 @@
         return window.fetch(API + '/api/admin/reseed', { method: 'POST', headers: authHeaders() }).then(function (r) {
           if (!r.ok) throw new Error('reseed failed');
           return r.json();
-        }).then(function (dump) { store = dump; return true; });
+        }).then(function (dump) { store = dump; invalidateCache(); return true; });
       }
       var _rlab = labById(currentLabId);
       store = seedStore({ labName: _rlab ? _rlab.name : undefined, demoData: currentLabId === 'lab1' });
+      invalidateCache();
       persist();
       return Promise.resolve(true);
     },
@@ -1229,7 +1265,7 @@
           return r.json();
         }).then(function () {
           return loadDump();
-        }).then(function (dump) { store = dump; return true; });
+        }).then(function (dump) { store = dump; invalidateCache(); return true; });
       }
       store = {
         seq: tables.seq, settings: tables.settings,
@@ -1240,6 +1276,7 @@
         wa_log: tables.wa_log, samples: tables.samples, closings: tables.closings, stock_items: tables.stock_items || [], stock_moves: tables.stock_moves || [], email_log: tables.email_log || [], panels: tables.panels || [], ref_labs: tables.ref_labs || [], outsourced: tables.outsourced || [], onlinepay_claims: tables.onlinepay_claims || [], appointments: tables.appointments || []
       };
       normalizeSeq(store);
+      invalidateCache();
       persist();
       return Promise.resolve(true);
     }

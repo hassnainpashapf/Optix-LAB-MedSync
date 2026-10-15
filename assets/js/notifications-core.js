@@ -117,7 +117,7 @@
       document.addEventListener('keydown', unlock);
       document.addEventListener('visibilitychange', refresh);
       window.addEventListener('storage', storage);
-      timer = setInterval(function () { if (!document.hidden) refresh(); }, 5000);
+      timer = setInterval(function () { if (!document.hidden) refresh(); }, 15000);
     }
     refresh();
   }

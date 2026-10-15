@@ -604,7 +604,9 @@
       var _tlab = null;
       try { _tlab = window.DB.labById(s.labId); } catch (e) {}
       if (!_tlab || _tlab.active === false) { logout(); return; }
-      try { window.DB.useLab(s.labId); } catch (e) {}
+      if (!window.DB.currentLabId || window.DB.currentLabId() !== s.labId) {
+        try { window.DB.useLab(s.labId); } catch (e) {}
+      }
     }
 
     /* patient / doctor portal: public page, works signed out and signed in */
@@ -1845,7 +1847,16 @@
     }
     window.addEventListener('hashchange', function () { setTimeout(watch, 0); schedule(); });
     window.addEventListener('resize', schedule);
-    setInterval(watch, 1500); /* #view is re-created on login/logout */
+    if (document.getElementById('view')) {
+      watch();
+    } else {
+      var _lblCheck = setInterval(function () {
+        if (document.getElementById('view')) {
+          clearInterval(_lblCheck);
+          watch();
+        }
+      }, 500);
+    }
   })();
 
   /* Table & View Horizontal Scroll / Zoom Pan Controller */
@@ -1996,7 +2007,16 @@
     }
     window.addEventListener('hashchange', function () { setTimeout(watch, 0); schedule(); });
     window.addEventListener('resize', schedule);
-    setInterval(watch, 1500);
+    if (document.getElementById('view')) {
+      watch();
+    } else {
+      var _scrollCheck = setInterval(function () {
+        if (document.getElementById('view')) {
+          clearInterval(_scrollCheck);
+          watch();
+        }
+      }, 500);
+    }
 
     /* mouse wheel on overflowing table or view with horizontal overflow */
     document.addEventListener('wheel', function (e) {
