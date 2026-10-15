@@ -202,7 +202,7 @@
         + '</div>'
         + '</div></div>'
 
-        + (gwCard || '<div class="card sms-card"><div class="card-h"><h3>Gateway Instructions</h3></div><div class="card-b"><p class="muted" style="font-size:13px;margin:0">\uD83D\uDCF2 Messages will go out automatically from your Android phone\u2019s SIM card. Keep the Optix SMS Gateway APK installed and running on your phone with background battery usage unrestricted.</p></div></div>')
+        + (gwCard || '')
 
         + '<div class="card sms-card"><div class="card-h"><h3>Automatic SMS</h3></div><div class="card-b">'
         + rowSwitch('smsAutoPatient', !!c.autoPatient, 'Report ready \u2192 patient', 'Automatically SMS the patient when their full report is ready (same moment WhatsApp would send).')
