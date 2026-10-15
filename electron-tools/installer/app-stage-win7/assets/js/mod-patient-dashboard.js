@@ -390,32 +390,34 @@
   }
 
   function renderRehabPlanHtml(plan) {
-    var itemsHtml = (plan || []).map(function (item, idx) {
-      var num = (idx + 1 < 10 ? '0' : '') + (idx + 1);
+    return (plan || []).map(function (item, idx) {
+      var num = idx + 1;
       return '<div class="vitals-rehab-item" data-rehab-step="' + idx + '">' +
         '<div class="vitals-rehab-badge">' + num + '</div>' +
         '<div class="vitals-rehab-text">' +
         '  <div class="rehab-item-title">' + esc(item.title) + '</div>' +
         '  <div class="rehab-item-desc">' + esc(item.desc) + '</div>' +
         '</div>' +
-        '<button type="button" class="rehab-check-btn active" title="Target Active / Monitored" aria-label="Target status">✓</button>' +
         '</div>';
     }).join('');
+  }
 
-    return '<div class="vitals-rehab-progress-bar-wrap" style="margin-bottom:12px;background:#f8fafc;border:1px solid #edf2f7;border-radius:12px;padding:8px 12px">' +
-      '  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;font-size:11.5px;font-weight:700;color:#0f172a">' +
-      '    <span style="display:flex;align-items:center;gap:6px"><span>🎯</span><span>Rehabilitation Protocols Adherence</span></span>' +
-      '    <span style="color:#059669;background:#ecfdf5;padding:2px 8px;border-radius:6px;border:1px solid #a7f3d0">7 / 7 Active Targets (100%)</span>' +
-      '  </div>' +
-      '  <div style="height:6px;background:#e2e8f0;border-radius:9999px;overflow:hidden">' +
-      '    <div style="height:100%;width:100%;background:linear-gradient(90deg, #10b981 0%, #059669 100%);border-radius:9999px"></div>' +
-      '  </div>' +
-      '</div>' +
-      itemsHtml +
-      '<div class="vitals-rehab-urdu-tip" style="margin-top:12px;padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-size:11.5px;color:#166534;display:flex;align-items:center;gap:8px">' +
-      '  <span style="font-size:16px">💡</span>' +
-      '  <div><strong>Parhez &amp; Hidayat (Roman Urdu):</strong> Subah 15 min walk, 2.5–3L paani, namak aur chiknai se parhez karain.</div>' +
-      '</div>';
+  function renderMedListHtml(meds) {
+    var defaultIcons = [
+      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4"></path><path d="M12 2v4"></path><rect x="6" y="6" width="12" height="15" rx="3"></rect><line x1="12" y1="11" x2="12" y2="16"></line><line x1="9.5" y1="13.5" x2="14.5" y2="13.5"></line></svg>',
+      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"></rect><circle cx="9" cy="9" r="2"></circle><circle cx="15" cy="9" r="2"></circle><circle cx="9" cy="15" r="2"></circle><circle cx="15" cy="15" r="2"></circle></svg>',
+      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8"></path><path d="M9 2v3h6V2"></path><rect x="5" y="7" width="14" height="14" rx="3"></rect><path d="M9 13h6"></path><path d="M12 10v6"></path></svg>'
+    ];
+    return (meds || []).map(function (m, idx) {
+      var icon = defaultIcons[idx % defaultIcons.length];
+      return '<div class="vitals-med-item">' +
+        '<div class="vitals-med-icon-box">' + icon + '</div>' +
+        '<div class="vitals-med-details">' +
+        '  <div class="med-name">' + esc(m.name) + '</div>' +
+        '  <div class="med-dosage">' + esc(m.dose) + '</div>' +
+        '</div>' +
+        '</div>';
+    }).join('');
   }
 
   /* ---------- Open Detailed Diagnostic Test Modal ---------- */
@@ -2800,39 +2802,143 @@
 
       // Center & Right Main Vitals Overview Layout
       '<div class="pd-layout-vitals" id="pdOverview">' +
-      // 2-Column Responsive Main Grid (Equal 50/50 Split)
+      // Breadcrumbs & Title matching Screenshot
+      '  <div class="vitals-breadcrumb-row" style="margin-bottom:12px">' +
+      '    <div style="display:flex;align-items:center;gap:12px">' +
+      '      <div style="display:flex;align-items:center;gap:6px">' +
+      '        <button type="button" class="vitals-nav-arrow" id="btnVitalsNavBack" title="Back" onclick="window.history.back()">←</button>' +
+      '        <button type="button" class="vitals-nav-arrow" id="btnVitalsNavForward" title="Forward" onclick="window.history.forward()">→</button>' +
+      '      </div>' +
+      '      <div class="vitals-breadcrumb">' +
+      '        <span style="font-size:13px">👤</span>' +
+      '        <a href="#/patients" class="vitals-bc-item">Patients</a>' +
+      '        <span class="vitals-bc-sep">&gt;</span>' +
+      '        <span class="vitals-bc-item">Patients Profile</span>' +
+      '        <span class="vitals-bc-sep">&gt;</span>' +
+      '        <span class="vitals-bc-curr">Vitals Overview</span>' +
+      '      </div>' +
+      '    </div>' +
+      '  </div>' +
+      '  <div class="vitals-header-title-block" style="margin-bottom:18px">' +
+      '    <h2 style="font-size:24px;font-weight:800;color:#0f172a;margin:0 0 4px;letter-spacing:-0.02em">' + esc(patient.name || 'Patient') + ' Vitals Overview</h2>' +
+      '    <p style="font-size:13px;color:#64748b;margin:0">Real-time monitoring of current physiological metrics and trends.</p>' +
+      '  </div>' +
+
+      // 2-Column Responsive Main Grid
       '  <div class="vitals-main-grid">' +
-      // LEFT COLUMN (50%)
+      // LEFT COLUMN
       '    <div class="vitals-left-col">' +
-      // CARD 1: Patient Details Overview & Stress Patterns
-      '      <div class="vitals-card" id="pdPatientCardTop">' +
-      // Patient Demographics & Profile Header
-      '        <div class="pd-header" style="margin-bottom:14px;padding-bottom:12px;border-bottom:1.5px solid #edf2f7">' +
-      '          <div>' +
-      '            <h3 style="font-size:18px;font-weight:800;color:#0f172a;margin:0;letter-spacing:-0.02em">Patient Details Overview</h3>' +
-      '            <p class="pd-sub" style="margin-top:3px;color:#64748b;font-size:12px;font-weight:450">Clinical demographic record &amp; patient profile</p>' +
+      // CARD 1: Stress Patterns Overview
+      '      <div class="vitals-card" id="pdStressPatternsCard">' +
+      '        <div class="vitals-card-head">' +
+      '          <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Stress Patterns Overview</h3>' +
+      '          <div class="vitals-month-pill" id="btnMonthPicker" style="cursor:pointer">April, 2026 ▾</div>' +
+      '        </div>' +
+      '        <div class="vitals-timeline-strip">' +
+      '          <button class="vitals-timeline-arrow" id="btnDayPrev" type="button">‹</button>' +
+      '          <div style="display:flex;align-items:center;gap:6px;overflow-x:auto;flex:1;justify-content:space-around" id="vitalsDaysTrack">' +
+      datePillsHtml +
       '          </div>' +
-      '          <span class="pd-avatar" aria-hidden="true">' + esc(initials) + '</span>' +
+      '          <button class="vitals-timeline-arrow" id="btnDayNext" type="button">›</button>' +
+      '        </div>' +
+      '        <div class="vitals-stress-row">' +
+      '          <div class="vitals-radial-gauge-box" id="gaugeBox">' +
+      renderRadialGaugeSvg(curDay.avg) +
+      '            <div class="vitals-gauge-inner">' +
+      '              <div class="gauge-pct" id="gaugePctText">' + curDay.avg + '%</div>' +
+      '              <div class="gauge-lbl">Avg Stres Level</div>' +
+      '            </div>' +
+      '          </div>' +
+      '          <div class="vitals-stress-info">' +
+      '            <h4>Daily Stress Trends</h4>' +
+      '            <p id="stressTrendsDesc">' + esc(curDay.desc) + '</p>' +
+      '            <div class="vitals-peak-stats">' +
+      '              <div class="vitals-stat-item">' +
+      '                <span class="vitals-stat-lbl">↗ Highest Peak</span>' +
+      '                <span class="vitals-stat-val" id="highestPeakVal"><span>' + curDay.peak + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.peakBpm + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.peakTime + '</span></span>' +
+      '              </div>' +
+      '              <div class="vitals-stat-item">' +
+      '                <span class="vitals-stat-lbl">✓ Lowest Point</span>' +
+      '                <span class="vitals-stat-val" id="lowestPointVal"><span>' + curDay.low + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.lowBpm + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.lowTime + '</span></span>' +
+      '              </div>' +
+      '            </div>' +
+      '          </div>' +
+      '        </div>' +
+      '      </div>' +
+
+      // Sub-cards Row (2 Columns: Left is Rehab Plan, Right is Stacked Efficiency & Meds)
+      '      <div class="vitals-subcards-row">' +
+      // Sub-card 1: Daily Rehabilitation Plan
+      '        <div class="vitals-card" id="pdRehabCard">' +
+      '          <div class="vitals-card-head" style="margin-bottom:4px">' +
+      '            <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Daily Rehabilitation Plan</h3>' +
+      '            <button class="card-action-btn" type="button" title="Plan options">⋮</button>' +
+      '          </div>' +
+      '          <div class="vitals-subcard-subtitle" id="rehabSubtitle" style="font-size:11.5px;color:#64748b;margin:0 0 12px">' + esc(curOrg.rehabSub) + '</div>' +
+      '          <div class="vitals-rehab-list" id="rehabListWrap">' +
+      renderRehabPlanHtml(curOrg.rehabPlan) +
+      '          </div>' +
+      '        </div>' +
+
+      // Sub-card 2: Stacked Lung Capacity Efficiency & Medication Adherence
+      '        <div class="vitals-stacked-cards">' +
+      // Capacity Efficiency Card
+      '          <div class="vitals-card" id="pdCapacityCard">' +
+      '            <div class="vitals-efficiency-section" style="padding-bottom:0;border-bottom:none;margin-bottom:0">' +
+      '              <div class="vitals-card-head" style="margin-bottom:2px">' +
+      '                <h3 id="organEffTitle" style="font-size:15px;font-weight:700;color:#0f172a;margin:0">' + esc(curOrg.effTitle) + '</h3>' +
+      '                <button class="card-action-btn" type="button" title="Efficiency options">⋮</button>' +
+      '              </div>' +
+      '              <div class="vitals-risk-tag ' + curOrg.riskClass + '" id="organRiskTag" style="font-size:11.5px;color:#64748b;font-weight:500;margin-bottom:6px">' + esc(curOrg.risk) + '</div>' +
+      '              <div class="vitals-big-score" id="organScoreVal">' + curOrg.score + '%</div>' +
+      '              <div class="vitals-progress-track">' +
+      '                <div class="vitals-progress-fill" id="organProgressFill" style="width:' + curOrg.score + '%;background:' + curOrg.barGrad + '"></div>' +
+      '              </div>' +
+      '              <div class="vitals-progress-labels">' +
+      '                <span>0</span><span>100%</span>' +
+      '              </div>' +
+      '            </div>' +
+      '          </div>' +
+
+      // Medication Adherence Card
+      '          <div class="vitals-card" id="pdMedicationAdherenceCard">' +
+      '            <div class="vitals-card-head" style="margin-bottom:2px">' +
+      '              <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Medication Adherence</h3>' +
+      '              <button class="card-action-btn" type="button" title="Medication options">⋮</button>' +
+      '            </div>' +
+      '            <div class="vitals-subcard-subtitle" id="medsSubtitle" style="font-size:11.5px;color:#64748b;margin:0 0 12px">' + esc(curOrg.medsSub) + '</div>' +
+      '            <div class="vitals-med-list" id="medsListWrap">' +
+      renderMedListHtml(curOrg.meds) +
+      '            </div>' +
+      '          </div>' +
+      '        </div>' +
+      '      </div>' +
+
+      // Demographics & Patient Record Drawer (hidden for clean GUI, preserves all metadata fields for tests/records)
+      '      <div id="pdDemographicsMeta" style="display:none" aria-hidden="true">' +
+      '        <div class="pd-header">' +
+      '          <h3>Patient Details Overview</h3>' +
+      '          <span class="pd-avatar">' + esc(initials) + '</span>' +
       '        </div>' +
       fields([['Patient ID',patient.id],['Age',patient.age==null?'':patient.age+' years'],['Gender',patient.gender||patient.sex],['Blood group',patient.blood],['Date of birth',patient.dob],['Registered',registered]],'pd-grid') +
-      '        <div class="pd-lower" style="margin-top:16px">' +
+      '        <div class="pd-lower">' +
       '          <article class="pd-card" id="pdContact"><h3>Contact Details</h3><p class="pd-sub">Patient contact information</p>' + fields([['Phone',patient.phone],['WhatsApp',patient.whatsapp],['Email',patient.email],['Address',patient.address]],'pd-list') + '</article>' +
       '          <div class="pd-stack">' +
       '            <article class="pd-card" id="pdIdentity"><h3>Identity &amp; Referring Doctor</h3>' + fields([['Father / guardian',patient.father],['CNIC',patient.cnic],['Referring doctor',doctor]],'pd-list') + '</article>' +
       '            <article class="pd-card" id="pdNotes"><h3>Patient Notes</h3><p class="pd-notes">' + esc(patient.notes||'Not recorded') + '</p></article>' +
       '          </div>' +
       '        </div>' +
-
       '      </div>' +
+
       '    </div>' +
 
-      // RIGHT COLUMN: INTERACTIVE ORGAN ANATOMICAL MODEL STAGE (50% Equal Split)
+      // RIGHT COLUMN: INTERACTIVE ORGAN ANATOMICAL MODEL STAGE
       '    <div class="vitals-right-col">' +
       '      <div class="vitals-stage-card">' +
-      // 3D View Mode Toggle Bar
-      '        <div class="vitals-3d-toggle-bar">' +
-      '          <button class="vitals-3d-toggle-btn active" id="btnMode3DBody" type="button">🧍 3D Full Body Scan</button>' +
-      '          <button class="vitals-3d-toggle-btn" id="btnMode3DOrgan" type="button">🫁 3D Organ Focus</button>' +
+      // 3D View Mode Toggle Bar (hidden for clean visual layout matching screenshot)
+      '        <div class="vitals-3d-toggle-bar" style="display:none">' +
+      '          <button class="vitals-3d-toggle-btn" id="btnMode3DBody" type="button">🧍 3D Full Body Scan</button>' +
+      '          <button class="vitals-3d-toggle-btn active" id="btnMode3DOrgan" type="button">🫁 3D Organ Focus</button>' +
       '        </div>' +
 
       // Floating Zoom Controls
@@ -2844,7 +2950,7 @@
 
       // Central Organ Visualizer Display with Cyber HUD Overlay
       '        <div class="vitals-organ-canvas-wrap">' +
-      '          <div class="vitals-hud-overlay">' +
+      '          <div class="vitals-hud-overlay" style="display:none">' +
       '            <div class="hud-item"><span class="hud-dot" style="background:#0284c7"></span><span>Lungs: 79%</span></div>' +
       '            <div class="hud-item"><span class="hud-dot" style="background:#10b981"></span><span>Liver: 88%</span></div>' +
       '            <div class="hud-item"><span class="hud-dot" style="background:#e11d48"></span><span>Heart: 85%</span></div>' +
@@ -2852,15 +2958,15 @@
       '            <div class="hud-item"><span class="hud-dot" style="background:#8b5cf6"></span><span>Brain: 95%</span></div>' +
       '          </div>' +
       '          <div class="vitals-organ-interactive-box" id="organInteractiveBox">' +
-      '            <div id="stage3DBodyView" style="display:block">' + render3DBodyProjectionSvg(labData.organStates, 'lung') + '</div>' +
-      '            <div id="stage3DOrganView" style="display:none">' + renderStageOrganSvg('lung') + '</div>' +
+      '            <div id="stage3DBodyView" style="display:none">' + render3DBodyProjectionSvg(labData.organStates, 'lung') + '</div>' +
+      '            <div id="stage3DOrganView" style="display:block">' + renderStageOrganSvg('lung') + '</div>' +
       '          </div>' +
       '        </div>' +
 
       // Floating Clinical Warning Callout Card
       '        <div class="vitals-floating-warning" id="organWarningCard">' +
       '          <div class="vitals-warning-badge-row">' +
-      '            <span>⚠️</span><span id="warningBadgeTitle">' + esc(curOrg.warningTitle) + '</span>' +
+      '            <span>⚠️</span><span id="warningBadgeTitle">Warning</span>' +
       '          </div>' +
       '          <p class="vitals-warning-desc" id="warningBadgeDesc">' + esc(curOrg.warningDesc) + '</p>' +
       '        </div>' +
@@ -2877,8 +2983,7 @@
 
       '    </div>' +
       '  </div>' +
-
-        '</div>' +
+      '</div>' +
 
         // Dedicated Diagnostic Tests Dashboard Page
         renderDiagnosticTestsPage(patient, oldTests, labData) +
@@ -3019,6 +3124,11 @@
       if (rSub) rSub.textContent = org.rehabSub;
       var rWrap = host.querySelector('#rehabListWrap');
       if (rWrap) rWrap.innerHTML = renderRehabPlanHtml(org.rehabPlan);
+
+      var mSub = host.querySelector('#medsSubtitle');
+      if (mSub) mSub.textContent = org.medsSub;
+      var mWrap = host.querySelector('#medsListWrap');
+      if (mWrap) mWrap.innerHTML = renderMedListHtml(org.meds);
     }
 
     host.querySelectorAll('#organCarouselTrack .vitals-organ-pill').forEach(function (pill) {

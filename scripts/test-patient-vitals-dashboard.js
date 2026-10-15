@@ -137,27 +137,28 @@ const patient = fakeDB._patients['PT-101'];
 const html = context.App.patientDashboard.render(patient);
 
 assert.ok(html.includes('Mohamed Ahmed'), 'Patient name present in left profile menu');
-assert.ok(html.includes('Patient Details Overview'), 'Card 1 Patient Details Overview present');
-assert.ok(!html.includes('Stress Patterns Overview'), 'Stress Patterns Overview cleanly removed');
-console.log('✓ Patient Details Overview verified and Stress Patterns Overview cleanly removed');
+assert.ok(html.includes('Patient Details Overview'), 'Patient Details Overview metadata present');
+assert.ok(html.includes('Stress Patterns Overview'), 'Stress Patterns Overview present matching screenshot');
+console.log('✓ Patient Details Overview and Stress Patterns Overview verified');
 
-// 3. Verify Daily Rehabilitation Plan is cleanly removed
-assert.ok(!html.includes('Daily Rehabilitation Plan'), 'Daily Rehabilitation Plan cleanly removed');
-assert.ok(!html.includes('Early Ambulation'), 'Rehab items cleanly removed');
-assert.ok(!html.includes('vitals-rehab-progress-bar-wrap'), 'Rehabilitation progress bar cleanly removed');
-console.log('✓ Daily Rehabilitation Plan cleanly removed as requested');
+// 3. Verify Daily Rehabilitation Plan is present matching screenshot
+assert.ok(html.includes('Daily Rehabilitation Plan'), 'Daily Rehabilitation Plan present');
+assert.ok(html.includes('Early Ambulation'), 'Rehab items present');
+assert.ok(!html.includes('vitals-rehab-progress-bar-wrap'), 'Rehabilitation progress bar cleanly omitted matching screenshot');
+console.log('✓ Daily Rehabilitation Plan verified');
 
-// 4. Test Clean Removal of Simulated Lung Capacity Efficiency (79% Moderate Risk) and Verification of Real Diagnostic Test Effect & Medication Adherence
-assert.ok(!html.includes('Lung Capacity Efficiency'), 'Lung Capacity Efficiency cleanly removed');
-assert.ok(!html.includes('vitals-big-score'), 'Simulated big score cleanly removed');
-assert.ok(!html.includes('vitals-progress-track'), 'Simulated progress track cleanly removed');
-// Verify Medication Adherence is completely removed from dashboard as requested
+// 4. Test Simulated Lung Capacity Efficiency (79% Moderate Risk) and Verification of Medication Adherence matching screenshot
+assert.ok(html.includes('Lung Capacity Efficiency'), 'Lung Capacity Efficiency present');
+assert.ok(html.includes('vitals-big-score'), 'Score present');
+assert.ok(html.includes('vitals-progress-track'), 'Progress track present');
+// Verify Medication Adherence is present in overview matching screenshot
 assert.ok(!html.includes('id="pdMeds"'), 'Dedicated Medication Adherence page cleanly removed');
 assert.ok(!html.includes('data-pd-section="pdMeds"'), 'Medication Adherence nav button cleanly removed');
-assert.ok(!html.includes('Medication Adherence'), 'Medication Adherence label cleanly removed');
-assert.ok(!html.includes('Active Prescriptions'), 'Medication KPI Active Prescriptions cleanly removed');
-assert.ok(!html.includes('Daily Dosage Schedule &amp; Intake Confirmation'), 'Dosage schedule cleanly removed');
-console.log('✓ Medication Adherence completely removed from dashboard as requested');
+assert.ok(html.includes('Medication Adherence'), 'Medication Adherence label present in overview');
+assert.ok(html.includes('Ventolin'), 'Ventolin present');
+assert.ok(html.includes('Pulmicort'), 'Pulmicort present');
+assert.ok(html.includes('Mucosolvan'), 'Mucosolvan present');
+console.log('✓ Medication Adherence and Capacity Efficiency verified matching screenshot');
 
 // 5. Test Right Stage: Anatomical Organ & Carousel
 assert.ok(html.includes('vitals-stage-card'), 'Interactive organ stage card present');

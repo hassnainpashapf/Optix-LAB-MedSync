@@ -19,5 +19,5 @@ console.log('Test anatomy: related regions, patient isolation, latest-order isol
 
 for(const label of ['aria-label="Patient menu"','aria-label="Patient sections"','data-pd-section="pdOverview"','data-pd-section="pdAnatomy"'])assert(api.render(p).includes(label));
 assert(!api.render(p).includes('pdMeds'));
-assert(!api.render(p).includes('Medication Adherence'));
+assert(api.render(p).includes('Medication Adherence'));
 console.log('Patient navigation is rendered inside the profile, independently of the global sidebar.');

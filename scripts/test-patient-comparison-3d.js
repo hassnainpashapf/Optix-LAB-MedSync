@@ -179,9 +179,9 @@ assert.ok(html.includes('id="pdTestSelect"'), 'Test anatomy dropdown present');
 assert.ok(html.includes('patient-body-reference.png'), 'Patient body reference image present in anatomy');
 assert.ok(html.includes('Target Organ Systems Breakdown'), 'Organ systems breakdown section present');
 assert.ok(html.includes('Patient Diagnostic Tests Anatomical Directory'), 'Diagnostic tests directory present');
-// 8. Verify Medication Adherence Page, Navigation & Regimen Monitoring are cleanly removed:
+// 8. Verify Dedicated Medication Adherence Page, Navigation & Regimen Monitoring are cleanly removed:
 assert.ok(!html.includes('data-pd-section="pdMeds"'), 'Header navigation button for Medication Adherence cleanly removed');
-assert.ok(!html.includes('Medication Adherence'), 'Header navigation button label cleanly removed');
+assert.ok(!html.includes('aria-label="Medication Adherence"'), 'Header navigation button label cleanly removed');
 assert.ok(!html.includes('id="pdMeds"'), 'Dedicated pdMeds page section cleanly removed');
 assert.ok(!html.includes('Daily Dosage Schedule &amp; Intake Confirmation'), 'Dosage schedule tracker cleanly removed');
 assert.ok(!html.includes('Pharmacological Safety &amp; Clearance'), 'Safety and clearance screening cleanly removed');
