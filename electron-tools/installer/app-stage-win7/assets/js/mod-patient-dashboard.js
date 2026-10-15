@@ -2657,26 +2657,6 @@
     return '<div class="pd-layout-tests" id="pdTests" style="display:none">' +
       '<div style="width:100%">' +
 
-      // Top Header Card
-      '  <div class="vitals-card" style="width:100%;margin-bottom:16px">' +
-      '    <div class="vitals-card-head" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">' +
-      '      <div>' +
-      '        <h3 style="display:flex;align-items:center;gap:8px;font-size:17px;font-weight:800;color:#0f172a;margin:0"><span>🧪</span><span>Patient Diagnostic Laboratory Tests &amp; Clinical Parameters</span></h3>' +
-      '        <p class="pd-sub" style="margin-top:4px;color:#64748b;font-size:12px;font-weight:450">Comprehensive chronological index of ordered lab tests, biomarker readings, normal reference intervals, and clinical flags</p>' +
-      '      </div>' +
-      '      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
-      '        <button type="button" class="btn btn-primary btn-sm" id="btnPdTestsDoctorAI" data-inv-id="' + esc(activeInvId) + '" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' +
-      '          <span>🤖</span> <span>AI Lab Analysis</span>' +
-      '        </button>' +
-      '        <button type="button" class="btn btn-ghost btn-sm" id="btnPdTestsPrintSheet" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff">' +
-      '          <span>🖨️</span> <span>Print Summary</span>' +
-      '        </button>' +
-      '        <button type="button" class="btn btn-ghost btn-sm" data-pd-switch="pdReports" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff">' +
-      '          <span>📑</span> <span>Reports Hub →</span>' +
-      '        </button>' +
-      '      </div>' +
-      '    </div>' +
-      '  </div>' +
 
       // 4 Diagnostic KPI Cards
       '  <div class="pd-trends-kpi-grid" style="margin-bottom:16px">' +

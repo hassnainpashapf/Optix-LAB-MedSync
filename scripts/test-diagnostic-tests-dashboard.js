@@ -144,8 +144,8 @@ console.log('✓ Navigation button for Diagnostic Tests is present with icon �
 // 4. Verify Dedicated #pdTests Container
 assert.ok(html.includes('id="pdTests"'), 'Dedicated #pdTests container must be present');
 assert.ok(html.includes('class="pd-layout-tests"'), 'pd-layout-tests class must be applied');
-assert.ok(html.includes('Patient Diagnostic Laboratory Tests &amp; Clinical Parameters') || html.includes('Patient Diagnostic Laboratory Tests & Clinical Parameters'), 'Dashboard heading must be present');
-console.log('✓ Dedicated #pdTests container verified');
+assert.ok(!html.includes('Patient Diagnostic Laboratory Tests &amp; Clinical Parameters') && !html.includes('Patient Diagnostic Laboratory Tests & Clinical Parameters'), 'Top header card must be cleanly removed per user request');
+console.log('✓ Dedicated #pdTests container verified (with clean layout, header card removed)');
 
 // 5. Verify 4 KPI Cards
 assert.ok(html.includes('data-pd-tests-kpi="all"'), 'KPI card for total tests must exist');
