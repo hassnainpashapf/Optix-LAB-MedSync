@@ -828,6 +828,52 @@
     return list;
   }
 
+  function getPatientReports(patient) {
+    if (!patient || !patient.id) return [];
+    var invoices = (DB.all('invoices') || []).filter(function (inv) {
+      return inv && inv.patientId === patient.id;
+    }).sort(function (a, b) {
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+    var results = DB.all('results') || [];
+    return invoices.map(function (inv) {
+      var invResults = results.filter(function (r) { return r && r.invoiceId === inv.id; });
+      var items = Array.isArray(inv.items) ? inv.items : [];
+      var testNames = items.map(function (item) {
+        var t = (item.testId ? DB.get('tests', item.testId) : null) || {};
+        return t.name || item.name || t.code || 'Diagnostic Test';
+      });
+      var readyCount = invResults.filter(function (r) { return r.status === 'ready'; }).length;
+      var isReady = readyCount > 0;
+      var allReady = items.length > 0 && items.every(function (item) {
+        return invResults.some(function (r) { return r.testId === item.testId && r.status === 'ready'; });
+      });
+      var doctor = inv.doctorId ? (DB.get('doctors', inv.doctorId) || {}) : null;
+      var status = allReady ? 'ready' : isReady ? 'partial' : 'pending';
+      var statusLabel = allReady ? 'Ready & Finalized' : isReady ? 'Partially Ready' : 'Processing';
+      var badgeCls = allReady ? 'b-ready' : isReady ? 'b-warn' : 'b-pending';
+      var visitNos = (App.visitNos && typeof App.visitNos === 'function') ? App.visitNos(inv) : { labText: inv.no || '#' + inv.id };
+      return {
+        inv: inv,
+        invoiceId: inv.id,
+        invoiceNo: inv.no || (inv.id ? '#' + inv.id : ''),
+        labText: visitNos.labText || inv.no || ('#' + inv.id),
+        date: inv.createdAt ? (App.d ? App.d(inv.createdAt) : String(inv.createdAt).slice(0, 10)) : 'Recorded',
+        time: inv.createdAt ? (App.dt ? App.dt(inv.createdAt) : String(inv.createdAt)) : '',
+        testNames: testNames,
+        testCount: items.length,
+        doctorName: doctor ? (doctor.name || 'Self') : 'Self',
+        status: status,
+        statusLabel: statusLabel,
+        badgeCls: badgeCls,
+        isPaid: (+inv.due || 0) <= 0.009,
+        due: inv.due || 0,
+        total: inv.total || 0,
+        reportPdfKey: inv.reportPdfKey || ''
+      };
+    });
+  }
+
   function anatomy(entry) {
     entry=entry||{region:'general',status:'pending',flags:[],name:'No ordered tests'};
     var region=regions[entry.region],red=entry.status==='abnormal';
@@ -2379,6 +2425,95 @@
 
 
 
+  /* Render Dedicated Patient Diagnostic Reports & Downloads Page */
+  function renderPatientReportsPage(patient) {
+    var reports = getPatientReports(patient);
+    var patName = patient ? (patient.name || 'Patient') : 'Patient';
+
+    var rowsHtml = '';
+    if (!reports.length) {
+      rowsHtml = '<tr><td colspan="6" style="padding:48px 20px;text-align:center;color:#64748b">' +
+        '<div style="font-size:36px;margin-bottom:8px">📋</div>' +
+        '<strong style="font-size:15px;color:#334155;display:block;margin-bottom:4px">No Diagnostic Reports Recorded Yet</strong>' +
+        '<span style="font-size:13px">Official laboratory reports will appear here automatically as soon as test orders are registered and finalized.</span>' +
+        '</td></tr>';
+    } else {
+      rowsHtml = reports.map(function (rep) {
+        var testPills = rep.testNames.map(function (tn) {
+          return '<span style="display:inline-block;padding:2px 8px;font-size:11.5px;font-weight:600;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0;border-radius:6px;margin:2px 4px 2px 0">' + esc(tn) + '</span>';
+        }).join('');
+        if (!testPills) testPills = '<span style="color:#94a3b8;font-size:12px">General Laboratory Test</span>';
+
+        return '<tr class="pd-report-row" data-rep-id="' + esc(rep.invoiceId) + '" style="border-bottom:1px solid #f1f5f9;transition:background 0.15s ease">' +
+          '  <td style="padding:14px 16px">' +
+          '    <div style="font-size:13.5px;font-weight:700;color:#0f172a">' + esc(rep.labText) + '</div>' +
+          '    <div style="font-size:11.5px;color:#64748b;font-family:monospace;margin-top:2px">' + esc(rep.invoiceNo) + '</div>' +
+          '  </td>' +
+          '  <td style="padding:14px 16px">' +
+          '    <div style="font-size:13px;font-weight:600;color:#1e293b">📅 ' + esc(rep.date) + '</div>' +
+          '    <div style="font-size:11px;color:#64748b;margin-top:2px">⏰ ' + esc(rep.time ? rep.time.slice(11, 16) : '') + '</div>' +
+          '  </td>' +
+          '  <td style="padding:14px 16px;max-width:320px">' +
+          '    <div style="display:flex;flex-wrap:wrap;align-items:center">' + testPills + '</div>' +
+          '    <div style="font-size:11px;color:#64748b;margin-top:4px">' + rep.testCount + ' test' + (rep.testCount === 1 ? '' : 's') + ' included</div>' +
+          '  </td>' +
+          '  <td style="padding:14px 16px">' +
+          '    <div style="font-size:12.5px;font-weight:600;color:#334155">👨‍⚕️ ' + esc(rep.doctorName) + '</div>' +
+          '  </td>' +
+          '  <td style="padding:14px 16px">' +
+          '    <span class="badge ' + rep.badgeCls + '" style="font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:6px">' + esc(rep.statusLabel) + '</span>' +
+          '    <div style="font-size:11px;color:#64748b;margin-top:4px">' + (rep.isPaid ? '🟢 Paid' : '🟡 Due ' + (App.money ? App.money(rep.due) : rep.due)) + '</div>' +
+          '  </td>' +
+          '  <td style="padding:14px 16px;text-align:right;white-space:nowrap">' +
+          '    <div style="display:inline-flex;align-items:center;gap:6px">' +
+          '      <button type="button" class="btn act-btn pd-rep-btn-view" data-rep-inv="' + esc(rep.invoiceId) + '" title="View complete formatted clinical report"><span>👁️</span> <span>View</span></button>' +
+          '      <button type="button" class="btn act-btn pd-rep-btn-print" data-rep-inv="' + esc(rep.invoiceId) + '" title="Print physical laboratory report with letterhead"><span>🖨️</span> <span>Print</span></button>' +
+          '      <button type="button" class="btn act-btn pd-rep-btn-pdf" data-rep-inv="' + esc(rep.invoiceId) + '" title="Download official PDF report document"><span>📥</span> <span>PDF</span></button>' +
+          '      <button type="button" class="btn act-btn pd-rep-btn-wa" data-rep-inv="' + esc(rep.invoiceId) + '" title="Share report with patient or doctor on WhatsApp"><span>💬</span> <span>Share</span></button>' +
+          '    </div>' +
+          '  </td>' +
+          '</tr>';
+      }).join('');
+    }
+
+    return '<div class="pd-layout-reports" id="pdReports" style="display:none">' +
+      '<div class="vitals-card" style="width:100%">' +
+      '  <div class="vitals-card-head" style="margin-bottom:16px;padding-bottom:14px;border-bottom:1.5px solid #edf2f7;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">' +
+      '    <div>' +
+      '      <h3 style="display:flex;align-items:center;gap:8px;font-size:17px;font-weight:800;color:#0f172a;margin:0"><span>📑</span><span>Patient Diagnostic Lab Reports &amp; Downloads</span></h3>' +
+      '      <p class="pd-sub" style="margin-top:4px;color:#64748b;font-size:12px;font-weight:450">Official validated laboratory test reports, printable clinical sheets, and high-resolution PDF downloads for patients &amp; doctors</p>' +
+      '    </div>' +
+      '    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+      '      <span class="badge b-ready" style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:6px">' + reports.length + ' Available Report' + (reports.length === 1 ? '' : 's') + '</span>' +
+      '      <button type="button" class="btn btn-primary btn-sm" id="btnPdDownloadAllPdfs" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' +
+      '        <span>📥</span> <span>Download All Ready PDFs</span>' +
+      '      </button>' +
+      '      <button type="button" class="btn btn-ghost btn-sm" id="btnPdPrintSummary" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff">' +
+      '        <span>🖨️</span> <span>Print Full Sheet</span>' +
+      '      </button>' +
+      '    </div>' +
+      '  </div>' +
+      '  <div class="tbl-wrap" style="border:1.5px solid #edf2f7;border-radius:12px;overflow-x:auto;box-shadow:0 1px 3px rgba(15,23,42,0.02)">' +
+      '    <table class="table" style="width:100%;margin:0;border-collapse:collapse;font-size:13px">' +
+      '      <thead style="background:#f8fafc;border-bottom:1.5px solid #e2e8f0">' +
+      '        <tr>' +
+      '          <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:700;color:#0f172a;letter-spacing:0.02em">Visit / Lab No.</th>' +
+      '          <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:700;color:#0f172a;letter-spacing:0.02em">Date &amp; Time</th>' +
+      '          <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:700;color:#0f172a;letter-spacing:0.02em">Tests Included</th>' +
+      '          <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:700;color:#0f172a;letter-spacing:0.02em">Referring Doctor</th>' +
+      '          <th style="padding:12px 16px;text-align:left;font-size:12px;font-weight:700;color:#0f172a;letter-spacing:0.02em">Clinical Status</th>' +
+      '          <th style="padding:12px 16px;text-align:right;font-size:12px;font-weight:700;color:#0f172a;letter-spacing:0.02em">Report Actions</th>' +
+      '        </tr>' +
+      '      </thead>' +
+      '      <tbody>' +
+      rowsHtml +
+      '      </tbody>' +
+      '    </table>' +
+      '  </div>' +
+      '</div>' +
+      '</div>';
+  }
+
   /* Render Primary Patient Vitals Dashboard */
   function render(patient) {
     var tests=testsFor(patient);
@@ -2441,7 +2576,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdTrajectory','Longitudinal Trajectory Vector Graph','📊'],['pdGraphs','Individual Biomarker Trend Graphs','🔬'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','🫀']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdTrajectory','Longitudinal Trajectory Vector Graph','📊'],['pdGraphs','Individual Biomarker Trend Graphs','🔬'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','🫀'],['pdReports','Diagnostic Lab Reports & Downloads','📑']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" title="'+esc(item[1])+'" aria-label="'+esc(item[1])+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span></button>';
       }).join('') +
       '  </nav>' +
@@ -2463,7 +2598,7 @@
       '        <div class="pd-header" style="margin-bottom:14px;padding-bottom:12px;border-bottom:1.5px solid #edf2f7">' +
       '          <div>' +
       '            <h3 style="font-size:18px;font-weight:800;color:#0f172a;margin:0;letter-spacing:-0.02em">Patient Details Overview</h3>' +
-      '            <p class="pd-sub" style="margin-top:3px;color:#334155;font-size:12px;font-weight:600">Clinical demographic record &amp; patient profile</p>' +
+      '            <p class="pd-sub" style="margin-top:3px;color:#64748b;font-size:12px;font-weight:450">Clinical demographic record &amp; patient profile</p>' +
       '          </div>' +
       '          <span class="pd-avatar" aria-hidden="true">' + esc(initials) + '</span>' +
       '        </div>' +
@@ -2566,6 +2701,9 @@
 
       // Dedicated Visual Laboratory Test Anatomy Page
       renderTestAnatomyPage(patient, tests, labData) +
+
+      // Dedicated Patient Diagnostic Reports & Downloads Page
+      renderPatientReportsPage(patient) +
       '</div>' +
       '</section>';
   }
@@ -2574,7 +2712,7 @@
     if (!host || !host.isConnected) return false;
     if (!document.getElementById('ptDashboardStyles')) {
       var link = document.createElement('link');link.id='ptDashboardStyles';link.rel='stylesheet';
-      link.href='assets/css/patient-dashboard.css?v='+encodeURIComponent(window.__ASSET_V||'299');document.head.appendChild(link);
+      link.href='assets/css/patient-dashboard.css?v='+encodeURIComponent(window.__ASSET_V||'300');document.head.appendChild(link);
     }
     host.innerHTML=render(patient);
 
@@ -2795,6 +2933,7 @@
       var graphsEl = host.querySelector('#pdGraphs');
       var varianceEl = host.querySelector('#pdVariance');
       var anatomyEl = host.querySelector('#pdAnatomy');
+      var reportsEl = host.querySelector('#pdReports');
 
       if (overviewEl) overviewEl.style.display = 'none';
       if (trendsEl) trendsEl.style.display = 'none';
@@ -2802,6 +2941,7 @@
       if (graphsEl) graphsEl.style.display = 'none';
       if (varianceEl) varianceEl.style.display = 'none';
       if (anatomyEl) anatomyEl.style.display = 'none';
+      if (reportsEl) reportsEl.style.display = 'none';
 
       if (sectionId === 'pdTrends') {
         if (trendsEl) trendsEl.style.display = 'block';
@@ -2813,6 +2953,8 @@
         if (varianceEl) varianceEl.style.display = 'block';
       } else if (sectionId === 'pdAnatomy') {
         if (anatomyEl) anatomyEl.style.display = 'block';
+      } else if (sectionId === 'pdReports') {
+        if (reportsEl) reportsEl.style.display = 'block';
       } else {
         if (overviewEl) overviewEl.style.display = 'block';
       }
@@ -2956,6 +3098,96 @@
       });
     }
 
+    // Wire Diagnostic Reports Page Actions
+    host.querySelectorAll('.pd-rep-btn-view').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var invId = btn.getAttribute('data-rep-inv');
+        if (!invId) return;
+        if (App.viewLabReport) {
+          App.viewLabReport(invId);
+        } else if (App.loadScript) {
+          App.loadScript('assets/js/mod-results.js').then(function () {
+            if (App.viewLabReport) App.viewLabReport(invId);
+          });
+        }
+      });
+    });
+
+    host.querySelectorAll('.pd-rep-btn-print').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var invId = btn.getAttribute('data-rep-inv');
+        if (!invId) return;
+        if (App.printLabReport) {
+          App.printLabReport(invId);
+        } else if (App.loadScript) {
+          App.loadScript('assets/js/mod-results.js').then(function () {
+            if (App.printLabReport) App.printLabReport(invId);
+          });
+        }
+      });
+    });
+
+    host.querySelectorAll('.pd-rep-btn-pdf').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var invId = btn.getAttribute('data-rep-inv');
+        if (!invId) return;
+        if (App.downloadReportPdf) {
+          App.downloadReportPdf(invId);
+        } else if (App.loadScript) {
+          App.loadScript('assets/js/mod-results.js').then(function () {
+            if (App.downloadReportPdf) App.downloadReportPdf(invId);
+          });
+        }
+      });
+    });
+
+    host.querySelectorAll('.pd-rep-btn-wa').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var invId = btn.getAttribute('data-rep-inv');
+        if (!invId) return;
+        var cleanPhone = String(patient.whatsapp || patient.phone || '').replace(/[^0-9]/g, '');
+        if (cleanPhone.startsWith('0')) cleanPhone = '92' + cleanPhone.slice(1);
+        var lab = (App.currentLab && App.currentLab()) || {};
+        var labName = lab.labName || 'Laboratory';
+        var inv = (DB.get('invoices', invId)) || {};
+        var text = encodeURIComponent('Hello ' + (patient.name || 'Patient') + ',\nYour laboratory report from ' + labName + ' (Invoice #' + (inv.no || invId) + ') is available.\nThank you for choosing ' + labName + '.');
+        var url = cleanPhone ? ('https://wa.me/' + cleanPhone + '?text=' + text) : ('https://wa.me/?text=' + text);
+        window.open(url, '_blank');
+      });
+    });
+
+    var btnDownloadAll = host.querySelector('#btnPdDownloadAllPdfs');
+    if (btnDownloadAll) {
+      btnDownloadAll.addEventListener('click', function () {
+        var reports = getPatientReports(patient);
+        var readyReps = reports.filter(function (r) { return r.status === 'ready' || r.status === 'partial'; });
+        if (!readyReps.length) {
+          if (App.toast) App.toast('No ready reports available to download yet.', 'warn');
+          return;
+        }
+        if (App.toast) App.toast('Downloading ' + readyReps.length + ' report PDF(s)…');
+        var loadPromise = (App.downloadReportPdf) ? Promise.resolve() : (App.loadScript ? App.loadScript('assets/js/mod-results.js') : Promise.resolve());
+        loadPromise.then(function () {
+          readyReps.forEach(function (r, idx) {
+            setTimeout(function () {
+              if (App.downloadReportPdf) App.downloadReportPdf(r.invoiceId);
+            }, idx * 600);
+          });
+        });
+      });
+    }
+
+    var btnPrintFullSheet = host.querySelector('#btnPdPrintSummary');
+    if (btnPrintFullSheet) {
+      btnPrintFullSheet.addEventListener('click', function () {
+        window.print();
+      });
+    }
+
     // Interactive rehab checklist toggles
     host.querySelectorAll('.rehab-check-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -2972,6 +3204,7 @@
     regionFor: regionFor,
     testsFor: testsFor,
     getPatientOldTests: getPatientOldTests,
+    getPatientReports: getPatientReports,
     getOrganTestEffectData: getOrganTestEffectData,
     outsideRange: outsideRange
   };

@@ -1775,9 +1775,9 @@
 }
 
 #ptPatientDashboard #pdPatientCardTop .pd-header .pd-sub {
-  color: #334155 !important;
+  color: #64748b !important;
   font-size: 12px !important;
-  font-weight: 600 !important;
+  font-weight: 450 !important;
   margin: 3px 0 0;
 }
 
@@ -1808,19 +1808,18 @@
 }
 
 #ptPatientDashboard #pdPatientCardTop dt {
-  color: #475569 !important;
-  font-size: 11px !important;
+  color: #0f172a !important;
+  font-size: 12.5px !important;
   font-weight: 700 !important;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
   margin: 0 0 4px;
 }
 
 #ptPatientDashboard #pdPatientCardTop dd {
-  color: #020617 !important;
-  font-size: 14.5px !important;
-  font-weight: 800 !important;
-  line-height: 1.35;
+  color: #475569 !important;
+  font-size: 13.5px !important;
+  font-weight: 400 !important;
+  line-height: 1.45;
   margin: 0;
 }
 
@@ -1834,16 +1833,16 @@
 }
 
 #ptPatientDashboard #pdPatientCardTop .pd-lower h3 {
-  font-size: 14px !important;
+  font-size: 14.5px !important;
   font-weight: 800 !important;
   color: #0f172a !important;
   margin: 0 0 2px;
 }
 
 #ptPatientDashboard #pdPatientCardTop .pd-lower .pd-sub {
-  color: #475569 !important;
+  color: #64748b !important;
   font-size: 11.5px !important;
-  font-weight: 500 !important;
+  font-weight: 450 !important;
   margin: 0 0 10px;
 }
 
@@ -1858,25 +1857,26 @@
 }
 
 #ptPatientDashboard #pdPatientCardTop .pd-list dt {
-  color: #475569 !important;
-  font-size: 11px !important;
+  color: #0f172a !important;
+  font-size: 12px !important;
   font-weight: 700 !important;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.01em;
   margin-bottom: 3px;
 }
 
 #ptPatientDashboard #pdPatientCardTop .pd-list dd {
-  color: #020617 !important;
-  font-size: 13.5px !important;
-  font-weight: 700 !important;
+  color: #475569 !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  line-height: 1.45;
+  margin: 0;
 }
 
 /* Patient Notes text */
 #ptPatientDashboard #pdPatientCardTop .pd-notes {
-  color: #0f172a !important;
+  color: #475569 !important;
   font-size: 13px !important;
-  font-weight: 600 !important;
+  font-weight: 400 !important;
   line-height: 1.6;
   background: #f8fafc;
   border: 1.5px solid #e2e8f0;
@@ -1899,6 +1899,14 @@
 #ptPatientDashboard .pd-layout-graphs,
 #ptPatientDashboard .pd-layout-trajectory {
   width: 100%;
+}
+
+/* Dedicated Diagnostic Reports Page */
+#ptPatientDashboard .pd-layout-reports {
+  width: 100%;
+}
+#ptPatientDashboard .pd-report-row:hover {
+  background: #f8fafc;
 }
 
 
