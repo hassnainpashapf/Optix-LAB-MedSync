@@ -68,7 +68,7 @@
   background: #ffffff;
   border: 1.5px solid #edf2f7;
   border-radius: 16px;
-  padding: 10px 18px;
+  padding: 8px 16px;
   position: sticky;
   top: 10px;
   z-index: 30;
@@ -122,13 +122,13 @@
   min-width: 0;
 }
 #ptPatientDashboard .pd-menu-patient .pd-avatar {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
   border-radius: 50%;
   background: #eff6ff;
   color: #2563eb;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 800;
   border: 1.5px solid #dbeafe;
   display: grid;
@@ -141,7 +141,7 @@
 }
 #ptPatientDashboard .pd-menu-patient strong {
   color: #0f172a;
-  font-size: 14.5px;
+  font-size: 14px;
   font-weight: 800;
   line-height: 1.2;
   overflow: hidden;
@@ -151,7 +151,7 @@
 }
 #ptPatientDashboard .pd-menu-patient small {
   color: #64748b;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
   line-height: 1.2;
   margin-top: 2px;
@@ -159,175 +159,176 @@
 #ptPatientDashboard .pd-patient-menu nav {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   margin: 0;
   flex-wrap: wrap;
 }
-#ptPatientDashboard .pd-patient-menu button {
+#ptPatientDashboard .pd-patient-menu nav button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: #ffffff;
   border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 8px 10px;
-  min-width: 56px;
-  width: 56px;
-  height: 50px;
+  border-radius: 10px;
+  padding: 0;
+  min-width: 36px;
+  width: 36px;
+  height: 36px;
   color: #475569;
   font: inherit;
-  font-size: 24px;
+  font-size: 17px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
   white-space: nowrap;
   position: relative;
+  box-sizing: border-box;
 }
-#ptPatientDashboard .pd-patient-menu button span:first-child {
-  font-size: 26px;
+#ptPatientDashboard .pd-patient-menu nav button span:first-child {
+  font-size: 17px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
   transition: transform 0.2s ease;
 }
-#ptPatientDashboard .pd-patient-menu button:hover:not(.active) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+#ptPatientDashboard .pd-patient-menu nav button:hover:not(.active) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
 }
-#ptPatientDashboard .pd-patient-menu button:hover:not(.active) span:first-child {
-  transform: scale(1.12);
+#ptPatientDashboard .pd-patient-menu nav button:hover:not(.active) span:first-child {
+  transform: scale(1.1);
 }
-#ptPatientDashboard .pd-patient-menu button:active {
+#ptPatientDashboard .pd-patient-menu nav button:active {
   transform: translateY(0);
 }
 
 /* Individual card colors matching other dashboard cards */
 /* 1. Vitals Overview - DNA */
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdOverview"] {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdOverview"] {
   background: #f0f7ff;
   border-color: #bfdbfe;
   color: #1d4ed8;
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdOverview"]:hover:not(.active) {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdOverview"]:hover:not(.active) {
   background: #dbeafe;
   border-color: #93c5fd;
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.16);
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.16);
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdOverview"].active {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdOverview"].active {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   border-color: #1d4ed8;
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35), 0 0 0 3px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35), 0 0 0 2px rgba(59, 130, 246, 0.25);
 }
 
 /* 2. Biomarker Trends - 📈 */
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdTrends"] {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdTrends"] {
   background: #fff1f2;
   border-color: #fecdd3;
   color: #e11d48;
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdTrends"]:hover:not(.active) {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdTrends"]:hover:not(.active) {
   background: #ffe4e6;
   border-color: #fda4af;
-  box-shadow: 0 6px 16px rgba(225, 29, 72, 0.16);
+  box-shadow: 0 4px 10px rgba(225, 29, 72, 0.16);
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdTrends"].active {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdTrends"].active {
   background: linear-gradient(135deg, #e11d48, #be123c);
   border-color: #be123c;
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(225, 29, 72, 0.35), 0 0 0 3px rgba(244, 63, 94, 0.3);
+  box-shadow: 0 3px 10px rgba(225, 29, 72, 0.35), 0 0 0 2px rgba(244, 63, 94, 0.25);
 }
 
 /* 3. Trajectory Vector - 📊 */
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdTrajectory"] {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdTrajectory"] {
   background: #f0fdf4;
   border-color: #bbf7d0;
   color: #059669;
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdTrajectory"]:hover:not(.active) {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdTrajectory"]:hover:not(.active) {
   background: #dcfce7;
   border-color: #86efac;
-  box-shadow: 0 6px 16px rgba(5, 150, 105, 0.16);
+  box-shadow: 0 4px 10px rgba(5, 150, 105, 0.16);
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdTrajectory"].active {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdTrajectory"].active {
   background: linear-gradient(135deg, #059669, #047857);
   border-color: #047857;
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(5, 150, 105, 0.35), 0 0 0 3px rgba(16, 185, 129, 0.3);
+  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.35), 0 0 0 2px rgba(16, 185, 129, 0.25);
 }
 
 /* 4. Individual Trend Graphs - 🔬 */
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdGraphs"] {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdGraphs"] {
   background: #faf5ff;
   border-color: #e9d5ff;
   color: #9333ea;
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdGraphs"]:hover:not(.active) {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdGraphs"]:hover:not(.active) {
   background: #f3e8ff;
   border-color: #d8b4fe;
-  box-shadow: 0 6px 16px rgba(147, 51, 234, 0.16);
+  box-shadow: 0 4px 10px rgba(147, 51, 234, 0.16);
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdGraphs"].active {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdGraphs"].active {
   background: linear-gradient(135deg, #9333ea, #7e22ce);
   border-color: #7e22ce;
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(147, 51, 234, 0.35), 0 0 0 3px rgba(168, 85, 247, 0.3);
+  box-shadow: 0 3px 10px rgba(147, 51, 234, 0.35), 0 0 0 2px rgba(168, 85, 247, 0.25);
 }
 
 /* 5. Biomarker Variance - ⚡ */
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdVariance"] {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdVariance"] {
   background: #fffbeb;
   border-color: #fde68a;
   color: #d97706;
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdVariance"]:hover:not(.active) {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdVariance"]:hover:not(.active) {
   background: #fef3c7;
   border-color: #fcd34d;
-  box-shadow: 0 6px 16px rgba(217, 119, 6, 0.16);
+  box-shadow: 0 4px 10px rgba(217, 119, 6, 0.16);
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdVariance"].active {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdVariance"].active {
   background: linear-gradient(135deg, #f59e0b, #d97706);
   border-color: #d97706;
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(217, 119, 6, 0.35), 0 0 0 3px rgba(245, 158, 11, 0.3);
+  box-shadow: 0 3px 10px rgba(217, 119, 6, 0.35), 0 0 0 2px rgba(245, 158, 11, 0.25);
 }
 
 /* 6. Test Anatomy - 🫀 */
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdAnatomy"] {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdAnatomy"] {
   background: #ecfeff;
   border-color: #a5f3fc;
   color: #0891b2;
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdAnatomy"]:hover:not(.active) {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdAnatomy"]:hover:not(.active) {
   background: #cffafe;
   border-color: #67e8f9;
-  box-shadow: 0 6px 16px rgba(8, 145, 178, 0.16);
+  box-shadow: 0 4px 10px rgba(8, 145, 178, 0.16);
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdAnatomy"].active {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdAnatomy"].active {
   background: linear-gradient(135deg, #0891b2, #0e7490);
   border-color: #0e7490;
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(8, 145, 178, 0.35), 0 0 0 3px rgba(6, 182, 212, 0.3);
+  box-shadow: 0 3px 10px rgba(8, 145, 178, 0.35), 0 0 0 2px rgba(6, 182, 212, 0.25);
 }
 
 /* 7. Medication Adherence - 💊 */
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdMeds"] {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdMeds"] {
   background: #f0fdfa;
   border-color: #99f6e4;
   color: #0d9488;
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdMeds"]:hover:not(.active) {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdMeds"]:hover:not(.active) {
   background: #ccfbf1;
   border-color: #5eead4;
-  box-shadow: 0 6px 16px rgba(13, 148, 136, 0.16);
+  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.16);
 }
-#ptPatientDashboard .pd-patient-menu button[data-pd-section="pdMeds"].active {
+#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdMeds"].active {
   background: linear-gradient(135deg, #0d9488, #0f766e);
   border-color: #0f766e;
   color: #ffffff;
-  box-shadow: 0 6px 18px rgba(13, 148, 136, 0.35), 0 0 0 3px rgba(20, 184, 166, 0.3);
+  box-shadow: 0 3px 10px rgba(13, 148, 136, 0.35), 0 0 0 2px rgba(20, 184, 166, 0.25);
 }
 #ptPatientDashboard .pd-header-actions {
   display: flex;
@@ -338,15 +339,20 @@
 #ptPatientDashboard .pd-header-actions .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   font-size: 12px;
   font-weight: 700;
-  padding: 8px 14px;
-  border-radius: 12px;
+  padding: 0 14px;
+  height: 36px;
+  width: auto;
+  min-width: 0;
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
   white-space: nowrap;
-  line-height: 1.2;
+  line-height: 1;
+  box-sizing: border-box;
 }
 #ptPatientDashboard .pd-header-actions #pt-edit {
   background: #f8fafc;
@@ -376,7 +382,7 @@
   #ptPatientDashboard .pd-patient-menu {
     flex-wrap: wrap;
     gap: 12px;
-    padding: 10px 16px;
+    padding: 8px 14px;
   }
   #ptPatientDashboard .pd-patient-menu nav {
     order: 3;
@@ -386,7 +392,7 @@
     padding-top: 8px;
     border-top: 1px dashed #edf2f7;
   }
-  #ptPatientDashboard .pd-patient-menu button {
+  #ptPatientDashboard .pd-patient-menu nav button {
     flex-shrink: 0;
   }
   #ptPatientDashboard .pd-header-actions {
