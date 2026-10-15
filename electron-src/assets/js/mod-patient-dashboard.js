@@ -785,18 +785,34 @@
         var status = 'pending';
         var statusLabel = 'Pending';
         var badgeCls = 'b-warn';
+        var abnormalParams = [];
+        var previewParams = [];
+        var params = Array.isArray(test.params) ? test.params : [];
+        var paramCount = params.length;
+
         if (ready) {
           if (ready.status === 'ready') {
             status = 'ready';
             statusLabel = 'Normal';
             badgeCls = 'b-ready';
-            var params = Array.isArray(test.params) ? test.params : [];
             var hasAbnormal = false;
             params.forEach(function (param) {
               var values = ready.values || {};
               var val = values[param.id] != null ? values[param.id] : values[param.name];
               var ref = reference(param, patient);
-              if (outsideRange(val, ref)) hasAbnormal = true;
+              var isOut = outsideRange(val, ref);
+              if (val != null && String(val).trim() !== '') {
+                previewParams.push({
+                  name: param.name || param.id,
+                  val: val,
+                  unit: param.unit || '',
+                  outside: isOut
+                });
+              }
+              if (isOut) {
+                hasAbnormal = true;
+                abnormalParams.push((param.name || param.id) + ': ' + val + (param.unit ? ' ' + param.unit : ''));
+              }
             });
             if (hasAbnormal || ready.isAbnormal) {
               status = 'abnormal';
@@ -809,19 +825,25 @@
             badgeCls = 'b-warn';
           }
         }
+        var doc = inv.doctorId ? (DB.get('doctors', inv.doctorId) || {}) : null;
         list.push({
           name: testName,
+          code: test.code || '',
           testId: item.testId,
           invoiceId: inv.id,
           invoiceNo: invNo,
           date: invDate,
           rawDate: inv.createdAt,
+          doctorName: doc ? (doc.name || 'Self') : 'Self',
           status: status,
           statusLabel: statusLabel,
           badgeCls: badgeCls,
           price: item.price,
-          category: test.category,
-          sampleType: test.sampleType
+          category: test.category || 'General Pathology',
+          sampleType: test.sampleType || 'Specimen Blood',
+          abnormalParams: abnormalParams,
+          previewParams: previewParams,
+          paramCount: paramCount
         });
       });
     });
@@ -2514,6 +2536,208 @@
       '</div>';
   }
 
+  /* Render Dedicated Patient Diagnostic Tests Dashboard Page */
+  function renderDiagnosticTestsPage(patient, tests, labData) {
+    tests = tests || [];
+    var totalCount = tests.length;
+    var normalCount = 0;
+    var abnormalCount = 0;
+    var pendingCount = 0;
+
+    tests.forEach(function (t) {
+      if (t.status === 'abnormal') abnormalCount++;
+      else if (t.status === 'ready' || t.status === 'within') normalCount++;
+      else pendingCount++;
+    });
+
+    var cardsHtml = '';
+    if (!tests.length) {
+      cardsHtml = '<div style="padding:48px 20px;text-align:center;color:#64748b;background:#ffffff;border:1.5px dashed #cbd5e1;border-radius:14px;grid-column:1/-1">' +
+        '<div style="font-size:38px;margin-bottom:8px">🧪</div>' +
+        '<strong style="font-size:16px;color:#0f172a;display:block;margin-bottom:4px">No Diagnostic Tests Recorded Yet</strong>' +
+        '<p style="margin:0;font-size:13px;color:#64748b">When laboratory tests or diagnostic orders are placed for this patient, their full parameters, status, and clinical reference intervals will appear here.</p>' +
+        '</div>';
+    } else {
+      cardsHtml = tests.map(function (t, idx) {
+        var statusBadgeCls = t.badgeCls || (t.status === 'abnormal' ? 'b-red' : (t.status === 'ready' || t.status === 'within' ? 'b-ready' : 'b-warn'));
+        var statusLabel = t.statusLabel || (t.status === 'abnormal' ? 'Abnormal' : (t.status === 'ready' || t.status === 'within' ? 'Normal' : 'Pending'));
+        var statusFilterKey = t.status === 'abnormal' ? 'abnormal' : (t.status === 'ready' || t.status === 'within' ? 'normal' : 'pending');
+        var dateStr = t.date ? (App.d ? App.d(t.date) : String(t.date).slice(0, 10)) : 'Recorded';
+        var invNoStr = t.invoiceNo ? esc(t.invoiceNo) : (t.invoiceId ? ('#' + esc(t.invoiceId)) : '');
+        var docName = esc(t.doctorName || 'Self / Walk-in');
+        var catName = esc(t.category || 'General Pathology');
+        var sampleName = esc(t.sampleType || 'Specimen Blood');
+
+        // Parameter preview pills
+        var paramPillsHtml = '';
+        if (t.previewParams && t.previewParams.length) {
+          var shownParams = t.previewParams.slice(0, 4);
+          paramPillsHtml = shownParams.map(function (p) {
+            var isOut = p.outside;
+            var pillBg = isOut ? '#fef2f2' : '#f8fafc';
+            var pillBorder = isOut ? '#fecaca' : '#e2e8f0';
+            var pillText = isOut ? '#b91c1c' : '#334155';
+            var valWeight = isOut ? '700' : '600';
+            return '<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 8px;font-size:11.5px;background:' + pillBg + ';border:1px solid ' + pillBorder + ';color:' + pillText + ';border-radius:6px">' +
+              (isOut ? '<span style="color:#dc2626;font-size:10px">⚠️</span>' : '') +
+              '<span>' + esc(p.name) + ':</span>' +
+              '<strong style="font-weight:' + valWeight + '">' + esc(p.val) + '</strong>' +
+              (p.unit ? '<span style="font-size:10.5px;color:#64748b">' + esc(p.unit) + '</span>' : '') +
+              '</span>';
+          }).join('');
+          if (t.previewParams.length > 4) {
+            paramPillsHtml += '<span style="font-size:11px;color:#64748b;font-weight:600;padding:2px 6px">+' + (t.previewParams.length - 4) + ' more</span>';
+          }
+        }
+
+        // Flag callout or status note
+        var statusNoteHtml = '';
+        if (t.status === 'abnormal' && t.abnormalParams && t.abnormalParams.length) {
+          statusNoteHtml = '<div style="margin-top:10px;padding:8px 12px;background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;font-size:11.5px;color:#9f1239;line-height:1.4">' +
+            '<strong>⚠️ Out of Range:</strong> ' + esc(t.abnormalParams.slice(0, 2).join(' • ')) +
+            (t.abnormalParams.length > 2 ? ' <span style="font-weight:600">(+' + (t.abnormalParams.length - 2) + ' more)</span>' : '') +
+            '</div>';
+        } else if (t.status === 'pending') {
+          statusNoteHtml = '<div style="margin-top:10px;padding:8px 12px;background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;font-size:11.5px;color:#92400e">' +
+            '⏳ Specimen collected and undergoing diagnostic laboratory processing.' +
+            '</div>';
+        }
+
+        var searchCorpus = (t.name + ' ' + (t.code || '') + ' ' + catName + ' ' + invNoStr + ' ' + docName + ' ' + sampleName + ' ' + statusLabel).toLowerCase();
+
+        return '<div class="pd-test-card vitals-card pd-test-card-item" data-pd-test-card-idx="' + idx + '" data-test-status="' + statusFilterKey + '" data-search-text="' + esc(searchCorpus) + '" style="margin:0;display:flex;flex-direction:column;justify-content:space-between;padding:16px 18px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,0.03);cursor:pointer;transition:all 0.15s ease">' +
+          '  <div>' +
+          // Header: Icon, Name, Category pill, Status Badge
+          '    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px">' +
+          '      <div style="min-width:0;flex:1">' +
+          '        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+          '          <span style="font-size:18px" aria-hidden="true">🧪</span>' +
+          '          <h4 style="margin:0;font-size:15px;font-weight:700;color:#0f172a;word-break:break-word">' + esc(t.name) + '</h4>' +
+          (t.code ? '          <span class="mono" style="font-size:10.5px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;padding:1px 6px;border-radius:4px">' + esc(t.code) + '</span>' : '') +
+          '        </div>' +
+          '        <div style="display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11.5px;color:#64748b;flex-wrap:wrap">' +
+          '          <span>📁 ' + catName + '</span>' +
+          '          <span style="color:#cbd5e1">•</span>' +
+          '          <span>🩸 ' + sampleName + '</span>' +
+          '        </div>' +
+          '      </div>' +
+          '      <span class="badge ' + statusBadgeCls + '" style="font-size:11.5px;font-weight:700;padding:4px 9px;border-radius:6px;flex-shrink:0">' + esc(statusLabel) + '</span>' +
+          '    </div>' +
+
+          // Case Info Meta Row
+          '    <div style="display:flex;align-items:center;gap:12px;font-size:12px;color:#475569;margin-bottom:10px;flex-wrap:wrap;padding:8px 10px;background:#f8fafc;border:1px solid #f1f5f9;border-radius:8px">' +
+          '      <span>📅 <strong>' + esc(dateStr) + '</strong></span>' +
+          (invNoStr ? '      <span>🏷️ <strong style="color:#0284c7">' + invNoStr + '</strong></span>' : '') +
+          '      <span>👨‍⚕️ <strong>' + docName + '</strong></span>' +
+          '    </div>' +
+
+          // Parameter preview pills
+          (paramPillsHtml ? '    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;align-items:center">' + paramPillsHtml + '</div>' : '') +
+          statusNoteHtml +
+          '  </div>' +
+
+          // Action Buttons Bar
+          '  <div style="margin-top:14px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">' +
+          '    <button type="button" class="btn btn-primary btn-sm pd-test-btn-details" data-pd-test-card-idx="' + idx + '" style="font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:5px;padding:4px 10px">' +
+          '      <span>👁️</span> <span>View Details &amp; Parameters</span>' +
+          '    </button>' +
+          '    <div style="display:inline-flex;align-items:center;gap:4px">' +
+          (t.invoiceId ? '      <button type="button" class="btn act-btn pd-test-btn-print" data-test-inv="' + esc(t.invoiceId) + '" title="Print laboratory test report" style="padding:4px 8px;font-size:11.5px"><span>🖨️</span></button>' : '') +
+          (t.invoiceId ? '      <button type="button" class="btn act-btn pd-test-btn-pdf" data-test-inv="' + esc(t.invoiceId) + '" title="View official PDF document" style="padding:4px 8px;font-size:11.5px"><span>📥</span></button>' : '') +
+          (t.invoiceId ? '      <button type="button" class="btn act-btn pd-test-btn-ai" data-test-inv="' + esc(t.invoiceId) + '" title="AI Clinical Insights" style="padding:4px 8px;font-size:11.5px"><span>🤖</span></button>' : '') +
+          '    </div>' +
+          '  </div>' +
+          '</div>';
+      }).join('');
+    }
+
+    var activeInv = (labData && (labData.currentInvoice || labData.pastInvoice)) || null;
+    var activeInvId = activeInv ? (activeInv.id || activeInv.no || '') : '';
+
+    return '<div class="pd-layout-tests" id="pdTests" style="display:none">' +
+      '<div style="width:100%">' +
+
+      // Top Header Card
+      '  <div class="vitals-card" style="width:100%;margin-bottom:16px">' +
+      '    <div class="vitals-card-head" style="margin-bottom:0;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">' +
+      '      <div>' +
+      '        <h3 style="display:flex;align-items:center;gap:8px;font-size:17px;font-weight:800;color:#0f172a;margin:0"><span>🧪</span><span>Patient Diagnostic Laboratory Tests &amp; Clinical Parameters</span></h3>' +
+      '        <p class="pd-sub" style="margin-top:4px;color:#64748b;font-size:12px;font-weight:450">Comprehensive chronological index of ordered lab tests, biomarker readings, normal reference intervals, and clinical flags</p>' +
+      '      </div>' +
+      '      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+      '        <button type="button" class="btn btn-primary btn-sm" id="btnPdTestsDoctorAI" data-inv-id="' + esc(activeInvId) + '" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' +
+      '          <span>🤖</span> <span>AI Lab Analysis</span>' +
+      '        </button>' +
+      '        <button type="button" class="btn btn-ghost btn-sm" id="btnPdTestsPrintSheet" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff">' +
+      '          <span>🖨️</span> <span>Print Summary</span>' +
+      '        </button>' +
+      '        <button type="button" class="btn btn-ghost btn-sm" data-pd-switch="pdReports" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff">' +
+      '          <span>📑</span> <span>Reports Hub →</span>' +
+      '        </button>' +
+      '      </div>' +
+      '    </div>' +
+      '  </div>' +
+
+      // 4 Diagnostic KPI Cards
+      '  <div class="pd-trends-kpi-grid" style="margin-bottom:16px">' +
+      '    <div class="stat pd-trends-kpi-card" data-tint="blue" data-pd-tests-kpi="all" style="cursor:pointer" title="Show all diagnostic tests">' +
+      '      <div class="stat-ico kpi-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg></div>' +
+      '      <div class="lb kpi-label">Diagnostic Tests</div>' +
+      '      <div class="vl kpi-value">' + totalCount + '</div>' +
+      '      <div class="dl kpi-sub">total ordered lab tests</div>' +
+      '    </div>' +
+      '    <div class="stat pd-trends-kpi-card" data-tint="green" data-pd-tests-kpi="normal" style="cursor:pointer" title="Filter normal tests within range">' +
+      '      <div class="stat-ico kpi-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></div>' +
+      '      <div class="lb kpi-label">Within Reference Range</div>' +
+      '      <div class="vl kpi-value">' + normalCount + '</div>' +
+      '      <div class="dl kpi-sub">normal physiological results</div>' +
+      '    </div>' +
+      '    <div class="stat pd-trends-kpi-card" data-tint="amber" data-pd-tests-kpi="abnormal" style="cursor:pointer" title="Filter abnormal flagged tests">' +
+      '      <div class="stat-ico kpi-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>' +
+      '      <div class="lb kpi-label">Outside Reference Range</div>' +
+      '      <div class="vl kpi-value">' + abnormalCount + '</div>' +
+      '      <div class="dl kpi-sub">flagged clinical deviations</div>' +
+      '    </div>' +
+      '    <div class="stat pd-trends-kpi-card" data-tint="brand" data-pd-tests-kpi="pending" style="cursor:pointer" title="Filter pending tests in progress">' +
+      '      <div class="stat-ico kpi-icon"><svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>' +
+      '      <div class="lb kpi-label">Pending / In Progress</div>' +
+      '      <div class="vl kpi-value">' + pendingCount + '</div>' +
+      '      <div class="dl kpi-sub">specimen in laboratory workflow</div>' +
+      '    </div>' +
+      '  </div>' +
+
+      // Search & Status Filter Tool Bar Card
+      '  <div class="vitals-card" style="margin-bottom:16px;padding:12px 18px">' +
+      '    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">' +
+      '      <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:240px">' +
+      '        <span style="font-size:16px;color:#64748b">🔍</span>' +
+      '        <input type="search" id="pdTestsSearchInput" placeholder="Search tests by name, code, category, or invoice #..." style="width:100%;max-width:440px;padding:8px 12px;border:1.5px solid #cbd5e1;border-radius:8px;font-size:12.5px;color:#0f172a;background:#ffffff;outline:none">' +
+      '      </div>' +
+      '      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap" id="pdTestsFilterChips">' +
+      '        <button type="button" class="btn btn-sm pd-tests-chip active" data-filter="all" style="padding:4px 10px;font-size:11.5px;font-weight:600;border-radius:6px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1d4ed8">All Tests (' + totalCount + ')</button>' +
+      '        <button type="button" class="btn btn-sm pd-tests-chip" data-filter="normal" style="padding:4px 10px;font-size:11.5px;font-weight:600;border-radius:6px;border:1.5px solid #e2e8f0;background:#ffffff;color:#475569">Normal (' + normalCount + ')</button>' +
+      '        <button type="button" class="btn btn-sm pd-tests-chip" data-filter="abnormal" style="padding:4px 10px;font-size:11.5px;font-weight:600;border-radius:6px;border:1.5px solid #e2e8f0;background:#ffffff;color:#475569">Abnormal (' + abnormalCount + ')</button>' +
+      '        <button type="button" class="btn btn-sm pd-tests-chip" data-filter="pending" style="padding:4px 10px;font-size:11.5px;font-weight:600;border-radius:6px;border:1.5px solid #e2e8f0;background:#ffffff;color:#475569">Pending (' + pendingCount + ')</button>' +
+      '      </div>' +
+      '    </div>' +
+      '  </div>' +
+
+      // Tests Grid
+      '  <div id="pdTestsCardsGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px;width:100%">' +
+      cardsHtml +
+      '  </div>' +
+
+      // Empty filter search results alert
+      '  <div id="pdTestsNoMatch" style="display:none;padding:36px 20px;text-align:center;color:#64748b;background:#ffffff;border:1.5px dashed #cbd5e1;border-radius:12px;margin-top:14px">' +
+      '    <div style="font-size:28px;margin-bottom:6px">🔍</div>' +
+      '    <strong style="font-size:14px;color:#334155;display:block">No matching diagnostic tests found</strong>' +
+      '    <span style="font-size:12px">Try searching with a different term or resetting the status filter chips.</span>' +
+      '  </div>' +
+
+      '</div>' +
+      '</div>';
+  }
+
   /* Render Primary Patient Vitals Dashboard */
   function render(patient) {
     var tests=testsFor(patient);
@@ -2522,11 +2746,19 @@
       oldTests = tests.map(function (t) {
         return {
           name: t.name,
+          code: t.code || '',
           date: t.date ? (App.d ? App.d(t.date) : String(t.date).slice(0, 10)) : 'Recorded',
           invoiceNo: '',
+          invoiceId: t.invoiceId || '',
+          testId: t.testId || t.id || '',
+          doctorName: 'Self',
           status: t.status,
           statusLabel: t.status === 'abnormal' ? 'Abnormal' : t.status === 'within' ? 'Normal' : 'Pending',
-          badgeCls: t.status === 'abnormal' ? 'b-red' : t.status === 'within' ? 'b-ready' : 'b-warn'
+          badgeCls: t.status === 'abnormal' ? 'b-red' : t.status === 'within' ? 'b-ready' : 'b-warn',
+          price: t.price,
+          category: t.category || 'General Pathology',
+          sampleType: t.sampleType || 'Specimen Blood',
+          abnormalParams: t.flags || []
         };
       });
     }
@@ -2576,7 +2808,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdTrajectory','Longitudinal Trajectory Vector Graph','📊'],['pdGraphs','Individual Biomarker Trend Graphs','🔬'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','🫀'],['pdReports','Diagnostic Lab Reports & Downloads','📑']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdTests','Diagnostic Laboratory Tests & Parameters','🧪'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdTrajectory','Longitudinal Trajectory Vector Graph','📊'],['pdGraphs','Individual Biomarker Trend Graphs','🔬'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','🫀'],['pdReports','Diagnostic Lab Reports & Downloads','📑']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" title="'+esc(item[1])+'" aria-label="'+esc(item[1])+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span></button>';
       }).join('') +
       '  </nav>' +
@@ -2674,15 +2906,21 @@
       '          <h3>Diagnostic Tests</h3>' +
       '          <p class="pd-sub" style="margin-top:2px">Patient previous laboratory tests &amp; order history</p>' +
       '        </div>' +
-      '        <span class="badge b-ready" style="font-size:11px;font-weight:700">' + oldTests.length + ' Test' + (oldTests.length === 1 ? '' : 's') + '</span>' +
-      '      </div>' +
-      renderPatientTestsListHtml(oldTests) +
-      '    </div>' +
-      '  </div>' +
-      '</div>' +
+      '        <div style="display:flex;align-items:center;gap:8px">' +
+        '          <span class="badge b-ready" style="font-size:11px;font-weight:700">' + oldTests.length + ' Test' + (oldTests.length === 1 ? '' : 's') + '</span>' +
+        '          <button type="button" class="btn btn-primary btn-sm" data-pd-switch="pdTests" style="font-size:11.5px;padding:3px 10px;font-weight:600;display:inline-flex;align-items:center;gap:4px"><span>🧪</span> <span>Open Dedicated Dashboard →</span></button>' +
+        '        </div>' +
+        '      </div>' +
+        renderPatientTestsListHtml(oldTests) +
+        '    </div>' +
+        '  </div>' +
+        '</div>' +
 
-      // Dedicated Longitudinal Biomarker Trends & Comparison Table Page
-      '<div class="pd-layout-trends" id="pdTrends" style="display:none">' +
+        // Dedicated Diagnostic Tests Dashboard Page
+        renderDiagnosticTestsPage(patient, oldTests, labData) +
+
+        // Dedicated Longitudinal Biomarker Trends & Comparison Table Page
+        '<div class="pd-layout-trends" id="pdTrends" style="display:none">' +
       renderLongitudinalTrendsPage(labData, patient) +
       '</div>' +
 
@@ -2928,6 +3166,7 @@
       });
 
       var overviewEl = host.querySelector('#pdOverview');
+      var testsEl = host.querySelector('#pdTests');
       var trendsEl = host.querySelector('#pdTrends');
       var trajectoryEl = host.querySelector('#pdTrajectory');
       var graphsEl = host.querySelector('#pdGraphs');
@@ -2936,6 +3175,7 @@
       var reportsEl = host.querySelector('#pdReports');
 
       if (overviewEl) overviewEl.style.display = 'none';
+      if (testsEl) testsEl.style.display = 'none';
       if (trendsEl) trendsEl.style.display = 'none';
       if (trajectoryEl) trajectoryEl.style.display = 'none';
       if (graphsEl) graphsEl.style.display = 'none';
@@ -2943,7 +3183,9 @@
       if (anatomyEl) anatomyEl.style.display = 'none';
       if (reportsEl) reportsEl.style.display = 'none';
 
-      if (sectionId === 'pdTrends') {
+      if (sectionId === 'pdTests') {
+        if (testsEl) testsEl.style.display = 'block';
+      } else if (sectionId === 'pdTrends') {
         if (trendsEl) trendsEl.style.display = 'block';
       } else if (sectionId === 'pdTrajectory') {
         if (trajectoryEl) trajectoryEl.style.display = 'block';
@@ -2967,15 +3209,19 @@
       oldTestsList = tests.map(function (t) {
         return {
           name: t.name,
+          code: t.code || '',
           date: t.date ? (App.d ? App.d(t.date) : String(t.date).slice(0, 10)) : 'Recorded',
           invoiceNo: '',
+          invoiceId: t.invoiceId || '',
+          testId: t.testId || t.id || '',
+          doctorName: 'Self',
           status: t.status,
           statusLabel: t.status === 'abnormal' ? 'Abnormal' : t.status === 'within' ? 'Normal' : 'Pending',
           badgeCls: t.status === 'abnormal' ? 'b-red' : t.status === 'within' ? 'b-ready' : 'b-warn',
-          testId: t.id || t.testId,
           price: t.price,
-          category: t.category,
-          sampleType: t.sampleType
+          category: t.category || 'General Pathology',
+          sampleType: t.sampleType || 'Specimen Blood',
+          abnormalParams: t.flags || []
         };
       });
     }
@@ -3188,6 +3434,146 @@
       });
     }
 
+    // Wire Diagnostic Tests Page Filtering, Search, and Action Triggers
+    var testsSearchInput = host.querySelector('#pdTestsSearchInput');
+    var testsFilterChips = host.querySelectorAll('#pdTestsFilterChips .pd-tests-chip');
+    var testsKpiCards = host.querySelectorAll('[data-pd-tests-kpi]');
+    var testCardItems = host.querySelectorAll('.pd-test-card-item');
+    var noMatchEl = host.querySelector('#pdTestsNoMatch');
+    var currentTestFilter = 'all';
+
+    function applyTestsFilter() {
+      var query = (testsSearchInput ? testsSearchInput.value : '').trim().toLowerCase();
+      var visibleCount = 0;
+
+      testCardItems.forEach(function (card) {
+        var status = card.getAttribute('data-test-status');
+        var searchText = card.getAttribute('data-search-text') || '';
+        var matchesStatus = (currentTestFilter === 'all') || (status === currentTestFilter);
+        var matchesQuery = !query || searchText.indexOf(query) !== -1;
+
+        if (matchesStatus && matchesQuery) {
+          card.style.display = 'flex';
+          visibleCount++;
+        } else {
+          card.style.display = 'none';
+        }
+      });
+
+      if (noMatchEl) {
+        noMatchEl.style.display = (testCardItems.length > 0 && visibleCount === 0) ? 'block' : 'none';
+      }
+    }
+
+    if (testsSearchInput) {
+      testsSearchInput.addEventListener('input', applyTestsFilter);
+    }
+
+    function setTestsFilter(filterKey) {
+      currentTestFilter = filterKey;
+      testsFilterChips.forEach(function (chip) {
+        var isAct = chip.getAttribute('data-filter') === filterKey;
+        chip.classList.toggle('active', isAct);
+        chip.style.borderColor = isAct ? '#bfdbfe' : '#e2e8f0';
+        chip.style.background = isAct ? '#eff6ff' : '#ffffff';
+        chip.style.color = isAct ? '#1d4ed8' : '#475569';
+      });
+      applyTestsFilter();
+    }
+
+    testsFilterChips.forEach(function (chip) {
+      chip.addEventListener('click', function () {
+        setTestsFilter(chip.getAttribute('data-filter') || 'all');
+      });
+    });
+
+    testsKpiCards.forEach(function (kpi) {
+      kpi.addEventListener('click', function () {
+        setTestsFilter(kpi.getAttribute('data-pd-tests-kpi') || 'all');
+      });
+    });
+
+    // Wire clicks on test card / detail buttons in pdTests
+    host.querySelectorAll('.pd-test-card-item').forEach(function (card) {
+      card.addEventListener('click', function (e) {
+        if (e.target.closest('.act-btn') || e.target.closest('.pd-test-btn-details')) return;
+        var idx = parseInt(card.getAttribute('data-pd-test-card-idx'), 10);
+        if (!isNaN(idx) && oldTestsList && oldTestsList[idx]) {
+          openPatientTestDetailModal(patient, oldTestsList[idx]);
+        }
+      });
+    });
+
+    host.querySelectorAll('.pd-test-btn-details').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var idx = parseInt(btn.getAttribute('data-pd-test-card-idx'), 10);
+        if (!isNaN(idx) && oldTestsList && oldTestsList[idx]) {
+          openPatientTestDetailModal(patient, oldTestsList[idx]);
+        }
+      });
+    });
+
+    host.querySelectorAll('.pd-test-btn-print').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var invId = btn.getAttribute('data-test-inv');
+        if (!invId) return;
+        if (App.printLabReport) {
+          App.printLabReport(invId);
+        } else if (App.loadScript) {
+          App.loadScript('assets/js/mod-results.js').then(function () {
+            if (App.printLabReport) App.printLabReport(invId);
+          });
+        }
+      });
+    });
+
+    host.querySelectorAll('.pd-test-btn-pdf').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var invId = btn.getAttribute('data-test-inv');
+        if (!invId) return;
+        if (App.viewLabReport) {
+          App.viewLabReport(invId);
+        } else if (App.loadScript) {
+          App.loadScript('assets/js/mod-results.js').then(function () {
+            if (App.viewLabReport) App.viewLabReport(invId);
+          });
+        }
+      });
+    });
+
+    host.querySelectorAll('.pd-test-btn-ai').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var invId = btn.getAttribute('data-test-inv');
+        if (!invId) return;
+        if (App.aiInsights && typeof App.aiInsights.showModal === 'function') {
+          App.aiInsights.showModal(invId);
+        }
+      });
+    });
+
+    var btnPdTestsAI = host.querySelector('#btnPdTestsDoctorAI');
+    if (btnPdTestsAI) {
+      btnPdTestsAI.addEventListener('click', function () {
+        var invId = btnPdTestsAI.getAttribute('data-inv-id');
+        if (App.aiInsights && invId) {
+          App.aiInsights.showModal(invId);
+        } else if (App.toast) {
+          App.toast('Please select an invoice or finalize tests to view AI insights.', 'info');
+        }
+      });
+    }
+
+    var btnPdTestsPrint = host.querySelector('#btnPdTestsPrintSheet');
+    if (btnPdTestsPrint) {
+      btnPdTestsPrint.addEventListener('click', function () {
+        window.print();
+      });
+    }
+
     // Interactive rehab checklist toggles
     host.querySelectorAll('.rehab-check-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -3205,6 +3591,7 @@
     testsFor: testsFor,
     getPatientOldTests: getPatientOldTests,
     getPatientReports: getPatientReports,
+    renderDiagnosticTestsPage: renderDiagnosticTestsPage,
     getOrganTestEffectData: getOrganTestEffectData,
     outsideRange: outsideRange
   };
