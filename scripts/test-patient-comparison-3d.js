@@ -112,10 +112,10 @@ console.log('--- Testing Patient Longitudinal Lab Comparison, 3D Body Map & Doct
 const api = sandbox.App.patientDashboard;
 const html = api.render(patient);
 
-// 1. Verify Longitudinal Comparison Card exists
-assert.ok(html.includes('Biomarker Trends &amp; Longitudinal Test Comparison'), 'Longitudinal Comparison card rendered');
-assert.ok(html.includes('Improved (Behtar)'), 'Improved summary badge present');
-assert.ok(html.includes('Deteriorated (Alert)'), 'Deteriorated summary badge present');
+// 1. Verify Longitudinal Comparison Card exists and redundant card head is cleanly removed
+assert.ok(html.includes('id="vitalsLabComparisonSection"'), 'Longitudinal Comparison card container rendered');
+assert.ok(!html.includes('vitals-comp-summary-pills'), 'Redundant comparison card head and summary pills cleanly removed');
+assert.ok(!html.includes('Tracking patient improvement across chronological laboratory reports.'), 'Redundant card subtitle cleanly removed');
 
 // 2. Verify specific biomarker comparisons
 assert.ok(html.includes('ALT (SGPT)'), 'ALT biomarker present');

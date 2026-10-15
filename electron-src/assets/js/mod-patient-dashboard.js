@@ -2072,18 +2072,6 @@
     }
 
     return '<div class="vitals-card vitals-comparison-card" id="vitalsLabComparisonSection">' +
-      '<div class="vitals-card-head">' +
-      '  <div>' +
-      '    <h3 style="display:flex;align-items:center;gap:8px"><span>📈</span><span>Biomarker Trends &amp; Longitudinal Test Comparison</span></h3>' +
-      '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Tracking patient improvement across chronological laboratory reports.</p>' +
-      '  </div>' +
-      '  <div class="vitals-comp-summary-pills">' +
-      '    <span class="vitals-sum-pill improved">🟢 ' + sum.improved + ' Improved (Behtar)</span>' +
-      '    <span class="vitals-sum-pill deteriorated">🔴 ' + sum.deteriorated + ' Deteriorated (Alert)</span>' +
-      '    <span class="vitals-sum-pill stable">⚪ ' + sum.stable + ' Stable (Mustahkam)</span>' +
-      (sum.baseline > 0 ? ('<span class="vitals-sum-pill" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">🔵 ' + sum.baseline + ' Baseline</span>') : '') +
-      '  </div>' +
-      '</div>' +
       '<div class="vitals-comp-table-wrap">' +
       '  <table class="vitals-comp-table">' +
       '    <thead>' +
