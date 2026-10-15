@@ -195,70 +195,9 @@
   /* Full Detailed Stage Organ SVGs */
   function renderStageOrganSvg(key) {
     if (key === 'lung') {
-      return '<svg viewBox="0 0 340 380" class="vitals-organ-svg lung-svg" style="max-width:100%;height:auto;overflow:visible">' +
-        '<defs>' +
-        '  <radialGradient id="lungHalo" cx="50%" cy="50%" r="50%">' +
-        '    <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.35"/>' +
-        '    <stop offset="70%" stop-color="#0284c7" stop-opacity="0.08"/>' +
-        '    <stop offset="100%" stop-color="#0284c7" stop-opacity="0"/>' +
-        '  </radialGradient>' +
-        '  <linearGradient id="tracheaGrad" x1="0%" y1="0%" x2="100%" y2="0%">' +
-        '    <stop offset="0%" stop-color="#0ea5e9"/>' +
-        '    <stop offset="50%" stop-color="#38bdf8"/>' +
-        '    <stop offset="100%" stop-color="#0284c7"/>' +
-        '  </linearGradient>' +
-        '  <linearGradient id="leftLungGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
-        '    <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.28"/>' +
-        '    <stop offset="60%" stop-color="#0284c7" stop-opacity="0.14"/>' +
-        '    <stop offset="100%" stop-color="#0369a1" stop-opacity="0.32"/>' +
-        '  </linearGradient>' +
-        '  <linearGradient id="rightLungGrad" x1="100%" y1="0%" x2="0%" y2="100%">' +
-        '    <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.25"/>' +
-        '    <stop offset="60%" stop-color="#0ea5e9" stop-opacity="0.14"/>' +
-        '    <stop offset="100%" stop-color="#0284c7" stop-opacity="0.32"/>' +
-        '  </linearGradient>' +
-        '  <filter id="vitalsGlow" x="-20%" y="-20%" width="140%" height="140%">' +
-        '    <feGaussianBlur stdDeviation="3.5" result="blur"/>' +
-        '    <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>' +
-        '  </filter>' +
-        '</defs>' +
-        '<ellipse cx="170" cy="190" rx="140" ry="150" fill="url(#lungHalo)"/>' +
-        '<path d="M162 20 L178 20 L178 95 L162 95 Z" fill="url(#tracheaGrad)" rx="3"/>' +
-        '<line x1="160" y1="32" x2="180" y2="32" stroke="#bae6fd" stroke-width="2.5" stroke-linecap="round"/>' +
-        '<line x1="160" y1="44" x2="180" y2="44" stroke="#bae6fd" stroke-width="2.5" stroke-linecap="round"/>' +
-        '<line x1="160" y1="56" x2="180" y2="56" stroke="#bae6fd" stroke-width="2.5" stroke-linecap="round"/>' +
-        '<line x1="160" y1="68" x2="180" y2="68" stroke="#bae6fd" stroke-width="2.5" stroke-linecap="round"/>' +
-        '<line x1="160" y1="80" x2="180" y2="80" stroke="#bae6fd" stroke-width="2.5" stroke-linecap="round"/>' +
-        '<line x1="160" y1="92" x2="180" y2="92" stroke="#bae6fd" stroke-width="2.5" stroke-linecap="round"/>' +
-        '<path d="M162 95 C140 100 85 115 65 155 C45 195 40 250 55 295 C68 335 110 345 145 330 C155 325 158 300 156 260 C155 220 158 140 162 95 Z" fill="url(#leftLungGrad)" stroke="#38bdf8" stroke-width="1.8" filter="url(#vitalsGlow)"/>' +
-        '<path d="M178 95 C200 100 255 115 275 155 C295 195 300 250 285 295 C272 335 230 345 195 330 C182 315 180 275 186 240 C190 205 183 140 178 95 Z" fill="url(#rightLungGrad)" stroke="#38bdf8" stroke-width="1.8" filter="url(#vitalsGlow)"/>' +
-        '<path d="M166 95 C155 115 130 140 115 170 C105 190 95 225 90 260" stroke="#0ea5e9" stroke-width="4.5" fill="none" stroke-linecap="round"/>' +
-        '<path d="M130 140 C110 135 85 145 75 165" stroke="#38bdf8" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
-        '<path d="M115 170 C130 190 135 225 132 255" stroke="#38bdf8" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
-        '<path d="M100 205 C80 215 70 240 68 270" stroke="#38bdf8" stroke-width="2" fill="none" stroke-linecap="round"/>' +
-        '<path d="M115 240 C125 270 120 295 105 315" stroke="#0284c7" stroke-width="2" fill="none" stroke-linecap="round"/>' +
-        '<path d="M90 260 C80 285 85 305 95 320" stroke="#38bdf8" stroke-width="1.8" fill="none" stroke-linecap="round"/>' +
-        '<path d="M174 95 C185 115 210 140 225 170 C235 190 245 225 250 260" stroke="#0ea5e9" stroke-width="4.5" fill="none" stroke-linecap="round"/>' +
-        '<path d="M210 140 C230 135 255 145 265 165" stroke="#f43f5e" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
-        '<path d="M225 170 C210 190 205 225 208 255" stroke="#f43f5e" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
-        '<path d="M240 205 C260 215 270 240 272 270" stroke="#38bdf8" stroke-width="2" fill="none" stroke-linecap="round"/>' +
-        '<path d="M225 240 C215 270 220 295 235 315" stroke="#0284c7" stroke-width="2" fill="none" stroke-linecap="round"/>' +
-        '<path d="M250 260 C260 285 255 305 245 320" stroke="#f43f5e" stroke-width="1.8" fill="none" stroke-linecap="round"/>' +
-        '<circle cx="75" cy="165" r="3.5" fill="#38bdf8" filter="url(#vitalsGlow)"/>' +
-        '<circle cx="68" cy="270" r="3" fill="#38bdf8"/>' +
-        '<circle cx="95" cy="320" r="3.5" fill="#bae6fd"/>' +
-        '<circle cx="105" cy="315" r="3" fill="#38bdf8"/>' +
-        '<circle cx="132" cy="255" r="3.5" fill="#0284c7"/>' +
-        '<circle cx="265" cy="165" r="3.5" fill="#fb7185" filter="url(#vitalsGlow)"/>' +
-        '<circle cx="272" cy="270" r="3" fill="#38bdf8"/>' +
-        '<circle cx="245" cy="320" r="3.5" fill="#fb7185"/>' +
-        '<circle cx="235" cy="315" r="3" fill="#38bdf8"/>' +
-        '<circle cx="208" cy="255" r="3.5" fill="#f43f5e"/>' +
-        '<path d="M75 165 Q60 180 58 205" stroke="#38bdf8" stroke-width="1" stroke-dasharray="2 2" fill="none"/>' +
-        '<path d="M265 165 Q280 180 282 205" stroke="#f43f5e" stroke-width="1" stroke-dasharray="2 2" fill="none"/>' +
-        '<path d="M90 260 Q75 280 72 300" stroke="#38bdf8" stroke-width="1" stroke-dasharray="2 2" fill="none"/>' +
-        '<path d="M250 260 Q265 280 268 300" stroke="#f43f5e" stroke-width="1" stroke-dasharray="2 2" fill="none"/>' +
-        '</svg>';
+      return '<div class="vitals-stage-organ-model lung-svg" style="position:relative;width:100%;max-width:340px;display:flex;align-items:center;justify-content:center">' +
+        '<img src="assets/img/patient-lungs.png" alt="3D Bioluminescent Lungs" class="vitals-organ-3d-img" style="width:100%;max-width:315px;height:auto;object-fit:contain;filter:drop-shadow(0 12px 28px rgba(14,165,233,0.35));user-select:none;pointer-events:none" />' +
+        '</div>';
     }
     if (key === 'liver') {
       return '<svg viewBox="0 0 340 380" class="vitals-organ-svg liver-svg" style="max-width:100%;height:auto;overflow:visible">' +
