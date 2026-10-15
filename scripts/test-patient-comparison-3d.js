@@ -183,7 +183,7 @@ assert.ok(html.includes('Patient Diagnostic Tests Anatomical Directory'), 'Diagn
 assert.ok(html.includes('data-pd-section="pdMeds"'), 'Header navigation button for Medication Adherence present');
 assert.ok(html.includes('Medication Adherence'), 'Header navigation button label present');
 assert.ok(html.includes('id="pdMeds"'), 'Dedicated pdMeds page section present');
-assert.ok(html.includes('class="pd-layout-meds"'), 'Dedicated pd-layout-meds class present');
+assert.ok(!html.includes('Medication Adherence &amp; Prescription Regimen'), 'Header banner card for Medication Adherence cleanly removed as requested');
 assert.ok(html.includes('Daily Dosage Schedule &amp; Intake Confirmation'), 'Dosage schedule tracker present');
 assert.ok(html.includes('Pharmacological Safety &amp; Clearance'), 'Safety and clearance screening present');
 assert.ok(html.includes('Prescription Refill &amp; Adherence Log'), 'Prescription refill and adherence log present');

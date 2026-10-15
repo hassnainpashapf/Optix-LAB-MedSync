@@ -2447,21 +2447,6 @@
 
     return '<div class="pd-layout-meds" id="pdMeds" style="display:none">' +
       '<div class="pd-meds-page-wrap" style="display:flex;flex-direction:column;gap:18px">' +
-      // Header Card with Action buttons
-      '<div class="vitals-card" style="padding:18px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;background:linear-gradient(135deg,#ffffff 0%,#f0fdf4 100%);border:1.5px solid #bbf7d0">' +
-      '  <div style="display:flex;align-items:center;gap:12px">' +
-      '    <span style="font-size:32px">💊</span>' +
-      '    <div>' +
-      '      <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.02em">Medication Adherence &amp; Prescription Regimen</h2>' +
-      '      <p class="pd-sub" style="margin:3px 0 0;color:#475569;font-size:12.5px">Active prescription management, daily timing slots, dosage compliance &amp; safety validation for ' + esc(patient.name || 'Patient') + '</p>' +
-      '    </div>' +
-      '  </div>' +
-      '  <div style="display:flex;align-items:center;gap:10px">' +
-      '    <span class="badge" style="font-size:12px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;padding:6px 12px;border-radius:8px">' + meds.length + ' Prescriptions Active</span>' +
-      '    <button type="button" class="btn btn-ghost btn-sm" data-pd-switch="pdOverview" style="font-weight:700;display:inline-flex;align-items:center;gap:6px"><span>🧬</span><span>Vitals Overview</span></button>' +
-      '  </div>' +
-      '</div>' +
-
       // 4 Top Metric KPI Summary Cards
       renderMedicationKpisHtml(meds) +
 
