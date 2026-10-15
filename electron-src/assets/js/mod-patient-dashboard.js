@@ -1936,6 +1936,79 @@
       '</div>';
   }
 
+  /* Render Dedicated Medication Adherence & Regimen Tracker Page */
+  function renderMedicationAdherencePage(curOrg, patient) {
+    var meds = (curOrg && curOrg.meds) ? curOrg.meds : [];
+    return '<div class="pd-layout-meds" id="pdMeds" style="display:none">' +
+      '<div class="pd-meds-page-wrap">' +
+      // Top Dedicated Dashboard Header Banner
+      '<div class="vitals-card" style="margin-bottom:16px;padding:16px 20px;background:#ffffff;border:1px solid #edf2f7;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,0.02)">' +
+      '  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">' +
+      '    <div>' +
+      '      <h3 style="margin:0;font-size:17.5px;font-weight:800;color:#0f172a;display:flex;align-items:center;gap:8px">' +
+      '        <span>💊</span><span>Medication Adherence &amp; Clinical Regimen Tracker</span>' +
+      '      </h3>' +
+      '      <p class="pd-sub" style="margin:3px 0 0;font-size:12px;color:#64748b">' +
+      '        Monitor prescribed therapeutic regimens, dosage schedules &amp; clinical adherence compliance' +
+      '      </p>' +
+      '    </div>' +
+      '    <div style="display:flex;align-items:center;gap:10px">' +
+      '      <span class="badge" style="font-size:11.5px;font-weight:600;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:4px 10px;border-radius:6px">' +
+      '        96% Compliance' +
+      '      </span>' +
+      '      <button type="button" class="btn btn-ghost btn-sm" data-pd-switch="pdOverview" style="font-size:12px;font-weight:600;padding:6px 14px">' +
+      '        ← Back to Overview' +
+      '      </button>' +
+      '    </div>' +
+      '  </div>' +
+      '</div>' +
+
+      // 4 Medication Metric KPI Summary Cards
+      '<div class="pd-trends-kpi-grid" style="margin-bottom:16px">' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#eff6ff;color:#2563eb;border:1px solid #dbeafe"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5L3.5 13.5C2.1 12.1 2.1 9.9 3.5 8.5L8.5 3.5C9.9 2.1 12.1 2.1 13.5 3.5L20.5 10.5C21.9 11.9 21.9 14.1 20.5 15.5L15.5 20.5C14.1 21.9 11.9 21.9 10.5 20.5Z"></path><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"></line></svg></span><span class="kpi-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe">Active</span></div>' +
+      '    <div class="kpi-value">' + meds.length + '</div>' +
+      '    <div class="kpi-label">Active Prescriptions</div>' +
+      '    <div class="kpi-sub">Prescribed daily medications</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></span><span class="kpi-badge improved">High Adherence</span></div>' +
+      '    <div class="kpi-value" style="color:#0f172a">96%</div>' +
+      '    <div class="kpi-label">Dose Compliance</div>' +
+      '    <div class="kpi-sub">Regular intake on schedule</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span><span class="kpi-badge" style="background:#f0fdf4;color:#15803d;border:1px solid #dcfce7">Verified</span></div>' +
+      '    <div class="kpi-value" style="color:#0f172a">Safe</div>' +
+      '    <div class="kpi-label">Drug Safety Shield</div>' +
+      '    <div class="kpi-sub">No harmful cross-interactions</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span><span class="kpi-badge" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0">Routine</span></div>' +
+      '    <div class="kpi-value" style="color:#0f172a">3 / Day</div>' +
+      '    <div class="kpi-label">Daily Timing Slots</div>' +
+      '    <div class="kpi-sub">Subah · Dopehar · Raat</div>' +
+      '  </div>' +
+      '</div>' +
+
+      // Main Card with Active Regimen List
+      '<div class="vitals-card" style="padding:22px">' +
+      '  <div class="vitals-card-head" style="margin-bottom:14px">' +
+      '    <div>' +
+      '      <h3 style="display:flex;align-items:center;gap:8px"><span>💊</span><span>Prescribed Medications &amp; Timing Schedule</span></h3>' +
+      '      <p class="pd-sub" style="margin-top:2px">' + esc(curOrg.medsSub || 'Organ-targeted therapeutic regimen') + '</p>' +
+      '    </div>' +
+      '    <span class="badge" style="font-size:11px;font-weight:600;background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;padding:3px 8px;border-radius:6px">' + meds.length + ' Prescribed</span>' +
+      '  </div>' +
+      '  <div class="vitals-med-list" id="medsFullListWrap">' +
+      renderMedListHtml(meds) +
+      '  </div>' +
+      '</div>' +
+
+      '</div>' +
+      '</div>';
+  }
+
   /* Render Primary Patient Vitals Dashboard */
   function render(patient) {
     var tests=testsFor(patient);
@@ -1998,7 +2071,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdAnatomy','Test Anatomy','◎'],['pdMeds','Medication Adherence','💊']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span><span>'+item[1]+'</span></button>';
       }).join('') +
       '  </nav>' +
@@ -2125,6 +2198,9 @@
 
       // Dedicated Visual Laboratory Test Anatomy Page
       renderTestAnatomyPage(patient, tests, labData) +
+
+      // Dedicated Medication Adherence Page
+      renderMedicationAdherencePage(curOrg, patient) +
       '</div>' +
       '</section>';
   }
@@ -2243,6 +2319,8 @@
       if (mSub) mSub.textContent = org.medsSub;
       var mWrap = host.querySelector('#medsListWrap');
       if (mWrap) mWrap.innerHTML = renderMedListHtml(org.meds);
+      var mFullWrap = host.querySelector('#medsFullListWrap');
+      if (mFullWrap) mFullWrap.innerHTML = renderMedListHtml(org.meds);
     }
 
     host.querySelectorAll('#organCarouselTrack .vitals-organ-pill').forEach(function (pill) {
@@ -2356,23 +2434,23 @@
       var overviewEl = host.querySelector('#pdOverview');
       var trendsEl = host.querySelector('#pdTrends');
       var anatomyEl = host.querySelector('#pdAnatomy');
+      var medsEl = host.querySelector('#pdMeds');
+
+      if (overviewEl) overviewEl.style.display = 'none';
+      if (trendsEl) trendsEl.style.display = 'none';
+      if (anatomyEl) anatomyEl.style.display = 'none';
+      if (medsEl) medsEl.style.display = 'none';
 
       if (sectionId === 'pdTrends') {
-        if (overviewEl) overviewEl.style.display = 'none';
-        if (anatomyEl) anatomyEl.style.display = 'none';
         if (trendsEl) trendsEl.style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else if (sectionId === 'pdOverview') {
-        if (trendsEl) trendsEl.style.display = 'none';
-        if (anatomyEl) anatomyEl.style.display = 'none';
         if (overviewEl) overviewEl.style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
       } else if (sectionId === 'pdAnatomy') {
-        if (overviewEl) overviewEl.style.display = 'none';
-        if (trendsEl) trendsEl.style.display = 'none';
         if (anatomyEl) anatomyEl.style.display = 'block';
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (sectionId === 'pdMeds') {
+        if (medsEl) medsEl.style.display = 'block';
       }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     // Wire clickable test cards in the anatomy directory

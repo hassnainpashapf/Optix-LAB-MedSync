@@ -1900,6 +1900,11 @@
   width: 100%;
 }
 
+/* Dedicated Medication Adherence Page */
+#ptPatientDashboard .pd-layout-meds {
+  width: 100%;
+}
+
 #ptPatientDashboard .pd-anatomy-grid {
   display: grid;
   grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
