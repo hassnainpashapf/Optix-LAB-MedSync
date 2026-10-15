@@ -2081,29 +2081,17 @@
       renderPatientTestsListHtml(oldTests) +
       '    </div>' +
 
-      // Sub-card 2: Diagnostic Laboratory Tests Effect & Medication Adherence (50% equal width)
+      // Sub-card 2: Patient Medication Adherence (50% equal width)
       '    <div class="vitals-card">' +
       '      <div class="vitals-card-head" style="margin-bottom:10px">' +
       '        <div>' +
-      '          <h3>Lab Tests Diagnostic Effect</h3>' +
-      '          <p class="pd-sub" style="margin-top:2px">Clinical organ impact from laboratory test findings</p>' +
-      '        </div>' +
-      '        <button class="card-action-btn" type="button" title="Diagnostic options">⋮</button>' +
-      '      </div>' +
-      '      <div class="organ-test-effect-container" id="organTestEffectBox">' +
-      renderOrganTestEffectInnerHtml('lung', patient, labData) +
-      '      </div>' +
-
-      // Medication Adherence section
-      '      <div>' +
-      '        <div class="vitals-card-head" style="margin-bottom:4px">' +
       '          <h3>Medication Adherence</h3>' +
-      '          <button class="card-action-btn" type="button" title="Medication options">⋮</button>' +
+      '          <p class="pd-sub" style="margin-top:2px" id="medsSubtitle">' + esc(curOrg.medsSub) + '</p>' +
       '        </div>' +
-      '        <div class="vitals-subcard-subtitle" id="medsSubtitle">' + esc(curOrg.medsSub) + '</div>' +
-      '        <div class="vitals-med-list" id="medsListWrap">' +
+      '        <button class="card-action-btn" type="button" title="Medication options">⋮</button>' +
+      '      </div>' +
+      '      <div class="vitals-med-list" id="medsListWrap">' +
       renderMedListHtml(curOrg.meds) +
-      '        </div>' +
       '      </div>' +
       '    </div>' +
       '  </div>' +
