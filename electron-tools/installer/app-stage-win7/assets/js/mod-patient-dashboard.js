@@ -1861,36 +1861,36 @@
       '          <p class="pd-sub" style="margin-top:2px">Biological body regions correlated with this patient\'s tests</p>' +
       '        </div>' +
       '      </div>' +
-      '      <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(130px, 1fr));gap:10px">' +
-      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
-      '          <div style="font-size:20px;margin-bottom:2px">🫀</div>' +
-      '          <strong style="font-size:12px;color:#0f172a;display:block">Liver / Hepatic</strong>' +
-      '          <span style="font-size:11px;color:#64748b">' + regionCounters.liver + ' Test' + (regionCounters.liver === 1 ? '' : 's') + '</span>' +
+      '      <div class="pd-organ-breakdown-grid" style="display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px">' +
+      '        <div class="pd-organ-breakdown-item" style="padding:10px 6px;background:#ffffff;border:1px solid #edf2f7;border-radius:10px;text-align:center;box-shadow:0 1px 2px rgba(15,23,42,0.02)">' +
+      '          <div class="organ-icon" style="font-size:18px;margin-bottom:3px">🫀</div>' +
+      '          <strong style="font-size:11.5px;color:#334155;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Liver / Hepatic</strong>' +
+      '          <span style="font-size:10.5px;color:#64748b;display:block;margin-top:2px">' + regionCounters.liver + ' Test' + (regionCounters.liver === 1 ? '' : 's') + '</span>' +
       '        </div>' +
-      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
-      '          <div style="font-size:20px;margin-bottom:2px">🫘</div>' +
-      '          <strong style="font-size:12px;color:#0f172a;display:block">Kidneys / Renal</strong>' +
-      '          <span style="font-size:11px;color:#64748b">' + regionCounters.kidneys + ' Test' + (regionCounters.kidneys === 1 ? '' : 's') + '</span>' +
+      '        <div class="pd-organ-breakdown-item" style="padding:10px 6px;background:#ffffff;border:1px solid #edf2f7;border-radius:10px;text-align:center;box-shadow:0 1px 2px rgba(15,23,42,0.02)">' +
+      '          <div class="organ-icon" style="font-size:18px;margin-bottom:3px">🫘</div>' +
+      '          <strong style="font-size:11.5px;color:#334155;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Kidneys / Renal</strong>' +
+      '          <span style="font-size:10.5px;color:#64748b;display:block;margin-top:2px">' + regionCounters.kidneys + ' Test' + (regionCounters.kidneys === 1 ? '' : 's') + '</span>' +
       '        </div>' +
-      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
-      '          <div style="font-size:20px;margin-bottom:2px">❤️</div>' +
-      '          <strong style="font-size:12px;color:#0f172a;display:block">Heart / Cardiac</strong>' +
-      '          <span style="font-size:11px;color:#64748b">' + regionCounters.heart + ' Test' + (regionCounters.heart === 1 ? '' : 's') + '</span>' +
+      '        <div class="pd-organ-breakdown-item" style="padding:10px 6px;background:#ffffff;border:1px solid #edf2f7;border-radius:10px;text-align:center;box-shadow:0 1px 2px rgba(15,23,42,0.02)">' +
+      '          <div class="organ-icon" style="font-size:18px;margin-bottom:3px">❤️</div>' +
+      '          <strong style="font-size:11.5px;color:#334155;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Heart / Cardiac</strong>' +
+      '          <span style="font-size:10.5px;color:#64748b;display:block;margin-top:2px">' + regionCounters.heart + ' Test' + (regionCounters.heart === 1 ? '' : 's') + '</span>' +
       '        </div>' +
-      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
-      '          <div style="font-size:20px;margin-bottom:2px">🫁</div>' +
-      '          <strong style="font-size:12px;color:#0f172a;display:block">Lungs / Pulm.</strong>' +
-      '          <span style="font-size:11px;color:#64748b">' + regionCounters.lungs + ' Test' + (regionCounters.lungs === 1 ? '' : 's') + '</span>' +
+      '        <div class="pd-organ-breakdown-item" style="padding:10px 6px;background:#ffffff;border:1px solid #edf2f7;border-radius:10px;text-align:center;box-shadow:0 1px 2px rgba(15,23,42,0.02)">' +
+      '          <div class="organ-icon" style="font-size:18px;margin-bottom:3px">🫁</div>' +
+      '          <strong style="font-size:11.5px;color:#334155;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Lungs / Pulm.</strong>' +
+      '          <span style="font-size:10.5px;color:#64748b;display:block;margin-top:2px">' + regionCounters.lungs + ' Test' + (regionCounters.lungs === 1 ? '' : 's') + '</span>' +
       '        </div>' +
-      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
-      '          <div style="font-size:20px;margin-bottom:2px">🥞</div>' +
-      '          <strong style="font-size:12px;color:#0f172a;display:block">Pancreas / Sugar</strong>' +
-      '          <span style="font-size:11px;color:#64748b">' + regionCounters.pancreas + ' Test' + (regionCounters.pancreas === 1 ? '' : 's') + '</span>' +
+      '        <div class="pd-organ-breakdown-item" style="padding:10px 6px;background:#ffffff;border:1px solid #edf2f7;border-radius:10px;text-align:center;box-shadow:0 1px 2px rgba(15,23,42,0.02)">' +
+      '          <div class="organ-icon" style="font-size:18px;margin-bottom:3px">🥞</div>' +
+      '          <strong style="font-size:11.5px;color:#334155;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Pancreas / Sugar</strong>' +
+      '          <span style="font-size:10.5px;color:#64748b;display:block;margin-top:2px">' + regionCounters.pancreas + ' Test' + (regionCounters.pancreas === 1 ? '' : 's') + '</span>' +
       '        </div>' +
-      '        <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;text-align:center">' +
-      '          <div style="font-size:20px;margin-bottom:2px">🩸</div>' +
-      '          <strong style="font-size:12px;color:#0f172a;display:block">Blood / Hematology</strong>' +
-      '          <span style="font-size:11px;color:#64748b">' + regionCounters.blood + ' Test' + (regionCounters.blood === 1 ? '' : 's') + '</span>' +
+      '        <div class="pd-organ-breakdown-item" style="padding:10px 6px;background:#ffffff;border:1px solid #edf2f7;border-radius:10px;text-align:center;box-shadow:0 1px 2px rgba(15,23,42,0.02)">' +
+      '          <div class="organ-icon" style="font-size:18px;margin-bottom:3px">🩸</div>' +
+      '          <strong style="font-size:11.5px;color:#334155;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Blood / Hematology</strong>' +
+      '          <span style="font-size:10.5px;color:#64748b;display:block;margin-top:2px">' + regionCounters.blood + ' Test' + (regionCounters.blood === 1 ? '' : 's') + '</span>' +
       '        </div>' +
       '      </div>' +
       '    </div>' +

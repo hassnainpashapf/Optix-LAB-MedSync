@@ -1918,3 +1918,56 @@
   box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
 }
 
+/* Target Organ Systems Breakdown - 1 Row Subtle Clean Cards */
+#ptPatientDashboard .pd-organ-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+@media (max-width: 900px) {
+  #ptPatientDashboard .pd-organ-breakdown-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 500px) {
+  #ptPatientDashboard .pd-organ-breakdown-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+#ptPatientDashboard .pd-organ-breakdown-item {
+  padding: 10px 6px;
+  background: #ffffff;
+  border: 1px solid #edf2f7;
+  border-radius: 10px;
+  text-align: center;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
+}
+#ptPatientDashboard .pd-organ-breakdown-item:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+#ptPatientDashboard .pd-organ-breakdown-item .organ-icon {
+  font-size: 18px;
+  margin-bottom: 3px;
+  display: block;
+}
+#ptPatientDashboard .pd-organ-breakdown-item strong {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #334155;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+#ptPatientDashboard .pd-organ-breakdown-item span {
+  font-size: 10.5px;
+  color: #64748b;
+  display: block;
+  margin-top: 2px;
+}
+
+
