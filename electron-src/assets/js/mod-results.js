@@ -3863,18 +3863,42 @@
         });
       }
 
-      // ---- Chughtai-style light blue header bar: TEST | NORMAL VALUE | UNIT ----
-      function tableHead() {
-        need(9);
+      // ---- Chughtai-style section header: Title + light blue header bar on left, RESULT box on right ----
+      function drawSectionHeader(curTitleLines) {
+        need(BOX_H + 6);
+        var boxTop = y;
+        var leftW = resultStart - M;
+        var headH = 7.5;
+        var headY = boxTop + BOX_H - headH;
+
+        // Draw RESULT boxes on the right
+        resultCols.forEach(function (c, ci) {
+          resultBox(resultStart + ci * RBW, boxTop, c.caseCode || c.invoiceNo, c.boxCaseText,
+            fmtTs(c.reportedAt), c.boxInvoiceNo, ci > 0);
+        });
+
+        // Draw Section Title on the top left above table head
+        if (curTitleLines && curTitleLines.length) {
+          var titleAvailH = BOX_H - headH;
+          var titleStartY = boxTop + Math.max(0, (titleAvailH - curTitleLines.length * 5.2) / 2);
+          doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
+          doc.setTextColor(11, 23, 64);
+          curTitleLines.forEach(function (tl, li) {
+            txt(tl, M, titleStartY + 4.6 + li * 5.2);
+          });
+        }
+
+        // Draw light blue header bar on the left (stopping before the RESULT box)
         doc.setFillColor(207, 228, 246); // #cfe4f6 Light blue matching Web View
         doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5);
-        doc.rect(M, y, CW, 7.5, 'FD');
+        doc.rect(M, headY, leftW, headH, 'FD');
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
         doc.setTextColor(11, 23, 64); // #0b1740 Deep Navy matching Web View
-        txt('TEST', CX_TEST + 1.5, y + 5.1, { charSpace: 0.6 });
-        txt('NORMAL VALUE', CX_REF, y + 5.1);
-        txt('UNIT', CX_UNIT, y + 5.1);
-        y += 7.5;
+        txt('TEST', CX_TEST + 1.5, headY + 5.1, { charSpace: 0.6 });
+        txt('NORMAL VALUE', CX_REF, headY + 5.1);
+        txt('UNIT', CX_UNIT, headY + 5.1);
+
+        y = boxTop + BOX_H;
       }
 
       // ---- build one param row, wrapping every selected result column ----
@@ -3962,18 +3986,9 @@
 
       function tableNeed(h) {
         if (y + h <= maxBodyY) return;
-        need(h + BOX_H + 11);
-        drawResultBoxes();
-        y += BOX_H + 2;
-        tableHead();
+        need(h + BOX_H + 8);
+        drawSectionHeader(null);
         if (y + h > maxBodyY) throw new Error('Report header leaves no room for result rows');
-      }
-      function drawResultBoxes() {
-        if (y + BOX_H + 16 > maxBodyY) throw new Error('Report header leaves no room for result identifiers');
-        resultCols.forEach(function (c, ci) {
-          resultBox(resultStart + ci * RBW, y, c.caseCode || c.invoiceNo, c.boxCaseText,
-            fmtTs(c.reportedAt), c.boxInvoiceNo, ci > 0);
-        });
       }
       function bodyLines(lines, style, size) {
         lines.forEach(function (line) {
@@ -4036,9 +4051,12 @@
         // Section title in Chughtai style: "{NAME} ({CODE}) REPORT"
         var tTitle = testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : '');
         if (!/report\s*:?\s*$/i.test(tTitle)) tTitle += ' REPORT';
+        var leftW = resultStart - M;
         doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-        var titleLines = doc.splitTextToSize(tTitle, CW);
-        var titleH = titleLines.length * 5.4;
+        var titleLines = doc.splitTextToSize(tTitle, Math.max(20, leftW - 4));
+        var headH = 7.5;
+        var neededBoxH = Math.max(BOX_H, titleLines.length * 5.2 + headH + 2);
+        BOX_H = Math.min(30, neededBoxH);
 
         // Include parameters populated only in a selected previous report.
         var shown = params.filter(function (p) {
@@ -4057,27 +4075,15 @@
           noteLines = doc.splitTextToSize(String(tnote), CW - 6);
         }
 
-        need(Math.min(titleH, 12) + BOX_H + 18);
-
-        // Section Title in Chughtai Deep Navy [11, 23, 64] (#0b1740)
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-        doc.setTextColor(11, 23, 64);
-        titleLines.forEach(function (tl) {
-          need(5.4); doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(11, 23, 64);
-          txt(tl, M, y + 4.6); y += 5.4;
-        });
+        need(BOX_H + 14);
         resultCols.forEach(function (c) {
           c.identifierNotes.forEach(function (note) {
             doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
             bodyLines(doc.splitTextToSize(note, CW - 4), 'normal', 8.5);
           });
         });
-        need(BOX_H + 16);
-        drawResultBoxes();
-        y += BOX_H + 2;
 
-        // Chughtai light blue header bar + rows.
-        tableHead();
+        drawSectionHeader(titleLines);
         rows.forEach(tableRow);
 
         drawReportGraph(test, vals);
