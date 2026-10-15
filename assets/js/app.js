@@ -1651,6 +1651,24 @@
             nextBtn.click();
             return;
           }
+          var tblWrap = document.querySelector('.tbl-wrap, .table-responsive');
+          var viewEl = document.getElementById('view');
+          var mainEl = document.querySelector('.main, .maincol');
+          if (tblWrap && tblWrap.scrollWidth > (tblWrap.clientWidth + 4) && tblWrap.scrollLeft + tblWrap.clientWidth < tblWrap.scrollWidth - 2) {
+            e.preventDefault();
+            tblWrap.scrollBy({ left: 160, behavior: 'smooth' });
+            return;
+          }
+          if (viewEl && viewEl.scrollWidth > (viewEl.clientWidth + 4)) {
+            e.preventDefault();
+            viewEl.scrollBy({ left: 160, behavior: 'smooth' });
+            return;
+          }
+          if (mainEl && mainEl.scrollWidth > (mainEl.clientWidth + 4)) {
+            e.preventDefault();
+            mainEl.scrollBy({ left: 160, behavior: 'smooth' });
+            return;
+          }
         }
       }
 
@@ -1686,6 +1704,24 @@
           if (prevBtn) {
             e.preventDefault();
             prevBtn.click();
+            return;
+          }
+          var tblWrap = document.querySelector('.tbl-wrap, .table-responsive');
+          var viewEl = document.getElementById('view');
+          var mainEl = document.querySelector('.main, .maincol');
+          if (tblWrap && tblWrap.scrollWidth > (tblWrap.clientWidth + 4) && tblWrap.scrollLeft > 2) {
+            e.preventDefault();
+            tblWrap.scrollBy({ left: -160, behavior: 'smooth' });
+            return;
+          }
+          if (viewEl && viewEl.scrollWidth > (viewEl.clientWidth + 4)) {
+            e.preventDefault();
+            viewEl.scrollBy({ left: -160, behavior: 'smooth' });
+            return;
+          }
+          if (mainEl && mainEl.scrollWidth > (mainEl.clientWidth + 4)) {
+            e.preventDefault();
+            mainEl.scrollBy({ left: -160, behavior: 'smooth' });
             return;
           }
         }
@@ -1809,6 +1845,124 @@
     window.addEventListener('resize', schedule);
     setInterval(watch, 1500); /* #view is re-created on login/logout */
   })();
+
+  /* Table & View Horizontal Scroll / Zoom Pan Controller */
+  (function () {
+    var timer = null;
+    function updateControls() {
+      timer = null;
+      var wraps = document.querySelectorAll('.tbl-wrap, .table-responsive');
+      wraps.forEach(function (wrap) {
+        var hasOverflow = wrap.scrollWidth > (wrap.clientWidth + 4);
+        var bar = wrap.previousElementSibling && wrap.previousElementSibling.classList && wrap.previousElementSibling.classList.contains('tbl-scroll-bar') ? wrap.previousElementSibling : null;
+
+        if (hasOverflow) {
+          if (!bar) {
+            bar = document.createElement('div');
+            bar.className = 'tbl-scroll-bar';
+            bar.innerHTML =
+              '<span class="muted" style="font-size:12px;margin-right:auto;font-weight:600">↔️ Wide table: click Left / Right or scroll</span>' +
+              '<button type="button" class="tbl-nav-btn tbl-nav-left" title="Scroll Left (◀)">◀ Left</button>' +
+              '<button type="button" class="tbl-nav-btn tbl-nav-right" title="Scroll Right (▶)">Right ▶</button>';
+            wrap.parentNode.insertBefore(bar, wrap);
+
+            var bL = bar.querySelector('.tbl-nav-left');
+            var bR = bar.querySelector('.tbl-nav-right');
+
+            if (bL) {
+              bL.addEventListener('click', function () {
+                wrap.scrollBy({ left: -260, behavior: 'smooth' });
+              });
+            }
+            if (bR) {
+              bR.addEventListener('click', function () {
+                wrap.scrollBy({ left: 260, behavior: 'smooth' });
+              });
+            }
+            wrap.addEventListener('scroll', function () {
+              if (bL) bL.disabled = (wrap.scrollLeft <= 2);
+              if (bR) bR.disabled = (wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 2);
+            });
+          }
+          bar.style.display = 'flex';
+          var bL = bar.querySelector('.tbl-nav-left');
+          var bR = bar.querySelector('.tbl-nav-right');
+          if (bL) bL.disabled = (wrap.scrollLeft <= 2);
+          if (bR) bR.disabled = (wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 2);
+        } else if (bar) {
+          bar.style.display = 'none';
+        }
+      });
+
+      // View & Main level horizontal overflow (when zoomed in)
+      var viewEl = document.getElementById('view');
+      var mainEl = document.querySelector('.main, .maincol');
+      var hasViewOverflow = (viewEl && viewEl.scrollWidth > (viewEl.clientWidth + 8)) ||
+                            (mainEl && mainEl.scrollWidth > (mainEl.clientWidth + 8)) ||
+                            (document.documentElement.scrollWidth > (window.innerWidth + 8));
+
+      var vPill = document.getElementById('viewScrollNav');
+      if (hasViewOverflow) {
+        if (!vPill) {
+          vPill = document.createElement('div');
+          vPill.id = 'viewScrollNav';
+          vPill.className = 'zoom-pan-pill';
+          vPill.innerHTML =
+            '<button type="button" class="zp-btn" id="zpScrollLeft" title="Scroll View Left (◀)">◀ Left</button>' +
+            '<span class="zp-div"></span>' +
+            '<button type="button" class="zp-btn" id="zpScrollRight" title="Scroll View Right (▶)">Right ▶</button>';
+          document.body.appendChild(vPill);
+
+          var zL = vPill.querySelector('#zpScrollLeft');
+          var zR = vPill.querySelector('#zpScrollRight');
+          if (zL) {
+            zL.addEventListener('click', function () {
+              var target = (viewEl && viewEl.scrollWidth > viewEl.clientWidth) ? viewEl : (mainEl && mainEl.scrollWidth > mainEl.clientWidth ? mainEl : window);
+              target.scrollBy({ left: -260, behavior: 'smooth' });
+            });
+          }
+          if (zR) {
+            zR.addEventListener('click', function () {
+              var target = (viewEl && viewEl.scrollWidth > viewEl.clientWidth) ? viewEl : (mainEl && mainEl.scrollWidth > mainEl.clientWidth ? mainEl : window);
+              target.scrollBy({ left: 260, behavior: 'smooth' });
+            });
+          }
+        }
+        vPill.style.display = 'flex';
+      } else if (vPill) {
+        vPill.style.display = 'none';
+      }
+    }
+
+    function schedule() { if (!timer) timer = setTimeout(updateControls, 80); }
+    function watch() {
+      var view = document.getElementById('view');
+      if (!view || view.__scrollObs) return;
+      view.__scrollObs = true;
+      new MutationObserver(schedule).observe(view, { childList: true, subtree: true });
+      schedule();
+    }
+    window.addEventListener('hashchange', function () { setTimeout(watch, 0); schedule(); });
+    window.addEventListener('resize', schedule);
+    setInterval(watch, 1500);
+
+    /* mouse wheel on overflowing table with no vertical overflow scrolls horizontally */
+    document.addEventListener('wheel', function (e) {
+      var wrap = e.target && e.target.closest ? e.target.closest('.tbl-wrap, .table-responsive') : null;
+      if (!wrap) return;
+      if (wrap.scrollWidth > (wrap.clientWidth + 4) && wrap.scrollHeight <= (wrap.clientHeight + 8)) {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && !e.shiftKey) {
+          var canScrollRight = (wrap.scrollLeft + wrap.clientWidth < wrap.scrollWidth - 2) && e.deltaY > 0;
+          var canScrollLeft = wrap.scrollLeft > 2 && e.deltaY < 0;
+          if (canScrollRight || canScrollLeft) {
+            wrap.scrollLeft += (e.deltaY > 0 ? 80 : -80);
+            e.preventDefault();
+          }
+        }
+      }
+    }, { passive: false });
+  })();
+
   /* Android app: tell the user when a newer APK exists and let them update in one tap
      (Android always asks for the final install confirmation itself — apps cannot install silently). */
   (function () {

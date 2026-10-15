@@ -1778,22 +1778,138 @@ table tbody tr:focus{
 
 /* ============ Fluid Responsive & Zoom Scaling ============ */
 html,body{
-  width:100%;max-width:100%;overflow-x:hidden;
+  width:100%;max-width:100%;
 }
 .app,.shell{
   width:100%;max-width:100%;min-width:0;
 }
 .main,.maincol{
-  min-width:0;box-sizing:border-box;overflow-x:hidden;flex:1;
+  min-width:0;box-sizing:border-box;overflow-x:auto;overflow-y:visible;flex:1;
+  -webkit-overflow-scrolling:touch;
 }
 #view,.view{
-  width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:hidden;
+  width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
 }
 .tbl-wrap,.table-responsive{
   width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;
+  position:relative;
 }
-.tbl-wrap::-webkit-scrollbar{height:7px}
-.tbl-wrap::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:6px}
+
+/* Clear, high-contrast, easy-to-drag scrollbars */
+::-webkit-scrollbar{width:12px;height:12px}
+::-webkit-scrollbar-track{background:#f1f5f9;border-radius:8px}
+::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:8px;border:2px solid #f1f5f9}
+::-webkit-scrollbar-thumb:hover{background:#475569}
+
+.tbl-wrap::-webkit-scrollbar,
+.table-responsive::-webkit-scrollbar,
+.main::-webkit-scrollbar,
+#view::-webkit-scrollbar{height:12px;width:12px}
+.tbl-wrap::-webkit-scrollbar-track,
+.table-responsive::-webkit-scrollbar-track,
+.main::-webkit-scrollbar-track,
+#view::-webkit-scrollbar-track{background:#f1f5f9;border-radius:8px}
+.tbl-wrap::-webkit-scrollbar-thumb,
+.table-responsive::-webkit-scrollbar-thumb,
+.main::-webkit-scrollbar-thumb,
+#view::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:8px;border:2px solid #f1f5f9}
+.tbl-wrap::-webkit-scrollbar-thumb:hover,
+.table-responsive::-webkit-scrollbar-thumb:hover,
+.main::-webkit-scrollbar-thumb:hover,
+#view::-webkit-scrollbar-thumb:hover{background:#475569}
+
+/* Firefox / standard scrollbar styling */
+*{
+  scrollbar-width:auto;
+  scrollbar-color:#94a3b8 #f1f5f9;
+}
+
+/* Explicit Table Left/Right Scroll Controls */
+.tbl-scroll-bar{
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
+  gap:8px;
+  padding:4px 0 8px;
+  user-select:none;
+}
+.tbl-nav-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:5px 12px;
+  font-size:12.5px;
+  font-weight:700;
+  border-radius:7px;
+  border:1.5px solid #cbd5e1;
+  background:#ffffff;
+  color:#0f172a;
+  cursor:pointer;
+  box-shadow:0 1px 2px rgba(15,23,42,0.06);
+  transition:all .15s ease;
+}
+.tbl-nav-btn:hover:not(:disabled){
+  background:#f8fafc;
+  border-color:#64748b;
+  color:#2563eb;
+  transform:translateY(-1px);
+  box-shadow:0 2px 5px rgba(15,23,42,0.1);
+}
+.tbl-nav-btn:active:not(:disabled){
+  transform:translateY(0);
+}
+.tbl-nav-btn:disabled{
+  opacity:0.4;
+  cursor:not-allowed;
+  border-color:#e2e8f0;
+  box-shadow:none;
+}
+
+/* Floating Zoom & Pan Controls Pill */
+.zoom-pan-pill{
+  position:fixed;
+  bottom:24px;
+  right:86px;
+  z-index:9000;
+  display:none;
+  background:#ffffff;
+  border:1.5px solid #cbd5e1;
+  border-radius:30px;
+  box-shadow:0 6px 24px rgba(15,23,42,0.18);
+  padding:4px 8px;
+  align-items:center;
+  gap:6px;
+  user-select:none;
+  animation:zpFadeIn .2s ease;
+}
+@keyframes zpFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.zp-btn{
+  border:none;
+  background:#f1f5f9;
+  border-radius:20px;
+  padding:6px 12px;
+  font-weight:700;
+  font-size:12px;
+  cursor:pointer;
+  color:#0f172a;
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  transition:all .15s ease;
+}
+.zp-btn:hover{
+  background:#e2e8f0;
+  color:#2563eb;
+}
+.zp-btn:active{
+  transform:scale(0.97);
+}
+.zp-div{
+  width:1px;
+  height:16px;
+  background:#cbd5e1;
+}
 
 /* Responsive grid auto-collapse under high zoom */
 @media(max-width:1200px){
