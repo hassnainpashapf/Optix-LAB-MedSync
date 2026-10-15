@@ -31,7 +31,7 @@
   function kpiCard(icon, tint, label, value, sub) {
     var c = STAT_TINTS[tint] || STAT_TINTS.blue;
     return '<div class="stat" data-tint="' + tint + '" style="--sc:' + c.sc + '">' +
-      '<div class="stat-ico" style="color:' + c.sc + ';background:' + c.soft + '">' + icon + '</div>' +
+      '<div class="stat-ico">' + icon + '</div>' +
       '<div class="lb">' + App.esc(label) + '</div>' +
       '<div class="vl">' + value + '</div>' +
       '<div class="dl">' + sub + '</div>' +

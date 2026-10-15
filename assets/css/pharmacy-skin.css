@@ -158,51 +158,43 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 .stat::before, .kpi::before,
 .stat > div[style*="border-radius:50%"] { display: none !important; }
 
-.stat-ico, .kpi-ic, .stat-ic {
-  position: relative !important;
-  width: 44px !important;
-  height: 44px !important;
-  border-radius: 12px !important;
-  display: grid !important;
-  place-items: center !important;
-  margin-bottom: 10px !important;
-  border: none !important;
-  box-shadow: none !important;
-  flex: none !important;
-}
-.stat[data-tint="brand"] .stat-ico, .stat[data-tint="blue"] .stat-ico { color: #2563eb !important; background: #eef3ff !important; }
-.stat[data-tint="green"] .stat-ico { color: #16a34a !important; background: #ecfdf3 !important; }
-.stat[data-tint="amber"] .stat-ico { color: #d97706 !important; background: #fffbeb !important; }
-.stat[data-tint="red"] .stat-ico { color: #dc2626 !important; background: #fef2f2 !important; }
-.stat[data-tint="purple"] .stat-ico, .stat[data-tint="violet"] .stat-ico { color: #7c3aed !important; background: #f5f3ff !important; }
+/* All card, stat, KPI, and overview icons merged into page (unboxed, transparent background, light blue #2563eb) */
+.stat-ico, .kpi-ic, .stat-ic,
+.stat[data-tint] .stat-ico,
+.stat[data-tint="brand"] .stat-ico,
+.stat[data-tint="blue"] .stat-ico,
+.stat[data-tint="green"] .stat-ico,
+.stat[data-tint="amber"] .stat-ico,
+.stat[data-tint="red"] .stat-ico,
+.stat[data-tint="purple"] .stat-ico,
+.stat[data-tint="violet"] .stat-ico,
+.kpi[data-tint] .kpi-ic,
+.kpi[class*="t-"] .kpi-ic,
+.stat .stat-ico,
+.stat .stat-ic,
+.kpi .kpi-ic,
+.ovk-ic,
+.ovk-h .ovk-ic,
+.ovk.sm .ovk-ic,
+.kpi-icon,
+.pd-trends-kpi-card .kpi-icon,
+.vitals-med-icon-box,
+.vital-icon,
+.sim-ico-box,
+.ai-sim-card .sim-ico-box,
+.unifi-panel-icon,
+.dl-ico,
+.card-h .dl-ico,
+.wa-brand-ico,
+.sms-brand-ico,
+#view .stat .stat-ico,
+#view .kpi .kpi-ic,
 #view .stat.ai-dash-kpi .stat-ico,
 #optixAiDashboard .ai-dash-kpi .stat-ico,
-.stat.ai-dash-kpi .stat-ico {
-  color: #2563eb !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-  width: auto !important;
-  height: auto !important;
-  border-radius: 0 !important;
-  margin-bottom: 0 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-#view .stat.ai-dash-kpi .stat-ico svg,
-#optixAiDashboard .ai-dash-kpi .stat-ico svg,
-.stat.ai-dash-kpi .stat-ico svg {
-  width: 28px !important;
-  height: 28px !important;
-  stroke-width: 2.2 !important;
-}
+.stat.ai-dash-kpi .stat-ico,
 #view .db-page .stat .stat-ico,
 .db-page .stat .stat-ico {
-  color: #2563eb !important;
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
+  position: relative !important;
   width: auto !important;
   height: auto !important;
   border-radius: 0 !important;
@@ -210,12 +202,68 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
   align-items: center !important;
   justify-content: flex-start !important;
   margin-bottom: 8px !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  color: #2563eb !important;
+  flex: none !important;
 }
+
+.stat-ico svg, .kpi-ic svg, .stat-ic svg,
+.stat[data-tint] .stat-ico svg,
+.stat[data-tint="brand"] .stat-ico svg,
+.stat[data-tint="blue"] .stat-ico svg,
+.stat[data-tint="green"] .stat-ico svg,
+.stat[data-tint="amber"] .stat-ico svg,
+.stat[data-tint="red"] .stat-ico svg,
+.stat[data-tint="purple"] .stat-ico svg,
+.stat[data-tint="violet"] .stat-ico svg,
+.kpi[data-tint] .kpi-ic svg,
+.kpi[class*="t-"] .kpi-ic svg,
+.stat .stat-ico svg,
+.stat .stat-ic svg,
+.kpi .kpi-ic svg,
+.ovk-ic svg,
+.ovk-h .ovk-ic svg,
+.ovk.sm .ovk-ic svg,
+.dl-ico svg,
+.card-h .dl-ico svg,
+.wa-brand-ico svg,
+#view .stat .stat-ico svg,
+#view .kpi .kpi-ic svg,
+#view .stat.ai-dash-kpi .stat-ico svg,
+#optixAiDashboard .ai-dash-kpi .stat-ico svg,
+.stat.ai-dash-kpi .stat-ico svg,
 #view .db-page .stat .stat-ico svg,
 .db-page .stat .stat-ico svg {
   width: 28px !important;
   height: 28px !important;
   stroke-width: 2.2 !important;
+  color: #2563eb !important;
+}
+
+/* Secondary tab icons and empty state icons unboxed and merged into page */
+.tab .tab-ico, .tab-ico, .tab-ico-alt,
+.fn-tabs a.tab .tab-ico, .fn-tabs a.tab .tab-ico-alt,
+.ai-tab-btn .ai-tab-ico {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  color: #2563eb !important;
+}
+.tab .tab-ico svg, .fn-tabs a.tab .tab-ico svg, .ai-tab-btn .ai-tab-ico svg {
+  color: #2563eb !important;
+}
+.empty .e-ico {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  color: #2563eb !important;
+}
+.empty .e-ico svg {
+  color: #2563eb !important;
 }
 
 html .db-page { --brand: #1b2a4a; --brand-d: #1b2a4a; --brand-soft: #eaf0ff; --brand-line: #c9d8fb; --brand-grad: linear-gradient(135deg, #3b7bf7, #1f4fd1);
@@ -1345,16 +1393,18 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   padding: 8px 12px;
 }
 .vitals-med-icon-box {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: #eff6ff;
-  color: #2563eb;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  flex-shrink: 0;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #2563eb !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
+  flex-shrink: 0 !important;
 }
 .vitals-med-details .med-name {
   font-size: 12.5px;

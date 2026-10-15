@@ -1964,7 +1964,7 @@
     '.unifi-panel{background:#ffffff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:18px;box-shadow:0 1px 3px rgba(15,23,42,.03);overflow:hidden;transition:border-color .15s}' +
     '.unifi-panel:hover{border-color:#cbd5e1}' +
     '.unifi-panel-header{padding:14px 18px;border-bottom:1px solid #f1f5f9;background:#fafbfc;display:flex;align-items:center;gap:12px}' +
-    '.unifi-panel-icon{font-size:18px;width:32px;height:32px;border-radius:8px;background:#ffffff;border:1px solid #e2e8f0;display:grid;place-items:center;flex:none;box-shadow:0 1px 2px rgba(0,0,0,.04)}' +
+    '.unifi-panel-icon{font-size:22px;width:auto;height:auto;border-radius:0;background:transparent;border:none;display:inline-flex;align-items:center;justify-content:center;flex:none;box-shadow:none}' +
     '.unifi-panel-title{font-size:14.5px;font-weight:800;color:#0f172a;margin:0}' +
     '.unifi-panel-desc{font-size:12px;color:#64748b;margin:2px 0 0}' +
     '.unifi-panel-body{padding:18px}' +
