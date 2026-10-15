@@ -1319,6 +1319,29 @@
   color: #64748b;
 }
 
+/* Medication Adherence KPI Cards in Overview */
+#ptPatientDashboard .pd-meds-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+@media (min-width: 1400px) {
+  #ptPatientDashboard .pd-meds-kpi-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+#ptPatientDashboard .pd-meds-kpi-grid .pd-trends-kpi-card {
+  padding: 10px 12px;
+  min-height: 72px;
+}
+
+#ptPatientDashboard .pd-meds-kpi-grid .pd-trends-kpi-card .kpi-value {
+  font-size: 18px;
+}
+
 /* Trajectory Graph Card */
 #ptPatientDashboard .pd-trends-graph-card {
   background: #ffffff;

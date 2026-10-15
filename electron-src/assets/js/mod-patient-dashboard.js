@@ -479,11 +479,42 @@
         '</div>' +
         '<button type="button" class="med-taken-btn active" title="Dose Confirmed / Le Li">✓</button>' +
         '</div>';
-    }).join('') +
-    '<div style="margin-top:10px;padding:8px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:10px;display:flex;justify-content:space-between;align-items:center;font-size:11px">' +
-    '  <span style="color:#059669;font-weight:700">✓ Drug Safety Shield: Verified Safe</span>' +
-    '  <span style="color:#64748b">Adherence: <strong>96% Compliance</strong></span>' +
-    '</div>';
+    }).join('');
+  }
+
+  /* 4 Clean Medication Metric KPI Summary Cards (Simple & Clean) */
+  function renderMedicationKpisHtml(meds) {
+    meds = meds || [];
+    return '<div class="pd-trends-kpi-grid pd-meds-kpi-grid" id="medsKpisWrap">' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-label">Active Prescriptions</span>' +
+      '      <span class="kpi-icon" style="background:#eff6ff;color:#2563eb;border:1px solid #dbeafe"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5L3.5 13.5C2.1 12.1 2.1 9.9 3.5 8.5L8.5 3.5C9.9 2.1 12.1 2.1 13.5 3.5L20.5 10.5C21.9 11.9 21.9 14.1 20.5 15.5L15.5 20.5C14.1 21.9 11.9 21.9 10.5 20.5Z"></path><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"></line></svg></span>' +
+      '    </div>' +
+      '    <div class="kpi-value">' + meds.length + '</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-label">Dose Compliance</span>' +
+      '      <span class="kpi-icon" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></span>' +
+      '    </div>' +
+      '    <div class="kpi-value" style="color:#059669">96%</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-label">Drug Safety Shield</span>' +
+      '      <span class="kpi-icon" style="background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>' +
+      '    </div>' +
+      '    <div class="kpi-value">Safe</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-label">Daily Timing Slots</span>' +
+      '      <span class="kpi-icon" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>' +
+      '    </div>' +
+      '    <div class="kpi-value">3 / Day</div>' +
+      '  </div>' +
+      '</div>';
   }
 
   // Anatomy regions mapping for laboratory test correlation
@@ -2108,60 +2139,7 @@
       '</div>';
   }
 
-  /* Render Dedicated Medication Adherence & Regimen Tracker Page */
-  function renderMedicationAdherencePage(curOrg, patient) {
-    var meds = (curOrg && curOrg.meds) ? curOrg.meds : [];
-    return '<div class="pd-layout-meds" id="pdMeds" style="display:none">' +
-      '<div class="pd-meds-page-wrap">' +
-      // 4 Medication Metric KPI Summary Cards (Simple & Clean)
-      '<div class="pd-trends-kpi-grid" style="margin-bottom:16px">' +
-      '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top">' +
-      '      <span class="kpi-label">Active Prescriptions</span>' +
-      '      <span class="kpi-icon" style="background:#eff6ff;color:#2563eb;border:1px solid #dbeafe"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5L3.5 13.5C2.1 12.1 2.1 9.9 3.5 8.5L8.5 3.5C9.9 2.1 12.1 2.1 13.5 3.5L20.5 10.5C21.9 11.9 21.9 14.1 20.5 15.5L15.5 20.5C14.1 21.9 11.9 21.9 10.5 20.5Z"></path><line x1="8.5" y1="8.5" x2="15.5" y2="15.5"></line></svg></span>' +
-      '    </div>' +
-      '    <div class="kpi-value">' + meds.length + '</div>' +
-      '  </div>' +
-      '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top">' +
-      '      <span class="kpi-label">Dose Compliance</span>' +
-      '      <span class="kpi-icon" style="background:#ecfdf5;color:#059669;border:1px solid #a7f3d0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></span>' +
-      '    </div>' +
-      '    <div class="kpi-value" style="color:#059669">96%</div>' +
-      '  </div>' +
-      '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top">' +
-      '      <span class="kpi-label">Drug Safety Shield</span>' +
-      '      <span class="kpi-icon" style="background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></span>' +
-      '    </div>' +
-      '    <div class="kpi-value">Safe</div>' +
-      '  </div>' +
-      '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top">' +
-      '      <span class="kpi-label">Daily Timing Slots</span>' +
-      '      <span class="kpi-icon" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span>' +
-      '    </div>' +
-      '    <div class="kpi-value">3 / Day</div>' +
-      '  </div>' +
-      '</div>' +
 
-      // Main Card with Active Regimen List
-      '<div class="vitals-card" style="padding:22px">' +
-      '  <div class="vitals-card-head" style="margin-bottom:14px">' +
-      '    <div>' +
-      '      <h3 style="display:flex;align-items:center;gap:8px"><span>💊</span><span>Prescribed Medications &amp; Timing Schedule</span></h3>' +
-      '      <p class="pd-sub" style="margin-top:2px">' + esc(curOrg.medsSub || 'Organ-targeted therapeutic regimen') + '</p>' +
-      '    </div>' +
-      '    <span class="badge" style="font-size:11px;font-weight:600;background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;padding:3px 8px;border-radius:6px">' + meds.length + ' Prescribed</span>' +
-      '  </div>' +
-      '  <div class="vitals-med-list" id="medsFullListWrap">' +
-      renderMedListHtml(meds) +
-      '  </div>' +
-      '</div>' +
-
-      '</div>' +
-      '</div>';
-  }
 
   /* Render Primary Patient Vitals Dashboard */
   function render(patient) {
@@ -2225,7 +2203,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','◎'],['pdMeds','Medication Adherence','💊']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" title="'+esc(item[1])+'" aria-label="'+esc(item[1])+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span></button>';
       }).join('') +
       '  </nav>' +
@@ -2330,14 +2308,15 @@
       '    </div>' +
 
       // Sub-card 2: Patient Medication Adherence (50% equal width)
-      '    <div class="vitals-card">' +
-      '      <div class="vitals-card-head" style="margin-bottom:10px">' +
+      '    <div class="vitals-card" id="pdMedsOverviewCard">' +
+      '      <div class="vitals-card-head" style="margin-bottom:12px">' +
       '        <div>' +
-      '          <h3>Medication Adherence</h3>' +
+      '          <h3 style="display:flex;align-items:center;gap:8px"><span>💊</span><span>Medication Adherence</span></h3>' +
       '          <p class="pd-sub" style="margin-top:2px" id="medsSubtitle">' + esc(curOrg.medsSub) + '</p>' +
       '        </div>' +
-      '        <button class="card-action-btn" type="button" title="Medication options">⋮</button>' +
+      '        <span class="badge" style="font-size:11px;font-weight:600;background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;padding:3px 8px;border-radius:6px">' + (curOrg.meds || []).length + ' Prescribed</span>' +
       '      </div>' +
+      renderMedicationKpisHtml(curOrg.meds) +
       '      <div class="vitals-med-list" id="medsListWrap">' +
       renderMedListHtml(curOrg.meds) +
       '      </div>' +
@@ -2355,9 +2334,6 @@
 
       // Dedicated Visual Laboratory Test Anatomy Page
       renderTestAnatomyPage(patient, tests, labData) +
-
-      // Dedicated Medication Adherence Page
-      renderMedicationAdherencePage(curOrg, patient) +
       '</div>' +
       '</section>';
   }
@@ -2476,8 +2452,8 @@
       if (mSub) mSub.textContent = org.medsSub;
       var mWrap = host.querySelector('#medsListWrap');
       if (mWrap) mWrap.innerHTML = renderMedListHtml(org.meds);
-      var mFullWrap = host.querySelector('#medsFullListWrap');
-      if (mFullWrap) mFullWrap.innerHTML = renderMedListHtml(org.meds);
+      var mKpisWrap = host.querySelector('#medsKpisWrap');
+      if (mKpisWrap) mKpisWrap.outerHTML = renderMedicationKpisHtml(org.meds);
     }
 
     host.querySelectorAll('#organCarouselTrack .vitals-organ-pill').forEach(function (pill) {
@@ -2580,7 +2556,7 @@
       resetBtn.addEventListener('click',function(){zoom=1;if(image)image.style.transform='scale(1)';});
     }
 
-    // Section switching navigation between Vitals Overview, Biomarker Trends, Variance, Anatomy, and Meds
+    // Section switching navigation between Vitals Overview, Biomarker Trends, Variance, and Anatomy
     function switchSection(sectionId) {
       host.querySelectorAll('[data-pd-section]').forEach(function(b){
         var isActive = b.getAttribute('data-pd-section') === sectionId;
@@ -2592,24 +2568,24 @@
       var trendsEl = host.querySelector('#pdTrends');
       var varianceEl = host.querySelector('#pdVariance');
       var anatomyEl = host.querySelector('#pdAnatomy');
-      var medsEl = host.querySelector('#pdMeds');
 
       if (overviewEl) overviewEl.style.display = 'none';
       if (trendsEl) trendsEl.style.display = 'none';
       if (varianceEl) varianceEl.style.display = 'none';
       if (anatomyEl) anatomyEl.style.display = 'none';
-      if (medsEl) medsEl.style.display = 'none';
 
       if (sectionId === 'pdTrends') {
         if (trendsEl) trendsEl.style.display = 'block';
       } else if (sectionId === 'pdVariance') {
         if (varianceEl) varianceEl.style.display = 'block';
-      } else if (sectionId === 'pdOverview') {
-        if (overviewEl) overviewEl.style.display = 'block';
       } else if (sectionId === 'pdAnatomy') {
         if (anatomyEl) anatomyEl.style.display = 'block';
-      } else if (sectionId === 'pdMeds') {
-        if (medsEl) medsEl.style.display = 'block';
+      } else {
+        if (overviewEl) overviewEl.style.display = 'block';
+        if (sectionId === 'pdMeds') {
+          var medsCard = host.querySelector('#pdMedsOverviewCard') || host.querySelector('#medsListWrap');
+          if (medsCard) medsCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }

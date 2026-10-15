@@ -155,9 +155,11 @@ assert.ok(html.includes('Medication Adherence'), 'Medication Adherence present')
 assert.ok(html.includes('Ventolin'), 'Ventolin med present');
 assert.ok(html.includes('Pulmicort'), 'Pulmicort med present');
 assert.ok(html.includes('Mucosolvan'), 'Mucosolvan med present');
-assert.ok(!html.includes('Lab Tests Diagnostic Effect'), 'Lab Tests Diagnostic Effect cleanly removed');
-assert.ok(!html.includes('organTestEffectBox'), 'organTestEffectBox cleanly removed');
-console.log('✓ Simulated Organ Capacity Efficiency cleanly removed, Lab Tests Diagnostic Effect cleanly removed, Medication Adherence verified');
+assert.ok(html.includes('Active Prescriptions'), 'Medication KPI Active Prescriptions present in Vitals Overview');
+assert.ok(html.includes('Dose Compliance'), 'Medication KPI Dose Compliance present in Vitals Overview');
+assert.ok(html.includes('Drug Safety Shield'), 'Medication KPI Drug Safety Shield present in Vitals Overview');
+assert.ok(html.includes('Daily Timing Slots'), 'Medication KPI Daily Timing Slots present in Vitals Overview');
+console.log('✓ Simulated Organ Capacity Efficiency cleanly removed, Lab Tests Diagnostic Effect cleanly removed, Medication Adherence & KPI Cards verified');
 
 // 5. Test Right Stage: Anatomical Organ & Carousel
 assert.ok(html.includes('vitals-stage-card'), 'Interactive organ stage card present');
