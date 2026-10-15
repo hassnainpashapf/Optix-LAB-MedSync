@@ -171,10 +171,10 @@ assert.ok(html.includes('pd-test-btn-pdf'), 'PDF button on card must exist');
 assert.ok(html.includes('pd-test-btn-ai'), 'AI insights button on card must exist');
 console.log('✓ Test cards and action buttons verified');
 
-// 8. Verify Overview quick switcher button
-assert.ok(html.includes('data-pd-switch="pdTests"'), 'Quick switcher to pdTests must be present on pdDiagnosticTestsCard');
-assert.ok(html.includes('Open Dedicated Dashboard'), 'Button text Open Dedicated Dashboard must be present');
-console.log('✓ Overview quick-switch button to pdTests verified');
+// 8. Verify Diagnostic Tests card is cleanly removed from Overview per user request
+assert.ok(!html.includes('id="pdDiagnosticTestsCard"'), 'Diagnostic Tests card must not be in Overview');
+assert.ok(!html.includes('Patient previous laboratory tests &amp; order history') && !html.includes('Patient previous laboratory tests & order history'), 'Overview must not contain old test history list');
+console.log('✓ Diagnostic Tests card cleanly removed from Patient Overview');
 
 console.log('============================================================');
 console.log('ALL DEDICATED DIAGNOSTIC TESTS DASHBOARD TESTS PASSED CLEANLY!');

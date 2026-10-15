@@ -123,11 +123,11 @@ console.log('✓ App.openPatientTestDetailModal exported successfully');
 const patient = { id: 'p_test', name: 'Ahmad Khan', age: 34, gender: 'Male' };
 const renderedHtml = sandbox.App.patientDashboard.render(patient);
 
-assert(renderedHtml.includes('pd-diag-test-item'), 'Rendered dashboard must contain pd-diag-test-item class');
-assert(renderedHtml.includes('data-pd-diag-idx="0"'), 'Diagnostic test item must have data-pd-diag-idx="0"');
-assert(renderedHtml.includes('View Details'), 'Diagnostic test item should display View Details badge');
+assert(renderedHtml.includes('pd-test-card-item'), 'Rendered dashboard must contain pd-test-card-item in dedicated pdTests dashboard');
+assert(renderedHtml.includes('data-pd-test-card-idx="0"'), 'Diagnostic test card must have data-pd-test-card-idx="0"');
+assert(renderedHtml.includes('View Details &amp; Parameters') || renderedHtml.includes('View Details & Parameters'), 'Diagnostic test item should display View Details button');
 assert(renderedHtml.includes('Complete Blood Count (CBC)'), 'Diagnostic test item must include CBC test');
-console.log('✓ Diagnostic Tests card correctly renders interactive test item with data-pd-diag-idx and badge');
+console.log('✓ Dedicated Diagnostic Tests dashboard renders interactive test item with details and parameters');
 
 // 3. Test openPatientTestDetailModal
 const oldTests = sandbox.App.patientDashboard.getPatientOldTests(patient);

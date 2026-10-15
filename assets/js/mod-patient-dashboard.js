@@ -2898,22 +2898,6 @@
       '    </div>' +
       '  </div>' +
 
-      // Full-Width Card: Diagnostic Laboratory Tests
-      '  <div class="vitals-subcards-row" style="margin-top:20px;width:100%">' +
-      '    <div class="vitals-card" id="pdDiagnosticTestsCard" style="width:100%">' +
-      '      <div class="vitals-card-head" style="margin-bottom:10px">' +
-      '        <div>' +
-      '          <h3>Diagnostic Tests</h3>' +
-      '          <p class="pd-sub" style="margin-top:2px">Patient previous laboratory tests &amp; order history</p>' +
-      '        </div>' +
-      '        <div style="display:flex;align-items:center;gap:8px">' +
-        '          <span class="badge b-ready" style="font-size:11px;font-weight:700">' + oldTests.length + ' Test' + (oldTests.length === 1 ? '' : 's') + '</span>' +
-        '          <button type="button" class="btn btn-primary btn-sm" data-pd-switch="pdTests" style="font-size:11.5px;padding:3px 10px;font-weight:600;display:inline-flex;align-items:center;gap:4px"><span>🧪</span> <span>Open Dedicated Dashboard →</span></button>' +
-        '        </div>' +
-        '      </div>' +
-        renderPatientTestsListHtml(oldTests) +
-        '    </div>' +
-        '  </div>' +
         '</div>' +
 
         // Dedicated Diagnostic Tests Dashboard Page
