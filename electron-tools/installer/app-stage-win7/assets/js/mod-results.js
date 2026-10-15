@@ -4600,7 +4600,7 @@
     v.querySelectorAll('[data-rviewfirst]').forEach(function (b) {
       b.addEventListener('click', function () {
         var pg = readyPatientGroups[+b.getAttribute('data-rviewfirst')];
-        if (pg && pg.rows.length) viewReport(pg.rows[0].invoice.id);
+        if (pg && pg.rows.length) openPatientOldReports(pg.rows[0].invoice.id);
       });
     });
   }
@@ -4670,7 +4670,10 @@
       '<div class="tbl-wrap"><table class="table"><thead><tr><th>INV # / Invoice no.</th><th>Registered</th><th>Patient</th><th>Tests</th><th>Doctor</th><th>Reported</th><th>Bill</th><th style="text-align:right">Actions</th></tr></thead><tbody>' + slice.map(function (g) {
         var inv = g.inv, vn = App.visitNos(inv), d = inv.doctorId ? DB.get('doctors', inv.doctorId) : null, names = g.rows.map(function (r) { return testName(r); }).filter(Boolean);
         return '<tr><td><b>' + App.esc(vn.labText) + '</b><div class="muted mono" style="font-size:11.5px">' + App.esc(inv.no || inv.id) + '</div></td><td>' + App.esc(App.d(inv.createdAt)) + '</td>' +
-          '<td><b>' + App.esc(g.pat.name || '—') + '</b><div class="muted" style="font-size:12px">' + App.esc([g.pat.age ? g.pat.age + ' yrs' : '', g.pat.gender || '', g.pat.phone || g.pat.whatsapp || ''].filter(Boolean).join(' · ')) + '</div></td>' +
+          '<td><a href="javascript:void(0)" class="link pt-name" data-opat="' + App.esc(inv.id) + '" style="font-weight:700;color:var(--brand,#2563eb);text-decoration:none;display:inline-flex;align-items:center;gap:6px;cursor:pointer" title="Click to view all old reports for ' + App.esc(g.pat.name || 'this patient') + '">' +
+            '<span>' + App.esc(g.pat.name || '—') + '</span>' +
+            '<span style="font-size:10.5px;font-weight:600;padding:1px 6px;border-radius:10px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;white-space:nowrap">📋 History</span>' +
+          '</a><div class="muted" style="font-size:12px">' + App.esc([g.pat.age ? g.pat.age + ' yrs' : '', g.pat.gender || '', g.pat.phone || g.pat.whatsapp || ''].filter(Boolean).join(' · ')) + '</div></td>' +
           '<td style="max-width:260px;font-size:13px">' + App.esc(names.slice(0, 3).join(', ')) + (names.length > 3 ? ' <span class="muted">+' + (names.length - 3) + ' more</span>' : '') + '</td>' +
           '<td>' + App.esc(d ? d.name : 'Self') + '</td><td class="muted">' + App.esc(g.last ? App.d(g.last) : '—') + '</td>' +
           '<td>' + ((+inv.due || 0) > 0.009 ? '<span class="badge b-unpaid">Due ' + App.esc(App.money(inv.due)) + '</span>' : '<span class="badge b-paid">Paid</span>') + '</td>' +
@@ -4684,12 +4687,194 @@
     var cl = document.getElementById('olClear'); if (cl) cl.addEventListener('click', function () { old = { q: '', from: '', to: '', doc: '', page: 1 }; renderOld(); });
     var pv = document.getElementById('olPrev'); if (pv) pv.addEventListener('click', function () { old.page--; renderOld(); });
     var nx = document.getElementById('olNext'); if (nx) nx.addEventListener('click', function () { old.page++; renderOld(); });
+    view.querySelectorAll('[data-opat]').forEach(function (b) { b.addEventListener('click', function () { openPatientOldReports(b.getAttribute('data-opat')); }); });
     view.querySelectorAll('[data-oai]').forEach(function (b) { b.addEventListener('click', function () { if (App.aiInsights && typeof App.aiInsights.showModal === 'function') App.aiInsights.showModal(b.getAttribute('data-oai')); }); });
     view.querySelectorAll('[data-ov]').forEach(function (b) { b.addEventListener('click', function () { viewReport(b.getAttribute('data-ov')); }); });
     view.querySelectorAll('[data-op]').forEach(function (b) { b.addEventListener('click', function () { printReportChoice(b.getAttribute('data-op')); }); });
     view.querySelectorAll('[data-oe]').forEach(function (b) { b.addEventListener('click', function () { manageReport(b.getAttribute('data-oe'), 'edit'); }); });
     view.querySelectorAll('[data-od]').forEach(function (b) { b.addEventListener('click', function () { manageReport(b.getAttribute('data-od'), 'delete'); }); });
   }
+
+  /* ---------- Patient Old Reports modal: shows all finished reports for this patient ---------- */
+  function openPatientOldReports(invoiceId) {
+    var all = oldList();
+    var currentGroup = all.filter(function (x) { return x.inv.id === invoiceId; })[0];
+    if (!currentGroup) {
+      App.toast('Patient report not found.', 'err');
+      return;
+    }
+    var pat = currentGroup.pat || {};
+    var patName = String(pat.name || '').trim();
+    var patId = String(pat.id || currentGroup.inv.patientId || '').trim();
+    var patPhone = String(pat.phone || pat.whatsapp || '').replace(/\D/g, '');
+
+    var patientReports = all.filter(function (g) {
+      var gPid = String((g.pat && g.pat.id) || (g.inv && g.inv.patientId) || '').trim();
+      if (patId && gPid && patId.toLowerCase() === gPid.toLowerCase()) return true;
+
+      var gPhone = String((g.pat && (g.pat.phone || g.pat.whatsapp)) || '').replace(/\D/g, '');
+      if (patPhone && gPhone && patPhone.length >= 7 && patPhone === gPhone) {
+        if (!patName || !g.pat.name || patName.toLowerCase() === String(g.pat.name).trim().toLowerCase()) {
+          return true;
+        }
+      }
+
+      if (patName && g.pat && g.pat.name) {
+        if (patName.toLowerCase() === String(g.pat.name).trim().toLowerCase() && patName.length > 1) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    if (!patientReports.length) patientReports = [currentGroup];
+
+    var canSeeAi = (!window.App || !App.aiInsights || typeof App.aiInsights.canAccess !== 'function') || App.aiInsights.canAccess();
+
+    var metaDetails = [
+      pat.age ? pat.age + ' yrs' : '',
+      pat.gender || '',
+      pat.phone || pat.whatsapp || '',
+      patId ? 'ID: ' + patId : ''
+    ].filter(Boolean).join(' · ');
+
+    var headerSummary =
+      '<div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">' +
+        '<div>' +
+          '<div style="font-size:16px;font-weight:700;color:#0f172a;display:flex;align-items:center;gap:8px">' +
+            '<span>👤 ' + App.esc(patName || 'Patient') + '</span>' +
+            '<span class="badge b-ready" style="font-size:12px;padding:2px 8px">' + patientReports.length + ' Finished Report' + (patientReports.length === 1 ? '' : 's') + '</span>' +
+          '</div>' +
+          (metaDetails ? '<div class="muted" style="font-size:13px;margin-top:3px">' + App.esc(metaDetails) + '</div>' : '') +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<button type="button" class="btn btn-ghost btn-sm" id="porFilterMain" style="font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:5px;border:1px solid #cbd5e1;background:#fff">' +
+            '<span>🔍</span> <span>Filter Page for ' + App.esc(patName.split(' ')[0] || 'Patient') + '</span>' +
+          '</button>' +
+          (patId ? '<button type="button" class="btn btn-ghost btn-sm" id="porOpenProfile" style="font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:5px;border:1px solid #cbd5e1;background:#fff">' +
+            '<span>📂</span> <span>Patient Profile</span>' +
+          '</button>' : '') +
+        '</div>' +
+      '</div>';
+
+    var tableHtml =
+      '<div class="tbl-wrap" style="max-height:60vh;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px">' +
+        '<table class="table" style="margin:0;font-size:13px">' +
+          '<thead style="position:sticky;top:0;background:#f8fafc;z-index:2;box-shadow:0 1px 2px rgba(0,0,0,0.05)"><tr>' +
+            '<th>Report / Invoice</th>' +
+            '<th>Registered</th>' +
+            '<th>Tests Included</th>' +
+            '<th>Doctor</th>' +
+            '<th>Reported</th>' +
+            '<th>Bill</th>' +
+            '<th style="text-align:right">Actions</th>' +
+          '</tr></thead>' +
+          '<tbody>' + patientReports.map(function (g) {
+            var inv = g.inv, vn = App.visitNos(inv), d = inv.doctorId ? DB.get('doctors', inv.doctorId) : null;
+            var names = g.rows.map(function (r) { return testName(r); }).filter(Boolean);
+            var isCurrent = (inv.id === invoiceId);
+            return '<tr' + (isCurrent ? ' style="background:#eff6ff"' : '') + '>' +
+              '<td>' +
+                '<b>' + App.esc(vn.labText) + '</b>' +
+                '<div class="muted mono" style="font-size:11.5px">' + App.esc(inv.no || inv.id) + '</div>' +
+                (isCurrent ? '<span style="font-size:10.5px;font-weight:700;color:#2563eb;background:#dbeafe;padding:1px 5px;border-radius:4px">Selected</span>' : '') +
+              '</td>' +
+              '<td>' + App.esc(App.d(inv.createdAt)) + '</td>' +
+              '<td style="max-width:240px">' +
+                '<div style="font-weight:600;color:#1e293b">' + App.esc(names.slice(0, 3).join(', ')) + (names.length > 3 ? ' <span class="muted">+' + (names.length - 3) + ' more</span>' : '') + '</div>' +
+                '<div class="muted" style="font-size:11.5px">' + g.rows.length + ' test' + (g.rows.length === 1 ? '' : 's') + '</div>' +
+              '</td>' +
+              '<td>' + App.esc(d ? d.name : 'Self') + '</td>' +
+              '<td class="muted">' + App.esc(g.last ? App.dt(g.last) : '—') + '</td>' +
+              '<td>' + ((+inv.due || 0) > 0.009 ? '<span class="badge b-unpaid">Due ' + App.esc(App.money(inv.due)) + '</span>' : '<span class="badge b-paid">Paid</span>') + '</td>' +
+              '<td style="text-align:right;white-space:nowrap">' +
+                (canSeeAi ? '<button type="button" class="btn btn-ghost btn-sm" data-porai="' + App.esc(inv.id) + '" style="color:#7c3aed;font-weight:700;padding:4px 8px" title="AI Doctor Recommendations">🤖 AI</button> ' : '') +
+                '<button type="button" class="btn btn-ghost btn-sm" data-porview="' + App.esc(inv.id) + '" style="font-weight:600;padding:4px 8px">👁️ View</button> ' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-porprint="' + App.esc(inv.id) + '" style="font-weight:600;padding:4px 8px">🖨️ Print</button> ' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-pordl="' + App.esc(inv.id) + '" style="font-weight:600;padding:4px 8px;color:#059669">📥 PDF</button> ' +
+                '<button type="button" class="btn btn-ghost btn-sm" data-poredit="' + App.esc(inv.id) + '" style="font-weight:600;padding:4px 8px">✏️ Edit</button>' +
+              '</td>' +
+            '</tr>';
+          }).join('') + '</tbody>' +
+        '</table>' +
+      '</div>';
+
+    var footerHtml =
+      '<div class="actions" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">' +
+        '<div class="muted" style="font-size:12.5px">Showing all ' + patientReports.length + ' finished report' + (patientReports.length === 1 ? '' : 's') + ' on record for ' + App.esc(patName || 'this patient') + '.</div>' +
+        '<button type="button" class="btn btn-ghost" id="porClose" style="min-width:96px;font-weight:700">Close</button>' +
+      '</div>';
+
+    App.modal('Old Reports — ' + App.esc(patName || 'Patient'), headerSummary + tableHtml + footerHtml, {
+      wide: true,
+      onOpen: function (ov, close) {
+        var bClose = ov.querySelector('#porClose');
+        if (bClose) bClose.addEventListener('click', close);
+
+        var bFilter = ov.querySelector('#porFilterMain');
+        if (bFilter) {
+          bFilter.addEventListener('click', function () {
+            close();
+            old.q = patName;
+            old.page = 1;
+            renderOld();
+            var inp = document.getElementById('olQ');
+            if (inp) { inp.focus(); }
+            App.toast('Filtered Old Reports for ' + patName);
+          });
+        }
+
+        var bProfile = ov.querySelector('#porOpenProfile');
+        if (bProfile && patId) {
+          bProfile.addEventListener('click', function () {
+            close();
+            App.nav('#/patient/' + encodeURIComponent(patId));
+          });
+        }
+
+        ov.querySelectorAll('[data-porai]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var iid = this.getAttribute('data-porai');
+            if (App.aiInsights && typeof App.aiInsights.showModal === 'function') {
+              App.aiInsights.showModal(iid);
+            } else {
+              App.toast('AI module loading…', 'err');
+            }
+          });
+        });
+
+        ov.querySelectorAll('[data-porview]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var iid = this.getAttribute('data-porview');
+            viewReport(iid);
+          });
+        });
+
+        ov.querySelectorAll('[data-porprint]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var iid = this.getAttribute('data-porprint');
+            printReportChoice(iid);
+          });
+        });
+
+        ov.querySelectorAll('[data-pordl]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var iid = this.getAttribute('data-pordl');
+            downloadReportPdf(iid);
+          });
+        });
+
+        ov.querySelectorAll('[data-poredit]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var iid = this.getAttribute('data-poredit');
+            close();
+            manageReport(iid, 'edit');
+          });
+        });
+      }
+    });
+  }
+
   /* edit the values of a finished report, test by test, or delete one test / the whole report (the test goes back to "Pending Entry", the bill is untouched) */
   function manageReport(invoiceId, mode) {
     var g = oldList().filter(function (x) { return x.inv.id === invoiceId; })[0]; if (!g) { App.toast('Report not found.', 'err'); return; }
@@ -4723,6 +4908,7 @@
   App.route('#/results/ready', function () { tab = 'ready'; render(); });
 
   /* exposed so the Reports page "Finalized Patient Reports" archive can view/print */
+  App.openPatientOldReports = openPatientOldReports;
   App.viewLabReport = viewReport;
   App.printLabReport = printReportChoice;
   /* exposed so the Patient Profile page can enter results directly */
