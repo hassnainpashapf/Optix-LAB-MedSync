@@ -1654,3 +1654,72 @@ body.oa-mode{background:#f2f5f9!important;margin:0;zoom:1!important;color-scheme
 .oa-page #suSlugMsg.ok{color:#059669}.oa-page #suSlugMsg.bad{color:#e11d48}
 @media(max-width:760px){.oa-page .oa-in{max-width:340px}}
 .oa-page .lg-forgot a.oa-link{font-size:12.5px;font-weight:600;color:#5b6b85;border:0}.oa-page .lg-forgot a.oa-link:hover{color:#2f6df6}
+
+/* ============ Keyboard Navigation & Accessible Focus System ============ */
+:focus-visible{
+  outline:2.5px solid #2563eb!important;
+  outline-offset:2px!important;
+}
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
+  outline:2.5px solid #2563eb!important;
+  outline-offset:2px!important;
+}
+table tbody tr.kb-active-row{
+  background:#f0f7ff!important;
+  outline:2px solid #3b82f6!important;
+  outline-offset:-2px!important;
+  box-shadow:inset 3px 0 0 #2563eb;
+  transition:background .1s ease;
+}
+table tbody tr:focus{
+  outline:2px solid #3b82f6!important;
+  background:#f0f7ff!important;
+}
+
+/* ============ Topbar Zoom Controls ============ */
+.tb-zoom-ctrl{
+  display:inline-flex;align-items:center;background:#f1f5f9;border:1px solid #cbd5e1;
+  border-radius:999px;padding:2px 4px;gap:2px;flex:none;box-shadow:0 1px 2px rgba(15,23,42,.04);
+}
+.tb-zoom-btn{
+  width:26px;height:26px;padding:0!important;border:none!important;background:transparent!important;
+  border-radius:50%!important;color:var(--ink);font-size:16px;font-weight:700;display:inline-flex;
+  align-items:center;justify-content:center;cursor:pointer;line-height:1;transition:background .15s,color .15s;
+}
+.tb-zoom-btn:hover{background:#e2e8f0!important;color:#2563eb!important}
+.tb-zoom-val{
+  font-size:11.5px;font-weight:700;color:var(--muted);padding:0 6px;min-width:38px;text-align:center;
+  border:none;background:transparent;cursor:pointer;font-variant-numeric:tabular-nums;line-height:26px;
+}
+.tb-zoom-val:hover{color:#2563eb}
+@media(max-width:960px){.tb-zoom-ctrl{display:none}}
+
+/* ============ Fluid Responsive & Zoom Scaling ============ */
+html,body{
+  width:100%;max-width:100%;overflow-x:hidden;
+}
+.app{
+  width:100%;max-width:100%;min-width:0;overflow-x:hidden;
+}
+.main,.maincol{
+  width:100%;min-width:0;max-width:100%;overflow-x:hidden;flex:1;
+}
+#view,.view{
+  width:100%;max-width:100%;min-width:0;box-sizing:border-box;overflow-x:hidden;
+}
+.tbl-wrap,.table-responsive{
+  width:100%;max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;
+}
+.tbl-wrap::-webkit-scrollbar{height:7px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:6px}
+
+/* Responsive grid auto-collapse under high zoom */
+@media(max-width:1200px){
+  .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:700px){
+  .stat-grid{grid-template-columns:1fr!important}
+  .topbar{padding:10px 14px!important}
+  #view{padding:14px 12px 50px!important}
+}
+

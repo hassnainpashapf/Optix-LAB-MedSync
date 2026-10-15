@@ -45,8 +45,8 @@ async function boot() {
   win = new BrowserWindow({
     width: 1440,
     height: 900,
-    minWidth: 1100,
-    minHeight: 700,
+    minWidth: 800,
+    minHeight: 550,
     autoHideMenuBar: true,
     backgroundColor: '#f6f8fb',
     title: 'Optix LAB MedSync',

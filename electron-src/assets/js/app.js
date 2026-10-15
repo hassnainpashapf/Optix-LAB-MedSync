@@ -852,9 +852,50 @@
     });
     return grouped;
   }
+  /* ---------------- UI Zoom & Scale Controller ---------------- */
+  var ZOOM_LEVELS = [70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 140, 150];
+  function getSavedZoom() {
+    try {
+      var z = parseInt(localStorage.getItem('labpos_zoom'), 10);
+      if (z && z >= 50 && z <= 200) return z;
+    } catch (e) {}
+    return 100;
+  }
+  function setZoom(pct, notify) {
+    pct = Math.max(70, Math.min(160, Math.round(pct)));
+    try { localStorage.setItem('labpos_zoom', String(pct)); } catch (e) {}
+    var factor = pct / 100;
+    document.documentElement.style.setProperty('--app-zoom', String(factor));
+    if ('zoom' in document.body.style) {
+      document.body.style.zoom = String(factor);
+    } else {
+      document.body.style.transform = factor === 1 ? '' : 'scale(' + factor + ')';
+      document.body.style.transformOrigin = 'top left';
+    }
+    var zVal = document.getElementById('tbZoomVal');
+    if (zVal) zVal.textContent = pct + '%';
+    if (notify) toast('Zoom: ' + pct + '%', 'info');
+    try { window.dispatchEvent(new Event('resize')); } catch (e) {}
+    return pct;
+  }
+  function zoomIn() {
+    var cur = getSavedZoom();
+    var next = ZOOM_LEVELS.find(function (z) { return z > cur; }) || (cur + 10);
+    return setZoom(next, true);
+  }
+  function zoomOut() {
+    var cur = getSavedZoom();
+    var prev = ZOOM_LEVELS.slice().reverse().find(function (z) { return z < cur; }) || (cur - 10);
+    return setZoom(prev, true);
+  }
+  function zoomReset() {
+    return setZoom(100, true);
+  }
+
   function renderShell(activeKey) {
     var s = session();
     if (!s) return;
+    try { setZoom(getSavedZoom(), false); } catch (e) {}
     applyFont();
     var shell = document.getElementById('shell');
     if (!shell) {
@@ -1080,6 +1121,11 @@
        (can('downloads', s.role) ? '<a class="btn btn-sm tb-qab tb-classic tb-icon-btn" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 18) + '</a>' : '') +
        '<a class="btn btn-sm tb-qab tb-classic tb-icon-btn tb-bell" id="notificationBell" href="#/notifications" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0112 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg><span class="tb-dot" id="notificationCount"></span></a>' +
        '</div>' +
+       '<div class="tb-zoom-ctrl" id="tbZoomCtrl" title="Screen Zoom (Ctrl + / Ctrl - / Ctrl 0)">' +
+       '<button type="button" class="tb-zoom-btn" id="tbZoomOut" title="Zoom Out (Ctrl -)" aria-label="Zoom Out">−</button>' +
+       '<button type="button" class="tb-zoom-val" id="tbZoomVal" title="Click to Reset (Ctrl 0)" aria-label="Current Zoom">' + getSavedZoom() + '%</button>' +
+       '<button type="button" class="tb-zoom-btn" id="tbZoomIn" title="Zoom In (Ctrl +)" aria-label="Zoom In">+</button>' +
+       '</div>' +
        '<span class="tb-vsep"></span>' +
        '<div class="tb-acct">' +
        '<button class="tb-avatar tb-chip" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false"><span class="tb-av">' + _avatarInner + '</span>' +
@@ -1095,6 +1141,12 @@
     document.getElementById('menuLogout').addEventListener('click', logout);
     document.getElementById('tbBack').addEventListener('click', function () { history.back(); });
     document.getElementById('tbFwd').addEventListener('click', function () { history.forward(); });
+    var zOut = document.getElementById('tbZoomOut');
+    if (zOut) zOut.addEventListener('click', function () { zoomOut(); });
+    var zIn = document.getElementById('tbZoomIn');
+    if (zIn) zIn.addEventListener('click', function () { zoomIn(); });
+    var zVal = document.getElementById('tbZoomVal');
+    if (zVal) zVal.addEventListener('click', function () { zoomReset(); });
     var msgBtn = document.getElementById('tbMsgBtn');
     if (msgBtn) msgBtn.addEventListener('click', function () { location.hash = '#/notifications'; });
     var critBtn = document.getElementById('tbCritBtn');
@@ -1268,10 +1320,15 @@
 
   /* ---------------- login / sign-up: see mod-auth.js (App.renderLogin / App.renderSignup) ---------------- */
 
-  /* ---------------- keyboard shortcuts ----------------
-     Ctrl/Cmd+K focuses the current page's search box (non-intrusive:
-     ignored when logged out, inside an input, or while a modal is open).
-     Escape already closes modals (see modal()) and the account menu. */
+  /* ---------------- keyboard shortcuts & 4-arrow/TAB navigation ----------------
+     - Ctrl/Cmd + / - / 0: UI Zoom scaling (70% - 150%)
+     - TAB: Cycle interactive inputs/buttons smoothly, trapped inside active modals
+     - Enter: Advance to next input field in forms/tables, or activate selected row
+     - Arrow Down / Up: Navigate table rows (highlighted with .kb-active-row),
+       move across table input cells vertically, or scroll page smoothly
+     - Arrow Left / Right: Navigate row action buttons, switch tabs, or page through records
+     - Ctrl/Cmd+K: Focus page search box
+  */
   function _isTyping(t) {
     if (!t) return false;
     var tag = (t.tagName || '').toLowerCase();
@@ -1292,20 +1349,330 @@
     }
     return false;
   }
+
+  function _getFocusable(container) {
+    if (!container) return [];
+    var all = container.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])');
+    return Array.from(all).filter(function (el) {
+      return el.offsetParent !== null && !el.disabled && !el.hidden;
+    });
+  }
+
+  var _activeRow = null;
+
+  function _findCurrentTable() {
+    var v = document.getElementById('view');
+    if (!v) return null;
+    var focused = document.activeElement;
+    if (focused && focused.closest && focused.closest('table')) return focused.closest('table');
+    return v.querySelector('table');
+  }
+
+  function _getTableRows(tbl) {
+    if (!tbl) return [];
+    return Array.from(tbl.querySelectorAll('tbody tr')).filter(function (tr) {
+      return tr.offsetParent !== null && !tr.querySelector('td[colspan]');
+    });
+  }
+
+  function _setActiveRow(tr, focus) {
+    if (_activeRow && _activeRow !== tr) {
+      _activeRow.classList.remove('kb-active-row');
+    }
+    _activeRow = tr;
+    if (tr) {
+      tr.classList.add('kb-active-row');
+      if (tr.scrollIntoViewIfNeeded) tr.scrollIntoViewIfNeeded(false);
+      else {
+        try { tr.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (e) {}
+      }
+      if (focus) {
+        if (!tr.getAttribute('tabindex')) tr.setAttribute('tabindex', '-1');
+        try { tr.focus(); } catch (e) {}
+      }
+    }
+  }
+
+  function _advanceInput(curInput, reverse) {
+    if (!curInput) return false;
+    var form = curInput.closest('form, .modal-b, .form-grid, .test-set-grid, table, #view');
+    if (!form) form = document.getElementById('view') || document.body;
+    var inputs = _getFocusable(form).filter(function (el) {
+      var tag = el.tagName.toLowerCase();
+      return tag === 'input' || tag === 'select' || tag === 'textarea' || (tag === 'button' && el.type === 'submit');
+    });
+    var idx = inputs.indexOf(curInput);
+    if (idx >= 0) {
+      var nextIdx = reverse ? (idx - 1) : (idx + 1);
+      if (nextIdx >= 0 && nextIdx < inputs.length) {
+        inputs[nextIdx].focus();
+        try { if (inputs[nextIdx].select) inputs[nextIdx].select(); } catch (e) {}
+        return true;
+      }
+    }
+    return false;
+  }
+
   function wireShortcuts() {
     if (window.__kbWired) return;
     window.__kbWired = true;
+
+    /* initialize zoom */
+    try { setZoom(getSavedZoom(), false); } catch (e) {}
+
+    /* delegate click on table rows to set active row */
+    document.addEventListener('click', function (e) {
+      var tr = e.target && e.target.closest && e.target.closest('table tbody tr');
+      if (tr && !tr.querySelector('td[colspan]')) {
+        _setActiveRow(tr, false);
+      }
+    });
+
     document.addEventListener('keydown', function (e) {
       var s = session();
       if (!s) return; /* login screen: no shortcuts */
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
-        if (_isTyping(e.target) || _modalOpen()) return;
-        e.preventDefault();
-        if (!_focusPageSearch()) toast('No search on this page', 'info');
-        return;
+
+      /* 1. Zoom shortcuts: Ctrl/Cmd + / - / 0 */
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === '=' || e.key === '+' || e.code === 'NumpadAdd') {
+          e.preventDefault();
+          zoomIn();
+          return;
+        }
+        if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
+          e.preventDefault();
+          zoomOut();
+          return;
+        }
+        if (e.key === '0' || e.code === 'Numpad0') {
+          e.preventDefault();
+          zoomReset();
+          return;
+        }
+        if (e.key === 'k' || e.key === 'K') {
+          if (_isTyping(e.target) || _modalOpen()) return;
+          e.preventDefault();
+          if (!_focusPageSearch()) toast('No search on this page', 'info');
+          return;
+        }
       }
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-      if (_isTyping(e.target) || _modalOpen()) return;
+
+      /* 2. TAB key: trap inside open modals */
+      if (e.key === 'Tab') {
+        if (_modalOpen()) {
+          var modalRoot = document.getElementById('modal-root');
+          var activeModal = modalRoot ? modalRoot.querySelector('.modal-box') : null;
+          if (activeModal) {
+            var fList = _getFocusable(activeModal);
+            if (fList.length) {
+              var fFirst = fList[0];
+              var fLast = fList[fList.length - 1];
+              if (e.shiftKey) {
+                if (document.activeElement === fFirst || !activeModal.contains(document.activeElement)) {
+                  e.preventDefault();
+                  fLast.focus();
+                  return;
+                }
+              } else {
+                if (document.activeElement === fLast || !activeModal.contains(document.activeElement)) {
+                  e.preventDefault();
+                  fFirst.focus();
+                  return;
+                }
+              }
+            }
+          }
+        }
+        return; /* normal Tab handles moving to next element */
+      }
+
+      /* 3. Enter key: advance in form inputs or activate selected table row */
+      if (e.key === 'Enter') {
+        var el = e.target;
+        if (el && el.tagName && el.tagName.toLowerCase() === 'input') {
+          var inputType = (el.type || 'text').toLowerCase();
+          if (inputType !== 'submit' && inputType !== 'button' && inputType !== 'search' && inputType !== 'checkbox' && inputType !== 'radio' && el.id !== 'sbInp' && !el.classList.contains('no-enter-tab')) {
+            if (_advanceInput(el, false)) {
+              e.preventDefault();
+              return;
+            }
+          }
+        }
+        if (_activeRow && (document.activeElement === _activeRow || _activeRow.contains(document.activeElement))) {
+          if (document.activeElement === _activeRow) {
+            var actionBtn = _activeRow.querySelector('button.btn, a.btn, a[href], button');
+            if (actionBtn) {
+              e.preventDefault();
+              actionBtn.click();
+              return;
+            }
+          }
+        }
+      }
+
+      /* 4. Arrow Keys: Up, Down, Left, Right */
+      var isTyping = _isTyping(e.target);
+      var tag = e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+
+      /* Arrow Down (Neeche) */
+      if (e.key === 'ArrowDown') {
+        if (tag === 'textarea' || tag === 'select') return;
+        if (isTyping && e.target.closest('table')) {
+          var curCell = e.target.closest('td');
+          var curRow = e.target.closest('tr');
+          if (curCell && curRow && curRow.nextElementSibling) {
+            var colIdx = Array.from(curRow.children).indexOf(curCell);
+            var nextRow = curRow.nextElementSibling;
+            if (nextRow.children[colIdx]) {
+              var nextInp = nextRow.children[colIdx].querySelector('input, select, textarea');
+              if (nextInp) {
+                e.preventDefault();
+                nextInp.focus();
+                try { if (nextInp.select) nextInp.select(); } catch (err) {}
+                _setActiveRow(nextRow, false);
+                return;
+              }
+            }
+          }
+        }
+        if (!isTyping || (e.target.closest && e.target.closest('tr'))) {
+          var tbl = _findCurrentTable();
+          if (tbl) {
+            var rows = _getTableRows(tbl);
+            if (rows.length) {
+              e.preventDefault();
+              var curIdx = _activeRow ? rows.indexOf(_activeRow) : -1;
+              var nextIdx = curIdx + 1;
+              if (nextIdx >= rows.length) nextIdx = rows.length - 1;
+              _setActiveRow(rows[nextIdx], true);
+              return;
+            }
+          }
+          if (!isTyping) {
+            var v = document.getElementById('view') || window;
+            try { v.scrollBy({ top: 120, behavior: 'smooth' }); } catch (err) {}
+          }
+        }
+      }
+
+      /* Arrow Up (Upar) */
+      if (e.key === 'ArrowUp') {
+        if (tag === 'textarea' || tag === 'select') return;
+        if (isTyping && e.target.closest('table')) {
+          var curCell = e.target.closest('td');
+          var curRow = e.target.closest('tr');
+          if (curCell && curRow && curRow.previousElementSibling) {
+            var colIdx = Array.from(curRow.children).indexOf(curCell);
+            var prevRow = curRow.previousElementSibling;
+            if (prevRow.children[colIdx]) {
+              var prevInp = prevRow.children[colIdx].querySelector('input, select, textarea');
+              if (prevInp) {
+                e.preventDefault();
+                prevInp.focus();
+                try { if (prevInp.select) prevInp.select(); } catch (err) {}
+                _setActiveRow(prevRow, false);
+                return;
+              }
+            }
+          }
+        }
+        if (!isTyping || (e.target.closest && e.target.closest('tr'))) {
+          var tbl = _findCurrentTable();
+          if (tbl) {
+            var rows = _getTableRows(tbl);
+            if (rows.length) {
+              e.preventDefault();
+              var curIdx = _activeRow ? rows.indexOf(_activeRow) : 0;
+              var prevIdx = curIdx - 1;
+              if (prevIdx < 0) prevIdx = 0;
+              _setActiveRow(rows[prevIdx], true);
+              return;
+            }
+          }
+          if (!isTyping) {
+            var v = document.getElementById('view') || window;
+            try { v.scrollBy({ top: -120, behavior: 'smooth' }); } catch (err) {}
+          }
+        }
+      }
+
+      /* Arrow Right (Right) */
+      if (e.key === 'ArrowRight') {
+        if (isTyping && e.target.selectionStart !== e.target.value.length) return;
+        if (_activeRow && document.activeElement === _activeRow) {
+          var btns = Array.from(_activeRow.querySelectorAll('a[href], button:not([disabled])'));
+          if (btns.length) {
+            e.preventDefault();
+            btns[0].focus();
+            return;
+          }
+        }
+        if (_activeRow && _activeRow.contains(document.activeElement)) {
+          var btns = Array.from(_activeRow.querySelectorAll('a[href], button:not([disabled])'));
+          var bIdx = btns.indexOf(document.activeElement);
+          if (bIdx >= 0 && bIdx + 1 < btns.length) {
+            e.preventDefault();
+            btns[bIdx + 1].focus();
+            return;
+          }
+        }
+        var tab = document.activeElement && document.activeElement.closest && document.activeElement.closest('.tab, .tab-btn, .nav-tab, [role="tab"], .rep-tab, .flt-btn');
+        if (tab && tab.parentElement) {
+          var tabs = Array.from(tab.parentElement.querySelectorAll('.tab, .tab-btn, .nav-tab, [role="tab"], .rep-tab, .flt-btn'));
+          var tIdx = tabs.indexOf(tab);
+          if (tIdx >= 0 && tIdx + 1 < tabs.length) {
+            e.preventDefault();
+            tabs[tIdx + 1].focus();
+            tabs[tIdx + 1].click();
+            return;
+          }
+        }
+        if (!isTyping) {
+          var nextBtn = document.querySelector('.pagination .next:not([disabled]), [data-page-next]:not([disabled]), #nextPage:not([disabled])');
+          if (nextBtn) {
+            e.preventDefault();
+            nextBtn.click();
+            return;
+          }
+        }
+      }
+
+      /* Arrow Left (Left) */
+      if (e.key === 'ArrowLeft') {
+        if (isTyping && e.target.selectionStart !== 0) return;
+        if (_activeRow && _activeRow.contains(document.activeElement)) {
+          var btns = Array.from(_activeRow.querySelectorAll('a[href], button:not([disabled])'));
+          var bIdx = btns.indexOf(document.activeElement);
+          if (bIdx > 0) {
+            e.preventDefault();
+            btns[bIdx - 1].focus();
+            return;
+          } else if (bIdx === 0) {
+            e.preventDefault();
+            _activeRow.focus();
+            return;
+          }
+        }
+        var tab = document.activeElement && document.activeElement.closest && document.activeElement.closest('.tab, .tab-btn, .nav-tab, [role="tab"], .rep-tab, .flt-btn');
+        if (tab && tab.parentElement) {
+          var tabs = Array.from(tab.parentElement.querySelectorAll('.tab, .tab-btn, .nav-tab, [role="tab"], .rep-tab, .flt-btn'));
+          var tIdx = tabs.indexOf(tab);
+          if (tIdx > 0) {
+            e.preventDefault();
+            tabs[tIdx - 1].focus();
+            tabs[tIdx - 1].click();
+            return;
+          }
+        }
+        if (!isTyping) {
+          var prevBtn = document.querySelector('.pagination .prev:not([disabled]), [data-page-prev]:not([disabled]), #prevPage:not([disabled])');
+          if (prevBtn) {
+            e.preventDefault();
+            prevBtn.click();
+            return;
+          }
+        }
+      }
     });
   }
 
@@ -1342,7 +1709,18 @@
     loadSub: loadSub,
     limitHit: limitHit,
     sub: function () { return subInfo; },
-    saasOn: saasOn
+    saasOn: saasOn,
+    zoom: {
+      get: getSavedZoom,
+      set: setZoom,
+      in: zoomIn,
+      out: zoomOut,
+      reset: zoomReset
+    },
+    zoomIn: zoomIn,
+    zoomOut: zoomOut,
+    zoomReset: zoomReset,
+    setZoom: setZoom
   };
 
   /* ---------------- multi-branch: per-lab feature map (fail-open: absent = enabled) ---------------- */
