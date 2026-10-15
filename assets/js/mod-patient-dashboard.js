@@ -1459,6 +1459,28 @@
     var curDate = curInv ? (curInv.createdAt ? String(curInv.createdAt).slice(0, 10) : 'Current Visit') : 'Current Visit';
 
     return '<div class="pd-trends-page-wrap">' +
+      // Top Dedicated Dashboard Header Banner
+      '<div class="vitals-card" style="margin-bottom:16px;padding:16px 20px;background:#ffffff;border:1px solid #edf2f7;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,0.02)">' +
+      '  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">' +
+      '    <div>' +
+      '      <h3 style="margin:0;font-size:17.5px;font-weight:800;color:#0f172a;display:flex;align-items:center;gap:8px">' +
+      '        <span>📈</span><span>Biomarker Trends &amp; Longitudinal Test Comparison</span>' +
+      '      </h3>' +
+      '      <p class="pd-sub" style="margin:3px 0 0;font-size:12px;color:#64748b">' +
+      '        Comprehensive multi-visit clinical trajectory tracking, biomarker delta velocity &amp; chronological lab comparison' +
+      '      </p>' +
+      '    </div>' +
+      '    <div style="display:flex;align-items:center;gap:10px">' +
+      '      <span class="badge" style="font-size:11.5px;font-weight:600;background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;padding:4px 10px;border-radius:6px">' +
+      comps.length + ' Tracked Biomarkers' +
+      '      </span>' +
+      '      <button type="button" class="btn btn-ghost btn-sm" data-pd-switch="pdOverview" style="font-size:12px;font-weight:600;padding:6px 14px">' +
+      '        ← Back to Overview' +
+      '      </button>' +
+      '    </div>' +
+      '  </div>' +
+      '</div>' +
+
       // Top Metric KPI Summary Cards (4 Cards)
       '<div class="pd-trends-kpi-grid">' +
       '  <div class="pd-trends-kpi-card">' +
@@ -1976,7 +1998,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends','📈'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span><span>'+item[1]+'</span></button>';
       }).join('') +
       '  </nav>' +

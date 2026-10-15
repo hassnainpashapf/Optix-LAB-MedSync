@@ -141,6 +141,7 @@ assert.ok(html.includes('data-inv-id="INV-OCT"'), 'Header Full AI Analysis butto
 // 6. Verify Dedicated Biomarker Trends Page, Navigation Button & Visual Graphs:
 assert.ok(html.includes('data-pd-section="pdTrends"'), 'Header navigation button for Biomarker Trends present');
 assert.ok(html.includes('Biomarker Trends'), 'Header navigation button label present');
+assert.ok(html.includes('Biomarker Trends &amp; Longitudinal Test Comparison'), 'Biomarker Trends & Longitudinal Test Comparison dashboard header present');
 assert.ok(html.includes('id="pdTrends"'), 'Dedicated pdTrends page section present');
 assert.ok(!html.includes('pd-trends-header-card'), 'Trends page redundant header card cleanly removed');
 assert.ok(html.includes('pd-trends-kpi-grid'), 'Trends page KPI summary grid present');
