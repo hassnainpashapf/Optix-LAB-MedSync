@@ -3309,12 +3309,14 @@
   function viewReport(invoiceId) {
     var d = reportData(invoiceId);
     if (!d) { App.toast('No ready results to view', 'err'); return; }
+    var patName = (d.pat && d.pat.name) ? String(d.pat.name).trim() : '';
+    var modalTitle = 'Lab Report — ' + (d.inv.no || d.inv.id) + (patName ? ' — ' + patName : '');
     /* manual WhatsApp sends: patient button always shown; doctor button only
        when the invoice has a referring doctor — disabled with a tooltip when
        the doctor has no WhatsApp number on file */
     var docWaBtn = '';
+    var docPh = d.doc ? waPhone(d.doc.whatsapp || d.doc.phone) : null;
     if (d.doc) {
-      var docPh = waPhone(d.doc.whatsapp || d.doc.phone);
       docWaBtn = docPh
         ? '<button class="btn btn-ghost" id="rvWaDoctor">' + WA_ICON + ' Send to Doctor (WhatsApp)</button>'
         : '<button class="btn btn-ghost" id="rvWaDoctor" disabled title="No WhatsApp number on file" style="opacity:.45;cursor:not-allowed">' + WA_ICON + ' Send to Doctor (WhatsApp)</button>';
@@ -3323,8 +3325,42 @@
     var aiBtnHtml = canSeeAi
       ? '<button type="button" class="btn btn-primary" id="rvAiInsights" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,58,237,.35)">🤖 AI Doctor Recommendations (5 Solutions)</button>'
       : '';
+    var topAiBtnHtml = canSeeAi
+      ? '<button type="button" class="btn btn-primary btn-sm" id="rvTopAiInsights" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);border:none;color:#fff;font-weight:700;box-shadow:0 2px 8px rgba(124,58,237,.3);display:inline-flex;align-items:center;gap:6px">' +
+          '<span>🤖</span><span>AI Doctor Recommendations</span>' +
+        '</button>'
+      : '';
+    var topDocWaBtn = d.doc
+      ? (docPh
+          ? '<button class="btn btn-ghost btn-sm" id="rvTopWaDoctor" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff">' + WA_ICON + ' <span>Doctor (WhatsApp)</span></button>'
+          : '<button class="btn btn-ghost btn-sm" id="rvTopWaDoctor" disabled title="No WhatsApp number on file" style="opacity:.45;cursor:not-allowed;font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff">' + WA_ICON + ' <span>Doctor (WhatsApp)</span></button>')
+      : '';
+
+    var topToolbarHtml =
+      '<div class="rv-top-bar" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;padding:8px 12px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(15,23,42,0.03)">' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<button class="btn btn-primary btn-sm" id="rvTopPrint" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' +
+            PRINT_ICON + ' <span>Print Report</span>' +
+            '<span style="opacity:.75;font-weight:600;font-size:10.5px;margin-left:2px;background:rgba(255,255,255,0.22);padding:1px 5px;border-radius:4px">Ctrl+P</span>' +
+          '</button>' +
+          topAiBtnHtml +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+          '<button class="btn btn-ghost btn-sm" id="rvTopWaPatient" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff">' +
+            WA_ICON + ' <span>Send to Patient (WhatsApp)</span>' +
+          '</button>' +
+          topDocWaBtn +
+          '<button class="btn btn-ghost btn-sm" id="rvTopSmsPatient" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff">' +
+            '<span>📲</span> <span>Send SMS to Patient</span>' +
+          '</button>' +
+          (d.doc ? '<button class="btn btn-ghost btn-sm" id="rvTopSmsDoctor" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff"><span>📲</span> <span>SMS Doctor</span></button>' : '') +
+          '<span id="rvTopShare" style="display:contents"></span>' +
+        '</div>' +
+      '</div>';
+
     var htmlContent = previewQr(reportHtml(d), invoiceId);
-    var close = App.modal('Lab Report — ' + App.esc(d.inv.no),
+    var close = App.modal(modalTitle,
+      topToolbarHtml +
       '<div class="rv-box" style="position:relative">' +
         '<div id="rvHtmlFrameWrap" class="report-preview" style="max-height:75vh;overflow:auto;border-radius:12px;padding:18px;background:#525659">' +
           htmlContent +
@@ -3347,12 +3383,25 @@
         onOpen: function (ov, close) {
           document.getElementById('rvClose').addEventListener('click', close);
           document.getElementById('rvPrint').addEventListener('click', function () { close(); printReportChoice(invoiceId); });
+          var topPrint = document.getElementById('rvTopPrint');
+          if (topPrint) topPrint.addEventListener('click', function () { close(); printReportChoice(invoiceId); });
+
           shareStatus().then(function (st) { /* Email / Slack buttons appear only when the server can send them */
             var slot = document.getElementById('rvShare'); if (!slot || !document.body.contains(ov)) return;
             var h = '', off = st.email ? '' : ' disabled title="Email sending is not set up on this server yet" style="opacity:.5;cursor:not-allowed"';
             if (shareOn()) h += '<button class="btn btn-ghost" id="rvEmPat"' + off + '>&#9993; Email Patient</button>' + (d.doc ? '<button class="btn btn-ghost" id="rvEmDoc"' + off + '>&#9993; Email Doctor</button>' : '');
             if (st.slack) h += '<button class="btn btn-ghost" id="rvSlack">Send to Slack</button>';
             slot.innerHTML = h;
+
+            var topSlot = document.getElementById('rvTopShare');
+            if (topSlot && shareOn()) {
+              var topH = '<button class="btn btn-ghost btn-sm" id="rvTopEmPat"' + off + ' style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff"><span>✉️</span> <span>Email Patient</span></button>' +
+                (d.doc ? '<button class="btn btn-ghost btn-sm" id="rvTopEmDoc"' + off + ' style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff"><span>✉️</span> <span>Email Doctor</span></button>' : '');
+              topSlot.innerHTML = topH;
+              var b1t = document.getElementById('rvTopEmPat'); if (b1t) b1t.addEventListener('click', function () { emailReport(invoiceId, 'patient'); });
+              var b2t = document.getElementById('rvTopEmDoc'); if (b2t) b2t.addEventListener('click', function () { emailReport(invoiceId, 'doctor'); });
+            }
+
             var auto = document.getElementById('rvAuto');
             if (auto && shareOn() && st.email) {
               var S0 = {}; try { S0 = DB.get('settings', 'main') || {}; } catch (e) {}
@@ -3386,12 +3435,34 @@
               }
             });
           }
+          var topAi = ov.querySelector('#rvTopAiInsights');
+          if (topAi) {
+            topAi.addEventListener('click', function () {
+              if (window.App && window.App.aiInsights && typeof window.App.aiInsights.showModal === 'function') {
+                window.App.aiInsights.showModal(invoiceId);
+              } else {
+                App.toast('AI Recommendations module loading… please retry.', 'err');
+              }
+            });
+          }
           document.getElementById('rvWaPatient').addEventListener('click', function () { waManualSend(invoiceId, 'patient'); });
+          var topWa = document.getElementById('rvTopWaPatient');
+          if (topWa) topWa.addEventListener('click', function () { waManualSend(invoiceId, 'patient'); });
+
           var wdoc = document.getElementById('rvWaDoctor');
           if (wdoc && !wdoc.disabled) wdoc.addEventListener('click', function () { waManualSend(invoiceId, 'doctor'); });
+          var topWdoc = document.getElementById('rvTopWaDoctor');
+          if (topWdoc && !topWdoc.disabled) topWdoc.addEventListener('click', function () { waManualSend(invoiceId, 'doctor'); });
+
           document.getElementById('rvSmsPatient').addEventListener('click', function () { smsManualSend(invoiceId, 'patient'); });
+          var topSms = document.getElementById('rvTopSmsPatient');
+          if (topSms) topSms.addEventListener('click', function () { smsManualSend(invoiceId, 'patient'); });
+
           var sdoc = document.getElementById('rvSmsDoctor');
           if (sdoc) sdoc.addEventListener('click', function () { smsManualSend(invoiceId, 'doctor'); });
+          var topSmsDoc = document.getElementById('rvTopSmsDoctor');
+          if (topSmsDoc) topSmsDoc.addEventListener('click', function () { smsManualSend(invoiceId, 'doctor'); });
+
           smsRefreshHistory(invoiceId);
         }
       });
