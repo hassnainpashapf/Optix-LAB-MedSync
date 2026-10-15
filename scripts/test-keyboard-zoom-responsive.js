@@ -11,10 +11,7 @@ const webApp = fs.readFileSync(path.join(root, 'assets/js/app.js'), 'utf8');
 const desktopApp = fs.readFileSync(path.join(root, 'electron-src/assets/js/app.js'), 'utf8');
 
 for (const [name, src] of [['web app.js', webApp], ['desktop app.js', desktopApp]]) {
-  assert.ok(src.includes('tbZoomCtrl'), name + ' must contain topbar zoom control HTML');
-  assert.ok(src.includes('tbZoomIn'), name + ' must contain tbZoomIn button');
-  assert.ok(src.includes('tbZoomOut'), name + ' must contain tbZoomOut button');
-  assert.ok(src.includes('tbZoomVal'), name + ' must contain tbZoomVal text');
+  assert.ok(!src.includes('tbZoomCtrl'), name + ' must not contain topbar zoom control HTML (reverted per user request)');
   assert.ok(src.includes('function setZoom('), name + ' must implement setZoom');
   assert.ok(src.includes('function zoomIn('), name + ' must implement zoomIn');
   assert.ok(src.includes('function zoomOut('), name + ' must implement zoomOut');
@@ -22,7 +19,7 @@ for (const [name, src] of [['web app.js', webApp], ['desktop app.js', desktopApp
   assert.ok(src.includes('zoom: {'), name + ' must export App.zoom object');
   assert.ok(src.includes('zoomIn: zoomIn'), name + ' must export App.zoomIn');
 }
-console.log('✓ UI Zoom engine and topbar controller verified in web and desktop app.js');
+console.log('✓ Topbar zoom pill cleanly reverted and UI zoom engine verified in web and desktop app.js');
 
 // 2. Verify 4-Arrow and TAB keyboard navigation in app.js
 for (const [name, src] of [['web app.js', webApp], ['desktop app.js', desktopApp]]) {
@@ -52,7 +49,7 @@ console.log('✓ 4-Arrow keys and TAB keyboard navigation verified across web an
 const appCss = fs.readFileSync(path.join(root, 'assets/css/app.css'), 'utf8');
 assert.ok(appCss.includes(':focus-visible'), 'app.css must have accessible focus-visible styles');
 assert.ok(appCss.includes('.kb-active-row'), 'app.css must style .kb-active-row');
-assert.ok(appCss.includes('.tb-zoom-ctrl'), 'app.css must style .tb-zoom-ctrl');
+assert.ok(!appCss.includes('.tb-zoom-ctrl'), 'app.css must not style .tb-zoom-ctrl (reverted per user request)');
 assert.ok(appCss.includes('.tbl-wrap'), 'app.css must have .tbl-wrap overflow-x auto');
 console.log('✓ CSS responsive zoom scaling, accessible focus outlines, and keyboard row styling verified');
 

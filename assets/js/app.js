@@ -895,7 +895,10 @@
   function renderShell(activeKey) {
     var s = session();
     if (!s) return;
-    try { setZoom(getSavedZoom(), false); } catch (e) {}
+    try {
+      localStorage.removeItem('labpos_zoom');
+      if (document.body && document.body.style && document.body.style.zoom) document.body.style.zoom = '';
+    } catch (e) {}
     applyFont();
     var shell = document.getElementById('shell');
     if (!shell) {
@@ -1121,11 +1124,6 @@
        (can('downloads', s.role) ? '<a class="btn btn-sm tb-qab tb-classic tb-icon-btn" href="#/downloads" title="Downloads" aria-label="Downloads">' + icon('download', 18) + '</a>' : '') +
        '<a class="btn btn-sm tb-qab tb-classic tb-icon-btn tb-bell" id="notificationBell" href="#/notifications" aria-label="Notifications" title="Notifications"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 17V11a6 6 0 0112 0v6l1.5 2h-15z"/><path d="M10 21h4"/></svg><span class="tb-dot" id="notificationCount"></span></a>' +
        '</div>' +
-       '<div class="tb-zoom-ctrl" id="tbZoomCtrl" title="Screen Zoom (Ctrl + / Ctrl - / Ctrl 0)">' +
-       '<button type="button" class="tb-zoom-btn" id="tbZoomOut" title="Zoom Out (Ctrl -)" aria-label="Zoom Out">−</button>' +
-       '<button type="button" class="tb-zoom-val" id="tbZoomVal" title="Click to Reset (Ctrl 0)" aria-label="Current Zoom">' + getSavedZoom() + '%</button>' +
-       '<button type="button" class="tb-zoom-btn" id="tbZoomIn" title="Zoom In (Ctrl +)" aria-label="Zoom In">+</button>' +
-       '</div>' +
        '<span class="tb-vsep"></span>' +
        '<div class="tb-acct">' +
        '<button class="tb-avatar tb-chip" id="avatarBtn" aria-label="Account menu" aria-haspopup="true" aria-expanded="false"><span class="tb-av">' + _avatarInner + '</span>' +
@@ -1141,12 +1139,6 @@
     document.getElementById('menuLogout').addEventListener('click', logout);
     document.getElementById('tbBack').addEventListener('click', function () { history.back(); });
     document.getElementById('tbFwd').addEventListener('click', function () { history.forward(); });
-    var zOut = document.getElementById('tbZoomOut');
-    if (zOut) zOut.addEventListener('click', function () { zoomOut(); });
-    var zIn = document.getElementById('tbZoomIn');
-    if (zIn) zIn.addEventListener('click', function () { zoomIn(); });
-    var zVal = document.getElementById('tbZoomVal');
-    if (zVal) zVal.addEventListener('click', function () { zoomReset(); });
     var msgBtn = document.getElementById('tbMsgBtn');
     if (msgBtn) msgBtn.addEventListener('click', function () { location.hash = '#/notifications'; });
     var critBtn = document.getElementById('tbCritBtn');
