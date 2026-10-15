@@ -1469,11 +1469,11 @@
    ===================================================================== */
 
 /* ---------------------------------------------------------------------
-   1. PAGE BOX — A4 portrait, ~12mm margins
+   1. PAGE BOX — A4 portrait, 0 margin to kill browser auto headers/footers
    --------------------------------------------------------------------- */
 @page {
   size: A4 portrait;
-  margin: 12mm;
+  margin: 0mm !important;
 }
 
 /* ---------------------------------------------------------------------
@@ -1487,18 +1487,20 @@
     padding: 0 !important;
     background: #fff !important;
     color: #000 !important;
+    width: 100% !important;
   }
 
   /* Clean standard multi-page pagination: repeating header and footer on EVERY page.
-     The outer layout table utilizes <thead> (table-header-group) and <tfoot> (table-footer-group)
-     so the browser automatically prints the lab header and patient demographic banner at the top of EVERY page,
-     and the verification/signatories/disclaimer footer at the bottom of EVERY page.
-     If test parameters exceed page capacity, they cleanly shift to subsequent pages between the header and footer. */
+     Outer layout table uses <thead> (table-header-group) and <tfoot> (table-footer-group)
+     with reserved foot spacer so test parameters cleanly break across pages,
+     and fixed footer block stays anchored at the bottom of EVERY printed page. */
   .rpt-page {
+    box-sizing: border-box !important;
     display: block !important;
     width: 100% !important;
-    max-width: 186mm !important;
-    margin: 0 auto !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 8mm 7mm 6mm 7mm !important;
     min-height: auto !important;
     height: auto !important;
   }
@@ -1510,6 +1512,7 @@
     margin: 0 !important;
     padding: 0 !important;
     table-layout: fixed !important;
+    height: auto !important;
   }
   table.rpt-layout-tbl > thead.rpt-layout-head {
     display: table-header-group !important;
@@ -1533,11 +1536,27 @@
     padding: 0 !important;
     vertical-align: top !important;
   }
-  /* Footer at the bottom of the sheet: the layout table is as tall as the printable area (A4 297mm - 2 x 12mm margin)
-     and the body row takes the spare height, so a one-page report keeps its footer at the foot of the page. */
-  table.rpt-layout-tbl { height: 271mm !important; }
-  table.rpt-layout-tbl > thead > tr, table.rpt-layout-tbl > tfoot > tr { height: 1px !important; }
-  table.rpt-layout-tbl > tbody > tr { height: 100% !important; }
+  .rpt-foot-spacer {
+    display: block !important;
+    visibility: hidden !important;
+    height: 48mm !important;
+    min-height: 48mm !important;
+    pointer-events: none !important;
+  }
+  .rpt-footer-block {
+    position: fixed !important;
+    bottom: 6mm !important;
+    left: 7mm !important;
+    right: 7mm !important;
+    width: auto !important;
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    z-index: 9999 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
   .rpt-header-block {
     display: block !important;
     break-inside: avoid !important;
@@ -1547,17 +1566,11 @@
   .rpt-tests-block {
     display: block !important;
   }
-  .rpt-footer-block {
-    display: block !important;
-    break-inside: avoid !important;
-    page-break-inside: avoid !important;
-    padding-top: 6px !important;
-  }
   .rpt-page .rpt-footer {
     display: block !important;
     break-inside: avoid !important;
     page-break-inside: avoid !important;
-    margin-top: 6px !important;
+    margin: 0 !important;
   }
 
   /* Never leak screen chrome into the printout. */
@@ -1567,10 +1580,10 @@
     display: none !important;
   }
 
-  /* Hide the browser's auto header/footer URL bar if the app sets
-     @page margin boxes — kept zero-size defensively. */
+  /* Suppress default browser header/footer (date, URL, title) */
   @page {
-    margin: 12mm;
+    size: A4 portrait;
+    margin: 0mm !important;
   }
 
   /* Keep everything monochrome-black like the reference report. */
@@ -1588,9 +1601,12 @@
 /* ---------------------------------------------------------------------
    3. REPORT CONTAINER
    --------------------------------------------------------------------- */
+.rpt-foot-spacer {
+  display: none;
+}
 .rpt-page {
-  /* 210mm A4 − 2×12mm page margin ≈ 186mm of printable width */
-  max-width: 186mm;
+  /* 210mm A4 − 2×7mm margin ≈ 196mm of printable width */
+  max-width: 196mm;
   width: 100%;
   margin: 0 auto;
   color: #000;
@@ -1610,9 +1626,9 @@
    readable at any viewport width; print media ignores this. */
 @media screen {
   .rpt-page {
-    max-width: 800px;
+    max-width: 840px;
   }
-  /* The report is designed as an A4 sheet (210 x 297 mm, 12mm margin): shown that way in the viewer and print preview.
+  /* The report is designed as an A4 sheet (210 x 297 mm, 7mm margin): shown that way in the viewer and print preview.
      Scoped so the Lab Profile sample preview (which draws its own sheet) is not double-framed. */
   .report-preview .rpt-page,
   body > .rpt-page {
@@ -1620,7 +1636,7 @@
     width: 210mm;
     max-width: none;
     min-height: 297mm;
-    padding: 12mm;
+    padding: 8mm 7mm 6mm 7mm;
     margin: 0 auto;
     background: #fff;
     box-shadow: 0 8px 30px rgba(0,0,0,.28);
@@ -1629,37 +1645,12 @@
   }
   .rpt-layout-tbl {
     width: 100%;
-    min-height: 100%;
-    height: 100%;
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-  .rpt-layout-tbl > thead.rpt-layout-head {
-    display: block;
-    width: 100%;
-  }
-  .rpt-layout-tbl > tbody.rpt-layout-body {
-    display: block;
-    width: 100%;
     flex: 1 0 auto;
   }
-  .rpt-layout-tbl > tfoot.rpt-layout-foot {
-    display: block;
-    width: 100%;
+  .rpt-footer-block {
     margin-top: auto;
-  }
-  .rpt-layout-tbl > thead > tr,
-  .rpt-layout-tbl > tbody > tr,
-  .rpt-layout-tbl > tfoot > tr,
-  .rpt-layout-tbl > thead > tr > td,
-  .rpt-layout-tbl > tbody > tr > td,
-  .rpt-layout-tbl > tfoot > tr > td {
-    display: block;
     width: 100%;
-    border: 0;
-    padding: 0;
+    flex: none;
   }
   .report-preview .rpt-page .rpt-footer,
   body > .rpt-page .rpt-footer { margin-top: auto; }
@@ -2982,10 +2973,11 @@
         '</tbody>' +
         '<tfoot class="rpt-layout-foot">' +
           '<tr><td>' +
-            '<div class="rpt-footer-block">' + footOut + '</div>' +
+            '<div class="rpt-foot-spacer"></div>' +
           '</td></tr>' +
         '</tfoot>' +
-      '</table>';
+      '</table>' +
+      '<div class="rpt-footer-block">' + footOut + '</div>';
 
     return '<style>' + RPT_PRINT_CSS + '</style>' +
       '<div class="rpt-page" style="font-size:' + rptBase + 'px">' + bodyHtml + '</div>';

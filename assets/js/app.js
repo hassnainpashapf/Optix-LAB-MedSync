@@ -447,7 +447,9 @@
       '.note{margin-top:14px;font-size:11px;color:#666;border-top:1px dashed #bbb;padding-top:8px}' +
       '.sig{margin-top:34px;text-align:right;font-size:12px}' +
       '.sig div{margin-top:36px;border-top:1px solid #333;display:inline-block;padding-top:4px;min-width:170px;text-align:center}' +
-      '@media print{body{padding:10px}.noprint{display:none}}';
+      '@page{size:A4 portrait;margin:0!important}' +
+      '@media print{html,body{margin:0!important;padding:0!important;background:#fff!important;width:100%!important}.noprint{display:none!important}}' +
+      (noHeader ? 'body{padding:0!important}' : '');
     var native = isNativeApp();
     var w = native ? null : window.open('', '_blank', 'width=920,height=720');
     if (!native && !w) { toast('Popup blocked — allow popups to print', 'err'); return; }
@@ -469,7 +471,14 @@
     w.document.write(_buf);
     w.document.close();
     w.focus();
-    setTimeout(function () { w.print(); }, 400);
+    setTimeout(function () {
+      try {
+        if (noHeader && w && w.document) {
+          w.document.title = '';
+        }
+      } catch (e) {}
+      w.print();
+    }, 400);
   }
 
   /* Android app (WebView): popups / window.print() do not exist, so the document is shown full-screen to read or screenshot;
