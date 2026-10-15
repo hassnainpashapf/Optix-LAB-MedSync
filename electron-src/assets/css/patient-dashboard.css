@@ -313,23 +313,7 @@
   box-shadow: 0 3px 10px rgba(8, 145, 178, 0.35), 0 0 0 2px rgba(6, 182, 212, 0.25);
 }
 
-/* 7. Medication Adherence - 💊 */
-#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdMeds"] {
-  background: #f0fdfa;
-  border-color: #99f6e4;
-  color: #0d9488;
-}
-#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdMeds"]:hover:not(.active) {
-  background: #ccfbf1;
-  border-color: #5eead4;
-  box-shadow: 0 4px 10px rgba(13, 148, 136, 0.16);
-}
-#ptPatientDashboard .pd-patient-menu nav button[data-pd-section="pdMeds"].active {
-  background: linear-gradient(135deg, #0d9488, #0f766e);
-  border-color: #0f766e;
-  color: #ffffff;
-  box-shadow: 0 3px 10px rgba(13, 148, 136, 0.35), 0 0 0 2px rgba(20, 184, 166, 0.25);
-}
+
 #ptPatientDashboard .pd-header-actions {
   display: flex;
   align-items: center;
@@ -1416,25 +1400,7 @@
   line-height: 1.35 !important;
 }
 
-/* Medication Adherence KPI Cards in Overview */
-#ptPatientDashboard .pd-meds-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 20px;
-}
 
-@media (max-width: 900px) {
-  #ptPatientDashboard .pd-meds-kpi-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 480px) {
-  #ptPatientDashboard .pd-meds-kpi-grid {
-    grid-template-columns: 1fr;
-  }
-}
 
 /* Trajectory Graph Card */
 #ptPatientDashboard .pd-trends-graph-card {
@@ -2035,10 +2001,7 @@
   width: 100%;
 }
 
-/* Dedicated Medication Adherence Page */
-#ptPatientDashboard .pd-layout-meds {
-  width: 100%;
-}
+
 
 #ptPatientDashboard .pd-anatomy-grid {
   display: grid;

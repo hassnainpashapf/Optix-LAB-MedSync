@@ -17,5 +17,7 @@ assert(!api.render(p).includes('Unknown <script>'));assert(api.render(p).include
 tables.results=tables.results.filter(r=>r.invoiceId!=='new'||r.testId!=='lft');assert.equal(api.testsFor(p)[0].status,'pending');
 console.log('Test anatomy: related regions, patient isolation, latest-order isolation, draft exclusion, age/sex references, strict ranges, missing/qualitative results, and escaping passed.');
 
-for(const label of ['aria-label="Patient menu"','aria-label="Patient sections"','data-pd-section="pdOverview"','data-pd-section="pdAnatomy"','Active Prescriptions','Dose Compliance','Drug Safety Shield','Daily Timing Slots'])assert(api.render(p).includes(label));
+for(const label of ['aria-label="Patient menu"','aria-label="Patient sections"','data-pd-section="pdOverview"','data-pd-section="pdAnatomy"'])assert(api.render(p).includes(label));
+assert(!api.render(p).includes('pdMeds'));
+assert(!api.render(p).includes('Medication Adherence'));
 console.log('Patient navigation is rendered inside the profile, independently of the global sidebar.');

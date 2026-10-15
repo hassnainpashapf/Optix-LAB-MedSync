@@ -179,15 +179,14 @@ assert.ok(html.includes('id="pdTestSelect"'), 'Test anatomy dropdown present');
 assert.ok(html.includes('patient-body-reference.png'), 'Patient body reference image present in anatomy');
 assert.ok(html.includes('Target Organ Systems Breakdown'), 'Organ systems breakdown section present');
 assert.ok(html.includes('Patient Diagnostic Tests Anatomical Directory'), 'Diagnostic tests directory present');
-// 8. Verify Dedicated Medication Adherence Page, Navigation & Regimen Monitoring:
-assert.ok(html.includes('data-pd-section="pdMeds"'), 'Header navigation button for Medication Adherence present');
-assert.ok(html.includes('Medication Adherence'), 'Header navigation button label present');
-assert.ok(html.includes('id="pdMeds"'), 'Dedicated pdMeds page section present');
-assert.ok(!html.includes('Medication Adherence &amp; Prescription Regimen'), 'Header banner card for Medication Adherence cleanly removed as requested');
-assert.ok(html.includes('Daily Dosage Schedule &amp; Intake Confirmation'), 'Dosage schedule tracker present');
-assert.ok(html.includes('Pharmacological Safety &amp; Clearance'), 'Safety and clearance screening present');
-assert.ok(html.includes('Prescription Refill &amp; Adherence Log'), 'Prescription refill and adherence log present');
+// 8. Verify Medication Adherence Page, Navigation & Regimen Monitoring are cleanly removed:
+assert.ok(!html.includes('data-pd-section="pdMeds"'), 'Header navigation button for Medication Adherence cleanly removed');
+assert.ok(!html.includes('Medication Adherence'), 'Header navigation button label cleanly removed');
+assert.ok(!html.includes('id="pdMeds"'), 'Dedicated pdMeds page section cleanly removed');
+assert.ok(!html.includes('Daily Dosage Schedule &amp; Intake Confirmation'), 'Dosage schedule tracker cleanly removed');
+assert.ok(!html.includes('Pharmacological Safety &amp; Clearance'), 'Safety and clearance screening cleanly removed');
+assert.ok(!html.includes('Prescription Refill &amp; Adherence Log'), 'Prescription refill and adherence log cleanly removed');
 
-console.log('✓ All 8 verification checks for Dedicated Trends, Anatomy, Trajectory, Variance & Medication Dashboard PASSED CLEANLY!\n');
+console.log('✓ All 8 verification checks for Dedicated Trends, Anatomy, Trajectory, Variance (with Medication Adherence removed) PASSED CLEANLY!\n');
 
 

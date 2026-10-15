@@ -151,19 +151,13 @@ console.log('✓ Daily Rehabilitation Plan cleanly removed as requested');
 assert.ok(!html.includes('Lung Capacity Efficiency'), 'Lung Capacity Efficiency cleanly removed');
 assert.ok(!html.includes('vitals-big-score'), 'Simulated big score cleanly removed');
 assert.ok(!html.includes('vitals-progress-track'), 'Simulated progress track cleanly removed');
-// Verify Medication Adherence is removed from Patient Details Overview (pdOverview) but active on dedicated dashboard page (pdMeds)
-const overviewPart = html.slice(html.indexOf('id="pdOverview"'), html.indexOf('id="pdTrends"'));
-assert.ok(!overviewPart.includes('pdMedsOverviewCard'), 'Medication Adherence card cleanly removed from Patient Details Overview');
-assert.ok(html.includes('id="pdMeds"'), 'Dedicated Medication Adherence page preserved');
-assert.ok(html.includes('Medication Adherence'), 'Medication Adherence present in dedicated dashboard');
-assert.ok(html.includes('Ventolin'), 'Ventolin med present');
-assert.ok(html.includes('Pulmicort'), 'Pulmicort med present');
-assert.ok(html.includes('Mucosolvan'), 'Mucosolvan med present');
-assert.ok(html.includes('Active Prescriptions'), 'Medication KPI Active Prescriptions present');
-assert.ok(html.includes('Dose Compliance'), 'Medication KPI Dose Compliance present');
-assert.ok(html.includes('Drug Safety Shield'), 'Medication KPI Drug Safety Shield present');
-assert.ok(html.includes('Daily Timing Slots'), 'Medication KPI Daily Timing Slots present');
-console.log('✓ Medication Adherence removed from Overview and verified on dedicated Medication Dashboard');
+// Verify Medication Adherence is completely removed from dashboard as requested
+assert.ok(!html.includes('id="pdMeds"'), 'Dedicated Medication Adherence page cleanly removed');
+assert.ok(!html.includes('data-pd-section="pdMeds"'), 'Medication Adherence nav button cleanly removed');
+assert.ok(!html.includes('Medication Adherence'), 'Medication Adherence label cleanly removed');
+assert.ok(!html.includes('Active Prescriptions'), 'Medication KPI Active Prescriptions cleanly removed');
+assert.ok(!html.includes('Daily Dosage Schedule &amp; Intake Confirmation'), 'Dosage schedule cleanly removed');
+console.log('✓ Medication Adherence completely removed from dashboard as requested');
 
 // 5. Test Right Stage: Anatomical Organ & Carousel
 assert.ok(html.includes('vitals-stage-card'), 'Interactive organ stage card present');
@@ -182,7 +176,7 @@ assert.ok(!html.includes('pd-telemetry-strip'), 'Live Clinical Telemetry strip c
 assert.ok(!html.includes('btnSendPatientWhatsApp'), 'WhatsApp Care Card button cleanly removed with telemetry strip');
 assert.ok(!html.includes('btnPrintClinicalSummary'), 'Ward Sheet print button cleanly removed with telemetry strip');
 assert.ok(html.includes('vitals-hud-overlay'), 'Cyber HUD telemetry overlay on 3D stage present');
-assert.ok(html.includes('med-timing-chip'), 'Medication dose schedule timing chips present');
+assert.ok(!html.includes('med-timing-chip'), 'Medication dose schedule timing chips cleanly removed');
 console.log('✓ Live Clinical Telemetry Strip cleanly removed and Cyber HUD on 3D stage verified');
 
 console.log('\n============================================================');
