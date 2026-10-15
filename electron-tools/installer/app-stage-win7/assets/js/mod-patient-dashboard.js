@@ -1167,33 +1167,36 @@
         (!isNaN(valNum) && valNum > 3.0 && /creat|creatinine/i.test(c.paramName))
       );
 
-      var badgeClass = isCrit ? 'b-red' : (isImp ? 'b-ready' : (isDet ? 'b-red' : 'b-warn'));
+      var badgeStyle = isCrit ? 'background:#fff1f2;color:#9f1239;border:1px solid #fecdd3' :
+        (isImp ? 'background:#f0fdf4;color:#166534;border:1px solid #dcfce7' :
+        (isDet ? 'background:#fff7ed;color:#9a3412;border:1px solid #ffedd5' :
+        'background:#f8fafc;color:#475569;border:1px solid #e2e8f0'));
       var badgeText = isCrit ? '🚨 Critical Drop' : (isImp ? '✓ Pehle se Behtar (' + (c.pct > 0 ? '+' : '') + c.pct + '%)' : (isDet ? '⚠️ Pehle se Kharab (' + (c.pct > 0 ? '+' : '') + c.pct + '%)' : '⚖️ Pehle se Stable'));
-      var strokeColor = isCrit ? '#dc2626' : (isImp ? '#10b981' : (isDet ? '#ef4444' : '#64748b'));
+      var strokeColor = isCrit ? '#b91c1c' : (isImp ? '#0d9488' : (isDet ? '#b91c1c' : '#475569'));
 
       var bounds = parseRefBounds(c.refRange);
       var yPrev = computeIndividualGraphY(c.prevVal, bounds);
       var yCur = computeIndividualGraphY(c.curVal, bounds);
 
       var curveSvg = (c.prevVal != null && c.prevVal !== '—') ?
-        ('<path d="M 75,' + yPrev + ' C 200,' + yPrev + ' 220,' + yCur + ' 345,' + yCur + '" fill="none" stroke="' + strokeColor + '" stroke-width="3" stroke-linecap="round" />' +
-         '<circle cx="75" cy="' + yPrev + '" r="5" fill="#ffffff" stroke="' + strokeColor + '" stroke-width="2.5" />' +
-         '<text x="75" y="' + (yPrev > 55 ? yPrev - 9 : yPrev + 17) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#475569">' + esc(c.prevVal) + '</text>') :
+        ('<path d="M 75,' + yPrev + ' C 200,' + yPrev + ' 220,' + yCur + ' 345,' + yCur + '" fill="none" stroke="' + strokeColor + '" stroke-width="2.2" stroke-linecap="round" opacity="0.85" />' +
+         '<circle cx="75" cy="' + yPrev + '" r="4.5" fill="#ffffff" stroke="' + strokeColor + '" stroke-width="2" />' +
+         '<text x="75" y="' + (yPrev > 55 ? yPrev - 9 : yPrev + 17) + '" text-anchor="middle" font-size="11" font-weight="600" fill="#475569">' + esc(c.prevVal) + '</text>') :
         '';
 
       var clinicalUrduNote = '';
       if (isCrit) {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11.5px;color:#991b1b">' +
-          '<strong>⚠️ Critical Alert:</strong> Value alarming threshold par chali gayi hai. Fori doctor consultation aur repeat lab order zaroori hai.</div>';
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #b91c1c;border-radius:6px;font-size:11.5px;color:#334155">' +
+          '<strong style="color:#991b1b">⚠️ Critical Alert:</strong> Value alarming threshold par chali gayi hai. Fori doctor consultation aur repeat lab order zaroori hai.</div>';
       } else if (isImp) {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11.5px;color:#166534">' +
-          '<strong>✓ Positive Effect:</strong> Pehle test ke muqablay mein behtar ho raha hai aur normal reference limits ki taraf recovery show kar raha hai.</div>';
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #0d9488;border-radius:6px;font-size:11.5px;color:#334155">' +
+          '<strong style="color:#0f766e">✓ Positive Effect:</strong> Pehle test ke muqablay mein behtar ho raha hai aur normal reference limits ki taraf recovery show kar raha hai.</div>';
       } else if (isDet) {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:11.5px;color:#92400e">' +
-          '<strong>⚠️ Adverse Effect:</strong> Pichlay test se value kharab (elevated) hui hai. Safe physiological limits se bahar strain hai.</div>';
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #d97706;border-radius:6px;font-size:11.5px;color:#334155">' +
+          '<strong style="color:#b45309">⚠️ Adverse Effect:</strong> Pichlay test se value kharab (elevated) hui hai. Safe physiological limits se bahar strain hai.</div>';
       } else {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:11.5px;color:#475569">' +
-          '<strong>⚖️ Stable:</strong> Pehle test ke muqablay mein baseline maintain hai, koi sudden decline note nahi hua.</div>';
+        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #94a3b8;border-radius:6px;font-size:11.5px;color:#475569">' +
+          '<strong style="color:#334155">⚖️ Stable:</strong> Pehle test ke muqablay mein baseline maintain hai, koi sudden decline note nahi hua.</div>';
       }
 
       return '<div class="vitals-card" style="padding:16px 18px;border:1.5px solid #edf2f7;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,0.03);display:flex;flex-direction:column;justify-content:space-between">' +
@@ -1205,7 +1208,7 @@
         '        </div>' +
         '        <small style="color:#64748b;font-size:11.5px">' + esc(c.testName) + ' · Normal: <strong>' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + '</strong></small>' +
         '      </div>' +
-        '      <span class="badge ' + badgeClass + '" style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap">' + esc(badgeText) + '</span>' +
+        '      <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;white-space:nowrap;' + badgeStyle + '">' + esc(badgeText) + '</span>' +
         '    </div>' +
 
         '    <div style="display:flex;align-items:center;gap:12px;background:#f8fafc;padding:8px 12px;border-radius:10px;border:1px solid #e2e8f0;margin:10px 0 12px">' +
@@ -1216,25 +1219,25 @@
         '      <div style="font-size:14px;color:#94a3b8">➔</div>' +
         '      <div style="flex:1;text-align:right">' +
         '        <div style="font-size:10.5px;color:#64748b;font-weight:600">Latest (' + esc(c.curDate) + ')</div>' +
-        '        <strong style="font-size:14.5px;color:' + (c.isOutside ? '#dc2626' : '#059669') + '">' + esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + (c.isOutside ? ' ⚠️' : ' ✓') + '</strong>' +
+        '        <strong style="font-size:14px;color:' + (c.isOutside ? '#b91c1c' : '#0f172a') + '">' + esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + (c.isOutside ? ' ⚠️' : '') + '</strong>' +
         '      </div>' +
         '    </div>' +
 
         '    <div style="background:#fafbfc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 6px">' +
         '      <svg viewBox="0 0 420 120" width="100%" height="auto" style="display:block;margin:0 auto;overflow:visible">' +
-        '        <!-- Reference normal zone -->' +
-        '        <rect x="20" y="40" width="380" height="40" rx="6" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1" stroke-dasharray="3 3"/>' +
-        '        <text x="210" y="64" text-anchor="middle" font-size="10.5" font-weight="700" fill="#047857" opacity="0.85">✓ NORMAL SAFE ZONE (' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + ')</text>' +
+        '        <!-- Reference normal zone - subtle clean neutral band -->' +
+        '        <rect x="20" y="40" width="380" height="40" rx="6" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3 3"/>' +
+        '        <text x="210" y="64" text-anchor="middle" font-size="10" font-weight="600" fill="#64748b">NORMAL SAFE ZONE (' + esc(c.refRange) + (c.unit ? ' ' + esc(c.unit) : '') + ')</text>' +
 
         '        <!-- Milestone guides -->' +
-        '        <line x1="75" y1="12" x2="75" y2="108" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="3 2"/>' +
-        '        <line x1="345" y1="12" x2="345" y2="108" stroke="#93c5fd" stroke-width="1.2" stroke-dasharray="3 2"/>' +
+        '        <line x1="75" y1="12" x2="75" y2="108" stroke="#e2e8f0" stroke-width="1.2" stroke-dasharray="3 2"/>' +
+        '        <line x1="345" y1="12" x2="345" y2="108" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="3 2"/>' +
         '        <text x="75" y="116" text-anchor="middle" font-size="9.5" font-weight="600" fill="#64748b">Prev: ' + esc(c.prevDate) + '</text>' +
-        '        <text x="345" y="116" text-anchor="middle" font-size="9.5" font-weight="700" fill="#1d4ed8">Now: ' + esc(c.curDate) + '</text>' +
+        '        <text x="345" y="116" text-anchor="middle" font-size="9.5" font-weight="700" fill="#334155">Now: ' + esc(c.curDate) + '</text>' +
 
         curveSvg +
-        '        <circle cx="345" cy="' + yCur + '" r="6" fill="' + strokeColor + '" stroke="#ffffff" stroke-width="2.5"/>' +
-        '        <text x="345" y="' + (yCur > 55 ? yCur - 10 : yCur + 18) + '" text-anchor="middle" font-size="11.5" font-weight="800" fill="' + (c.isOutside ? '#dc2626' : '#059669') + '">' + esc(c.curVal) + '</text>' +
+        '        <circle cx="345" cy="' + yCur + '" r="5.5" fill="' + strokeColor + '" stroke="#ffffff" stroke-width="2"/>' +
+        '        <text x="345" y="' + (yCur > 55 ? yCur - 10 : yCur + 18) + '" text-anchor="middle" font-size="11.5" font-weight="700" fill="' + (c.isOutside ? '#b91c1c' : '#0f172a') + '">' + esc(c.curVal) + '</text>' +
         '      </svg>' +
         '    </div>' +
         '  </div>' +
@@ -1249,7 +1252,7 @@
       '    <h3 style="display:flex;align-items:center;gap:8px"><span>🔬</span><span>Individual Biomarker Trend Graphs</span></h3>' +
       '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Har parameter ka alag alag clean graph — pehle se normal hai ya critical hai asaani se dekhein.</p>' +
       '  </div>' +
-      '  <span class="badge b-ready" style="font-size:11px;font-weight:700">' + comps.length + ' Individual Graphs</span>' +
+      '  <span style="font-size:11.5px;font-weight:600;color:#475569;background:#f1f5f9;border:1px solid #e2e8f0;padding:3px 10px;border-radius:6px">' + comps.length + ' Individual Graphs</span>' +
       '</div>' +
       '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(320px, 1fr));gap:14px">' +
       cardsHtml +
