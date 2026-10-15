@@ -373,6 +373,21 @@
     }
     var ovHead = '<div class="ov-head"><div><h1>Overview</h1><p>Here is the Summary of Overall Data</p></div>' +
       '<select class="select" id="ovPeriod" aria-label="Period"><option value="today">Today</option><option value="7">Last 7 days</option><option value="month">This month</option></select></div>';
+    var canSms = role === 'admin' || role === 'reception' || (App.canPage && App.canPage('sms'));
+    var simBanner = canSms
+      ? ('<div id="dbSimBanner" class="db-sim-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;padding:12px 18px;margin-bottom:18px;transition:all .2s ease">' +
+        '  <div style="display:flex;align-items:center;gap:12px;min-width:0">' +
+        '    <div id="dbSimDot" style="width:10px;height:10px;border-radius:50%;background:#94a3b8;flex-shrink:0"></div>' +
+        '    <div style="min-width:0">' +
+        '      <div id="dbSimTitle" style="font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📱 SIM SMS Service: Checking connection…</div>' +
+        '      <div id="dbSimSub" style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Checking mobile SMS gateway status…</div>' +
+        '    </div>' +
+        '  </div>' +
+        '  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
+        '    <a href="#/sms" class="btn btn-sm btn-ghost" id="dbSimCta" style="font-weight:600;font-size:12px;padding:5px 12px;border-radius:8px">Open SIM Settings →</a>' +
+        '  </div>' +
+        '</div>')
+      : '';
     var ovGrid = '<div class="ov-grid" id="ovGrid">' + ovCards('today') + '</div>';
     window.__ovCards = ovCards;
 
@@ -910,7 +925,7 @@
     '.ap-tbl .dcell{display:flex;align-items:center;gap:12px}' +
     '</style>' +
 
-    ovHead + ovGrid + midHtml +
+    ovHead + simBanner + ovGrid + midHtml +
     mid2Html +
     patCard +
     '<div id="tip2" class="tip2" hidden></div>' +
@@ -1035,6 +1050,64 @@
       /* backwards compatibility hook */
     }
 
+    function wireSimStatus(v) {
+      var banner = v.querySelector('#dbSimBanner');
+      if (!banner) return;
+      var dot = v.querySelector('#dbSimDot');
+      var title = v.querySelector('#dbSimTitle');
+      var sub = v.querySelector('#dbSimSub');
+      var cta = v.querySelector('#dbSimCta');
+      if (!title) return;
+      DB.smsApi('GET', 'status', undefined).then(function (j) {
+        if (!j) return;
+        if (j.connected) {
+          banner.style.background = '#f0fdf4';
+          banner.style.borderColor = '#86efac';
+          if (dot) {
+            dot.style.background = '#22c55e';
+            dot.style.boxShadow = '0 0 0 3px rgba(34,197,94,0.25)';
+          }
+          title.innerHTML = '🟢 SIM Connected: <span style="font-family:monospace;font-size:14px;color:#15803d">' + App.esc(j.simNumber || 'Active SIM') + '</span> · Ready to send SMS';
+          if (sub) sub.textContent = 'Mobile phone is active and sending automated patient alerts' + (j.deviceModel ? ' (' + j.deviceModel + ')' : '') + (j.lastPoll ? ' · Last sync ' + App.dt(j.lastPoll) : '');
+          if (cta) {
+            cta.textContent = 'Manage SIM Settings →';
+            cta.style.borderColor = '#86efac';
+            cta.style.color = '#15803d';
+          }
+        } else if (j.simNumber) {
+          banner.style.background = '#fffbeb';
+          banner.style.borderColor = '#fde68a';
+          if (dot) {
+            dot.style.background = '#f59e0b';
+            dot.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.25)';
+          }
+          title.innerHTML = '🟡 SIM Configured: <span style="font-family:monospace;color:#b45309">' + App.esc(j.simNumber) + '</span> · Waiting for phone connection';
+          if (sub) sub.textContent = 'Install Optix SMS Gateway APK on the phone with this SIM to begin automated sending.';
+          if (cta) {
+            cta.textContent = 'Connect Mobile App →';
+            cta.style.borderColor = '#fde68a';
+            cta.style.color = '#b45309';
+          }
+        } else {
+          banner.style.background = '#f8fafc';
+          banner.style.borderColor = '#e2e8f0';
+          if (dot) {
+            dot.style.background = '#94a3b8';
+            dot.style.boxShadow = 'none';
+          }
+          title.innerHTML = '📱 SIM SMS Service: Connect Your Mobile Phone';
+          if (sub) sub.textContent = 'Download dedicated SMS Gateway APK on admin phone to send report alerts from your SIM.';
+          if (cta) {
+            cta.textContent = 'Download APK & Connect →';
+            cta.style.borderColor = '#cbd5e1';
+            cta.style.color = 'inherit';
+          }
+        }
+      }, function () {
+        if (banner) banner.style.display = 'none';
+      });
+    }
+
     /* paint skeleton now; render full content right after it paints */
     setTimeout(function () {
       var v = document.getElementById('view');
@@ -1043,6 +1116,7 @@
       wireCrit(v);
       wireFlow(v);
       wireRecentPatients(v);
+      wireSimStatus(v);
       var ovSel = v.querySelector('#ovPeriod');
       if (ovSel) ovSel.addEventListener('change', function () {
         var g = v.querySelector('#ovGrid'); if (g && window.__ovCards) { g.innerHTML = window.__ovCards(ovSel.value); scheduleCountUp(); }

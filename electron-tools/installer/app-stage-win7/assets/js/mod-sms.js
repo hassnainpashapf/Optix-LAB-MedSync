@@ -90,6 +90,7 @@
       }
 
       /* phone gateway card: only inside the native Android app */
+      /* phone gateway card: only inside the native Android app */
       var gw = (window.App && App.smsGw && App.smsGw.available()) ? App.smsGw : null;
       var gwCard;
       if (gw) {
@@ -101,10 +102,57 @@
           + '<p class="muted" style="font-size:12px;margin:8px 0 0">For reliable sending, set this app\u2019s battery usage to <b>Unrestricted</b> (Android Settings → Apps → Optix Lab → Battery).</p>'
           + '</div></div>';
       } else {
-        gwCard = '<div class="card sms-card sms-wide"><div class="card-b">'
-          + '<p class="muted" style="font-size:13px;margin:0">\uD83D\uDCF2 SMS messages go out from <b>your own mobile phone</b> through the Optix lab app — no extra app or setup needed. Open this page in the app on the phone that holds the SIM and switch the gateway ON there.</p>'
-          + '</div></div>';
+        gwCard = '';
       }
+
+      var apkDownloadPath = 'assets/apk/Optix-SMS-Gateway.apk';
+      var origin = (typeof location !== 'undefined' && location.origin && location.origin.indexOf('http') === 0) ? location.origin : 'https://labpos-api.150.230.52.29.sslip.io';
+      var fullApkUrl = origin.replace(/\/+$/, '') + '/' + apkDownloadPath;
+      var apkQrImg = '';
+      try {
+        if (typeof qrcode !== 'undefined') {
+          var q = qrcode(0, 'M');
+          q.addData(fullApkUrl);
+          q.make();
+          apkQrImg = q.createDataURL(4, 4);
+        }
+      } catch (e) {}
+
+      var apkCard =
+        '<div class="card sms-card sms-wide sms-apk-banner" style="background:linear-gradient(135deg,#f0fdf4 0%,#e0f2fe 100%);border:2px solid #86efac;border-radius:18px;overflow:hidden;box-shadow:0 4px 16px rgba(34,197,94,0.08)">'
+        + '<div class="card-b" style="padding:20px 24px;display:grid;grid-template-columns:minmax(0,1.8fr) minmax(220px,1fr);gap:24px;align-items:center">'
+        + '  <div style="display:flex;flex-direction:column;gap:12px">'
+        + '    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+        + '      <span style="font-size:26px">📱</span>'
+        + '      <h3 style="margin:0;font-size:18px;font-weight:800;color:#0f172a">Optix SIM SMS Gateway APK (Dedicated Mobile App)</h3>'
+        + '      <span class="badge b-ready" style="font-size:11px;padding:3px 9px;background:#dcfce7;color:#15803d;border:1px solid #86efac">Dedicated SIM Gateway</span>'
+        + '    </div>'
+        + '    <p style="margin:0;font-size:13.5px;color:#334155;line-height:1.55">'
+        + '      Admin apne Android mobile me yeh special APK install karein. Yeh app background me phone ke SIM card se automated patient &amp; doctor report SMS alerts send karti hai — <b>zero API cost</b> aur standard SIM SMS bundle rates par!'
+        + '    </p>'
+        + '    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 14px;background:#ffffffcc;border:1px solid #cbd5e1;border-radius:12px;padding:12px 14px;font-size:12px;color:#1e293b">'
+        + '      <div style="display:flex;align-items:flex-start;gap:8px"><span style="font-weight:800;color:#16a34a">1.</span><span>APK download &amp; mobile me install karein</span></div>'
+        + '      <div style="display:flex;align-items:flex-start;gap:8px"><span style="font-weight:800;color:#16a34a">2.</span><span>App open karke SMS Permission allow karein</span></div>'
+        + '      <div style="display:flex;align-items:flex-start;gap:8px"><span style="font-weight:800;color:#16a34a">3.</span><span>Apna SIM number add karein &amp; <b>Link SIM</b> dabayein</span></div>'
+        + '      <div style="display:flex;align-items:flex-start;gap:8px"><span style="font-weight:800;color:#16a34a">4.</span><span>Test SMS send karein &amp; Dashboard par live status dekhein</span></div>'
+        + '    </div>'
+        + '    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:4px">'
+        + '      <a class="btn btn-primary" id="smsDownloadApkBtn" href="' + apkDownloadPath + '" download="Optix-SMS-Gateway.apk" style="display:inline-flex;align-items:center;gap:8px;padding:9px 18px;font-weight:700;border-radius:10px">'
+        + '        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v11m0 0 4-4m-4 4-4-4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>'
+        + '        <span>Download APK (3.9 MB)</span>'
+        + '      </a>'
+        + '      <button type="button" class="btn btn-ghost" id="smsCopyApkLink" style="display:inline-flex;align-items:center;gap:6px;padding:9px 14px;font-size:12.5px;background:#fff">'
+        + '        📋 Copy Download Link'
+        + '      </button>'
+        + '    </div>'
+        + '  </div>'
+        + '  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;background:#fff;border:1.5px dashed #86efac;border-radius:14px;padding:14px;text-align:center">'
+        + (apkQrImg ? '    <img src="' + apkQrImg + '" alt="Scan to Download APK" style="width:130px;height:130px;border-radius:8px;display:block">' : '<div style="width:130px;height:130px;display:grid;place-items:center;background:#f1f5f9;color:#64748b;font-size:11px">QR Code</div>')
+        + '    <div style="font-size:11px;font-weight:700;color:#15803d;margin-top:8px">📱 Mobile se Scan karein</div>'
+        + '    <div style="font-size:10.5px;color:#64748b">Direct download on Android</div>'
+        + '  </div>'
+        + '</div>'
+        + '</div>';
 
       var html = '<style>'
         + '.sms-set-wrap{max-width:1240px;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}'
@@ -140,18 +188,31 @@
         + '<div class="sms-set-wrap">'
         + '<div class="sms-set-head">'
         + '  <div style="display:flex;align-items:center;gap:14px"><div class="sms-brand-ico">\uD83D\uDCF2</div>'
-        + '  <div><h2 class="sms-set-title">SIM Setting</h2>'
-        + '  <p class="sms-set-sub">Send report alerts as plain SMS from your own SIM card — the Optix app on your phone does the sending.</p></div></div>'
+        + '  <div><h2 class="sms-set-title">SIM SMS Service</h2>'
+        + '  <p class="sms-set-sub">Send report alerts as plain SMS from your own SIM card — the dedicated Optix SMS Gateway APK on your mobile phone handles automated sending.</p></div></div>'
         + '</div>'
 
-        + '<div class="card sms-card"><div class="card-h"><h3>SIM Setting</h3><span id="smsConnBadge"></span></div><div class="card-b">'
+        + apkCard
+
+        + '<div class="card sms-card"><div class="card-h"><h3>SIM Setting &amp; Mobile Link</h3><span id="smsConnBadge"></span></div><div class="card-b">'
         + rowSwitch('smsEnabled', !!c.enabled, 'Enable SMS', 'Queue SMS messages whenever reports are ready or alerts fire — just like WhatsApp.')
-        + '<div class="sms-field"><label>SIM / mobile number</label><input id="smsSimNumber" placeholder="0300-1234567" value="' + App.esc(c.simNumber || '') + '">'
-        + '<div class="sms-hint">The number patients will see the SMS coming from — the SIM in your phone.</div></div>'
-        + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button class="btn btn-ghost" id="smsTestSend">Send test SMS</button><span id="smsTestMsg" class="sms-hint"></span></div>'
+        + '<div class="sms-field"><label>SIM / Mobile Number</label>'
+        + '  <div style="display:flex;gap:8px">'
+        + '    <input id="smsSimNumber" placeholder="0300-1234567" value="' + App.esc(c.simNumber || '') + '" style="flex:1">'
+        + '    <button type="button" class="btn btn-primary" id="smsLinkBtn" style="white-space:nowrap;padding:0 16px;font-weight:700">Link SIM</button>'
+        + '  </div>'
+        + '<div class="sms-hint">The SIM number in your phone. Patients will see SMS delivered from this number.</div></div>'
+        + '<div id="smsLiveStatusBanner" style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:10px;background:#f1f5f9;font-size:12.5px;color:#334155;border:1px solid #cbd5e1">'
+        + '  <span id="smsStatusDot" style="width:10px;height:10px;border-radius:50%;background:#94a3b8;flex-shrink:0"></span>'
+        + '  <span id="smsStatusText" style="flex:1">Checking phone connection…</span>'
+        + '</div>'
+        + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
+        + '  <button class="btn btn-ghost" id="smsTestSend" style="font-weight:600">📤 Send Test SMS</button>'
+        + '  <span id="smsTestMsg" class="sms-hint"></span>'
+        + '</div>'
         + '</div></div>'
 
-        + gwCard
+        + (gwCard || '<div class="card sms-card"><div class="card-h"><h3>Gateway Instructions</h3></div><div class="card-b"><p class="muted" style="font-size:13px;margin:0">\uD83D\uDCF2 Messages will go out automatically from your Android phone\u2019s SIM card. Keep the Optix SMS Gateway APK installed and running on your phone with background battery usage unrestricted.</p></div></div>')
 
         + '<div class="card sms-card"><div class="card-h"><h3>Automatic SMS</h3></div><div class="card-b">'
         + rowSwitch('smsAutoPatient', !!c.autoPatient, 'Report ready \u2192 patient', 'Automatically SMS the patient when their full report is ready (same moment WhatsApp would send).')
@@ -212,19 +273,105 @@
         if (el) el.addEventListener('change', function () { saveSms(false); });
       });
 
+      var copyBtn = g('smsCopyApkLink');
+      if (copyBtn) copyBtn.addEventListener('click', function () {
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(fullApkUrl);
+            App.toast('APK download link copied to clipboard!');
+          } else {
+            prompt('Copy APK Download Link:', fullApkUrl);
+          }
+        } catch (e) {
+          prompt('Copy APK Download Link:', fullApkUrl);
+        }
+      });
+
+      var linkBtn = g('smsLinkBtn');
+      if (linkBtn) linkBtn.addEventListener('click', function () {
+        var num = (g('smsSimNumber') && g('smsSimNumber').value.trim()) || '';
+        if (!num) { App.toast('Enter your SIM phone number first', 'err'); return; }
+        linkBtn.disabled = true;
+        linkBtn.textContent = 'Linking…';
+        DB.smsApi('POST', 'link', { simNumber: num }).then(function (j) {
+          linkBtn.disabled = false;
+          linkBtn.textContent = 'Link SIM';
+          if (j && j.ok) {
+            saveSms(false);
+            App.toast('SIM Number linked successfully! Mobile connected.', 'ok');
+            refreshSmsStatus();
+          } else {
+            App.toast((j && j.error) || 'Failed to link SIM', 'err');
+          }
+        }, function (e) {
+          linkBtn.disabled = false;
+          linkBtn.textContent = 'Link SIM';
+          App.toast((e && e.message) || 'Server unreachable', 'err');
+        });
+      });
+
       function setBadge(ok, txt) {
         var b = g('smsConnBadge'); if (!b) return;
         b.innerHTML = '<span class="badge ' + (ok ? 'b-ready' : 'b-pending') + '">' + App.esc(txt) + '</span>';
       }
       function refreshSmsStatus() {
         setBadge(false, 'CHECKING\u2026');
+        var banner = g('smsLiveStatusBanner');
+        var dot = g('smsStatusDot');
+        var text = g('smsStatusText');
         DB.smsApi('GET', 'status', undefined).then(function (j) {
           if (j && j.ok) {
+            var isConn = !!j.connected;
+            var num = j.simNumber || (g('smsSimNumber') && g('smsSimNumber').value.trim()) || '';
             var bits = [j.enabled ? 'ON' : 'OFF'];
             if (j.pending) bits.push(j.pending + ' QUEUED');
             if (j.failed) bits.push(j.failed + ' FAILED');
-            if (j.lastPoll) { try { bits.push('PHONE SEEN ' + App.dt(j.lastPoll)); } catch (e) { /* keep going */ } }
-            setBadge(!!j.enabled, bits.join(' \u00B7 '));
+            if (isConn) {
+              bits.unshift('CONNECTED');
+              setBadge(true, bits.join(' \u00B7 '));
+              if (banner) {
+                banner.style.background = '#f0fdf4';
+                banner.style.borderColor = '#86efac';
+                banner.style.color = '#15803d';
+              }
+              if (dot) {
+                dot.style.background = '#22c55e';
+                dot.style.boxShadow = '0 0 0 3px rgba(34,197,94,0.25)';
+              }
+              if (text) {
+                text.innerHTML = '<b>🟢 SIM Connected: ' + App.esc(num || 'Active') + '</b>' + (j.deviceModel ? ' &middot; ' + App.esc(j.deviceModel) : '') + (j.lastPoll ? ' &middot; Phone seen ' + App.dt(j.lastPoll) : '') + ' &middot; Ready to send SMS';
+              }
+            } else if (num) {
+              bits.unshift('PHONE WAITING');
+              setBadge(false, bits.join(' \u00B7 '));
+              if (banner) {
+                banner.style.background = '#fffbeb';
+                banner.style.borderColor = '#fde68a';
+                banner.style.color = '#b45309';
+              }
+              if (dot) {
+                dot.style.background = '#f59e0b';
+                dot.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.25)';
+              }
+              if (text) {
+                text.innerHTML = '<b>🟡 SIM Saved: ' + App.esc(num) + '</b> &middot; Waiting for phone connection. Install the APK and open app on phone.';
+              }
+            } else {
+              bits.unshift('NOT LINKED');
+              setBadge(false, bits.join(' \u00B7 '));
+              if (banner) {
+                banner.style.background = '#f8fafc';
+                banner.style.borderColor = '#e2e8f0';
+                banner.style.color = '#64748b';
+              }
+              if (dot) {
+                dot.style.background = '#94a3b8';
+                dot.style.boxShadow = 'none';
+              }
+              if (text) {
+                text.textContent = '⚪ Phone not connected yet. Download the APK on mobile and link your SIM number.';
+              }
+            }
           } else setBadge(false, 'ERROR');
         }, function () { setBadge(false, 'SERVER UNREACHABLE'); });
       }
@@ -237,10 +384,46 @@
         var sc = collect();
         if (!sc.simNumber) { b.disabled = false; if (msgEl) msgEl.textContent = 'Enter your SIM number above first.'; return; }
         var labName = (DB.get('settings', 'main') || {}).labName || 'Optix Medical Sync';
-        DB.smsApi('POST', 'queue', { to: sc.simNumber, text: labName + ': test SMS from your lab. If you received this on your phone, SMS sending works.', kind: 'test' }).then(function (j) {
+        DB.smsApi('POST', 'queue', {
+          to: sc.simNumber,
+          text: labName + ': Test SMS from your lab SIM Gateway. If you received this on your mobile, SMS service is fully linked and working!',
+          kind: 'test'
+        }).then(function (j) {
           b.disabled = false;
-          if (msgEl) msgEl.textContent = j && j.ok ? 'Test SMS queued. Your phone will send it within a minute (gateway must be ON in the app).' : 'Could not queue the test SMS.';
-          loadSmsLog(); refreshSmsStatus();
+          if (j && j.ok) {
+            var smsId = j.id;
+            if (msgEl) msgEl.innerHTML = '<span style="color:#2563eb">⏳ Test SMS queued (ID: ' + App.esc(smsId) + '). Phone is sending via SIM…</span>';
+            loadSmsLog(); refreshSmsStatus();
+            var pollCount = 0;
+            var pollTimer = setInterval(function () {
+              pollCount++;
+              DB.smsApi('GET', 'status', undefined).then(function (st) {
+                if (st && st.connected) refreshSmsStatus();
+              });
+              DB.smsApi('GET', 'log?limit=5', undefined).then(function (res) {
+                var row = res && res.rows && res.rows.find(function (r) { return r.id === smsId; });
+                if (row) {
+                  if (row.status === 'sent' || row.status === 'delivered') {
+                    clearInterval(pollTimer);
+                    if (msgEl) msgEl.innerHTML = '<span style="color:#16a34a;font-weight:700">✅ Test SMS sent successfully from SIM!</span>';
+                    loadSmsLog(); refreshSmsStatus();
+                  } else if (row.status === 'failed') {
+                    clearInterval(pollTimer);
+                    if (msgEl) msgEl.innerHTML = '<span style="color:#dc2626;font-weight:700">❌ Sending failed: ' + App.esc(row.error || 'Gateway error') + '</span>';
+                    loadSmsLog(); refreshSmsStatus();
+                  }
+                }
+                if (pollCount >= 15) {
+                  clearInterval(pollTimer);
+                  if (msgEl && !msgEl.textContent.includes('✅') && !msgEl.textContent.includes('❌')) {
+                    msgEl.textContent = 'Test SMS queued. Your mobile phone will pick it up on its next check cycle.';
+                  }
+                }
+              });
+            }, 2000);
+          } else {
+            if (msgEl) msgEl.textContent = 'Could not queue the test SMS.';
+          }
         }, function (e) {
           b.disabled = false;
           if (msgEl) msgEl.textContent = 'Failed: ' + (e && e.message ? e.message : 'server unreachable');

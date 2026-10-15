@@ -2173,9 +2173,41 @@ async function main() {
       const pending = rows.filter((r) => r && (r.status === 'pending' || r.status === 'sending')).length;
       const failed = rows.filter((r) => r && r.status === 'failed').length;
       const gw = await smsGwGet(req.store);
-      res.json({ ok: true, enabled: !!cfg.enabled, simNumber: cfg.simNumber || '', pending, failed,
+      const lastPollTime = gw.lastPoll ? new Date(gw.lastPoll).getTime() : 0;
+      const isConnected = !!(lastPollTime && (Date.now() - lastPollTime < 15 * 60 * 1000));
+      res.json({ ok: true, enabled: !!cfg.enabled, simNumber: cfg.simNumber || gw.simNumber || '', pending, failed,
+        connected: isConnected,
         lastPoll: gw.lastPoll || '', lastSentAt: gw.lastSentAt || '', sentCount: gw.sentCount || 0 });
     } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* phone link & register: sets the device phone number and registers instant connection */
+  app.post('/api/sms/link', needUser, async (req, res) => {
+    try {
+      const b = req.body || {}, store = req.store;
+      const sim = String(b.simNumber || b.phone || '').trim();
+      const ts = new Date().toISOString();
+      const patch = { lastPoll: ts, connected: true };
+      if (sim) {
+        patch.simNumber = sim;
+        try {
+          const st = (await store.get('settings', 'main')) || {};
+          st.sms = Object.assign({}, st.sms || {}, { simNumber: sim, enabled: true });
+          await store.put('settings', Object.assign({ id: 'main' }, st));
+        } catch (err) {}
+      }
+      await smsGwSet(store, patch);
+      res.json({ ok: true, connected: true, simNumber: sim, lastPoll: ts });
+    } catch (e) { res.status(400).json({ error: e.message }); }
+  });
+
+  /* download APK direct route */
+  app.get(['/api/sms/download-apk', '/download/sms-gateway.apk'], (req, res) => {
+    const localApk = path.join(__dirname, '..', 'assets', 'apk', 'Optix-SMS-Gateway.apk');
+    if (fs.existsSync(localApk)) return res.download(localApk, 'Optix-SMS-Gateway.apk');
+    const relApk = path.join(RELEASES_DIR, 'Optix-LAB-MedSync-2.1.0.apk');
+    if (fs.existsSync(relApk)) return res.download(relApk, 'Optix-SMS-Gateway.apk');
+    res.redirect('https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.1.0.apk');
   });
 
   /* phone poll: the lab's Android app calls this ~every minute with its lab login
@@ -2198,7 +2230,10 @@ async function main() {
         await store.patch('sms_outbox', r.id, { status: 'sending', claimedAt: ts });
         out.push({ id: r.id, to: r.to, text: r.text });
       }
-      await smsGwSet(store, { lastPoll: ts });
+      const querySim = String(req.query.simNumber || req.headers['x-sim-number'] || '').trim();
+      const gwUpdate = { lastPoll: ts };
+      if (querySim) gwUpdate.simNumber = querySim;
+      await smsGwSet(store, gwUpdate);
       res.json({ ok: true, rows: out });
     } catch (e) { res.status(400).json({ error: e.message }); }
   });

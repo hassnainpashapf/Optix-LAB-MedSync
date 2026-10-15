@@ -4,8 +4,7 @@
 
   var GH = 'https://labpos-api.150.230.52.29.sslip.io/releases/';
   var DMG_URL = GH + 'Optix-LAB-MedSync-1.4.2-arm64.dmg.tar.gz';
-  /* TODO(parent): replace with the real published APK URL */
-  var APK_URL = 'https://labpos-api.150.230.52.29.sslip.io/releases/Optix-LAB-MedSync-2.1.0.apk';
+  var APK_URL = 'assets/apk/Optix-SMS-Gateway.apk';
 
   /* 6 distinct installer binaries (Windows 11 and Windows 10 64-bit share one) */
   var WIN_OPTS = [
@@ -173,13 +172,13 @@
       ]
     }) +
     dlCard({
-      title: 'Android APK', version: '2.1.0', size: '~3 MB', file: 'APK', url: APK_URL, icon: ICO.android,
-      note: ICO.check + '<span>Install the <b>Optix LAB MedSync</b> mobile app on your Android phone. It opens like an app and uses the same cloud account and data (internet needed).</span>',
+      title: 'Android APK & SIM Gateway', version: '2.1.0', size: '~3.9 MB', file: 'APK', url: APK_URL, icon: ICO.android,
+      note: ICO.check + '<span>Install the <b>Optix LAB MedSync &amp; SIM SMS Gateway</b> mobile app on your Android phone. It enables automated background SMS alerts from your phone\'s SIM card and syncs with your lab data.</span>',
       steps: [
-        'Download the <b>.apk</b> file on your Android phone.',
+        'Download the <b>Optix-SMS-Gateway.apk</b> file on your Android phone.',
         'In Chrome tap <b>Download anyway</b>, then open the file and allow <b>install from unknown sources</b> if prompted.',
         'Tap <b>Install</b>, then open Optix LAB MedSync.',
-        'Log in with your lab account credentials.'
+        'Log in with your lab credentials and allow SMS permissions to link your SIM.'
       ]
     }) +
     pwaCard() +
