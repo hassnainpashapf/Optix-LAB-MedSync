@@ -4160,7 +4160,7 @@
         return '<div class="stat ai-dash-kpi" data-tint="' + tint + '" style="--sc:' + c.sc + ';--sc-line:' + c.line + ';--sc-soft:' + c.soft + ';display:flex;flex-direction:column;justify-content:space-between;height:104px;min-height:104px;box-sizing:border-box;background:#ffffff;border:1px solid var(--bd,#cbd5e1);border-radius:12px;padding:12px 16px;box-shadow:0 1px 3px rgba(15,23,42,.03);overflow:hidden">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
           + '  <div class="lb" style="font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);">' + escFn(label) + '</div>'
-          + '  <div class="stat-ico" style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;background:#eef3ff;width:32px;height:32px;border-radius:8px;flex-shrink:0">' + icon + '</div>'
+          + '  <div class="stat-ico" style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;background:transparent;border:none;flex-shrink:0;width:auto;height:auto">' + icon + '</div>'
           + '</div>'
           + '<div class="vl" data-count="' + raw + '" style="font-size:24px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;margin:4px 0 2px">' + value + '</div>'
           + '<div class="dl" style="font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + sub + '</div>'
@@ -4210,10 +4210,11 @@
         + '  #optixAiDashboard .ai-card-mod:hover { border-color: #94a3b8; box-shadow: 0 2px 6px rgba(15,30,46,0.06); }'
         + '  #optixAiDashboard .ai-mod-ico {'
         + '    display: inline-flex; align-items: center; justify-content: center;'
-        + '    color: #2563eb; background: #eef3ff; border: 1px solid #dbeafe;'
-        + '    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;'
+        + '    color: #2563eb; background: transparent; border: none;'
+        + '    width: auto; height: auto; flex-shrink: 0;'
         + '  }'
-        + '  #optixAiDashboard .ai-card-mod:hover .ai-mod-ico { background: #dbeafe; border-color: #bfdbfe; color: #1d4ed8; }'
+        + '  #optixAiDashboard .ai-mod-ico svg { width: 22px; height: 22px; stroke-width: 2.2; }'
+        + '  #optixAiDashboard .ai-card-mod:hover .ai-mod-ico { background: transparent; border: none; color: #1d4ed8; }'
         + '  #optixAiDashboard .ai-card-mod .ai-mod-title { font-size: 13px; font-weight: 600; color: var(--ink, #0f1e2e); line-height: 1.25; }'
         + '  #optixAiDashboard .ai-switch { position: relative; display: inline-block; width: 42px; height: 22px; flex-shrink: 0; }'
         + '  #optixAiDashboard .ai-switch input { opacity: 0; width: 0; height: 0; }'
@@ -4253,8 +4254,8 @@
         + '  #optixAiDashboard .ai-sim-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,30,46,0.06); border-color: #94a3b8; }'
         + '  #optixAiDashboard .ai-sim-card .sim-ico-box {'
         + '    display: inline-flex; align-items: center; justify-content: center;'
-        + '    background: #eef3ff; border: 1px solid #dbeafe; color: #2563eb;'
-        + '    width: 32px; height: 32px; border-radius: 8px; font-size: 16px;'
+        + '    background: transparent; border: none; color: #2563eb;'
+        + '    width: auto; height: auto; font-size: 22px;'
         + '  }'
         + '  #optixAiDashboard .ai-sim-card .sim-title { font-size: 13.5px; font-weight: 700; color: var(--ink, #0f1e2e); margin: 6px 0 4px; }'
         + '  #optixAiDashboard .ai-sim-card .sim-stats {'
@@ -4283,7 +4284,7 @@
         + '</style>'
         + '<div class="stat-grid" style="margin-bottom:18px">'
         +   renderKpiCard(
-              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+              '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
               'blue',
               'Analyses',
               stats.analyzed,
@@ -4291,7 +4292,7 @@
               stats.analyzed
             )
         +   renderKpiCard(
-              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+              '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
               'blue',
               'Critical Alerts',
               stats.panics,
@@ -4299,7 +4300,7 @@
               stats.panics
             )
         +   renderKpiCard(
-              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+              '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
               'blue',
               'Organ Warnings',
               stats.organAlerts,
@@ -4307,7 +4308,7 @@
               stats.organAlerts
             )
         +   renderKpiCard(
-              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+              '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
               'blue',
               'DDI Conflicts',
               stats.ddiBlocked,

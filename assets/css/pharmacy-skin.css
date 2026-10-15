@@ -179,10 +179,12 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 #optixAiDashboard .ai-dash-kpi .stat-ico,
 .stat.ai-dash-kpi .stat-ico {
   color: #2563eb !important;
-  background: #eef3ff !important;
-  width: 32px !important;
-  height: 32px !important;
-  border-radius: 8px !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
   margin-bottom: 0 !important;
   display: inline-flex !important;
   align-items: center !important;
@@ -191,8 +193,29 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 #view .stat.ai-dash-kpi .stat-ico svg,
 #optixAiDashboard .ai-dash-kpi .stat-ico svg,
 .stat.ai-dash-kpi .stat-ico svg {
-  width: 16px !important;
-  height: 16px !important;
+  width: 28px !important;
+  height: 28px !important;
+  stroke-width: 2.2 !important;
+}
+#view .db-page .stat .stat-ico,
+.db-page .stat .stat-ico {
+  color: #2563eb !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  margin-bottom: 8px !important;
+}
+#view .db-page .stat .stat-ico svg,
+.db-page .stat .stat-ico svg {
+  width: 28px !important;
+  height: 28px !important;
+  stroke-width: 2.2 !important;
 }
 
 html .db-page { --brand: #1b2a4a; --brand-d: #1b2a4a; --brand-soft: #eaf0ff; --brand-line: #c9d8fb; --brand-grad: linear-gradient(135deg, #3b7bf7, #1f4fd1);
@@ -471,10 +494,28 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .ovk:hover, .dbq-card:hover { box-shadow: 0 14px 34px -16px rgba(27, 42, 74, .32) !important; }
 .db-kpi { border-left: 4px solid var(--kc, #2f6df6) !important; }
 
-/* one icon colour everywhere on the cards: the same light blue chip and blue icon */
-.ovk-ic, .stat .stat-ico, .kpi .kpi-ic { color: #2f6df6 !important; background: #eef3ff !important; box-shadow: none !important; border: 0 !important; }
-.dbq-card .card-b > span:first-child { color: #2f6df6 !important; background: #eef3ff !important; }
-.stat-ic, .stat-ic.blue, .stat-ic.teal { color: #2f6df6; background: #eef3ff; }
+/* Dashboard & card icons merged into page (unboxed, transparent background) with enlarged size */
+.ovk-ic, .stat .stat-ico, .kpi .kpi-ic {
+  color: #2563eb !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.ovk-ic svg, .stat .stat-ico svg, .kpi .kpi-ic svg {
+  width: 28px !important;
+  height: 28px !important;
+  stroke-width: 2.2 !important;
+  color: #2563eb !important;
+}
+.dbq-card .card-b > span:first-child { color: #2563eb !important; background: transparent !important; width: auto !important; height: auto !important; }
+.dbq-card .card-b > span:first-child svg { width: 28px !important; height: 28px !important; stroke-width: 2.2 !important; }
+.stat-ic, .stat-ic.blue, .stat-ic.teal { color: #2563eb; background: transparent; }
 
 /* Smart Dashboard: same look as the Overview (section header, KPI cards, separate cards for branch, demand and the trend) */
 .db-smart { margin: 8px 0 18px; }
@@ -492,8 +533,8 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 /* KPI cards a little smaller */
 .ov-grid { gap: 14px; margin-bottom: 16px; }
 .ovk { padding: 14px 16px 13px; gap: 9px; border-radius: 20px; }
-.ovk-ic { width: 40px; height: 40px; border-radius: 12px; }
-.ovk-ic svg { width: 18px; height: 18px; }
+.ovk-ic { width: auto !important; height: auto !important; border-radius: 0 !important; background: transparent !important; }
+.ovk-ic svg { width: 28px !important; height: 28px !important; stroke-width: 2.2 !important; }
 .ovk-t b { font-size: 14.5px; font-weight: 500 !important; }
 .ovk-t small { font-size: 12px; font-weight: 400 !important; }
 .ovk-v { font-size: 28px; font-weight: 600 !important; }
@@ -700,19 +741,23 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   display: none !important;
 }
 #view .stat .stat-ico {
-  width: 44px !important;
-  height: 44px !important;
-  border-radius: 12px !important;
-  display: grid !important;
-  place-items: center !important;
-  margin-bottom: 10px !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  margin-bottom: 8px !important;
   border: none !important;
   box-shadow: none !important;
+  background: transparent !important;
+  color: #2563eb !important;
   flex: none !important;
 }
 #view .stat .stat-ico svg {
-  width: 22px !important;
-  height: 22px !important;
+  width: 28px !important;
+  height: 28px !important;
+  stroke-width: 2.2 !important;
 }
 #view .stat .lb {
   font-size: 12px !important;
