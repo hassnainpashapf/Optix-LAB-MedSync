@@ -4131,18 +4131,18 @@
     var activeTab = 'modules';
 
     var MODULE_DEFS = [
-      { key: 'solutions5', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>', name: '5 Core Solutions', desc: 'Diagnosis, medications, diet & red flags.' },
-      { key: 'bodyMap', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v8"/><path d="M9 12h6"/><path d="M9 21l3-5 3 5"/></svg>', name: 'Organ Impact Map', desc: '8-system physiological impact visualizer.' },
-      { key: 'calculators', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>', name: 'Clinical Calculators', desc: 'eGFR, Mentzer, FIB-4 & ASCVD scores.' },
-      { key: 'panicSos', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', name: 'Panic SOS Alerts', desc: 'Emergency limits & automated WhatsApp dispatch.' },
-      { key: 'drugInteractions', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>', name: 'Drug Interactions (DDI)', desc: 'Multi-drug clash & conflict detection.' },
-      { key: 'safetyShields', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>', name: 'Organ Toxicity Shields', desc: 'Renal, hepatic & hematology contraindications.' },
-      { key: 'ddx', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>', name: 'Differential Diagnosis (DDx)', desc: 'Ranked candidate disease differentials.' },
-      { key: 'geneticGuard', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-14 0"/><circle cx="9" cy="9" r="2"/><path d="m14 8 5 5"/></svg>', name: 'Genetic & Marriage Guard', desc: 'Thalassemia & familial carrier risk.' },
-      { key: 'ascvdRisk', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5v14"/></svg>', name: '10-Year ASCVD Risk', desc: 'Cardiovascular stroke & heart risk.' },
-      { key: 'urduGuide', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>', name: 'Roman Urdu Guide', desc: 'Bilingual patient care & diet instructions.' },
-      { key: 'rxPad', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>', name: 'Digital Prescription Pad', desc: 'Printable prescription pad with credentials.' },
-      { key: 'reportRemarks', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', name: 'Report Remarks Summary', desc: 'Attaches AI summary to report footer.' }
+      { key: 'solutions5', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>', name: '5 Core Solutions', desc: 'Diagnosis, medications, diet & red flags.' },
+      { key: 'bodyMap', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v8"/><path d="M9 12h6"/><path d="M9 21l3-5 3 5"/></svg>', name: 'Organ Impact Map', desc: '8-system physiological impact visualizer.' },
+      { key: 'calculators', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>', name: 'Clinical Calculators', desc: 'eGFR, Mentzer, FIB-4 & ASCVD scores.' },
+      { key: 'panicSos', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', name: 'Panic SOS Alerts', desc: 'Emergency limits & automated WhatsApp dispatch.' },
+      { key: 'drugInteractions', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>', name: 'Drug Interactions (DDI)', desc: 'Multi-drug clash & conflict detection.' },
+      { key: 'safetyShields', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>', name: 'Organ Toxicity Shields', desc: 'Renal, hepatic & hematology contraindications.' },
+      { key: 'ddx', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>', name: 'Differential Diagnosis (DDx)', desc: 'Ranked candidate disease differentials.' },
+      { key: 'geneticGuard', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-14 0"/><circle cx="9" cy="9" r="2"/><path d="m14 8 5 5"/></svg>', name: 'Genetic & Marriage Guard', desc: 'Thalassemia & familial carrier risk.' },
+      { key: 'ascvdRisk', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5v14"/></svg>', name: '10-Year ASCVD Risk', desc: 'Cardiovascular stroke & heart risk.' },
+      { key: 'urduGuide', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>', name: 'Roman Urdu Guide', desc: 'Bilingual patient care & diet instructions.' },
+      { key: 'rxPad', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>', name: 'Digital Prescription Pad', desc: 'Printable prescription pad with credentials.' },
+      { key: 'reportRemarks', icon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', name: 'Report Remarks Summary', desc: 'Attaches AI summary to report footer.' }
     ];
 
     function renderShell() {
@@ -4156,11 +4156,10 @@
       };
 
       function renderKpiCard(icon, tint, label, value, sub, raw) {
-        var c = STAT_TINTS[tint] || STAT_TINTS.blue;
-        return '<div class="stat ai-dash-kpi" data-tint="' + tint + '" style="--sc:' + c.sc + ';--sc-line:' + c.line + ';--sc-soft:' + c.soft + ';display:flex;flex-direction:column;justify-content:space-between;height:104px;min-height:104px;box-sizing:border-box;background:#ffffff;border:1px solid var(--bd,#cbd5e1);border-radius:12px;padding:12px 16px;box-shadow:0 1px 3px rgba(15,23,42,.03);overflow:hidden">'
+        return '<div class="stat ai-dash-kpi" data-tint="brand" style="display:flex;flex-direction:column;justify-content:space-between;height:104px;min-height:104px;box-sizing:border-box;background:#ffffff !important;border:1px solid var(--bd,#cbd5e1) !important;border-radius:12px;padding:12px 16px;box-shadow:0 1px 3px rgba(15,23,42,.03) !important;overflow:hidden">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
           + '  <div class="lb" style="font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);">' + escFn(label) + '</div>'
-          + '  <div class="stat-ico" style="display:inline-flex;align-items:center;justify-content:center;color:' + c.sc + ';background:transparent;border:none;flex-shrink:0">' + icon + '</div>'
+          + '  <div class="stat-ico ai-kpi-ico" style="display:inline-flex !important;align-items:center !important;justify-content:center !important;color:#131845 !important;background:transparent !important;background-color:transparent !important;border:none !important;box-shadow:none !important;border-radius:0 !important;width:auto !important;height:auto !important;min-width:0 !important;min-height:0 !important;margin:0 !important;padding:0 !important;flex:none !important">' + icon + '</div>'
           + '</div>'
           + '<div class="vl" data-count="' + raw + '" style="font-size:24px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;margin:4px 0 2px">' + value + '</div>'
           + '<div class="dl" style="font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + sub + '</div>'
@@ -4172,6 +4171,55 @@
         + '  #optixAiDashboard { font-family: inherit; color: var(--ink, #0f1e2e); }'
         + '  #optixAiDashboard .stat-grid {'
         + '    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; align-items: stretch;'
+        + '  }'
+        + '  #optixAiDashboard .stat.ai-dash-kpi,'
+        + '  #view #optixAiDashboard .stat.ai-dash-kpi {'
+        + '    border: 1px solid var(--bd, #cbd5e1) !important;'
+        + '    box-shadow: 0 1px 3px rgba(15,23,42,0.03) !important;'
+        + '    background: #ffffff !important;'
+        + '    transform: none !important;'
+        + '  }'
+        + '  #optixAiDashboard .stat-ico,'
+        + '  #optixAiDashboard .stat .stat-ico,'
+        + '  #optixAiDashboard .ai-dash-kpi .stat-ico,'
+        + '  #optixAiDashboard .ai-kpi-ico,'
+        + '  #view #optixAiDashboard .stat-ico,'
+        + '  #view #optixAiDashboard .stat .stat-ico,'
+        + '  #view #optixAiDashboard .stat[data-tint] .stat-ico,'
+        + '  #view #optixAiDashboard .ai-dash-kpi .stat-ico,'
+        + '  #view #optixAiDashboard .ai-kpi-ico {'
+        + '    width: auto !important;'
+        + '    height: auto !important;'
+        + '    min-width: 0 !important;'
+        + '    min-height: 0 !important;'
+        + '    border-radius: 0 !important;'
+        + '    background: transparent !important;'
+        + '    background-color: transparent !important;'
+        + '    border: none !important;'
+        + '    box-shadow: none !important;'
+        + '    margin: 0 !important;'
+        + '    padding: 0 !important;'
+        + '    display: inline-flex !important;'
+        + '    align-items: center !important;'
+        + '    justify-content: center !important;'
+        + '    color: var(--brand, #131845) !important;'
+        + '    flex: 0 0 auto !important;'
+        + '  }'
+        + '  #optixAiDashboard .stat-ico svg,'
+        + '  #optixAiDashboard .stat .stat-ico svg,'
+        + '  #optixAiDashboard .ai-dash-kpi .stat-ico svg,'
+        + '  #optixAiDashboard .ai-kpi-ico svg,'
+        + '  #view #optixAiDashboard .stat-ico svg,'
+        + '  #view #optixAiDashboard .stat .stat-ico svg,'
+        + '  #view #optixAiDashboard .stat[data-tint] .stat-ico svg,'
+        + '  #view #optixAiDashboard .ai-dash-kpi .stat-ico svg,'
+        + '  #view #optixAiDashboard .ai-kpi-ico svg {'
+        + '    width: 18px !important;'
+        + '    height: 18px !important;'
+        + '    color: var(--brand, #131845) !important;'
+        + '    stroke: var(--brand, #131845) !important;'
+        + '    stroke-width: 2 !important;'
+        + '    display: block !important;'
         + '  }'
         + '  @media(max-width:1100px) { #optixAiDashboard .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }'
         + '  @media(max-width:560px) { #optixAiDashboard .stat-grid { grid-template-columns: 1fr; gap: 10px; } }'
@@ -4281,7 +4329,7 @@
         + '</style>'
         + '<div class="stat-grid" style="margin-bottom:18px">'
         +   renderKpiCard(
-              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
               'brand',
               'Analyses',
               stats.analyzed,
@@ -4289,24 +4337,24 @@
               stats.analyzed
             )
         +   renderKpiCard(
-              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-              'red',
+              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+              'brand',
               'Critical Alerts',
               stats.panics,
               'Emergency flags',
               stats.panics
             )
         +   renderKpiCard(
-              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
-              'amber',
+              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+              'brand',
               'Organ Warnings',
               stats.organAlerts,
               'High risk systems',
               stats.organAlerts
             )
         +   renderKpiCard(
-              '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
-              'blue',
+              '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+              'brand',
               'DDI Conflicts',
               stats.ddiBlocked,
               'Drug interactions',
@@ -4458,7 +4506,7 @@
         + '      <div class="ai-sim-card">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>'
+        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>'
         + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">CRITICAL</span>'
         + '          </div>'
         + '          <div class="sim-title">Acute Dengue Shock</div>'
@@ -4469,7 +4517,7 @@
         + '      <div class="ai-sim-card">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>'
+        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>'
         + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">RENAL</span>'
         + '          </div>'
         + '          <div class="sim-title">Diabetic Nephropathy &amp; AKI</div>'
@@ -4480,7 +4528,7 @@
         + '      <div class="ai-sim-card">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></div>'
+        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></div>'
         + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">GENETIC</span>'
         + '          </div>'
         + '          <div class="sim-title">Beta-Thalassemia Trait</div>'
@@ -4491,7 +4539,7 @@
         + '      <div class="ai-sim-card">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>'
+        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>'
         + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">HEPATIC</span>'
         + '          </div>'
         + '          <div class="sim-title">Hyperuricemia &amp; Liver Steatosis</div>'

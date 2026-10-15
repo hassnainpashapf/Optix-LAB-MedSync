@@ -158,7 +158,7 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 .stat::before, .kpi::before,
 .stat > div[style*="border-radius:50%"] { display: none !important; }
 
-.stat-ico, .kpi-ic, .stat-ic {
+.stat:not(.ai-dash-kpi) .stat-ico, .kpi-ic, .stat-ic {
   position: relative !important;
   width: 44px !important;
   height: 44px !important;
@@ -170,11 +170,11 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
   box-shadow: none !important;
   flex: none !important;
 }
-.stat[data-tint="brand"] .stat-ico, .stat[data-tint="blue"] .stat-ico { color: #2563eb !important; background: #eef3ff !important; }
-.stat[data-tint="green"] .stat-ico { color: #16a34a !important; background: #ecfdf3 !important; }
-.stat[data-tint="amber"] .stat-ico { color: #d97706 !important; background: #fffbeb !important; }
-.stat[data-tint="red"] .stat-ico { color: #dc2626 !important; background: #fef2f2 !important; }
-.stat[data-tint="purple"] .stat-ico, .stat[data-tint="violet"] .stat-ico { color: #7c3aed !important; background: #f5f3ff !important; }
+.stat:not(.ai-dash-kpi)[data-tint="brand"] .stat-ico, .stat:not(.ai-dash-kpi)[data-tint="blue"] .stat-ico { color: #2563eb !important; background: #eef3ff !important; }
+.stat:not(.ai-dash-kpi)[data-tint="green"] .stat-ico { color: #16a34a !important; background: #ecfdf3 !important; }
+.stat:not(.ai-dash-kpi)[data-tint="amber"] .stat-ico { color: #d97706 !important; background: #fffbeb !important; }
+.stat:not(.ai-dash-kpi)[data-tint="red"] .stat-ico { color: #dc2626 !important; background: #fef2f2 !important; }
+.stat:not(.ai-dash-kpi)[data-tint="purple"] .stat-ico, .stat:not(.ai-dash-kpi)[data-tint="violet"] .stat-ico { color: #7c3aed !important; background: #f5f3ff !important; }
 
 html .db-page { --brand: #1b2a4a; --brand-d: #1b2a4a; --brand-soft: #eaf0ff; --brand-line: #c9d8fb; --brand-grad: linear-gradient(135deg, #3b7bf7, #1f4fd1);
   --blue: #2f6df6; --blue-soft: #eaf0ff; --ink: #1b2a4a; --ink2: #3c4761; --muted: #6f7a92; --faint: #8b94a7; --line: #e2e8f1; --line2: #edf1f7; --bg: #f2f5f9; --card: #fff;
@@ -453,7 +453,7 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .db-kpi { border-left: 4px solid var(--kc, #2f6df6) !important; }
 
 /* one icon colour everywhere on the cards: the same light blue chip and blue icon */
-.ovk-ic, .stat .stat-ico, .kpi .kpi-ic { color: #2f6df6 !important; background: #eef3ff !important; box-shadow: none !important; border: 0 !important; }
+.ovk-ic, .stat:not(.ai-dash-kpi) .stat-ico, .kpi .kpi-ic { color: #2f6df6 !important; background: #eef3ff !important; box-shadow: none !important; border: 0 !important; }
 .dbq-card .card-b > span:first-child { color: #2f6df6 !important; background: #eef3ff !important; }
 .stat-ic, .stat-ic.blue, .stat-ic.teal { color: #2f6df6; background: #eef3ff; }
 
@@ -680,7 +680,7 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 #view .stat > div[style*="border-radius:50%"] {
   display: none !important;
 }
-#view .stat .stat-ico {
+#view .stat:not(.ai-dash-kpi) .stat-ico {
   width: 44px !important;
   height: 44px !important;
   border-radius: 12px !important;
@@ -691,7 +691,7 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   box-shadow: none !important;
   flex: none !important;
 }
-#view .stat .stat-ico svg {
+#view .stat:not(.ai-dash-kpi) .stat-ico svg {
   width: 22px !important;
   height: 22px !important;
 }
