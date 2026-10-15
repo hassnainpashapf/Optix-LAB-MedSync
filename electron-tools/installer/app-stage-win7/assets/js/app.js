@@ -450,6 +450,31 @@
       '@page{size:A4 portrait;margin:0!important}' +
       '@media print{html,body{margin:0!important;padding:0!important;background:#fff!important;width:100%!important}.noprint{display:none!important}}' +
       (noHeader ? 'body{padding:0!important}' : '');
+    /* When a true PDF blob URL is provided (e.g. lab reports), print the exact vector PDF directly */
+    if (opts && opts.pdfBlobUrl && typeof window !== 'undefined' && window.document && document.body) {
+      try {
+        var oldP = document.getElementById('_appPdfPrintFrame');
+        if (oldP && oldP.parentNode) oldP.parentNode.removeChild(oldP);
+        var pf = document.createElement('iframe');
+        pf.id = '_appPdfPrintFrame';
+        pf.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+        pf.src = opts.pdfBlobUrl;
+        document.body.appendChild(pf);
+        pf.onload = function () {
+          setTimeout(function () {
+            try {
+              pf.contentWindow.focus();
+              pf.contentWindow.print();
+            } catch (e) {
+              var w = window.open(opts.pdfBlobUrl, '_blank');
+              if (w) w.focus();
+            }
+          }, 350);
+        };
+        return;
+      } catch (e) {}
+    }
+
     var native = isNativeApp();
     var w = native ? null : window.open('', '_blank', 'width=920,height=720');
     if (!native && !w) { toast('Popup blocked — allow popups to print', 'err'); return; }

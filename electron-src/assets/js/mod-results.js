@@ -3153,8 +3153,38 @@
     var html = reportHtml(d, opts);
     if (qrImg) html = html.replace('data-qr="1"', 'data-qr="1" src="' + qrImg + '"');
     else html = stripQrImg(html);
-    App.print('Lab Report — ' + d.inv.no, html, { noHeader: true });
+    var pdfBlobUrl = null;
+    try {
+      var pdfRes = await buildReportPdfBlobUrl(invoiceId, opts);
+      if (pdfRes && pdfRes.blobUrl) pdfBlobUrl = pdfRes.blobUrl;
+    } catch (e) {}
+    App.print('Lab Report — ' + d.inv.no, html, { noHeader: true, pdfBlobUrl: pdfBlobUrl });
   }
+
+  /* Direct PDF download helper */
+  function downloadReportPdf(invoiceId, opts) {
+    App.toast('Preparing PDF download…');
+    return buildReportPdfBlobUrl(invoiceId, opts).then(function (res) {
+      if (!res || !res.blobUrl) {
+        App.toast('Could not generate PDF for download', 'err');
+        return;
+      }
+      var d = reportData(invoiceId, opts);
+      var patName = (d && d.pat && d.pat.name) ? String(d.pat.name).trim().replace(/\s+/g, '_') : '';
+      var no = (d && d.inv && (d.inv.no || d.inv.id)) || invoiceId;
+      var filename = 'Lab-Report-' + no + (patName ? '-' + patName : '') + '.pdf';
+      var a = document.createElement('a');
+      a.href = res.blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(function () { a.remove(); }, 150);
+      App.toast('PDF downloaded successfully');
+    }).catch(function (e) {
+      App.toast('Download failed: ' + (e ? e.message : 'Unknown error'), 'err');
+    });
+  }
+  App.downloadReportPdf = downloadReportPdf;
 
   /* print choice dialog: with or without the lab letterhead header */
   function printReportChoice(invoiceId) {
@@ -3343,6 +3373,13 @@
             PRINT_ICON + ' <span>Print Report</span>' +
             '<span style="opacity:.75;font-weight:600;font-size:10.5px;margin-left:2px;background:rgba(255,255,255,0.22);padding:1px 5px;border-radius:4px">Ctrl+P</span>' +
           '</button>' +
+          '<button type="button" class="btn btn-sm" id="rvTopDownloadPdf" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;background:#059669;color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;box-shadow:0 1px 3px rgba(5,150,105,0.25)">' +
+            '<span>📥</span> <span>Download PDF</span>' +
+          '</button>' +
+          '<div style="display:inline-flex;align-items:center;background:#e2e8f0;border-radius:8px;padding:2px;font-size:12px">' +
+            '<button type="button" id="rvModePdf" style="border:none;border-radius:6px;padding:4px 10px;cursor:pointer;background:#fff;color:#0f172a;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,0.08);transition:all .15s">📄 PDF View</button>' +
+            '<button type="button" id="rvModeHtml" style="border:none;border-radius:6px;padding:4px 10px;cursor:pointer;background:transparent;color:#64748b;font-weight:600;transition:all .15s">🌐 Web View</button>' +
+          '</div>' +
           topAiBtnHtml +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
@@ -3361,8 +3398,13 @@
     var htmlContent = previewQr(reportHtml(d), invoiceId);
     var close = App.modal(modalTitle,
       topToolbarHtml +
-      '<div class="rv-box" style="position:relative">' +
-        '<div id="rvHtmlFrameWrap" class="report-preview" style="max-height:75vh;overflow:auto;border-radius:12px;padding:18px;background:#525659">' +
+      '<div class="rv-box" style="position:relative;background:#525659;border-radius:12px;overflow:hidden">' +
+        '<div id="rvPdfLoading" style="display:flex;align-items:center;justify-content:center;height:72vh;color:#fff;flex-direction:column;gap:12px">' +
+          '<div style="width:36px;height:36px;border:3px solid rgba(255,255,255,0.25);border-top-color:#38bdf8;border-radius:50%;animation:spin 0.8s linear infinite"></div>' +
+          '<div style="font-weight:600;font-size:14px;color:#f1f5f9">Generating Official PDF Report…</div>' +
+        '</div>' +
+        '<div id="rvPdfWrap" style="display:none;width:100%;height:75vh"></div>' +
+        '<div id="rvHtmlFrameWrap" class="report-preview" style="display:none;max-height:75vh;overflow:auto;padding:18px;background:#525659">' +
           htmlContent +
         '</div>' +
       '</div>' +
@@ -3377,10 +3419,82 @@
         '<button class="btn btn-ghost" id="rvSmsPatient">📲 Send SMS to Patient</button>' +
         (d.doc ? '<button class="btn btn-ghost" id="rvSmsDoctor">📲 Send SMS to Doctor</button>' : '') +
         '<span id="rvShare" style="display:contents"></span>' +
+        '<button class="btn btn-sm" id="rvDownloadPdf" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;background:#059669;color:#fff;border:none;border-radius:8px;padding:8px 14px;cursor:pointer">📥 Download PDF</button>' +
         '<button class="btn btn-primary" id="rvPrint">' + PRINT_ICON + ' Print Report <span style="opacity:.7;font-weight:500;font-size:11px;margin-left:4px">Ctrl+P</span></button>' +
       '</div>',
       { wide: true,
         onOpen: function (ov, close) {
+          var activeBlobUrl = null;
+          var modePdfBtn = document.getElementById('rvModePdf');
+          var modeHtmlBtn = document.getElementById('rvModeHtml');
+          var pdfLoading = document.getElementById('rvPdfLoading');
+          var pdfWrap = document.getElementById('rvPdfWrap');
+          var htmlWrap = document.getElementById('rvHtmlFrameWrap');
+
+          function setViewMode(mode) {
+            if (mode === 'html') {
+              if (pdfWrap) pdfWrap.style.display = 'none';
+              if (pdfLoading) pdfLoading.style.display = 'none';
+              if (htmlWrap) htmlWrap.style.display = 'block';
+              if (modeHtmlBtn) { modeHtmlBtn.style.background = '#fff'; modeHtmlBtn.style.color = '#0f172a'; modeHtmlBtn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)'; modeHtmlBtn.style.fontWeight = '700'; }
+              if (modePdfBtn) { modePdfBtn.style.background = 'transparent'; modePdfBtn.style.color = '#64748b'; modePdfBtn.style.boxShadow = 'none'; modePdfBtn.style.fontWeight = '600'; }
+            } else {
+              if (htmlWrap) htmlWrap.style.display = 'none';
+              if (activeBlobUrl) {
+                if (pdfLoading) pdfLoading.style.display = 'none';
+                if (pdfWrap) pdfWrap.style.display = 'block';
+              } else {
+                if (pdfLoading) pdfLoading.style.display = 'flex';
+                if (pdfWrap) pdfWrap.style.display = 'none';
+              }
+              if (modePdfBtn) { modePdfBtn.style.background = '#fff'; modePdfBtn.style.color = '#0f172a'; modePdfBtn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)'; modePdfBtn.style.fontWeight = '700'; }
+              if (modeHtmlBtn) { modeHtmlBtn.style.background = 'transparent'; modeHtmlBtn.style.color = '#64748b'; modeHtmlBtn.style.boxShadow = 'none'; modeHtmlBtn.style.fontWeight = '600'; }
+            }
+          }
+
+          if (modePdfBtn) modePdfBtn.addEventListener('click', function () { setViewMode('pdf'); });
+          if (modeHtmlBtn) modeHtmlBtn.addEventListener('click', function () { setViewMode('html'); });
+
+          // Load true PDF preview by default
+          buildReportPdfBlobUrl(invoiceId).then(function (res) {
+            if (!document.body.contains(ov)) return;
+            if (res && res.blobUrl) {
+              activeBlobUrl = res.blobUrl;
+              if (pdfWrap) {
+                pdfWrap.innerHTML = '<iframe id="rvPdfFrame" src="' + res.blobUrl + '#toolbar=0" style="width:100%;height:75vh;border:none;display:block;background:#525659"></iframe>';
+                if (pdfLoading) pdfLoading.style.display = 'none';
+                pdfWrap.style.display = 'block';
+              }
+            } else {
+              setViewMode('html');
+            }
+          }).catch(function (err) {
+            console.error('PDF view loading failed:', err);
+            if (!document.body.contains(ov)) return;
+            setViewMode('html');
+          });
+
+          function handleDownloadPdf() {
+            if (activeBlobUrl) {
+              var patClean = (d.pat && d.pat.name) ? String(d.pat.name).trim().replace(/\s+/g, '_') : '';
+              var filename = 'Lab-Report-' + (d.inv.no || d.inv.id) + (patClean ? '-' + patClean : '') + '.pdf';
+              var a = document.createElement('a');
+              a.href = activeBlobUrl;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              setTimeout(function () { a.remove(); }, 150);
+              App.toast('PDF downloaded successfully');
+            } else {
+              downloadReportPdf(invoiceId);
+            }
+          }
+
+          var topDlBtn = document.getElementById('rvTopDownloadPdf');
+          if (topDlBtn) topDlBtn.addEventListener('click', handleDownloadPdf);
+          var btmDlBtn = document.getElementById('rvDownloadPdf');
+          if (btmDlBtn) btmDlBtn.addEventListener('click', handleDownloadPdf);
+
           document.getElementById('rvClose').addEventListener('click', close);
           document.getElementById('rvPrint').addEventListener('click', function () { close(); printReportChoice(invoiceId); });
           var topPrint = document.getElementById('rvTopPrint');
@@ -3421,7 +3535,7 @@
             if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && String(e.key || '').toLowerCase() === 'p') {
               e.preventDefault(); e.stopPropagation();
               document.removeEventListener('keydown', rvKey, true);
-              close(); printReport(invoiceId);
+              close(); printReportChoice(invoiceId);
             }
           }
           document.addEventListener('keydown', rvKey, true);
