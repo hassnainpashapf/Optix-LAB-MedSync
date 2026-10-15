@@ -2123,17 +2123,6 @@
       '        </div>' +
       '      </div>' +
 
-      // Link to Dedicated Test Anatomy Page
-      '      <div class="vitals-card" style="margin-top:14px;padding:12px 14px;background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between" data-pd-switch="pdAnatomy" title="Open Test Anatomy">' +
-      '        <div style="display:flex;align-items:center;gap:10px">' +
-      '          <span style="font-size:22px">◎</span>' +
-      '          <div>' +
-      '            <strong style="color:#0369a1;font-size:12.5px;display:block">Visual Test Anatomy Page</strong>' +
-      '            <p style="margin:2px 0 0;font-size:11px;color:#0284c7">Explore interactive organ systems &amp; body map</p>' +
-      '          </div>' +
-      '        </div>' +
-      '        <span class="badge b-ready" style="font-size:11px;font-weight:700">Open Page →</span>' +
-      '      </div>' +
       '    </div>' +
       '  </div>' +
       '</div>' +
