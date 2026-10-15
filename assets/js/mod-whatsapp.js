@@ -1154,7 +1154,7 @@
     function draw(st) {
       var sig = JSON.stringify([st.state, st.qr, st.number, st.err]); if (sig === last) return; last = sig;
       var w = (DB.get('settings', 'main') || {}).whatsapp || {};
-      var head = '<div class="card wa-card" style="margin-bottom:16px"><div class="card-h"><h3>Connect your WhatsApp number</h3><span class="badge ' + (st.state === 'open' ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.state === 'open' ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">';
+      var head = '<div class="card wa-card" style="margin:0"><div class="card-h"><h3>Connect your WhatsApp number</h3><span class="badge ' + (st.state === 'open' ? 'b-ready' : 'b-pending') + '" style="margin-left:8px">' + (st.state === 'open' ? 'CONNECTED' : 'NOT CONNECTED') + '</span></div><div class="card-b">';
       var body = '';
       if (st.enabled === false) body = '<p class="muted" style="margin:0">Linking a WhatsApp number is not available on this server.</p>';
       else if (st.state === 'open') {
@@ -1231,9 +1231,11 @@
 
     var html =
       '<style>'
-      + '.wa-set-wrap{max-width:1240px;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}'
+      + '.wa-set-wrap{max-width:1240px;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:stretch}'
       + '.wa-set-wrap>.wa-set-head,.wa-set-wrap>.wa-action-bar,.wa-set-wrap>.wa-wide{grid-column:1/-1}'
-      + '#waGwBox .card{margin:0 !important}'
+      + '#waGwBox{display:flex;flex-direction:column;height:100%}'
+      + '#waGwBox .card{margin:0 !important;display:flex;flex-direction:column;height:100%}'
+      + '#waGwBox .card-b{display:flex;flex-direction:column;flex:1}'
       + '.wa-set-wrap .input,.wa-set-wrap .select{border:1.5px solid #8c9ab3;background:#fff}'
       + '.wa-set-wrap .input:focus,.wa-set-wrap .select:focus{border-color:#2f6df6;box-shadow:0 0 0 3px rgba(47,109,246,.16)}'
       + '@media(max-width:1000px){.wa-set-wrap{grid-template-columns:1fr}}'
@@ -1242,9 +1244,9 @@
       + '.wa-brand-ico{width:46px;height:46px;border-radius:12px;background:#25D366;color:#fff;display:grid;place-items:center;box-shadow:0 4px 14px rgba(37,211,102,.35);flex:none}'
       + '.wa-set-title{font-size:18px;font-weight:800;color:#14532d;margin:0 0 3px}'
       + '.wa-set-sub{font-size:13px;color:#166534;margin:0}'
-      + '.wa-card{margin:0;border-radius:14px;box-shadow:0 1px 4px rgba(15,30,46,.04);border:1.5px solid #8c9ab3}'
-      + '.wa-card .card-h{display:flex;align-items:center;justify-content:space-between;padding:11px 16px}'
-      + '.wa-card .card-b{padding:12px 16px}'
+      + '.wa-card{margin:0;border-radius:14px;box-shadow:0 1px 4px rgba(15,30,46,.04);border:1.5px solid #8c9ab3;display:flex;flex-direction:column;height:100%}'
+      + '.wa-card .card-h{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;min-height:50px;box-sizing:border-box}'
+      + '.wa-card .card-b{padding:14px 16px;display:flex;flex-direction:column;flex:1}'
       + '.wa-card-title-group{display:flex;align-items:center;gap:9px}'
       + '.wa-card-ic{font-size:16px}'
       + '.wa-row-item{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid var(--line2)}'
@@ -1281,16 +1283,41 @@
       + '  </div>'
       + '</div>'
       + '<div id="waGwBox"></div>'
-      + '<div class="card wa-card">'
+      + '<div class="card wa-card wa-lab-card">'
       + '  <div class="card-h">'
       + '    <div class="wa-card-title-group"><span class="wa-card-ic">📱</span><h3 style="margin:0">Lab WhatsApp Number</h3></div>'
-      + '    <span class="badge ' + (w.labNumber ? 'b-ready' : 'b-pending') + '">' + (w.labNumber ? 'NUMBER SET' : 'NOT SET') + '</span>'
+      + '    <span class="badge ' + (w.labNumber ? 'b-ready' : 'b-pending') + '" id="waLabBadge">' + (w.labNumber ? 'NUMBER SET' : 'NOT SET') + '</span>'
       + '  </div>'
-      + '  <div class="card-b">'
-      + '    <p class="muted" style="font-size:13px;margin:0 0 10px">This number represents your lab on WhatsApp — printed on bills and invoices, and used as the sender contact.</p>'
-      + '    <div style="display:flex;gap:10px;align-items:center;max-width:440px">'
-      + '      <input class="input" id="waLabNum" placeholder="e.g. 0300-1234567 or 923001234567" value="' + App.esc(w.labNumber || '') + '" style="font-size:14px;font-weight:600">'
-      + '      <button class="btn btn-primary" id="waLabNumSave" type="button" style="flex:none">Save</button>'
+      + '  <div class="card-b" style="justify-content:space-between;gap:14px">'
+      + '    <div>'
+      + '      <p class="muted" style="font-size:13px;margin:0 0 10px">This number represents your lab on WhatsApp — printed on bills and invoices, and used as the sender contact.</p>'
+      + '      <div style="display:flex;gap:10px;align-items:center;width:100%">'
+      + '        <input class="input" id="waLabNum" placeholder="e.g. 0300-1234567 or 923001234567" value="' + App.esc(w.labNumber || '') + '" style="font-size:14px;font-weight:600;flex:1">'
+      + '        <button class="btn btn-primary" id="waLabNumSave" type="button" style="flex:none;font-weight:700">Save</button>'
+      + '      </div>'
+      + '    </div>'
+      + '    <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;font-size:12.5px;color:#334155">'
+      + '      <div style="font-weight:700;color:#0f172a;display:flex;align-items:center;gap:6px">'
+      + '        <span>📋</span><span>Where this number is displayed:</span>'
+      + '      </div>'
+      + '      <div style="display:flex;align-items:flex-start;gap:8px">'
+      + '        <span style="color:#16a34a;font-weight:800">✓</span>'
+      + '        <span><b>Printed Reports &amp; Invoices:</b> Appears in the header and contact footer for patient queries.</span>'
+      + '      </div>'
+      + '      <div style="display:flex;align-items:flex-start;gap:8px">'
+      + '        <span style="color:#16a34a;font-weight:800">✓</span>'
+      + '        <span><b>Online Reports Portal:</b> Displayed as the direct lab helpdesk contact for patients &amp; doctors.</span>'
+      + '      </div>'
+      + '      <div style="display:flex;align-items:flex-start;gap:8px">'
+      + '        <span style="color:#16a34a;font-weight:800">✓</span>'
+      + '        <span><b>Automated Message Sender:</b> WhatsApp delivery alerts and receipts show this number.</span>'
+      + '      </div>'
+      + '    </div>'
+      + '    <div style="margin-top:auto;padding-top:10px;border-top:1px solid var(--line2);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">'
+      + '      <span class="muted" style="font-size:12px">💡 Direct patient queries ke liye yeh SIM WhatsApp par active rakhein.</span>'
+      + '      <a id="waDirectChatBtn" href="' + (w.labNumber ? 'https://wa.me/' + encodeURIComponent(String(w.labNumber).replace(/[^0-9]/g, '')) : '#') + '" target="_blank" class="btn btn-sm btn-ghost" style="font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;' + (!w.labNumber ? 'display:none' : '') + '">'
+      + '        💬 Open WhatsApp Chat'
+      + '      </a>'
       + '    </div>'
       + '  </div>'
       + '</div>'
@@ -1311,9 +1338,14 @@
       + '    <div class="wa-card-title-group"><span class="wa-card-ic">🚨</span><h3 style="margin:0">Doctor &amp; Emergency Clinical Alerts</h3></div>'
       + '    <span class="muted" style="font-size:12.5px">Clinical safety &amp; referral sharing</span>'
       + '  </div>'
-      + '  <div class="card-b">'
+      + '  <div class="card-b" style="justify-content:space-between;gap:12px">'
+      + '    <div>'
       +     rowSwitch('waAutoCritical', autoCrit, 'Critical Value Panic Alerts', 'When a recorded test result is far outside the safe biological limit, immediately alert the referring doctor and your lab number.', '<span class="wa-badge-pill wa-badge-alert">Urgent Safety</span>')
       +     rowSwitch('waAutoDoctor', autoDoc, 'Auto-send Report to Referring Doctor', 'Automatically send a digital copy of the finalized test report to the patient\'s referring doctor on WhatsApp.')
+      + '    </div>'
+      + '    <div style="margin-top:auto;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;color:#991b1b;line-height:1.5">'
+      + '      <b>🚨 Emergency Alerts Protocol:</b> Critical panic alerts bypass normal queue delays and are transmitted immediately to ensure rapid patient intervention.'
+      + '    </div>'
       + '  </div>'
       + '</div>'
       + '<div class="card wa-card wa-wide">'
@@ -1349,7 +1381,24 @@
       var ww = Object.assign(waDefaults(), st.whatsapp || {});
 
       var labNumEl = g('waLabNum');
-      if (labNumEl) ww.labNumber = labNumEl.value.trim();
+      if (labNumEl) {
+        ww.labNumber = labNumEl.value.trim();
+        var labBadge = g('waLabBadge');
+        if (labBadge) {
+          labBadge.className = 'badge ' + (ww.labNumber ? 'b-ready' : 'b-pending');
+          labBadge.textContent = ww.labNumber ? 'NUMBER SET' : 'NOT SET';
+        }
+        var chatBtn = g('waDirectChatBtn');
+        if (chatBtn) {
+          var cleanDigits = String(ww.labNumber).replace(/[^0-9]/g, '');
+          if (cleanDigits) {
+            chatBtn.href = 'https://wa.me/' + cleanDigits;
+            chatBtn.style.display = 'inline-flex';
+          } else {
+            chatBtn.style.display = 'none';
+          }
+        }
+      }
 
       var apEl = g('waAutoPatient'); if (apEl) ww.autoPatient = apEl.checked;
       var adEl = g('waAutoDoctor'); if (adEl) ww.autoDoctor = adEl.checked;
