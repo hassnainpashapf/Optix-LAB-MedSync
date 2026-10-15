@@ -19,6 +19,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+/* Direct Login Entry for Web App, APK, and Desktop EXE: unauthenticated cold launch goes straight to login */
+(function () {
+  var h = location.hash || '';
+  if (!h || h === '#' || h === '#/') {
+    var s = null;
+    try { s = localStorage.getItem('labpos_session'); } catch (e) {}
+    location.hash = s ? '#/dashboard' : '#/login';
+  }
+})();
+</script>
 </head>
 <body>
 <div class="app">

@@ -287,7 +287,7 @@
 
     var canSignup = showLabId && !desk;
     oaPage({
-      back: desk ? '' : '<a class="oa-back" href="' + WEB + '/">&larr; Optix Lab</a>',
+      back: '',
       form:
         '<div class="oa-brand"><span class="oa-mark">' + (st.logo ? '<img src="' + esc(st.logo) + '" alt="Lab logo">' : icon('flask', 22)) + '</span>' +
           '<span class="oa-bt"><b class="oa-bn">' + esc(st.labName || 'Optix Medical Sync') + '</b><small class="oa-tag">' + esc(st.tagline || 'Accurate • Fast • Trusted') + '</small></span></div>' +
@@ -399,7 +399,7 @@
   A.renderSignup = function () {
     if (isDesktop() || !(window.DB && DB.saas) || !window.LABPOS_API) { location.hash = '#/login'; return; }
     oaPage({
-      back: '<a class="oa-back" href="' + WEB + '/">&larr; Optix Lab</a>',
+      back: '<a class="oa-back" href="#/login">&larr; Back to Sign In</a>',
       form:
         '<h1 class="oa-title">Sign Up</h1>' +
         '<div id="suGoogle" class="oa-gwrap" hidden><div class="oa-google" id="suGBtn"></div>' +

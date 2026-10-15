@@ -612,10 +612,10 @@
         if (App.renderApps) App.renderApps(); return;
       }
     } else if (hash === '#/apps') { location.hash = s ? '#/dashboard' : '#/login'; return; }
-    /* auth guard */
+    /* auth guard: direct login page for Web App, APK, and Desktop EXE */
     if (!s && hash !== '#/login' && hash !== '#/signup') { location.hash = '#/login'; return; }
-    if (s && (hash === '#/login' || hash === '#/signup' || hash === '' || hash === '#')) { location.hash = '#/dashboard'; return; }
-    if (!hash) { location.hash = s ? '#/dashboard' : '#/login'; return; }
+    if (s && (hash === '#/login' || hash === '#/signup' || hash === '' || hash === '#' || hash === '#/')) { location.hash = '#/dashboard'; return; }
+    if (!hash || hash === '#' || hash === '#/') { location.hash = s ? '#/dashboard' : '#/login'; return; }
 
     /* Optix Assistant: inject the widget once a session exists; keep it off the login page */
     ensureChatbot(); chatbotVisibility();

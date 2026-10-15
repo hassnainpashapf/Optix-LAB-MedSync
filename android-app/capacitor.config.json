@@ -3,7 +3,7 @@
   "appName": "Optix LAB MedSync",
   "webDir": "www",
   "server": {
-    "url": "https://optix-lab-medsync.pages.dev/app/",
+    "url": "https://optix-lab-medsync.pages.dev/app/#/login",
     "cleartext": false,
     "androidScheme": "https",
     "errorPath": "offline.html",

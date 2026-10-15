@@ -60,7 +60,7 @@ async function boot() {
     if (typeof url === 'string' && /^https:\/\//.test(url)) { try { require('electron').shell.openExternal(url); } catch (e) {} }
     return { action: 'deny' }; /* keep prints and in-app navigation inside */
   });
-  await win.loadURL(`http://127.0.0.1:${started.port}/index.html`);
+  await win.loadURL(`http://127.0.0.1:${started.port}/index.html#/login`);
   updater.wireWindow(win);        /* health marker + auto-rollback on failed boot */
   updater.startUpdateChecks(win); /* heartbeat + version poll, non-blocking */
   win.on('closed', () => { win = null; });
