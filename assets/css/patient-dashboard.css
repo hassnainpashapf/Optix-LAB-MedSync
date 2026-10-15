@@ -1935,8 +1935,9 @@
   width: 100%;
 }
 
-/* Dedicated Longitudinal Trajectory & Biomarker Graphs Page */
-#ptPatientDashboard .pd-layout-graphs {
+/* Dedicated Longitudinal Trajectory & Biomarker Graphs Pages */
+#ptPatientDashboard .pd-layout-graphs,
+#ptPatientDashboard .pd-layout-trajectory {
   width: 100%;
 }
 
