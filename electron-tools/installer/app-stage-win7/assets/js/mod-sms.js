@@ -155,10 +155,10 @@
         + '</div>';
 
       var html = '<style>'
-        + '.sms-set-wrap{max-width:1240px;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}'
+        + '.sms-set-wrap{max-width:1240px;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:stretch}'
         + '.sms-set-wrap>.sms-wide{grid-column:1/-1}'
-        + '.sms-set-wrap .card{margin:0;border:1.5px solid #8c9ab3;border-radius:14px}'
-        + '.sms-set-wrap .card-h{padding:11px 16px}.sms-set-wrap .card-b{padding:12px 16px}'
+        + '.sms-set-wrap .card{margin:0;border:1.5px solid #8c9ab3;border-radius:14px;display:flex;flex-direction:column;height:100%}'
+        + '.sms-set-wrap .card-h{padding:11px 16px;min-height:50px;display:flex;align-items:center;justify-content:space-between;box-sizing:border-box}.sms-set-wrap .card-b{padding:12px 16px}'
         + '.sms-tpl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}'
         + '.wa-row-item{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:10px 0;border-top:1px solid var(--line2)}'
         + '.wa-row-item:first-child{border-top:none;padding-top:2px}'
@@ -172,7 +172,11 @@
         + '.wa-switch input:checked + .wa-slider{background-color:#16a34a}'
         + '.wa-switch input:checked + .wa-slider:before{transform:translateX(20px)}'
         + '@media(max-width:1000px){.sms-set-wrap{grid-template-columns:1fr}.sms-tpl-grid{grid-template-columns:1fr}}'
-        + '.sms-card .card-b{display:flex;flex-direction:column;gap:10px}'
+        + '.sms-card .card-b{display:flex;flex-direction:column;gap:10px;flex:1}'
+        + '.sms-auto-card .card-b{display:flex;flex-direction:column;justify-content:space-between;flex:1}'
+        + '.sms-auto-card .wa-row-item{flex:1;display:flex;align-items:center;justify-content:space-between;padding:12px 0}'
+        + '.sms-auto-card .wa-row-item:first-child{border-top:none;padding-top:0}'
+        + '.sms-auto-card .wa-switch{margin-top:0}'
         + '.sms-field label{display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--mut)}'
         + '.sms-field input,.sms-field textarea,.sms-field select{width:100%;padding:9px 12px;border:1.5px solid #8c9ab3;border-radius:10px;font-size:14px;background:#fff}.sms-field input:focus,.sms-field textarea:focus,.sms-field select:focus{outline:none;border-color:#2f6df6;box-shadow:0 0 0 3px rgba(47,109,246,.16)}'
         + '.sms-field textarea{min-height:64px;resize:vertical}'
@@ -204,7 +208,7 @@
 
         + (gwCard || '')
 
-        + '<div class="card sms-card"><div class="card-h"><h3>Automatic SMS</h3></div><div class="card-b">'
+        + '<div class="card sms-card sms-auto-card"><div class="card-h"><h3>Automatic SMS</h3></div><div class="card-b">'
         + rowSwitch('smsAutoPatient', !!c.autoPatient, 'Report ready \u2192 patient', 'Automatically SMS the patient when their full report is ready (same moment WhatsApp would send).')
         + rowSwitch('smsAutoDoctor', !!c.autoDoctor, 'Report ready \u2192 referring doctor', 'Automatically SMS the referring doctor when the report is ready.')
         + rowSwitch('smsAutoCritical', !!c.autoCritical, 'Critical result alerts', 'Immediately SMS the referring doctor and the lab number on critical values.')
