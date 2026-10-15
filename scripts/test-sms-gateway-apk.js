@@ -44,13 +44,17 @@ assert.ok(webSms.includes('qrcode('), 'mod-sms.js must generate dynamic QR code 
 assert.ok(webSms.includes('POST\', \'link\''), 'mod-sms.js must invoke POST /api/sms/link');
 console.log('✓ mod-sms.js verified with APK download banner, QR generator, Link SIM action, and live test SMS polling');
 
-// 4. Verify mod-dashboard.js
+// 4. Verify mod-dashboard.js is clean without SIM banner (moved to SIM setting page per user request)
 const webDash = fs.readFileSync(path.join(root, 'assets/js/mod-dashboard.js'), 'utf8');
-assert.ok(webDash.includes('dbSimBanner'), 'mod-dashboard.js must contain dbSimBanner');
-assert.ok(webDash.includes('wireSimStatus'), 'mod-dashboard.js must contain wireSimStatus function');
-assert.ok(webDash.includes('🟢 SIM Connected:'), 'mod-dashboard.js must render connected status message');
-assert.ok(webDash.includes('ovHead + simBanner + ovGrid'), 'mod-dashboard.js must place simBanner right above overview grid');
-console.log('✓ mod-dashboard.js verified with live SIM status banner and real-time wireSimStatus hook');
+assert.ok(!webDash.includes('ovHead + simBanner + ovGrid'), 'mod-dashboard.js must not contain simBanner in overview');
+assert.ok(webDash.includes('ovHead + ovGrid'), 'mod-dashboard.js must render overview directly');
+console.log('✓ mod-dashboard.js verified clean without SIM banner (moved to SIM settings)');
+
+// 4b. Verify mod-sms.js contains live SIM status banner
+assert.ok(webSms.includes('smsTopBanner'), 'mod-sms.js must contain smsTopBanner');
+assert.ok(webSms.includes('🟢 SIM Connected:'), 'mod-sms.js must render connected status message');
+assert.ok(webSms.includes('🟡 SIM Configured:'), 'mod-sms.js must render configured status message');
+console.log('✓ mod-sms.js verified with live SIM status banner and real-time status updates');
 
 // 5. Verify mod-downloads.js
 const webDl = fs.readFileSync(path.join(root, 'assets/js/mod-downloads.js'), 'utf8');

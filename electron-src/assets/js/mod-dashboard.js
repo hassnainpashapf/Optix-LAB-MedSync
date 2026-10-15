@@ -373,21 +373,6 @@
     }
     var ovHead = '<div class="ov-head"><div><h1>Overview</h1><p>Here is the Summary of Overall Data</p></div>' +
       '<select class="select" id="ovPeriod" aria-label="Period"><option value="today">Today</option><option value="7">Last 7 days</option><option value="month">This month</option></select></div>';
-    var canSms = role === 'admin' || role === 'reception' || (App.canPage && App.canPage('sms'));
-    var simBanner = canSms
-      ? ('<div id="dbSimBanner" class="db-sim-banner" style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:14px;padding:12px 18px;margin-bottom:18px;transition:all .2s ease">' +
-        '  <div style="display:flex;align-items:center;gap:12px;min-width:0">' +
-        '    <div id="dbSimDot" style="width:10px;height:10px;border-radius:50%;background:#94a3b8;flex-shrink:0"></div>' +
-        '    <div style="min-width:0">' +
-        '      <div id="dbSimTitle" style="font-size:13.5px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📱 SIM SMS Service: Checking connection…</div>' +
-        '      <div id="dbSimSub" style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Checking mobile SMS gateway status…</div>' +
-        '    </div>' +
-        '  </div>' +
-        '  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
-        '    <a href="#/sms" class="btn btn-sm btn-ghost" id="dbSimCta" style="font-weight:600;font-size:12px;padding:5px 12px;border-radius:8px">Open SIM Settings →</a>' +
-        '  </div>' +
-        '</div>')
-      : '';
     var ovGrid = '<div class="ov-grid" id="ovGrid">' + ovCards('today') + '</div>';
     window.__ovCards = ovCards;
 
@@ -925,7 +910,7 @@
     '.ap-tbl .dcell{display:flex;align-items:center;gap:12px}' +
     '</style>' +
 
-    ovHead + simBanner + ovGrid + midHtml +
+    ovHead + ovGrid + midHtml +
     mid2Html +
     patCard +
     '<div id="tip2" class="tip2" hidden></div>' +
