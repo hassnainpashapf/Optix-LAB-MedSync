@@ -2482,24 +2482,8 @@
       '    </div>' +
       '  </div>' +
 
-      // Full-Width Stacked Cards: 1) Medication Adherence on top (Full Page), 2) Diagnostic Tests below it
-      '  <div class="vitals-subcards-row vitals-stacked-cards" style="display:flex;flex-direction:column;gap:20px;width:100%">' +
-      // Full-Width Card 1: Patient Medication Adherence
-      '    <div class="vitals-card" id="pdMedsOverviewCard" style="width:100%">' +
-      '      <div class="vitals-card-head" style="margin-bottom:12px">' +
-      '        <div>' +
-      '          <h3 style="display:flex;align-items:center;gap:8px"><span>💊</span><span>Medication Adherence</span></h3>' +
-      '          <p class="pd-sub" style="margin-top:2px" id="medsSubtitle">' + esc(curOrg.medsSub) + '</p>' +
-      '        </div>' +
-      '        <span class="badge" style="font-size:11px;font-weight:600;background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;padding:3px 8px;border-radius:6px">' + (curOrg.meds || []).length + ' Prescribed</span>' +
-      '      </div>' +
-      renderMedicationKpisHtml(curOrg.meds) +
-      '      <div class="vitals-med-list" id="medsListWrap">' +
-      renderMedListHtml(curOrg.meds) +
-      '      </div>' +
-      '    </div>' +
-
-      // Full-Width Card 2: Diagnostic Laboratory Tests (Shown below Medication Adherence)
+      // Full-Width Card: Diagnostic Laboratory Tests
+      '  <div class="vitals-subcards-row" style="margin-top:20px;width:100%">' +
       '    <div class="vitals-card" id="pdDiagnosticTestsCard" style="width:100%">' +
       '      <div class="vitals-card-head" style="margin-bottom:10px">' +
       '        <div>' +

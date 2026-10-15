@@ -151,15 +151,19 @@ console.log('✓ Daily Rehabilitation Plan cleanly removed as requested');
 assert.ok(!html.includes('Lung Capacity Efficiency'), 'Lung Capacity Efficiency cleanly removed');
 assert.ok(!html.includes('vitals-big-score'), 'Simulated big score cleanly removed');
 assert.ok(!html.includes('vitals-progress-track'), 'Simulated progress track cleanly removed');
-assert.ok(html.includes('Medication Adherence'), 'Medication Adherence present');
+// Verify Medication Adherence is removed from Patient Details Overview (pdOverview) but active on dedicated dashboard page (pdMeds)
+const overviewPart = html.slice(html.indexOf('id="pdOverview"'), html.indexOf('id="pdTrends"'));
+assert.ok(!overviewPart.includes('pdMedsOverviewCard'), 'Medication Adherence card cleanly removed from Patient Details Overview');
+assert.ok(html.includes('id="pdMeds"'), 'Dedicated Medication Adherence page preserved');
+assert.ok(html.includes('Medication Adherence'), 'Medication Adherence present in dedicated dashboard');
 assert.ok(html.includes('Ventolin'), 'Ventolin med present');
 assert.ok(html.includes('Pulmicort'), 'Pulmicort med present');
 assert.ok(html.includes('Mucosolvan'), 'Mucosolvan med present');
-assert.ok(html.includes('Active Prescriptions'), 'Medication KPI Active Prescriptions present in Vitals Overview');
-assert.ok(html.includes('Dose Compliance'), 'Medication KPI Dose Compliance present in Vitals Overview');
-assert.ok(html.includes('Drug Safety Shield'), 'Medication KPI Drug Safety Shield present in Vitals Overview');
-assert.ok(html.includes('Daily Timing Slots'), 'Medication KPI Daily Timing Slots present in Vitals Overview');
-console.log('✓ Simulated Organ Capacity Efficiency cleanly removed, Lab Tests Diagnostic Effect cleanly removed, Medication Adherence & KPI Cards verified');
+assert.ok(html.includes('Active Prescriptions'), 'Medication KPI Active Prescriptions present');
+assert.ok(html.includes('Dose Compliance'), 'Medication KPI Dose Compliance present');
+assert.ok(html.includes('Drug Safety Shield'), 'Medication KPI Drug Safety Shield present');
+assert.ok(html.includes('Daily Timing Slots'), 'Medication KPI Daily Timing Slots present');
+console.log('✓ Medication Adherence removed from Overview and verified on dedicated Medication Dashboard');
 
 // 5. Test Right Stage: Anatomical Organ & Carousel
 assert.ok(html.includes('vitals-stage-card'), 'Interactive organ stage card present');
