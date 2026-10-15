@@ -3376,10 +3376,6 @@
           '<button type="button" class="btn btn-sm" id="rvTopDownloadPdf" style="font-weight:700;display:inline-flex;align-items:center;gap:6px;background:#059669;color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;box-shadow:0 1px 3px rgba(5,150,105,0.25)">' +
             '<span>📥</span> <span>Download PDF</span>' +
           '</button>' +
-          '<div style="display:inline-flex;align-items:center;background:#e2e8f0;border-radius:8px;padding:2px;font-size:12px">' +
-            '<button type="button" id="rvModePdf" style="border:none;border-radius:6px;padding:4px 10px;cursor:pointer;background:#fff;color:#0f172a;font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,0.08);transition:all .15s">📄 PDF View</button>' +
-            '<button type="button" id="rvModeHtml" style="border:none;border-radius:6px;padding:4px 10px;cursor:pointer;background:transparent;color:#64748b;font-weight:600;transition:all .15s">🌐 Web View</button>' +
-          '</div>' +
           topAiBtnHtml +
         '</div>' +
         '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
@@ -3416,37 +3412,11 @@
       { wide: true,
         onOpen: function (ov, close) {
           var activeBlobUrl = null;
-          var modePdfBtn = document.getElementById('rvModePdf');
-          var modeHtmlBtn = document.getElementById('rvModeHtml');
           var pdfLoading = document.getElementById('rvPdfLoading');
           var pdfWrap = document.getElementById('rvPdfWrap');
           var htmlWrap = document.getElementById('rvHtmlFrameWrap');
 
-          function setViewMode(mode) {
-            if (mode === 'html') {
-              if (pdfWrap) pdfWrap.style.display = 'none';
-              if (pdfLoading) pdfLoading.style.display = 'none';
-              if (htmlWrap) htmlWrap.style.display = 'block';
-              if (modeHtmlBtn) { modeHtmlBtn.style.background = '#fff'; modeHtmlBtn.style.color = '#0f172a'; modeHtmlBtn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)'; modeHtmlBtn.style.fontWeight = '700'; }
-              if (modePdfBtn) { modePdfBtn.style.background = 'transparent'; modePdfBtn.style.color = '#64748b'; modePdfBtn.style.boxShadow = 'none'; modePdfBtn.style.fontWeight = '600'; }
-            } else {
-              if (htmlWrap) htmlWrap.style.display = 'none';
-              if (activeBlobUrl) {
-                if (pdfLoading) pdfLoading.style.display = 'none';
-                if (pdfWrap) pdfWrap.style.display = 'block';
-              } else {
-                if (pdfLoading) pdfLoading.style.display = 'flex';
-                if (pdfWrap) pdfWrap.style.display = 'none';
-              }
-              if (modePdfBtn) { modePdfBtn.style.background = '#fff'; modePdfBtn.style.color = '#0f172a'; modePdfBtn.style.boxShadow = '0 1px 2px rgba(0,0,0,0.08)'; modePdfBtn.style.fontWeight = '700'; }
-              if (modeHtmlBtn) { modeHtmlBtn.style.background = 'transparent'; modeHtmlBtn.style.color = '#64748b'; modeHtmlBtn.style.boxShadow = 'none'; modeHtmlBtn.style.fontWeight = '600'; }
-            }
-          }
-
-          if (modePdfBtn) modePdfBtn.addEventListener('click', function () { setViewMode('pdf'); });
-          if (modeHtmlBtn) modeHtmlBtn.addEventListener('click', function () { setViewMode('html'); });
-
-          // Load true PDF preview by default
+          // Load true PDF preview exclusively
           buildReportPdfBlobUrl(invoiceId).then(function (res) {
             if (!document.body.contains(ov)) return;
             if (res && res.blobUrl) {
@@ -3456,13 +3426,15 @@
                 if (pdfLoading) pdfLoading.style.display = 'none';
                 pdfWrap.style.display = 'block';
               }
-            } else {
-              setViewMode('html');
+            } else if (htmlWrap) {
+              if (pdfLoading) pdfLoading.style.display = 'none';
+              htmlWrap.style.display = 'block';
             }
           }).catch(function (err) {
             console.error('PDF view loading failed:', err);
             if (!document.body.contains(ov)) return;
-            setViewMode('html');
+            if (pdfLoading) pdfLoading.style.display = 'none';
+            if (htmlWrap) htmlWrap.style.display = 'block';
           });
 
           function handleDownloadPdf() {
