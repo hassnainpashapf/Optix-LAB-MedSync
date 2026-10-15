@@ -1052,7 +1052,7 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 /* 2-Column Responsive Layout */
 .vitals-main-grid {
   display: grid;
-  grid-template-columns: 1.18fr 0.82fr;
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   align-items: stretch;
 }
@@ -1060,6 +1060,19 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   .vitals-main-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.vitals-left-col,
+.vitals-right-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.vitals-left-col > .vitals-card,
+.vitals-right-col > .vitals-stage-card {
+  flex: 1;
+  height: 100%;
 }
 
 .vitals-card {
@@ -1473,13 +1486,14 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   align-items: center;
   justify-content: center;
   position: relative;
-  min-height: 360px;
+  min-height: 420px;
   user-select: none;
 }
 .vitals-organ-interactive-box {
   width: 100%;
-  max-width: 340px;
-  height: 380px;
+  max-width: 460px;
+  height: 100%;
+  min-height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;

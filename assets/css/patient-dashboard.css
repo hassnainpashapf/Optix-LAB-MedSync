@@ -1,5 +1,5 @@
 #ptPatientDashboard{color:#1b2a4a;margin:0 0 16px 0;font-family:inherit;background:#f8fafb;border-radius:22px;padding:16px}
-#ptPatientDashboard .pd-layout{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(300px,1fr);gap:20px;align-items:start}
+#ptPatientDashboard .pd-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
 #ptPatientDashboard .pd-card{background:#fff;border:1px solid #e8edf3;border-radius:18px;padding:17px 19px;min-width:0}
 #ptPatientDashboard .pd-header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
 #ptPatientDashboard .pd-avatar{width:43px;height:43px;flex:0 0 43px;display:grid;place-items:center;border-radius:50%;background:#eaf3ff;color:#4a8bc9;font-size:14px;font-weight:700}
@@ -365,7 +365,7 @@
 
 #ptPatientDashboard .vitals-main-grid {
   display: grid;
-  grid-template-columns: 1.18fr 0.82fr;
+  grid-template-columns: 1fr 1fr;
   gap: 20px;
   align-items: stretch;
 }
@@ -373,6 +373,19 @@
   #ptPatientDashboard .vitals-main-grid {
     grid-template-columns: 1fr;
   }
+}
+
+#ptPatientDashboard .vitals-left-col,
+#ptPatientDashboard .vitals-right-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+#ptPatientDashboard .vitals-left-col > .vitals-card,
+#ptPatientDashboard .vitals-right-col > .vitals-stage-card {
+  flex: 1;
+  height: 100%;
 }
 
 #ptPatientDashboard .vitals-card {
@@ -788,13 +801,14 @@
   align-items: center;
   justify-content: center;
   position: relative;
-  min-height: 360px;
+  min-height: 420px;
   user-select: none;
 }
 #ptPatientDashboard .vitals-organ-interactive-box {
   width: 100%;
-  max-width: 340px;
-  height: 380px;
+  max-width: 460px;
+  height: 100%;
+  min-height: 420px;
   display: flex;
   align-items: center;
   justify-content: center;

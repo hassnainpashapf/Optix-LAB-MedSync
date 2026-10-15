@@ -1040,7 +1040,7 @@
         '</g>';
     }).join('');
 
-    return '<svg viewBox="0 0 320 540" width="100%" height="auto" style="max-height:480px;display:block;margin:0 auto;overflow:visible">' +
+    return '<svg viewBox="0 0 320 540" width="100%" height="auto" style="max-height:500px;display:block;margin:0 auto;overflow:visible">' +
       '<defs>' +
       '  <linearGradient id="bodyMeshGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
       '    <stop offset="0%" stop-color="#334155" stop-opacity="0.95"/>' +
@@ -1989,9 +1989,9 @@
 
       // Center & Right Main Vitals Overview Layout
       '<div class="pd-layout-vitals" id="pdOverview">' +
-      // 2-Column Responsive Main Grid
+      // 2-Column Responsive Main Grid (Equal 50/50 Split)
       '  <div class="vitals-main-grid">' +
-      // LEFT COLUMN (~60%)
+      // LEFT COLUMN (50%)
       '    <div class="vitals-left-col">' +
       // CARD 1: Patient Details Overview & Stress Patterns
       '      <div class="vitals-card" id="pdPatientCardTop">' +
@@ -2015,7 +2015,7 @@
       '      </div>' +
       '    </div>' +
 
-      // RIGHT COLUMN: INTERACTIVE ORGAN ANATOMICAL MODEL STAGE (~40%)
+      // RIGHT COLUMN: INTERACTIVE ORGAN ANATOMICAL MODEL STAGE (50% Equal Split)
       '    <div class="vitals-right-col">' +
       '      <div class="vitals-stage-card">' +
       // 3D View Mode Toggle Bar
