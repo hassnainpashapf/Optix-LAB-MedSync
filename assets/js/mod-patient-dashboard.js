@@ -1227,6 +1227,185 @@
   }
 
   /* Render Visual Interactive Multi-Biomarker Longitudinal Trajectory Vector Graph */
+  /* Helper to layout SVG trajectory labels without collision */
+  function layoutTrajectoryLabels(items, minY, maxY, minGap) {
+    if (!items || !items.length) return;
+    minGap = minGap || 24;
+
+    // Layout Current labels
+    var sortedCur = items.slice().sort(function (a, b) { return a.yCur - b.yCur; });
+    for (var i = 0; i < sortedCur.length; i++) {
+      sortedCur[i].labelYCur = sortedCur[i].yCur;
+    }
+    for (var i = 1; i < sortedCur.length; i++) {
+      if (sortedCur[i].labelYCur < sortedCur[i - 1].labelYCur + minGap) {
+        sortedCur[i].labelYCur = sortedCur[i - 1].labelYCur + minGap;
+      }
+    }
+    if (sortedCur.length > 0 && sortedCur[sortedCur.length - 1].labelYCur > maxY) {
+      sortedCur[sortedCur.length - 1].labelYCur = maxY;
+      for (var j = sortedCur.length - 2; j >= 0; j--) {
+        if (sortedCur[j].labelYCur > sortedCur[j + 1].labelYCur - minGap) {
+          sortedCur[j].labelYCur = sortedCur[j + 1].labelYCur - minGap;
+        }
+      }
+    }
+    if (sortedCur.length > 0 && sortedCur[0].labelYCur < minY) {
+      sortedCur[0].labelYCur = minY;
+      for (var k = 1; k < sortedCur.length; k++) {
+        if (sortedCur[k].labelYCur < sortedCur[k - 1].labelYCur + minGap) {
+          sortedCur[k].labelYCur = sortedCur[k - 1].labelYCur + minGap;
+        }
+      }
+    }
+
+    // Layout Previous labels (for items that have prev values)
+    var sortedPrev = items.filter(function (x) { return x.hasPrevVal; }).sort(function (a, b) { return a.yPrev - b.yPrev; });
+    for (var i = 0; i < sortedPrev.length; i++) {
+      sortedPrev[i].labelYPrev = sortedPrev[i].yPrev;
+    }
+    for (var i = 1; i < sortedPrev.length; i++) {
+      if (sortedPrev[i].labelYPrev < sortedPrev[i - 1].labelYPrev + minGap) {
+        sortedPrev[i].labelYPrev = sortedPrev[i - 1].labelYPrev + minGap;
+      }
+    }
+    if (sortedPrev.length > 0 && sortedPrev[sortedPrev.length - 1].labelYPrev > maxY) {
+      sortedPrev[sortedPrev.length - 1].labelYPrev = maxY;
+      for (var j = sortedPrev.length - 2; j >= 0; j--) {
+        if (sortedPrev[j].labelYPrev > sortedPrev[j + 1].labelYPrev - minGap) {
+          sortedPrev[j].labelYPrev = sortedPrev[j + 1].labelYPrev - minGap;
+        }
+      }
+    }
+    if (sortedPrev.length > 0 && sortedPrev[0].labelYPrev < minY) {
+      sortedPrev[0].labelYPrev = minY;
+      for (var k = 1; k < sortedPrev.length; k++) {
+        if (sortedPrev[k].labelYPrev < sortedPrev[k - 1].labelYPrev + minGap) {
+          sortedPrev[k].labelYPrev = sortedPrev[k - 1].labelYPrev + minGap;
+        }
+      }
+    }
+  }
+
+  /* Render SVG Inner Content for Trajectory Graph */
+  function renderTrajectorySvgContent(comps, prevDate, curDate, filter, isSingleVisit) {
+    filter = filter || 'key';
+    var filteredComps = [];
+
+    if (filter === 'key') {
+      // Pick top 5-6 key parameters: outside reference first, then critical, then prominent
+      var outside = comps.filter(function (c) { return c.isOutside; });
+      var changed = comps.filter(function (c) { return !c.isOutside && c.badgeClass !== 'stable'; });
+      var stable = comps.filter(function (c) { return !c.isOutside && c.badgeClass === 'stable'; });
+      filteredComps = outside.concat(changed).concat(stable).slice(0, 6);
+    } else if (filter.indexOf('param:') === 0) {
+      var pKey = filter.slice(6);
+      filteredComps = comps.filter(function (c) { return c.paramKey === pKey; });
+      if (!filteredComps.length) filteredComps = comps.slice(0, 1);
+    } else if (filter === 'all') {
+      filteredComps = comps.slice(0, 10); // max 10 to guarantee clean readability
+    } else {
+      filteredComps = comps.filter(function (c) { return c.organ === filter; });
+      if (!filteredComps.length) filteredComps = comps.slice(0, 5);
+      filteredComps = filteredComps.slice(0, 8);
+    }
+
+    var colorPalette = ['#2563eb', '#059669', '#dc2626', '#d97706', '#7c3aed', '#0284c7', '#db2777', '#0d9488'];
+
+    // Map items with initial Y coordinates
+    var items = filteredComps.map(function (c, idx) {
+      var bounds = parseRefBounds(c.refRange);
+      var yPrev = computeTrajectoryY(c.prevVal, bounds, idx);
+      var yCur = computeTrajectoryY(c.curVal, bounds, idx);
+      var hasPrevVal = !isSingleVisit && c.prevVal != null && c.prevVal !== '—';
+      return {
+        c: c,
+        idx: idx,
+        color: colorPalette[idx % colorPalette.length],
+        bounds: bounds,
+        yPrev: yPrev,
+        yCur: yCur,
+        hasPrevVal: hasPrevVal,
+        labelYCur: yCur,
+        labelYPrev: yPrev
+      };
+    });
+
+    // Space labels to completely eliminate text collisions
+    layoutTrajectoryLabels(items, 50, 310, 24);
+
+    var vectorsSvg = items.map(function (item) {
+      var c = item.c;
+      var color = item.color;
+      var deltaText = (c.status === 'baseline' || isSingleVisit) ? 'Baseline' : ((c.diff > 0 ? '+' : '') + c.diff + (c.unit ? ' ' + c.unit : '') + ' (' + (c.pct > 0 ? '+' : '') + c.pct + '%)');
+      var deltaPillColor = (c.status === 'baseline' || isSingleVisit) ? '#475569' : (c.badgeClass === 'improved' ? '#059669' : (c.badgeClass === 'deteriorated' ? '#dc2626' : '#475569'));
+
+      var curve = '';
+      if (item.hasPrevVal) {
+        curve = '<path d="M 175,' + item.yPrev + ' C 350,' + item.yPrev + ' 500,' + item.yCur + ' 670,' + item.yCur + '" fill="none" stroke="' + color + '" stroke-width="2.8" stroke-linecap="round" opacity="0.9" />' +
+          '<circle cx="175" cy="' + item.yPrev + '" r="5.5" fill="#ffffff" stroke="' + color + '" stroke-width="2.5" />' +
+          (Math.abs(item.labelYPrev - item.yPrev) > 3 ? ('<line x1="175" y1="' + item.yPrev + '" x2="160" y2="' + item.labelYPrev + '" stroke="' + color + '" stroke-width="1" stroke-dasharray="2 2" opacity="0.6"/>') : '') +
+          '<text x="154" y="' + (item.labelYPrev + 4) + '" text-anchor="end" font-size="11" font-weight="700">' +
+          '<tspan fill="#334155">' + esc(c.paramName) + ': </tspan>' +
+          '<tspan fill="#0f172a">' + esc(c.prevVal) + (c.unit ? ' ' + esc(c.unit) : '') + '</tspan>' +
+          '</text>';
+      } else {
+        // Baseline visit: Draw clean guideline connecting baseline milestone to current value
+        curve = '<path d="M 175,' + item.labelYCur + ' L 670,' + item.yCur + '" fill="none" stroke="' + color + '" stroke-width="1.8" stroke-dasharray="4 3" opacity="0.5" />' +
+          '<circle cx="175" cy="' + item.labelYCur + '" r="4.5" fill="#ffffff" stroke="' + color + '" stroke-width="2" />' +
+          '<text x="162" y="' + (item.labelYCur + 4) + '" text-anchor="end" font-size="10.5" font-weight="600" fill="#64748b">' + esc(c.paramName) + ' (Baseline)</text>';
+      }
+
+      var leaderLine = (Math.abs(item.labelYCur - item.yCur) > 3) ?
+        ('<line x1="670" y1="' + item.yCur + '" x2="686" y2="' + item.labelYCur + '" stroke="' + color + '" stroke-width="1.2" stroke-dasharray="2 2" opacity="0.65"/>') : '';
+
+      return '<g class="pd-trajectory-vector" data-biomarker="' + esc(c.paramKey) + '">' +
+        curve +
+        leaderLine +
+        '<circle cx="670" cy="' + item.yCur + '" r="6.5" fill="' + color + '" stroke="#ffffff" stroke-width="2.5" />' +
+        '<text x="692" y="' + (item.labelYCur + 4) + '" text-anchor="start" font-size="11.5" font-weight="700">' +
+        '<tspan fill="#0f172a">' + esc(c.paramName) + ': </tspan>' +
+        '<tspan fill="' + (c.isOutside ? '#b91c1c' : '#334155') + '">' + esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + ' </tspan>' +
+        '<tspan font-size="10" font-weight="700" fill="' + deltaPillColor + '">[' + esc(deltaText) + ']</tspan>' +
+        '</text>' +
+        '</g>';
+    }).join('');
+
+    var svgHeight = Math.max(340, 60 + (items.length * 28));
+
+    return '<svg viewBox="0 0 920 ' + svgHeight + '" width="100%" height="auto" style="min-width:720px;display:block;margin:0 auto;overflow:visible">' +
+      '<defs>' +
+      '  <linearGradient id="normalZoneGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
+      '    <stop offset="0%" stop-color="#ecfdf5" stop-opacity="0.9"/>' +
+      '    <stop offset="100%" stop-color="#d1fae5" stop-opacity="0.85"/>' +
+      '  </linearGradient>' +
+      '</defs>' +
+
+      // Normal reference band (Center Zone)
+      '<rect x="60" y="122" width="800" height="84" fill="url(#normalZoneGrad)" rx="8" stroke="#a7f3d0" stroke-width="1.2" stroke-dasharray="4 3"/>' +
+      '<text x="460" y="168" text-anchor="middle" font-size="11.5" font-weight="700" fill="#047857" opacity="0.9">✓ STANDARD PHYSIOLOGICAL REFERENCE ZONE (NORMAL)</text>' +
+
+      // High abnormal zone banner
+      '<text x="460" y="70" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b91c1c" opacity="0.65">▲ ELEVATED / SUPRA-NORMAL ABNORMAL ZONE</text>' +
+
+      // Low abnormal zone banner
+      '<text x="460" y="260" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0284c7" opacity="0.65">▼ SUB-NORMAL / DEFICIENT ABNORMAL ZONE</text>' +
+
+      // Previous milestone vertical guide
+      '<line x1="175" y1="40" x2="175" y2="' + (svgHeight - 20) + '" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+      '<rect x="85" y="10" width="180" height="26" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/>' +
+      '<text x="175" y="27" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">PREVIOUS: ' + esc(prevDate) + '</text>' +
+
+      // Current milestone vertical guide
+      '<line x1="670" y1="40" x2="670" y2="' + (svgHeight - 20) + '" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+      '<rect x="580" y="10" width="180" height="26" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>' +
+      '<text x="670" y="27" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d4ed8">CURRENT: ' + esc(curDate) + '</text>' +
+
+      vectorsSvg +
+      '</svg>';
+  }
+
+  /* Render Visual Interactive Multi-Biomarker Longitudinal Trajectory Vector Graph */
   function renderBiomarkerTrajectoriesGraphCard(labData) {
     var comps = labData.comparisons || [];
     var prevDate = labData.pastInvoice ? (labData.pastInvoice.createdAt ? String(labData.pastInvoice.createdAt).slice(0, 10) : 'Previous Visit') : 'Previous Visit';
@@ -1248,84 +1427,55 @@
         '</div>';
     }
 
-    var colorPalette = ['#f59e0b', '#ef4444', '#0284c7', '#8b5cf6', '#10b981', '#ec4899', '#06b6d4', '#6366f1'];
+    // Filter selector options
+    var optionsHtml = '<option value="key">⭐ Top Key Biomarkers (Clean View)</option>' +
+      '<option value="liver">🫀 Liver Biomarkers (LFT)</option>' +
+      '<option value="kidneys">🫘 Kidney / Renal Biomarkers (RFT)</option>' +
+      '<option value="blood">🩸 Hematology / CBC Biomarkers</option>' +
+      '<option value="all">📊 All Biomarkers (Staggered)</option>';
 
-    var vectorsSvg = comps.map(function (c, idx) {
-      var color = colorPalette[idx % colorPalette.length];
-      var bounds = parseRefBounds(c.refRange);
-      var yPrev = computeTrajectoryY(c.prevVal, bounds, idx);
-      var yCur = computeTrajectoryY(c.curVal, bounds, idx);
-
-      var hasPrevVal = c.prevVal != null && c.prevVal !== '—';
-      var deltaText = (c.status === 'baseline') ? 'Baseline' : ((c.diff > 0 ? '+' : '') + c.diff + (c.unit ? ' ' + c.unit : '') + ' (' + (c.pct > 0 ? '+' : '') + c.pct + '%)');
-      var deltaPillColor = c.badgeClass === 'improved' ? '#059669' : (c.badgeClass === 'deteriorated' ? '#dc2626' : '#475569');
-
-      var curve = hasPrevVal ?
-        ('<path d="M 165,' + yPrev + ' C 340,' + yPrev + ' 480,' + yCur + ' 670,' + yCur + '" fill="none" stroke="' + color + '" stroke-width="2.8" stroke-linecap="round" opacity="0.9" />' +
-         '<circle cx="165" cy="' + yPrev + '" r="5.5" fill="#ffffff" stroke="' + color + '" stroke-width="2.5" />' +
-         '<text x="152" y="' + (yPrev + 4) + '" text-anchor="end" font-size="11" font-weight="700" fill="#334155">' + esc(c.prevVal) + (c.unit ? ' ' + esc(c.unit) : '') + '</text>') :
-        '';
-
-      return '<g class="pd-trajectory-vector" data-biomarker="' + esc(c.paramKey) + '">' +
-        curve +
-        '<circle cx="670" cy="' + yCur + '" r="7" fill="' + color + '" stroke="#ffffff" stroke-width="2.5" />' +
-        '<text x="686" y="' + (yCur + 4) + '" text-anchor="start" font-size="11" font-weight="700" fill="#0f172a">' +
-        esc(c.curVal) + (c.unit ? ' ' + esc(c.unit) : '') + ' ' +
-        '<tspan font-size="10.5" font-weight="700" fill="' + deltaPillColor + '">[' + esc(deltaText) + ']</tspan>' +
-        '</text>' +
-        '</g>';
+    var paramOptionsHtml = comps.map(function (c) {
+      return '<option value="param:' + esc(c.paramKey) + '">' + esc(c.paramName) + ' (' + esc(c.testName) + ')</option>';
     }).join('');
 
-    var legendHtml = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">' +
-      comps.map(function (c, idx) {
-        var color = colorPalette[idx % colorPalette.length];
-        return '<span style="display:inline-flex;align-items:center;gap:5px;background:#ffffff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;color:#334155">' +
-          '<span style="width:8px;height:8px;border-radius:50%;background:' + color + '"></span>' +
-          esc(c.paramName) +
-          '</span>';
-      }).join('') +
-      '</div>';
+    var isSingleVisit = !labData.pastInvoice;
+    var infoNoticeHtml = isSingleVisit ?
+      ('<div style="display:flex;align-items:flex-start;gap:10px;background:#eff6ff;border:1px solid #dbeafe;border-radius:10px;padding:10px 14px;margin-bottom:12px">' +
+       '  <span style="font-size:16px;line-height:1.2">ℹ️</span>' +
+       '  <div style="font-size:12px;color:#1e40af;line-height:1.4">' +
+       '    <strong>Initial Clinical Baseline Recorded (' + esc(curDate) + '):</strong> ' +
+       '    Biomarkers are mapped into physiological reference zones. Directional trajectory shift vectors will connect here automatically once a subsequent visit is logged.' +
+       '  </div>' +
+       '</div>') : '';
 
     return '<div class="vitals-card pd-trends-graph-card" style="margin-top:16px">' +
-      '<div class="vitals-card-head">' +
+      '<div class="vitals-card-head" style="flex-wrap:wrap;gap:10px">' +
       '  <div>' +
       '    <h3 style="display:flex;align-items:center;gap:8px"><span>📊</span><span>Longitudinal Trajectory Vector Graph</span></h3>' +
       '    <p class="vitals-subcard-subtitle" style="margin:2px 0 0">Biomarker directional vectors plotted relative to physiological reference zone.</p>' +
       '  </div>' +
-      '  <div style="font-size:11.5px;color:#64748b;font-weight:600">' +
-      '    <span>Normal Reference: </span><span style="color:#059669;font-weight:700">Zone (Center)</span>' +
+      '  <div style="display:flex;align-items:center;gap:8px">' +
+      '    <label for="pdTrajectorySelect" style="font-size:12px;font-weight:700;color:#475569">Filter Parameter:</label>' +
+      '    <select id="pdTrajectorySelect" class="pd-test-select" style="font-size:12px;padding:6px 10px;border-radius:8px;border:1px solid #cbd5e1;background:#ffffff;color:#0f172a">' +
+      optionsHtml +
+      '      <optgroup label="Single Biomarker Focus">' + paramOptionsHtml + '</optgroup>' +
+      '    </select>' +
       '  </div>' +
       '</div>' +
-      legendHtml +
-      '<div class="pd-trends-svg-wrap" style="width:100%;overflow-x:auto;background:#fafbfc;border:1px solid #e2e8f0;border-radius:14px;padding:12px 8px;margin-top:14px">' +
-      '  <svg viewBox="0 0 850 330" width="100%" height="auto" style="min-width:680px;display:block;margin:0 auto;overflow:visible">' +
-      '    <defs>' +
-      '      <linearGradient id="normalZoneGrad" x1="0%" y1="0%" x2="0%" y2="100%">' +
-      '        <stop offset="0%" stop-color="#ecfdf5" stop-opacity="0.9"/>' +
-      '        <stop offset="100%" stop-color="#d1fae5" stop-opacity="0.85"/>' +
-      '      </linearGradient>' +
-      '    </defs>' +
-      // Milestones background guides
-      '    <line x1="165" y1="40" x2="165" y2="295" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="4 3"/>' +
-      '    <rect x="75" y="10" width="180" height="26" rx="6" fill="#f1f5f9" stroke="#e2e8f0"/>' +
-      '    <text x="165" y="27" text-anchor="middle" font-size="11.5" font-weight="700" fill="#334155">PREVIOUS: ' + esc(prevDate) + '</text>' +
 
-      '    <line x1="670" y1="40" x2="670" y2="295" stroke="#93c5fd" stroke-width="1.5" stroke-dasharray="4 3"/>' +
-      '    <rect x="580" y="10" width="180" height="26" rx="6" fill="#eff6ff" stroke="#bfdbfe"/>' +
-      '    <text x="670" y="27" text-anchor="middle" font-size="11.5" font-weight="700" fill="#1d4ed8">CURRENT: ' + esc(curDate) + '</text>' +
+      infoNoticeHtml +
 
-      // Normal reference band
-      '    <rect x="60" y="122" width="730" height="84" fill="url(#normalZoneGrad)" rx="6" stroke="#a7f3d0" stroke-width="1.2" stroke-dasharray="4 3"/>' +
-      '    <text x="420" y="168" text-anchor="middle" font-size="11.5" font-weight="700" fill="#047857" opacity="0.85">✓ STANDARD PHYSIOLOGICAL REFERENCE ZONE (NORMAL)</text>' +
+      // Organ Filter Quick Buttons
+      '<div class="pd-trajectory-chips" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 12px">' +
+      '  <button type="button" class="btn btn-ghost btn-xs active" data-pd-traj="key" style="font-size:11.5px;padding:3px 10px;border-radius:6px;border:1px solid #2563eb;background:#eff6ff;color:#1d4ed8;font-weight:700">⭐ Key Biomarkers</button>' +
+      '  <button type="button" class="btn btn-ghost btn-xs" data-pd-traj="blood" style="font-size:11.5px;padding:3px 10px;border-radius:6px;border:1px solid #cbd5e1;font-weight:600">🩸 Blood (CBC)</button>' +
+      '  <button type="button" class="btn btn-ghost btn-xs" data-pd-traj="liver" style="font-size:11.5px;padding:3px 10px;border-radius:6px;border:1px solid #cbd5e1;font-weight:600">🫀 Liver</button>' +
+      '  <button type="button" class="btn btn-ghost btn-xs" data-pd-traj="kidneys" style="font-size:11.5px;padding:3px 10px;border-radius:6px;border:1px solid #cbd5e1;font-weight:600">🫘 Kidneys</button>' +
+      '  <button type="button" class="btn btn-ghost btn-xs" data-pd-traj="all" style="font-size:11.5px;padding:3px 10px;border-radius:6px;border:1px solid #cbd5e1;font-weight:600">🌐 All Biomarkers</button>' +
+      '</div>' +
 
-      // High abnormal zone banner
-      '    <text x="420" y="72" text-anchor="middle" font-size="10.5" font-weight="700" fill="#b91c1c" opacity="0.65">▲ ELEVATED / SUPRA-NORMAL ABNORMAL ZONE</text>' +
-
-      // Low abnormal zone banner
-      '    <text x="420" y="260" text-anchor="middle" font-size="10.5" font-weight="700" fill="#0284c7" opacity="0.65">▼ SUB-NORMAL / DEFICIENT ABNORMAL ZONE</text>' +
-
-      vectorsSvg +
-      '  </svg>' +
+      '<div class="pd-trends-svg-wrap" id="pdTrajectorySvgContainer" style="width:100%;overflow-x:auto;background:#fafbfc;border:1px solid #e2e8f0;border-radius:14px;padding:12px 8px">' +
+      renderTrajectorySvgContent(comps, prevDate, curDate, 'key', isSingleVisit) +
       '</div>' +
       '</div>';
   }
@@ -2491,6 +2641,41 @@
     host.querySelectorAll('[data-pd-switch]').forEach(function(el){
       el.addEventListener('click', function(){
         switchSection(el.getAttribute('data-pd-switch'));
+      });
+    });
+
+    // Wire trajectory filter select and chip buttons
+    var trajSel = host.querySelector('#pdTrajectorySelect');
+    var trajSvgWrap = host.querySelector('#pdTrajectorySvgContainer');
+    var trajChips = host.querySelectorAll('[data-pd-traj]');
+
+    function updateTrajectoryView(filterVal) {
+      if (!trajSvgWrap) return;
+      var curInv = labData.currentInvoice;
+      var pastInv = labData.pastInvoice;
+      var prevDate = pastInv ? (pastInv.createdAt ? String(pastInv.createdAt).slice(0, 10) : 'Previous Visit') : 'Previous Visit';
+      var curDate = curInv ? (curInv.createdAt ? String(curInv.createdAt).slice(0, 10) : 'Current Visit') : 'Current Visit';
+      trajSvgWrap.innerHTML = renderTrajectorySvgContent(labData.comparisons || [], prevDate, curDate, filterVal, !pastInv);
+      if (trajSel) trajSel.value = filterVal;
+      trajChips.forEach(function (btn) {
+        var isAct = btn.getAttribute('data-pd-traj') === filterVal;
+        btn.classList.toggle('active', isAct);
+        btn.style.borderColor = isAct ? '#2563eb' : '#cbd5e1';
+        btn.style.background = isAct ? '#eff6ff' : '#ffffff';
+        btn.style.color = isAct ? '#1d4ed8' : '#475569';
+        btn.style.fontWeight = isAct ? '700' : '600';
+      });
+    }
+
+    if (trajSel) {
+      trajSel.addEventListener('change', function () {
+        updateTrajectoryView(trajSel.value);
+      });
+    }
+
+    trajChips.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        updateTrajectoryView(btn.getAttribute('data-pd-traj'));
       });
     });
 
