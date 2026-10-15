@@ -175,6 +175,25 @@ input[type=checkbox], input[type=radio] { accent-color: var(--blue); }
 .stat[data-tint="amber"] .stat-ico { color: #d97706 !important; background: #fffbeb !important; }
 .stat[data-tint="red"] .stat-ico { color: #dc2626 !important; background: #fef2f2 !important; }
 .stat[data-tint="purple"] .stat-ico, .stat[data-tint="violet"] .stat-ico { color: #7c3aed !important; background: #f5f3ff !important; }
+#view .stat.ai-dash-kpi .stat-ico,
+#optixAiDashboard .ai-dash-kpi .stat-ico,
+.stat.ai-dash-kpi .stat-ico {
+  color: #2563eb !important;
+  background: #eef3ff !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  margin-bottom: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+#view .stat.ai-dash-kpi .stat-ico svg,
+#optixAiDashboard .ai-dash-kpi .stat-ico svg,
+.stat.ai-dash-kpi .stat-ico svg {
+  width: 16px !important;
+  height: 16px !important;
+}
 
 html .db-page { --brand: #1b2a4a; --brand-d: #1b2a4a; --brand-soft: #eaf0ff; --brand-line: #c9d8fb; --brand-grad: linear-gradient(135deg, #3b7bf7, #1f4fd1);
   --blue: #2f6df6; --blue-soft: #eaf0ff; --ink: #1b2a4a; --ink2: #3c4761; --muted: #6f7a92; --faint: #8b94a7; --line: #e2e8f1; --line2: #edf1f7; --bg: #f2f5f9; --card: #fff;

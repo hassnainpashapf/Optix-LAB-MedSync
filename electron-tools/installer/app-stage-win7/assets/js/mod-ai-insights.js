@@ -3097,14 +3097,14 @@
 
       panicBannerHtml = '<div style="background:#ffffff;border:1.5px solid #cbd5e1;border-left:4px solid #131845;color:#0f172a;border-radius:12px;padding:14px 18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
         + '<div style="display:flex;align-items:center;gap:10px">'
-        + '  <span style="display:inline-flex;align-items:center;justify-content:center;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>'
+        + '  <span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>'
         + '  <div>'
         + '    <div style="font-size:13px;font-weight:800;color:#131845;letter-spacing:0.02em">CRITICAL PANIC-VALUE LAB ALERT (ISO 15189 / CAP Standard)</div>'
         + '    <div style="font-size:12px;color:#475569;margin-top:2px">' + panicDetails + '</div>'
         + '  </div>'
         + '</div>'
         + '<div>'
-        + '  <button type="button" class="btn ai-action-btn" id="aiSendPanicSos" style="background:#ffffff;color:#1e293b;border:1.5px solid #cbd5e1;font-weight:700;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Send Panic SOS to Doctor</span></button>'
+        + '  <button type="button" class="btn ai-action-btn" id="aiSendPanicSos" style="background:#ffffff;color:#1e293b;border:1.5px solid #cbd5e1;font-weight:700;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;color:#2563eb"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Send Panic SOS to Doctor</span></button>'
         + '</div>'
         + '</div>';
     }
@@ -3116,7 +3116,7 @@
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
         + '  <div>'
         + '    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">Cardiovascular / AHA-ACC Guideline</div>'
-        + '    <div style="font-size:15.5px;font-weight:800;color:#131845;margin-top:2px;display:flex;align-items:center;gap:7px"><span style="display:inline-flex;align-items:center;justify-content:center;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span>10-Year ASCVD Heart Attack &amp; Stroke Risk</span></div>'
+        + '    <div style="font-size:15.5px;font-weight:800;color:#131845;margin-top:2px;display:flex;align-items:center;gap:7px"><span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span>10-Year ASCVD Heart Attack &amp; Stroke Risk</span></div>'
         + '    <div style="font-size:12px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(ascvdRisk.details) : ascvdRisk.details) + '</div>'
         + '  </div>'
         + '  <div style="text-align:right">'
@@ -3156,11 +3156,11 @@
     var safetyHtml = '';
     if (drugInteractions.length) {
       safetyHtml += '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-        + '<div style="font-size:14.5px;font-weight:800;color:#131845;margin-bottom:12px;display:flex;align-items:center;gap:7px"><span style="display:inline-flex;align-items:center;justify-content:center;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span><span>Drug Interactions &amp; Clash Matrix (DDI)</span></div>'
+        + '<div style="font-size:14.5px;font-weight:800;color:#131845;margin-bottom:12px;display:flex;align-items:center;gap:7px"><span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span><span>Drug Interactions &amp; Clash Matrix (DDI)</span></div>'
         + drugInteractions.map(function (di) {
             return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-left:3px solid #131845;border-radius:8px;padding:12px 14px;margin-bottom:8px">'
               + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:gap:6px">'
-              + '  <b style="color:#131845;font-size:13px;display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
+              + '  <b style="color:#131845;font-size:13px;display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#2563eb"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
               + '  <span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase">' + di.severity + '</span>'
               + '</div>'
               + '<div style="font-size:12px;color:#475569;margin-top:4px;line-height:1.45">' + (window.App ? App.esc(di.mechanism) : di.mechanism) + '</div>'
@@ -3189,7 +3189,7 @@
 
         return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
           + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-          + '  <span style="display:inline-flex;align-items:center;justify-content:center;color:#131845;flex-shrink:0">' + dsSvg + '</span>'
+          + '  <span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0">' + dsSvg + '</span>'
           + '  <div>'
           + '    <div style="font-size:15px;font-weight:800;color:#131845">' + (window.App ? App.esc(ds.title) : ds.title) + '</div>'
           + '    <div style="font-size:11.5px;color:#64748b;margin-top:1px">Trigger: ' + (window.App ? App.esc(ds.trigger) : ds.trigger) + '</div>'
@@ -3361,7 +3361,7 @@
       + '  .ai-action-btn-primary:hover {'
       + '    background: #0d1238 !important; border-color: #0d1238 !important; color: #ffffff !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(19,24,69,0.3) !important;'
       + '  }'
-      + '  .ai-tab-btn .ai-tab-ico { display: inline-flex; align-items: center; justify-content: center; color: #131845; }'
+      + '  .ai-tab-btn .ai-tab-ico { display: inline-flex; align-items: center; justify-content: center; color: #2563eb; }'
       + '  .ai-tab-btn.active .ai-tab-ico { color: #ffffff; }'
       + '</style>';
 
@@ -3383,31 +3383,31 @@
       + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
       + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;margin-bottom:20px">'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-flex;align-items:center;justify-content:center;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v5a4.5 4.5 0 0 0 9 0V3"/><path d="M6 3h3"/><path d="M10.5 3h3"/><path d="M9 12.5A6.5 6.5 0 0 0 15.5 19h1a2.5 2.5 0 0 0 2.5-2.5v-1"/><circle cx="19" cy="15" r="2"/></svg></span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v5a4.5 4.5 0 0 0 9 0V3"/><path d="M6 3h3"/><path d="M10.5 3h3"/><path d="M9 12.5A6.5 6.5 0 0 0 15.5 19h1a2.5 2.5 0 0 0 2.5-2.5v-1"/><circle cx="19" cy="15" r="2"/></svg></span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          diagHtml
       + '      </div>'
       + '    </div>'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-flex;align-items:center;justify-content:center;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span><span>Solution 2: Prescription & Medication Guidance</span></div>'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span><span>Solution 2: Prescription & Medication Guidance</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          medsHtml
       + '      </div>'
       + '    </div>'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-flex;align-items:center;justify-content:center;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          dietHtml
       + '      </div>'
       + '    </div>'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-flex;align-items:center;justify-content:center;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-14 0"/><circle cx="9" cy="9" r="2"/><path d="m14 7 3-3 4 4-3 3"/><path d="m9 12 5 5"/></svg></span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-14 0"/><circle cx="9" cy="9" r="2"/><path d="m14 7 3-3 4 4-3 3"/><path d="m9 12 5 5"/></svg></span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          testsHtml
       + '      </div>'
       + '    </div>'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-flex;align-items:center;justify-content:center;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          redflagsHtml
       + '      </div>'
@@ -4148,11 +4148,11 @@
     function renderShell() {
       var escFn = (window.App && App.esc) ? App.esc : function (s) { return String(s || '').replace(/[&<>"']/g, ''); };
       var STAT_TINTS = {
-        brand: { sc: '#131845', line: '#cbd5e1', soft: 'transparent', circle: '#e2e8f0' },
-        blue:  { sc: '#131845', line: '#cbd5e1', soft: 'transparent', circle: '#e2e8f0' },
-        amber: { sc: '#131845', line: '#cbd5e1', soft: 'transparent', circle: '#e2e8f0' },
-        green: { sc: '#131845', line: '#cbd5e1', soft: 'transparent', circle: '#e2e8f0' },
-        red:   { sc: '#131845', line: '#cbd5e1', soft: 'transparent', circle: '#e2e8f0' }
+        brand: { sc: '#2563eb', line: '#c7d8fb', soft: '#eef3ff', circle: '#e2e8f0' },
+        blue:  { sc: '#2563eb', line: '#c7d8fb', soft: '#eef3ff', circle: '#e2e8f0' },
+        amber: { sc: '#2563eb', line: '#c7d8fb', soft: '#eef3ff', circle: '#e2e8f0' },
+        green: { sc: '#2563eb', line: '#c7d8fb', soft: '#eef3ff', circle: '#e2e8f0' },
+        red:   { sc: '#2563eb', line: '#c7d8fb', soft: '#eef3ff', circle: '#e2e8f0' }
       };
 
       function renderKpiCard(icon, tint, label, value, sub, raw) {
@@ -4160,7 +4160,7 @@
         return '<div class="stat ai-dash-kpi" data-tint="' + tint + '" style="--sc:' + c.sc + ';--sc-line:' + c.line + ';--sc-soft:' + c.soft + ';display:flex;flex-direction:column;justify-content:space-between;height:104px;min-height:104px;box-sizing:border-box;background:#ffffff;border:1px solid var(--bd,#cbd5e1);border-radius:12px;padding:12px 16px;box-shadow:0 1px 3px rgba(15,23,42,.03);overflow:hidden">'
           + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
           + '  <div class="lb" style="font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted);">' + escFn(label) + '</div>'
-          + '  <div class="stat-ico" style="display:inline-flex;align-items:center;justify-content:center;color:' + c.sc + ';background:transparent;border:none;flex-shrink:0">' + icon + '</div>'
+          + '  <div class="stat-ico" style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;background:#eef3ff;width:32px;height:32px;border-radius:8px;flex-shrink:0">' + icon + '</div>'
           + '</div>'
           + '<div class="vl" data-count="' + raw + '" style="font-size:24px;font-weight:800;letter-spacing:-0.02em;color:var(--ink);line-height:1.1;font-variant-numeric:tabular-nums;margin:4px 0 2px">' + value + '</div>'
           + '<div class="dl" style="font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + sub + '</div>'
@@ -4194,7 +4194,8 @@
         + '    background: var(--brand, #131845); border-color: var(--brand, #131845); color: #ffffff; font-weight: 700;'
         + '    box-shadow: 0 2px 4px rgba(19,24,69,0.18);'
         + '  }'
-        + '  #optixAiDashboard .ai-dash-icon { display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }'
+        + '  #optixAiDashboard .ai-dash-icon { display: inline-flex; align-items: center; justify-content: center; font-size: 14px; color: #2563eb; }'
+        + '  #optixAiDashboard .ai-dash-tab:not(.active) .ai-dash-icon { color: #2563eb; }'
         + '  #optixAiDashboard .ai-dash-tab.active .ai-dash-icon { color: #ffffff; }'
         + '  #optixAiDashboard .ai-dash-tab-title { font-size: 13px; white-space: nowrap; }'
         + '  #optixAiDashboard .card { background: #ffffff; border: 1px solid var(--bd, #cbd5e1); border-radius: 12px; box-shadow: 0 1px 3px rgba(15,23,42,0.04); margin-bottom: 16px; overflow: hidden; }'
@@ -4209,10 +4210,10 @@
         + '  #optixAiDashboard .ai-card-mod:hover { border-color: #94a3b8; box-shadow: 0 2px 6px rgba(15,30,46,0.06); }'
         + '  #optixAiDashboard .ai-mod-ico {'
         + '    display: inline-flex; align-items: center; justify-content: center;'
-        + '    color: var(--brand, #131845); background: transparent; border: none;'
-        + '    font-size: 18px; flex-shrink: 0; width: auto; height: auto;'
+        + '    color: #2563eb; background: #eef3ff; border: 1px solid #dbeafe;'
+        + '    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;'
         + '  }'
-        + '  #optixAiDashboard .ai-card-mod:hover .ai-mod-ico { background: transparent; border: none; color: var(--brand, #131845); }'
+        + '  #optixAiDashboard .ai-card-mod:hover .ai-mod-ico { background: #dbeafe; border-color: #bfdbfe; color: #1d4ed8; }'
         + '  #optixAiDashboard .ai-card-mod .ai-mod-title { font-size: 13px; font-weight: 600; color: var(--ink, #0f1e2e); line-height: 1.25; }'
         + '  #optixAiDashboard .ai-switch { position: relative; display: inline-block; width: 42px; height: 22px; flex-shrink: 0; }'
         + '  #optixAiDashboard .ai-switch input { opacity: 0; width: 0; height: 0; }'
@@ -4241,8 +4242,9 @@
         + '  #optixAiDashboard .ai-sec-badge {'
         + '    display: inline-flex; align-items: center; gap: 6px; padding: 0;'
         + '    font-size: 11.5px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 10px;'
-        + '    background: transparent; color: var(--brand, #131845); border: none;'
+        + '    background: transparent; color: #2563eb; border: none;'
         + '  }'
+        + '  #optixAiDashboard .ai-sec-badge svg { color: #2563eb; }'
         + '  #optixAiDashboard .ai-sim-card {'
         + '    background: #ffffff; border: 1px solid var(--bd, #cbd5e1); border-radius: 12px; padding: 14px 16px;'
         + '    display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 1px 3px rgba(15,30,46,0.03);'
@@ -4251,8 +4253,8 @@
         + '  #optixAiDashboard .ai-sim-card:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(15,30,46,0.06); border-color: #94a3b8; }'
         + '  #optixAiDashboard .ai-sim-card .sim-ico-box {'
         + '    display: inline-flex; align-items: center; justify-content: center;'
-        + '    background: transparent; border: none; color: var(--brand, #131845);'
-        + '    width: auto; height: auto; font-size: 18px;'
+        + '    background: #eef3ff; border: 1px solid #dbeafe; color: #2563eb;'
+        + '    width: 32px; height: 32px; border-radius: 8px; font-size: 16px;'
         + '  }'
         + '  #optixAiDashboard .ai-sim-card .sim-title { font-size: 13.5px; font-weight: 700; color: var(--ink, #0f1e2e); margin: 6px 0 4px; }'
         + '  #optixAiDashboard .ai-sim-card .sim-stats {'
@@ -4282,7 +4284,7 @@
         + '<div class="stat-grid" style="margin-bottom:18px">'
         +   renderKpiCard(
               '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
-              'brand',
+              'blue',
               'Analyses',
               stats.analyzed,
               'Total evaluations',
@@ -4290,7 +4292,7 @@
             )
         +   renderKpiCard(
               '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
-              'red',
+              'blue',
               'Critical Alerts',
               stats.panics,
               'Emergency flags',
@@ -4298,7 +4300,7 @@
             )
         +   renderKpiCard(
               '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
-              'amber',
+              'blue',
               'Organ Warnings',
               stats.organAlerts,
               'High risk systems',
@@ -4459,7 +4461,7 @@
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
         + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>'
-        + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">CRITICAL</span>'
+        + '            <span class="badge" style="background:#eef3ff;color:#2563eb;border:1px solid #dbeafe;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">CRITICAL</span>'
         + '          </div>'
         + '          <div class="sim-title">Acute Dengue Shock</div>'
         + '          <div class="sim-stats">Plt: <b>14,000</b> &bull; WBC: <b>2,800</b> &bull; HCT: <b>48.5%</b></div>'
@@ -4470,7 +4472,7 @@
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
         + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>'
-        + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">RENAL</span>'
+        + '            <span class="badge" style="background:#eef3ff;color:#2563eb;border:1px solid #dbeafe;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">RENAL</span>'
         + '          </div>'
         + '          <div class="sim-title">Diabetic Nephropathy &amp; AKI</div>'
         + '          <div class="sim-stats">Glucose: <b>465</b> &bull; Creatinine: <b>4.8</b> &bull; K+: <b>6.4</b></div>'
@@ -4481,7 +4483,7 @@
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
         + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></div>'
-        + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">GENETIC</span>'
+        + '            <span class="badge" style="background:#eef3ff;color:#2563eb;border:1px solid #dbeafe;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">GENETIC</span>'
         + '          </div>'
         + '          <div class="sim-title">Beta-Thalassemia Trait</div>'
         + '          <div class="sim-stats">Hb: <b>7.9</b> &bull; MCV: <b>57 fL</b> &bull; Mentzer: <b>9.8</b></div>'
@@ -4492,7 +4494,7 @@
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
         + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>'
-        + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">HEPATIC</span>'
+        + '            <span class="badge" style="background:#eef3ff;color:#2563eb;border:1px solid #dbeafe;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">HEPATIC</span>'
         + '          </div>'
         + '          <div class="sim-title">Hyperuricemia &amp; Liver Steatosis</div>'
         + '          <div class="sim-stats">Uric Acid: <b>9.8</b> &bull; ALT: <b>94</b> &bull; AST: <b>45</b></div>'
