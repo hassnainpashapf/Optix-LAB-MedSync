@@ -2373,22 +2373,10 @@
       '    </div>' +
       '  </div>' +
 
-      // 2 EQUAL CARDS ACROSS FULL PAGE: Diagnostic Tests & Lab Tests Diagnostic Effect
-      '  <div class="vitals-subcards-row">' +
-      // Sub-card 1: Diagnostic Laboratory Tests (50% equal width)
-      '    <div class="vitals-card">' +
-      '      <div class="vitals-card-head" style="margin-bottom:10px">' +
-      '        <div>' +
-      '          <h3>Diagnostic Tests</h3>' +
-      '          <p class="pd-sub" style="margin-top:2px">Patient previous laboratory tests &amp; order history</p>' +
-      '        </div>' +
-      '        <span class="badge b-ready" style="font-size:11px;font-weight:700">' + oldTests.length + ' Test' + (oldTests.length === 1 ? '' : 's') + '</span>' +
-      '      </div>' +
-      renderPatientTestsListHtml(oldTests) +
-      '    </div>' +
-
-      // Sub-card 2: Patient Medication Adherence (50% equal width)
-      '    <div class="vitals-card" id="pdMedsOverviewCard">' +
+      // Full-Width Stacked Cards: 1) Medication Adherence on top (Full Page), 2) Diagnostic Tests below it
+      '  <div class="vitals-subcards-row vitals-stacked-cards" style="display:flex;flex-direction:column;gap:20px;width:100%">' +
+      // Full-Width Card 1: Patient Medication Adherence
+      '    <div class="vitals-card" id="pdMedsOverviewCard" style="width:100%">' +
       '      <div class="vitals-card-head" style="margin-bottom:12px">' +
       '        <div>' +
       '          <h3 style="display:flex;align-items:center;gap:8px"><span>💊</span><span>Medication Adherence</span></h3>' +
@@ -2400,6 +2388,18 @@
       '      <div class="vitals-med-list" id="medsListWrap">' +
       renderMedListHtml(curOrg.meds) +
       '      </div>' +
+      '    </div>' +
+
+      // Full-Width Card 2: Diagnostic Laboratory Tests (Shown below Medication Adherence)
+      '    <div class="vitals-card" id="pdDiagnosticTestsCard" style="width:100%">' +
+      '      <div class="vitals-card-head" style="margin-bottom:10px">' +
+      '        <div>' +
+      '          <h3>Diagnostic Tests</h3>' +
+      '          <p class="pd-sub" style="margin-top:2px">Patient previous laboratory tests &amp; order history</p>' +
+      '        </div>' +
+      '        <span class="badge b-ready" style="font-size:11px;font-weight:700">' + oldTests.length + ' Test' + (oldTests.length === 1 ? '' : 's') + '</span>' +
+      '      </div>' +
+      renderPatientTestsListHtml(oldTests) +
       '    </div>' +
       '  </div>' +
       '</div>' +

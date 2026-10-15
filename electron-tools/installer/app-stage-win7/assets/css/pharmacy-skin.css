@@ -1295,16 +1295,18 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 }
 
 /* Sub-Cards Row (Daily Rehab Plan & Capacity / Adherence) */
-.vitals-subcards-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+.vitals-subcards-row,
+.vitals-stacked-cards {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 20px;
   margin-top: 20px;
+  width: 100% !important;
 }
-@media (max-width: 720px) {
-  .vitals-subcards-row {
-    grid-template-columns: 1fr;
-  }
+.vitals-subcards-row > .vitals-card,
+.vitals-stacked-cards > .vitals-card {
+  width: 100% !important;
+  box-sizing: border-box;
 }
 
 .vitals-subcard-subtitle {

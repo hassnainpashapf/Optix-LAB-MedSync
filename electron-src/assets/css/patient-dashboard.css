@@ -595,29 +595,27 @@
   color: #cbd5e1;
 }
 
-#ptPatientDashboard .vitals-subcards-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+#ptPatientDashboard .vitals-subcards-row,
+#ptPatientDashboard .vitals-stacked-cards {
+  display: flex !important;
+  flex-direction: column !important;
   gap: 20px;
   margin-top: 22px;
-  width: 100%;
+  width: 100% !important;
   box-sizing: border-box;
-  align-items: start;
+  align-items: stretch !important;
 }
-#ptPatientDashboard .vitals-subcards-row > .vitals-card {
+#ptPatientDashboard .vitals-subcards-row > .vitals-card,
+#ptPatientDashboard .vitals-stacked-cards > .vitals-card {
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
   margin: 0;
+  width: 100% !important;
 }
 #ptPatientDashboard .pd-tests-scroll-list {
   max-height: none !important;
   overflow-y: visible !important;
-}
-@media (max-width: 900px) {
-  #ptPatientDashboard .vitals-subcards-row {
-    grid-template-columns: 1fr;
-  }
 }
 
 #ptPatientDashboard .vitals-subcard-subtitle {
@@ -1322,14 +1320,20 @@
 /* Medication Adherence KPI Cards in Overview */
 #ptPatientDashboard .pd-meds-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
   margin-bottom: 14px;
 }
 
-@media (min-width: 1400px) {
+@media (max-width: 900px) {
   #ptPatientDashboard .pd-meds-kpi-grid {
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  #ptPatientDashboard .pd-meds-kpi-grid {
+    grid-template-columns: 1fr;
   }
 }
 
