@@ -166,14 +166,16 @@
 #ptPatientDashboard .pd-patient-menu button {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  justify-content: center;
   background: #ffffff;
   border: 1.5px solid #edf2f7;
   border-radius: 12px;
-  padding: 8px 14px;
+  padding: 8px 12px;
+  min-width: 42px;
+  height: 38px;
   color: #475569;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
   width: auto;
@@ -182,10 +184,11 @@
   white-space: nowrap;
 }
 #ptPatientDashboard .pd-patient-menu button span:first-child {
-  font-size: 15px;
+  font-size: 17px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  line-height: 1;
 }
 #ptPatientDashboard .pd-patient-menu button:hover:not(.active) {
   background: #f8fafc;
