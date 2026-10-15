@@ -1899,40 +1899,90 @@
       // View & Main level horizontal overflow (when zoomed in)
       var viewEl = document.getElementById('view');
       var mainEl = document.querySelector('.main, .maincol');
-      var hasViewOverflow = (viewEl && viewEl.scrollWidth > (viewEl.clientWidth + 8)) ||
-                            (mainEl && mainEl.scrollWidth > (mainEl.clientWidth + 8)) ||
-                            (document.documentElement.scrollWidth > (window.innerWidth + 8));
+      var scrollTarget = (viewEl && viewEl.scrollWidth > viewEl.clientWidth) ? viewEl : (mainEl && mainEl.scrollWidth > mainEl.clientWidth ? mainEl : null);
+      var contentWidth = scrollTarget ? scrollTarget.scrollWidth : (document.documentElement.scrollWidth || 0);
+      var clientWidth = scrollTarget ? scrollTarget.clientWidth : (window.innerWidth || 0);
+      var hasViewOverflow = contentWidth > (clientWidth + 4);
 
-      var vPill = document.getElementById('viewScrollNav');
+      var vBar = document.getElementById('viewBottomScrollBar');
       if (hasViewOverflow) {
-        if (!vPill) {
-          vPill = document.createElement('div');
-          vPill.id = 'viewScrollNav';
-          vPill.className = 'zoom-pan-pill';
-          vPill.innerHTML =
-            '<button type="button" class="zp-btn" id="zpScrollLeft" title="Scroll View Left (◀)">◀ Left</button>' +
-            '<span class="zp-div"></span>' +
-            '<button type="button" class="zp-btn" id="zpScrollRight" title="Scroll View Right (▶)">Right ▶</button>';
-          document.body.appendChild(vPill);
+        if (!vBar) {
+          vBar = document.createElement('div');
+          vBar.id = 'viewBottomScrollBar';
+          vBar.className = 'view-bottom-scrollbar';
+          vBar.setAttribute('aria-label', 'Horizontal page scroll navigation');
+          vBar.innerHTML =
+            '<button type="button" class="vbs-btn vbs-left" id="vbsBtnLeft" title="Scroll Left (◀)">◀</button>' +
+            '<div class="vbs-track-wrap" id="vbsTrackWrap" title="Drag or scroll line to view hidden options">' +
+            '  <div class="vbs-spacer" id="vbsSpacer"></div>' +
+            '</div>' +
+            '<button type="button" class="vbs-btn vbs-right" id="vbsBtnRight" title="Scroll Right (▶)">▶</button>' +
+            '<span class="vbs-label">↔️ Scroll Page</span>';
+          document.body.appendChild(vBar);
 
-          var zL = vPill.querySelector('#zpScrollLeft');
-          var zR = vPill.querySelector('#zpScrollRight');
+          var zL = vBar.querySelector('#vbsBtnLeft');
+          var zR = vBar.querySelector('#vbsBtnRight');
+          var zTrack = vBar.querySelector('#vbsTrackWrap');
+          var isSyncing = false;
+
+          if (zTrack) {
+            zTrack.addEventListener('scroll', function () {
+              if (isSyncing) return;
+              isSyncing = true;
+              var target = (viewEl && viewEl.scrollWidth > viewEl.clientWidth) ? viewEl : (mainEl && mainEl.scrollWidth > mainEl.clientWidth ? mainEl : null);
+              if (target) {
+                target.scrollLeft = zTrack.scrollLeft;
+              } else {
+                window.scrollTo({ left: zTrack.scrollLeft });
+              }
+              if (zL) zL.disabled = (zTrack.scrollLeft <= 2);
+              if (zR) zR.disabled = (zTrack.scrollLeft + clientWidth >= contentWidth - 4);
+              setTimeout(function () { isSyncing = false; }, 20);
+            });
+          }
+
           if (zL) {
             zL.addEventListener('click', function () {
-              var target = (viewEl && viewEl.scrollWidth > viewEl.clientWidth) ? viewEl : (mainEl && mainEl.scrollWidth > mainEl.clientWidth ? mainEl : window);
-              target.scrollBy({ left: -260, behavior: 'smooth' });
+              var target = (viewEl && viewEl.scrollWidth > viewEl.clientWidth) ? viewEl : (mainEl && mainEl.scrollWidth > mainEl.clientWidth ? mainEl : null);
+              if (target) target.scrollBy({ left: -280, behavior: 'smooth' });
+              else window.scrollBy({ left: -280, behavior: 'smooth' });
             });
           }
           if (zR) {
             zR.addEventListener('click', function () {
-              var target = (viewEl && viewEl.scrollWidth > viewEl.clientWidth) ? viewEl : (mainEl && mainEl.scrollWidth > mainEl.clientWidth ? mainEl : window);
-              target.scrollBy({ left: 260, behavior: 'smooth' });
+              var target = (viewEl && viewEl.scrollWidth > viewEl.clientWidth) ? viewEl : (mainEl && mainEl.scrollWidth > mainEl.clientWidth ? mainEl : null);
+              if (target) target.scrollBy({ left: 280, behavior: 'smooth' });
+              else window.scrollBy({ left: 280, behavior: 'smooth' });
+            });
+          }
+
+          if (viewEl) {
+            viewEl.addEventListener('scroll', function () {
+              if (isSyncing) return;
+              isSyncing = true;
+              if (zTrack) zTrack.scrollLeft = viewEl.scrollLeft;
+              if (zL) zL.disabled = (viewEl.scrollLeft <= 2);
+              if (zR) zR.disabled = (viewEl.scrollLeft + viewEl.clientWidth >= viewEl.scrollWidth - 4);
+              setTimeout(function () { isSyncing = false; }, 20);
             });
           }
         }
-        vPill.style.display = 'flex';
-      } else if (vPill) {
-        vPill.style.display = 'none';
+
+        var spacer = vBar.querySelector('#vbsSpacer');
+        if (spacer) spacer.style.width = contentWidth + 'px';
+        var track = vBar.querySelector('#vbsTrackWrap');
+        if (track && scrollTarget) {
+          track.scrollLeft = scrollTarget.scrollLeft;
+        }
+        var btnL = vBar.querySelector('#vbsBtnLeft');
+        var btnR = vBar.querySelector('#vbsBtnRight');
+        var curLeft = scrollTarget ? scrollTarget.scrollLeft : 0;
+        if (btnL) btnL.disabled = (curLeft <= 2);
+        if (btnR) btnR.disabled = (curLeft + clientWidth >= contentWidth - 4);
+
+        vBar.style.display = 'flex';
+      } else if (vBar) {
+        vBar.style.display = 'none';
       }
     }
 
@@ -1948,17 +1998,29 @@
     window.addEventListener('resize', schedule);
     setInterval(watch, 1500);
 
-    /* mouse wheel on overflowing table with no vertical overflow scrolls horizontally */
+    /* mouse wheel on overflowing table or view with horizontal overflow */
     document.addEventListener('wheel', function (e) {
       var wrap = e.target && e.target.closest ? e.target.closest('.tbl-wrap, .table-responsive') : null;
-      if (!wrap) return;
-      if (wrap.scrollWidth > (wrap.clientWidth + 4) && wrap.scrollHeight <= (wrap.clientHeight + 8)) {
+      if (wrap && wrap.scrollWidth > (wrap.clientWidth + 4) && wrap.scrollHeight <= (wrap.clientHeight + 8)) {
         if (Math.abs(e.deltaY) > Math.abs(e.deltaX) && !e.shiftKey) {
           var canScrollRight = (wrap.scrollLeft + wrap.clientWidth < wrap.scrollWidth - 2) && e.deltaY > 0;
           var canScrollLeft = wrap.scrollLeft > 2 && e.deltaY < 0;
           if (canScrollRight || canScrollLeft) {
             wrap.scrollLeft += (e.deltaY > 0 ? 80 : -80);
             e.preventDefault();
+          }
+        }
+      } else {
+        var viewEl = document.getElementById('view');
+        var mainEl = document.querySelector('.main, .maincol');
+        var target = (viewEl && viewEl.scrollWidth > viewEl.clientWidth) ? viewEl : (mainEl && mainEl.scrollWidth > mainEl.clientWidth ? mainEl : null);
+        if (target && (target.scrollWidth > target.clientWidth + 4)) {
+          if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY) || (e.target && e.target.closest && e.target.closest('.view-bottom-scrollbar'))) {
+            var delta = e.shiftKey ? e.deltaY : (Math.abs(e.deltaX) > 0 ? e.deltaX : e.deltaY);
+            if (delta) {
+              target.scrollLeft += delta;
+              e.preventDefault();
+            }
           }
         }
       }

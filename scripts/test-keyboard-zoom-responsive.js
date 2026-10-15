@@ -42,8 +42,10 @@ for (const [name, src] of [['web app.js', webApp], ['desktop app.js', desktopApp
   assert.ok(src.includes("e.key === 'ArrowLeft'"), name + ' must handle ArrowLeft key');
   assert.ok(src.includes('_setActiveRow('), name + ' must implement _setActiveRow helper');
   assert.ok(src.includes('kb-active-row'), name + ' must add kb-active-row class');
+  assert.ok(src.includes('viewBottomScrollBar'), name + ' must create viewBottomScrollBar when zoomed');
+  assert.ok(src.includes('vbs-track-wrap'), name + ' must contain vbs-track-wrap scroll track');
 }
-console.log('✓ 4-Arrow keys and TAB keyboard navigation verified across web and desktop app.js');
+console.log('✓ 4-Arrow keys, TAB navigation, and viewBottomScrollBar horizontal scrollbar verified in app.js');
 
 // 3. Verify CSS rules in app.css
 const appCss = fs.readFileSync(path.join(root, 'assets/css/app.css'), 'utf8');
@@ -51,7 +53,9 @@ assert.ok(appCss.includes(':focus-visible'), 'app.css must have accessible focus
 assert.ok(appCss.includes('.kb-active-row'), 'app.css must style .kb-active-row');
 assert.ok(!appCss.includes('.tb-zoom-ctrl'), 'app.css must not style .tb-zoom-ctrl (reverted per user request)');
 assert.ok(appCss.includes('.tbl-wrap'), 'app.css must have .tbl-wrap overflow-x auto');
-console.log('✓ CSS responsive zoom scaling, accessible focus outlines, and keyboard row styling verified');
+assert.ok(appCss.includes('.view-bottom-scrollbar'), 'app.css must style .view-bottom-scrollbar');
+assert.ok(appCss.includes('html,body{overflow-x:auto}'), 'app.css must allow horizontal scrolling on html,body');
+console.log('✓ CSS responsive zoom scaling, view-bottom-scrollbar, and keyboard row styling verified');
 
 // 4. Verify Electron main.js minWidth and minHeight
 const electronMain = fs.readFileSync(path.join(root, 'electron-src/main.js'), 'utf8');
