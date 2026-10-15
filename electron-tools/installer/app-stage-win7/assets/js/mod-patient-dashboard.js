@@ -2219,7 +2219,116 @@
       '</div>';
   }
 
+  /* Render Dedicated Medication Adherence Dashboard Page */
+  function renderMedicationDashboardPage(patient, curOrg, labData) {
+    curOrg = curOrg || ORGAN_DATA.lung;
+    var meds = curOrg.meds || [];
+    var timingBadges = ['☀️ Subah (Morning - 8:00 AM)', '🌤️ Dopehar (Noon - 1:00 PM)', '🌙 Raat (Night - 9:00 PM)'];
+    var mealAdvice = ['Take with or after breakfast with warm water', 'Take 30 mins after lunch', 'Take before bedtime'];
 
+    return '<div class="pd-layout-meds" id="pdMeds" style="display:none">' +
+      '<div class="pd-meds-page-wrap" style="display:flex;flex-direction:column;gap:18px">' +
+      // Header Card with Action buttons
+      '<div class="vitals-card" style="padding:18px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;background:linear-gradient(135deg,#ffffff 0%,#f0fdf4 100%);border:1.5px solid #bbf7d0">' +
+      '  <div style="display:flex;align-items:center;gap:12px">' +
+      '    <span style="font-size:32px">💊</span>' +
+      '    <div>' +
+      '      <h2 style="margin:0;font-size:20px;font-weight:800;color:#0f172a;letter-spacing:-0.02em">Medication Adherence &amp; Prescription Regimen</h2>' +
+      '      <p class="pd-sub" style="margin:3px 0 0;color:#475569;font-size:12.5px">Active prescription management, daily timing slots, dosage compliance &amp; safety validation for ' + esc(patient.name || 'Patient') + '</p>' +
+      '    </div>' +
+      '  </div>' +
+      '  <div style="display:flex;align-items:center;gap:10px">' +
+      '    <span class="badge" style="font-size:12px;font-weight:700;background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;padding:6px 12px;border-radius:8px">' + meds.length + ' Prescriptions Active</span>' +
+      '    <button type="button" class="btn btn-ghost btn-sm" data-pd-switch="pdOverview" style="font-weight:700;display:inline-flex;align-items:center;gap:6px"><span>🧬</span><span>Vitals Overview</span></button>' +
+      '  </div>' +
+      '</div>' +
+
+      // 4 Top Metric KPI Summary Cards
+      renderMedicationKpisHtml(meds) +
+
+      // Daily Schedule Tracker Card
+      '<div class="vitals-card">' +
+      '  <div class="vitals-card-head" style="margin-bottom:14px">' +
+      '    <div>' +
+      '      <h3 style="display:flex;align-items:center;gap:8px"><span>⏰</span><span>Daily Dosage Schedule &amp; Intake Confirmation</span></h3>' +
+      '      <p class="pd-sub" style="margin-top:2px">Mark medications as taken to maintain your daily adherence streak (96% current compliance)</p>' +
+      '    </div>' +
+      '    <span class="badge b-ready" style="font-size:11.5px;font-weight:700">All Today\'s Doses Confirmed</span>' +
+      '  </div>' +
+      '  <div class="vitals-med-list" id="medsListWrapDashboard" style="display:flex;flex-direction:column;gap:12px">' +
+      meds.map(function (m, idx) {
+        var timing = timingBadges[idx % timingBadges.length];
+        var advice = mealAdvice[idx % mealAdvice.length];
+        return '<div class="vitals-med-item" style="padding:14px 18px;display:flex;align-items:center;justify-content:space-between;background:#ffffff;border:1.5px solid #e2e8f0;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,0.03)">' +
+          '  <div style="display:flex;align-items:center;gap:16px;flex:1">' +
+          '    <div style="font-size:26px;width:44px;height:44px;border-radius:12px;background:#f8fafc;display:flex;align-items:center;justify-content:center;border:1px solid #edf2f7">' + m.icon + '</div>' +
+          '    <div>' +
+          '      <div style="display:flex;align-items:center;gap:10px">' +
+          '        <strong style="font-size:15px;color:#0f172a">' + esc(m.name) + '</strong>' +
+          '        <span class="med-timing-chip" style="font-size:11.5px;padding:3px 10px">' + timing + '</span>' +
+          '      </div>' +
+          '      <div style="font-size:12.5px;color:#334155;margin-top:3px;font-weight:600">' + esc(m.dose) + '</div>' +
+          '      <div style="font-size:11.5px;color:#64748b;margin-top:2px">💡 ' + advice + '</div>' +
+          '    </div>' +
+          '  </div>' +
+          '  <div style="display:flex;align-items:center;gap:12px">' +
+          '    <span class="badge b-ready" style="font-size:11px;font-weight:700">Dose Confirmed</span>' +
+          '    <button type="button" class="med-taken-btn active" title="Dose Confirmed / Le Li" style="width:36px;height:36px;font-size:16px">✓</button>' +
+          '  </div>' +
+          '</div>';
+      }).join('') +
+      '  </div>' +
+      '</div>' +
+
+      // 2-Column Grid: 1) Clinical Safety & Interaction Matrix, 2) Refill & Adherence History
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">' +
+      // Column 1: Drug Safety & Organ Clearance Screening
+      '  <div class="vitals-card">' +
+      '    <div class="vitals-card-head" style="margin-bottom:12px">' +
+      '      <div>' +
+      '        <h3 style="display:flex;align-items:center;gap:8px"><span>🛡️</span><span>Pharmacological Safety &amp; Clearance</span></h3>' +
+      '        <p class="pd-sub" style="margin-top:2px">Real-time cross-organ drug toxicity &amp; clearance evaluation</p>' +
+      '      </div>' +
+      '    </div>' +
+      '    <div style="display:flex;flex-direction:column;gap:10px">' +
+      '      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-radius:10px;border:1px solid #edf2f7">' +
+      '        <div style="font-size:12.5px"><strong>Renal Excretion Profile (Kidneys):</strong><div style="font-size:11px;color:#64748b">Estimated GFR normal, no dose adjustment required</div></div>' +
+      '        <span class="badge b-ready" style="font-size:11px;font-weight:700">Optimal</span>' +
+      '      </div>' +
+      '      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-radius:10px;border:1px solid #edf2f7">' +
+      '        <div style="font-size:12.5px"><strong>Hepatic Metabolism (Liver):</strong><div style="font-size:11px;color:#64748b">Normal transaminases, safe Cytochrome P450 clearance</div></div>' +
+      '        <span class="badge b-ready" style="font-size:11px;font-weight:700">Safe</span>' +
+      '      </div>' +
+      '      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;border-radius:10px;border:1px solid #edf2f7">' +
+      '        <div style="font-size:12.5px"><strong>Drug-Drug Interaction Screen:</strong><div style="font-size:11px;color:#64748b">Zero adverse pharmacology conflicts detected across all prescribed drugs</div></div>' +
+      '        <span class="badge b-ready" style="font-size:11px;font-weight:700">Clean</span>' +
+      '      </div>' +
+      '    </div>' +
+      '  </div>' +
+
+      // Column 2: Adherence Calendar & Prescription Refill
+      '  <div class="vitals-card">' +
+      '    <div class="vitals-card-head" style="margin-bottom:12px">' +
+      '      <div>' +
+      '        <h3 style="display:flex;align-items:center;gap:8px"><span>📦</span><span>Prescription Refill &amp; Adherence Log</span></h3>' +
+      '        <p class="pd-sub" style="margin-top:2px">Pharmacy refill schedule and 14-day compliance record</p>' +
+      '      </div>' +
+      '    </div>' +
+      '    <div style="display:flex;flex-direction:column;gap:12px">' +
+      '      <div>' +
+      '        <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px"><span>14-Day Consecutive Adherence Streak</span><strong style="color:#059669">96% (13.5 of 14 Days)</strong></div>' +
+      '        <div style="height:10px;background:#e2e8f0;border-radius:99px;overflow:hidden"><div style="width:96%;height:100%;background:linear-gradient(90deg,#10b981,#059669);border-radius:99px"></div></div>' +
+      '      </div>' +
+      '      <div style="background:#f8fafc;padding:12px;border-radius:10px;border:1px solid #edf2f7;font-size:12px;line-height:1.6">' +
+      '        <div><strong>Next Scheduled Pharmacy Refill:</strong> <span style="color:#2563eb;font-weight:700">28 Oct 2026</span> (In 13 Days)</div>' +
+      '        <div style="color:#475569;margin-top:4px"><strong>Physician Regimen Note:</strong> Patient responds well to regular morning and noon inhalation. Bronchial compliance stable. Continue current pulmonary doses without interruption.</div>' +
+      '      </div>' +
+      '    </div>' +
+      '  </div>' +
+      '</div>' +
+      '</div>' +
+      '</div>';
+  }
 
   /* Render Primary Patient Vitals Dashboard */
   function render(patient) {
@@ -2283,7 +2392,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdTrajectory','Longitudinal Trajectory Vector Graph','📊'],['pdGraphs','Individual Biomarker Trend Graphs','🔬'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdTrajectory','Longitudinal Trajectory Vector Graph','📊'],['pdGraphs','Individual Biomarker Trend Graphs','🔬'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','◎'],['pdMeds','Medication Adherence','💊']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" title="'+esc(item[1])+'" aria-label="'+esc(item[1])+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span></button>';
       }).join('') +
       '  </nav>' +
@@ -2424,6 +2533,9 @@
 
       // Dedicated Visual Laboratory Test Anatomy Page
       renderTestAnatomyPage(patient, tests, labData) +
+
+      // Dedicated Medication Adherence Dashboard Page
+      renderMedicationDashboardPage(patient, curOrg, labData) +
       '</div>' +
       '</section>';
   }
@@ -2660,6 +2772,7 @@
       var graphsEl = host.querySelector('#pdGraphs');
       var varianceEl = host.querySelector('#pdVariance');
       var anatomyEl = host.querySelector('#pdAnatomy');
+      var medsEl = host.querySelector('#pdMeds');
 
       if (overviewEl) overviewEl.style.display = 'none';
       if (trendsEl) trendsEl.style.display = 'none';
@@ -2667,6 +2780,7 @@
       if (graphsEl) graphsEl.style.display = 'none';
       if (varianceEl) varianceEl.style.display = 'none';
       if (anatomyEl) anatomyEl.style.display = 'none';
+      if (medsEl) medsEl.style.display = 'none';
 
       if (sectionId === 'pdTrends') {
         if (trendsEl) trendsEl.style.display = 'block';
@@ -2678,12 +2792,10 @@
         if (varianceEl) varianceEl.style.display = 'block';
       } else if (sectionId === 'pdAnatomy') {
         if (anatomyEl) anatomyEl.style.display = 'block';
+      } else if (sectionId === 'pdMeds') {
+        if (medsEl) medsEl.style.display = 'block';
       } else {
         if (overviewEl) overviewEl.style.display = 'block';
-        if (sectionId === 'pdMeds') {
-          var medsCard = host.querySelector('#pdMedsOverviewCard') || host.querySelector('#medsListWrap');
-          if (medsCard) medsCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }

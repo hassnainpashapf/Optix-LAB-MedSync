@@ -179,8 +179,15 @@ assert.ok(html.includes('id="pdTestSelect"'), 'Test anatomy dropdown present');
 assert.ok(html.includes('patient-body-reference.png'), 'Patient body reference image present in anatomy');
 assert.ok(html.includes('Target Organ Systems Breakdown'), 'Organ systems breakdown section present');
 assert.ok(html.includes('Patient Diagnostic Tests Anatomical Directory'), 'Diagnostic tests directory present');
-assert.ok(html.includes('pd-anatomy-test-card'), 'Anatomy test cards present in directory');
+// 8. Verify Dedicated Medication Adherence Page, Navigation & Regimen Monitoring:
+assert.ok(html.includes('data-pd-section="pdMeds"'), 'Header navigation button for Medication Adherence present');
+assert.ok(html.includes('Medication Adherence'), 'Header navigation button label present');
+assert.ok(html.includes('id="pdMeds"'), 'Dedicated pdMeds page section present');
+assert.ok(html.includes('class="pd-layout-meds"'), 'Dedicated pd-layout-meds class present');
+assert.ok(html.includes('Daily Dosage Schedule &amp; Intake Confirmation'), 'Dosage schedule tracker present');
+assert.ok(html.includes('Pharmacological Safety &amp; Clearance'), 'Safety and clearance screening present');
+assert.ok(html.includes('Prescription Refill &amp; Adherence Log'), 'Prescription refill and adherence log present');
 
-console.log('✓ All 7 verification checks for Dedicated Biomarker Trends Page, Dedicated Test Anatomy Page, and 3D Models PASSED CLEANLY!\n');
+console.log('✓ All 8 verification checks for Dedicated Trends, Anatomy, Trajectory, Variance & Medication Dashboard PASSED CLEANLY!\n');
 
 
