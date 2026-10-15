@@ -2392,7 +2392,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdTrajectory','Longitudinal Trajectory Vector Graph','📊'],['pdGraphs','Individual Biomarker Trend Graphs','🔬'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','◎'],['pdMeds','Medication Adherence','💊']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdTrajectory','Longitudinal Trajectory Vector Graph','📊'],['pdGraphs','Individual Biomarker Trend Graphs','🔬'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','🫀'],['pdMeds','Medication Adherence','💊']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" title="'+esc(item[1])+'" aria-label="'+esc(item[1])+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span></button>';
       }).join('') +
       '  </nav>' +
