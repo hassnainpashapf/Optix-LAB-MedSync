@@ -1681,14 +1681,10 @@
       '</div>';
   }
 
-  /* Render Dedicated Longitudinal Biomarker Trends & Visual Graphs Page */
+  /* Render Dedicated Longitudinal Biomarker Trends & Comparison Table Page */
   function renderLongitudinalTrendsPage(labData, patient) {
     var comps = labData.comparisons || [];
     var sum = labData.summary || { improved: 0, deteriorated: 0, stable: 0, baseline: 0, total: 0 };
-    var curInv = labData.currentInvoice;
-    var pastInv = labData.pastInvoice;
-    var prevDate = pastInv ? (pastInv.createdAt ? String(pastInv.createdAt).slice(0, 10) : 'Previous Visit') : 'Initial baseline';
-    var curDate = curInv ? (curInv.createdAt ? String(curInv.createdAt).slice(0, 10) : 'Current Visit') : 'Current Visit';
 
     return '<div class="pd-trends-page-wrap">' +
       // Top Metric KPI Summary Cards (4 Cards - Simple & Clean)
@@ -1723,14 +1719,58 @@
       '  </div>' +
       '</div>' +
 
-      // Individual Clean Biomarker Trend Graphs (1 separate graph per biomarker - simple and clear)
-      renderIndividualBiomarkerGraphsSection(comps, prevDate, curDate) +
+      // The Complete Chronological Comparison Table
+      renderLongitudinalComparisonCard(labData) +
+      '</div>';
+  }
+
+  /* Render Dedicated Longitudinal Trajectory & Biomarker Graphs Page */
+  function renderLongitudinalGraphsPage(labData, patient) {
+    var comps = labData.comparisons || [];
+    var sum = labData.summary || { improved: 0, deteriorated: 0, stable: 0, baseline: 0, total: 0 };
+    var curInv = labData.currentInvoice;
+    var pastInv = labData.pastInvoice;
+    var prevDate = pastInv ? (pastInv.createdAt ? String(pastInv.createdAt).slice(0, 10) : 'Previous Visit') : 'Initial baseline';
+    var curDate = curInv ? (curInv.createdAt ? String(curInv.createdAt).slice(0, 10) : 'Current Visit') : 'Current Visit';
+
+    return '<div class="pd-graphs-page-wrap">' +
+      // Top Metric KPI Summary Cards (4 Cards - Simple & Clean)
+      '<div class="pd-trends-kpi-grid">' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-label">Visual Biomarkers</span>' +
+      '      <span class="kpi-icon icon-monitored"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg></span>' +
+      '    </div>' +
+      '    <div class="kpi-value">' + comps.length + '</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-label">Positive Trajectory</span>' +
+      '      <span class="kpi-icon icon-improved"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg></span>' +
+      '    </div>' +
+      '    <div class="kpi-value"' + (sum.improved > 0 ? ' style="color:#059669"' : '') + '>' + sum.improved + '</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-label">Alert Trajectory</span>' +
+      '      <span class="kpi-icon icon-alert"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></span>' +
+      '    </div>' +
+      '    <div class="kpi-value"' + (sum.deteriorated > 0 ? ' style="color:#dc2626"' : '') + '>' + sum.deteriorated + '</div>' +
+      '  </div>' +
+      '  <div class="pd-trends-kpi-card">' +
+      '    <div class="kpi-top">' +
+      '      <span class="kpi-label">Equilibrium</span>' +
+      '      <span class="kpi-icon icon-stable"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 16 12 8 9 14 6 12 2 12"></polyline></svg></span>' +
+      '    </div>' +
+      '    <div class="kpi-value">' + (sum.stable + sum.baseline) + '</div>' +
+      '  </div>' +
+      '</div>' +
 
       // Graph 1: Multi-Biomarker Longitudinal Trajectory Vector Chart (SVG)
       renderBiomarkerTrajectoriesGraphCard(labData) +
 
-      // The Complete Chronological Comparison Table
-      renderLongitudinalComparisonCard(labData) +
+      // Individual Clean Biomarker Trend Graphs (1 separate graph per biomarker - simple and clear)
+      renderIndividualBiomarkerGraphsSection(comps, prevDate, curDate) +
       '</div>';
   }
 
@@ -2203,7 +2243,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdGraphs','Longitudinal Trajectory & Trend Graphs','📊'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','◎']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" title="'+esc(item[1])+'" aria-label="'+esc(item[1])+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span></button>';
       }).join('') +
       '  </nav>' +
@@ -2324,9 +2364,14 @@
       '  </div>' +
       '</div>' +
 
-      // Dedicated Longitudinal Biomarker Trends & Visual Graphs Page
+      // Dedicated Longitudinal Biomarker Trends & Comparison Table Page
       '<div class="pd-layout-trends" id="pdTrends" style="display:none">' +
       renderLongitudinalTrendsPage(labData, patient) +
+      '</div>' +
+
+      // Dedicated Longitudinal Trajectory & Biomarker Graphs Page
+      '<div class="pd-layout-graphs" id="pdGraphs" style="display:none">' +
+      renderLongitudinalGraphsPage(labData, patient) +
       '</div>' +
 
       // Dedicated Biomarker Variance & Delta Velocity Visualizer Page
@@ -2566,16 +2611,20 @@
 
       var overviewEl = host.querySelector('#pdOverview');
       var trendsEl = host.querySelector('#pdTrends');
+      var graphsEl = host.querySelector('#pdGraphs');
       var varianceEl = host.querySelector('#pdVariance');
       var anatomyEl = host.querySelector('#pdAnatomy');
 
       if (overviewEl) overviewEl.style.display = 'none';
       if (trendsEl) trendsEl.style.display = 'none';
+      if (graphsEl) graphsEl.style.display = 'none';
       if (varianceEl) varianceEl.style.display = 'none';
       if (anatomyEl) anatomyEl.style.display = 'none';
 
       if (sectionId === 'pdTrends') {
         if (trendsEl) trendsEl.style.display = 'block';
+      } else if (sectionId === 'pdGraphs') {
+        if (graphsEl) graphsEl.style.display = 'block';
       } else if (sectionId === 'pdVariance') {
         if (varianceEl) varianceEl.style.display = 'block';
       } else if (sectionId === 'pdAnatomy') {

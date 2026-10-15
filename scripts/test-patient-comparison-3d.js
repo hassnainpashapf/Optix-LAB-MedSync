@@ -159,6 +159,9 @@ assert.ok(html.includes('id="pdVariance"'), 'Dedicated pdVariance page section p
 assert.ok(html.includes('class="pd-layout-variance"'), 'Dedicated pd-layout-variance class present');
 assert.ok(html.includes('Individual Biomarker Trend Graphs'), 'Individual Biomarker Trend Graphs grid present');
 assert.ok(html.includes('pd-individual-biomarkers-section'), 'Individual Biomarker section container present');
+assert.ok(html.includes('data-pd-section="pdGraphs"'), 'Header navigation button for Longitudinal Trajectory & Graphs present');
+assert.ok(html.includes('id="pdGraphs"'), 'Dedicated pdGraphs page section present');
+assert.ok(html.includes('class="pd-layout-graphs"'), 'Dedicated pd-layout-graphs class present');
 assert.ok(!html.includes('vitals-trends-preview-card'), 'Biomarker Trends preview banner cleanly removed from Overview');
 assert.ok(html.includes('btnLaunchTrendsDoctorAI'), 'Full AI Analysis button moved to top patient header');
 
