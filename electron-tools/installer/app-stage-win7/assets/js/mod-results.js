@@ -4676,8 +4676,13 @@
           '</a><div class="muted" style="font-size:12px">' + App.esc([g.pat.age ? g.pat.age + ' yrs' : '', g.pat.gender || '', g.pat.phone || g.pat.whatsapp || ''].filter(Boolean).join(' · ')) + '</div></td>' +
           '<td style="max-width:260px;font-size:13px">' + App.esc(names.slice(0, 3).join(', ')) + (names.length > 3 ? ' <span class="muted">+' + (names.length - 3) + ' more</span>' : '') + '</td>' +
           '<td>' + App.esc(d ? d.name : 'Self') + '</td><td class="muted">' + App.esc(g.last ? App.d(g.last) : '—') + '</td>' +
-          '<td>' + ((+inv.due || 0) > 0.009 ? '<span class="badge b-unpaid">Due ' + App.esc(App.money(inv.due)) + '</span>' : '<span class="badge b-paid">Paid</span>') + '</td>' +
-          '<td style="text-align:right;white-space:nowrap">' + (canSeeAi ? '<button class="btn btn-ghost btn-sm" data-oai="' + App.esc(inv.id) + '" style="color:#7c3aed;font-weight:700" title="AI Doctor Recommendations">🤖 AI</button> ' : '') + '<button class="btn btn-ghost btn-sm" data-ov="' + App.esc(inv.id) + '">View</button> <button class="btn btn-ghost btn-sm" data-op="' + App.esc(inv.id) + '">Print</button> <button class="btn btn-ghost btn-sm" data-oe="' + App.esc(inv.id) + '">Edit</button> <button class="btn btn-ghost btn-sm" data-od="' + App.esc(inv.id) + '" style="color:#b91c1c">Delete</button></td></tr>';
+          '<td style="text-align:right;white-space:nowrap">' +
+            (canSeeAi ? '<button class="btn act-btn act-btn-ai" data-oai="' + App.esc(inv.id) + '" style="margin-right:4px" title="AI Doctor Recommendations"><span>🤖</span> <span>AI</span></button>' : '') +
+            '<button class="btn act-btn act-btn-view" data-ov="' + App.esc(inv.id) + '" style="margin-right:4px"><span>👁️</span> <span>View</span></button>' +
+            '<button class="btn act-btn act-btn-print" data-op="' + App.esc(inv.id) + '" style="margin-right:4px"><span>🖨️</span> <span>Print</span></button>' +
+            '<button class="btn act-btn act-btn-edit" data-oe="' + App.esc(inv.id) + '" style="margin-right:4px"><span>✏️</span> <span>Edit</span></button>' +
+            '<button class="btn act-btn act-btn-del" data-od="' + App.esc(inv.id) + '"><span>🗑️</span> <span>Delete</span></button>' +
+          '</td></tr>';
       }).join('') + '</tbody></table></div>' +
       (pages > 1 ? '<div style="display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px"><button class="btn btn-ghost btn-sm" id="olPrev"' + (old.page <= 1 ? ' disabled' : '') + '>&larr; Newer</button><span class="muted" style="font-size:13px">Page ' + old.page + ' of ' + pages + '</span><button class="btn btn-ghost btn-sm" id="olNext"' + (old.page >= pages ? ' disabled' : '') + '>Older &rarr;</button></div>' : '');
     view.innerHTML = oldKpis(all) + bar + '<div class="card"><div class="card-b">' + body + '</div></div>';
@@ -4788,11 +4793,11 @@
               '<td class="muted">' + App.esc(g.last ? App.dt(g.last) : '—') + '</td>' +
               '<td>' + ((+inv.due || 0) > 0.009 ? '<span class="badge b-unpaid">Due ' + App.esc(App.money(inv.due)) + '</span>' : '<span class="badge b-paid">Paid</span>') + '</td>' +
               '<td style="text-align:right;white-space:nowrap">' +
-                (canSeeAi ? '<button type="button" class="btn btn-ghost btn-sm" data-porai="' + App.esc(inv.id) + '" style="color:#7c3aed;font-weight:700;padding:4px 8px" title="AI Doctor Recommendations">🤖 AI</button> ' : '') +
-                '<button type="button" class="btn btn-ghost btn-sm" data-porview="' + App.esc(inv.id) + '" style="font-weight:600;padding:4px 8px">👁️ View</button> ' +
-                '<button type="button" class="btn btn-ghost btn-sm" data-porprint="' + App.esc(inv.id) + '" style="font-weight:600;padding:4px 8px">🖨️ Print</button> ' +
-                '<button type="button" class="btn btn-ghost btn-sm" data-pordl="' + App.esc(inv.id) + '" style="font-weight:600;padding:4px 8px;color:#059669">📥 PDF</button> ' +
-                '<button type="button" class="btn btn-ghost btn-sm" data-poredit="' + App.esc(inv.id) + '" style="font-weight:600;padding:4px 8px">✏️ Edit</button>' +
+                (canSeeAi ? '<button type="button" class="btn act-btn act-btn-ai" data-porai="' + App.esc(inv.id) + '" style="margin-right:4px" title="AI Doctor Recommendations"><span>🤖</span> <span>AI</span></button>' : '') +
+                '<button type="button" class="btn act-btn act-btn-view" data-porview="' + App.esc(inv.id) + '" style="margin-right:4px"><span>👁️</span> <span>View</span></button>' +
+                '<button type="button" class="btn act-btn act-btn-print" data-porprint="' + App.esc(inv.id) + '" style="margin-right:4px"><span>🖨️</span> <span>Print</span></button>' +
+                '<button type="button" class="btn act-btn act-btn-pdf" data-pordl="' + App.esc(inv.id) + '" style="margin-right:4px"><span>📥</span> <span>PDF</span></button>' +
+                '<button type="button" class="btn act-btn act-btn-edit" data-poredit="' + App.esc(inv.id) + '"><span>✏️</span> <span>Edit</span></button>' +
               '</td>' +
             '</tr>';
           }).join('') + '</tbody>' +
