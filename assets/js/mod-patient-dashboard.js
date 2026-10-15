@@ -418,6 +418,242 @@
       '</div>';
   }
 
+  /* ---------- Open Detailed Diagnostic Test Modal ---------- */
+  function openPatientTestDetailModal(patient, t) {
+    if (!t) return;
+    var testName = t.name || 'Diagnostic Test';
+    var test = (t.testId ? DB.get('tests', t.testId) : null) || {};
+    if (!test.id && t.name) {
+      var allTests = DB.all('tests') || [];
+      test = allTests.find(function (x) {
+        return x && (x.id === t.testId || (x.name && x.name.toLowerCase() === t.name.toLowerCase()));
+      }) || test;
+    }
+    var inv = (t.invoiceId ? DB.get('invoices', t.invoiceId) : null) || {};
+    var allResults = DB.all('results') || [];
+    var res = allResults.filter(function (r) {
+      return r && (
+        (t.invoiceId && r.invoiceId === t.invoiceId && (r.testId === t.testId || (t.name && (r.testName === t.name || (test.name && r.testName === test.name))))) ||
+        (!t.invoiceId && (r.testId === t.testId || (t.name && r.testName === t.name)))
+      );
+    }).sort(function (a, b) {
+      return String(b.reportedAt || b.updatedAt || '').localeCompare(String(a.reportedAt || a.updatedAt || ''));
+    })[0];
+
+    if (!inv.id && res && res.invoiceId) {
+      inv = DB.get('invoices', res.invoiceId) || inv;
+    }
+    var doc = inv.doctorId ? DB.get('doctors', inv.doctorId) : null;
+
+    var isReady = res && res.status === 'ready';
+    var params = Array.isArray(test.params) ? test.params : [];
+    var values = (res && res.values) || {};
+
+    // Build Biomarkers / Parameters table
+    var paramsTableHtml = '';
+    if (params.length || Object.keys(values).length) {
+      var rowsHtml = '';
+      if (params.length) {
+        rowsHtml = params.map(function (param) {
+          var pName = param.name || param.id || 'Biomarker';
+          var val = values[param.id] != null ? values[param.id] : values[param.name];
+          var hasVal = val != null && String(val).trim() !== '';
+          var valStr = hasVal ? String(val).trim() : (isReady ? '—' : 'Pending');
+          var ref = reference(param, patient);
+          var isOut = outsideRange(val, ref);
+          var unit = param.unit || '';
+
+          var valDisplay = esc(valStr);
+          var statusBadge = '<span class="badge b-ready" style="font-size:11px;font-weight:700">Normal</span>';
+          if (isOut === true) {
+            valDisplay = '<span style="color:#b91c1c;font-weight:800;display:inline-flex;align-items:center;gap:3px">' + esc(valStr) + ' <span style="font-size:13px">⚠️</span></span>';
+            statusBadge = '<span class="badge b-red" style="font-size:11px;font-weight:700">Abnormal</span>';
+          } else if (!hasVal && !isReady) {
+            valDisplay = '<span style="color:#94a3b8;font-style:italic">Pending</span>';
+            statusBadge = '<span class="badge b-warn" style="font-size:11px;font-weight:700">Pending</span>';
+          } else if (!hasVal && isReady) {
+            valDisplay = '<span style="color:#94a3b8">—</span>';
+            statusBadge = '<span class="badge" style="font-size:11px;background:#f1f5f9;color:#64748b">Not entered</span>';
+          }
+
+          return '<tr style="border-bottom:1px solid #e2e8f0' + (isOut ? ';background:#fef2f2' : '') + '">' +
+            '<td style="padding:10px 12px;font-weight:600;color:#1e293b">' + esc(pName) + '</td>' +
+            '<td style="padding:10px 12px;font-weight:700;font-size:13.5px">' + valDisplay + '</td>' +
+            '<td style="padding:10px 12px;color:#64748b;font-size:12px">' + esc(unit || '—') + '</td>' +
+            '<td style="padding:10px 12px;color:#475569;font-size:12px;font-family:monospace">' + esc(ref || 'Standard') + '</td>' +
+            '<td style="padding:10px 12px;text-align:right">' + statusBadge + '</td>' +
+          '</tr>';
+        }).join('');
+      } else {
+        rowsHtml = Object.keys(values).map(function (k) {
+          return '<tr style="border-bottom:1px solid #e2e8f0">' +
+            '<td style="padding:10px 12px;font-weight:600;color:#1e293b">' + esc(k) + '</td>' +
+            '<td style="padding:10px 12px;font-weight:700;font-size:13.5px">' + esc(values[k]) + '</td>' +
+            '<td style="padding:10px 12px;color:#64748b;font-size:12px">—</td>' +
+            '<td style="padding:10px 12px;color:#475569;font-size:12px">—</td>' +
+            '<td style="padding:10px 12px;text-align:right"><span class="badge b-ready">Recorded</span></td>' +
+          '</tr>';
+        }).join('');
+      }
+
+      var pendingNotice = !isReady ? (
+        '<div style="margin-bottom:12px;padding:10px 14px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:8px">' +
+          '<span style="font-size:16px">⏳</span>' +
+          '<span><strong>Laboratory Processing:</strong> Official results verification is in progress. Standard parameter reference ranges are listed below.</span>' +
+        '</div>'
+      ) : '';
+
+      paramsTableHtml =
+        '<div style="margin-top:16px">' +
+          pendingNotice +
+          '<div style="font-weight:700;font-size:13.5px;color:#0f172a;margin-bottom:8px;display:flex;align-items:center;gap:6px">' +
+            '<span>🔬</span> <span>Analyte Parameters &amp; Lab Values (' + (params.length || Object.keys(values).length) + ' Analyzed)</span>' +
+          '</div>' +
+          '<div style="border:1.5px solid #e2e8f0;border-radius:10px;overflow:hidden">' +
+            '<table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left">' +
+              '<thead style="background:#f8fafc;border-bottom:1.5px solid #e2e8f0;font-size:12px;color:#64748b">' +
+                '<tr>' +
+                  '<th style="padding:8px 12px">Biomarker / Test Parameter</th>' +
+                  '<th style="padding:8px 12px">Observed Value</th>' +
+                  '<th style="padding:8px 12px">Unit</th>' +
+                  '<th style="padding:8px 12px">Normal Reference Range</th>' +
+                  '<th style="padding:8px 12px;text-align:right">Evaluation</th>' +
+                '</tr>' +
+              '</thead>' +
+              '<tbody>' + rowsHtml + '</tbody>' +
+            '</table>' +
+          '</div>' +
+        '</div>';
+    } else {
+      paramsTableHtml =
+        '<div style="margin-top:16px;padding:24px 16px;background:#fffbeb;border:1.5px dashed #fcd34d;border-radius:12px;text-align:center">' +
+          '<div style="font-size:28px;margin-bottom:6px">⏳</div>' +
+          '<strong style="color:#92400e;font-size:14px;display:block">Results Entry In Progress</strong>' +
+          '<p style="margin:4px 0 0;font-size:12px;color:#b45309">Specimen collected and assigned to laboratory workbench. Official findings will appear here once verified.</p>' +
+        '</div>';
+    }
+
+    var remarksHtml = '';
+    if (res && (res.remarks || res.narrative || res.notes)) {
+      var noteTxt = res.remarks || res.narrative || res.notes;
+      remarksHtml =
+        '<div style="margin-top:14px;padding:12px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px">' +
+          '<strong style="font-size:12.5px;color:#166534;display:flex;align-items:center;gap:6px">📝 Pathologist / Clinical Remarks:</strong>' +
+          '<div style="font-size:12.5px;color:#14532d;margin-top:4px;white-space:pre-wrap;line-height:1.5">' + esc(noteTxt) + '</div>' +
+        '</div>';
+    }
+
+    var reportedByHtml = '';
+    if (res && (res.reportedBy || res.reportedAt)) {
+      reportedByHtml = '<div style="font-size:11.5px;color:#64748b;margin-top:8px">Verified by: ' + esc(res.reportedBy || 'Pathologist') + (res.reportedAt ? ' on ' + esc(App.dt ? App.dt(res.reportedAt) : res.reportedAt) : '') + '</div>';
+    }
+
+    var badgeCls = t.badgeCls || 'b-warn';
+    var badgeText = t.statusLabel || 'Pending';
+
+    var modalHtml =
+      '<div style="display:flex;flex-direction:column;gap:12px">' +
+        // Header summary card
+        '<div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">' +
+          '<div>' +
+            '<div style="display:flex;align-items:center;gap:8px">' +
+              '<span style="font-size:22px">🧪</span>' +
+              '<div>' +
+                '<h3 style="margin:0;font-size:17px;font-weight:800;color:#0f172a">' + esc(testName) + '</h3>' +
+                '<div style="font-size:12px;color:#64748b;margin-top:2px">' +
+                  (test.code ? '<span class="mono" style="font-weight:700;color:#0284c7">' + esc(test.code) + '</span> · ' : '') +
+                  '<span>📁 ' + esc(test.category || t.category || 'General Pathology') + '</span> · ' +
+                  '<span>🩸 ' + esc(test.sampleType || t.sampleType || 'Specimen Blood') + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="display:flex;align-items:center;gap:8px">' +
+            '<span class="badge ' + badgeCls + '" style="font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px">' + esc(badgeText) + '</span>' +
+          '</div>' +
+        '</div>' +
+
+        // Order Details Grid
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px">' +
+          '<div>' +
+            '<span style="font-size:11px;color:#64748b;display:block">Invoice / Case #</span>' +
+            '<strong style="font-size:13px;color:#0f172a">' + esc(t.invoiceNo || 'Recorded') + '</strong>' +
+          '</div>' +
+          '<div>' +
+            '<span style="font-size:11px;color:#64748b;display:block">Registration Date</span>' +
+            '<strong style="font-size:13px;color:#0f172a">' + esc(t.date || 'Recorded') + '</strong>' +
+          '</div>' +
+          '<div>' +
+            '<span style="font-size:11px;color:#64748b;display:block">Referring Doctor</span>' +
+            '<strong style="font-size:13px;color:#0f172a">' + esc(doc ? doc.name : 'Self / Walk-in') + '</strong>' +
+          '</div>' +
+          '<div>' +
+            '<span style="font-size:11px;color:#64748b;display:block">Test Fee &amp; Billing</span>' +
+            '<strong style="font-size:13px;color:#0f172a">' + (t.price ? App.money(t.price) : 'Standard') + ' (' + ((+inv.due || 0) > 0.009 ? '<span style="color:#dc2626">Due ' + App.money(inv.due) + '</span>' : '<span style="color:#16a34a">Paid</span>') + ')</strong>' +
+          '</div>' +
+        '</div>' +
+
+        paramsTableHtml +
+        remarksHtml +
+        reportedByHtml +
+
+        '<div class="actions" style="margin-top:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">' +
+          '<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">' +
+            (t.invoiceId ? '<button type="button" class="btn btn-primary btn-sm" id="ptdViewReport" style="font-weight:700;display:inline-flex;align-items:center;gap:6px"><span>👁️</span> <span>View Official Report (PDF)</span></button>' : '') +
+            (t.invoiceId ? '<button type="button" class="btn btn-ghost btn-sm" id="ptdPrintReport" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff"><span>🖨️</span> <span>Print Report</span></button>' : '') +
+            ((window.App && App.aiInsights && t.invoiceId) ? '<button type="button" class="btn btn-ghost btn-sm" id="ptdAiInsights" style="font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid #cbd5e1;background:#fff"><span>🤖</span> <span>AI Recommendations</span></button>' : '') +
+          '</div>' +
+          '<button type="button" class="btn btn-ghost" id="ptdClose" style="min-width:90px;font-weight:700">Close</button>' +
+        '</div>' +
+      '</div>';
+
+    App.modal('Diagnostic Test Details — ' + esc(testName), modalHtml, {
+      wide: true,
+      onOpen: function (dov, dClose) {
+        var clBtn = dov.querySelector('#ptdClose');
+        if (clBtn) clBtn.addEventListener('click', dClose);
+
+        var vrBtn = dov.querySelector('#ptdViewReport');
+        if (vrBtn && t.invoiceId) {
+          vrBtn.addEventListener('click', function () {
+            dClose();
+            if (App.viewLabReport) {
+              App.viewLabReport(t.invoiceId);
+            } else if (App.loadScript) {
+              App.loadScript('assets/js/mod-results.js').then(function () {
+                if (App.viewLabReport) App.viewLabReport(t.invoiceId);
+              });
+            }
+          });
+        }
+
+        var prBtn = dov.querySelector('#ptdPrintReport');
+        if (prBtn && t.invoiceId) {
+          prBtn.addEventListener('click', function () {
+            dClose();
+            if (App.printLabReport) {
+              App.printLabReport(t.invoiceId);
+            } else if (App.loadScript) {
+              App.loadScript('assets/js/mod-results.js').then(function () {
+                if (App.printLabReport) App.printLabReport(t.invoiceId);
+              });
+            }
+          });
+        }
+
+        var aiBtn = dov.querySelector('#ptdAiInsights');
+        if (aiBtn && t.invoiceId) {
+          aiBtn.addEventListener('click', function () {
+            if (App.aiInsights && typeof App.aiInsights.showModal === 'function') {
+              App.aiInsights.showModal(t.invoiceId);
+            }
+          });
+        }
+      }
+    });
+  }
+  App.openPatientTestDetailModal = openPatientTestDetailModal;
+
   function renderPatientTestsListHtml(tests) {
     if (!tests || !tests.length) {
       return '<div style="padding:22px 16px;background:#f8fafc;border:1.5px dashed #cbd5e1;border-radius:12px;text-align:center;color:#64748b;font-size:12px;margin-bottom:12px">' +
@@ -427,7 +663,7 @@
         '</div>';
     }
     return '<div class="pd-tests-scroll-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;width:100%">' +
-      tests.map(function (t) {
+      tests.map(function (t, idx) {
         var badgeCls = t.badgeCls || 'b-warn';
         var badgeText = t.statusLabel || 'Pending';
         if (!t.statusLabel) {
@@ -447,18 +683,23 @@
           ? '<span style="color:#cbd5e1">•</span><span style="font-weight:600;color:#0284c7">' + esc(t.invoiceNo) + '</span>'
           : '';
 
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:10px;gap:12px;box-shadow:0 1px 2px rgba(15,23,42,0.02)">' +
+        return '<div class="pd-diag-test-item" data-pd-diag-idx="' + idx + '" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:10px;gap:12px;box-shadow:0 1px 2px rgba(15,23,42,0.02);cursor:pointer;transition:all 0.15s ease" title="Click to view full test parameters and clinical results">' +
           '  <div style="min-width:0;flex:1">' +
-          '    <div style="display:flex;align-items:center;gap:7px">' +
-          '      <span style="font-size:13px;color:#475569" aria-hidden="true">🧪</span>' +
-          '      <strong style="font-size:13px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(t.name) + '</strong>' +
+          '    <div style="display:flex;align-items:center;gap:8px">' +
+          '      <span style="font-size:15px;color:#475569" aria-hidden="true">🧪</span>' +
+          '      <strong style="font-size:13.5px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(t.name) + '</strong>' +
+          '      <span style="font-size:11px;font-weight:600;color:#2563eb;background:#eff6ff;padding:1px 6px;border-radius:4px;border:1px solid #bfdbfe">View Details</span>' +
           '    </div>' +
-          '    <div style="display:flex;align-items:center;gap:6px;margin-top:3px;font-size:11px;color:#64748b">' +
+          '    <div style="display:flex;align-items:center;gap:6px;margin-top:3px;font-size:11.5px;color:#64748b">' +
           '      <span>📅 ' + esc(dateStr) + '</span>' +
           invoiceTag +
+          (t.category ? '<span style="color:#cbd5e1">•</span><span>📁 ' + esc(t.category) + '</span>' : '') +
           '    </div>' +
           '  </div>' +
-          '  <span class="badge ' + badgeCls + '" style="font-size:11px;font-weight:700;flex-shrink:0;padding:3px 8px;border-radius:6px">' + esc(badgeText) + '</span>' +
+          '  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
+          '    <span class="badge ' + badgeCls + '" style="font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px">' + esc(badgeText) + '</span>' +
+          '    <span style="color:#94a3b8;font-size:16px;font-weight:700">›</span>' +
+          '  </div>' +
           '</div>';
       }).join('') +
       '</div>';
@@ -565,7 +806,7 @@
         var ref=reference(param,patient),outside=outsideRange(value,ref);if(outside!==null)checked++;
         if(outside)flags.push((param.name||param.id)+': '+value+(param.unit?' '+param.unit:'')+' (reference '+ref+')');
       });
-      entries.push({name:name,region:regionFor({name:name,code:test.code}),status:flags.length?'abnormal':!ready?'pending':checked>0&&checked===params.length&&populated===params.length?'within':'unknown',flags:flags,date:inv.createdAt||''});
+      entries.push({name:name,region:regionFor({name:name,code:test.code}),status:flags.length?'abnormal':!ready?'pending':checked>0&&checked===params.length&&populated===params.length?'within':'unknown',flags:flags,date:inv.createdAt||'',testId:item.testId,invoiceId:inv.id,invoiceNo:inv.no||(inv.id?'#'+inv.id:''),price:item.price,category:test.category,sampleType:test.sampleType});
     });});return entries;
   }
 
@@ -627,7 +868,9 @@
           status: status,
           statusLabel: statusLabel,
           badgeCls: badgeCls,
-          price: item.price
+          price: item.price,
+          category: test.category,
+          sampleType: test.sampleType
         });
       });
     });
@@ -2061,7 +2304,10 @@
           '      <small style="color:#64748b;font-size:11px">' + esc(regName) + ' · ' + esc(t.date ? String(t.date).slice(0, 10) : 'Recorded') + '</small>' +
           '    </div>' +
           '  </div>' +
-          '  <div>' + stBadge + '</div>' +
+          '  <div style="display:flex;align-items:center;gap:6px">' +
+          '    <button type="button" class="btn btn-ghost btn-xs pd-anatomy-detail-btn" data-anatomy-btn-idx="' + idx + '" title="View Test Details" style="font-size:11px;font-weight:600;padding:2px 8px;border:1px solid #cbd5e1;background:#fff;border-radius:6px;color:#2563eb">Details ↗</button>' +
+          '    <div>' + stBadge + '</div>' +
+          '  </div>' +
           '</div>' +
           flagsHtml +
           '</div>';
@@ -2756,6 +3002,44 @@
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+    // Wire clickable items in Diagnostic Tests Card to open full detail modal
+    var oldTestsList = getPatientOldTests(patient);
+    if (!oldTestsList.length && tests && tests.length) {
+      oldTestsList = tests.map(function (t) {
+        return {
+          name: t.name,
+          date: t.date ? (App.d ? App.d(t.date) : String(t.date).slice(0, 10)) : 'Recorded',
+          invoiceNo: '',
+          status: t.status,
+          statusLabel: t.status === 'abnormal' ? 'Abnormal' : t.status === 'within' ? 'Normal' : 'Pending',
+          badgeCls: t.status === 'abnormal' ? 'b-red' : t.status === 'within' ? 'b-ready' : 'b-warn',
+          testId: t.id || t.testId,
+          price: t.price,
+          category: t.category,
+          sampleType: t.sampleType
+        };
+      });
+    }
+
+    host.querySelectorAll('.pd-diag-test-item').forEach(function (item) {
+      item.addEventListener('click', function () {
+        var idx = parseInt(this.getAttribute('data-pd-diag-idx'), 10);
+        if (!isNaN(idx) && oldTestsList && oldTestsList[idx]) {
+          openPatientTestDetailModal(patient, oldTestsList[idx]);
+        }
+      });
+    });
+
+    host.querySelectorAll('.pd-anatomy-detail-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var idx = parseInt(btn.getAttribute('data-anatomy-btn-idx'), 10);
+        if (!isNaN(idx) && tests && tests[idx]) {
+          openPatientTestDetailModal(patient, tests[idx]);
+        }
+      });
+    });
 
     // Wire clickable test cards in the anatomy directory
     host.querySelectorAll('[data-pd-test-idx]').forEach(function(card) {
