@@ -3095,16 +3095,16 @@
         return '<b>' + (window.App ? App.esc(a.param) : a.param) + ' (' + (window.App ? App.esc(a.value) : a.value) + '):</b> ' + (window.App ? App.esc(a.hazard) : a.hazard);
       }).join(' &bull; ');
 
-      panicBannerHtml = '<div style="background:#ffffff;border:1.5px solid #cbd5e1;border-left:4px solid #b91c1c;color:#0f172a;border-radius:12px;padding:14px 18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
+      panicBannerHtml = '<div style="background:#ffffff;border:1.5px solid #cbd5e1;border-left:4px solid #131845;color:#0f172a;border-radius:12px;padding:14px 18px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
         + '<div style="display:flex;align-items:center;gap:10px">'
-        + '  <span style="font-size:22px">🚨</span>'
+        + '  <span style="display:inline-grid;place-items:center;width:32px;height:32px;border-radius:8px;background:#ebf4f8;border:1px solid #c7d8e8;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>'
         + '  <div>'
         + '    <div style="font-size:13px;font-weight:800;color:#131845;letter-spacing:0.02em">CRITICAL PANIC-VALUE LAB ALERT (ISO 15189 / CAP Standard)</div>'
         + '    <div style="font-size:12px;color:#475569;margin-top:2px">' + panicDetails + '</div>'
         + '  </div>'
         + '</div>'
         + '<div>'
-        + '  <button type="button" class="btn ai-action-btn" id="aiSendPanicSos" style="background:#ffffff;color:#1e293b;border:1.5px solid #cbd5e1;font-weight:700;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer">💬 Send Panic SOS to Doctor</button>'
+        + '  <button type="button" class="btn ai-action-btn" id="aiSendPanicSos" style="background:#ffffff;color:#1e293b;border:1.5px solid #cbd5e1;font-weight:700;padding:7px 14px;border-radius:8px;font-size:12px;cursor:pointer"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Send Panic SOS to Doctor</span></button>'
         + '</div>'
         + '</div>';
     }
@@ -3116,7 +3116,7 @@
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
         + '  <div>'
         + '    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">Cardiovascular / AHA-ACC Guideline</div>'
-        + '    <div style="font-size:15.5px;font-weight:800;color:#131845;margin-top:2px">🫀 10-Year ASCVD Heart Attack & Stroke Risk</div>'
+        + '    <div style="font-size:15.5px;font-weight:800;color:#131845;margin-top:2px;display:flex;align-items:center;gap:7px"><span style="display:inline-grid;place-items:center;width:24px;height:24px;border-radius:6px;background:#ebf4f8;border:1px solid #c7d8e8;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span>10-Year ASCVD Heart Attack &amp; Stroke Risk</span></div>'
         + '    <div style="font-size:12px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(ascvdRisk.details) : ascvdRisk.details) + '</div>'
         + '  </div>'
         + '  <div style="text-align:right">'
@@ -3156,11 +3156,11 @@
     var safetyHtml = '';
     if (drugInteractions.length) {
       safetyHtml += '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-        + '<div style="font-size:14.5px;font-weight:800;color:#131845;margin-bottom:12px">💊 Drug Interactions & Clash Matrix (DDI)</div>'
+        + '<div style="font-size:14.5px;font-weight:800;color:#131845;margin-bottom:12px;display:flex;align-items:center;gap:7px"><span style="display:inline-grid;place-items:center;width:24px;height:24px;border-radius:6px;background:#ebf4f8;border:1px solid #c7d8e8;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span><span>Drug Interactions &amp; Clash Matrix (DDI)</span></div>'
         + drugInteractions.map(function (di) {
             return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-left:3px solid #131845;border-radius:8px;padding:12px 14px;margin-bottom:8px">'
               + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:gap:6px">'
-              + '  <b style="color:#131845;font-size:13px">⚡ ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
+              + '  <b style="color:#131845;font-size:13px;display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
               + '  <span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase">' + di.severity + '</span>'
               + '</div>'
               + '<div style="font-size:12px;color:#475569;margin-top:4px;line-height:1.45">' + (window.App ? App.esc(di.mechanism) : di.mechanism) + '</div>'
@@ -3172,19 +3172,24 @@
 
     if (drugSafety.length) {
       safetyHtml += drugSafety.map(function (ds) {
+        var dsSvg = ds.organ === 'Renal'
+          ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+          : (ds.organ === 'Hepatic'
+              ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
+              : '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>');
         var contraHtml = ds.contraindications.map(function (c) {
-          return '<li style="margin-bottom:4px"><b style="color:#1e293b">🚫 CONTRAINDICATED:</b> <span style="color:#334155">' + (window.App ? App.esc(c) : c) + '</span></li>';
+          return '<li style="margin-bottom:4px"><b style="color:#1e293b">CONTRAINDICATED:</b> <span style="color:#334155">' + (window.App ? App.esc(c) : c) + '</span></li>';
         }).join('');
         var cautionsHtml = ds.cautions.map(function (c) {
-          return '<li style="margin-bottom:4px"><b style="color:#1e293b">⚠️ CAUTION:</b> <span style="color:#334155">' + (window.App ? App.esc(c) : c) + '</span></li>';
+          return '<li style="margin-bottom:4px"><b style="color:#1e293b">CAUTION:</b> <span style="color:#334155">' + (window.App ? App.esc(c) : c) + '</span></li>';
         }).join('');
         var safeHtml = ds.safeAlternatives.map(function (sAlt) {
-          return '<li style="margin-bottom:4px"><b style="color:#1e293b">💡 SAFE ALTERNATIVE:</b> <span style="color:#334155">' + (window.App ? App.esc(sAlt) : sAlt) + '</span></li>';
+          return '<li style="margin-bottom:4px"><b style="color:#1e293b">SAFE ALTERNATIVE:</b> <span style="color:#334155">' + (window.App ? App.esc(sAlt) : sAlt) + '</span></li>';
         }).join('');
 
         return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
           + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-          + '  <span style="font-size:24px">' + ds.icon + '</span>'
+          + '  <span style="display:inline-grid;place-items:center;width:32px;height:32px;border-radius:8px;background:#ebf4f8;border:1px solid #c7d8e8;color:#131845;flex-shrink:0">' + dsSvg + '</span>'
           + '  <div>'
           + '    <div style="font-size:15px;font-weight:800;color:#131845">' + (window.App ? App.esc(ds.title) : ds.title) + '</div>'
           + '    <div style="font-size:11.5px;color:#64748b;margin-top:1px">Trigger: ' + (window.App ? App.esc(ds.trigger) : ds.trigger) + '</div>'
@@ -3253,29 +3258,29 @@
           + '</div>';
       }).join('');
     } else {
-      geneticHtml = '<div style="padding:22px;text-align:center;color:#334155;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;font-weight:700">🧬 No high-risk familial carrier traits (such as Beta-Thalassemia or early onset monogenic diabetes) detected in current report.</div>';
+      geneticHtml = '<div style="padding:22px;text-align:center;color:#334155;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;font-weight:700">No high-risk familial carrier traits (such as Beta-Thalassemia or early onset monogenic diabetes) detected in current report.</div>';
     }
 
     // Tab 6: Roman Urdu Patient Care Guide HTML (Theme Harmonized)
     var urduHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:20px 24px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
       + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;border-bottom:1px solid #f1f5f9;padding-bottom:12px">'
       + '  <div>'
-      + '    <div style="font-size:16px;font-weight:800;color:#131845">🇵🇰 Mareez Ke Liye Rehnumai (Roman Urdu Guide)</div>'
+      + '    <div style="font-size:16px;font-weight:800;color:#131845">Mareez Ke Liye Rehnumai (Roman Urdu Guide)</div>'
       + '    <div style="font-size:12px;color:#64748b;margin-top:2px">Asan zaban mein bimari ki wazahat, khurak, parhez aur dawai ka tareeqa</div>'
       + '  </div>'
       + '  <div style="display:flex;gap:8px">'
-      + '    <button type="button" class="btn ai-action-btn" id="aiCopyUrduGuide" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer">📋 Copy Urdu</button>'
-      + '    <button type="button" class="btn ai-action-btn" id="aiWaUrduGuide" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer">💬 WhatsApp to Patient</button>'
+      + '    <button type="button" class="btn ai-action-btn" id="aiCopyUrduGuide" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy Urdu</span></button>'
+      + '    <button type="button" class="btn ai-action-btn" id="aiWaUrduGuide" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>WhatsApp to Patient</span></button>'
       + '  </div>'
       + '</div>'
       + '<div style="margin-bottom:14px">'
-      + '  <div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">1. 🩺 Bemari Ki Wazahat:</div>'
+      + '  <div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">1. Bemari Ki Wazahat:</div>'
       + '  <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
       +      urduGuide.wazahat.map(function (w) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(w) : w) + '</li>'; }).join('')
       + '  </ul>'
       + '</div>'
       + '<div style="margin-bottom:14px">'
-      + '  <div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">2. 🍲 Khurak Aur Parhez:</div>'
+      + '  <div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">2. Khurak Aur Parhez:</div>'
       + '  <div style="font-size:12px;color:#131845;font-weight:700;margin-bottom:4px">Kya Khayein:</div>'
       + '  <ul style="margin:0 0 8px;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
       +      (urduGuide.khurak.length ? urduGuide.khurak.map(function (k) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(k) : k) + '</li>'; }).join('') : '<li>Saaf mutawazan khurak aur ubla hua paani.</li>')
@@ -3286,13 +3291,13 @@
       + '  </ul>'
       + '</div>'
       + (urduGuide.dawaiSchedule.length ? ('<div style="margin-bottom:14px">'
-          + '<div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">3. 💊 Dawai Lene Ka Tareeqa:</div>'
+          + '<div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">3. Dawai Lene Ka Tareeqa:</div>'
           + '<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
           + urduGuide.dawaiSchedule.map(function (ds) { return '<li style="margin-bottom:4px"><b>' + (window.App ? App.esc(ds.waqt) : ds.waqt) + ':</b> ' + (window.App ? App.esc(ds.dawai) : ds.dawai) + '</li>'; }).join('')
           + '</ul>'
           + '</div>') : '')
       + '<div style="margin-bottom:8px">'
-      + '  <div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">4. ⚠️ Khatray Ki Alamaat (Kab Foran Emergency Jayein):</div>'
+      + '  <div style="font-size:13px;font-weight:800;color:#131845;margin-bottom:6px">4. Khatray Ki Alamaat (Kab Foran Emergency Jayein):</div>'
       + '  <ul style="margin:0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.65">'
       +      urduGuide.khatraAlamaat.map(function (ka) { return '<li style="margin-bottom:4px">' + (window.App ? App.esc(ka) : ka) + '</li>'; }).join('')
       + '  </ul>'
@@ -3304,7 +3309,7 @@
       + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px">'
       + '  <div style="display:flex;align-items:center;gap:8px">'
       + '    <button type="button" class="btn ai-action-btn" id="aiVoiceDictateBtn" style="border:1.5px solid #131845;color:#131845;background:#ffffff;font-weight:700;font-size:12.5px;display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;cursor:pointer">'
-      + '      <span id="aiVoiceMicIcon">🎙️</span> <span id="aiVoiceMicText">Bol Kar Likhain (Voice Dictate)</span>'
+      + '      <span id="aiVoiceMicIcon"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span> <span id="aiVoiceMicText">Bol Kar Likhain (Voice Dictate)</span>'
       + '    </button>'
       + '    <span id="aiVoiceStatusText" style="font-size:11px;color:#64748b;font-weight:600"></span>'
       + '  </div>'
@@ -3356,18 +3361,20 @@
       + '  .ai-action-btn-primary:hover {'
       + '    background: #0d1238 !important; border-color: #0d1238 !important; color: #ffffff !important; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(19,24,69,0.3) !important;'
       + '  }'
+      + '  .ai-tab-btn .ai-tab-ico { display: inline-flex; align-items: center; justify-content: center; color: #131845; }'
+      + '  .ai-tab-btn.active .ai-tab-ico { color: #ffffff; }'
       + '</style>';
 
     var tabsHtml = tabsStyle
       + '<div class="ai-tabs-bar">'
-      + '<button type="button" class="btn ai-tab-btn active" data-tab="solutions"><span>🩺</span> <span>5 Solutions</span></button>'
-      + (showBodyMap ? '<button type="button" class="btn ai-tab-btn" data-tab="bodymap"><span>🫀</span> <span>Organ Map</span></button>' : '')
-      + (showCalculators ? '<button type="button" class="btn ai-tab-btn" data-tab="indices"><span>🧮</span> <span>Indices</span></button>' : '')
-      + (showSafety ? '<button type="button" class="btn ai-tab-btn" data-tab="safety"><span>⚠️</span> <span>Drug Safety</span></button>' : '')
-      + '<button type="button" class="btn ai-tab-btn" data-tab="trends"><span>📈</span> <span>Velocity</span></button>'
-      + (showGenetic ? '<button type="button" class="btn ai-tab-btn" data-tab="genetic"><span>🧬</span> <span>Genetic Guard</span></button>' : '')
-      + (showUrdu ? '<button type="button" class="btn ai-tab-btn" data-tab="urdu"><span>🇵🇰</span> <span>Urdu Guide</span></button>' : '')
-      + (showRx ? '<button type="button" class="btn ai-tab-btn" data-tab="rx"><span>🖨️</span> <span>Rx Pad</span></button>' : '')
+      + '<button type="button" class="btn ai-tab-btn active" data-tab="solutions"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v5a4.5 4.5 0 0 0 9 0V3"/><path d="M6 3h3"/><path d="M10.5 3h3"/><path d="M9 12.5A6.5 6.5 0 0 0 15.5 19h1a2.5 2.5 0 0 0 2.5-2.5v-1"/><circle cx="19" cy="15" r="2"/></svg></span> <span>5 Solutions</span></button>'
+      + (showBodyMap ? '<button type="button" class="btn ai-tab-btn" data-tab="bodymap"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> <span>Organ Map</span></button>' : '')
+      + (showCalculators ? '<button type="button" class="btn ai-tab-btn" data-tab="indices"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg></span> <span>Indices</span></button>' : '')
+      + (showSafety ? '<button type="button" class="btn ai-tab-btn" data-tab="safety"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> <span>Drug Safety</span></button>' : '')
+      + '<button type="button" class="btn ai-tab-btn" data-tab="trends"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span> <span>Velocity</span></button>'
+      + (showGenetic ? '<button type="button" class="btn ai-tab-btn" data-tab="genetic"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></span> <span>Genetic Guard</span></button>' : '')
+      + (showUrdu ? '<button type="button" class="btn ai-tab-btn" data-tab="urdu"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> <span>Urdu Guide</span></button>' : '')
+      + (showRx ? '<button type="button" class="btn ai-tab-btn" data-tab="rx"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span> <span>Rx Pad</span></button>' : '')
       + '</div>';
 
     var html = ''
@@ -3376,31 +3383,31 @@
       + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
       + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;margin-bottom:20px">'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🩺</span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-grid;place-items:center;width:32px;height:32px;border-radius:8px;background:#ebf4f8;border:1px solid #c7d8e8;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v5a4.5 4.5 0 0 0 9 0V3"/><path d="M6 3h3"/><path d="M10.5 3h3"/><path d="M9 12.5A6.5 6.5 0 0 0 15.5 19h1a2.5 2.5 0 0 0 2.5-2.5v-1"/><circle cx="19" cy="15" r="2"/></svg></span><span>Solution 1: Clinical Diagnosis & Interpretation</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          diagHtml
       + '      </div>'
       + '    </div>'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">💊</span><span>Solution 2: Prescription & Medication Guidance</span></div>'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-grid;place-items:center;width:32px;height:32px;border-radius:8px;background:#ebf4f8;border:1px solid #c7d8e8;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span><span>Solution 2: Prescription & Medication Guidance</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          medsHtml
       + '      </div>'
       + '    </div>'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🥗</span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-grid;place-items:center;width:32px;height:32px;border-radius:8px;background:#ebf4f8;border:1px solid #c7d8e8;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span><span>Solution 3: Diet & Lifestyle Plan (Parhez)</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          dietHtml
       + '      </div>'
       + '    </div>'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">🔬</span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-grid;place-items:center;width:32px;height:32px;border-radius:8px;background:#ebf4f8;border:1px solid #c7d8e8;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-14 0"/><circle cx="9" cy="9" r="2"/><path d="m14 7 3-3 4 4-3 3"/><path d="m9 12 5 5"/></svg></span><span>Solution 4: Confirmatory Follow-up Tests</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          testsHtml
       + '      </div>'
       + '    </div>'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
-      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="font-size:20px">⚠️</span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
+      + '      <div style="font-size:16.5px;font-weight:800;color:#131845;margin-bottom:16px;display:flex;align-items:center;gap:10px;flex-shrink:0"><span style="display:inline-grid;place-items:center;width:32px;height:32px;border-radius:8px;background:#ebf4f8;border:1px solid #c7d8e8;color:#131845;flex-shrink:0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span>Solution 5: Red Flags, Precautions & Specialist Referral</span></div>'
       + '      <div style="flex:1;overflow-y:auto;scrollbar-width:thin;padding-right:8px">'
       +          redflagsHtml
       + '      </div>'
@@ -3812,11 +3819,11 @@
       + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
       +    switcherHtml
-      + '  <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📋 Copy Solutions</button>'
-      + '  <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks" style="border:1.5px solid #131845;background:#ffffff;color:#131845;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📄 Attach Remarks</button>'
-      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">💬 WhatsApp Doctor</button>' : '')
-      + '  <button type="button" class="btn ai-action-btn" id="aiPrintSlip" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">🖨️ Print Summary</button>'
-      + '  <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:13px;padding:8px 18px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 3px 8px rgba(19,24,69,0.22);font-family:inherit">🖨️ Print Rx Pad</button>'
+      + '  <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy Solutions</span></button>'
+      + '  <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks" style="border:1.5px solid #131845;background:#ffffff;color:#131845;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Attach Remarks</span></button>'
+      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>WhatsApp Doctor</span></button>' : '')
+      + '  <button type="button" class="btn ai-action-btn" id="aiPrintSlip" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>Print Summary</span></button>'
+      + '  <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:13px;padding:8px 18px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 3px 8px rgba(19,24,69,0.22);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>Print Rx Pad</span></button>'
       + '</div>'
       + '</div>';
 
@@ -3886,11 +3893,11 @@
       + '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:10px;border-top:1px solid #e2e8f0">'
       + '  <button type="button" class="btn ai-action-btn" id="aiModalClose" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">Close</button>'
       + '  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
-      + '    <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📋 Copy Solutions</button>'
-      + '    <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks" style="border:1.5px solid #131845;background:#ffffff;color:#131845;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">📄 Attach Remarks</button>'
-      + (doc && (doc.phone || doc.whatsapp) ? '    <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="color:#059669;border:1.5px solid #10b981;background:#ffffff;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">💬 WhatsApp Doctor</button>' : '')
-      + '    <button type="button" class="btn ai-action-btn" id="aiPrintSlip" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit">🖨️ Print Summary</button>'
-      + '    <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:13px;padding:8px 18px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 3px 8px rgba(19,24,69,0.22);font-family:inherit">🖨️ Print Rx Pad</button>'
+      + '    <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy Solutions</span></button>'
+      + '    <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks" style="border:1.5px solid #131845;background:#ffffff;color:#131845;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Attach Remarks</span></button>'
+      + (doc && (doc.phone || doc.whatsapp) ? '    <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="color:#059669;border:1.5px solid #10b981;background:#ffffff;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>WhatsApp Doctor</span></button>' : '')
+      + '    <button type="button" class="btn ai-action-btn" id="aiPrintSlip" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>Print Summary</span></button>'
+      + '    <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:13px;padding:8px 18px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 3px 8px rgba(19,24,69,0.22);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>Print Rx Pad</span></button>'
       + '  </div>'
       + '</div>'
       + '</div>';
@@ -4124,18 +4131,18 @@
     var activeTab = 'modules';
 
     var MODULE_DEFS = [
-      { key: 'solutions5', icon: '🩺', name: '5 Core Solutions', desc: 'Diagnosis, medications, diet & red flags.' },
-      { key: 'bodyMap', icon: '🫀', name: 'Organ Impact Map', desc: '8-system physiological impact visualizer.' },
-      { key: 'calculators', icon: '🧮', name: 'Clinical Calculators', desc: 'eGFR, Mentzer, FIB-4 & ASCVD scores.' },
-      { key: 'panicSos', icon: '🚨', name: 'Panic SOS Alerts', desc: 'Emergency limits & automated WhatsApp dispatch.' },
-      { key: 'drugInteractions', icon: '💊', name: 'Drug Interactions (DDI)', desc: 'Multi-drug clash & conflict detection.' },
-      { key: 'safetyShields', icon: '🛡️', name: 'Organ Toxicity Shields', desc: 'Renal, hepatic & hematology contraindications.' },
-      { key: 'ddx', icon: '🧬', name: 'Differential Diagnosis (DDx)', desc: 'Ranked candidate disease differentials.' },
-      { key: 'geneticGuard', icon: '🔬', name: 'Genetic & Marriage Guard', desc: 'Thalassemia & familial carrier risk.' },
-      { key: 'ascvdRisk', icon: '❤️', name: '10-Year ASCVD Risk', desc: 'Cardiovascular stroke & heart risk.' },
-      { key: 'urduGuide', icon: '🇵🇰', name: 'Roman Urdu Guide', desc: 'Bilingual patient care & diet instructions.' },
-      { key: 'rxPad', icon: '🖨️', name: 'Digital Prescription Pad', desc: 'Printable prescription pad with credentials.' },
-      { key: 'reportRemarks', icon: '📝', name: 'Report Remarks Summary', desc: 'Attaches AI summary to report footer.' }
+      { key: 'solutions5', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>', name: '5 Core Solutions', desc: 'Diagnosis, medications, diet & red flags.' },
+      { key: 'bodyMap', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v8"/><path d="M9 12h6"/><path d="M9 21l3-5 3 5"/></svg>', name: 'Organ Impact Map', desc: '8-system physiological impact visualizer.' },
+      { key: 'calculators', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>', name: 'Clinical Calculators', desc: 'eGFR, Mentzer, FIB-4 & ASCVD scores.' },
+      { key: 'panicSos', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', name: 'Panic SOS Alerts', desc: 'Emergency limits & automated WhatsApp dispatch.' },
+      { key: 'drugInteractions', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>', name: 'Drug Interactions (DDI)', desc: 'Multi-drug clash & conflict detection.' },
+      { key: 'safetyShields', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>', name: 'Organ Toxicity Shields', desc: 'Renal, hepatic & hematology contraindications.' },
+      { key: 'ddx', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>', name: 'Differential Diagnosis (DDx)', desc: 'Ranked candidate disease differentials.' },
+      { key: 'geneticGuard', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-14 0"/><circle cx="9" cy="9" r="2"/><path d="m14 8 5 5"/></svg>', name: 'Genetic & Marriage Guard', desc: 'Thalassemia & familial carrier risk.' },
+      { key: 'ascvdRisk', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5v14"/></svg>', name: '10-Year ASCVD Risk', desc: 'Cardiovascular stroke & heart risk.' },
+      { key: 'urduGuide', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>', name: 'Roman Urdu Guide', desc: 'Bilingual patient care & diet instructions.' },
+      { key: 'rxPad', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>', name: 'Digital Prescription Pad', desc: 'Printable prescription pad with credentials.' },
+      { key: 'reportRemarks', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', name: 'Report Remarks Summary', desc: 'Attaches AI summary to report footer.' }
     ];
 
     function renderShell() {
@@ -4307,9 +4314,9 @@
 
         // Tabs Bar
         + '<div class="ai-tabs-bar" role="group" aria-label="AI dashboard sections">'
-        + '  <button type="button" class="btn ai-dash-tab' + (activeTab === 'modules' ? ' active' : '') + '" data-dash-tab="modules" aria-controls="aiPanel-modules" aria-pressed="' + (activeTab === 'modules' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">⚙️</span><span class="ai-dash-tab-title">Subsystem Toggles</span></button>'
-        + '  <button type="button" class="btn ai-dash-tab' + (activeTab === 'panic' ? ' active' : '') + '" data-dash-tab="panic" aria-controls="aiPanel-panic" aria-pressed="' + (activeTab === 'panic' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🚨</span><span class="ai-dash-tab-title">Emergency Panic Cutoff Limits</span></button>'
-        + '  <button type="button" class="btn ai-dash-tab' + (activeTab === 'sandbox' ? ' active' : '') + '" data-dash-tab="sandbox" aria-controls="aiPanel-sandbox" aria-pressed="' + (activeTab === 'sandbox' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true">🧪</span><span class="ai-dash-tab-title">Clinical Sandbox & Live Analysis Simulator</span></button>'
+        + '  <button type="button" class="btn ai-dash-tab' + (activeTab === 'modules' ? ' active' : '') + '" data-dash-tab="modules" aria-controls="aiPanel-modules" aria-pressed="' + (activeTab === 'modules' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></span><span class="ai-dash-tab-title">Subsystem Toggles</span></button>'
+        + '  <button type="button" class="btn ai-dash-tab' + (activeTab === 'panic' ? ' active' : '') + '" data-dash-tab="panic" aria-controls="aiPanel-panic" aria-pressed="' + (activeTab === 'panic' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span><span class="ai-dash-tab-title">Emergency Panic Cutoff Limits</span></button>'
+        + '  <button type="button" class="btn ai-dash-tab' + (activeTab === 'sandbox' ? ' active' : '') + '" data-dash-tab="sandbox" aria-controls="aiPanel-sandbox" aria-pressed="' + (activeTab === 'sandbox' ? 'true' : 'false') + '"><span class="ai-dash-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.31L4.2 19.5A2 2 0 0 0 5.92 22h12.16a2 2 0 0 0 1.72-2.5L14 9.31V2"/><line x1="8" y1="2" x2="16" y2="2"/></svg></span><span class="ai-dash-tab-title">Clinical Sandbox & Live Analysis Simulator</span></button>'
         + '</div>'
 
         // Panels
@@ -4347,12 +4354,12 @@
         + '      <div class="card-h">'
         + '        <h3 style="margin:0;font-size:14px;font-weight:700;color:var(--ink,#0f1e2e)">Emergency Panic Cutoff Limits (CAP / ISO 15189)</h3>'
         + '        <button type="button" id="aiResetPanicDefaultsBtn" class="ai-btn-ghost">'
-        + '          🔄 Restore Defaults'
+        + '          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>Restore Defaults</span>'
         + '        </button>'
         + '      </div>'
         + '      <div class="card-b">'
         + '        <div class="ai-sec-badge">'
-        + '          <span>🩸</span> Hematology'
+        + '          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg> <span>Hematology</span>'
         + '        </div>'
         + '        <div class="ai-input-grid" style="margin-bottom:14px">'
         + '          <div class="ai-form-group">'
@@ -4385,7 +4392,7 @@
         + '          </div>'
         + '        </div>'
         + '        <div class="ai-sec-badge">'
-        + '          <span>🧪</span> Glucose & Liver'
+        + '          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.31L4.2 19.5A2 2 0 0 0 5.92 22h12.16a2 2 0 0 0 1.72-2.5L14 9.31V2"/><line x1="8" y1="2" x2="16" y2="2"/></svg> <span>Glucose &amp; Liver</span>'
         + '        </div>'
         + '        <div class="ai-input-grid" style="margin-bottom:14px">'
         + '          <div class="ai-form-group">'
@@ -4411,7 +4418,7 @@
         + '          </div>'
         + '        </div>'
         + '        <div class="ai-sec-badge">'
-        + '          <span>🫘</span> Renal & Electrolytes'
+        + '          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> <span>Renal &amp; Electrolytes</span>'
         + '        </div>'
         + '        <div class="ai-input-grid">'
         + '          <div class="ai-form-group">'
@@ -4449,8 +4456,8 @@
         + '      <div class="ai-sim-card">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        + '            <div class="sim-ico-box">🩸</div>'
-        + '            <span class="badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">CRITICAL</span>'
+        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg></div>'
+        + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">CRITICAL</span>'
         + '          </div>'
         + '          <div class="sim-title">Acute Dengue Shock</div>'
         + '          <div class="sim-stats">Plt: <b>14,000</b> &bull; WBC: <b>2,800</b> &bull; HCT: <b>48.5%</b></div>'
@@ -4460,10 +4467,10 @@
         + '      <div class="ai-sim-card">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        + '            <div class="sim-ico-box">🫘</div>'
-        + '            <span class="badge" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">RENAL</span>'
+        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>'
+        + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">RENAL</span>'
         + '          </div>'
-        + '          <div class="sim-title">Diabetic Nephropathy & AKI</div>'
+        + '          <div class="sim-title">Diabetic Nephropathy &amp; AKI</div>'
         + '          <div class="sim-stats">Glucose: <b>465</b> &bull; Creatinine: <b>4.8</b> &bull; K+: <b>6.4</b></div>'
         + '        </div>'
         + '        <button type="button" class="btn btn-primary sim-btn" data-ai-sim="diabetic_aki">▶ Run Simulation</button>'
@@ -4471,8 +4478,8 @@
         + '      <div class="ai-sim-card">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        + '            <div class="sim-ico-box">🧬</div>'
-        + '            <span class="badge" style="background:#f0fdf4;color:#15803d;border:1px solid #bbf7d0;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">GENETIC</span>'
+        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></div>'
+        + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">GENETIC</span>'
         + '          </div>'
         + '          <div class="sim-title">Beta-Thalassemia Trait</div>'
         + '          <div class="sim-stats">Hb: <b>7.9</b> &bull; MCV: <b>57 fL</b> &bull; Mentzer: <b>9.8</b></div>'
@@ -4482,10 +4489,10 @@
         + '      <div class="ai-sim-card">'
         + '        <div>'
         + '          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
-        + '            <div class="sim-ico-box">🥩</div>'
-        + '            <span class="badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">HEPATIC</span>'
+        + '            <div class="sim-ico-box"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div>'
+        + '            <span class="badge" style="background:var(--brand-soft,#ebf4f8);color:var(--brand,#131845);border:1px solid var(--brand-line,#c7d8e8);font-size:10.5px;font-weight:700;border-radius:6px;padding:2px 7px">HEPATIC</span>'
         + '          </div>'
-        + '          <div class="sim-title">Hyperuricemia & Liver Steatosis</div>'
+        + '          <div class="sim-title">Hyperuricemia &amp; Liver Steatosis</div>'
         + '          <div class="sim-stats">Uric Acid: <b>9.8</b> &bull; ALT: <b>94</b> &bull; AST: <b>45</b></div>'
         + '        </div>'
         + '        <button type="button" class="btn btn-primary sim-btn" data-ai-sim="gout">▶ Run Simulation</button>'
