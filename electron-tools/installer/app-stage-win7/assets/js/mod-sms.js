@@ -156,7 +156,7 @@
 
       var html = '<style>'
         + '.sms-set-wrap{max-width:1240px;margin:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}'
-        + '.sms-set-wrap>.sms-set-head,.sms-set-wrap>.sms-wide{grid-column:1/-1}'
+        + '.sms-set-wrap>.sms-wide{grid-column:1/-1}'
         + '.sms-set-wrap .card{margin:0;border:1.5px solid #8c9ab3;border-radius:14px}'
         + '.sms-set-wrap .card-h{padding:11px 16px}.sms-set-wrap .card-b{padding:12px 16px}'
         + '.sms-tpl-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}'
@@ -172,10 +172,6 @@
         + '.wa-switch input:checked + .wa-slider{background-color:#16a34a}'
         + '.wa-switch input:checked + .wa-slider:before{transform:translateX(20px)}'
         + '@media(max-width:1000px){.sms-set-wrap{grid-template-columns:1fr}.sms-tpl-grid{grid-template-columns:1fr}}'
-        + '.sms-set-head{padding:2px 2px 0}'
-        + '.sms-set-title{font-size:20px;font-weight:800;margin:0}'
-        + '.sms-set-sub{color:var(--mut);font-size:13px;margin:4px 0 0}'
-        + '.sms-brand-ico{width:44px;height:44px;border-radius:12px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:22px;flex:none}'
         + '.sms-card .card-b{display:flex;flex-direction:column;gap:10px}'
         + '.sms-field label{display:block;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--mut)}'
         + '.sms-field input,.sms-field textarea,.sms-field select{width:100%;padding:9px 12px;border:1.5px solid #8c9ab3;border-radius:10px;font-size:14px;background:#fff}.sms-field input:focus,.sms-field textarea:focus,.sms-field select:focus{outline:none;border-color:#2f6df6;box-shadow:0 0 0 3px rgba(47,109,246,.16)}'
@@ -186,25 +182,6 @@
         + '.sms-log-table td{padding:8px 10px;border-bottom:1px solid var(--line2);vertical-align:top}'
         + '</style>'
         + '<div class="sms-set-wrap">'
-        + '<div class="sms-set-head">'
-        + '  <div style="display:flex;align-items:center;gap:14px"><div class="sms-brand-ico">\uD83D\uDCF2</div>'
-        + '  <div><h2 class="sms-set-title">SIM SMS Service</h2>'
-        + '  <p class="sms-set-sub">Send report alerts as plain SMS from your own SIM card — the dedicated Optix SMS Gateway APK on your mobile phone handles automated sending.</p></div></div>'
-        + '</div>'
-
-        + '<div id="smsTopBanner" class="sms-wide" style="display:flex;align-items:center;justify-content:space-between;gap:14px;background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:14px;padding:14px 18px;margin-bottom:2px;transition:all .2s ease">'
-        + '  <div style="display:flex;align-items:center;gap:12px;min-width:0">'
-        + '    <div id="smsTopDot" style="width:10px;height:10px;border-radius:50%;background:#94a3b8;flex-shrink:0"></div>'
-        + '    <div style="min-width:0">'
-        + '      <div id="smsTopTitle" style="font-size:14px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">📱 SIM SMS Service: Connect Your Mobile Phone</div>'
-        + '      <div id="smsTopSub" style="font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Install Optix SMS Gateway APK on Android to send SMS directly from your SIM</div>'
-        + '    </div>'
-        + '  </div>'
-        + '  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">'
-        + '    <button type="button" class="btn btn-sm btn-ghost" id="smsTopCta" style="font-weight:600;font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff">Download APK &amp; Connect →</button>'
-        + '  </div>'
-        + '</div>'
-
         + apkCard
 
         + '<div class="card sms-card"><div class="card-h"><h3>SIM Setting &amp; Mobile Link</h3><span id="smsConnBadge"></span></div><div class="card-b">'
@@ -332,11 +309,6 @@
         var banner = g('smsLiveStatusBanner');
         var dot = g('smsStatusDot');
         var text = g('smsStatusText');
-        var topBanner = g('smsTopBanner');
-        var topDot = g('smsTopDot');
-        var topTitle = g('smsTopTitle');
-        var topSub = g('smsTopSub');
-        var topCta = g('smsTopCta');
         DB.smsApi('GET', 'status', undefined).then(function (j) {
           if (j && j.ok) {
             var isConn = !!j.connected;
@@ -359,28 +331,6 @@
               if (text) {
                 text.innerHTML = '<b>🟢 SIM Connected: ' + App.esc(num || 'Active') + '</b>' + (j.deviceModel ? ' &middot; ' + App.esc(j.deviceModel) : '') + (j.lastPoll ? ' &middot; Phone seen ' + App.dt(j.lastPoll) : '') + ' &middot; Ready to send SMS';
               }
-              if (topBanner) {
-                topBanner.style.background = '#f0fdf4';
-                topBanner.style.borderColor = '#86efac';
-              }
-              if (topDot) {
-                topDot.style.background = '#22c55e';
-                topDot.style.boxShadow = '0 0 0 3px rgba(34,197,94,0.25)';
-              }
-              if (topTitle) {
-                topTitle.innerHTML = '🟢 SIM Connected: <span style="font-family:monospace;font-size:14px;color:#15803d">' + App.esc(num || 'Active Phone') + '</span> · Ready to send SMS';
-                topTitle.style.color = '#15803d';
-              }
-              if (topSub) {
-                topSub.textContent = 'Mobile phone is active and sending automated patient alerts' + (j.deviceModel ? ' (' + j.deviceModel + ')' : '') + (j.lastPoll ? ' · Last sync ' + App.dt(j.lastPoll) : '');
-                topSub.style.color = '#166534';
-              }
-              if (topCta) {
-                topCta.textContent = '🟢 Mobile Connected & Active';
-                topCta.style.borderColor = '#86efac';
-                topCta.style.color = '#15803d';
-                topCta.style.background = '#dcfce7';
-              }
             } else if (num) {
               bits.unshift('PHONE WAITING');
               setBadge(false, bits.join(' \u00B7 '));
@@ -394,29 +344,7 @@
                 dot.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.25)';
               }
               if (text) {
-                text.innerHTML = '<b>🟡 SIM Saved: ' + App.esc(num) + '</b> &middot; Waiting for phone connection. Install the APK and open app on phone.';
-              }
-              if (topBanner) {
-                topBanner.style.background = '#fffbeb';
-                topBanner.style.borderColor = '#fde68a';
-              }
-              if (topDot) {
-                topDot.style.background = '#f59e0b';
-                topDot.style.boxShadow = '0 0 0 3px rgba(245,158,11,0.25)';
-              }
-              if (topTitle) {
-                topTitle.innerHTML = '🟡 SIM Configured: <span style="font-family:monospace;color:#b45309">' + App.esc(num) + '</span> · Waiting for phone connection';
-                topTitle.style.color = '#b45309';
-              }
-              if (topSub) {
-                topSub.textContent = 'Open the Optix SMS Gateway APK on mobile to establish live link';
-                topSub.style.color = '#92400e';
-              }
-              if (topCta) {
-                topCta.textContent = 'Open APK on Mobile →';
-                topCta.style.borderColor = '#fde68a';
-                topCta.style.color = '#b45309';
-                topCta.style.background = '#fef3c7';
+                text.innerHTML = '<b>🟡 SIM Configured: ' + App.esc(num) + '</b> &middot; Waiting for phone connection. Install the APK and open app on phone.';
               }
             } else {
               bits.unshift('NOT LINKED');
@@ -433,45 +361,11 @@
               if (text) {
                 text.textContent = '⚪ Phone not connected yet. Download the APK on mobile and link your SIM number.';
               }
-              if (topBanner) {
-                topBanner.style.background = '#f8fafc';
-                topBanner.style.borderColor = '#cbd5e1';
-              }
-              if (topDot) {
-                topDot.style.background = '#64748b';
-                topDot.style.boxShadow = 'none';
-              }
-              if (topTitle) {
-                topTitle.innerHTML = '📱 SIM SMS Service: Connect Your Mobile Phone';
-                topTitle.style.color = 'var(--ink)';
-              }
-              if (topSub) {
-                topSub.textContent = 'Install Optix SMS Gateway APK on Android to send SMS directly from your SIM';
-                topSub.style.color = 'var(--muted)';
-              }
-              if (topCta) {
-                topCta.textContent = 'Download APK & Connect →';
-                topCta.style.borderColor = '#cbd5e1';
-                topCta.style.color = 'inherit';
-                topCta.style.background = '#fff';
-              }
             }
           } else setBadge(false, 'ERROR');
         }, function () { setBadge(false, 'SERVER UNREACHABLE'); });
       }
       refreshSmsStatus();
-
-      var topCtaBtn = g('smsTopCta');
-      if (topCtaBtn) {
-        topCtaBtn.addEventListener('click', function (e) {
-          e.preventDefault();
-          var target = g('smsDownloadApkBtn') || g('smsSimNumber');
-          if (target && target.scrollIntoView) {
-            target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            if (target.focus) target.focus();
-          }
-        });
-      }
 
       var tsBtn = g('smsTestSend');
       if (tsBtn) tsBtn.addEventListener('click', function () {

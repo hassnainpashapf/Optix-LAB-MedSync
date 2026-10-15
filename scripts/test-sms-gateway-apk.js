@@ -50,11 +50,13 @@ assert.ok(!webDash.includes('ovHead + simBanner + ovGrid'), 'mod-dashboard.js mu
 assert.ok(webDash.includes('ovHead + ovGrid'), 'mod-dashboard.js must render overview directly');
 console.log('✓ mod-dashboard.js verified clean without SIM banner (moved to SIM settings)');
 
-// 4b. Verify mod-sms.js contains live SIM status banner
-assert.ok(webSms.includes('smsTopBanner'), 'mod-sms.js must contain smsTopBanner');
+// 4b. Verify mod-sms.js is clean without top banner (removed per user request) and retains live SIM status
+assert.ok(!webSms.includes('smsTopBanner'), 'mod-sms.js must not contain smsTopBanner per user request');
+assert.ok(!webSms.includes('sms-set-head'), 'mod-sms.js must not contain sms-set-head per user request');
+assert.ok(webSms.includes('smsLiveStatusBanner'), 'mod-sms.js must contain smsLiveStatusBanner');
 assert.ok(webSms.includes('🟢 SIM Connected:'), 'mod-sms.js must render connected status message');
 assert.ok(webSms.includes('🟡 SIM Configured:'), 'mod-sms.js must render configured status message');
-console.log('✓ mod-sms.js verified with live SIM status banner and real-time status updates');
+console.log('✓ mod-sms.js verified with clean layout (no top banner) and real-time live SIM status');
 
 // 5. Verify mod-downloads.js
 const webDl = fs.readFileSync(path.join(root, 'assets/js/mod-downloads.js'), 'utf8');
