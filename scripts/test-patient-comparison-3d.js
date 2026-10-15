@@ -153,6 +153,10 @@ assert.ok(html.includes('STANDARD PHYSIOLOGICAL REFERENCE ZONE (NORMAL)'), 'Norm
 assert.ok(html.includes('PREVIOUS: 2026-09-10'), 'Previous date milestone marker present in graph');
 assert.ok(html.includes('CURRENT: 2026-10-14'), 'Current date milestone marker present in graph');
 assert.ok(html.includes('pd-trends-variance-card'), 'Biomarker Variance & Delta Velocity card present');
+assert.ok(html.includes('data-pd-section="pdVariance"'), 'Header navigation button for Biomarker Variance present');
+assert.ok(html.includes('Biomarker Variance &amp; Delta Velocity Visualizer'), 'Biomarker Variance title present');
+assert.ok(html.includes('id="pdVariance"'), 'Dedicated pdVariance page section present');
+assert.ok(html.includes('class="pd-layout-variance"'), 'Dedicated pd-layout-variance class present');
 assert.ok(html.includes('Individual Biomarker Trend Graphs'), 'Individual Biomarker Trend Graphs grid present');
 assert.ok(html.includes('pd-individual-biomarkers-section'), 'Individual Biomarker section container present');
 assert.ok(!html.includes('vitals-trends-preview-card'), 'Biomarker Trends preview banner cleanly removed from Overview');

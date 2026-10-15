@@ -1904,6 +1904,11 @@
   width: 100%;
 }
 
+/* Dedicated Biomarker Variance & Delta Velocity Visualizer Page */
+#ptPatientDashboard .pd-layout-variance {
+  width: 100%;
+}
+
 /* Dedicated Medication Adherence Page */
 #ptPatientDashboard .pd-layout-meds {
   width: 100%;
