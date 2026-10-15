@@ -774,68 +774,33 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .act-btn:active {
   transform: translateY(0) !important;
 }
-.act-btn-ai {
-  background: #f5f3ff !important;
-  border-color: #ddd6fe !important;
-  color: #6d28d9 !important;
-  font-weight: 700 !important;
-  box-shadow: 0 1px 2px rgba(109, 40, 217, 0.08) !important;
-}
-.act-btn-ai:hover {
-  background: #ede9fe !important;
-  border-color: #c4b5fd !important;
-  color: #5b21b6 !important;
-}
-.act-btn-view {
+.act-btn-ai,
+.act-btn-view,
+.act-btn-print,
+.act-btn-pdf,
+.act-btn-edit {
   background: #ffffff !important;
   border-color: #cbd5e1 !important;
   color: #334155 !important;
 }
-.act-btn-view:hover {
+.act-btn-ai:hover,
+.act-btn-view:hover,
+.act-btn-print:hover,
+.act-btn-pdf:hover,
+.act-btn-edit:hover {
   background: #f8fafc !important;
   border-color: #94a3b8 !important;
   color: #0f172a !important;
 }
-.act-btn-print {
-  background: #eff6ff !important;
-  border-color: #bfdbfe !important;
-  color: #1d4ed8 !important;
-}
-.act-btn-print:hover {
-  background: #dbeafe !important;
-  border-color: #93c5fd !important;
-  color: #1e40af !important;
-}
-.act-btn-pdf {
-  background: #ecfdf5 !important;
-  border-color: #a7f3d0 !important;
-  color: #047857 !important;
-  font-weight: 700 !important;
-}
-.act-btn-pdf:hover {
-  background: #d1fae5 !important;
-  border-color: #6ee7b7 !important;
-  color: #065f46 !important;
-}
-.act-btn-edit {
-  background: #fffbeb !important;
-  border-color: #fde68a !important;
-  color: #b45309 !important;
-}
-.act-btn-edit:hover {
-  background: #fef3c7 !important;
-  border-color: #fcd34d !important;
-  color: #92400e !important;
-}
 .act-btn-del {
-  background: #fef2f2 !important;
-  border-color: #fecaca !important;
-  color: #b91c1c !important;
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
 }
 .act-btn-del:hover {
-  background: #fee2e2 !important;
-  border-color: #f87171 !important;
-  color: #991b1b !important;
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+  color: #dc2626 !important;
 }
 
 /* ---- Inputs ---- */
