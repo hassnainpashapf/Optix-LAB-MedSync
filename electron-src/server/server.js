@@ -1795,18 +1795,31 @@ async function main() {
 
     async function portalBuild(req, lab, st, set, w) {
       const invs = await st.all('invoices'), results = await st.all('results'), patById = {}; (await st.all('patients')).forEach((p) => { patById[p.id] = p; });
-        const gatewayReady = patientPayReady(await patientPayConfig(lab.id));
-        const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
-        const allPayments = await st.all('payments'), claims = await st.all('onlinepay_claims');
-        const allAppointments = await st.all('appointments');
-        const reportOf = (inv, forDoctor) => {
-          const rs = byInv[inv.id] || [], items = Array.isArray(inv.items) ? inv.items : [], done = rs.length > 0 && items.every((it) => rs.some((r) => r.testId === it.testId && r.status === 'ready') || rs.some((r) => r.status === 'ready' && it.isPackage));
-          const ready = rs.length > 0 && rs.every((r) => r.status === 'ready') && done, due = +inv.due || 0;
-          const key = inv.reportPdfKey, havePdf = !!key && REPORT_KEY_RE.test(String(key)) && fs.existsSync(path.join(REPORT_PDFS_DIR, key + '.pdf'));
-          return { no: inv.no || inv.id, date: inv.createdAt, patient: (patById[inv.patientId] || {}).name || '', tests: items.map((x) => x.name || x.code || '').filter(Boolean).join(', ').slice(0, 200),
-            status: ready ? ((due > 0.009 && !forDoctor) ? 'locked' : (havePdf ? 'ready' : 'preparing')) : 'pending', due: due > 0.009 ? Math.round(due) : 0, total: forDoctor ? Math.round(+inv.total || 0) : undefined,
-            link: ready && havePdf && (due <= 0.009 || forDoctor) ? linkOf(req, key) : '' };
+      const tById = {}; (await st.all('tests')).forEach((t) => { tById[t.id] = t; });
+      const gatewayReady = patientPayReady(await patientPayConfig(lab.id));
+      const byInv = {}; results.forEach((r) => { (byInv[r.invoiceId] = byInv[r.invoiceId] || []).push(r); });
+      const allPayments = await st.all('payments'), claims = await st.all('onlinepay_claims');
+      const allAppointments = await st.all('appointments');
+      const reportOf = (inv, forDoctor) => {
+        const rs = byInv[inv.id] || [], items = Array.isArray(inv.items) ? inv.items : [], done = rs.length > 0 && items.every((it) => rs.some((r) => r.testId === it.testId && r.status === 'ready') || rs.some((r) => r.status === 'ready' && it.isPackage));
+        const ready = rs.length > 0 && rs.every((r) => r.status === 'ready') && done, due = +inv.due || 0;
+        const key = inv.reportPdfKey, havePdf = !!key && REPORT_KEY_RE.test(String(key)) && fs.existsSync(path.join(REPORT_PDFS_DIR, key + '.pdf'));
+        const pat = patById[inv.patientId] || {};
+        return {
+          id: inv.id, invoiceId: inv.id, no: inv.no || inv.id, date: inv.createdAt,
+          patient: pat.name || '', age: pat.age, gender: pat.gender || pat.sex,
+          tests: items.map((x) => x.name || x.code || '').filter(Boolean).join(', ').slice(0, 200),
+          status: ready ? ((due > 0.009 && !forDoctor) ? 'locked' : (havePdf ? 'ready' : 'preparing')) : 'pending',
+          due: due > 0.009 ? Math.round(due) : 0, total: forDoctor ? Math.round(+inv.total || 0) : undefined,
+          link: ready && havePdf && (due <= 0.009 || forDoctor) ? linkOf(req, key) : '',
+          results: forDoctor ? rs.map((r) => ({
+            testId: r.testId,
+            testName: (tById[r.testId] || {}).name || '',
+            values: r.values || {},
+            params: (tById[r.testId] || {}).params || []
+          })) : undefined
         };
+      };
         const out = { ok: true, lab: { name: set.labName || lab.name }, patient: null, doctor: null };
         if (w.pats.length) {
           const ids = {}; w.pats.forEach((p) => { ids[p.id] = 1; });
@@ -1848,7 +1861,6 @@ async function main() {
         }
         if (w.docs.length) {
           const dids = {}; w.docs.forEach((d) => { dids[d.id] = d; });
-          const tById = {}; (await st.all('tests')).forEach((t) => { tById[t.id] = t; });
           const commissionOf = (inv, doc, tests) => {   /* same rules as the app: test rule > category rule > default % */
             const total = +inv.total || 0, base = +doc.commissionPct || 0, rules = Array.isArray(doc.commissionRules) ? doc.commissionRules : [];
             if (!rules.length) return total * base / 100;
@@ -2297,6 +2309,72 @@ async function main() {
     res.setHeader('Content-Type', 'application/pdf');
     if (!req.query.dl) res.setHeader('Content-Disposition', 'inline; filename="lab-report-' + key + '.pdf"');
     fs.createReadStream(file).pipe(res);
+  });
+
+  /* Public digital receipt viewer: mobile-friendly web page for patient receipts */
+  app.get(['/receipt/:slug/:id', '/receipt/:id', '/inv/:slug/:id', '/inv/:id'], async (req, res) => {
+    try {
+      const slug = req.params.slug && req.params.id ? req.params.slug : 'main';
+      const id = req.params.id || req.params.slug;
+      let lab = null;
+      if (saas) {
+        lab = await saas.findBySlug(slug) || await saas.getLab(slug);
+        if (!lab && slug === 'main') lab = await saas.getLab('main');
+        if (!lab) {
+          const labs = await saas.loadLabs();
+          for (const l of labs.values()) {
+            const st = saas.storeFor(l);
+            const found = await st.get('invoices', id) || (await st.all('invoices')).find(i => String(i.no || i.id) === String(id));
+            if (found) { lab = l; break; }
+          }
+        }
+      }
+      if (!lab && saas) lab = await saas.getLab('main');
+      const st = (saas && lab) ? saas.storeFor(lab) : req.store;
+      const set = (await st.get('settings', 'main')) || {};
+      const inv = await st.get('invoices', id) || (await st.all('invoices')).find(i => String(i.no || i.id) === String(id));
+      if (!inv) {
+        return res.status(404).type('html').send('<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>Receipt Not Found</title></head><body style="font-family:sans-serif;padding:30px;text-align:center;background:#f8fafc"><div style="max-width:400px;margin:auto;background:#fff;padding:24px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.08)"><h2>Receipt Not Found</h2><p style="color:#64748b">The requested invoice or receipt could not be found. Please contact the lab.</p></div></body></html>');
+      }
+      const pat = (inv.patientId ? await st.get('patients', inv.patientId) : null) || {};
+      const labName = set.labName || (lab && lab.name) || 'Laboratory';
+      const labPhone = set.phone || '';
+      const labAddress = set.address || '';
+      const items = Array.isArray(inv.items) ? inv.items : [];
+      const total = Math.round(+inv.total || 0);
+      const paid = Math.round(+inv.paid || 0);
+      const due = Math.max(0, Math.round(+inv.due || 0));
+      const isPaid = due <= 0;
+      const dateStr = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+      const portalUrl = (APP_URL || 'https://optix-lab-medsync.pages.dev') + '/app/#/portal/' + (lab && lab.slug ? lab.slug : slug);
+
+      const itemRows = items.map((it, i) => '<tr><td style="color:#94a3b8;padding:8px 4px">' + (i + 1) + '</td><td style="padding:8px 4px"><b>' + String(it.name || it.code || 'Test').replace(/</g, '&lt;') + '</b></td><td style="text-align:right;font-weight:700;padding:8px 4px">Rs ' + Math.round(+it.price || 0).toLocaleString() + '</td></tr>').join('');
+
+      const html = '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Receipt ' + String(inv.no || inv.id) + ' — ' + String(labName).replace(/</g, '&lt;') + '</title>' +
+        '<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">' +
+        '<style>*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;padding:16px;background:#f1f5f9;font-family:\'Plus Jakarta Sans\',sans-serif;color:#0f172a}.receipt-card{max-width:480px;margin:12px auto;background:#fff;border-radius:20px;box-shadow:0 10px 30px rgba(15,23,42,.08);overflow:hidden}.hdr{background:linear-gradient(135deg,#131845,#1e2a6b);color:#fff;padding:24px 20px;text-align:center}.hdr h1{margin:0;font-size:20px;font-weight:800;letter-spacing:-.01em}.hdr p{margin:4px 0 0;font-size:12.5px;opacity:.85}.badge-pill{display:inline-block;padding:5px 14px;border-radius:99px;font-size:12px;font-weight:700;margin-top:12px;text-transform:uppercase;letter-spacing:.05em}.b-paid{background:#10b981;color:#fff}.b-due{background:#f59e0b;color:#fff}.bdy{padding:20px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid #e2e8f0;font-size:13px}.grid .lbl{color:#64748b;font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;font-weight:600}.grid .val{font-weight:700;margin-top:2px}.items{width:100%;border-collapse:collapse;margin:14px 0;font-size:13.5px}.items th{text-align:left;color:#64748b;font-size:11.5px;text-transform:uppercase;padding:8px 4px;border-bottom:1.5px solid #e2e8f0}.items td{padding:10px 4px;border-bottom:1px solid #f1f5f9}.tot-box{background:#f8fafc;border-radius:14px;padding:14px;margin-top:14px}.tot-row{display:flex;justify-content:space-between;padding:4px 0;font-size:13.5px}.tot-row.grand{font-size:17px;font-weight:800;border-top:1.5px dashed #cbd5e1;padding-top:8px;margin-top:4px;color:#131845}.tot-row.paid{color:#10b981;font-weight:700}.tot-row.due{color:#ef4444;font-weight:800;font-size:15px}.actions{display:flex;gap:10px;margin-top:20px}.btn{flex:1;text-align:center;padding:12px;border-radius:12px;font-weight:700;font-size:13.5px;text-decoration:none;cursor:pointer;border:0;display:inline-flex;align-items:center;justify-content:center;gap:6px}.btn-dark{background:#131845;color:#fff}.btn-light{background:#e2e8f0;color:#1e293b}.ftr{text-align:center;padding:16px;font-size:11.5px;color:#94a3b8}@media print{body{background:#fff;padding:0}.receipt-card{box-shadow:none;border-radius:0;margin:0}.actions{display:none}}</style></head>' +
+        '<body><div class="receipt-card"><div class="hdr"><h1>' + String(labName).replace(/</g, '&lt;') + '</h1>' +
+        (labAddress ? '<p>' + String(labAddress).replace(/</g, '&lt;') + '</p>' : '') +
+        (labPhone ? '<p>Tel: ' + String(labPhone).replace(/</g, '&lt;') + '</p>' : '') +
+        '<span class="badge-pill ' + (isPaid ? 'b-paid' : 'b-due') + '">' + (isPaid ? 'Paid in Full' : 'Balance Pending') + '</span></div>' +
+        '<div class="bdy"><div class="grid"><div><div class="lbl">Invoice No</div><div class="val">' + String(inv.no || inv.id).replace(/</g, '&lt;') + '</div></div>' +
+        '<div><div class="lbl">Date & Time</div><div class="val">' + dateStr + '</div></div>' +
+        '<div><div class="lbl">Patient Name</div><div class="val">' + String(pat.name || 'Walk-in').replace(/</g, '&lt;') + '</div></div>' +
+        '<div><div class="lbl">Patient Contact</div><div class="val">' + String(pat.phone || pat.whatsapp || '—').replace(/</g, '&lt;') + '</div></div></div>' +
+        '<table class="items"><thead><tr><th>#</th><th>Test Description</th><th style="text-align:right">Price</th></tr></thead><tbody>' +
+        itemRows + '</tbody></table>' +
+        '<div class="tot-box"><div class="tot-row"><span>Subtotal:</span><span>Rs ' + Math.round(+inv.subtotal || total).toLocaleString() + '</span></div>' +
+        (inv.discount ? '<div class="tot-row" style="color:#d97706"><span>Discount:</span><span>-Rs ' + Math.round(+inv.discount).toLocaleString() + '</span></div>' : '') +
+        '<div class="tot-row grand"><span>Total Amount:</span><span>Rs ' + total.toLocaleString() + '</span></div>' +
+        '<div class="tot-row paid"><span>Amount Paid:</span><span>Rs ' + paid.toLocaleString() + '</span></div>' +
+        (due > 0 ? '<div class="tot-row due"><span>Balance Due:</span><span>Rs ' + due.toLocaleString() + '</span></div>' : '') + '</div>' +
+        '<div class="actions"><button class="btn btn-dark" onclick="window.print()">Print / Save PDF</button><a class="btn btn-light" href="' + portalUrl + '" target="_blank">Patient Portal</a></div></div>' +
+        '<div class="ftr">Thank you for choosing ' + String(labName).replace(/</g, '&lt;') + '.<br>Powered by System Optix</div></div></body></html>';
+      res.type('html').send(html);
+    } catch (e) {
+      console.error('[receipt-viewer-error]', e);
+      res.status(500).json({ error: e.message });
+    }
   });
 
   /* restore/seed only touch the calling lab's own rows (tenant-store.js), never the shared registry / signing secret / device list */
