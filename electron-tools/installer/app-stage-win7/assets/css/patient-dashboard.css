@@ -846,11 +846,60 @@
   width: 100%;
   max-width: 360px;
   height: 100%;
+  min-height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
   will-change: transform;
+}
+#ptPatientDashboard #stage3DOrganView,
+#ptPatientDashboard #stage3DBodyView {
+  width: 100%;
+  max-width: 340px;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  position: relative;
+}
+#ptPatientDashboard .vitals-stage-organ-model {
+  width: 100%;
+  max-width: 320px;
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+#ptPatientDashboard .vitals-organ-3d-img {
+  width: 100%;
+  max-width: 315px;
+  height: auto;
+  min-height: 250px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 14px 28px rgba(14,165,233,0.45));
+  user-select: none;
+  pointer-events: none;
+}
+#ptPatientDashboard .vitals-organ-svg {
+  width: 100%;
+  max-width: 320px;
+  min-height: 260px;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+  overflow: visible;
+  filter: drop-shadow(0 10px 24px rgba(15,23,42,0.08));
+}
+#ptPatientDashboard .vitals-lung-fallback {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #ptPatientDashboard .vitals-floating-warning {
