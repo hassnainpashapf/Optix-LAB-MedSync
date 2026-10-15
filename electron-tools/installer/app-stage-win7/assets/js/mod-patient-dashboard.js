@@ -2574,7 +2574,7 @@
     if (!host || !host.isConnected) return false;
     if (!document.getElementById('ptDashboardStyles')) {
       var link = document.createElement('link');link.id='ptDashboardStyles';link.rel='stylesheet';
-      link.href='assets/css/patient-dashboard.css?v='+encodeURIComponent(window.__ASSET_V||'298');document.head.appendChild(link);
+      link.href='assets/css/patient-dashboard.css?v='+encodeURIComponent(window.__ASSET_V||'299');document.head.appendChild(link);
     }
     host.innerHTML=render(patient);
 
