@@ -1751,8 +1751,8 @@
         var isAbnormal = t.status === 'abnormal';
         var isWithin = t.status === 'within';
         var stBadge = isAbnormal
-          ? '<span class="badge b-red" style="font-weight:700">🔴 Abnormal</span>'
-          : (isWithin ? '<span class="badge b-ready" style="font-weight:700">🟢 Normal</span>' : '<span class="badge b-warn" style="font-weight:700">⏳ Pending</span>');
+          ? '<span class="badge" style="font-weight:600;font-size:11px;background:#fef2f2;color:#b91c1c;border:1px solid #fee2e2;padding:3px 8px;border-radius:6px">Abnormal</span>'
+          : (isWithin ? '<span class="badge" style="font-weight:600;font-size:11px;background:#f0fdf4;color:#15803d;border:1px solid #dcfce7;padding:3px 8px;border-radius:6px">Normal</span>' : '<span class="badge" style="font-weight:600;font-size:11px;background:#fffbeb;color:#b45309;border:1px solid #fef3c7;padding:3px 8px;border-radius:6px">Pending</span>');
 
         var organIcons = {
           liver: '🫀',
@@ -1769,12 +1769,12 @@
 
         var flagsHtml = '';
         if (t.flags && t.flags.length) {
-          flagsHtml = '<div style="margin-top:6px;padding:6px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#991b1b">' +
-            t.flags.map(function (f) { return '<div>⚠️ ' + esc(f) + '</div>'; }).join('') +
+          flagsHtml = '<div style="margin-top:6px;padding:6px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #f87171;border-radius:6px;font-size:11px;color:#475569">' +
+            t.flags.map(function (f) { return '<div style="color:#b91c1c;font-weight:500">• ' + esc(f) + '</div>'; }).join('') +
             '</div>';
         }
 
-        return '<div class="pd-anatomy-test-card" data-pd-test-idx="' + idx + '" style="padding:12px 14px;background:#ffffff;border:1.5px solid #edf2f7;border-radius:12px;margin-bottom:10px;cursor:pointer;transition:all 0.15s ease">' +
+        return '<div class="pd-anatomy-test-card" data-pd-test-idx="' + idx + '" style="padding:12px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all 0.15s ease">' +
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
           '  <div style="display:flex;align-items:center;gap:8px">' +
           '    <span style="font-size:20px">' + oIcon + '</span>' +
@@ -1801,26 +1801,26 @@
 
       '<div class="pd-trends-kpi-grid" style="margin-bottom:16px">' +
       '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top"><span class="kpi-icon icon-monitored" style="background:#eff6ff;color:#2563eb"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg></span><span class="kpi-badge" style="background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe">Monitored</span></div>' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle></svg></span><span class="kpi-badge" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0">Total</span></div>' +
       '    <div class="kpi-value">' + tests.length + '</div>' +
       '    <div class="kpi-label">Diagnostic Tests</div>' +
       '    <div class="kpi-sub">Total lab tests analyzed</div>' +
       '  </div>' +
       '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top"><span class="kpi-icon icon-improved" style="background:#ecfdf5;color:#059669"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></span><span class="kpi-badge improved">Normal</span></div>' +
-      '    <div class="kpi-value" style="color:#059669">' + normalCount + '</div>' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#f0fdf4;color:#16a34a;border:1px solid #dcfce7"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg></span><span class="kpi-badge" style="background:#f0fdf4;color:#15803d;border:1px solid #dcfce7">Normal</span></div>' +
+      '    <div class="kpi-value">' + normalCount + '</div>' +
       '    <div class="kpi-label">Within Reference Range</div>' +
       '    <div class="kpi-sub">Safe physiological status</div>' +
       '  </div>' +
       '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top"><span class="kpi-icon icon-alert" style="background:#fef2f2;color:#dc2626"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span><span class="kpi-badge deteriorated">Abnormal</span></div>' +
-      '    <div class="kpi-value" style="color:#dc2626">' + abnormalCount + '</div>' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#fef2f2;color:#dc2626;border:1px solid #fee2e2"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></span><span class="kpi-badge" style="background:#fef2f2;color:#b91c1c;border:1px solid #fee2e2">Abnormal</span></div>' +
+      '    <div class="kpi-value">' + abnormalCount + '</div>' +
       '    <div class="kpi-label">Outside Reference Range</div>' +
       '    <div class="kpi-sub">Requires doctor consultation</div>' +
       '  </div>' +
       '  <div class="pd-trends-kpi-card">' +
-      '    <div class="kpi-top"><span class="kpi-icon icon-pending" style="background:#fffbeb;color:#d97706"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span><span class="kpi-badge" style="background:#fef3c7;color:#92400e;border:1px solid #fde68a">Pending</span></div>' +
-      '    <div class="kpi-value" style="color:#d97706">' + pendingCount + '</div>' +
+      '    <div class="kpi-top"><span class="kpi-icon" style="background:#fffbeb;color:#d97706;border:1px solid #fef3c7"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span><span class="kpi-badge" style="background:#fffbeb;color:#b45309;border:1px solid #fef3c7">Pending</span></div>' +
+      '    <div class="kpi-value">' + pendingCount + '</div>' +
       '    <div class="kpi-label">Awaiting Results</div>' +
       '    <div class="kpi-sub">In laboratory processing</div>' +
       '  </div>' +
@@ -1831,12 +1831,12 @@
       '    <div style="margin-bottom:12px">' +
       '      <label class="pd-test-label" for="pdTestSelect" style="font-weight:700;font-size:12.5px;color:#0f172a;display:block;margin-bottom:4px">Select test anatomy</label>' +
       '      <p style="margin:0 0 8px;font-size:11px;color:#64748b">Choose a laboratory test to project onto the anatomical body map:</p>' +
-      '      <select id="pdTestSelect" class="pd-test-select" aria-label="Select test anatomy" style="width:100%;font-size:13px;padding:10px 12px;border:1.5px solid #cbd5e1;border-radius:10px;background:#ffffff">' +
+      '      <select id="pdTestSelect" class="pd-test-select" aria-label="Select test anatomy" style="width:100%;font-size:13px;padding:9px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#ffffff;color:#334155">' +
       optionsHtml +
       '      </select>' +
       '    </div>' +
 
-      '    <div class="pd-art" style="height:480px;position:relative;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:16px;overflow:hidden">' +
+      '    <div class="pd-art" style="height:480px;position:relative;background:#ffffff;border:1px solid #edf2f7;border-radius:14px;overflow:hidden;box-shadow:0 1px 3px rgba(15,23,42,0.02)">' +
       '      <div data-pd-anatomy>' +
       anatomy(tests[0]) +
       '      </div>' +
@@ -1848,7 +1848,7 @@
       '    </div>' +
 
       '    <p class="pd-caption" style="margin-top:14px;font-size:11.5px;color:#64748b;line-height:1.6;text-align:center">' +
-      '      <span style="color:#0284c7;font-weight:700">Blue</span>: test-related area · <span style="color:#dc2626;font-weight:700">Red</span>: abnormal report value.<br>' +
+      '      <span style="color:#2563eb;font-weight:600">Blue</span>: test-related area · <span style="color:#dc2626;font-weight:600">Red</span>: abnormal report value.<br>' +
       '      Illustration only; not an exact disease location or a patient scan.' +
       '    </p>' +
       '  </div>' +
@@ -1901,7 +1901,7 @@
       '          <h3 style="display:flex;align-items:center;gap:8px"><span>📋</span><span>Patient Diagnostic Tests Anatomical Directory</span></h3>' +
       '          <p class="pd-sub" style="margin-top:2px">Click any test to immediately focus the anatomical body projection</p>' +
       '        </div>' +
-      '        <span class="badge b-ready" style="font-size:11px;font-weight:700">' + tests.length + ' Available</span>' +
+      '        <span class="badge" style="font-size:11px;font-weight:600;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;padding:3px 8px;border-radius:6px">' + tests.length + ' Available</span>' +
       '      </div>' +
       '      <div style="max-height:360px;overflow-y:auto;padding-right:4px">' +
       testsCardsHtml +
@@ -2366,8 +2366,8 @@
         }
         host.querySelectorAll('[data-pd-test-idx]').forEach(function(c) {
           var isCur = c === card;
-          c.style.borderColor = isCur ? '#0284c7' : '#edf2f7';
-          c.style.background = isCur ? '#f0f9ff' : '#ffffff';
+          c.style.borderColor = isCur ? '#94a3b8' : '#e2e8f0';
+          c.style.background = isCur ? '#f8fafc' : '#ffffff';
         });
       });
     });

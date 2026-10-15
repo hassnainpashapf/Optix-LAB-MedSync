@@ -40,12 +40,12 @@
 #ptPatientDashboard .pd-body-frame{position:absolute;width:216px;height:310px;left:50%;margin-left:-108px;top:0;transform-origin:center}
 #ptPatientDashboard .pd-body-frame img{position:static;width:100%;height:100%;max-width:none;transform:none;object-fit:contain;border-radius:12px}
 #ptPatientDashboard .pd-body-markers{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#ptPatientDashboard .pd-body-markers ellipse{fill:#3585ff55;stroke:#1978ed;stroke-width:.7}
-#ptPatientDashboard .pd-body-markers.pd-abnormal ellipse{fill:#ff1d3555;stroke:#c90024;stroke-width:1}
-#ptPatientDashboard .pd-callout{left:8%;right:8%;bottom:0;padding:9px 12px;max-height:120px;overflow:auto}
-#ptPatientDashboard .pd-callout.pd-abnormal{border-color:#f6b3bd}
-#ptPatientDashboard .pd-callout.pd-abnormal strong{color:#b91c36}
-#ptPatientDashboard .pd-callout p{font-size:10px;line-height:1.5;margin:5px 0 0;color:#b91c36}
+#ptPatientDashboard .pd-body-markers ellipse{fill:rgba(59, 130, 246, 0.18);stroke:#60a5fa;stroke-width:0.8}
+#ptPatientDashboard .pd-body-markers.pd-abnormal ellipse{fill:rgba(239, 68, 68, 0.18);stroke:#f87171;stroke-width:0.8}
+#ptPatientDashboard .pd-callout{left:8%;right:8%;bottom:0;padding:9px 12px;max-height:120px;overflow:auto;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 4px 12px rgba(15,23,42,0.04)}
+#ptPatientDashboard .pd-callout.pd-abnormal{border-color:#fecaca;background:#fff}
+#ptPatientDashboard .pd-callout.pd-abnormal strong{color:#991b1b}
+#ptPatientDashboard .pd-callout p{font-size:10.5px;line-height:1.5;margin:5px 0 0;color:#991b1b}
 #ptPatientDashboard .pd-caption{line-height:1.6}
 #ptPatientDashboard select:focus-visible{outline:3px solid #9ec1ef;outline-offset:2px}
 
@@ -1914,8 +1914,9 @@
 }
 
 #ptPatientDashboard .pd-anatomy-test-card:hover {
-  border-color: #0284c7 !important;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.08);
+  border-color: #cbd5e1 !important;
+  background: #f8fafc !important;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
 }
 
 /* Target Organ Systems Breakdown - 1 Row Subtle Clean Cards */
