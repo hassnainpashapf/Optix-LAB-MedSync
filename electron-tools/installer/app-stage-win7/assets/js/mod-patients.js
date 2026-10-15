@@ -210,6 +210,7 @@
     '#ptf-form .form-row{grid-column:span 2;gap:4px}' +
     '#ptf-form .ptf-wide{grid-column:1/-1}' +
     '#ptf-form .ptf-half{grid-column:span 3}' +
+    '#ptf-form #ptf-dupwarn{grid-column:1/-1;width:100%;box-sizing:border-box;order:0;margin-bottom:12px}' +
     '#ptf-form .label{margin:0}' +
     '#ptf-form .input,#ptf-form .select,#ptf-form textarea.input{border:1.5px solid #8c9ab3;background:#fff}' +
     '#ptf-form .input:focus,#ptf-form .select:focus{border-color:#2f6df6;box-shadow:0 0 0 3px rgba(47,109,246,.16)}' +
@@ -331,22 +332,26 @@
     });
     var bloodInput = document.getElementById('ptf-blood');
     if (bloodInput) bloodInput.addEventListener('change', function () { if (isRealBlood(bloodInput.value)) setErr('ptf-e-blood', ''); });
-    // duplicate detection: warn if the phone number matches an existing patient
-    var dupWarn = document.createElement('div');
-    dupWarn.id = 'ptf-dupwarn';
-    dupWarn.style.cssText = 'display:none;margin-top:12px;padding:12px;border:1px solid var(--amber);border-radius:8px;background:var(--amber-soft)';
-    if (form) form.insertBefore(dupWarn, form.firstChild);
+    // duplicate detection: warn if the phone number matches an existing patient (Add mode only; disabled when editing existing patient)
+    var isAddMode = !existing || !existing.id;
+    var dupWarn = null;
+    if (isAddMode && form) {
+      dupWarn = document.createElement('div');
+      dupWarn.id = 'ptf-dupwarn';
+      dupWarn.style.cssText = 'display:none;grid-column:1/-1;width:100%;box-sizing:border-box;margin-bottom:12px;padding:12px 14px;border:1.5px solid #f59e0b;border-radius:10px;background:#fef3c7;color:#92400e;order:0';
+      form.insertBefore(dupWarn, form.firstChild);
+    }
     function normPhone(p) { return (p || '').replace(/\D/g, '').replace(/^92/, '0'); }
     function checkDuplicate() {
-      if (!dupWarn) return;
+      if (!isAddMode || !dupWarn) return;
       var phone = normPhone(phoneInput ? phoneInput.value : '');
       var found = null, matchBy = '';
-      if (phone) {
+      if (phone && phone.length >= 10) {
         var all = DB.all('patients');
         for (var i = 0; i < all.length; i++) {
           var p = all[i];
-          if (existing && p.id === existing.id) continue;
-          if (phone && phone.length >= 10 && p.phone && normPhone(p.phone) === phone) { found = p; matchBy = phone; break; }
+          if (p.phone && normPhone(p.phone) === phone) { found = p; matchBy = phone; break; }
+          if (p.whatsapp && normPhone(p.whatsapp) === phone) { found = p; matchBy = phone; break; }
         }
       }
       if (found) {
@@ -354,7 +359,7 @@
         dupWarn.style.display = 'block';
         dupWarn.innerHTML = '<strong>⚠️ Possible duplicate:</strong> ' + App.esc(found.name || '') +
           ' (matched by ' + App.esc(matchBy) + ') already exists with ' + invCount + ' invoice(s). ' +
-          '<button type="button" class="btn btn-ghost btn-sm" id="ptf-dupview" style="margin-left:8px">View existing patient</button>';
+          '<button type="button" class="btn btn-ghost btn-sm" id="ptf-dupview" style="margin-left:8px;background:#ffffff;border:1px solid #d97706;color:#92400e">View existing patient</button>';
         var dv = document.getElementById('ptf-dupview');
         if (dv) dv.addEventListener('click', function () { App.nav('#/patients/' + found.id); });
       } else {
@@ -362,7 +367,7 @@
         dupWarn.innerHTML = '';
       }
     }
-    setTimeout(checkDuplicate, 300);
+    if (isAddMode) setTimeout(checkDuplicate, 300);
     // order-tests picker (add mode only): search filter + live selection summary
     var tSearch = document.getElementById('ptf-tsearch');
     var tList = document.getElementById('ptf-tlist');
