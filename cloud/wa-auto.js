@@ -61,8 +61,13 @@ function create({ saas, raw, waGw, log }) {
         if (inv.panelId) { S.receipt[inv.id] = nowMs; continue; } /* a company's bill: nothing for the patient to pay or be reminded about */
         const p = patients[inv.patientId], to = phoneOf(p); if (!to) { S.receipt[inv.id] = nowMs; continue; }
         const items = (inv.items || []).map((x) => x.name || x.code).filter(Boolean).join(', '), due = +inv.due || 0;
+        const apiBase = (process.env.PUBLIC_API_URL || 'https://labpos-api.150.230.52.29.sslip.io').replace(/\/+$/, '');
+        const labSlug = lab.slug || lab.id || 'main';
+        const receiptLink = apiBase + '/receipt/' + labSlug + '/' + encodeURIComponent(inv.no || inv.id);
         const txt = '*' + labName + '*\n\nAssalam-o-Alaikum ' + clean(p.name, 60) + ',\n\nThank you for visiting us. Here is your receipt:\n\n*Invoice:* ' + clean(inv.no || inv.id, 30) + ' (' + dlabel(inv.createdAt) + ')\n*Tests:* ' + clean(items, 300) +
-          '\n*Total:* ' + rs(inv.total) + '\n*Paid:* ' + rs(inv.paid) + (due > 0.009 ? '\n*Balance:* ' + rs(due) : '\n*Status:* Paid in full') + '\n\nYour report will be sent to you here on WhatsApp as soon as it is ready.' + (labPhone ? '\n\n' + labName + ' | ' + labPhone : '');
+          '\n*Total:* ' + rs(inv.total) + '\n*Paid:* ' + rs(inv.paid) + (due > 0.009 ? '\n*Balance:* ' + rs(due) : '\n*Status:* Paid in full') +
+          '\n*Invoice Link:* ' + receiptLink +
+          '\n\nYour report will be sent to you here on WhatsApp as soon as it is ready.' + (labPhone ? '\n\n' + labName + ' | ' + labPhone : '');
         if (await send(to, txt, 'receipt')) S.receipt[inv.id] = nowMs;
       }
     }

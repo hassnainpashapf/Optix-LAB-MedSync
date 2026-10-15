@@ -1537,22 +1537,27 @@ nav.nav{padding:4px 12px 12px;scrollbar-width:thin;scrollbar-color:#d5dbe8 trans
 .sf-out{margin-left:auto;border:0;background:none;color:#8793a8;padding:8px;border-radius:9px;cursor:pointer;display:grid;place-items:center}
 .sf-out:hover{background:#fdecec;color:#dc2626}
 
-/* sidebar text: black */
-.sidebar .brand-tx b{color:#000}
-.sidebar .brand-tx small{color:#4b5563}
-.nav-it{color:#000}
+/* sidebar text and icons: crisp dark */
+.sidebar .brand-tx b{color:#0f172a}
+.sidebar .brand-tx small{color:#334155}
+.nav-it{color:#0f172a;font-weight:600}
 .nav-it:hover{color:#000}
-.nav-it.active{color:#000}
-.nav-ic{color:#1f2937}
-.nav-it:hover .nav-ic,.nav-it.active .nav-ic{color:#000}
-.nav-chev{color:#374151}
-.nav-sub-it{color:#000}
-.nav-sub-it:hover,.nav-sub-it.on{color:#000}
+.nav-it.active{color:#044e49;font-weight:700}
+.nav-ic{color:#0f172a}
+.nav-ic svg{stroke:#0f172a;stroke-width:2.2}
+.nav-it:hover .nav-ic,.nav-it:hover .nav-ic svg{color:#000;stroke:#000}
+.nav-it.active .nav-ic,.nav-it.active .nav-ic svg{color:#044e49;stroke:#044e49}
+.nav-chev{color:#0f172a}
+.nav-chev svg,svg.nav-chev{stroke:#0f172a;stroke-width:2.5}
+.nav-sub-it{color:#1e293b;font-weight:600}
+.nav-sub-it .nav-sub-ic svg{stroke:#0f172a;stroke-width:2.2}
+.nav-sub-it:hover{color:#000}
+.nav-sub-it.on{color:#044e49;font-weight:700}
 .nav-sub-it.danger,.nav-sub-it.danger.on{color:#dc2626}
-.nav-sec2{color:#4b5563}
-.sf-tx b{color:#000}
-.sf-tx small{color:#4b5563}
-.sf-out{color:#374151}
+.nav-sec2{color:#0f172a;font-weight:800}
+.sf-tx b{color:#0f172a}
+.sf-tx small{color:#334155}
+.sf-out{color:#0f172a}
 
 /* sidebar: tighter spacing */
 .sidebar .brand{padding:14px 16px 12px;gap:10px}

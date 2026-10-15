@@ -521,10 +521,14 @@
     if (!ph) { App.toast('No WhatsApp number on patient record', 'err'); return; }
     var s = DB.get('settings', 'main') || {};
     var tests = (inv.items || []).map(function (it) { return it.name; }).join(', ');
+    var apiBase = String(window.LABPOS_API || 'https://labpos-api.150.230.52.29.sslip.io').replace(/\/+$/, '');
+    var slug = (App.me && App.me.lab && (App.me.lab.slug || App.me.lab.id)) || s.labSlug || 'main';
+    var invLink = apiBase + '/receipt/' + slug + '/' + encodeURIComponent(inv.no || inv.id);
     var msg = (s.labName || 'Lab') + '\nInvoice ' + inv.no + ' (' + App.d(inv.createdAt) + ')\n' +
       'Patient: ' + (p ? p.name : 'Walk-in') + '\n' +
       'Tests: ' + tests + '\n' +
-      'Total: ' + App.money(inv.total) + ' | Paid: ' + App.money(inv.paid) + ' | Due: ' + App.money(inv.due);
+      'Total: ' + App.money(inv.total) + ' | Paid: ' + App.money(inv.paid) + ' | Due: ' + App.money(inv.due) + '\n' +
+      'Invoice Link: ' + invLink;
     window.open('https://wa.me/' + ph + '?text=' + encodeURIComponent(msg), '_blank');
   }
 
