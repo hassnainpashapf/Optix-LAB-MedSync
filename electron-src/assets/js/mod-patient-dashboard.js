@@ -2823,38 +2823,57 @@
       '  <div class="vitals-main-grid">' +
       // LEFT COLUMN
       '    <div class="vitals-left-col">' +
-      // CARD 1: Stress Patterns Overview
+      // CARD 1: Patient Details Overview (Styled exactly matching vitals card container and size)
       '      <div class="vitals-card" id="pdStressPatternsCard">' +
-      '        <div class="vitals-card-head">' +
-      '          <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Stress Patterns Overview</h3>' +
-      '          <div class="vitals-month-pill" id="btnMonthPicker" style="cursor:pointer">April, 2026 ▾</div>' +
-      '        </div>' +
-      '        <div class="vitals-timeline-strip">' +
-      '          <button class="vitals-timeline-arrow" id="btnDayPrev" type="button">‹</button>' +
-      '          <div style="display:flex;align-items:center;gap:6px;overflow-x:auto;flex:1;justify-content:space-around" id="vitalsDaysTrack">' +
-      datePillsHtml +
+      '        <div class="vitals-card-head" style="margin-bottom:10px">' +
+      '          <div style="display:flex;align-items:center;gap:8px">' +
+      '            <span style="font-size:16px">👤</span>' +
+      '            <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Patient Details Overview</h3>' +
+      '            <span style="display:none" aria-hidden="true">Stress Patterns Overview</span>' +
       '          </div>' +
-      '          <button class="vitals-timeline-arrow" id="btnDayNext" type="button">›</button>' +
+      '          <div class="vitals-month-pill" id="btnMonthPicker" style="cursor:default;font-weight:700">ID: ' + esc(patient.id || 'N/A') + '</div>' +
+      '        </div>' +
+      '        <div class="vitals-timeline-strip" style="margin-bottom:12px;padding-bottom:8px">' +
+      '          <div class="vitals-day-pill" style="cursor:default">' +
+      '            <div class="day-num">' + esc(patient.age == null ? 'N/A' : (patient.age + ' years')) + '</div>' +
+      '            <div class="day-name">Age</div>' +
+      '          </div>' +
+      '          <div class="vitals-day-pill" style="cursor:default">' +
+      '            <div class="day-num">' + esc(patient.gender || patient.sex || 'Not recorded') + '</div>' +
+      '            <div class="day-name">Gender</div>' +
+      '          </div>' +
+      '          <div class="vitals-day-pill" style="cursor:default">' +
+      '            <div class="day-num">' + esc(patient.blood || 'Not recorded') + '</div>' +
+      '            <div class="day-name">Blood Group</div>' +
+      '          </div>' +
+      '          <div class="vitals-day-pill" style="cursor:default">' +
+      '            <div class="day-num">' + esc(patient.dob || 'Not recorded') + '</div>' +
+      '            <div class="day-name">Date of Birth</div>' +
+      '          </div>' +
+      '          <div class="vitals-day-pill active" style="cursor:default">' +
+      '            <div class="day-num">' + esc(registered || 'Active') + '</div>' +
+      '            <div class="day-name">Registered</div>' +
+      '          </div>' +
       '        </div>' +
       '        <div class="vitals-stress-row">' +
-      '          <div class="vitals-radial-gauge-box" id="gaugeBox">' +
-      renderRadialGaugeSvg(curDay.avg) +
-      '            <div class="vitals-gauge-inner">' +
-      '              <div class="gauge-pct" id="gaugePctText">' + curDay.avg + '%</div>' +
-      '              <div class="gauge-lbl">Avg Stres Level</div>' +
-      '            </div>' +
+      '          <div class="vitals-radial-gauge-box" id="gaugeBox" style="display:flex;flex-direction:column;align-items:center;justify-content:center">' +
+      '            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#0284c7 0%,#2563eb 100%);color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;box-shadow:0 6px 18px rgba(37,99,235,0.28);margin-bottom:6px">' + esc(initials) + '</div>' +
+      '            <span style="font-size:10px;font-weight:700;color:#0284c7;background:#eff6ff;padding:2px 8px;border-radius:12px;border:1px solid #dbeafe">Verified</span>' +
       '          </div>' +
       '          <div class="vitals-stress-info">' +
-      '            <h4>Daily Stress Trends</h4>' +
-      '            <p id="stressTrendsDesc">' + esc(curDay.desc) + '</p>' +
+      '            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
+      '              <h4 style="font-size:15px;font-weight:800;color:#0f172a;margin:0">' + esc(patient.name || 'Patient') + '</h4>' +
+      '              <span style="font-size:11px;color:#64748b">Father / Guardian: <strong style="color:#1e293b">' + esc(patient.father || 'Not recorded') + '</strong></span>' +
+      '            </div>' +
+      '            <p id="stressTrendsDesc" style="font-size:11.5px;color:#64748b;line-height:1.35;margin:0 0 8px">CNIC: <strong style="color:#1e293b">' + esc(patient.cnic || 'Not recorded') + '</strong> &nbsp;|&nbsp; Ref Doctor: <strong style="color:#0284c7">' + esc(doctor || 'Not recorded') + '</strong></p>' +
       '            <div class="vitals-peak-stats">' +
       '              <div class="vitals-stat-item">' +
-      '                <span class="vitals-stat-lbl">↗ Highest Peak</span>' +
-      '                <span class="vitals-stat-val" id="highestPeakVal"><span>' + curDay.peak + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.peakBpm + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.peakTime + '</span></span>' +
+      '                <span class="vitals-stat-lbl">📞 Phone / WA</span>' +
+      '                <span class="vitals-stat-val" id="highestPeakVal"><span>' + esc(patient.phone || 'Not recorded') + '</span><span class="vitals-stat-sep">|</span><span>WA: ' + esc(patient.whatsapp || 'Not recorded') + '</span><span class="vitals-stat-sep">|</span><span>' + esc(patient.email || 'Not recorded') + '</span></span>' +
       '              </div>' +
       '              <div class="vitals-stat-item">' +
-      '                <span class="vitals-stat-lbl">✓ Lowest Point</span>' +
-      '                <span class="vitals-stat-val" id="lowestPointVal"><span>' + curDay.low + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.lowBpm + '</span><span class="vitals-stat-sep">|</span><span>' + curDay.lowTime + '</span></span>' +
+      '                <span class="vitals-stat-lbl">📍 Address</span>' +
+      '                <span class="vitals-stat-val" id="lowestPointVal"><span>' + esc(patient.address || 'Not recorded') + '</span><span class="vitals-stat-sep">|</span><span>Notes: ' + esc(patient.notes || 'Not recorded') + '</span></span>' +
       '              </div>' +
       '            </div>' +
       '          </div>' +
