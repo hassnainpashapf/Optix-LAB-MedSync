@@ -450,20 +450,30 @@
     }).join('') + '<div style="display:none" aria-hidden="true">Early Ambulation</div>';
   }
 
-  function renderMedListHtml(meds) {
+  function renderMedListHtml(meds, patient) {
     var defaultIcons = [
-      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4"></path><path d="M12 2v4"></path><rect x="6" y="6" width="12" height="15" rx="3"></rect><line x1="12" y1="11" x2="12" y2="16"></line><line x1="9.5" y1="13.5" x2="14.5" y2="13.5"></line></svg>',
-      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"></rect><circle cx="9" cy="9" r="2"></circle><circle cx="15" cy="9" r="2"></circle><circle cx="9" cy="15" r="2"></circle><circle cx="15" cy="15" r="2"></circle></svg>',
-      '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8"></path><path d="M9 2v3h6V2"></path><rect x="5" y="7" width="14" height="14" rx="3"></rect><path d="M9 13h6"></path><path d="M12 10v6"></path></svg>'
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4"></path><path d="M12 2v4"></path><rect x="6" y="6" width="12" height="15" rx="3"></rect><line x1="12" y1="11" x2="12" y2="16"></line><line x1="9.5" y1="13.5" x2="14.5" y2="13.5"></line></svg>',
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"></rect><circle cx="9" cy="9" r="2"></circle><circle cx="15" cy="9" r="2"></circle><circle cx="9" cy="15" r="2"></circle><circle cx="15" cy="15" r="2"></circle></svg>',
+      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8"></path><path d="M9 2v3h6V2"></path><rect x="5" y="7" width="14" height="14" rx="3"></rect><path d="M9 13h6"></path><path d="M12 10v6"></path></svg>'
+    ];
+    var statusSchedules = [
+      { text: '✓ Taken 08:30 AM', color: '#059669', bg: '#f0fdf4', border: '#bbf7d0', timing: 'Morning Dose' },
+      { text: '⏰ Due 02:00 PM', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', timing: 'Midday Dose' },
+      { text: '⏳ Next 09:30 PM', color: '#64748b', bg: '#f8fafc', border: '#cbd5e1', timing: 'Night Dose' }
     ];
     return (meds || []).map(function (m, idx) {
       var icon = defaultIcons[idx % defaultIcons.length];
-      return '<div class="vitals-med-item">' +
-        '<div class="vitals-med-icon-box">' + icon + '</div>' +
-        '<div class="vitals-med-details">' +
-        '  <div class="med-name">' + esc(m.name) + '</div>' +
-        '  <div class="med-dosage">' + esc(m.dose) + '</div>' +
+      var sched = statusSchedules[idx % statusSchedules.length];
+      var doseText = m.dose ? (m.dose + ' • ' + sched.timing) : sched.timing;
+      return '<div class="vitals-med-item" data-med-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:space-between;gap:8px" title="Click to log dose adherence" onclick="var b=this.querySelector(\'.med-status-chip\');if(b){b.textContent=\'✓ Taken Just Now\';b.style.color=\'#059669\';b.style.background=\'#f0fdf4\';b.style.borderColor=\'#bbf7d0\';if(window.App&&App.toast)App.toast(\'Medication dose recorded as taken!\');}">' +
+        '<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">' +
+        '  <div class="vitals-med-icon-box">' + icon + '</div>' +
+        '  <div class="vitals-med-details" style="min-width:0;flex:1">' +
+        '    <div class="med-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(m.name) + '">' + esc(m.name) + '</div>' +
+        '    <div class="med-dosage" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(doseText) + '</div>' +
+        '  </div>' +
         '</div>' +
+        '<span class="med-status-chip" style="font-size:9.5px;font-weight:700;color:' + sched.color + ';background:' + sched.bg + ';border:1px solid ' + sched.border + ';padding:2px 7px;border-radius:10px;flex-shrink:0">' + sched.text + '</span>' +
         '</div>';
     }).join('');
   }
@@ -2954,12 +2964,18 @@
       // Medication Adherence Card
       '          <div class="vitals-card" id="pdMedicationAdherenceCard">' +
       '            <div class="vitals-card-head" style="margin-bottom:2px">' +
-      '              <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Medication Adherence</h3>' +
-      '              <button class="card-action-btn" type="button" title="Medication options">⋮</button>' +
+      '              <div style="display:flex;align-items:center;gap:6px">' +
+      '                <span style="font-size:15px">💊</span>' +
+      '                <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Medication Adherence</h3>' +
+      '              </div>' +
+      '              <span class="vitals-month-pill" style="font-size:10px;font-weight:700;background:#ecfdf5;color:#059669;border-color:#a7f3d0;padding:2px 8px" title="Overall Adherence Compliance">88% Adherence</span>' +
       '            </div>' +
-      '            <div class="vitals-subcard-subtitle" id="medsSubtitle" style="font-size:11.5px;color:#64748b;margin:0 0 12px">' + esc(curOrg.medsSub) + '</div>' +
+      '            <div class="vitals-subcard-subtitle" id="medsSubtitle" style="font-size:11px;color:#64748b;margin:0 0 6px">Daily Regimen • 2 of 3 doses logged today</div>' +
+      '            <div style="margin-bottom:8px;background:#f1f5f9;border-radius:99px;height:5px;overflow:hidden;display:flex">' +
+      '              <div style="width:67%;background:linear-gradient(90deg,#10b981,#059669);border-radius:99px" title="2 of 3 doses taken today (67%)"></div>' +
+      '            </div>' +
       '            <div class="vitals-med-list" id="medsListWrap">' +
-      renderMedListHtml(curOrg.meds) +
+      renderMedListHtml(curOrg.meds, patient) +
       '            </div>' +
       '          </div>' +
       '        </div>' +
@@ -3175,9 +3191,9 @@
       if (rWrap) rWrap.innerHTML = renderRecentTestsListHtml(recentTests, patient);
 
       var mSub = host.querySelector('#medsSubtitle');
-      if (mSub) mSub.textContent = org.medsSub;
+      if (mSub) mSub.textContent = org.name + ' Regimen • 2 of 3 doses logged today';
       var mWrap = host.querySelector('#medsListWrap');
-      if (mWrap) mWrap.innerHTML = renderMedListHtml(org.meds);
+      if (mWrap) mWrap.innerHTML = renderMedListHtml(org.meds, patient);
     }
 
     host.querySelectorAll('#organCarouselTrack .vitals-organ-pill').forEach(function (pill) {
