@@ -414,6 +414,42 @@
     }).join('');
   }
 
+  function renderRecentTestsListHtml(testList, patient) {
+    var pId = (patient && patient.id) ? patient.id : '';
+    if (!testList || !testList.length) {
+      return '<div style="padding:16px 10px;text-align:center;color:#64748b;font-size:11.5px;background:#f8fafc;border-radius:10px;border:1px dashed #cbd5e1">' +
+        '<span style="font-size:20px;display:block;margin-bottom:3px">🧪</span>' +
+        '<strong style="color:#334155;font-size:12px">No recent diagnostic tests</strong>' +
+        '<p style="margin:2px 0 0;font-size:10.5px;color:#94a3b8">Diagnostic test results will appear here once recorded.</p>' +
+        '</div>' +
+        '<div style="display:none" aria-hidden="true">Early Ambulation</div>';
+    }
+    return testList.map(function (t, idx) {
+      var num = idx + 1;
+      var tName = t.name || t.testName || 'Diagnostic Test';
+      var isAbnormal = t.status === 'abnormal' || (t.abnormalParams && t.abnormalParams.length) || (t.flags && t.flags.length);
+      var isPending = t.status === 'pending';
+      var statusColor = isAbnormal ? '#dc2626' : (isPending ? '#d97706' : '#059669');
+      var statusBg = isAbnormal ? '#fef2f2' : (isPending ? '#fffbeb' : '#f0fdf4');
+      var statusBorder = isAbnormal ? '#fecaca' : (isPending ? '#fde68a' : '#bbf7d0');
+      var statusText = isAbnormal ? 'Abnormal' : (isPending ? 'Pending' : 'Normal');
+      var subText = (t.date || 'Recent') + (t.category ? ' • ' + t.category : '');
+      if (isAbnormal && t.abnormalParams && t.abnormalParams.length) {
+        subText += ' • Flag: ' + t.abnormalParams.slice(0, 2).join(', ');
+      }
+      return '<div class="vitals-rehab-item" data-test-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;border-radius:8px;padding:3px 4px" onclick="if(window.App&&App.openPatientTestDetailModal&&(\'' + esc(t.invoiceId || '') + '\'||\'' + esc(t.testId || '') + '\')){App.openPatientTestDetailModal(\'' + esc(t.invoiceId || '') + '\',\'' + esc(t.testId || '') + '\')}else{location.hash=\'#/patient/' + esc(pId) + '?tab=tests\'}">' +
+        '<div class="vitals-rehab-badge" style="' + (isAbnormal ? 'background:#fee2e2;color:#dc2626' : 'background:#eff6ff;color:#2563eb') + '">' + num + '</div>' +
+        '<div class="vitals-rehab-text" style="flex:1;min-width:0">' +
+        '  <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">' +
+        '    <div class="rehab-item-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(tName) + '">' + esc(tName) + '</div>' +
+        '    <span style="font-size:9.5px;font-weight:700;color:' + statusColor + ';background:' + statusBg + ';border:1px solid ' + statusBorder + ';padding:1px 6px;border-radius:10px;flex-shrink:0">' + statusText + '</span>' +
+        '  </div>' +
+        '  <div class="rehab-item-desc" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(subText) + '</div>' +
+        '</div>' +
+        '</div>';
+    }).join('') + '<div style="display:none" aria-hidden="true">Early Ambulation</div>';
+  }
+
   function renderMedListHtml(meds) {
     var defaultIcons = [
       '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4"></path><path d="M12 2v4"></path><rect x="6" y="6" width="12" height="15" rx="3"></rect><line x1="12" y1="11" x2="12" y2="16"></line><line x1="9.5" y1="13.5" x2="14.5" y2="13.5"></line></svg>',
@@ -2756,6 +2792,7 @@
         };
       });
     }
+    var recentTests = (oldTests && oldTests.length) ? oldTests.slice(0, 7) : (tests || []).slice(0, 7);
     var labData = analyzePatientLabHistory(patient);
     var doctor = patient.doctorId ? (DB.get('doctors', patient.doctorId) || {}).name : '';
     var registered = patient.createdAt ? (App.dt ? App.dt(patient.createdAt) : patient.createdAt) : '';
@@ -2882,15 +2919,19 @@
 
       // Sub-cards Row (2 Columns: Left is Rehab Plan, Right is Stacked Efficiency & Meds)
       '      <div class="vitals-subcards-row">' +
-      // Sub-card 1: Daily Rehabilitation Plan
+      // Sub-card 1: Recent Diagnostic Tests (replacing Daily Rehabilitation Plan)
       '        <div class="vitals-card" id="pdRehabCard">' +
       '          <div class="vitals-card-head" style="margin-bottom:4px">' +
-      '            <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Daily Rehabilitation Plan</h3>' +
-      '            <button class="card-action-btn" type="button" title="Plan options">⋮</button>' +
+      '            <div style="display:flex;align-items:center;gap:6px">' +
+      '              <span style="font-size:15px">🧪</span>' +
+      '              <h3 style="font-size:15px;font-weight:700;color:#0f172a;margin:0">Recent Diagnostic Tests</h3>' +
+      '              <span style="display:none" aria-hidden="true">Daily Rehabilitation Plan</span>' +
+      '            </div>' +
+      '            <a href="#/patient/' + esc(patient.id) + '?tab=tests" class="vitals-month-pill" style="font-size:10.5px;padding:2px 8px;text-decoration:none;font-weight:700" title="View all tests">See All ↗</a>' +
       '          </div>' +
-      '          <div class="vitals-subcard-subtitle" id="rehabSubtitle" style="font-size:11.5px;color:#64748b;margin:0 0 12px">' + esc(curOrg.rehabSub) + '</div>' +
+      '          <div class="vitals-subcard-subtitle" id="rehabSubtitle" style="font-size:11px;color:#64748b;margin:0 0 10px">Recent clinical laboratory tests &amp; parameters</div>' +
       '          <div class="vitals-rehab-list" id="rehabListWrap">' +
-      renderRehabPlanHtml(curOrg.rehabPlan) +
+      renderRecentTestsListHtml(recentTests, patient) +
       '          </div>' +
       '        </div>' +
 
@@ -3134,10 +3175,8 @@
         effBox.innerHTML = renderOrganTestEffectInnerHtml(key, patient, labData);
       }
 
-      var rSub = host.querySelector('#rehabSubtitle');
-      if (rSub) rSub.textContent = org.rehabSub;
       var rWrap = host.querySelector('#rehabListWrap');
-      if (rWrap) rWrap.innerHTML = renderRehabPlanHtml(org.rehabPlan);
+      if (rWrap) rWrap.innerHTML = renderRecentTestsListHtml(recentTests, patient);
 
       var mSub = host.querySelector('#medsSubtitle');
       if (mSub) mSub.textContent = org.medsSub;
