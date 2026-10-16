@@ -166,7 +166,7 @@
     var r = 46;
     var c = 2 * Math.PI * r;
     var offset = c - (p / 100) * c;
-    return '<svg viewBox="0 0 120 120" width="82" height="82" style="overflow:visible;display:block;max-width:100%;height:auto">' +
+    return '<svg viewBox="0 0 120 120" width="120" height="120" style="overflow:visible;display:block">' +
       '<circle cx="60" cy="60" r="' + r + '" fill="none" stroke="#e2e8f0" stroke-width="8" stroke-dasharray="3,3" />' +
       '<circle cx="60" cy="60" r="' + r + '" fill="none" stroke="#2563eb" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + c + '" stroke-dashoffset="' + offset + '" transform="rotate(-90 60 60)" style="transition:stroke-dashoffset 0.6s ease" />' +
       '</svg>';
