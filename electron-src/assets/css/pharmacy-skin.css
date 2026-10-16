@@ -1127,10 +1127,11 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 #view.patient-view-active {
   display: flex !important;
   flex-direction: column !important;
-  min-height: calc(100vh / 0.9 - 100px) !important;
-  padding: 16px 20px 20px !important;
+  min-height: calc(100vh / 0.9 - 50px) !important;
+  padding: 12px 18px 10px !important;
   box-sizing: border-box !important;
   flex: 1 1 auto !important;
+  overflow-x: hidden !important;
 }
 
 #ptPatientDashboardHost {
@@ -1138,9 +1139,10 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   flex-direction: column !important;
   flex: 1 1 auto !important;
   width: 100% !important;
-  min-height: calc(100vh / 0.9 - 130px) !important;
-  min-height: max(620px, calc(100vh / 0.9 - 130px)) !important;
+  min-height: calc(100vh / 0.9 - 68px) !important;
+  min-height: max(580px, calc(100vh / 0.9 - 68px)) !important;
   box-sizing: border-box !important;
+  overflow-x: hidden !important;
 }
 
 #ptPatientDashboard {
@@ -1148,10 +1150,11 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   flex-direction: column !important;
   flex: 1 1 auto !important;
   width: 100% !important;
-  min-height: calc(100vh / 0.9 - 130px) !important;
-  min-height: max(620px, calc(100vh / 0.9 - 130px)) !important;
+  min-height: calc(100vh / 0.9 - 68px) !important;
+  min-height: max(580px, calc(100vh / 0.9 - 68px)) !important;
   box-sizing: border-box !important;
   margin: 0 !important;
+  overflow-x: hidden !important;
 }
 
 .vitals-main-grid {
@@ -1164,7 +1167,8 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   max-width: 100% !important;
   box-sizing: border-box !important;
   flex: 1 1 auto !important;
-  min-height: 600px !important;
+  min-height: calc(100vh / 0.9 - 135px) !important;
+  min-height: max(540px, calc(100vh / 0.9 - 135px)) !important;
   height: 100% !important;
 }
 @media (max-width: 850px) {
@@ -1198,7 +1202,8 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .vitals-right-col > .vitals-stage-card {
   flex: 1 1 auto !important;
   height: 100% !important;
-  min-height: 600px !important;
+  min-height: calc(100vh / 0.9 - 135px) !important;
+  min-height: max(540px, calc(100vh / 0.9 - 135px)) !important;
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;

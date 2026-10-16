@@ -2,10 +2,11 @@
 #view.patient-view-active {
   display: flex !important;
   flex-direction: column !important;
-  min-height: calc(100vh / 0.9 - 100px) !important;
-  padding: 16px 20px 20px !important;
+  min-height: calc(100vh / 0.9 - 50px) !important;
+  padding: 12px 18px 10px !important;
   box-sizing: border-box !important;
   flex: 1 1 auto !important;
+  overflow-x: hidden !important;
 }
 
 #ptPatientDashboardHost {
@@ -13,9 +14,10 @@
   flex-direction: column !important;
   flex: 1 1 auto !important;
   width: 100% !important;
-  min-height: calc(100vh / 0.9 - 130px) !important;
-  min-height: max(620px, calc(100vh / 0.9 - 130px)) !important;
+  min-height: calc(100vh / 0.9 - 68px) !important;
+  min-height: max(580px, calc(100vh / 0.9 - 68px)) !important;
   box-sizing: border-box !important;
+  overflow-x: hidden !important;
 }
 
 #ptPatientDashboard {
@@ -23,15 +25,16 @@
   margin: 0 !important;
   font-family: inherit;
   background: #f8fafb;
-  border-radius: 22px;
+  border-radius: 20px;
   padding: 16px 18px !important;
-  min-height: calc(100vh / 0.9 - 130px) !important;
-  min-height: max(620px, calc(100vh / 0.9 - 130px)) !important;
+  min-height: calc(100vh / 0.9 - 68px) !important;
+  min-height: max(580px, calc(100vh / 0.9 - 68px)) !important;
   display: flex !important;
   flex-direction: column !important;
   flex: 1 1 auto !important;
   width: 100% !important;
   box-sizing: border-box !important;
+  overflow-x: hidden !important;
 }
 #ptPatientDashboard .pd-layout {
   display: grid;
@@ -436,8 +439,10 @@
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-  flex: 1 0 auto !important;
-  min-height: 580px !important;
+  flex: 1 1 auto !important;
+  min-height: calc(100vh / 0.9 - 135px) !important;
+  min-height: max(540px, calc(100vh / 0.9 - 135px)) !important;
+  height: 100% !important;
 }
 @media (max-width: 850px) {
   #ptPatientDashboard .vitals-main-grid {
@@ -451,7 +456,7 @@
   display: flex !important;
   flex-direction: column !important;
   height: 100% !important;
-  flex: 1 !important;
+  flex: 1 1 auto !important;
   min-width: 0 !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -469,9 +474,10 @@
   overflow: hidden !important;
 }
 #ptPatientDashboard .vitals-right-col > .vitals-stage-card {
-  flex: 1 0 auto !important;
+  flex: 1 1 auto !important;
   height: 100% !important;
-  min-height: 580px !important;
+  min-height: calc(100vh / 0.9 - 135px) !important;
+  min-height: max(540px, calc(100vh / 0.9 - 135px)) !important;
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
