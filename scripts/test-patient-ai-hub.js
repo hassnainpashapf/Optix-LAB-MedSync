@@ -86,8 +86,8 @@ EXPECTED_NAV_SECTIONS.forEach(secAttr => {
   assert(patientHtml.includes(secAttr), `Patient navigation must include icon button: ${secAttr}`);
 });
 assert(patientHtml.includes('class="pd-ai-nav-icon-btn"'), 'Patient navigation must render .pd-ai-nav-icon-btn buttons');
-assert(patientHtml.includes('class="pd-ai-quick-icon-btn'), 'Patient AI view must render .pd-ai-quick-icon-btn quick switcher buttons');
-console.log('✓ Patient navigation includes all 12 AI Module Icon Buttons + Hub icon button');
+assert(!patientHtml.includes('id="pdActiveAiModTitle"'), 'Redundant AI module header card must be removed from #pdAiSingleModuleView');
+console.log('✓ Patient navigation includes all 12 AI Module Icon Buttons + Hub icon button (redundant top banner removed)');
 
 // Dedicated Single Module View & Hub Grid Container
 assert(patientHtml.includes('id="pdAiHub"'), 'Dedicated #pdAiHub layout section must exist');

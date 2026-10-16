@@ -3741,29 +3741,9 @@
         + '</div>';
     }).join('');
 
-    var firstMod = PAT_AI_MODULES[0];
-
     return '<div class="pd-layout-ai-hub" id="pdAiHub" style="display:none">'
       // 1. Single AI Module Active View (triggered by any of the 12 Icon Buttons)
       + '<div id="pdAiSingleModuleView" style="display:block">'
-      + '  <div class="vitals-card" style="width:100%;margin-bottom:14px;padding:16px 20px">'
-      + '    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">'
-      + '      <div style="display:flex;align-items:center;gap:12px;min-width:0">'
-      + '        <div id="pdActiveAiModIcon" style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:21px;flex-shrink:0;box-shadow:0 3px 10px rgba(37,99,235,0.25)">' + firstMod.icon + '</div>'
-      + '        <div style="min-width:0">'
-      + '          <div id="pdActiveAiModBadge" style="font-size:11px;font-weight:800;color:#2563eb;text-transform:uppercase;letter-spacing:0.04em">MODULE #1 OF 12 &bull; ' + esc(firstMod.category) + '</div>'
-      + '          <h3 id="pdActiveAiModTitle" style="font-size:18px;font-weight:800;color:#131845;margin:1px 0 2px">' + esc(firstMod.title) + '</h3>'
-      + '          <p id="pdActiveAiModDesc" style="margin:0;color:#64748b;font-size:12px">' + esc(firstMod.desc) + '</p>'
-      + '        </div>'
-      + '      </div>'
-      + '      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">'
-      + '        <div class="pd-ai-quick-icon-bar" aria-label="12 AI Module Quick Icons" style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;background:#f8fafc;padding:4px 6px;border-radius:10px;border:1px solid #e2e8f0">'
-      +            quickIconBtnsHtml
-      + '        </div>'
-      + '        <button type="button" class="btn btn-outline-primary btn-sm" id="btnShowAiHubGrid" style="font-weight:700;font-size:12px;padding:7px 12px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><span>🤖</span><span>All 12 Grid</span></button>'
-      + '      </div>'
-      + '    </div>'
-      + '  </div>'
       + '  <div id="pdAiInlineMount" style="width:100%">'
       +      inlineAiHtml
       + '  </div>'
