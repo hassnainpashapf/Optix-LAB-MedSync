@@ -34,33 +34,68 @@ async function preparePage() {
   }));
   const broken = Array.from(document.images).filter(image => !image.naturalWidth && image.getAttribute('src'));
   if (broken.length) throw new Error('A report image could not be loaded; check the saved lab logo/signatures');
-  // Keep the original grid markup/styles, but give Chromium a repeating section
-  // heading when one test's rows continue onto another sheet.
-  document.querySelectorAll('.rpt-tests-block > .rpt-section').forEach(section => {
-    const children = Array.from(section.children);
-    if (!children.length || children[0].style.display !== 'grid') return;
-    const table = document.createElement('table');
-    table.style.cssText = 'width:100%;border:0;border-collapse:collapse;margin:0;padding:0;table-layout:fixed;font-size:inherit';
-    children.forEach((child, i) => {
-      const group = i === 0 ? document.createElement('thead') : (table.tBodies[0] || document.createElement('tbody'));
-      group.style.display = i === 0 ? 'table-header-group' : 'table-row-group';
-      const row = document.createElement('tr'), cell = document.createElement('td');
-      cell.style.cssText = 'border:0;padding:0;vertical-align:top;font-size:inherit;line-height:inherit';
-      cell.appendChild(child); row.appendChild(cell); group.appendChild(row);
-      if (!group.parentNode) table.appendChild(group);
-    });
-    section.appendChild(table);
-  });
-  const footer = document.querySelector('.rpt-footer-block');
-  const height = footer ? Math.ceil(footer.getBoundingClientRect().height) : 0;
-  if (height > 400) throw new Error('The saved report footer is too tall for A4; shorten it in Lab Profile');
-  // The existing template repeats its header and reserves a footer on every page.
-  // Measure the saved footer instead of assuming that every lab uses a 48mm footer.
+  // Electron measures before printToPDF switches media; apply print rules to
+  // this isolated document as well so both renderers measure identical sheets.
+  const printStyles = document.createElement('style');
+  printStyles.textContent = Array.from(document.styleSheets).flatMap(sheet => {
+    try { return Array.from(sheet.cssRules).filter(rule => rule.media && rule.media.mediaText.includes('print')).map(rule => Array.from(rule.cssRules, child => child.cssText).join('\n')); }
+    catch (_) { return []; }
+  }).join('\n');
+  document.body.appendChild(printStyles);
+  // Paginate at the actual A4 width. Chromium cannot reliably repeat a tall
+  // patient header or reserve a nested table footer; use explicit sheets instead.
+  const original = document.querySelector('.rpt-page');
+  const header = original.querySelector('.rpt-header-block');
+  const footer = original.querySelector('.rpt-footer-block');
+  const tests = original.querySelector('.rpt-tests-block');
+  if (!header || !footer || !tests) throw new Error('Report layout is incomplete');
+  const font = getComputedStyle(original).fontFamily;
   const style = document.createElement('style');
-  style.textContent = '@media print{.rpt-header-block{padding-top:28px!important}.rpt-section>div{break-inside:avoid;page-break-inside:avoid}.rpt-section>div:first-child{break-after:avoid;page-break-after:avoid}.rpt-foot-spacer{height:' + (height + 16) + 'px!important;min-height:' + (height + 16) + 'px!important}}';
-  document.head.appendChild(style);
-  return { footerHeight: height, font: getComputedStyle(document.querySelector('.rpt-page')).fontFamily };
+  style.textContent = '.rpt-page.rpt-sheet{display:block!important;width:210mm!important;max-width:210mm!important;height:297mm!important;min-height:297mm!important;padding:8mm 7mm 6mm!important;position:relative!important;break-after:page!important;page-break-after:always!important;overflow:hidden}.rpt-page.rpt-sheet:last-of-type{break-after:auto!important;page-break-after:auto!important}.rpt-sheet .rpt-header-block{padding-top:28px!important}.rpt-sheet .rpt-footer-block{position:absolute!important;bottom:6mm!important;left:7mm!important;right:7mm!important}.rpt-sheet-content{display:flow-root}';
+  document.body.appendChild(style);
+  let sheet, content, limit;
+  function newSheet() {
+    sheet = document.createElement('div');
+    sheet.className = 'rpt-page rpt-sheet';
+    sheet.setAttribute('style', original.getAttribute('style') || '');
+    sheet.appendChild(header.cloneNode(true));
+    content = document.createElement('div'); content.className = 'rpt-sheet-content';
+    sheet.appendChild(content);
+    const foot = footer.cloneNode(true); sheet.appendChild(foot);
+    original.before(sheet);
+    if (foot.getBoundingClientRect().height > 400) throw new Error('The saved report footer is too tall for A4; shorten it in Lab Profile');
+    limit = foot.getBoundingClientRect().top - 16;
+    if (content.getBoundingClientRect().top + 80 > limit) throw new Error('The saved report header/footer leaves no room for test results');
+  }
+  const fits = () => content.getBoundingClientRect().bottom <= limit;
+  newSheet();
+  for (const child of Array.from(tests.children)) {
+    const block = child.cloneNode(true);
+    content.appendChild(block);
+    if (fits()) continue;
+    block.remove();
+    // Keep a complete test together when it fits on a fresh sheet.
+    if (content.children.length) { newSheet(); content.appendChild(block); if (fits()) continue; block.remove(); }
+    if (!block.classList.contains('rpt-section')) throw new Error('A report note is too tall for A4');
+    // A long test continues with its heading and result stamp on each sheet.
+    const parts = Array.from(block.children);
+    const heading = parts.shift();
+    let segment = block.cloneNode(false);
+    segment.appendChild(heading.cloneNode(true)); content.appendChild(segment);
+    for (const part of parts) {
+      segment.appendChild(part);
+      if (fits()) continue;
+      part.remove();
+      if (segment.children.length === 1) throw new Error('A test row is too tall for A4');
+      newSheet(); segment = block.cloneNode(false);
+      segment.appendChild(heading.cloneNode(true)); segment.appendChild(part); content.appendChild(segment);
+      if (!fits()) throw new Error('A test row is too tall for A4');
+    }
+  }
+  original.remove();
+  return { font };
 }
+
 let active = 0;
 async function chromiumPdf(html) {
   if (active >= 2) { const error = new Error('PDF renderer is busy. Please retry.'); error.status = 503; throw error; }
