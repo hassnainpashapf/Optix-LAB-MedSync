@@ -85,10 +85,11 @@ async function suite(folder) {
   context.window = context;
   vm.runInContext(fs.readFileSync(path.join(folder, 'assets/js/graph-config.js'), 'utf8'), context);
   let source = fs.readFileSync(path.join(folder, 'assets/js/mod-results.js'), 'utf8');
-  source = source.replace(/\}\)\(\);\s*$/, 'App.testBlob = buildReportPdfBlobUrl; App.testPdf = buildReportPdf; App.testData = reportData; App.testHtml = reportHtml; App.testPrint = printReport; })();');
+  source = source.replace(/\}\)\(\);\s*$/, 'App.testResetPdfCache = function () { profilePdfCache = []; }; App.testBlob = buildReportPdfBlobUrl; App.testPdf = buildReportPdf; App.testData = reportData; App.testHtml = reportHtml; App.testPrint = printReport; })();');
   vm.runInContext(source, context);
 
   function fixture() {
+    App.testResetPdfCache();
     uploads = []; prints = []; messages = []; native = false; outputFailure = ''; qrTargets = [];
     context.location.href = '';
     tables = {

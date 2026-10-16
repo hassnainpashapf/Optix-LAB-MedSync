@@ -112,7 +112,7 @@ async function chromiumPdf(html) {
     await page.setRequestInterception(true);
     page.on('request', request => allowedResource(request.url()) ? request.continue() : request.abort());
     await page.emulateMediaType('print');
-    await page.setContent(documentHtml(html), { waitUntil: 'networkidle0', timeout: 20000 });
+    await page.setContent(documentHtml(html), { waitUntil: 'load', timeout: 20000 });
     await page.evaluate(preparePage);
     return Buffer.from(await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true, displayHeaderFooter: false, timeout: 20000 }));
   } finally {

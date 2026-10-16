@@ -34,15 +34,16 @@ function fixture(count) {
   }
   const App = { route() {}, esc: value => String(value == null ? '' : value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])),
     visitNos: () => ({ labText: 'INV # 11 - 10/2026', labCode: 'INV11-10-2026', caseText: 'P # 01 - 15/10', caseCode: '01-15-10' }) };
-  const DB = { get: (name, id) => (tables[name] || []).find(r => r.id === id), all: name => tables[name] || [] };
+  const controls = { token: 'fixture-a', fail: false };
+  const DB = { authHeaders: headers => ({ ...headers, Authorization: controls.token }), get: (name, id) => (tables[name] || []).find(r => r.id === id), all: name => tables[name] || [] };
   const renderCalls = [];
   const context = vm.createContext({ App, DB, console, setTimeout, LABPOS_API: 'https://fixture.invalid',
-    fetch: async (url, options) => { renderCalls.push({ url, html: JSON.parse(options.body).html }); return { ok: true, json: async () => ({ dataUri: 'data:application/pdf;base64,' + Buffer.from('%PDF-fixture').toString('base64') }) }; }, localStorage: { getItem: () => null }, document: { addEventListener() {} } });
+    fetch: async (url, options) => { renderCalls.push({ url, html: JSON.parse(options.body).html }); if (controls.fail) throw new Error('Temporary renderer failure'); return { ok: true, json: async () => ({ dataUri: 'data:application/pdf;base64,' + Buffer.from('%PDF-fixture').toString('base64') }) }; }, localStorage: { getItem: () => null }, document: { addEventListener() {} } });
   context.window = context;
   vm.runInContext(fs.readFileSync(path.join(root, 'assets/js/qrcode.min.js'), 'utf8'), context);
   vm.runInContext(fs.readFileSync(path.join(root, 'assets/js/mod-results.js'), 'utf8'), context);
   const qr = App.qrDataUrlFor('https://example.invalid/r/synthetic-sample');
-  return { App, settings, tables, renderCalls, html: () => App.reportPdfHtml('i', qr) };
+  return { App, settings, tables, renderCalls, controls, html: () => App.reportPdfHtml('i', qr) };
 }
 async function main() {
   const sample = fixture();
@@ -65,6 +66,18 @@ async function main() {
   assert.ok(sample.renderCalls[0].html.includes('font-family:"Poppins"'));
   const settingsSource = fs.readFileSync(path.join(root, 'assets/js/mod-admin.js'), 'utf8');
   assert.ok(settingsSource.includes('App.renderLabProfilePdf(html, ps)') && settingsSource.includes('id="spPrevPdf"'), 'Lab Profile exposes its own PDF download');
+  await Promise.all([sample.App.renderLabProfilePdf(unsavedHtml, { font: 'poppins' }), sample.App.renderLabProfilePdf(unsavedHtml, { font: 'poppins' })]);
+  assert.equal(sample.renderCalls.length, 1, 'Identical preview/download renders share a cached PDF');
+  await sample.App.renderLabProfilePdf(unsavedHtml + '<p>Changed result</p>', { font: 'poppins' });
+  assert.equal(sample.renderCalls.length, 2, 'Changed report content renders a fresh PDF');
+  sample.controls.token = 'fixture-b';
+  await sample.App.renderLabProfilePdf(unsavedHtml, { font: 'poppins' });
+  assert.equal(sample.renderCalls.length, 3, 'A different auth session cannot reuse a cached PDF');
+  sample.controls.fail = true;
+  await assert.rejects(sample.App.renderLabProfilePdf(unsavedHtml + 'retry', { font: 'poppins' }), /Temporary renderer failure/);
+  sample.controls.fail = false;
+  await sample.App.renderLabProfilePdf(unsavedHtml + 'retry', { font: 'poppins' });
+  assert.equal(sample.renderCalls.length, 5, 'Failed renders are evicted and can be retried');
   delete sample.settings.headerHtml; delete sample.settings.footerHtml; sample.settings.font = 'inter';
   assert.throws(() => renderer.documentHtml('bad'), /complete report/);
   assert.throws(() => renderer.documentHtml('rpt-page' + 'x'.repeat(8 * 1024 * 1024)), /complete report/);
