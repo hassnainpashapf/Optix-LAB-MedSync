@@ -110,7 +110,7 @@ function requireSuperadmin(req, res, next) {
   return res.status(403).json({ error: 'forbidden' });
 }
 
-async function main() {
+async function main(options = {}) {
   const mod = ADAPTER === 'pg' ? require('./db-pg') : require('./db-sqlite');
   const { TABLES } = mod;
   const rawStore = await mod.openStore(ADAPTER === 'pg' ? DATABASE_URL : SQLITE_PATH);
@@ -1512,6 +1512,8 @@ async function main() {
      The web app uploads the generated report PDF here; scanning the QR on a
      printed report opens this URL on the patient's phone with a download
      option. NOTE: registered BEFORE the generic /api/:table routes. */
+  require('./report-pdf').register(app, needUser, options.renderReportPdf);
+
   const REPORT_KEY_RE = /^[A-Za-z0-9_-]{4,64}$/;
   const REPORT_PDF_MAX_BYTES = 15 * 1024 * 1024;
   const PDF_DATA_PREFIX = 'data:application/pdf;base64,';

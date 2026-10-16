@@ -545,7 +545,7 @@
   }
   /* the PDF engine is loaded on demand: make sure it is there before building the report PDF that email / Slack send */
   function pdfUrlFor(invoiceId) {
-    return Promise.resolve(App.ensureJsPDF ? App.ensureJsPDF() : true).then(function () { return getReportPdfUrl(invoiceId, true); });
+    return getReportPdfUrl(invoiceId, true);
   }
   function keyOfUrl(u) { var m = /\/r\/([A-Za-z0-9_-]+)/.exec(String(u || '')); return m ? m[1] : ''; }
   function slackNames(invoiceId) {
@@ -3045,6 +3045,59 @@
     ]).then(function (r) { return { hdr: r[0] || null, ftr: r[1] || null }; }, function () { return {}; });
   }
 
+  // The same reportHtml() drives Settings > Lab Profile and every PDF output.
+  function reportPdfDocument(html, settings) {
+    var fonts = { inter: 'Inter', jakarta: 'Plus Jakarta Sans', roboto: 'Roboto', poppins: 'Poppins',
+      opensans: 'Open Sans', lato: 'Lato', montserrat: 'Montserrat' };
+    var font = fonts[(settings || {}).font || 'inter'] || fonts.inter;
+    return '<style>html,body{margin:0;padding:0;background:#fff}body{font-family:"' + font + '",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}*{box-sizing:border-box}</style>' + html;
+  }
+  function reportPdfHtml(invoiceId, qrDataUrl, opts) {
+    var d = reportData(invoiceId, opts);
+    if (!d) throw new Error('No ready results for PDF');
+    var html = reportHtml(d, opts);
+    html = qrDataUrl && d.s.showQr !== false
+      ? html.replace(/data-qr="1"/g, 'data-qr="1" src="' + qrDataUrl + '"') : stripQrImg(html);
+    return reportPdfDocument(html, d.s);
+  }
+  function renderProfileReportPdf(invoiceId, qrDataUrl, opts) {
+    var html;
+    try { html = reportPdfHtml(invoiceId, qrDataUrl, opts); }
+    catch (error) { return Promise.reject(error); }
+    return renderProfileHtml(html);
+  }
+  function renderProfileHtml(html) {
+    var base = String(window.LABPOS_API || '').replace(/\/+$/, '');
+    return fetch(base + '/api/report-pdf/render', {
+      method: 'POST', headers: DB.authHeaders ? DB.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ html: html })
+    }).then(function (response) {
+      return response.json().then(function (result) {
+        if (response.ok === false || !result || !/^data:application\/pdf;base64,JVBER/.test(result.dataUri || '')) {
+          throw new Error((result && result.error) || 'The Lab Profile PDF renderer is unavailable. Update the app/server and retry.');
+        }
+        return result;
+      });
+    });
+  }
+  function reportPdfBlob(pdf) {
+    try {
+      var arr = pdf.dataUri.split(','), mime = (arr[0].match(/:(.*?);/) || [])[1] || 'application/pdf',
+          bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      var blob = new Blob([u8arr], { type: mime });
+      return { blobUrl: URL.createObjectURL(blob), dataUri: pdf.dataUri };
+    } catch (e) {
+      return { blobUrl: pdf.dataUri, dataUri: pdf.dataUri };
+    }
+  }
+  App.renderLabProfilePdf = function (html, settings) {
+    return renderProfileHtml(reportPdfDocument(html, settings)).then(reportPdfBlob);
+  };
+  App.reportPdfHtml = reportPdfHtml;
+
   // Build the report PDF, upload it to the cloud API, return the public URL (or null).
   function getReportPdfUrl(invoiceId, force, opts) {
     var inv = invOf(invoiceId);
@@ -3059,11 +3112,7 @@
       var qb = String(window.LABPOS_REPORT_API || (!(window.labposDesktop && window.labposDesktop.isDesktop) ? window.LABPOS_API : '') || '').replace(/\/+$/, '');
       if (qb) selfQr = qrDataUrlFor(qb + '/r/' + key);
     } catch (e) { selfQr = null; }
-    return customPdfParts(invoiceId, selfQr, opts).catch(function () { return {}; }).then(function (pre) {
-    var pdf = null;
-    try { pdf = buildReportPdf(invoiceId, selfQr, pre, opts); }
-    catch (e) { App.toast('Could not build complete report PDF: ' + e.message, 'err'); return null; }
-    if (!pdf || !pdf.dataUri) return null;
+    return renderProfileReportPdf(invoiceId, selfQr, opts).then(function (pdf) {
     var rawUri = String(pdf.dataUri);
     var b64 = rawUri.slice(rawUri.indexOf(',') + 1); // strip data:...;base64, prefix (jsPDF adds filename=)
     var base = 'https://labpos-api.150.230.52.29.sslip.io';
@@ -3088,7 +3137,7 @@
         return null;
       })
       .catch(function () { return null; });
-    });
+    }).catch(function (error) { App.toast('Could not render Lab Profile PDF: ' + error.message, 'err'); return null; });
   }
   App.getReportPdfUrl = getReportPdfUrl;
   App.barcodeHtml = barcodeHtml;   /* the invoice print draws the same barcodes */
@@ -3134,17 +3183,14 @@
     /* Android app: no popups/printing in a WebView -> open the report in the phone browser (cloud viewer: print, share, download) */
     if (App.isNative && App.isNative()) {
       try {
-        if (await App.ensureJsPDF()) {
-          var nurl = await getReportPdfUrl(invoiceId, true, opts);
-          if (nurl) { location.href = nurl; return; }
-        }
+        var nurl = await getReportPdfUrl(invoiceId, true, opts);
+        if (nurl) { location.href = nurl; return; }
       } catch (e) {}
       App.toast('Could not open the report. Check your internet connection.', 'err');
       return;
     }
     try {
-      var jsOk = await App.ensureJsPDF();
-      if (jsOk) {
+      {
         var url = await getReportPdfUrl(invoiceId, false, opts);
         /* no live report link (invoice not fully paid, or the upload failed): print no QR rather than a link to the staff login page, which a patient's phone cannot open */
         qrImg = url ? qrDataUrlFor(url) : null;
@@ -3158,6 +3204,7 @@
       var pdfRes = await buildReportPdfBlobUrl(invoiceId, opts, url || null);
       if (pdfRes && pdfRes.blobUrl) pdfBlobUrl = pdfRes.blobUrl;
     } catch (e) {}
+    if (!pdfBlobUrl) { App.toast('Could not generate the Lab Profile PDF. Please retry.', 'err'); return; }
     App.print('Lab Report — ' + d.inv.no, html, { noHeader: true, pdfBlobUrl: pdfBlobUrl });
   }
 
@@ -3238,8 +3285,7 @@
     /* full new report + comparison on one page */
     var qrImg = null;
     try {
-      var jsOk = await App.ensureJsPDF();
-      if (jsOk) {
+      {
         var url = await getReportPdfUrl(newInvId);
         qrImg = url ? qrDataUrlFor(url) : null;
       }
@@ -3306,26 +3352,13 @@
   }
 
   function buildReportPdfBlobUrl(invoiceId, opts, publicUrl) {
-    return Promise.resolve(App.ensureJsPDF ? App.ensureJsPDF() : true).then(function () {
+    return Promise.resolve().then(function () {
       var d = reportData(invoiceId, opts);
       if (!d) return null;
       return (publicUrl !== undefined ? Promise.resolve(publicUrl) : getReportPdfUrl(invoiceId, false, opts)).then(function (publicUrl) {
       var selfQr = publicUrl ? qrDataUrlFor(publicUrl) : null;
-      return customPdfParts(invoiceId, selfQr, opts).catch(function () { return {}; }).then(function (pre) {
-        var pdf = null;
-        try { pdf = buildReportPdf(invoiceId, selfQr, pre, opts); } catch (e) { console.error(e); }
-        if (!pdf || !pdf.dataUri) return null;
-        try {
-          var arr = pdf.dataUri.split(','), mime = (arr[0].match(/:(.*?);/) || [])[1] || 'application/pdf',
-              bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-          while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-          }
-          var blob = new Blob([u8arr], { type: mime });
-          return { blobUrl: URL.createObjectURL(blob), dataUri: pdf.dataUri };
-        } catch (e) {
-          return { blobUrl: pdf.dataUri, dataUri: pdf.dataUri };
-        }
+      return renderProfileReportPdf(invoiceId, selfQr, opts).then(function (pdf) {
+        return reportPdfBlob(pdf);
       });
       });
     });
@@ -3553,7 +3586,7 @@
       });
   }
 
-  /* ---------- report PDF builder (jsPDF) ---------- */
+  /* ---------- legacy vector helper (compatibility regression fixtures only) ---------- */
 
   // Returns { dataUri } or null (error toasted).
   // qrDataUrl (optional): QR image data URL embedded in the header.

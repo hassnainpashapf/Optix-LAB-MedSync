@@ -62,6 +62,17 @@ async function suite(folder) {
     LABPOS_API: 'https://fixture.invalid',
     qrcode: () => ({ addData: url => qrTargets.push(url), make() {}, createDataURL: () => pixel }),
     fetch: async (url, options) => {
+      // Legacy vector geometry remains covered separately; transport-only harness
+      // substitutes its PDF bytes for the browser renderer. The real renderer has
+      // its own Chromium integration suite in test-profile-pdf.js.
+      if (url === 'https://fixture.invalid/api/report-pdf/render') {
+        const html = JSON.parse(options.body).html;
+        assert.ok(html.includes('rpt-page'));
+        const opts = { noLabHeader: !html.includes('Fixture Laboratory'),
+          compareIds: ['older', 'newer'].filter(id => html.includes(id.toUpperCase()) || html.includes(id === 'older' ? '>108<' : '>109<')) };
+        const result = App.testPdf('i', html.includes('data-qr="1"') ? pixel : null, null, opts);
+        return { ok: !!result, json: async () => result ? { dataUri: 'data:application/pdf;base64,' + result.dataUri.split('base64,')[1] } : { error: 'fixture renderer failure' } };
+      }
       assert.equal(url, 'https://fixture.invalid/api/report-pdfs');
       assert.equal(options.method, 'POST');
       assert.equal(options.headers['X-Fixture-Auth'], 'fixture');
@@ -292,15 +303,14 @@ async function suite(folder) {
   App.graphFor = () => { throw new Error('fixture graph failure'); };
   assert.equal(await App.getReportPdfUrl('i'), null);
   assert.equal(uploads.length, 0, 'Never upload silently incomplete graph PDF');
-  assert.ok(messages.some(m => /complete report PDF.*fixture graph failure/.test(m)));
+  assert.ok(messages.some(m => /Lab Profile PDF.*fixture graph failure/.test(m)));
   App.graphFor = graphFor;
   for (const failure of ['throw', 'empty', 'invalid']) {
     fixture(); outputFailure = failure;
     const beforeFailure = JSON.stringify(tables);
     await App.testPrint('i', { compareIds: ['newer'] });
     assert.equal(uploads.length, 0, 'Never upload invalid/missing output');
-    assert.equal(prints.length, 1, 'Browser retains HTML print fallback');
-    assert.ok(prints[0].html.includes('History only'));
+    assert.equal(prints.length, 0, 'A failed PDF never prints a different HTML layout');
     assert.ok(!qrTargets.some(t => String(t).indexOf('#/invoice/') >= 0), 'A failed PDF never prints a staff-login invoice link as the QR');
     assert.ok(messages.some(m => /Could not build PDF:/.test(m)), 'Output failure is reported');
     assert.equal(JSON.stringify(tables), beforeFailure, 'Failure never changes key or clinical records');
