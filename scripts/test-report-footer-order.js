@@ -154,6 +154,29 @@ function suite(folder) {
   fixture(); tables.settings[0].footerNote = 'NOTE: Fixture legacy note retained.'; checkDefault();
   fixture(); tables.settings[0].footerNote = 'Get well soon. Reports available on counter & phone.'; checkDefault();
 
+  // Reference arrangement: compact letterhead, four signatories, footer at page bottom.
+  fixture(2);
+  Object.assign(tables.settings[0], { labName: 'CITY CARE LAB', tagline: 'Diagnostic & Research Center',
+    showTagline: true, showBarcode: true, footerText: '', verNote: 'Electronically verified report. No signatures necessary.',
+    headOffice: '', mainLab: '', callCenter: '', website: '', address: 'Synthetic Main Road, Sample City',
+    phone: '000-000-0000', email: 'sample@example.invalid',
+    signatories: Array.from({ length: 4 }, (_, i) => ({ name: 'SYNTHETIC SIGNATORY ' + (i + 1), qual: 'Sample Qualification', title: 'Consultant Pathologist' })) });
+  tables.tests[0].name = tables.invoices[0].items[0].name = 'BLOOD GROUP (ABO/RH) (BGRP)';
+  tables.tests[0].params = [{ name: 'ABO Group', ref: '—', unit: '' }, { name: 'Rh Factor', ref: 'Positive / Negative', unit: '' }];
+  tables.results[0].values = { 'ABO Group': 'O', 'Rh Factor': 'Positive' };
+  tables.tests.push({ id: 'hb', name: 'HEMOGLOBIN (HB)', params: [{ name: 'Hemoglobin', ref: '13.5-17.5', unit: 'g/dL' }] });
+  tables.invoices[0].items.push({ testId: 'hb', name: 'HEMOGLOBIN (HB)' });
+  tables.results.push({ id: 'hb-result', invoiceId: 'i', testId: 'hb', status: 'ready', reportedAt: '2026-10-09T10:00:00Z', values: { Hemoglobin: '12.7' } });
+  render();
+  assert.equal(pdf.doc.getNumberOfPages(), 1, 'Two short sections and four signatories fit one A4 page');
+  assert.ok(pdf.text.filter(t => /^SYNTHETIC SIGNATORY/.test(t.values[0])).every(t => t.style === 'bold' && t.y > 220));
+  assert.ok(pdf.text.find(t => t.values[0] === 'Hemoglobin').y < 170, 'Tests remain near top, footer remains at bottom');
+  assert.ok(pdf.doc.internal.pages[1].length > 0);
+  if (process.env.REPORT_SAMPLE_DIR && folder === root) {
+    fs.mkdirSync(process.env.REPORT_SAMPLE_DIR, { recursive: true });
+    fs.writeFileSync(path.join(process.env.REPORT_SAMPLE_DIR, 'reference-layout-sample.pdf'), Buffer.from(pdf.doc.output('arraybuffer')));
+  }
+
   // Regression: long letterheads, titles and multi-line signatory credentials.
   fixture(45);
   tables.settings[0].labName = 'Synthetic Advanced Diagnostic Laboratory and Research Centre';

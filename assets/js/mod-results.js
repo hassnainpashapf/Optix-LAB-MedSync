@@ -3582,9 +3582,9 @@
     var fHasSigImg = s.enableSignatures !== false && fSigs.some(function (g) { return !!(g.sigImg || g.signature); });
     var fSigImgH = fHasSigImg ? 9 : 0;
     var fSigBlockH = 0;
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.2);
     var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
-    doc.setFontSize(7.2);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2);
     var fSigQualLines = fSigs.map(function (g) { return g.qual ? doc.splitTextToSize(g.qual, fSw - 3) : []; });
     var fSigTitleLines = fSigs.map(function (g) {
       return g.title ? doc.splitTextToSize(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fSw - 3) : [];
@@ -3612,7 +3612,7 @@
     var fTextH = fTextLines.length ? fTextLines.length * 4.2 + 3 : 0;
     var fH = (pre && pre.ftr)
       ? (CW * pre.ftr.ratio + 2)
-      : (fTextH + fVerLines.length * 4.4 + 3 + 3 + fSigBlockH + 3 + fNoteH + 3 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + 5);
+      : (fTextH + fVerLines.length * 4.4 + 3 + 4.2 + fSigBlockH + 3 + fNoteH + 3 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + 5);
 
     function drawFooter() {
       var fy = PH - FM - fH;
@@ -3629,7 +3629,7 @@
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
       txt(fVerLines, W / 2, curY + 3, { align: 'center' });
       curY += fVerLines.length * 4.4 + 3;
-      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, curY, W - M, curY); curY += 2.8;
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, curY, W - M, curY); curY += 4;
       fSigs.forEach(function (g, k) {
         var fCx = M + fSw * (k + 0.5), fSy = curY;
         var sigImgData = (s.enableSignatures !== false) ? (g.sigImg || g.signature) : null;
@@ -3640,7 +3640,7 @@
           try { doc.addImage(g.stampImg, 'PNG', fCx + 10, fSy, 8, 8); } catch (e) {}
         }
         if (fSigImgH) fSy += fSigImgH + 1;
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); doc.setTextColor(20, 20, 20);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.2); doc.setTextColor(20, 20, 20);
         txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 3.6;
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2); doc.setTextColor(40, 40, 40);
         if (fSigQualLines[k].length) { txt(fSigQualLines[k], fCx, fSy, { align: 'center' }); fSy += fSigQualLines[k].length * 3.3; }
@@ -3688,6 +3688,20 @@
       } catch (e) { return false; }
     }
 
+    function drawCode39(bx, by, bw, bh, seed) {
+      var seq = '*' + String(seed || '0000').toUpperCase().replace(/\s+/g, '') + '*';
+      var modules = [];
+      for (var i = 0; i < seq.length; i++) {
+        var pattern = CODE39[seq[i]] || CODE39['-'];
+        for (var j = 0; j < 9; j++) modules.push({ bar: j % 2 === 0, w: pattern[j] === 'w' ? 3 : 1 });
+        if (i < seq.length - 1) modules.push({ bar: false, w: 1 });
+      }
+      var total = modules.reduce(function (n, m) { return n + m.w; }, 20);
+      var unit = bw / total, x = bx + 10 * unit;
+      doc.setFillColor(0, 0, 0);
+      modules.forEach(function (m) { if (m.bar) doc.rect(x, by, m.w * unit, bh, 'F'); x += m.w * unit; });
+    }
+
     /* ----- header: logo + lab (left), patient/case nos + QR (right) ----- */
 
     // Accent hex -> RGB (default navy #1B1B6E); accepts "#rrggbb" or "rrggbb".
@@ -3719,39 +3733,38 @@
         if (!skipPatient) drawPatientGrid();
         return;
       }
-      // --- left: logo (~18mm) + lab name + subtitle ---
-      if (s.logo) addImg(s.logo, M - 2.5, y - 4, 26, 26);   /* logo and name sit a little higher, level with the barcodes */
-      var htx = M + (s.logo ? 27.5 : 0);
-      doc.setFont('times', 'bold'); doc.setFontSize(25);
-      var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : A; /* the lab-name colour from Lab Profile (default: the accent colour) */
+      // Reference letterhead: logo/name left, stacked visit barcodes beside QR right.
+      var qrSize = 20, barcodeW = 26, rightGap = 3;
+      var barcodeX = W - M - barcodeW - (showQr ? qrSize + rightGap : 0);
+      if (s.logo) addImg(s.logo, M, y, 22, 22);
+      var htx = M + (s.logo ? 28 : 0);
+      var nameW = barcodeX - htx - 6;
+      doc.setFont('times', 'bold'); doc.setFontSize(23);
+      var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : [0, 0, 0];
       doc.setTextColor(NC[0], NC[1], NC[2]);
-      var nameW = Math.max(30, W - M - (showQr ? qrS + 15 : 0) - 42 - htx);
       var labLines = doc.splitTextToSize(s.labName || 'Optix Medical Sync', nameW);
       txt(labLines, htx, y + 8);
-      var labBottom = 8 + (labLines.length - 1) * 25 * 1.15 / doc.internal.scaleFactor;
+      var labBottom = 8 + (labLines.length - 1) * 23 * 1.15 / doc.internal.scaleFactor;
       if (showTagline) {
-        doc.setFont('times', 'italic'); doc.setFontSize(13);
-        doc.setTextColor(A[0], A[1], A[2]);
+        doc.setFont('times', 'italic'); doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
         var tagLines = doc.splitTextToSize(s.tagline, nameW);
-        txt(tagLines, htx, y + labBottom + 7.5);
-        labBottom += 7.5 + (tagLines.length - 1) * 13 * 1.15 / doc.internal.scaleFactor;
+        txt(tagLines, htx, y + labBottom + 6);
+        labBottom += 6 + (tagLines.length - 1) * 11 * 1.15 / doc.internal.scaleFactor;
       }
-
-      // --- right: Patient No. / Case # right-aligned with wide letter spacing ---
-      var hnx = W - M - (showQr ? qrS + 15 : 0);
-      doc.setTextColor(20, 20, 20);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-      var vnp = App.visitNos(inv);
-      txt('Inv #:', hnx, y + 5, { align: 'right' });
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt(vnp.labText.replace('INV # ', ''), hnx, y + 10, { align: 'right', charSpace: 0.6 });
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt((/^P\s*#/i.test(String(vnp.caseText || '')) ? vnp.caseText : ('P # ' + vnp.caseText)), hnx, y + 17, { align: 'right', charSpace: 0.6 });
-
-      // --- QR 26mm at far right ---
-      if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
-
-      y += Math.max(headH, labBottom + 3) + 1.5;
+      var vnp = App.visitNos(inv), idBottom = 0;
+      [ [vnp.labCode, vnp.labText], [vnp.caseCode, /^P\s*#/i.test(String(vnp.caseText || '')) ? vnp.caseText : 'P # ' + vnp.caseText] ].forEach(function (pair) {
+        if (s.showBarcode !== false) {
+          drawCode39(barcodeX, y + idBottom, barcodeW, 4.5, pair[0]);
+          idBottom += 6;
+        }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(0, 0, 0);
+        var lines = doc.splitTextToSize(String(pair[1] || ''), barcodeW);
+        txt(lines, barcodeX, y + idBottom + 2);
+        idBottom += lines.length * 2.7 + 2;
+      });
+      if (showQr) addImg(qrDataUrl, W - M - qrSize, y, qrSize, qrSize);
+      y += Math.max(24, labBottom + 3, idBottom, showQr ? qrSize : 0) + 4;
 
       // --- plain header text from Lab Profile ("Header text"), centred under the header ---
       if (String(s.headerText || '').trim()) {
@@ -3771,7 +3784,7 @@
       }
 
       // --- navy divider line; y now sits below the header ---
-      doc.setDrawColor(A[0], A[1], A[2]); doc.setLineWidth(0.6);
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
       doc.line(M, y, W - M, y);
       y += 3;
 
@@ -3962,24 +3975,8 @@
         return 0;
       }
 
-      // ---- pseudo-barcode: thin vertical rects derived from the case # chars ----
       function drawBarcode(bx, byy, bw, bh, seed) {
-        var str = String(seed == null || seed === '' ? '0000' : seed);
-        var bars = [], total = 0, i, c, w, g;
-        for (i = 0; i < str.length; i++) {
-          c = str.charCodeAt(i);
-          w = 0.35 + (((c * 7 + i * 13) % 5) * 0.16);   // 0.35 - 0.99
-          g = 0.30 + (((c * 3 + i * 11) % 3) * 0.20);   // 0.30 - 0.70
-          bars.push({ w: w, g: g });
-          total += w + g;
-        }
-        var scale = Math.min(1, (bw - 4) / total);
-        var x = bx + bw / 2 - (total * scale) / 2;
-        doc.setFillColor(INK[0], INK[1], INK[2]);
-        for (i = 0; i < bars.length; i++) {
-          doc.rect(x, byy, bars[i].w * scale, bh, 'F');
-          x += (bars[i].w + bars[i].g) * scale;
-        }
+        drawCode39(bx, byy, bw, bh, seed);
       }
 
       // ---- sub-reference lines for "(See Below)" style params ----
@@ -4029,7 +4026,7 @@
           txt(ddmm, cx, yy + 2.6, { align: 'center' });
         }
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
-        doc.splitTextToSize(String(invoiceNo || ''), RBW - 3).forEach(function (line, i) {
+        if (resultCols.length > 1) doc.splitTextToSize(String(invoiceNo || ''), RBW - 3).forEach(function (line, i) {
           txt(line, cx, yy + 6 + i * 3.2, { align: 'center' });
         });
       }
@@ -4217,7 +4214,7 @@
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
         var idLines = 1;
         resultCols.forEach(function (c) { idLines = Math.max(idLines, doc.splitTextToSize(c.boxInvoiceNo, RBW - 3).length); });
-        BOX_H = (showBc ? 23 : 16) + idLines * 3.2;
+        BOX_H = resultCols.length > 1 ? (showBc ? 23 : 16) + idLines * 3.2 : (showBc ? 21 : 14);
 
         // Section title in Chughtai style: "{NAME} ({CODE}) REPORT"
         var tTitle = testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : '');
