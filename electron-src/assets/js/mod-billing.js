@@ -158,8 +158,9 @@
             '<div class="bl-pat-ava">' + App.esc((p.name || '?').charAt(0).toUpperCase()) + '</div>' +
             '<div class="bl-pat-info">' +
               '<strong>' + App.esc(p.name) + '</strong>' +
+              (p.id ? '<span style="font-weight:700;color:var(--brand-d)">Patient No: ' + App.esc(p.id) + '</span>' : '') +
               '<span>' + App.esc([p.age ? p.age + ' yrs' : '', p.gender || ''].filter(Boolean).join(' • ') || '—') + '</span>' +
-              '<span>' + App.esc(p.phone || 'No phone') + '</span>' +
+              '<span>' + App.esc(p.phone || p.whatsapp || 'No phone') + '</span>' +
             '</div>' +
           '</div>';
       } else {

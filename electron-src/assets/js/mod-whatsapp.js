@@ -812,7 +812,7 @@
           var owes = (+inv.due || 0) > 0.009;
           return '<tr><td><input type="checkbox" class="wcRow" data-id="' + esc(inv.id) + '"' + (sel[inv.id] ? ' checked' : '') + (sp ? ' disabled' : '') + '></td>' +
             '<td><b>' + esc(inv.no || inv.id) + '</b><div class="wc-sub">' + App.d(inv.createdAt) + '</div></td>' +
-            '<td><b>' + esc(pat.name || '—') + '</b><div class="wc-sub">' + esc(pat.whatsapp || pat.phone || 'no number') + '</div></td>' +
+            '<td><b>' + esc(pat.name || '—') + '</b><div class="wc-sub">' + (pat.id ? 'ID: ' + esc(pat.id) + ' &middot; ' : '') + esc(pat.whatsapp || pat.phone || 'no number') + '</div></td>' +
             '<td class="wc-tests">' + esc(App.wa.testNames(inv.id).join(', ')) + '</td>' +
             '<td>' + (owes ? '<span class="wc-chip o">Due ' + esc(App.money(inv.due)) + '</span>' : '<span class="wc-chip g">Paid</span>') + '</td>' +
             '<td>' + (sp ? '<span class="wc-chip g">✓ Sent</span><div class="wc-sub">' + ts(sp) + '</div>' : (sn ? '<span class="wc-chip b">Balance note sent</span>' : '<span class="wc-chip n">Not sent</span>')) + '</td>' +

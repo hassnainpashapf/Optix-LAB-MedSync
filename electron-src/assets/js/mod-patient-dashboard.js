@@ -3533,7 +3533,8 @@
         var lab = (App.currentLab && App.currentLab()) || {};
         var labName = lab.labName || 'Laboratory';
         var inv = (DB.get('invoices', invId)) || {};
-        var text = encodeURIComponent('Hello ' + (patient.name || 'Patient') + ',\nYour laboratory report from ' + labName + ' (Invoice #' + (inv.no || invId) + ') is available.\nThank you for choosing ' + labName + '.');
+        var patNo = patient.id ? ('\nPatient No: ' + patient.id) : '';
+        var text = encodeURIComponent('Hello ' + (patient.name || 'Patient') + ',' + patNo + '\nYour laboratory report from ' + labName + ' (Invoice #' + (inv.no || invId) + ') is available.\nThank you for choosing ' + labName + '.');
         var url = cleanPhone ? ('https://wa.me/' + cleanPhone + '?text=' + text) : ('https://wa.me/?text=' + text);
         window.open(url, '_blank');
       });

@@ -320,7 +320,13 @@
   }
   function invoiceSummary(inv) {
     var a = invoiceAmounts(inv), line = paymentLine(inv);
-    var out = 'Invoice summary:\nInvoice: ' + (inv.no || inv.id || '') + '\nTotal: ' + App.money(a.total) + '\nDue: ' + App.money(a.due) + '\nStatus: ' + invoiceStatus(inv);
+    var p = inv && inv.patientId ? DB.get('patients', inv.patientId) : null;
+    var patInfo = '';
+    if (p) {
+      if (p.id) patInfo += '\nPatient No: ' + p.id;
+      if (p.phone || p.whatsapp) patInfo += '\nPhone: ' + (p.phone || p.whatsapp);
+    }
+    var out = 'Invoice summary:\nInvoice: ' + (inv.no || inv.id || '') + patInfo + '\nTotal: ' + App.money(a.total) + '\nDue: ' + App.money(a.due) + '\nStatus: ' + invoiceStatus(inv);
     return line ? out + '\n' + line : out;
   }
   function appendInvoiceSummary(message, inv) {
@@ -329,7 +335,24 @@
   }
   function waVars(inv, pat, doc, testNames, link) {
     var s = DB.get('settings', 'main') || {};
-    return { lab: s.labName || 'Lab', patient: pat.name || '', doctor: (doc && doc.name) || '', invoice: inv.no || inv.id, date: App.d(inv.createdAt), tests: (testNames || []).join(', '), total: App.money(inv.total), due: App.money(inv.due), status: invoiceStatus(inv), paymentline: doc ? '' : paymentLine(inv), link: link || '' };
+    var patNo = (pat && pat.id) ? pat.id : '';
+    var patPhone = (pat && (pat.phone || pat.whatsapp)) ? (pat.phone || pat.whatsapp) : '';
+    return {
+      lab: s.labName || 'Lab',
+      patient: pat ? (pat.name || '') : '',
+      patientno: patNo || patPhone || '',
+      patientid: patNo,
+      patientphone: patPhone,
+      doctor: (doc && doc.name) || '',
+      invoice: inv.no || inv.id,
+      date: App.d(inv.createdAt),
+      tests: (testNames || []).join(', '),
+      total: App.money(inv.total),
+      due: App.money(inv.due),
+      status: invoiceStatus(inv),
+      paymentline: doc ? '' : paymentLine(inv),
+      link: link || ''
+    };
   }
   function waAlreadyNoted(invoiceId) {
     try { return DB.all('wa_log').some(function (e) { return e.kind === 'due' && e.invoiceId === invoiceId && e.status === 'sent'; }); } catch (e) { return false; }
@@ -4769,6 +4792,8 @@
       var lines = [];
       lines.push('🏥 *' + labName + '*');
       lines.push('Assalam-o-Alaikum *' + (patName || 'Valued Patient') + '*,');
+      if (pat && pat.id) lines.push('🆔 *Patient No:* ' + pat.id);
+      if (patPhone) lines.push('📱 *Patient Contact:* ' + patPhone);
       lines.push('Here is the summary of your *' + selectedGroups.length + ' medical report' + (selectedGroups.length === 1 ? '' : 's') + '*:');
       lines.push('----------------------------------------');
 

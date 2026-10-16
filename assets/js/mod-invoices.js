@@ -524,8 +524,12 @@
     var apiBase = String(window.LABPOS_API || 'https://labpos-api.150.230.52.29.sslip.io').replace(/\/+$/, '');
     var slug = (App.me && App.me.lab && (App.me.lab.slug || App.me.lab.id)) || s.labSlug || 'main';
     var invLink = apiBase + '/receipt/' + slug + '/' + encodeURIComponent(inv.no || inv.id);
+    var patNo = (p && p.id) ? p.id : '';
+    var patPhone = (p && (p.phone || p.whatsapp)) ? (p.phone || p.whatsapp) : '';
     var msg = (s.labName || 'Lab') + '\nInvoice ' + inv.no + ' (' + App.d(inv.createdAt) + ')\n' +
       'Patient: ' + (p ? p.name : 'Walk-in') + '\n' +
+      (patNo ? ('Patient No: ' + patNo + '\n') : '') +
+      (patPhone ? ('Patient Contact: ' + patPhone + '\n') : '') +
       'Tests: ' + tests + '\n' +
       'Total: ' + App.money(inv.total) + ' | Paid: ' + App.money(inv.paid) + ' | Due: ' + App.money(inv.due) + '\n' +
       'Invoice Link: ' + invLink;
@@ -564,6 +568,8 @@
         '<tr><td style="padding:6px;color:#555">Date</td><td style="padding:6px">' + (String(py.date || '').length > 10 ? App.dt(py.date) : App.d(py.date)) + '</td></tr>' +
         '<tr><td style="padding:6px;color:#555">Invoice</td><td style="padding:6px;font-weight:700">' + App.esc(inv ? inv.no : '—') + '</td></tr>' +
         '<tr><td style="padding:6px;color:#555">Patient</td><td style="padding:6px">' + App.esc(p ? p.name : 'Walk-in') + '</td></tr>' +
+        (p && p.id ? '<tr><td style="padding:6px;color:#555">Patient No</td><td style="padding:6px;font-weight:700">' + App.esc(p.id) + '</td></tr>' : '') +
+        (p && (p.phone || p.whatsapp) ? '<tr><td style="padding:6px;color:#555">Phone</td><td style="padding:6px">' + App.esc(p.phone || p.whatsapp) + '</td></tr>' : '') +
         '<tr><td style="padding:6px;color:#555">Method</td><td style="padding:6px">' + App.esc(py.method) + '</td></tr>' +
         (py.note ? '<tr><td style="padding:6px;color:#555">Note</td><td style="padding:6px">' + App.esc(py.note) + '</td></tr>' : '') +
         '<tr><td style="padding:10px 6px;font-size:18px;font-weight:800">Amount Received</td><td style="padding:10px 6px;font-size:18px;font-weight:800">' + App.money(py.amount) + '</td></tr>' +
@@ -804,7 +810,8 @@
           '<div style="display:flex;gap:32px;margin-bottom:14px;font-size:13.5px">' +
             '<div><strong>Patient:</strong> ' + App.esc(p ? p.name : 'Walk-in') +
             (p ? ' &nbsp;(' + App.esc(String(p.age || '')) + ' / ' + App.esc(p.gender || '') + ')' : '') +
-            '<br><strong>Phone:</strong> ' + App.esc((p && p.phone) || '—') +
+            (p && p.id ? '<br><strong>Patient No:</strong> ' + App.esc(p.id) : '') +
+            '<br><strong>Phone:</strong> ' + App.esc((p && (p.phone || p.whatsapp)) || '—') +
             (p && p.address ? '<br><strong>Address:</strong> ' + App.esc(p.address) : '') + '</div>' +
             '<div><strong>Consultant:</strong> ' + App.esc(d ? d.name : 'Self') +
             (d ? '<br><span style="color:#555;font-size:12px">' + App.esc(d.clinic || '') + '</span>' : '') +
@@ -920,8 +927,8 @@
         '<div><b>Invoice:</b> ' + App.esc(inv.no) + '</div>' +
         '<div><b>Date:</b> ' + App.dt(inv.createdAt) + '</div>' +
         '<div><b>Patient:</b> ' + App.esc(p ? p.name : 'Walk-in') + (p && p.age ? ' (' + p.age + 'Y/' + (p.gender || '') + ')' : '') + '</div>' +
-        (p && p.id ? '<div><b>MR No:</b> ' + App.esc(p.id) + '</div>' : '') +
-        (p && p.phone ? '<div><b>Phone:</b> ' + App.esc(p.phone) + '</div>' : '') +
+        (p && p.id ? '<div><b>Patient No / MR#:</b> ' + App.esc(p.id) + '</div>' : '') +
+        (p && (p.phone || p.whatsapp) ? '<div><b>Phone:</b> ' + App.esc(p.phone || p.whatsapp) + '</div>' : '') +
         (d ? '<div><b>Ref By:</b> ' + App.esc(d.name) + '</div>' : '') +
         '<div class="pos-sep"></div>' +
         '<table class="pos-table">' +
@@ -997,7 +1004,8 @@
         '<td><a href="#/invoice/' + App.esc(inv.id) + '" style="font-weight:700;color:var(--brand-d)">' + App.esc(inv.no) + '</a></td>' +
         '<td>' + App.d(inv.createdAt) + '</td>' +
         '<td>' + App.esc(p ? p.name : 'Walk-in') +
-          (p && p.phone ? '<div style="font-size:12px;color:var(--muted)">' + App.esc(p.phone) + '</div>' : '') + '</td>' +
+          (p && p.id ? '<div style="font-size:11.5px;color:var(--brand-d);font-weight:600">ID: ' + App.esc(p.id) + '</div>' : '') +
+          (p && (p.phone || p.whatsapp) ? '<div style="font-size:12px;color:var(--muted)">' + App.esc(p.phone || p.whatsapp) + '</div>' : '') + '</td>' +
         '<td style="text-align:center">' + (inv.items ? inv.items.length : 0) + '</td>' +
         '<td style="text-align:right">' + App.money(inv.total) + '</td>' +
         '<td style="text-align:right;color:var(--green)">' + App.money(inv.paid) + '</td>' +
@@ -1155,7 +1163,8 @@
         var p = patientOf(inv), href = '#/invoice/' + App.esc(inv.id);
         return '<tr><td><a href="' + href + '" style="font-weight:700;color:var(--brand-d)">' + App.esc(inv.no || inv.id) + '</a></td>' +
           '<td>' + App.d(inv.createdAt) + '</td><td>' + App.esc(p ? p.name : 'Walk-in') +
-            (p && p.phone ? '<div style="font-size:12px;color:var(--muted)">' + App.esc(p.phone) + '</div>' : '') + '</td>' +
+            (p && p.id ? '<div style="font-size:11.5px;color:var(--brand-d);font-weight:600">ID: ' + App.esc(p.id) + '</div>' : '') +
+            (p && (p.phone || p.whatsapp) ? '<div style="font-size:12px;color:var(--muted)">' + App.esc(p.phone || p.whatsapp) + '</div>' : '') + '</td>' +
           '<td>' + App.badge(pendingStatus(inv)) + '</td>' +
           (hideMoney ? '' : '<td style="text-align:right;font-weight:800;color:var(--red)">' + App.money(inv.due) + '</td>') +
           '<td class="actions"><a class="btn btn-sm btn-ghost" href="' + href + '">View</a>' +
@@ -1263,6 +1272,7 @@
           '<div>' +
             '<div style="font-size:12px;letter-spacing:.1em;color:var(--muted);font-weight:700">' + App.esc(s.labName || 'Lab').toUpperCase() + '</div>' +
             '<h2 style="margin:4px 0">Invoice ' + App.esc(inv.no) + '</h2>' +
+            (p && p.id ? '<div style="font-size:13.5px;font-weight:700;color:var(--brand-d);margin-top:2px">Patient No: ' + App.esc(p.id) + '</div>' : '') +
             '<div style="color:var(--muted);font-size:13px">' + App.esc(s.address || '') + ' &nbsp;•&nbsp; ' + App.esc(s.phone || '') + '</div>' +
           '</div>' +
           '<div style="text-align:right">' + App.badge(inv.status) + panelChip(inv) + (smpSum ? Samples.chipHTML(smpSum) : '') +
@@ -1276,6 +1286,7 @@
         '<div class="card"><div class="card-h">Patient</div><div class="card-b">' +
           '<div style="font-size:17px;font-weight:800">' + App.esc(p ? p.name : 'Walk-in') + '</div>' +
           (p ? '<div style="color:var(--muted);font-size:13px;margin-top:4px">' +
+            (p.id ? '<div style="font-size:13.5px;font-weight:700;color:var(--brand-d);margin-bottom:4px">Patient No: ' + App.esc(p.id) + '</div>' : '') +
             App.esc(String(p.age || '')) + (p.age ? ' yrs' : '') + ' &nbsp;•&nbsp; ' + App.esc(p.gender || '') +
             (p.phone ? ' &nbsp;•&nbsp; ' + App.esc(p.phone) : '') + '</div>' +
             (p.address ? '<div style="font-size:13px;margin-top:4px">' + App.esc(p.address) + '</div>' : '') +
