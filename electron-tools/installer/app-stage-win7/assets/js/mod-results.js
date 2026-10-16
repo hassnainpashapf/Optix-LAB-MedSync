@@ -3066,10 +3066,19 @@
     catch (error) { return Promise.reject(error); }
     return renderProfileHtml(html);
   }
+  var profilePdfCache = [];
   function renderProfileHtml(html) {
     var base = String(window.LABPOS_API || '').replace(/\/+$/, '');
-    return fetch(base + '/api/report-pdf/render', {
-      method: 'POST', headers: DB.authHeaders ? DB.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' },
+    var headers = DB.authHeaders ? DB.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' };
+    var scope = base + JSON.stringify(headers), now = Date.now();
+    profilePdfCache = profilePdfCache.filter(function (entry) { return now - entry.created < 300000; });
+    var cached = profilePdfCache.filter(function (entry) { return entry.scope === scope && entry.html === html; })[0];
+    if (cached) return cached.promise;
+    // Share in-flight and completed renders for the exact current document.
+    // Session/auth, changed results, settings or QR produce a different entry.
+    var entry = { scope: scope, html: html, created: now };
+    var request = fetch(base + '/api/report-pdf/render', {
+      method: 'POST', headers: headers,
       body: JSON.stringify({ html: html })
     }).then(function (response) {
       return response.json().then(function (result) {
@@ -3079,6 +3088,17 @@
         return result;
       });
     });
+    entry.promise = request.then(function (pdf) {
+      // Keep memory bounded for reports containing large embedded images.
+      if (html.length + pdf.dataUri.length > 4 * 1024 * 1024) profilePdfCache = profilePdfCache.filter(function (item) { return item !== entry; });
+      return pdf;
+    }, function (error) {
+      profilePdfCache = profilePdfCache.filter(function (item) { return item !== entry; });
+      throw error;
+    });
+    profilePdfCache.push(entry);
+    if (profilePdfCache.length > 3) profilePdfCache.shift();
+    return entry.promise;
   }
   function reportPdfBlob(pdf) {
     try {
