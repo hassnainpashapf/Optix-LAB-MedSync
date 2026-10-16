@@ -2567,7 +2567,7 @@
             }
             return '<div class="rpt-sig" style="flex:1;text-align:center;min-width:0">' +
               sigPic +
-              '<div style="font-weight:400;font-size:0.78em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(g.name) + '</div>' +
+              '<div style="font-weight:700;font-size:0.78em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + App.esc(g.name) + '</div>' +
               (g.qual ? '<div style="font-size:0.68em;color:#333">' + App.esc(g.qual) + '</div>' : '') +
               (g.title ? '<div style="font-size:0.68em;color:#555">' + App.esc(g.title) + (g.regNo ? ' (' + App.esc(g.regNo) + ')' : '') + '</div>' : '') +
             '</div>';
