@@ -39,9 +39,48 @@
       ],
       medsSub: 'Monitor prescribed pulmonary treatments',
       meds: [
-        { icon: '🧪', name: 'Ventolin', dose: '1-2 puffs as needed (Rescue Inhaler).' },
-        { icon: '💊', name: 'Pulmicort', dose: '1-2 inhalations every 12 hours.' },
-        { icon: '🧴', name: 'Mucosolvan', dose: '1 tablet (30mg) three times daily' }
+        {
+          icon: '🧪',
+          name: 'Ventolin',
+          generic: 'Salbutamol Sulfate 100mcg',
+          category: 'SABA Bronchodilator',
+          indication: 'Acute bronchospasm relief & rapid airway dilation',
+          dose: '1-2 puffs as needed (Rescue Inhaler).',
+          timing: 'Morning baseline • 8:30 AM',
+          instructions: 'Shake inhaler well. Exhale fully, inhale deeply through spacer, hold breath for 10 seconds. Wait 1 min before second puff.',
+          food: 'Can be taken without regard to meals.',
+          safety: 'Monitor for mild transient hand tremor or palpitations. Seek urgent care if relief requires more than 4 puffs in 4 hours.',
+          mech: 'Selectively stimulates beta-2 adrenergic receptors in bronchial smooth muscle, activating adenylate cyclase to produce cyclic AMP, inducing rapid bronchodilation within 3-5 minutes.',
+          clinicalGoal: 'Rapidly reverse bronchospasm, ease work of breathing, and maintain resting SpO2 > 95%.'
+        },
+        {
+          icon: '💊',
+          name: 'Pulmicort',
+          generic: 'Budesonide 0.5mg/2mL Suspension',
+          category: 'Inhaled Corticosteroid (ICS)',
+          indication: 'Airway anti-inflammatory & long-term asthma/COPD control',
+          dose: '1-2 inhalations every 12 hours.',
+          timing: 'Mid-day maintenance • 2:00 PM',
+          instructions: 'Inhale via turbohaler or compressor nebulizer. Always rinse mouth thoroughly and gargle with warm water immediately after each dose.',
+          food: 'Take consistently at 12-hour intervals.',
+          safety: 'Rinsing mouth and spitting out water prevents oral candidiasis (fungal thrush) and dysphonia (voice hoarseness).',
+          mech: 'Potent glucocorticoid that enters bronchial epithelial cells to suppress inflammatory gene transcription, reducing mucosal edema, cellular infiltration, and hyperresponsiveness.',
+          clinicalGoal: 'Suppress chronic eosinophilic inflammation and prevent acute respiratory flare-ups.'
+        },
+        {
+          icon: '🧴',
+          name: 'Mucosolvan',
+          generic: 'Ambroxol Hydrochloride 30mg',
+          category: 'Secretolytic Mucoactive Agent',
+          indication: 'Mucus liquefaction & tracheobronchial ciliary clearance',
+          dose: '1 tablet (30mg) three times daily',
+          timing: 'Evening pulmonary clearance • 9:30 PM',
+          instructions: 'Swallow tablet with a full glass of water. Maintain abundant daily fluid intake (2.5L) to optimize secretolytic thinning.',
+          food: 'Take with or immediately after meals.',
+          safety: 'Well tolerated; gastrointestinal discomfort rare. Do not combine with antitussives (cough suppressants) to avoid mucus retention.',
+          mech: 'Increases serous bronchial gland secretion, cleaves viscous mucopolysaccharide strands, and stimulates surfactant production by type II alveolar pneumocytes.',
+          clinicalGoal: 'Thin viscous mucus plugs, accelerate mucociliary transport, and facilitate productive clearance.'
+        }
       ],
       warningTitle: 'Warning',
       warningDesc: 'Pulmonary findings: elevated airway resistance, imagined lung symptoms Rate 7.2%.'
@@ -67,9 +106,48 @@
       ],
       medsSub: 'Monitor prescribed hepatoprotective therapies',
       meds: [
-        { icon: '💊', name: 'Heptral (SAMe)', dose: '500mg twice daily between meals.' },
-        { icon: '🧪', name: 'Essentiale Forte', dose: '1 capsule three times daily with meals.' },
-        { icon: '🌿', name: 'Silymarin (Milk Thistle)', dose: '140mg twice daily with water.' }
+        {
+          icon: '💊',
+          name: 'Heptral (SAMe)',
+          generic: 'Ademetionine 500mg',
+          category: 'Hepatic Methyl Donor & Antioxidant',
+          indication: 'Intrahepatic cholestasis & hepatocyte membrane protection',
+          dose: '500mg twice daily between meals.',
+          timing: 'Morning hepatic detox • 8:30 AM',
+          instructions: 'Swallow tablet whole with plenty of water. Do not crush, chew, or divide enteric coating.',
+          food: 'Take on an empty stomach between meals for optimal gastrointestinal bioavailability.',
+          safety: 'Avoid taking immediately before bedtime due to mild energizing properties. Monitor serum transaminases (ALT/AST).',
+          mech: 'Essential biological sulfhydryl and methyl donor in the liver, driving transsulfuration for intracellular glutathione synthesis and transmethylation for membrane phospholipid repair.',
+          clinicalGoal: 'Normalize elevated transaminases, enhance bile canalicular flow, and protect against free-radical damage.'
+        },
+        {
+          icon: '🧪',
+          name: 'Essentiale Forte',
+          generic: 'Phosphatidylcholine (EPL) 300mg',
+          category: 'Hepatoprotective Membrane Restorative',
+          indication: 'Hepatic steatosis (Fatty Liver) & lipid clearance',
+          dose: '1 capsule three times daily with meals.',
+          timing: 'Mid-day lipid balance • 2:00 PM',
+          instructions: 'Swallow capsule whole during meals with half a glass of drinking water.',
+          food: 'Take directly with meals containing dietary lipids to enhance natural absorption and utilization.',
+          safety: 'Exceptional safety profile. Well tolerated during long-term therapy (3-6 months).',
+          mech: 'Incorporates physiological polyunsaturated phospholipids directly into damaged hepatocyte and mitochondrial membranes, restoring enzymatic function and mobilizing trapped triglycerides.',
+          clinicalGoal: 'Mobilize intrahepatic fat deposits, reduce steatosis grade, and accelerate parenchymal cell regeneration.'
+        },
+        {
+          icon: '🌿',
+          name: 'Silymarin (Milk Thistle)',
+          generic: 'Standardized Silymarin Flavonolignans 140mg',
+          category: 'Flavonoid Hepatoprotectant',
+          indication: 'Anti-fibrotic support & free-radical scavenge',
+          dose: '140mg twice daily with water.',
+          timing: 'Evening regenerative window • 9:30 PM',
+          instructions: 'Take with a glass of water. Maintain continuous therapy for minimum 8-12 weeks for therapeutic remodeling.',
+          food: 'Can be taken with or after meals.',
+          safety: 'Mild transient laxative effect may rarely be noted upon initiation. Non-toxic natural hepatoprotectant.',
+          mech: 'Binds hepatocyte membrane receptors to block toxin penetration, quenches lipid peroxidation radicals, and stimulates nucleolar RNA polymerase I to accelerate protein synthesis.',
+          clinicalGoal: 'Inhibit hepatic stellate cell activation, prevent fibrotic progression, and stabilize synthetic function.'
+        }
       ],
       warningTitle: 'Hepatic Status',
       warningDesc: 'Hepatic findings: normal synthetic function, ALT/AST within therapeutic baseline.'
@@ -95,9 +173,48 @@
       ],
       medsSub: 'Monitor prescribed cardiovascular treatments',
       meds: [
-        { icon: '💊', name: 'Concor (Bisoprolol)', dose: '2.5mg once daily every morning.' },
-        { icon: '💊', name: 'Lipitor (Atorvastatin)', dose: '20mg once daily at bedtime.' },
-        { icon: '🩸', name: 'Lowplat (Aspirin)', dose: '75mg once daily after lunch.' }
+        {
+          icon: '💊',
+          name: 'Concor (Bisoprolol)',
+          generic: 'Bisoprolol Fumarate 2.5mg',
+          category: 'Cardioselective Beta-1 Blocker',
+          indication: 'Resting tachycardia & cardiac workload reduction',
+          dose: '2.5mg once daily every morning.',
+          timing: 'Morning cardioprotection • 8:30 AM',
+          instructions: 'Take in the morning with water. Do not skip doses or stop abruptly to avoid rebound hypertension or tachycardia.',
+          food: 'Can be taken with breakfast or on empty stomach.',
+          safety: 'Check pulse and BP daily. If resting heart rate drops below 55 bpm, withhold dose and consult cardiologist.',
+          mech: 'Selectively blocks myocardial beta-1 adrenergic receptors, blunting sympathetic surges, reducing SA node rate, lowering myocardial contractility and oxygen demand.',
+          clinicalGoal: 'Maintain resting heart rate between 60-70 bpm and reduce hemodynamic strain on the myocardium.'
+        },
+        {
+          icon: '💊',
+          name: 'Lipitor (Atorvastatin)',
+          generic: 'Atorvastatin Calcium 20mg',
+          category: 'HMG-CoA Reductase Inhibitor',
+          indication: 'Hypercholesterolemia & arterial plaque stability',
+          dose: '20mg once daily at bedtime.',
+          timing: 'Bedtime lipid suppression • 9:30 PM',
+          instructions: 'Take once daily at bedtime with water. Bedtime dosing coordinates with peak circadian hepatic cholesterol synthesis.',
+          food: 'Can be taken with or without food. Avoid grapefruit juice in large amounts (>1L/day).',
+          safety: 'Alert physician promptly if experiencing unexplained muscle aches, cramps, or dark tea-colored urine. Check ALT/AST annually.',
+          mech: 'Competitively inhibits 3-hydroxy-3-methylglutaryl-coenzyme A (HMG-CoA) reductase, upregulating hepatic LDL receptors and clearing atherogenic lipoproteins.',
+          clinicalGoal: 'Reduce serum LDL-C < 70 mg/dL, suppress vascular inflammation (hs-CRP), and stabilize coronary plaques.'
+        },
+        {
+          icon: '🩸',
+          name: 'Lowplat (Aspirin)',
+          generic: 'Enteric-Coated Acetylsalicylic Acid 75mg',
+          category: 'Antiplatelet / COX-1 Inhibitor',
+          indication: 'Secondary cardiovascular thromboprophylaxis',
+          dose: '75mg once daily after lunch.',
+          timing: 'Post-lunch antiplatelet • 2:00 PM',
+          instructions: 'Swallow tablet whole with water after a meal. Do not crush, bite, or dissolve enteric-coated tablet.',
+          food: 'Strictly take immediately after lunch or a meal to protect the gastric mucosal barrier.',
+          safety: 'Watch for signs of gastrointestinal bleeding (dark tarry stools, unusual bruising). Avoid combining with other OTC NSAIDs.',
+          mech: 'Irreversibly acetylates platelet cyclooxygenase-1 (COX-1), blocking thromboxane A2 production and preventing platelet aggregation for the 7-10 day lifespan of platelets.',
+          clinicalGoal: 'Prevent coronary thrombosis and thromboembolic ischemic cerebrovascular events.'
+        }
       ],
       warningTitle: 'Cardiac Finding',
       warningDesc: 'Cardiovascular findings: mild resting tachycardia (86 bpm), systolic compliance stable.'
@@ -123,9 +240,48 @@
       ],
       medsSub: 'Monitor prescribed nephrological treatments',
       meds: [
-        { icon: '💊', name: 'Ketosteril', dose: '3 tablets three times daily during meals.' },
-        { icon: '🧪', name: 'Urals Effervescent', dose: '1 sachet dissolved in water twice daily.' },
-        { icon: '💊', name: 'Cozaar (Losartan)', dose: '50mg once daily for renal protection.' }
+        {
+          icon: '💊',
+          name: 'Ketosteril',
+          generic: 'Essential Amino Acid Ketoanalogues + Ca',
+          category: 'Renal Nitrogen-Free Amino Acid Nutrition',
+          indication: 'CKD protein restriction & uremic waste control',
+          dose: '3 tablets three times daily during meals.',
+          timing: 'Breakfast renal intake • 8:30 AM',
+          instructions: 'Take during meals with plenty of water. Pair with a nephrologist-guided low-protein diet (0.6g/kg/day).',
+          food: 'Must be ingested during meals so keto-analogues can utilize dietary nitrogen from eaten food.',
+          safety: 'Periodically monitor serum calcium and phosphorus to prevent hypercalcemia or mineral metabolism imbalance.',
+          mech: 'Undergoes endogenous transamination by recycling nitrogenous waste products, synthesizing essential amino acids while reducing urea generation and toxic nitrogen retention.',
+          clinicalGoal: 'Delay chronic kidney disease progression, lower serum urea/BUN, and postpone the need for dialysis.'
+        },
+        {
+          icon: '🧪',
+          name: 'Urals Effervescent',
+          generic: 'Sodium Citrate + Citric Acid + Tartaric Acid',
+          category: 'Urinary Alkalinizer & Buffering Agent',
+          indication: 'Uric acid crystal prevention & urinary buffering',
+          dose: '1 sachet dissolved in water twice daily.',
+          timing: 'Afternoon hydration buffer • 2:00 PM',
+          instructions: 'Dissolve sachet completely in a full glass of cold water before drinking. Drink while effervescing.',
+          food: 'Take after meals. Maintain generous daily hydration (2.5 - 3.0 liters).',
+          safety: 'Exercise caution in patients with sodium-restricted diets or congestive heart failure due to sodium content.',
+          mech: 'Metabolic oxidation of citrate yields systemic bicarbonate, raising urinary pH from acidic (<5.5) to optimal (6.5-7.2), which exponentially enhances uric acid solubility.',
+          clinicalGoal: 'Maintain urinary pH between 6.5 and 7.2 to dissolve uric acid gravel and soothe dysuria symptoms.'
+        },
+        {
+          icon: '💊',
+          name: 'Cozaar (Losartan)',
+          generic: 'Losartan Potassium 50mg',
+          category: 'Angiotensin II Receptor Blocker (ARB)',
+          indication: 'Renoprotection & glomerular pressure relief',
+          dose: '50mg once daily for renal protection.',
+          timing: 'Evening hemodynamic control • 9:30 PM',
+          instructions: 'Take once daily at the same time each evening with water.',
+          food: 'Can be taken with or without food.',
+          safety: 'Check serum creatinine and potassium 2-4 weeks after initiating therapy. Avoid potassium supplements or salt substitutes.',
+          mech: 'Selectively blocks angiotensin II type 1 (AT1) receptors, causing preferential vasodilation of renal efferent arterioles, lowering intraglomerular pressure and filtering strain.',
+          clinicalGoal: 'Reduce urinary albumin leakage (proteinuria) by >30% and control systemic blood pressure under 125/75 mmHg.'
+        }
       ],
       warningTitle: 'Renal Alert',
       warningDesc: 'Renal findings: eGFR estimated at 84 mL/min, serum creatinine stable.'
@@ -151,9 +307,48 @@
       ],
       medsSub: 'Monitor prescribed cognitive and stress therapies',
       meds: [
-        { icon: '💊', name: 'Citicoline (Cognizin)', dose: '500mg once daily after breakfast.' },
-        { icon: '💊', name: 'Magnesium L-Threonate', dose: '144mg elemental at night.' },
-        { icon: '🧪', name: 'Neurobion Forte', dose: '1 tablet once daily with lunch.' }
+        {
+          icon: '💊',
+          name: 'Citicoline (Cognizin)',
+          generic: 'Cytidine 5-diphosphocholine (CDP-Choline) 500mg',
+          category: 'Nootropic & Neural Membrane Precursor',
+          indication: 'Cognitive clarity, neurovascular repair & focus',
+          dose: '500mg once daily after breakfast.',
+          timing: 'Morning cognitive priming • 8:30 AM',
+          instructions: 'Take in the morning with a full glass of water after breakfast for clean mental alertness.',
+          food: 'Best taken with morning meal for smooth sustained absorption.',
+          safety: 'Avoid taking late in the evening to prevent potential mild sleep onset delay. Well tolerated.',
+          mech: 'Supplies cytidine and choline precursors across the blood-brain barrier to accelerate neuronal membrane phosphatidylcholine synthesis and upregulate acetylcholine and dopamine levels.',
+          clinicalGoal: 'Enhance executive focus, boost cerebral bioenergetics (ATP), and support neuro-repair.'
+        },
+        {
+          icon: '💊',
+          name: 'Magnesium L-Threonate',
+          generic: 'Magnesium L-Threonate (Magtein) 144mg',
+          category: 'Neuro-Penetrating Magnesium Chelate',
+          indication: 'Synaptic plasticity, deep sleep & stress calm',
+          dose: '144mg elemental at night.',
+          timing: 'Nocturnal synaptic recovery • 9:30 PM',
+          instructions: 'Take 1-2 hours before bedtime with water to support restorative deep slow-wave sleep cycles.',
+          food: 'Can be taken with or without evening food.',
+          safety: 'Specifically designed for neural permeability without causing osmotic gastrointestinal discomfort or loose stools.',
+          mech: 'Crosses blood-brain barrier effectively to elevate cerebrospinal fluid magnesium concentrations, stimulating NMDA receptor density, synaptic connectivity, and GABAergic calm.',
+          clinicalGoal: 'Lower nocturnal stress cortisol, support memory consolidation during REM sleep, and calm neuro-excitability.'
+        },
+        {
+          icon: '🧪',
+          name: 'Neurobion Forte',
+          generic: 'Vitamin B1 (100mg) + B6 (200mg) + B12 (200mcg)',
+          category: 'Neurotropic Triad Vitamin Complex',
+          indication: 'Peripheral nerve regeneration & myelin repair',
+          dose: '1 tablet once daily with lunch.',
+          timing: 'Mid-day neural metabolic boost • 2:00 PM',
+          instructions: 'Swallow tablet whole with water during or immediately after lunch. Do not chew.',
+          food: 'Take with food to optimize enteric absorption of B-complex vitamins.',
+          safety: 'Urine may exhibit a harmless bright yellow tint due to riboflavin/B-vitamin excretion.',
+          mech: 'Synergistic neurotropic triad: Thiamine (B1) fuels nerve carbohydrate metabolism, Pyridoxine (B6) synthesizes key neurotransmitters, and Cobalamin (B12) maintains axonal myelin sheath integrity.',
+          clinicalGoal: 'Protect peripheral nerves, relieve numbness or paresthesia sensations, and maintain axonal signal conduction.'
+        }
       ],
       warningTitle: 'Neuro Finding',
       warningDesc: 'Neurological findings: heightened sympathetic tone, stress markers 32% elevated.'
@@ -1014,7 +1209,7 @@
     }).join('') + '<div style="display:none" aria-hidden="true">Early Ambulation</div>';
   }
 
-  function renderMedListHtml(meds, patient) {
+  function renderMedListHtml(meds, patient, curOrganKey) {
     var defaultIcons = [
       '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4"></path><path d="M12 2v4"></path><rect x="6" y="6" width="12" height="15" rx="3"></rect><line x1="12" y1="11" x2="12" y2="16"></line><line x1="9.5" y1="13.5" x2="14.5" y2="13.5"></line></svg>',
       '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"></rect><circle cx="9" cy="9" r="2"></circle><circle cx="15" cy="9" r="2"></circle><circle cx="9" cy="15" r="2"></circle><circle cx="15" cy="15" r="2"></circle></svg>',
@@ -1025,21 +1220,186 @@
       { text: '⏰ Due', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', timing: '2:00 PM' },
       { text: '⏳ Next', color: '#64748b', bg: '#f8fafc', border: '#cbd5e1', timing: '9:30 PM' }
     ];
+    var oKey = curOrganKey || 'lung';
     return (meds || []).map(function (m, idx) {
       var icon = defaultIcons[idx % defaultIcons.length];
       var sched = statusSchedules[idx % statusSchedules.length];
-      var doseText = (m.dose ? m.dose : '1 dose') + ' • ' + sched.timing;
-      return '<div class="vitals-med-item" data-med-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;min-height:42px;min-width:0;width:100%;box-sizing:border-box" title="Click to log dose adherence" onclick="var b=this.querySelector(\'.med-status-chip\');if(b){b.textContent=\'✓ Taken\';b.style.color=\'#059669\';b.style.background=\'#f0fdf4\';b.style.borderColor=\'#bbf7d0\';if(window.App&&App.toast)App.toast(\'Medication dose recorded as taken!\');}">' +
-        '<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden">' +
-        '  <div class="vitals-med-icon-box" style="width:26px!important;height:26px!important;font-size:13px!important;flex-shrink:0">' + icon + '</div>' +
+      var doseText = (m.dose ? m.dose : '1 dose') + ' • ' + (m.timing || sched.timing);
+      var genBadge = m.generic ? '<span class="med-generic-pill" style="font-size:9.5px;font-weight:600;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;padding:1px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:130px" title="' + esc(m.generic) + '">' + esc(m.generic) + '</span>' : '';
+      var indText = m.indication ? '<div class="med-indication-line" style="font-size:9.5px;font-weight:600;color:#0369a1;background:#f0f9ff;border-radius:4px;padding:1px 5px;display:inline-block;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%" title="' + esc(m.indication) + '">🩺 ' + esc(m.indication) + '</div>' : '';
+
+      return '<div class="vitals-med-item" data-med-idx="' + idx + '" data-organ-key="' + esc(oKey) + '" style="cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;min-height:48px;min-width:0;width:100%;box-sizing:border-box" title="Click to view full medication pharmacology &amp; adherence" onclick="if(event.target.closest(\'.med-status-chip\')){var b=this.querySelector(\'.med-status-chip\');if(b){b.textContent=\'✓ Taken\';b.style.color=\'#059669\';b.style.background=\'#f0fdf4\';b.style.borderColor=\'#bbf7d0\';if(window.App&&App.toast)App.toast(\'Medication dose recorded as taken!\');}return;}if(window.App&&App.openPatientMedicationDetailModal){App.openPatientMedicationDetailModal(' + idx + ',\'' + esc(oKey) + '\');}">' +
+        '<div style="display:flex;align-items:flex-start;gap:8px;min-width:0;flex:1;overflow:hidden">' +
+        '  <div class="vitals-med-icon-box" style="width:26px!important;height:26px!important;font-size:13px!important;flex-shrink:0;margin-top:2px">' + icon + '</div>' +
         '  <div class="vitals-med-details" style="min-width:0;flex:1;overflow:hidden">' +
-        '    <div class="med-name" style="font-size:12px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(m.name) + '">' + esc(m.name) + '</div>' +
-        '    <div class="med-dosage" style="font-size:10px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(doseText) + '">' + esc(doseText) + '</div>' +
+        '    <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden">' +
+        '      <span class="med-name" style="font-size:12px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(m.name) + '">' + esc(m.name) + '</span>' +
+        '      ' + genBadge +
+        '    </div>' +
+        '    <div class="med-dosage" style="font-size:10px;color:#64748b;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(doseText) + '">' + esc(doseText) + '</div>' +
+        '    ' + indText +
         '  </div>' +
         '</div>' +
-        '<span class="med-status-chip" style="font-size:9.5px;font-weight:700;color:' + sched.color + ';background:' + sched.bg + ';border:1px solid ' + sched.border + ';padding:2px 7px;border-radius:8px;flex-shrink:0;white-space:nowrap">' + sched.text + '</span>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px;flex-shrink:0">' +
+        '  <span class="med-status-chip" style="font-size:9.5px;font-weight:700;color:' + sched.color + ';background:' + sched.bg + ';border:1px solid ' + sched.border + ';padding:2px 7px;border-radius:8px;flex-shrink:0;white-space:nowrap" title="Click to log dose">' + sched.text + '</span>' +
+        '  <span class="med-info-pill" style="font-size:9px;font-weight:700;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:4px;padding:1px 5px;display:inline-flex;align-items:center;gap:2px" title="View clinical pharmacology info">ℹ️ Info</span>' +
+        '</div>' +
         '</div>';
     }).join('');
+  }
+
+  /* ---------- Open Detailed Medication Pharmacology & Adherence Modal ---------- */
+  function openPatientMedicationDetailModal(medOrIdx, organKey, patient) {
+    var orgKey = organKey || 'lung';
+    var org = ORGAN_DATA[orgKey] || ORGAN_DATA.lung;
+    var med = null;
+
+    if (typeof medOrIdx === 'number') {
+      med = org.meds && org.meds[medOrIdx];
+    } else if (medOrIdx && typeof medOrIdx === 'object') {
+      med = medOrIdx;
+      if (med.organKey && ORGAN_DATA[med.organKey]) {
+        orgKey = med.organKey;
+        org = ORGAN_DATA[orgKey];
+      }
+    }
+
+    if (!med) return;
+
+    if (!patient && window.App && App.patientDashboard && App.patientDashboard._activePatient) {
+      patient = App.patientDashboard._activePatient;
+    }
+    if (!patient && window.location && window.location.hash) {
+      var mP = window.location.hash.match(/#\/patient\/([^/?]+)/);
+      if (mP && mP[1] && window.DB) {
+        patient = DB.get('patients', mP[1]);
+      }
+    }
+
+    var medTitle = med.name || 'Prescribed Medication';
+    var genericName = med.generic || 'Active Pharmaceutical Ingredient';
+    var category = med.category || (org.system + ' Therapeutic Agent');
+    var dose = med.dose || 'As prescribed by physician';
+    var timing = med.timing || 'Daily Scheduled Regimen';
+    var indication = med.indication || ('Targeted support and therapy for the ' + org.name + ' (' + org.system + ').');
+    var mech = med.mech || ('Therapeutic mechanism targeted towards cellular resilience and functional regulation of the ' + org.system + '.');
+    var instructions = med.instructions || 'Take as prescribed with water. Maintain adherence without skipping scheduled doses.';
+    var food = med.food || 'Follow physician advice regarding intake with or without meals.';
+    var safety = med.safety || ('Regular monitoring of clinical symptoms and ' + org.name + ' function parameters.');
+    var goal = med.clinicalGoal || ('Maintain optimal physiological performance and stabilization of the ' + org.name + '.');
+
+    var modalHtml =
+      '<div class="pt-medication-detail-modal" style="display:flex;flex-direction:column;gap:14px;color:#1e293b;font-family:inherit">' +
+        // Patient & System Header Banner
+        '<div style="background:linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);border:1px solid #bae6fd;border-radius:12px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">' +
+          '<div style="display:flex;align-items:center;gap:12px">' +
+            '<div style="width:40px;height:40px;border-radius:10px;background:#fff;border:1.5px solid #38bdf8;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 2px 4px rgba(0,0,0,0.04)">💊</div>' +
+            '<div>' +
+              '<div style="display:flex;align-items:center;gap:8px">' +
+                '<h3 style="margin:0;font-size:17px;font-weight:800;color:#0f172a">' + esc(medTitle) + '</h3>' +
+                '<span style="font-size:11px;font-weight:700;background:#0284c7;color:#fff;padding:2px 8px;border-radius:6px">' + esc(category) + '</span>' +
+              '</div>' +
+              '<div style="font-size:12px;color:#475569;margin-top:2px">' +
+                '<span style="font-weight:600">Generic:</span> <code style="font-family:inherit;background:#fff;padding:1px 6px;border-radius:4px;border:1px solid #cbd5e1;font-weight:700;color:#0369a1">' + esc(genericName) + '</code>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div style="text-align:right">' +
+            '<div style="font-size:11px;color:#64748b;font-weight:600">Target Biological System</div>' +
+            '<div style="font-size:13px;font-weight:700;color:#059669;display:flex;align-items:center;gap:4px;justify-content:flex-end">' +
+              '<span>🫀</span> <span>' + esc(org.system) + ' (' + esc(org.name) + ')</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        // Summary Quick Badges Bar
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:10px">' +
+          '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">' +
+            '<div style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Prescribed Regimen</div>' +
+            '<div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:2px">' + esc(dose) + '</div>' +
+          '</div>' +
+          '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">' +
+            '<div style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Daily Schedule &amp; Timing</div>' +
+            '<div style="font-size:13px;font-weight:700;color:#0284c7;margin-top:2px">⏰ ' + esc(timing) + '</div>' +
+          '</div>' +
+          '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 12px">' +
+            '<div style="font-size:10.5px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px">Adherence Tracking</div>' +
+            '<div style="font-size:13px;font-weight:700;color:#059669;margin-top:2px">✓ Logged Today (Compliance: 88%)</div>' +
+          '</div>' +
+        '</div>' +
+
+        // 4 Main Information Cards
+        '<div style="display:flex;flex-direction:column;gap:10px">' +
+          // 1. Clinical Indication & Therapeutic Purpose
+          '<div style="background:#ffffff;border:1.5px solid #e2e8f0;border-left:4px solid #0284c7;border-radius:10px;padding:12px 14px">' +
+            '<div style="font-size:13px;font-weight:800;color:#0369a1;display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
+              '<span>🎯</span> <span>Clinical Indications &amp; Therapeutic Purpose</span>' +
+            '</div>' +
+            '<p style="margin:0 0 6px;font-size:12.5px;line-height:1.5;color:#334155">' + esc(indication) + '</p>' +
+            '<div style="font-size:11.5px;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:6px;padding:4px 8px;display:inline-flex;align-items:center;gap:4px">' +
+              '<span>🏆</span> <strong>Primary Goal:</strong> ' + esc(goal) +
+            '</div>' +
+          '</div>' +
+
+          // 2. Pharmacological Mechanism of Action
+          '<div style="background:#ffffff;border:1.5px solid #e2e8f0;border-left:4px solid #8b5cf6;border-radius:10px;padding:12px 14px">' +
+            '<div style="font-size:13px;font-weight:800;color:#6d28d9;display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
+              '<span>🧬</span> <span>Pharmacological Mechanism of Action (MOA)</span>' +
+            '</div>' +
+            '<p style="margin:0;font-size:12.5px;line-height:1.55;color:#334155">' + esc(mech) + '</p>' +
+          '</div>' +
+
+          // 3. Administration Technique & Food Guidelines
+          '<div style="background:#ffffff;border:1.5px solid #e2e8f0;border-left:4px solid #f59e0b;border-radius:10px;padding:12px 14px">' +
+            '<div style="font-size:13px;font-weight:800;color:#b45309;display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
+              '<span>📋</span> <span>Administration Instructions &amp; Food Guidance</span>' +
+            '</div>' +
+            '<div style="font-size:12.5px;line-height:1.5;color:#334155;margin-bottom:6px">' +
+              '<strong>Directions:</strong> ' + esc(instructions) +
+            '</div>' +
+            '<div style="font-size:12px;color:#78350f;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:5px 8px;display:flex;align-items:center;gap:6px">' +
+              '<span>🍽️</span> <span><strong>Food Relation:</strong> ' + esc(food) + '</span>' +
+            '</div>' +
+          '</div>' +
+
+          // 4. Safety Precautions, Shield & Lab Monitoring
+          '<div style="background:#ffffff;border:1.5px solid #e2e8f0;border-left:4px solid #10b981;border-radius:10px;padding:12px 14px">' +
+            '<div style="font-size:13px;font-weight:800;color:#047857;display:flex;align-items:center;gap:6px;margin-bottom:4px">' +
+              '<span>🛡️</span> <span>Safety Precautions, Side Effect Shield &amp; Lab Monitoring</span>' +
+            '</div>' +
+            '<p style="margin:0 0 6px;font-size:12.5px;line-height:1.5;color:#334155">' + esc(safety) + '</p>' +
+            '<div style="font-size:11.5px;color:#475569;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:4px 8px;display:inline-flex;align-items:center;gap:4px">' +
+              '<span>🔬</span> <span><strong>Correlated Lab Tests:</strong> Routine quarterly ' + esc(org.name) + ' panel &amp; biomarker follow-up</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+
+        // Modal Action Footer
+        '<div style="margin-top:6px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding-top:10px;border-top:1px solid #e2e8f0">' +
+          '<button type="button" class="btn btn-primary" id="btnLogMedDose" style="font-weight:700;display:inline-flex;align-items:center;gap:6px">' +
+            '<span>✓</span> <span>Mark Today\'s Dose as Taken</span>' +
+          '</button>' +
+          '<button type="button" class="btn btn-ghost" id="btnMedModalClose" style="min-width:85px;font-weight:700">Close</button>' +
+        '</div>' +
+      '</div>';
+
+    App.modal('Medication Clinical Guide — ' + esc(medTitle), modalHtml, {
+      wide: true,
+      onOpen: function (dov, dClose) {
+        var clBtn = dov.querySelector('#btnMedModalClose');
+        if (clBtn) clBtn.addEventListener('click', dClose);
+
+        var logBtn = dov.querySelector('#btnLogMedDose');
+        if (logBtn) {
+          logBtn.addEventListener('click', function () {
+            if (window.App && App.toast) {
+              App.toast('Dose recorded as taken: ' + medTitle + ' (' + dose + ')');
+            }
+            dClose();
+          });
+        }
+      }
+    });
   }
 
   /* ---------- Open Detailed Diagnostic Test Modal ---------- */
@@ -1286,6 +1646,7 @@
     });
   }
   App.openPatientTestDetailModal = openPatientTestDetailModal;
+  App.openPatientMedicationDetailModal = openPatientMedicationDetailModal;
 
   function renderPatientTestsListHtml(tests) {
     if (!tests || !tests.length) {
@@ -3355,6 +3716,7 @@
 
   /* Render Primary Patient Vitals Dashboard */
   function render(patient) {
+    if (App.patientDashboard) App.patientDashboard._activePatient = patient;
     var tests=testsFor(patient);
     var oldTests = getPatientOldTests(patient);
     if (!oldTests.length && tests && tests.length) {
@@ -3544,7 +3906,7 @@
       '              <div style="width:67%;background:linear-gradient(90deg,#10b981,#059669);border-radius:99px" title="2 of 3 doses taken today (67%)"></div>' +
       '            </div>' +
       '            <div class="vitals-med-list" id="medsListWrap">' +
-      renderMedListHtml(curOrg.meds, patient) +
+      renderMedListHtml(curOrg.meds, patient, curOrg.key) +
       '            </div>' +
       '          </div>' +
       '        </div>' +
@@ -3762,7 +4124,7 @@
       var mSub = host.querySelector('#medsSubtitle');
       if (mSub) mSub.textContent = org.name + ' Regimen • 2 of 3 doses logged today';
       var mWrap = host.querySelector('#medsListWrap');
-      if (mWrap) mWrap.innerHTML = renderMedListHtml(org.meds, patient);
+      if (mWrap) mWrap.innerHTML = renderMedListHtml(org.meds, patient, key);
     }
 
     host.querySelectorAll('#organCarouselTrack .vitals-organ-pill').forEach(function (pill) {
@@ -4302,6 +4664,7 @@
     getPatientReports: getPatientReports,
     renderDiagnosticTestsPage: renderDiagnosticTestsPage,
     getOrganTestEffectData: getOrganTestEffectData,
-    outsideRange: outsideRange
+    outsideRange: outsideRange,
+    openPatientMedicationDetailModal: openPatientMedicationDetailModal
   };
 })();

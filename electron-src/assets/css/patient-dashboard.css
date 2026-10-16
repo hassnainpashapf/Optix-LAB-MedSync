@@ -929,6 +929,33 @@
   color: #64748b;
   margin-top: 2px;
 }
+#ptPatientDashboard .vitals-med-item:hover {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+}
+#ptPatientDashboard .vitals-med-item .med-generic-pill {
+  font-size: 9.5px;
+  font-weight: 600;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+#ptPatientDashboard .vitals-med-item .med-indication-line {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #0369a1;
+  background: #f0f9ff;
+  border-radius: 4px;
+  padding: 1px 5px;
+  display: inline-block;
+}
+#ptPatientDashboard .vitals-med-item .med-info-pill:hover {
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+}
 
 #ptPatientDashboard .vitals-stage-card {
   background: radial-gradient(ellipse at 50% 40%, rgba(238,246,255,0.85) 0%, rgba(248,250,252,0.95) 60%, #ffffff 100%);
