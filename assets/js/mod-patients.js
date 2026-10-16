@@ -96,6 +96,7 @@
   function paint(html, onMount) {
     var v = document.getElementById('view');
     if (!v) return;
+    v.classList.remove('patient-view-active');
     v.innerHTML = html;
     try { window.scrollTo(0, 0); } catch (e) {}
     if (onMount) onMount();
@@ -689,6 +690,8 @@
       '<div id="ptPatientDashboardHost"><div class="card"><div class="card-b"><h2>' + App.esc(p.name) + '</h2><p class="muted">Loading patient details…</p></div></div></div>' +
       '<!-- Unified header buttons: id="pt-edit" id="pt-del" -->';
     paint(html, function () {
+      var v = document.getElementById('view');
+      if (v) v.classList.add('patient-view-active');
       var host = document.getElementById('ptPatientDashboardHost');
       function bindActions() {
         var bEdit = host.querySelector('#pt-edit, [id="pt-edit"]');

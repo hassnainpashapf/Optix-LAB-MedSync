@@ -262,18 +262,18 @@
   /* Full Detailed Stage Organ SVGs */
   function renderStageOrganSvg(key) {
     if (key === 'lung') {
-      return '<div class="vitals-stage-organ-model lung-svg" style="position:relative;width:100%;max-width:370px;min-height:300px;display:flex;align-items:center;justify-content:center">' +
+      return '<div class="vitals-stage-organ-model lung-svg" style="position:relative;width:100%;max-width:480px;min-height:400px;display:flex;align-items:center;justify-content:center">' +
         '<img src="assets/img/patient-lungs.png" alt="3D Bioluminescent Lungs" class="vitals-organ-3d-img" ' +
         'onload="this.style.display=\'block\'; var fb=this.parentNode.querySelector(\'.vitals-lung-fallback\'); if(fb) fb.style.display=\'none\';" ' +
         'onerror="this.style.display=\'none\'; var fb=this.parentNode.querySelector(\'.vitals-lung-fallback\'); if(fb) fb.style.display=\'block\';" ' +
-        'style="width:100%;max-width:350px;height:auto;object-fit:contain;filter:drop-shadow(0 16px 32px rgba(14,165,233,0.45));user-select:none;pointer-events:none;display:block" />' +
+        'style="width:100%;max-width:460px;max-height:460px;height:auto;object-fit:contain;filter:drop-shadow(0 20px 42px rgba(14,165,233,0.45));user-select:none;pointer-events:none;display:block" />' +
         '<div class="vitals-lung-fallback" style="display:none;width:100%;height:100%">' +
         renderDetailedLungSvg() +
         '</div>' +
         '</div>';
     }
     if (key === 'liver') {
-      return '<svg width="320" height="340" viewBox="0 0 340 380" class="vitals-organ-svg liver-svg" style="max-width:100%;height:auto;overflow:visible">' +
+      return '<svg width="420" height="400" viewBox="0 0 340 380" class="vitals-organ-svg liver-svg" style="max-width:100%;height:auto;overflow:visible">' +
         '<defs>' +
         '  <radialGradient id="liverHalo" cx="50%" cy="50%" r="50%">' +
         '    <stop offset="0%" stop-color="#10b981" stop-opacity="0.32"/>' +
@@ -302,7 +302,7 @@
         '</svg>';
     }
     if (key === 'heart') {
-      return '<svg width="320" height="340" viewBox="0 0 340 380" class="vitals-organ-svg heart-svg" style="max-width:100%;height:auto;overflow:visible">' +
+      return '<svg width="420" height="400" viewBox="0 0 340 380" class="vitals-organ-svg heart-svg" style="max-width:100%;height:auto;overflow:visible">' +
         '<defs>' +
         '  <radialGradient id="heartHalo" cx="50%" cy="50%" r="50%">' +
         '    <stop offset="0%" stop-color="#f43f5e" stop-opacity="0.32"/>' +
@@ -339,7 +339,7 @@
         '</svg>';
     }
     if (key === 'kidneys') {
-      return '<svg width="320" height="340" viewBox="0 0 340 380" class="vitals-organ-svg kidneys-svg" style="max-width:100%;height:auto;overflow:visible">' +
+      return '<svg width="420" height="400" viewBox="0 0 340 380" class="vitals-organ-svg kidneys-svg" style="max-width:100%;height:auto;overflow:visible">' +
         '<defs>' +
         '  <radialGradient id="renalHalo" cx="50%" cy="50%" r="50%">' +
         '    <stop offset="0%" stop-color="#06b6d4" stop-opacity="0.32"/>' +
@@ -368,7 +368,7 @@
         '</svg>';
     }
     if (key === 'brain') {
-      return '<svg width="320" height="340" viewBox="0 0 340 380" class="vitals-organ-svg brain-svg" style="max-width:100%;height:auto;overflow:visible">' +
+      return '<svg width="420" height="400" viewBox="0 0 340 380" class="vitals-organ-svg brain-svg" style="max-width:100%;height:auto;overflow:visible">' +
         '<defs>' +
         '  <radialGradient id="brainHalo" cx="50%" cy="50%" r="50%">' +
         '    <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.35"/>' +
@@ -437,14 +437,14 @@
       if (isAbnormal && t.abnormalParams && t.abnormalParams.length) {
         subText += ' • Flag: ' + t.abnormalParams.slice(0, 2).join(', ');
       }
-      return '<div class="vitals-rehab-item" data-test-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;border-radius:8px;padding:3px 4px;width:100%;box-sizing:border-box;min-width:0;display:flex;align-items:center;gap:6px" onclick="if(window.App&&App.openPatientTestDetailModal&&(\'' + esc(t.invoiceId || '') + '\'||\'' + esc(t.testId || '') + '\')){App.openPatientTestDetailModal(\'' + esc(t.invoiceId || '') + '\',\'' + esc(t.testId || '') + '\')}else{location.hash=\'#/patient/' + esc(pId) + '?tab=tests\'}">' +
-        '<div class="vitals-rehab-badge" style="' + (isAbnormal ? 'background:#fee2e2;color:#dc2626' : 'background:#eff6ff;color:#2563eb') + ';width:20px;height:20px;font-size:10.5px;flex-shrink:0">' + num + '</div>' +
+      return '<div class="vitals-rehab-item" data-test-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;border-radius:8px;padding:6px 8px;min-height:38px;width:100%;box-sizing:border-box;min-width:0;display:flex;align-items:center;gap:8px" onclick="if(window.App&&App.openPatientTestDetailModal&&(\'' + esc(t.invoiceId || '') + '\'||\'' + esc(t.testId || '') + '\')){App.openPatientTestDetailModal(\'' + esc(t.invoiceId || '') + '\',\'' + esc(t.testId || '') + '\')}else{location.hash=\'#/patient/' + esc(pId) + '?tab=tests\'}">' +
+        '<div class="vitals-rehab-badge" style="' + (isAbnormal ? 'background:#fee2e2;color:#dc2626' : 'background:#eff6ff;color:#2563eb') + ';width:22px;height:22px;font-size:11px;flex-shrink:0">' + num + '</div>' +
         '<div class="vitals-rehab-text" style="flex:1;min-width:0;overflow:hidden">' +
         '  <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">' +
-        '    <div class="rehab-item-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:700" title="' + esc(tName) + '">' + esc(tName) + '</div>' +
-        '    <span style="font-size:9px;font-weight:700;color:' + statusColor + ';background:' + statusBg + ';border:1px solid ' + statusBorder + ';padding:1px 5px;border-radius:8px;flex-shrink:0;white-space:nowrap">' + statusText + '</span>' +
+        '    <div class="rehab-item-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;font-weight:700" title="' + esc(tName) + '">' + esc(tName) + '</div>' +
+        '    <span style="font-size:9.5px;font-weight:700;color:' + statusColor + ';background:' + statusBg + ';border:1px solid ' + statusBorder + ';padding:1.5px 6px;border-radius:8px;flex-shrink:0;white-space:nowrap">' + statusText + '</span>' +
         '  </div>' +
-        '  <div class="rehab-item-desc" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9.5px" title="' + esc(subText) + '">' + esc(subText) + '</div>' +
+        '  <div class="rehab-item-desc" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px" title="' + esc(subText) + '">' + esc(subText) + '</div>' +
         '</div>' +
         '</div>';
     }).join('') + '<div style="display:none" aria-hidden="true">Early Ambulation</div>';
@@ -465,15 +465,15 @@
       var icon = defaultIcons[idx % defaultIcons.length];
       var sched = statusSchedules[idx % statusSchedules.length];
       var doseText = (m.dose ? m.dose : '1 dose') + ' • ' + sched.timing;
-      return '<div class="vitals-med-item" data-med-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;min-height:36px;min-width:0;width:100%;box-sizing:border-box" title="Click to log dose adherence" onclick="var b=this.querySelector(\'.med-status-chip\');if(b){b.textContent=\'✓ Taken\';b.style.color=\'#059669\';b.style.background=\'#f0fdf4\';b.style.borderColor=\'#bbf7d0\';if(window.App&&App.toast)App.toast(\'Medication dose recorded as taken!\');}">' +
-        '<div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow:hidden">' +
-        '  <div class="vitals-med-icon-box" style="width:22px!important;height:22px!important;font-size:11px!important;flex-shrink:0">' + icon + '</div>' +
+      return '<div class="vitals-med-item" data-med-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;min-height:42px;min-width:0;width:100%;box-sizing:border-box" title="Click to log dose adherence" onclick="var b=this.querySelector(\'.med-status-chip\');if(b){b.textContent=\'✓ Taken\';b.style.color=\'#059669\';b.style.background=\'#f0fdf4\';b.style.borderColor=\'#bbf7d0\';if(window.App&&App.toast)App.toast(\'Medication dose recorded as taken!\');}">' +
+        '<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;overflow:hidden">' +
+        '  <div class="vitals-med-icon-box" style="width:26px!important;height:26px!important;font-size:13px!important;flex-shrink:0">' + icon + '</div>' +
         '  <div class="vitals-med-details" style="min-width:0;flex:1;overflow:hidden">' +
-        '    <div class="med-name" style="font-size:11px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(m.name) + '">' + esc(m.name) + '</div>' +
-        '    <div class="med-dosage" style="font-size:9.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(doseText) + '">' + esc(doseText) + '</div>' +
+        '    <div class="med-name" style="font-size:12px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(m.name) + '">' + esc(m.name) + '</div>' +
+        '    <div class="med-dosage" style="font-size:10px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(doseText) + '">' + esc(doseText) + '</div>' +
         '  </div>' +
         '</div>' +
-        '<span class="med-status-chip" style="font-size:9px;font-weight:700;color:' + sched.color + ';background:' + sched.bg + ';border:1px solid ' + sched.border + ';padding:1.5px 6px;border-radius:8px;flex-shrink:0;white-space:nowrap">' + sched.text + '</span>' +
+        '<span class="med-status-chip" style="font-size:9.5px;font-weight:700;color:' + sched.color + ';background:' + sched.bg + ';border:1px solid ' + sched.border + ';padding:2px 7px;border-radius:8px;flex-shrink:0;white-space:nowrap">' + sched.text + '</span>' +
         '</div>';
     }).join('');
   }

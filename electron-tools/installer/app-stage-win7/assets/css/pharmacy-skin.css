@@ -1123,20 +1123,54 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 }
 
 /* 2-Column Responsive Layout */
+#view:has(#ptPatientDashboardHost),
+#view.patient-view-active {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: calc(100vh / 0.9 - 100px) !important;
+  padding: 16px 20px 20px !important;
+  box-sizing: border-box !important;
+  flex: 1 1 auto !important;
+}
+
+#ptPatientDashboardHost {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-height: calc(100vh / 0.9 - 130px) !important;
+  min-height: max(620px, calc(100vh / 0.9 - 130px)) !important;
+  box-sizing: border-box !important;
+}
+
+#ptPatientDashboard {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  width: 100% !important;
+  min-height: calc(100vh / 0.9 - 130px) !important;
+  min-height: max(620px, calc(100vh / 0.9 - 130px)) !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
 .vitals-main-grid {
   display: grid !important;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) !important;
-  gap: 12px !important;
+  grid-template-rows: 1fr !important;
+  gap: 14px !important;
   align-items: stretch !important;
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-  flex: 1 !important;
-  min-height: 0 !important;
+  flex: 1 1 auto !important;
+  min-height: 600px !important;
+  height: 100% !important;
 }
 @media (max-width: 850px) {
   .vitals-main-grid {
     grid-template-columns: 1fr !important;
+    grid-template-rows: auto !important;
   }
 }
 
@@ -1145,6 +1179,7 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   display: flex !important;
   flex-direction: column !important;
   height: 100% !important;
+  flex: 1 1 auto !important;
   min-width: 0 !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -1161,9 +1196,9 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   overflow: hidden !important;
 }
 .vitals-right-col > .vitals-stage-card {
-  flex: 1 !important;
+  flex: 1 1 auto !important;
   height: 100% !important;
-  min-height: 540px !important;
+  min-height: 600px !important;
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -1384,20 +1419,27 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .vitals-subcards-row {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
-  gap: 10px !important;
-  margin-top: 10px !important;
+  grid-template-rows: 1fr !important;
+  gap: 12px !important;
+  margin-top: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
   align-items: stretch !important;
-  flex: 1 !important;
+  flex: 1 1 0% !important;
   min-height: 0 !important;
   overflow: hidden !important;
+}
+@media (max-width: 768px) {
+  .vitals-subcards-row {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: auto auto !important;
+  }
 }
 .vitals-stacked-cards {
   display: flex !important;
   flex-direction: column !important;
-  gap: 8px !important;
+  gap: 12px !important;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
@@ -1413,30 +1455,33 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   flex-direction: column !important;
   box-sizing: border-box !important;
   margin: 0 !important;
+  padding: 14px 16px !important;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
   overflow: hidden !important;
 }
 .vitals-stacked-cards > #pdMedicationAdherenceCard {
-  flex: 1 1 auto !important;
+  flex: 1 1 0% !important;
   min-height: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
   margin: 0 !important;
+  padding: 14px 16px !important;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
   overflow: hidden !important;
 }
 .vitals-subcards-row > #pdRehabCard {
-  flex: 1 !important;
+  flex: 1 1 0% !important;
   height: 100% !important;
   display: flex !important;
   flex-direction: column !important;
   box-sizing: border-box !important;
   margin: 0 !important;
+  padding: 14px 16px !important;
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
@@ -1591,16 +1636,18 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .vitals-stage-card {
   background: radial-gradient(ellipse at 50% 40%, rgba(238,246,255,0.85) 0%, rgba(248,250,252,0.95) 60%, #ffffff 100%);
   border: 1px solid #e2e8f0;
-  border-radius: 24px;
+  border-radius: 20px;
   position: relative;
-  min-height: 560px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  padding: 22px;
+  min-height: 580px;
+  height: 100% !important;
+  flex: 1 0 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  padding: 18px 22px 14px !important;
   box-shadow: 0 4px 16px rgba(15,23,42,0.04);
   overflow: hidden;
-  box-sizing: border-box;
+  box-sizing: border-box !important;
 }
 
 /* Floating Zoom / Pan Controls */
@@ -1637,24 +1684,24 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 
 /* Center Organ Display */
 .vitals-organ-canvas-wrap {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  min-height: 420px;
-  user-select: none;
+  flex: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  position: relative !important;
+  min-height: 380px !important;
+  user-select: none !important;
 }
 .vitals-organ-interactive-box {
-  width: 100%;
-  max-width: 460px;
-  height: 100%;
-  min-height: 420px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-  will-change: transform;
+  width: 100% !important;
+  max-width: 480px !important;
+  height: 100% !important;
+  min-height: 380px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+  will-change: transform !important;
 }
 
 /* Animations */
