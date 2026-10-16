@@ -1131,6 +1131,8 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+  flex: 1 !important;
+  min-height: 0 !important;
 }
 @media (max-width: 850px) {
   .vitals-main-grid {
@@ -1142,6 +1144,7 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .vitals-right-col {
   display: flex !important;
   flex-direction: column !important;
+  height: 100% !important;
   min-width: 0 !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -1160,6 +1163,7 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 .vitals-right-col > .vitals-stage-card {
   flex: 1 !important;
   height: 100% !important;
+  min-height: 540px !important;
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -1385,6 +1389,9 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+  align-items: stretch !important;
+  flex: 1 !important;
+  min-height: 0 !important;
   overflow: hidden !important;
 }
 .vitals-stacked-cards {
@@ -1394,7 +1401,45 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
   width: 100% !important;
   max-width: 100% !important;
   min-width: 0 !important;
+  height: 100% !important;
   box-sizing: border-box !important;
+  justify-content: space-between !important;
+  overflow: hidden !important;
+}
+.vitals-stacked-cards > #pdCapacityCard {
+  flex: 0 0 auto !important;
+  height: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+.vitals-stacked-cards > #pdMedicationAdherenceCard {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+.vitals-subcards-row > #pdRehabCard {
+  flex: 1 !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
   overflow: hidden !important;
 }
 .vitals-subcards-row > .vitals-card,

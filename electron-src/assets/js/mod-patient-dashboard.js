@@ -262,11 +262,11 @@
   /* Full Detailed Stage Organ SVGs */
   function renderStageOrganSvg(key) {
     if (key === 'lung') {
-      return '<div class="vitals-stage-organ-model lung-svg" style="position:relative;width:100%;max-width:340px;min-height:280px;display:flex;align-items:center;justify-content:center">' +
+      return '<div class="vitals-stage-organ-model lung-svg" style="position:relative;width:100%;max-width:370px;min-height:300px;display:flex;align-items:center;justify-content:center">' +
         '<img src="assets/img/patient-lungs.png" alt="3D Bioluminescent Lungs" class="vitals-organ-3d-img" ' +
         'onload="this.style.display=\'block\'; var fb=this.parentNode.querySelector(\'.vitals-lung-fallback\'); if(fb) fb.style.display=\'none\';" ' +
         'onerror="this.style.display=\'none\'; var fb=this.parentNode.querySelector(\'.vitals-lung-fallback\'); if(fb) fb.style.display=\'block\';" ' +
-        'style="width:100%;max-width:315px;height:auto;object-fit:contain;filter:drop-shadow(0 14px 28px rgba(14,165,233,0.45));user-select:none;pointer-events:none;display:block" />' +
+        'style="width:100%;max-width:350px;height:auto;object-fit:contain;filter:drop-shadow(0 16px 32px rgba(14,165,233,0.45));user-select:none;pointer-events:none;display:block" />' +
         '<div class="vitals-lung-fallback" style="display:none;width:100%;height:100%">' +
         renderDetailedLungSvg() +
         '</div>' +
@@ -465,7 +465,7 @@
       var icon = defaultIcons[idx % defaultIcons.length];
       var sched = statusSchedules[idx % statusSchedules.length];
       var doseText = (m.dose ? m.dose : '1 dose') + ' • ' + sched.timing;
-      return '<div class="vitals-med-item" data-med-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 6px;min-width:0;width:100%;box-sizing:border-box" title="Click to log dose adherence" onclick="var b=this.querySelector(\'.med-status-chip\');if(b){b.textContent=\'✓ Taken\';b.style.color=\'#059669\';b.style.background=\'#f0fdf4\';b.style.borderColor=\'#bbf7d0\';if(window.App&&App.toast)App.toast(\'Medication dose recorded as taken!\');}">' +
+      return '<div class="vitals-med-item" data-med-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:5px 8px;min-height:36px;min-width:0;width:100%;box-sizing:border-box" title="Click to log dose adherence" onclick="var b=this.querySelector(\'.med-status-chip\');if(b){b.textContent=\'✓ Taken\';b.style.color=\'#059669\';b.style.background=\'#f0fdf4\';b.style.borderColor=\'#bbf7d0\';if(window.App&&App.toast)App.toast(\'Medication dose recorded as taken!\');}">' +
         '<div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow:hidden">' +
         '  <div class="vitals-med-icon-box" style="width:22px!important;height:22px!important;font-size:11px!important;flex-shrink:0">' + icon + '</div>' +
         '  <div class="vitals-med-details" style="min-width:0;flex:1;overflow:hidden">' +
