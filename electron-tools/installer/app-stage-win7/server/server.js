@@ -339,7 +339,7 @@ async function main() {
     const base = DESKTOP ? `${req.protocol}://${req.get('host')}` : (PUBLIC_API_URL || `${req.protocol}://${req.get('host')}`);
     res.type('application/javascript');
     res.set('Cache-Control', 'no-store');
-    res.send(`window.LABPOS_API=${JSON.stringify(base)};`);
+    res.send(`window.LABPOS_API=${JSON.stringify(base)};window.LABPOS_REPORT_API=${JSON.stringify(DESKTOP ? DESKTOP_CLOUD_URL : base)};`);
   };
   app.get('/api-config.js', sendApiConfig);
   app.get('/assets/js/api-config.js', sendApiConfig); /* the web index.html loads this path */

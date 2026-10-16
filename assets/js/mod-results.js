@@ -3053,11 +3053,11 @@
     // (force = the Android app, which opens the PDF viewer instead of printing)
     if (inv.status !== 'paid' && !force) return Promise.resolve(null);
     var key = inv.reportPdfKey || ('rpt-' + invoiceId + '-' + rand6());
-    /* the PDF carries its own QR (this same link) in the header, like the printout; on the desktop app the cloud address is only known after the upload, so there the QR is left out of the PDF */
+    /* Desktop data uses localhost; patient QR links use the configured public cloud. */
     var selfQr = null;
     try {
-      var qb = String(window.LABPOS_API || '').replace(/\/+$/, '');
-      if (qb && !(window.labposDesktop && window.labposDesktop.isDesktop)) selfQr = qrDataUrlFor(qb + '/r/' + key);
+      var qb = String(window.LABPOS_REPORT_API || (!(window.labposDesktop && window.labposDesktop.isDesktop) ? window.LABPOS_API : '') || '').replace(/\/+$/, '');
+      if (qb) selfQr = qrDataUrlFor(qb + '/r/' + key);
     } catch (e) { selfQr = null; }
     return customPdfParts(invoiceId, selfQr, opts).catch(function () { return {}; }).then(function (pre) {
     var pdf = null;
@@ -3155,7 +3155,7 @@
     else html = stripQrImg(html);
     var pdfBlobUrl = null;
     try {
-      var pdfRes = await buildReportPdfBlobUrl(invoiceId, opts);
+      var pdfRes = await buildReportPdfBlobUrl(invoiceId, opts, url || null);
       if (pdfRes && pdfRes.blobUrl) pdfBlobUrl = pdfRes.blobUrl;
     } catch (e) {}
     App.print('Lab Report — ' + d.inv.no, html, { noHeader: true, pdfBlobUrl: pdfBlobUrl });
@@ -3305,17 +3305,12 @@
       '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
   }
 
-  function buildReportPdfBlobUrl(invoiceId, opts) {
+  function buildReportPdfBlobUrl(invoiceId, opts, publicUrl) {
     return Promise.resolve(App.ensureJsPDF ? App.ensureJsPDF() : true).then(function () {
       var d = reportData(invoiceId, opts);
       if (!d) return null;
-      var inv = d.inv || {};
-      var key = inv.reportPdfKey || ('rpt-' + invoiceId);
-      var selfQr = null;
-      try {
-        var qb = String(window.LABPOS_API || '').replace(/\/+$/, '');
-        if (qb && !(window.labposDesktop && window.labposDesktop.isDesktop)) selfQr = qrDataUrlFor(qb + '/r/' + key);
-      } catch (e) { selfQr = null; }
+      return (publicUrl !== undefined ? Promise.resolve(publicUrl) : getReportPdfUrl(invoiceId, false, opts)).then(function (publicUrl) {
+      var selfQr = publicUrl ? qrDataUrlFor(publicUrl) : null;
       return customPdfParts(invoiceId, selfQr, opts).catch(function () { return {}; }).then(function (pre) {
         var pdf = null;
         try { pdf = buildReportPdf(invoiceId, selfQr, pre, opts); } catch (e) { console.error(e); }
@@ -3331,6 +3326,7 @@
         } catch (e) {
           return { blobUrl: pdf.dataUri, dataUri: pdf.dataUri };
         }
+      });
       });
     });
   }

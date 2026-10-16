@@ -74,7 +74,7 @@ async function suite(folder) {
   context.window = context;
   vm.runInContext(fs.readFileSync(path.join(folder, 'assets/js/graph-config.js'), 'utf8'), context);
   let source = fs.readFileSync(path.join(folder, 'assets/js/mod-results.js'), 'utf8');
-  source = source.replace(/\}\)\(\);\s*$/, 'App.testPdf = buildReportPdf; App.testData = reportData; App.testHtml = reportHtml; App.testPrint = printReport; })();');
+  source = source.replace(/\}\)\(\);\s*$/, 'App.testBlob = buildReportPdfBlobUrl; App.testPdf = buildReportPdf; App.testData = reportData; App.testHtml = reportHtml; App.testPrint = printReport; })();');
   vm.runInContext(source, context);
 
   function fixture() {
@@ -274,6 +274,18 @@ async function suite(folder) {
   await App.getReportPdfUrl('i');
   assert.equal(uploads[0].key, uploads[1].key, 'First assigned QR key remains stable on refresh');
   assert.equal(JSON.stringify(tables.results), clinicalBefore);
+
+  fixture();
+  context.labposDesktop = { isDesktop: true };
+  context.LABPOS_REPORT_API = 'https://fixture.invalid';
+  delete tables.invoices[0].reportPdfKey;
+  const previewPdf = await App.testBlob('i');
+  assert.ok(previewPdf && previewPdf.dataUri, 'Desktop preview produces PDF');
+  assert.equal(uploads.length, 1, 'Preview publishes report before embedding patient QR');
+  assert.ok(qrTargets.includes('https://fixture.invalid/r/' + tables.invoices[0].reportPdfKey));
+  assert.ok(receipt.images.some(i => i.args[4] === 20 && i.args[5] === 20), 'QR embedded in desktop letterhead');
+  assert.ok(qrTargets.every(url => !/localhost|127\.0\.0\.1/.test(url)), 'Patient QR never targets local desktop');
+  context.labposDesktop = null; delete context.LABPOS_REPORT_API;
 
   fixture();
   const graphFor = App.graphFor;

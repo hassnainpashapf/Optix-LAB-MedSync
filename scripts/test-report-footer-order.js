@@ -73,10 +73,10 @@ function suite(folder) {
         values: Object.fromEntries(params.map((p, i) => [p.name, 'Value' + i])) }]
     };
   }
-  function render(pre) {
+  function render(pre, qrImage) {
     const before = JSON.stringify(tables);
     const html = App.testHtml(App.testData('i'));
-    const result = App.testPdf('i', null, pre);
+    const result = App.testPdf('i', qrImage || null, pre);
     assert.ok(Buffer.from(result.dataUri.split('base64,')[1], 'base64').toString('latin1').startsWith('%PDF-'));
     assert.equal(JSON.stringify(tables), before, 'Rendering leaves records unchanged');
     return html;
@@ -167,7 +167,12 @@ function suite(folder) {
   tables.tests.push({ id: 'hb', name: 'HEMOGLOBIN (HB)', params: [{ name: 'Hemoglobin', ref: '13.5-17.5', unit: 'g/dL' }] });
   tables.invoices[0].items.push({ testId: 'hb', name: 'HEMOGLOBIN (HB)' });
   tables.results.push({ id: 'hb-result', invoiceId: 'i', testId: 'hb', status: 'ready', reportedAt: '2026-10-09T10:00:00Z', values: { Hemoglobin: '12.7' } });
-  render();
+  // Real bundled QR encoder, not the one-pixel transport test fixture.
+  vm.runInContext(fs.readFileSync(path.join(folder, 'assets/js/qrcode.min.js'), 'utf8'), context);
+  const qr = context.qrcode(0, 'M'); qr.addData('https://example.invalid/r/synthetic-sample'); qr.make();
+  tables.settings[0].showQr = true;
+  render(null, qr.createDataURL(4, 16));
+  assert.ok(pdf.images.some(image => image.args[4] === 20 && image.args[5] === 20), 'Real QR image embeds in sample PDF');
   assert.equal(pdf.doc.getNumberOfPages(), 1, 'Two short sections and four signatories fit one A4 page');
   assert.ok(pdf.text.filter(t => /^SYNTHETIC SIGNATORY/.test(t.values[0])).every(t => t.style === 'bold' && t.y > 220));
   assert.ok(pdf.text.find(t => t.values[0] === 'Hemoglobin').y < 170, 'Tests remain near top, footer remains at bottom');
