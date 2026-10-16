@@ -414,6 +414,572 @@
     }).join('');
   }
 
+  /* ---------- Comprehensive Test-Specific Clinical Notes & Medical Interpretation Engine ---------- */
+  function getTestSpecificClinicalNote(testName, testCode, category, status, abnormalParams, testObj) {
+    var nm = String(testName || '').trim();
+    var nmLower = nm.toLowerCase();
+    var cd = String(testCode || '').toUpperCase().trim();
+    var isAbn = status === 'abnormal';
+    var isPend = status === 'pending';
+
+    // Check if testObj has a pre-stored custom note from DB
+    var dbNote = (testObj && (testObj.note || testObj.notes)) ? String(testObj.note || testObj.notes).trim() : '';
+
+    // Specific definitions per diagnostic test
+    if (/complete blood count|\bcbc\b/i.test(nmLower) || cd === 'CBC') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.slice(0, 2).join(', ') + ' ⚠️ ' : '') + 'Mild Anemia / Erythrocyte review')
+                       : (isPend ? 'Specimen undergoing automated multi-parameter hematology count'
+                                 : 'Normal Hematology: Balanced RBC, Platelet & Leucocyte distribution'),
+        detail: isAbn ? ('Complete Blood Count (CBC) mein abnormal findings detect hui hain (' + (abnormalParams && abnormalParams.length ? abnormalParams.join(', ') : 'Biomarker out of range') + '). Morphological blood film review aur anemia workup recommend kiya jata hai.')
+                      : (dbNote || 'Automated cell counter analysis ke mutabiq hemoglobin, platelet hemostasis aur leukocyte defense normal reference limits ke mutabiq hain.'),
+        statusLabel: isAbn ? 'Abnormal Hematology' : (isPend ? 'Analyzing Blood' : 'Normal Hematology Profile')
+      };
+    }
+
+    if (/anti[\s-]?hcv|hepatitis c/i.test(nmLower) || cd === 'AHCV') {
+      return {
+        compact: isAbn ? 'Reactive ⚠️ Confirmatory HCV RNA (PCR) advised'
+                       : (isPend ? 'Serology ELISA/Chemiluminescence screening in progress'
+                                 : 'Non-Reactive: Hepatitis C viral antibodies absent'),
+        detail: isAbn ? 'Antibodies against Hepatitis C Virus Reactive note hui hain. Active vs past exposure ki tasdeeq ke liye confirmatory HCV RNA (PCR) aur LFT testing darkaar hai.'
+                      : (dbNote || 'Screening for antibodies against Hepatitis C Virus is Non-Reactive. Is specimen mein HCV infection ke koi detectable antibodies maujood nahi.'),
+        statusLabel: isAbn ? 'Reactive Serology' : (isPend ? 'Processing Serum' : 'Non-Reactive Serology')
+      };
+    }
+
+    if (/vitamin b12|cobalamin|\bb12\b/i.test(nmLower) || cd === 'B12') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.join(', ') + ' ⚠️ ' : '') + 'Deficient: Neurological/Anemia risk')
+                       : (isPend ? 'Chemiluminescent immunoassay running'
+                                 : 'Normal Cobalamin: Adequate nerve function & RBC support'),
+        detail: isAbn ? 'Vitamin B12 level reference limit se kam note hua hai (< 200 pg/mL). Megaloblastic anemia, peripheral neuropathy aur dietary malabsorption evaluate karein.'
+                      : (dbNote || 'Serum Vitamin B12 level normal reference range (200–900 pg/mL) mein hai. Neurological myelin sheath integrity aur red blood cell maturation ke liye adequate reserves maujood hain.'),
+        statusLabel: isAbn ? 'Vitamin B12 Deficient' : (isPend ? 'Assay Running' : 'Normal Vitamin B12')
+      };
+    }
+
+    if (/blood group|abo/i.test(nmLower) || cd === 'BGRP') {
+      return {
+        compact: isAbn ? 'Unusual agglutination ⚠️ Secondary tube typing advised'
+                       : (isPend ? 'Forward and reverse hemagglutination typing underway'
+                                 : 'Verified ABO & Rh(D) grouping confirmed for transfusion safety'),
+        detail: isAbn ? 'Blood group typing mein atypical reaction note hua hai. Rh-subtyping aur crossmatch verification zaroori hai.'
+                      : (dbNote || 'Standard forward aur reverse hemagglutination method se ABO aur Rh factor successfully verify ho chuka hai. Emergency blood transfusion records ke mutabiq authenticated hai.'),
+        statusLabel: isAbn ? 'Atypical Grouping' : (isPend ? 'Typing Specimen' : 'Blood Group Verified')
+      };
+    }
+
+    if (/calcium/i.test(nmLower) || cd === 'CA') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.join(', ') + ' ⚠️ ' : '') + 'Out of range: Bone/PTH evaluation')
+                       : (isPend ? 'Photometric serum calcium assay in progress'
+                                 : 'Optimal Calcium: Bone mineral & cardiac rhythm balance'),
+        detail: isAbn ? 'Serum Calcium reference threshold se deviate hua hai. Albumin correction, serum phosphorus aur Parathyroid Hormone (PTH) correlation advised hai.'
+                      : (dbNote || 'Total Serum Calcium physiological reference range (8.5–10.5 mg/dL) ke mutabiq optimal hai. Bone mineralization, neuromuscular transmission aur cardiac rhythm stable hain.'),
+        statusLabel: isAbn ? 'Calcium Imbalance' : (isPend ? 'Assaying Serum' : 'Normal Serum Calcium')
+      };
+    }
+
+    if (/cholesterol|lipid/i.test(nmLower) || cd === 'CHOL' || cd === 'LIPID') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.join(', ') + ' ⚠️ ' : '') + 'Elevated: Cardiovascular vigilance required')
+                       : (isPend ? 'Enzymatic lipid fraction quantification in progress'
+                                 : 'Desirable Lipid Profile: Low atherogenic risk (< 200 mg/dL)'),
+        detail: isAbn ? 'Serum Cholesterol / Lipid parameters atherogenic threshold se barhay hue hain. Cardiovascular safety ke liye dietary fat moderation aur lifestyle review darkaar hai.'
+                      : (dbNote || 'Lipid profile parameters ATP III guidelines ke mutabiq desirable limits mein hain (< 200 mg/dL). Atherogenic cardiovascular risk controlled hai.'),
+        statusLabel: isAbn ? 'Dyslipidemia Alert' : (isPend ? 'Lipid Analyzer' : 'Desirable Lipid Level')
+      };
+    }
+
+    if (/c-reactive|crp\b/i.test(nmLower) || cd === 'CRP') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.join(', ') + ' ⚠️ ' : '') + 'Elevated: Active systemic inflammation')
+                       : (isPend ? 'Turbidimetric immunoinflammatory assay in progress'
+                                 : 'Normal CRP: Active systemic inflammation absent (< 6 mg/L)'),
+        detail: isAbn ? 'C-Reactive Protein (CRP) significantly elevated hai. Jism mein active bacterial infection, tissue injury ya acute inflammatory response ki nishandahi hai.'
+                      : (dbNote || 'Quantitative C-Reactive Protein (CRP) baseline safe limits (< 6.0 mg/L) mein hai. Koi active acute systemic inflammatory process detect nahi hua.'),
+        statusLabel: isAbn ? 'Inflammatory Flare' : (isPend ? 'Measuring CRP' : 'Normal CRP Index')
+      };
+    }
+
+    if (/liver function|\blft\b|sgpt|alt\b/i.test(nmLower) || cd === 'LFT') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.slice(0, 2).join(', ') + ' ⚠️ ' : '') + 'Hepatic enzymes elevated: Liver cell strain')
+                       : (isPend ? 'Automated photometric hepatic chemistry running'
+                                 : 'Normal LFT: Intact hepatic synthetic function & biliary clearance'),
+        detail: isAbn ? 'Liver Function Tests mein transaminases (ALT/AST) ya bilirubin deviation note hui hai. Hepatocellular injury ya biliary congestion evaluate karein.'
+                      : (dbNote || 'Hepatic enzymes (ALT/AST), alkaline phosphatase aur bilirubin baseline par hain. Liver synthetic function aur biliary clearance normal hain.'),
+        statusLabel: isAbn ? 'Hepatic Deviation' : (isPend ? 'Running LFT' : 'Normal Liver Profile')
+      };
+    }
+
+    if (/renal function|kidney function|\brft\b|\bkft\b/i.test(nmLower) || cd === 'RFT') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.slice(0, 2).join(', ') + ' ⚠️ ' : '') + 'Elevated markers: Glomerular clearance check')
+                       : (isPend ? 'Enzymatic urea & kinetic creatinine clearance running'
+                                 : 'Healthy Renal Function: Glomerular filtration rate & urea clearance intact'),
+        detail: isAbn ? 'Serum Creatinine ya Urea elevated hain. Kidneys par filtration strain hai; hydration status aur renal clearance tracking zaroori hai.'
+                      : (dbNote || 'Serum Creatinine aur Blood Urea reference limits ke mutabiq normal hain. Kidneys metabolic waste products successfully filter aur excrete kar rahi hain.'),
+        statusLabel: isAbn ? 'Renal Alert' : (isPend ? 'Analyzing RFT' : 'Normal Renal Profile')
+      };
+    }
+
+    if (/glucose|sugar|fbs|rbs/i.test(nmLower) || cd === 'FBS' || cd === 'RBS') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.join(', ') + ' ⚠️ ' : '') + 'Dysglycemia: Glycemic review recommended')
+                       : (isPend ? 'Hexokinase/oxidase enzymatic glucose assay running'
+                                 : 'Euglycemic Control: Normal blood glucose homeostasis'),
+        detail: isAbn ? 'Blood glucose level reference physiological limit se bahar note hua hai. Fasting compliance aur HbA1c correlation advised hai.'
+                      : (dbNote || 'Blood glucose level normal physiological limits mein hai. Insulin sensitivity aur carbohydrate tolerance mutawazan hai.'),
+        statusLabel: isAbn ? 'Altered Glucose' : (isPend ? 'Testing Glucose' : 'Normal Blood Glucose')
+      };
+    }
+
+    if (/hba1c|glycated/i.test(nmLower) || cd === 'HBA1C') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.join(', ') + ' ⚠️ ' : '') + 'Elevated HbA1c: Diabetic management required')
+                       : (isPend ? 'HPLC / Boronate affinity chromatography running'
+                                 : 'Optimal Glycated Hemoglobin: Healthy 3-month glycemic control (< 5.7%)'),
+        detail: isAbn ? 'HbA1c level target range se zyada hai. Pichlay 3 mahinay ka cumulative glycemic load elevated raha hai; antidiabetic therapy review karein.'
+                      : (dbNote || 'HbA1c level ADA guidelines ke mutabiq non-diabetic safe range (< 5.7%) mein hai. Long-term glucose control mutawazan hai.'),
+        statusLabel: isAbn ? 'Elevated HbA1c' : (isPend ? 'HPLC Running' : 'Optimal HbA1c')
+      };
+    }
+
+    if (/thyroid|\btsh\b|\btft\b/i.test(nmLower) || cd === 'TSH' || cd === 'TFT') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.join(', ') + ' ⚠️ ' : '') + 'Thyroid deviation: Endocrine evaluation advised')
+                       : (isPend ? 'Ultra-sensitive 3rd generation CLIA assay running'
+                                 : 'Euthyroid Status: Pituitary-thyroid regulatory axis normal'),
+        detail: isAbn ? 'Thyroid stimulating hormone ya free thyroid hormones baseline limits se deviate hain. Hypo/hyperthyroidism symptoms correlate karein.'
+                      : (dbNote || 'Third-generation TSH assay normal reference limit mein hai. Basal metabolic rate aur pituitary-thyroid feedback axis healthy equilibrium mein hai.'),
+        statusLabel: isAbn ? 'Thyroid Alert' : (isPend ? 'Testing Thyroid' : 'Normal Euthyroid')
+      };
+    }
+
+    if (/vitamin d/i.test(nmLower) || cd === 'VITD') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.join(', ') + ' ⚠️ ' : '') + 'Insufficient/Deficient: Vitamin D supplementation needed')
+                       : (isPend ? 'CLIA 25-Hydroxy Vitamin D assay running'
+                                 : 'Adequate Vitamin D: Healthy bone mineralization & immune resilience'),
+        detail: isAbn ? '25-OH Vitamin D level insufficient/deficient note hua hai. Calcium absorption aur bone density ke liye corrective supplementation darkaar hai.'
+                      : (dbNote || 'Circulating 25-OH Vitamin D level optimal safe physiological limits (> 30 ng/mL) mein hai. Bone mineralization aur immune modulation adequate hai.'),
+        statusLabel: isAbn ? 'Vitamin D Deficient' : (isPend ? 'Testing Vit D' : 'Sufficient Vitamin D')
+      };
+    }
+
+    if (/urine routine|\bure\b/i.test(nmLower) || cd === 'URE') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.slice(0, 2).join(', ') + ' ⚠️ ' : '') + 'Microscopic findings detected: Pyuria/Proteinuria check')
+                       : (isPend ? 'Physical, chemical dipstick & microscopic sedimentation in progress'
+                                 : 'Clear Urine Examination: No significant pus cells, protein ya casts'),
+        detail: isAbn ? 'Urine analysis mein abnormal sediment (pus cells / protein / RBCs) note hui hain. Urinary tract infection ya renal irritation evaluate karein.'
+                      : (dbNote || 'Clean-catch urine routine examination normal reference limits ke mutabiq clear hai. Significant pus cells, RBCs ya proteinuria absent hain.'),
+        statusLabel: isAbn ? 'Urinary Findings' : (isPend ? 'Microscopy Running' : 'Normal Urine Exam')
+      };
+    }
+
+    if (/ferritin/i.test(nmLower) || cd === 'FERR') {
+      return {
+        compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.join(', ') + ' ⚠️ ' : '') + 'Iron store altered: Iron profile correlation')
+                       : (isPend ? 'Chemiluminescent iron store immunoassay in progress'
+                                 : 'Normal Serum Ferritin: Adequate total body iron storage reserves'),
+        detail: isAbn ? 'Serum Ferritin total body iron reserves ki kami ya acute-phase inflammation ki nishandahi kar raha hai. Complete iron profile correlate karein.'
+                      : (dbNote || 'Serum Ferritin levels healthy reference boundaries mein hain. Total body iron storage reserves adequate hain.'),
+        statusLabel: isAbn ? 'Ferritin Imbalance' : (isPend ? 'Testing Ferritin' : 'Normal Iron Stores')
+      };
+    }
+
+    if (/hbsag|hepatitis b/i.test(nmLower) || cd === 'HBSAG') {
+      return {
+        compact: isAbn ? 'Reactive ⚠️ Confirmatory HBV DNA PCR advised'
+                       : (isPend ? 'Hepatitis B surface antigen screening in progress'
+                                 : 'Non-Reactive: No Hepatitis B surface antigen detected'),
+        detail: isAbn ? 'HBsAg screening test reactive note hua hai. Active Hepatitis B infection evaluate karne ke liye HBV DNA PCR aur liver function tests darkaar hain.'
+                      : (dbNote || 'Qualitative screening for Hepatitis B surface antigen is Non-Reactive. No detectable HBsAg antigen present in this specimen.'),
+        statusLabel: isAbn ? 'Reactive HBsAg' : (isPend ? 'Testing HBsAg' : 'Non-Reactive HBsAg')
+      };
+    }
+
+    // Default intelligent diagnostic note based on test name and category
+    return {
+      compact: isAbn ? ((abnormalParams && abnormalParams.length ? 'Flag: ' + abnormalParams.slice(0, 2).join(', ') + ' ⚠️ ' : '') + 'Out of range: Clinical vigilance advised')
+                     : (isPend ? 'Specimen undergoing laboratory workbench processing'
+                               : 'Normal Findings: Verified parameters physiological reference limits ke mutabiq hain'),
+      detail: isAbn ? (nm + ' parameters normal reference limit se deviate hain. Further clinical correlation aur specialist review recommended hai.')
+                    : (dbNote || (nm + ' standard clinical laboratory methodology ke mutabiq verify hua hai. Findings normal physiological baseline maintain kar rahi hain.')),
+      statusLabel: isAbn ? 'Abnormal Diagnostic' : (isPend ? 'Processing' : 'Normal Diagnostic')
+    };
+  }
+
+  /* Helper to produce biomarker-specific clinical interpretation in trend graphs */
+  function getBiomarkerClinicalInterpretation(paramName, testName, curVal, prevVal, status, isCrit, isOutside) {
+    var pLower = String(paramName || '').toLowerCase();
+    var tLower = String(testName || '').toLowerCase();
+    var isImp = status === 'improved';
+    var isDet = status === 'deteriorated';
+
+    // 1. Hemoglobin / Hb
+    if (/hb\b|hemoglobin/i.test(pLower)) {
+      if (isCrit) {
+        return {
+          icon: '🚨',
+          label: 'Critical Anemia Alert',
+          color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+          note: 'Hemoglobin alarming stage par drop hua hai (' + curVal + ' g/dL). Oxygen-carrying capacity severely compromised hai; immediate clinical transfusion ya hematologist review darkaar hai.'
+        };
+      }
+      if (isImp) {
+        return {
+          icon: '✓',
+          label: 'Positive Recovery (Erythropoiesis)',
+          color: '#166534', bg: '#f0fdf4', border: '#bbf7d0',
+          note: 'Hemoglobin level pehle se behtar ho kar normal range ki taraf improve ho raha hai. Blood oxygenation aur energy levels mein positive recovery note hui hai.'
+        };
+      }
+      if (isDet) {
+        return {
+          icon: '⚠️',
+          label: 'Hemoglobin Decline',
+          color: '#92400e', bg: '#fffbeb', border: '#fde68a',
+          note: 'Hemoglobin value pichlay test ke muqablay mein drop hui hai (' + curVal + ' g/dL). Anemia, nutritional iron deficiency ya blood loss ka risk monitor karein.'
+        };
+      }
+      return {
+        icon: '⚖️',
+        label: isOutside ? 'Borderline Hemoglobin' : 'Stable Erythrocyte Index',
+        color: isOutside ? '#92400e' : '#334155', bg: isOutside ? '#fffbeb' : '#f8fafc', border: isOutside ? '#fde68a' : '#e2e8f0',
+        note: isOutside
+          ? 'Hemoglobin baseline safe limits se bahar (' + curVal + ' g/dL) hai. Dietary iron aur hydration review mufeed rahay gi.'
+          : 'Hemoglobin stable baseline maintain kar raha hai. Tissue oxygenation aur red cell mass physiological limits mein hain.'
+      };
+    }
+
+    // 2. Platelets / PLT
+    if (/plt\b|platelet/i.test(pLower)) {
+      if (isCrit) {
+        return {
+          icon: '🚨',
+          label: 'Severe Thrombocytopenia Alert',
+          color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+          note: 'Platelet count alarming low level par gir gaya hai (' + curVal + '). Spontaneous bleeding aur bruising ka shadeed khatra hai, fori clinical evaluation zaroori hai.'
+        };
+      }
+      if (isImp) {
+        return {
+          icon: '✓',
+          label: 'Platelet Recovery (Hemostasis)',
+          color: '#166534', bg: '#f0fdf4', border: '#bbf7d0',
+          note: 'Platelet count pehle ke muqablay mein behtar ho raha hai. Bone marrow megakaryopoiesis aur blood clotting ability normal reference limit ki taraf gamzan hai.'
+        };
+      }
+      if (isDet) {
+        return {
+          icon: '⚠️',
+          label: 'Platelet Drop Warning',
+          color: '#92400e', bg: '#fffbeb', border: '#fde68a',
+          note: 'Platelet count pichlay test se kam hua hai. Viral suppression ya immune consumption evaluate karein aur serial platelet tracking jari rakhein.'
+        };
+      }
+      return {
+        icon: '⚖️',
+        label: isOutside ? 'Platelet Deviation' : 'Stable Hemostasis',
+        color: isOutside ? '#92400e' : '#334155', bg: isOutside ? '#fffbeb' : '#f8fafc', border: isOutside ? '#fde68a' : '#e2e8f0',
+        note: isOutside
+          ? 'Platelet count reference boundaries se bahar (' + curVal + ') hai. Peripheral blood smear review recommended hai.'
+          : 'Platelets physiological reference limits mein stable hain. Coagulation aur capillary integrity intact hai.'
+      };
+    }
+
+    // 3. Creatinine / Renal
+    if (/creat|creatinine/i.test(pLower)) {
+      if (isCrit) {
+        return {
+          icon: '🚨',
+          label: 'Acute Renal Strain Alert',
+          color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+          note: 'Serum creatinine alarming threshold par elevate ho gaya hai (' + curVal + ' mg/dL). Glomerular filtration severely impaired hai, emergency nephrology assessment darkaar hai.'
+        };
+      }
+      if (isImp) {
+        return {
+          icon: '✓',
+          label: 'Renal Clearance Improving',
+          color: '#166534', bg: '#f0fdf4', border: '#bbf7d0',
+          note: 'Kidneys ki glomerular clearance pehle se behtar hui hai aur serum creatinine normal limit ki taraf drop ho raha hai.'
+        };
+      }
+      if (isDet) {
+        return {
+          icon: '⚠️',
+          label: 'Elevated Renal Filtration Strain',
+          color: '#92400e', bg: '#fffbeb', border: '#fde68a',
+          note: 'Creatinine pichlay test se barh gaya hai (' + curVal + ' mg/dL). Renal perfusion, dehydration ya nephrotoxic medication ka asar check karein.'
+        };
+      }
+      return {
+        icon: '⚖️',
+        label: isOutside ? 'Renal Deviation' : 'Stable Renal Function',
+        color: isOutside ? '#92400e' : '#334155', bg: isOutside ? '#fffbeb' : '#f8fafc', border: isOutside ? '#fde68a' : '#e2e8f0',
+        note: isOutside
+          ? 'Serum creatinine reference range se elevated (' + curVal + ' mg/dL) chal raha hai. Adequate hydration aur renal function tracking zaroori hai.'
+          : 'Glomerular filtration rate (eGFR) aur creatinine clearance baseline par normal hain. Kidneys metabolic waste successfully clear kar rahi hain.'
+      };
+    }
+
+    // 4. ALT / SGPT / AST / SGOT / Liver
+    if (/alt\b|sgpt|ast\b|sgot|bilirubin/i.test(pLower) || /liver|lft/i.test(tLower)) {
+      if (isCrit) {
+        return {
+          icon: '🚨',
+          label: 'Acute Hepatocellular Alert',
+          color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+          note: 'Liver biomarker alarming level tak elevate ho gaya hai (' + curVal + '). Acute liver inflammation ya biliary obstruction ka khatra hai, fori medical consult darkaar hai.'
+        };
+      }
+      if (isImp) {
+        return {
+          icon: '✓',
+          label: 'Hepatic Recovery Observed',
+          color: '#166534', bg: '#f0fdf4', border: '#bbf7d0',
+          note: 'Liver transaminases pichlay test ke muqablay mein normalize ho rahe hain. Hepatic cell membrane irritation kam ho kar recovery show kar rahi hai.'
+        };
+      }
+      if (isDet) {
+        return {
+          icon: '⚠️',
+          label: 'Hepatic Enzyme Elevation',
+          color: '#92400e', bg: '#fffbeb', border: '#fde68a',
+          note: 'Liver enzyme value pichlay test se elevate hui hai (' + curVal + '). Fatty liver, viral burden ya hepatic stress ka assessment darkaar hai.'
+        };
+      }
+      return {
+        icon: '⚖️',
+        label: isOutside ? 'Hepatic Fluctuation' : 'Stable Hepatic Status',
+        color: isOutside ? '#92400e' : '#334155', bg: isOutside ? '#fffbeb' : '#f8fafc', border: isOutside ? '#fde68a' : '#e2e8f0',
+        note: isOutside
+          ? 'Liver biomarker reference limits se thora bahar (' + curVal + ') hai. Dietary lifestyle changes aur ultrasound liver correlation mufeed ho sakti hai.'
+          : 'Liver synthetic function aur biliary clearance baseline par normal hain. Hepatocellular enzymes healthy limits mein hain.'
+      };
+    }
+
+    // 5. TLC / WBC / Leucocytes
+    if (/tlc|wbc|leukocyte|white blood/i.test(pLower)) {
+      if (isCrit) {
+        return {
+          icon: '🚨',
+          label: 'Immune Dysregulation Alert',
+          color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+          note: 'Total leukocyte count alarming threshold par hai (' + curVal + '). Severe acute systemic infection ya bone marrow response ka imkan hai, urgent review zaroori hai.'
+        };
+      }
+      if (isImp) {
+        return {
+          icon: '✓',
+          label: 'Infection Settling',
+          color: '#166534', bg: '#f0fdf4', border: '#bbf7d0',
+          note: 'White blood cells count pehle se normalize ho raha hai. Jism ka immune defense infection ko control kar ke normal range ki taraf la raha hai.'
+        };
+      }
+      if (isDet) {
+        return {
+          icon: '⚠️',
+          label: 'Elevated Leucocyte Response',
+          color: '#92400e', bg: '#fffbeb', border: '#fde68a',
+          note: 'TLC count pichlay test ke muqablay mein barh gaya hai (' + curVal + '). Active bacterial/viral challenge ya inflammation ki nishandahi hai.'
+        };
+      }
+      return {
+        icon: '⚖️',
+        label: isOutside ? 'Immune Variation' : 'Stable Immune Defense',
+        color: isOutside ? '#92400e' : '#334155', bg: isOutside ? '#fffbeb' : '#f8fafc', border: isOutside ? '#fde68a' : '#e2e8f0',
+        note: isOutside
+          ? 'Leukocyte count reference range se bahar (' + curVal + ') chal raha hai. Clinical fever ya allergy symptoms correlate karein.'
+          : 'Total leukocyte count baseline normal physiological range mein hai. Patient ka immune system healthy equilibrium maintain kar raha hai.'
+      };
+    }
+
+    // 6. Blood Glucose / RBS / FBS / HbA1c
+    if (/glucose|sugar|fbs|rbs|hba1c/i.test(pLower) || /diabetes/i.test(tLower)) {
+      if (isCrit) {
+        return {
+          icon: '🚨',
+          label: 'Severe Dysglycemia Alert',
+          color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+          note: 'Blood glucose level alarming zone mein hai (' + curVal + '). Diabetic ketoacidosis ya severe hypoglycemia ka risk hai, fori medical correction darkaar hai.'
+        };
+      }
+      if (isImp) {
+        return {
+          icon: '✓',
+          label: 'Glycemic Control Improving',
+          color: '#166534', bg: '#f0fdf4', border: '#bbf7d0',
+          note: 'Blood sugar level pehle ke muqablay mein behtar control show kar raha hai aur euglycemic target range ki taraf improve ho raha hai.'
+        };
+      }
+      if (isDet) {
+        return {
+          icon: '⚠️',
+          label: 'Glycemic Spike Observed',
+          color: '#92400e', bg: '#fffbeb', border: '#fde68a',
+          note: 'Blood glucose level pichlay test se barh gaya hai (' + curVal + '). Carbohydrate intake aur antidiabetic therapy adjust karne ki zaroorat ho sakti hai.'
+        };
+      }
+      return {
+        icon: '⚖️',
+        label: isOutside ? 'Altered Glycemic Level' : 'Stable Glucose Homeostasis',
+        color: isOutside ? '#92400e' : '#334155', bg: isOutside ? '#fffbeb' : '#f8fafc', border: isOutside ? '#fde68a' : '#e2e8f0',
+        note: isOutside
+          ? 'Glucose levels physiological reference limit se deviate kar rahe hain (' + curVal + '). Fasting compliance aur HbA1c correlation advised hai.'
+          : 'Blood glucose concentration baseline normal limits mein hai. Insulin sensitivity aur carbohydrate metabolism mutawazan hain.'
+      };
+    }
+
+    // 7. Cholesterol / Triglycerides / Lipid
+    if (/cholesterol|triglyceride|lipid|ldl|hdl/i.test(pLower) || /lipid/i.test(tLower)) {
+      if (isCrit) {
+        return {
+          icon: '🚨',
+          label: 'Severe Hyperlipidemia Alert',
+          color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+          note: 'Lipid fraction critical threshold tak elevate ho gaya hai (' + curVal + '). Acute pancreatitis aur accelerated cardiovascular risk ke liye immediate statin/dietary protocol zaroori hai.'
+        };
+      }
+      if (isImp) {
+        return {
+          icon: '✓',
+          label: 'Cardiovascular Risk Reducing',
+          color: '#166534', bg: '#f0fdf4', border: '#bbf7d0',
+          note: 'Lipid parameters pichlay test ke muqablay mein normal range ki taraf improve ho rahe hain. Atherogenic burden kam ho raha hai.'
+        };
+      }
+      if (isDet) {
+        return {
+          icon: '⚠️',
+          label: 'Elevated Atherogenic Risk',
+          color: '#92400e', bg: '#fffbeb', border: '#fde68a',
+          note: 'Lipid level pichlay test se barh gaya hai (' + curVal + '). Vascular health ke tahaffuz ke liye lifestyle aur dietary fat restriction darkaar hai.'
+        };
+      }
+      return {
+        icon: '⚖️',
+        label: isOutside ? 'Borderline Lipid Level' : 'Optimal Lipid Profile',
+        color: isOutside ? '#92400e' : '#334155', bg: isOutside ? '#fffbeb' : '#f8fafc', border: isOutside ? '#fde68a' : '#e2e8f0',
+        note: isOutside
+          ? 'Lipid fraction desirable target limit se thora barha hua (' + curVal + ') hai. Regular exercise aur healthy oils ka istemal mufeed rahay ga.'
+          : 'Total atherogenic risk baseline control mein hai. Circulating lipid fractions cardiovascular safety limits ke mutabiq stable hain.'
+      };
+    }
+
+    // 8. Calcium / Electrolytes / Urea
+    if (/calcium|sodium|potassium|chloride|urea|uric/i.test(pLower)) {
+      if (isCrit) {
+        return {
+          icon: '🚨',
+          label: 'Electrolyte / Metabolic Alert',
+          color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+          note: 'Biomarker value alarming limit tak deviate ho chuki hai (' + curVal + '). Neuromuscular irritability aur cardiac rhythm monitoring ke liye fori action darkaar hai.'
+        };
+      }
+      if (isImp) {
+        return {
+          icon: '✓',
+          label: 'Metabolic Balance Restoring',
+          color: '#166534', bg: '#f0fdf4', border: '#bbf7d0',
+          note: 'Electrolyte/metabolic parameter pehle se normal limits ki taraf improve ho raha hai. Cellular homeostasis behtar ho rahi hai.'
+        };
+      }
+      if (isDet) {
+        return {
+          icon: '⚠️',
+          label: 'Metabolic Shift Detected',
+          color: '#92400e', bg: '#fffbeb', border: '#fde68a',
+          note: 'Biomarker level pichlay test ke muqablay mein deviate hua hai (' + curVal + '). Fluid intake aur renal excretory balance check karein.'
+        };
+      }
+      return {
+        icon: '⚖️',
+        label: isOutside ? 'Electrolyte Deviation' : 'Stable Electrolyte Homeostasis',
+        color: isOutside ? '#92400e' : '#334155', bg: isOutside ? '#fffbeb' : '#f8fafc', border: isOutside ? '#fde68a' : '#e2e8f0',
+        note: isOutside
+          ? 'Observed value reference limits se bahar (' + curVal + ') hai. Dietary mineral intake aur hydration maintain karein.'
+          : 'Electrolyte balance aur cellular membrane potential baseline par bilkul normal aur mutawazan hai.'
+      };
+    }
+
+    // 9. CRP / ESR / Inflammation
+    if (/crp|esr|c-reactive/i.test(pLower)) {
+      if (isCrit) {
+        return {
+          icon: '🚨',
+          label: 'Severe Inflammatory Flare',
+          color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+          note: 'Inflammatory marker alarming stage tak jump kar chuka hai (' + curVal + '). High-grade systemic inflammation ya severe infection ka clinical focus talash karna zaroori hai.'
+        };
+      }
+      if (isImp) {
+        return {
+          icon: '✓',
+          label: 'Inflammation Settling',
+          color: '#166534', bg: '#f0fdf4', border: '#bbf7d0',
+          note: 'Inflammatory activity pehle test ke muqablay mein wazeh tor par kam ho rahi hai. Jism recovery aur healing ki taraf barh raha hai.'
+        };
+      }
+      if (isDet) {
+        return {
+          icon: '⚠️',
+          label: 'Increased Systemic Inflammation',
+          color: '#92400e', bg: '#fffbeb', border: '#fde68a',
+          note: 'Acute-phase reactant level elevate ho gaya hai (' + curVal + '). Jism mein active inflammation ya tissue repair activity jari hai.'
+        };
+      }
+      return {
+        icon: '⚖️',
+        label: isOutside ? 'Low-grade Inflammation' : 'Normal Inflammatory Baseline',
+        color: isOutside ? '#92400e' : '#334155', bg: isOutside ? '#fffbeb' : '#f8fafc', border: isOutside ? '#fde68a' : '#e2e8f0',
+        note: isOutside
+          ? 'Inflammatory index baseline reference se ooper (' + curVal + ') hai. Mild tissue irritation ya infection correlation zaroori hai.'
+          : 'Systemic inflammatory markers baseline negative/normal hain. Koi active acute systemic inflammatory process maujood nahi.'
+      };
+    }
+
+    // 10. Default fallback tailored with parameter & test name
+    var pTitle = paramName || 'Biomarker';
+    if (isCrit) {
+      return {
+        icon: '🚨',
+        label: 'Critical ' + pTitle + ' Alert',
+        color: '#991b1b', bg: '#fef2f2', border: '#fecaca',
+        note: pTitle + ' ki value alarming threshold par chali gayi hai (' + curVal + '). Fori doctor consultation aur repeat laboratory evaluation zaroori hai.'
+      };
+    }
+    if (isImp) {
+      return {
+        icon: '✓',
+        label: pTitle + ' Pehle se Behtar (Positive Effect)',
+        color: '#166534', bg: '#f0fdf4', border: '#bbf7d0',
+        note: pTitle + ' pichlay test ke muqablay mein behtar ho raha hai aur normal reference limits ki taraf recovery show kar raha hai.'
+      };
+    }
+    if (isDet) {
+      return {
+        icon: '⚠️',
+        label: pTitle + ' Pehle se Kharab (Adverse Effect)',
+        color: '#92400e', bg: '#fffbeb', border: '#fde68a',
+        note: pTitle + ' ki value pichlay test se kharab (elevated/deviated) hui hai (' + curVal + '). Physiological strain monitor karein.'
+      };
+    }
+    return {
+      icon: '⚖️',
+      label: isOutside ? (pTitle + ' Outside Range') : (pTitle + ' Stable Baseline'),
+      color: isOutside ? '#92400e' : '#475569', bg: isOutside ? '#fffbeb' : '#f8fafc', border: isOutside ? '#fde68a' : '#e2e8f0',
+      note: isOutside
+        ? pTitle + ' reference range se bahar (' + curVal + ') maintain hai. Periodic clinical observation jari rakhein.'
+        : pTitle + ' pehle test ke muqablay mein baseline maintain kar raha hai, koi sudden decline note nahi hua.'
+    };
+  }
+
   function renderRecentTestsListHtml(testList, patient) {
     var pId = (patient && patient.id) ? patient.id : '';
     if (!testList || !testList.length) {
@@ -433,10 +999,8 @@
       var statusBg = isAbnormal ? '#fef2f2' : (isPending ? '#fffbeb' : '#f0fdf4');
       var statusBorder = isAbnormal ? '#fecaca' : (isPending ? '#fde68a' : '#bbf7d0');
       var statusText = isAbnormal ? 'Abnormal' : (isPending ? 'Pending' : 'Normal');
-      var subText = (t.date || 'Recent') + (t.category ? ' • ' + t.category : '');
-      if (isAbnormal && t.abnormalParams && t.abnormalParams.length) {
-        subText += ' • Flag: ' + t.abnormalParams.slice(0, 2).join(', ');
-      }
+      var specNote = getTestSpecificClinicalNote(tName, t.code, t.category, t.status, t.abnormalParams, t);
+      var subText = (t.date || 'Recent') + (t.category ? ' • ' + t.category : '') + ' • ' + specNote.compact;
       return '<div class="vitals-rehab-item" data-test-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;border-radius:8px;padding:6px 8px;min-height:38px;width:100%;box-sizing:border-box;min-width:0;display:flex;align-items:center;gap:8px" onclick="if(window.App&&App.openPatientTestDetailModal&&(\'' + esc(t.invoiceId || '') + '\'||\'' + esc(t.testId || '') + '\')){App.openPatientTestDetailModal(\'' + esc(t.invoiceId || '') + '\',\'' + esc(t.testId || '') + '\')}else{location.hash=\'#/patient/' + esc(pId) + '?tab=tests\'}">' +
         '<div class="vitals-rehab-badge" style="' + (isAbnormal ? 'background:#fee2e2;color:#dc2626' : 'background:#eff6ff;color:#2563eb') + ';width:22px;height:22px;font-size:11px;flex-shrink:0">' + num + '</div>' +
         '<div class="vitals-rehab-text" style="flex:1;min-width:0;overflow:hidden">' +
@@ -593,6 +1157,8 @@
         '</div>';
     }
 
+    var specNote = getTestSpecificClinicalNote(testName, test.code || t.code, test.category || t.category, t.status, t.abnormalParams, test);
+
     var remarksHtml = '';
     if (res && (res.remarks || res.narrative || res.notes)) {
       var noteTxt = res.remarks || res.narrative || res.notes;
@@ -602,6 +1168,12 @@
           '<div style="font-size:12.5px;color:#14532d;margin-top:4px;white-space:pre-wrap;line-height:1.5">' + esc(noteTxt) + '</div>' +
         '</div>';
     }
+
+    var testInterpretationHtml =
+      '<div style="margin-top:14px;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #0284c7;border-radius:10px">' +
+        '<strong style="font-size:12.5px;color:#0f172a;display:flex;align-items:center;gap:6px">🔬 Clinical Test Interpretation &amp; Guidance (' + esc(testName) + '):</strong>' +
+        '<div style="font-size:12.5px;color:#334155;margin-top:4px;line-height:1.5">' + esc(specNote.detail) + '</div>' +
+      '</div>';
 
     var reportedByHtml = '';
     if (res && (res.reportedBy || res.reportedAt)) {
@@ -654,6 +1226,7 @@
         '</div>' +
 
         paramsTableHtml +
+        testInterpretationHtml +
         remarksHtml +
         reportedByHtml +
 
@@ -1336,9 +1909,13 @@
         var borderC = isAbn ? '#fecaca' : '#bbf7d0';
         var textC = isAbn ? '#b91c1c' : '#15803d';
         var icon = isAbn ? '⚠️' : '✓';
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:' + bgC + ';border:1px solid ' + borderC + ';border-radius:8px;font-size:11.5px;color:' + textC + '">' +
-          '  <span style="font-weight:700">' + icon + ' ' + esc(t.name) + '</span>' +
-          '  <span style="font-weight:600;font-size:11px">' + esc(t.statusLabel) + (t.date ? ' · ' + esc(t.date) : '') + '</span>' +
+        var specNote = getTestSpecificClinicalNote(t.name, t.code, t.category, t.status, t.abnormalParams, t);
+        return '<div style="display:flex;flex-direction:column;gap:2px;padding:6px 10px;background:' + bgC + ';border:1px solid ' + borderC + ';border-radius:8px;font-size:11.5px;color:' + textC + '">' +
+          '  <div style="display:flex;align-items:center;justify-content:space-between">' +
+          '    <span style="font-weight:700">' + icon + ' ' + esc(t.name) + '</span>' +
+          '    <span style="font-weight:600;font-size:11px">' + esc(t.statusLabel) + (t.date ? ' · ' + esc(t.date) : '') + '</span>' +
+          '  </div>' +
+          '  <div style="font-size:10.5px;color:#64748b;line-height:1.3">' + esc(specNote.compact) + '</div>' +
           '</div>';
       }).join('');
     }
@@ -1499,20 +2076,9 @@
          '<text x="75" y="' + (yPrev > 55 ? yPrev - 9 : yPrev + 17) + '" text-anchor="middle" font-size="11" font-weight="700" fill="#475569">' + esc(c.prevVal) + '</text>') :
         '';
 
-      var clinicalUrduNote = '';
-      if (isCrit) {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11.5px;color:#991b1b">' +
-          '<strong>⚠️ Critical Alert:</strong> Value alarming threshold par chali gayi hai. Fori doctor consultation aur repeat lab order zaroori hai.</div>';
-      } else if (isImp) {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11.5px;color:#166534">' +
-          '<strong>✓ Positive Effect:</strong> Pehle test ke muqablay mein behtar ho raha hai aur normal reference limits ki taraf recovery show kar raha hai.</div>';
-      } else if (isDet) {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;font-size:11.5px;color:#92400e">' +
-          '<strong>⚠️ Adverse Effect:</strong> Pichlay test se value kharab (elevated) hui hai. Safe physiological limits se bahar strain hai.</div>';
-      } else {
-        clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:11.5px;color:#475569">' +
-          '<strong>⚖️ Stable:</strong> Pehle test ke muqablay mein baseline maintain hai, koi sudden decline note nahi hua.</div>';
-      }
+      var interp = getBiomarkerClinicalInterpretation(c.paramName, c.testName, c.curVal, c.prevVal, c.status, isCrit, c.isOutside);
+      var clinicalUrduNote = '<div style="margin-top:10px;padding:8px 10px;background:' + interp.bg + ';border:1px solid ' + interp.border + ';border-radius:8px;font-size:11.5px;color:' + interp.color + '">' +
+        '<strong>' + interp.icon + ' ' + esc(interp.label) + ':</strong> ' + esc(interp.note) + '</div>';
 
       return '<div class="vitals-card" style="padding:16px 18px;border:1.5px solid #edf2f7;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,0.03);display:flex;flex-direction:column;justify-content:space-between">' +
         '  <div>' +
@@ -2362,6 +2928,8 @@
             '</div>';
         }
 
+        var specNote = getTestSpecificClinicalNote(t.name, t.code, t.category, t.status, t.flags, t);
+
         return '<div class="pd-anatomy-test-card" data-pd-test-idx="' + idx + '" style="padding:12px 14px;background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:8px;cursor:pointer;transition:all 0.15s ease">' +
           '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
           '  <div style="display:flex;align-items:center;gap:8px">' +
@@ -2377,6 +2945,7 @@
           '  </div>' +
           '</div>' +
           flagsHtml +
+          '<div style="margin-top:6px;font-size:11px;color:#64748b;line-height:1.4"><strong>📝 Note:</strong> ' + esc(specNote.compact) + '</div>' +
           '</div>';
       }).join('');
     } else {
@@ -2651,15 +3220,21 @@
         }
 
         // Flag callout or status note
+        var specNote = getTestSpecificClinicalNote(t.name, t.code, t.category, t.status, t.abnormalParams, t);
         var statusNoteHtml = '';
         if (t.status === 'abnormal' && t.abnormalParams && t.abnormalParams.length) {
           statusNoteHtml = '<div style="margin-top:10px;padding:8px 12px;background:#fff1f2;border:1px solid #fecdd3;border-radius:8px;font-size:11.5px;color:#9f1239;line-height:1.4">' +
             '<strong>⚠️ Out of Range:</strong> ' + esc(t.abnormalParams.slice(0, 2).join(' • ')) +
             (t.abnormalParams.length > 2 ? ' <span style="font-weight:600">(+' + (t.abnormalParams.length - 2) + ' more)</span>' : '') +
+            '<div style="margin-top:4px;font-size:11px;color:#be123c;line-height:1.4"><strong>📝 Clinical Note:</strong> ' + esc(specNote.detail) + '</div>' +
             '</div>';
         } else if (t.status === 'pending') {
           statusNoteHtml = '<div style="margin-top:10px;padding:8px 12px;background:#fffbeb;border:1px solid #fef3c7;border-radius:8px;font-size:11.5px;color:#92400e">' +
-            '⏳ Specimen collected and undergoing diagnostic laboratory processing.' +
+            '⏳ <strong>Specimen Processing:</strong> ' + esc(specNote.detail) +
+            '</div>';
+        } else {
+          statusNoteHtml = '<div style="margin-top:10px;padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11.5px;color:#166534;line-height:1.4">' +
+            '<strong>✓ Clinical Interpretation:</strong> ' + esc(specNote.detail) +
             '</div>';
         }
 
