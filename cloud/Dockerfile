@@ -4,7 +4,7 @@ FROM node:20-alpine
 WORKDIR /app
 
 # git: one WhatsApp dependency (libsignal) is fetched from GitHub
-RUN apk add --no-cache git
+RUN apk add --no-cache git chromium font-noto font-noto-arabic ttf-freefont
 
 # Install dependencies first (better layer caching)
 COPY package.json package-lock.json ./
@@ -13,7 +13,8 @@ RUN npm ci --omit=dev && npm cache clean --force
 # App code (server, adapters, chat, seed, releases)
 COPY . ./
 
-ENV NODE_ENV=production \
+ENV REPORT_CHROMIUM_PATH=/usr/bin/chromium-browser \
+    NODE_ENV=production \
     PORT=4000 \
     BIND_HOST=0.0.0.0 \
     DB_ADAPTER=pg

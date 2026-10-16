@@ -545,7 +545,7 @@
   }
   /* the PDF engine is loaded on demand: make sure it is there before building the report PDF that email / Slack send */
   function pdfUrlFor(invoiceId) {
-    return Promise.resolve(App.ensureJsPDF ? App.ensureJsPDF() : true).then(function () { return getReportPdfUrl(invoiceId, true); });
+    return getReportPdfUrl(invoiceId, true);
   }
   function keyOfUrl(u) { var m = /\/r\/([A-Za-z0-9_-]+)/.exec(String(u || '')); return m ? m[1] : ''; }
   function slackNames(invoiceId) {
@@ -3045,6 +3045,59 @@
     ]).then(function (r) { return { hdr: r[0] || null, ftr: r[1] || null }; }, function () { return {}; });
   }
 
+  // The same reportHtml() drives Settings > Lab Profile and every PDF output.
+  function reportPdfDocument(html, settings) {
+    var fonts = { inter: 'Inter', jakarta: 'Plus Jakarta Sans', roboto: 'Roboto', poppins: 'Poppins',
+      opensans: 'Open Sans', lato: 'Lato', montserrat: 'Montserrat' };
+    var font = fonts[(settings || {}).font || 'inter'] || fonts.inter;
+    return '<style>html,body{margin:0;padding:0;background:#fff}body{font-family:"' + font + '",Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}*{box-sizing:border-box}</style>' + html;
+  }
+  function reportPdfHtml(invoiceId, qrDataUrl, opts) {
+    var d = reportData(invoiceId, opts);
+    if (!d) throw new Error('No ready results for PDF');
+    var html = reportHtml(d, opts);
+    html = qrDataUrl && d.s.showQr !== false
+      ? html.replace(/data-qr="1"/g, 'data-qr="1" src="' + qrDataUrl + '"') : stripQrImg(html);
+    return reportPdfDocument(html, d.s);
+  }
+  function renderProfileReportPdf(invoiceId, qrDataUrl, opts) {
+    var html;
+    try { html = reportPdfHtml(invoiceId, qrDataUrl, opts); }
+    catch (error) { return Promise.reject(error); }
+    return renderProfileHtml(html);
+  }
+  function renderProfileHtml(html) {
+    var base = String(window.LABPOS_API || '').replace(/\/+$/, '');
+    return fetch(base + '/api/report-pdf/render', {
+      method: 'POST', headers: DB.authHeaders ? DB.authHeaders({ 'Content-Type': 'application/json' }) : { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ html: html })
+    }).then(function (response) {
+      return response.json().then(function (result) {
+        if (response.ok === false || !result || !/^data:application\/pdf;base64,JVBER/.test(result.dataUri || '')) {
+          throw new Error((result && result.error) || 'The Lab Profile PDF renderer is unavailable. Update the app/server and retry.');
+        }
+        return result;
+      });
+    });
+  }
+  function reportPdfBlob(pdf) {
+    try {
+      var arr = pdf.dataUri.split(','), mime = (arr[0].match(/:(.*?);/) || [])[1] || 'application/pdf',
+          bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+      while (n--) {
+        u8arr[n] = bstr.charCodeAt(n);
+      }
+      var blob = new Blob([u8arr], { type: mime });
+      return { blobUrl: URL.createObjectURL(blob), dataUri: pdf.dataUri };
+    } catch (e) {
+      return { blobUrl: pdf.dataUri, dataUri: pdf.dataUri };
+    }
+  }
+  App.renderLabProfilePdf = function (html, settings) {
+    return renderProfileHtml(reportPdfDocument(html, settings)).then(reportPdfBlob);
+  };
+  App.reportPdfHtml = reportPdfHtml;
+
   // Build the report PDF, upload it to the cloud API, return the public URL (or null).
   function getReportPdfUrl(invoiceId, force, opts) {
     var inv = invOf(invoiceId);
@@ -3053,17 +3106,13 @@
     // (force = the Android app, which opens the PDF viewer instead of printing)
     if (inv.status !== 'paid' && !force) return Promise.resolve(null);
     var key = inv.reportPdfKey || ('rpt-' + invoiceId + '-' + rand6());
-    /* the PDF carries its own QR (this same link) in the header, like the printout; on the desktop app the cloud address is only known after the upload, so there the QR is left out of the PDF */
+    /* Desktop data uses localhost; patient QR links use the configured public cloud. */
     var selfQr = null;
     try {
-      var qb = String(window.LABPOS_API || '').replace(/\/+$/, '');
-      if (qb && !(window.labposDesktop && window.labposDesktop.isDesktop)) selfQr = qrDataUrlFor(qb + '/r/' + key);
+      var qb = String(window.LABPOS_REPORT_API || (!(window.labposDesktop && window.labposDesktop.isDesktop) ? window.LABPOS_API : '') || '').replace(/\/+$/, '');
+      if (qb) selfQr = qrDataUrlFor(qb + '/r/' + key);
     } catch (e) { selfQr = null; }
-    return customPdfParts(invoiceId, selfQr, opts).catch(function () { return {}; }).then(function (pre) {
-    var pdf = null;
-    try { pdf = buildReportPdf(invoiceId, selfQr, pre, opts); }
-    catch (e) { App.toast('Could not build complete report PDF: ' + e.message, 'err'); return null; }
-    if (!pdf || !pdf.dataUri) return null;
+    return renderProfileReportPdf(invoiceId, selfQr, opts).then(function (pdf) {
     var rawUri = String(pdf.dataUri);
     var b64 = rawUri.slice(rawUri.indexOf(',') + 1); // strip data:...;base64, prefix (jsPDF adds filename=)
     var base = 'https://labpos-api.150.230.52.29.sslip.io';
@@ -3088,7 +3137,7 @@
         return null;
       })
       .catch(function () { return null; });
-    });
+    }).catch(function (error) { App.toast('Could not render Lab Profile PDF: ' + error.message, 'err'); return null; });
   }
   App.getReportPdfUrl = getReportPdfUrl;
   App.barcodeHtml = barcodeHtml;   /* the invoice print draws the same barcodes */
@@ -3134,17 +3183,14 @@
     /* Android app: no popups/printing in a WebView -> open the report in the phone browser (cloud viewer: print, share, download) */
     if (App.isNative && App.isNative()) {
       try {
-        if (await App.ensureJsPDF()) {
-          var nurl = await getReportPdfUrl(invoiceId, true, opts);
-          if (nurl) { location.href = nurl; return; }
-        }
+        var nurl = await getReportPdfUrl(invoiceId, true, opts);
+        if (nurl) { location.href = nurl; return; }
       } catch (e) {}
       App.toast('Could not open the report. Check your internet connection.', 'err');
       return;
     }
     try {
-      var jsOk = await App.ensureJsPDF();
-      if (jsOk) {
+      {
         var url = await getReportPdfUrl(invoiceId, false, opts);
         /* no live report link (invoice not fully paid, or the upload failed): print no QR rather than a link to the staff login page, which a patient's phone cannot open */
         qrImg = url ? qrDataUrlFor(url) : null;
@@ -3155,9 +3201,10 @@
     else html = stripQrImg(html);
     var pdfBlobUrl = null;
     try {
-      var pdfRes = await buildReportPdfBlobUrl(invoiceId, opts);
+      var pdfRes = await buildReportPdfBlobUrl(invoiceId, opts, url || null);
       if (pdfRes && pdfRes.blobUrl) pdfBlobUrl = pdfRes.blobUrl;
     } catch (e) {}
+    if (!pdfBlobUrl) { App.toast('Could not generate the Lab Profile PDF. Please retry.', 'err'); return; }
     App.print('Lab Report — ' + d.inv.no, html, { noHeader: true, pdfBlobUrl: pdfBlobUrl });
   }
 
@@ -3238,8 +3285,7 @@
     /* full new report + comparison on one page */
     var qrImg = null;
     try {
-      var jsOk = await App.ensureJsPDF();
-      if (jsOk) {
+      {
         var url = await getReportPdfUrl(newInvId);
         qrImg = url ? qrDataUrlFor(url) : null;
       }
@@ -3305,32 +3351,15 @@
       '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
   }
 
-  function buildReportPdfBlobUrl(invoiceId, opts) {
-    return Promise.resolve(App.ensureJsPDF ? App.ensureJsPDF() : true).then(function () {
+  function buildReportPdfBlobUrl(invoiceId, opts, publicUrl) {
+    return Promise.resolve().then(function () {
       var d = reportData(invoiceId, opts);
       if (!d) return null;
-      var inv = d.inv || {};
-      var key = inv.reportPdfKey || ('rpt-' + invoiceId);
-      var selfQr = null;
-      try {
-        var qb = String(window.LABPOS_API || '').replace(/\/+$/, '');
-        if (qb && !(window.labposDesktop && window.labposDesktop.isDesktop)) selfQr = qrDataUrlFor(qb + '/r/' + key);
-      } catch (e) { selfQr = null; }
-      return customPdfParts(invoiceId, selfQr, opts).catch(function () { return {}; }).then(function (pre) {
-        var pdf = null;
-        try { pdf = buildReportPdf(invoiceId, selfQr, pre, opts); } catch (e) { console.error(e); }
-        if (!pdf || !pdf.dataUri) return null;
-        try {
-          var arr = pdf.dataUri.split(','), mime = (arr[0].match(/:(.*?);/) || [])[1] || 'application/pdf',
-              bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-          while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-          }
-          var blob = new Blob([u8arr], { type: mime });
-          return { blobUrl: URL.createObjectURL(blob), dataUri: pdf.dataUri };
-        } catch (e) {
-          return { blobUrl: pdf.dataUri, dataUri: pdf.dataUri };
-        }
+      return (publicUrl !== undefined ? Promise.resolve(publicUrl) : getReportPdfUrl(invoiceId, false, opts)).then(function (publicUrl) {
+      var selfQr = publicUrl ? qrDataUrlFor(publicUrl) : null;
+      return renderProfileReportPdf(invoiceId, selfQr, opts).then(function (pdf) {
+        return reportPdfBlob(pdf);
+      });
       });
     });
   }
@@ -3391,7 +3420,7 @@
         '</div>' +
       '</div>';
 
-    var htmlContent = previewQr(reportHtml(d), invoiceId);
+    var htmlContent = '<div style="color:#fff;text-align:center;padding:32px" role="alert">PDF could not be generated. Please retry using Download PDF or reopen this report.</div>';
     var close = App.modal(modalTitle,
       topToolbarHtml +
       '<div class="rv-box" style="position:relative;background:#525659;border-radius:12px;overflow:hidden">' +
@@ -3557,7 +3586,7 @@
       });
   }
 
-  /* ---------- report PDF builder (jsPDF) ---------- */
+  /* ---------- legacy vector helper (compatibility regression fixtures only) ---------- */
 
   // Returns { dataUri } or null (error toasted).
   // qrDataUrl (optional): QR image data URL embedded in the header.
@@ -3572,9 +3601,10 @@
     var W = 210, M = 12, CW = W - 2 * M;
     var y = M;
 
-    var inHdr = false, repeatPatientGrid = true, letterheadBottom = M;
+    var inHdr = false, repeatPatientGrid = true, letterheadBottom = M, pageFrameTop = null;
     var PH = 297, FM = M;                                   // A4 height, bottom margin
     var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
     var fVerLines = doc.splitTextToSize(fVerNote, CW);
     var fSigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title) && g.active !== false; });
     var fSw = fSigs.length ? CW / fSigs.length : CW;
@@ -3583,8 +3613,13 @@
     var fSigBlockH = 0;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2);
     var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2);
+    var fSigQualLines = fSigs.map(function (g) { return g.qual ? doc.splitTextToSize(g.qual, fSw - 3) : []; });
+    var fSigTitleLines = fSigs.map(function (g) {
+      return g.title ? doc.splitTextToSize(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fSw - 3) : [];
+    });
     fSigs.forEach(function (g, k) {
-      var h = fSigImgH + fSigNameLines[k].length * 3.6 + (g.qual ? 3.3 : 0) + (g.title ? 3.3 : 0);
+      var h = (fSigImgH ? fSigImgH + 1 : 0) + fSigNameLines[k].length * 3.6 + fSigQualLines[k].length * 3.3 + fSigTitleLines[k].length * 3.3;
       if (h > fSigBlockH) fSigBlockH = h;
     });
     var fAddrParts = [];
@@ -3606,9 +3641,13 @@
     var fTextH = fTextLines.length ? fTextLines.length * 4.2 + 3 : 0;
     var fH = (pre && pre.ftr)
       ? (CW * pre.ftr.ratio + 2)
-      : (fTextH + fVerLines.length * 4.4 + 3 + 3 + fSigBlockH + 3 + fNoteH + 3 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + 5);
+      : (fTextH + fVerLines.length * 4.4 + 3 + 6.2 + fSigBlockH + 3 + fNoteH + 3 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + 5);
 
     function drawFooter() {
+      if (pageFrameTop != null && y > pageFrameTop) {
+        doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.15);
+        doc.rect(M, pageFrameTop, CW, y + 1 - pageFrameTop);
+      }
       var fy = PH - FM - fH;
       if (pre && pre.ftr) {
         addImg(pre.ftr.url, M, fy, CW, fH - 2);
@@ -3623,7 +3662,7 @@
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
       txt(fVerLines, W / 2, curY + 3, { align: 'center' });
       curY += fVerLines.length * 4.4 + 3;
-      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, curY, W - M, curY); curY += 2.8;
+      doc.setDrawColor(230, 233, 238); doc.setLineWidth(0.15); doc.line(M, curY, W - M, curY); curY += 6;
       fSigs.forEach(function (g, k) {
         var fCx = M + fSw * (k + 0.5), fSy = curY;
         var sigImgData = (s.enableSignatures !== false) ? (g.sigImg || g.signature) : null;
@@ -3637,8 +3676,8 @@
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); doc.setTextColor(20, 20, 20);
         txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 3.6;
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2); doc.setTextColor(40, 40, 40);
-        if (g.qual) { txt(g.qual, fCx, fSy, { align: 'center' }); fSy += 3.3; }
-        if (g.title) { txt(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fCx, fSy, { align: 'center' }); fSy += 3.3; }
+        if (fSigQualLines[k].length) { txt(fSigQualLines[k], fCx, fSy, { align: 'center' }); fSy += fSigQualLines[k].length * 3.3; }
+        if (fSigTitleLines[k].length) { txt(fSigTitleLines[k], fCx, fSy, { align: 'center' }); fSy += fSigTitleLines[k].length * 3.3; }
       });
       curY += fSigBlockH + 3;
       doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.rect(M, curY, CW, fNoteH);
@@ -3657,13 +3696,14 @@
       if (y + h > maxBodyY) {
         drawFooter();
         doc.addPage();
-        y = M;
+        y = M; pageFrameTop = null;
         // An unusually long patient/location field can span pages. Continue
         // it under the letterhead, without recursively restarting the grid.
         var wasInHdr = inHdr;
         if (wasInHdr) repeatPatientGrid = false;
         inHdr = true;
         drawHeader(wasInHdr || !repeatPatientGrid);
+        if (pageFrameTop == null) pageFrameTop = y;
         inHdr = wasInHdr;
       }
     } /* Normal result pages repeat the letterhead and patient/visit block. */
@@ -3680,6 +3720,20 @@
         doc.addImage(dataUrl, fmt, x, yy, w, h);
         return true;
       } catch (e) { return false; }
+    }
+
+    function drawCode39(bx, by, bw, bh, seed) {
+      var seq = '*' + String(seed || '0000').toUpperCase().replace(/\s+/g, '') + '*';
+      var modules = [];
+      for (var i = 0; i < seq.length; i++) {
+        var pattern = CODE39[seq[i]] || CODE39['-'];
+        for (var j = 0; j < 9; j++) modules.push({ bar: j % 2 === 0, w: pattern[j] === 'w' ? 3 : 1 });
+        if (i < seq.length - 1) modules.push({ bar: false, w: 1 });
+      }
+      var total = modules.reduce(function (n, m) { return n + m.w; }, 20);
+      var unit = bw / total, x = bx + 10 * unit;
+      doc.setFillColor(0, 0, 0);
+      modules.forEach(function (m) { if (m.bar) doc.rect(x, by, m.w * unit, bh, 'F'); x += m.w * unit; });
     }
 
     /* ----- header: logo + lab (left), patient/case nos + QR (right) ----- */
@@ -3713,34 +3767,38 @@
         if (!skipPatient) drawPatientGrid();
         return;
       }
-      // --- left: logo (~18mm) + lab name + subtitle ---
-      if (s.logo) addImg(s.logo, M - 2.5, y - 4, 26, 26);   /* logo and name sit a little higher, level with the barcodes */
-      var htx = M + (s.logo ? 27.5 : 0);
-      doc.setFont('times', 'bold'); doc.setFontSize(25);
-      var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : A; /* the lab-name colour from Lab Profile (default: the accent colour) */
+      // Reference letterhead: logo/name left, stacked visit barcodes beside QR right.
+      var qrSize = 24, barcodeW = 30, rightGap = 4;
+      var barcodeX = W - M - barcodeW - (showQr ? qrSize + rightGap : 0);
+      if (s.logo) addImg(s.logo, M, y, 28, 28);
+      var htx = M + (s.logo ? 35 : 0);
+      var nameW = barcodeX - htx - 6;
+      doc.setFont('times', 'bold'); doc.setFontSize(23);
+      var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : [24, 25, 76];
       doc.setTextColor(NC[0], NC[1], NC[2]);
-      txt(s.labName || 'Optix Medical Sync', htx, y + 8);
+      var labLines = doc.splitTextToSize(s.labName || 'Optix Medical Sync', nameW);
+      txt(labLines, htx, y + 8);
+      var labBottom = 8 + (labLines.length - 1) * 23 * 1.15 / doc.internal.scaleFactor;
       if (showTagline) {
-        doc.setFont('times', 'italic'); doc.setFontSize(13);
-        doc.setTextColor(A[0], A[1], A[2]);
-        txt(s.tagline, htx, y + 15.5);
+        doc.setFont('times', 'italic'); doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        var tagLines = doc.splitTextToSize(s.tagline, nameW);
+        txt(tagLines, htx, y + labBottom + 6);
+        labBottom += 6 + (tagLines.length - 1) * 11 * 1.15 / doc.internal.scaleFactor;
       }
-
-      // --- right: Patient No. / Case # right-aligned with wide letter spacing ---
-      var hnx = W - M - (showQr ? qrS + 15 : 0);
-      doc.setTextColor(20, 20, 20);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-      var vnp = App.visitNos(inv);
-      txt('Inv #:', hnx, y + 5, { align: 'right' });
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt(vnp.labText.replace('INV # ', ''), hnx, y + 10, { align: 'right', charSpace: 0.6 });
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5);
-      txt((/^P\s*#/i.test(String(vnp.caseText || '')) ? vnp.caseText : ('P # ' + vnp.caseText)), hnx, y + 17, { align: 'right', charSpace: 0.6 });
-
-      // --- QR 26mm at far right ---
-      if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
-
-      y += headH + 1.5;
+      var vnp = App.visitNos(inv), idBottom = 0;
+      [ [vnp.labCode, vnp.labText], [vnp.caseCode, /^P\s*#/i.test(String(vnp.caseText || '')) ? vnp.caseText : 'P # ' + vnp.caseText] ].forEach(function (pair) {
+        if (s.showBarcode !== false) {
+          drawCode39(barcodeX, y + idBottom, barcodeW, 4.5, pair[0]);
+          idBottom += 6;
+        }
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(0, 0, 0);
+        var lines = doc.splitTextToSize(String(pair[1] || ''), barcodeW);
+        txt(lines, barcodeX, y + idBottom + 2);
+        idBottom += lines.length * 2.7 + 2;
+      });
+      if (showQr) addImg(qrDataUrl, W - M - qrSize, y, qrSize, qrSize);
+      y += Math.max(30, labBottom + 3, idBottom, showQr ? qrSize : 0) + 5;
 
       // --- plain header text from Lab Profile ("Header text"), centred under the header ---
       if (String(s.headerText || '').trim()) {
@@ -3760,7 +3818,7 @@
       }
 
       // --- navy divider line; y now sits below the header ---
-      doc.setDrawColor(A[0], A[1], A[2]); doc.setLineWidth(0.6);
+      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3);
       doc.line(M, y, W - M, y);
       y += 3;
 
@@ -3768,12 +3826,13 @@
       if (!skipPatient) drawPatientGrid();
     }
     function drawPatientGrid() {
+      pageFrameTop = Math.max(M, y - 1);
       var hr = reportHeaderRows(d), LH = 4.6, ROW_PAD = 1.4, COLON_W = 3;
-      /* Two columns like the HTML block: label | ":" | value. Left starts at the
-         margin with ":" at 20% of the width; right starts at 50% with ":" at 70%. */
+      /* Two columns like the HTML block: label | ":" | value. Labels are inset from the frame; colons sit at 25% and 73%
+         of the content width, matching the supplied two-column reference. */
       var cols = [
-        { rows: hr.identity, x: M, colon: M + CW * 0.2, right: M + CW * 0.5 - 5 },
-        { rows: hr.visit, x: M + CW * 0.5, colon: M + CW * 0.69, right: W - M }
+        { rows: hr.identity, x: M + 2, colon: M + CW * 0.25, right: M + CW * 0.5 - 5 },
+        { rows: hr.visit, x: M + CW * 0.5 + 2, colon: M + CW * 0.73, right: W - M }
       ];
       doc.setFontSize(9);
       cols.forEach(function (c) {
@@ -3951,24 +4010,8 @@
         return 0;
       }
 
-      // ---- pseudo-barcode: thin vertical rects derived from the case # chars ----
       function drawBarcode(bx, byy, bw, bh, seed) {
-        var str = String(seed == null || seed === '' ? '0000' : seed);
-        var bars = [], total = 0, i, c, w, g;
-        for (i = 0; i < str.length; i++) {
-          c = str.charCodeAt(i);
-          w = 0.35 + (((c * 7 + i * 13) % 5) * 0.16);   // 0.35 - 0.99
-          g = 0.30 + (((c * 3 + i * 11) % 3) * 0.20);   // 0.30 - 0.70
-          bars.push({ w: w, g: g });
-          total += w + g;
-        }
-        var scale = Math.min(1, (bw - 4) / total);
-        var x = bx + bw / 2 - (total * scale) / 2;
-        doc.setFillColor(INK[0], INK[1], INK[2]);
-        for (i = 0; i < bars.length; i++) {
-          doc.rect(x, byy, bars[i].w * scale, bh, 'F');
-          x += (bars[i].w + bars[i].g) * scale;
-        }
+        drawCode39(bx, byy, bw, bh, seed);
       }
 
       // ---- sub-reference lines for "(See Below)" style params ----
@@ -3995,8 +4038,8 @@
         txt(previous ? 'PREVIOUS' : 'RESULT', cx, byy + 3.9, { align: 'center' });
         var valOnly = String(patText || '').replace(/^P\s*#\s*/i, '').trim();
         if (showBc) {
-          drawBarcode(bx, yy + 1, RBW, 6.5, patCode);
-          yy += 8.2;
+          drawBarcode(bx, yy + 1, RBW, 3.8, patCode);
+          yy += 5.5;
           if (valOnly) {
             doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
             doc.setTextColor(0, 0, 0);
@@ -4018,7 +4061,7 @@
           txt(ddmm, cx, yy + 2.6, { align: 'center' });
         }
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
-        doc.splitTextToSize(String(invoiceNo || ''), RBW - 3).forEach(function (line, i) {
+        if (resultCols.length > 1) doc.splitTextToSize(String(invoiceNo || ''), RBW - 3).forEach(function (line, i) {
           txt(line, cx, yy + 6 + i * 3.2, { align: 'center' });
         });
       }
@@ -4042,9 +4085,9 @@
           var titleAvailH = BOX_H - headH;
           var titleStartY = boxTop + Math.max(0, (titleAvailH - curTitleLines.length * 5.2) / 2);
           doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-          doc.setTextColor(11, 23, 64);
+          doc.setTextColor(0, 0, 0);
           curTitleLines.forEach(function (tl, li) {
-            txt(tl, M, titleStartY + 4.6 + li * 5.2);
+            txt(tl, M + 2, titleStartY + 4.6 + li * 5.2);
           });
         }
 
@@ -4072,7 +4115,7 @@
         var nameL = doc.splitTextToSize(p.name || '', Math.max(10, nameW));
         doc.setFont('helvetica', 'normal');
         var refL  = doc.splitTextToSize(refStr, Math.max(10, refW));
-        var unitL = doc.splitTextToSize(p.unit || '—', Math.max(10, unitW));
+        var unitL = doc.splitTextToSize(p.unit || '', Math.max(10, unitW));
         doc.setFont('helvetica', 'bold');
         var valueLines = resultCols.map(function (c) {
           return doc.splitTextToSize(String(c.values[p.name] == null ? '' : c.values[p.name]), RBW - 7);
@@ -4107,7 +4150,7 @@
         for (var li = 0; li < row.count; li++) {
           tableNeed(LINE + 2.5);
           doc.setTextColor(20, 20, 20); doc.setFontSize(9);
-          doc.setFont('helvetica', 'bold');
+          doc.setFont('helvetica', 'normal');
           if (row.name[li]) txt(row.name[li], CX_TEST, y + LINE);
           doc.setFont('helvetica', 'normal');
           if (row.ref[li]) txt(row.ref[li], CX_REF, y + LINE);
@@ -4118,14 +4161,18 @@
             /* the value sits in the middle of the RESULT column, under the RESULT box (the arrow, when there is one, goes right after it) */
             var cxv = resultStart + ci * RBW + RBW / 2;
             var color = dir === 'high' ? RED : (dir === 'low' ? BLUE : INK);
-            doc.setFont('helvetica', ci === 0 ? 'bold' : 'normal');
+            doc.setFont('helvetica', ci === 0 && dir ? 'bold' : 'normal');
             doc.setTextColor(color[0], color[1], color[2]);
             var tw = doc.getTextWidth(String(value)), arrowW = dir ? 3.5 : 0, vx = cxv - (tw + arrowW) / 2;
             txt(value, vx, y + LINE);
             if (dir && li === 0) {
               doc.setFillColor(color[0], color[1], color[2]);
               var by = y + LINE - 1.1, sign = dir === 'high' ? 1 : -1, ax = vx + tw + 0.9;
-              doc.triangle(ax, by + sign * 1.2, ax + 2.6, by + sign * 1.2, ax + 1.3, by - sign * 1.3, 'F');
+              doc.setDrawColor(color[0], color[1], color[2]); doc.setLineWidth(0.45);
+              var tipY = by - sign * 1.3;
+              doc.line(ax + 1.3, by + sign * 1.3, ax + 1.3, tipY);
+              doc.line(ax, tipY + sign * 1.2, ax + 1.3, tipY);
+              doc.line(ax + 2.6, tipY + sign * 1.2, ax + 1.3, tipY);
             }
           });
           y += LINE;
@@ -4170,6 +4217,7 @@
         var params = Array.isArray(test.params) ? test.params : [];
         var vals = (r.res && r.res.values) || {};
         var tid = (r.item && (r.item.testId || r.item.id)) || '';
+        RBW = (d.prevByTest && d.prevByTest[tid] && d.prevByTest[tid].length) ? 30 : CW * 0.215;
         resultCols = [{ values: vals, invoiceNo: inv.no || inv.id,
           caseCode: pvn && pvn.caseCode, caseText: pvn && pvn.caseText,
           reportedAt: (r.res && r.res.reportedAt) || d.maxReported || inv.createdAt }]
@@ -4200,13 +4248,13 @@
           CX_REF = M + 46;
           CX_UNIT = M + 90;
         } else {
-          CX_REF = M + 58;
-          CX_UNIT = M + 112;
+          CX_REF = M + CW * 0.325;
+          CX_UNIT = M + CW * 0.57;
         }
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
         var idLines = 1;
         resultCols.forEach(function (c) { idLines = Math.max(idLines, doc.splitTextToSize(c.boxInvoiceNo, RBW - 3).length); });
-        BOX_H = (showBc ? 23 : 16) + idLines * 3.2;
+        BOX_H = resultCols.length > 1 ? (showBc ? 23 : 16) + idLines * 3.2 : (showBc ? 18 : 14);
 
         // Section title in Chughtai style: "{NAME} ({CODE}) REPORT"
         var tTitle = testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : '');
@@ -4216,7 +4264,9 @@
         var titleLines = doc.splitTextToSize(tTitle, Math.max(20, leftW - 4));
         var headH = 7.5;
         var neededBoxH = Math.max(BOX_H, titleLines.length * 5.2 + headH + 2);
-        BOX_H = Math.min(30, neededBoxH);
+        // Long titles belong in the flowing body, never over the table headings.
+        var flowTitle = neededBoxH > 30;
+        BOX_H = flowTitle ? BOX_H : neededBoxH;
 
         // Include parameters populated only in a selected previous report.
         var shown = params.filter(function (p) {
@@ -4235,7 +4285,7 @@
           noteLines = doc.splitTextToSize(String(tnote), CW - 6);
         }
 
-        need(BOX_H + 14);
+        need(BOX_H + LINE + 2.5);
         resultCols.forEach(function (c) {
           c.identifierNotes.forEach(function (note) {
             doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
@@ -4243,7 +4293,8 @@
           });
         });
 
-        drawSectionHeader(titleLines);
+        if (flowTitle) bodyLines(titleLines, 'bold', 11);
+        drawSectionHeader(flowTitle ? null : titleLines);
         rows.forEach(tableRow);
 
         drawReportGraph(test, vals);
@@ -4313,7 +4364,7 @@
             bodyLines(remLinesOnly, 'normal', 8.5);
           }
         }
-        y += 4;
+        y += 2.5;
       });
     })();
 

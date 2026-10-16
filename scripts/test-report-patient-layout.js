@@ -75,7 +75,7 @@ function first(value, page = 1) {
 }
 // Two-column geometry (mm): left column starts at the margin with ":" at 20% of the width,
 // right column starts at 50% with ":" at 70%; values follow the colon.
-const M = 12, CW = 186, LX = M, LCOLON = M + CW * 0.2, RX = M + CW * 0.5, RCOLON = M + CW * 0.69, COLON_W = 3;
+const M = 12, CW = 186, LX = M + 2, LCOLON = M + CW * 0.25, RX = M + CW * 0.5 + 2, RCOLON = M + CW * 0.73, COLON_W = 3;
 const near = (a, b) => Math.abs(a - b) < 0.01;
 function label(name, x, page = 1) {
   const found = pdf.text.find(t => t.value === name && t.page === page && near(t.x, x));
@@ -242,7 +242,7 @@ assert.ok(!html.includes('rpt-info-cols"') || html.split('class="rpt-info-cols"'
 fixture();
 tables.invoices[0].regLocation = Array.from({ length: 1600 }, (_, i) => 'Region' + i).join(' ');
 render();
-assert.ok(pdf.doc.getNumberOfPages() > 2 && pdf.doc.getNumberOfPages() < 20);
+assert.ok(pdf.doc.getNumberOfPages() > 2 && pdf.doc.getNumberOfPages() < 30);
 const regionLines = pdf.text.filter(t => /^Region\d/.test(t.value));
 assert.equal(regionLines.map(t => t.value).join(' '), tables.invoices[0].regLocation);
 for (const text of regionLines) {

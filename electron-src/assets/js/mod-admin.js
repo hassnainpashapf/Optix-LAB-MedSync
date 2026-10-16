@@ -2449,12 +2449,30 @@
           '<div style="background:#fff;color:#111;max-width:794px;width:100%;margin:0 auto;padding:46px 50px;box-shadow:0 8px 34px rgba(0,0,0,.45);font-family:' + ff + ';font-size:14px;line-height:1.55">' +
           html +
           '</div>' +
-          '<div style="text-align:center;margin-top:20px"><button class="btn btn-primary" id="spPrevPrint">🖨 Print This Preview</button></div>' +
+          '<div style="text-align:center;margin-top:20px"><button class="btn btn-primary" id="spPrevPrint">🖨 Print This Preview</button> <button class="btn btn-ghost" id="spPrevPdf">Download PDF</button></div>' +
           '</div>';
         App.modal('Report Preview — Full Page', fullHtml, { wide: true, onOpen: function (ov) {
+          var pdfPromise = null;
+          function currentPreviewPdf() {
+            if (!pdfPromise) pdfPromise = App.renderLabProfilePdf(html, ps).catch(function (error) { pdfPromise = null; throw error; });
+            return pdfPromise;
+          }
+          function pdfAction(button, action) {
+            button.disabled = true;
+            currentPreviewPdf().then(action).catch(function (error) {
+              App.toast('Could not render Lab Profile PDF: ' + error.message, 'err');
+            }).then(function () { button.disabled = false; });
+          }
           var pb = ov.querySelector('#spPrevPrint');
           if (pb) pb.addEventListener('click', function () {
-            App.print('Lab Report Preview', html, { noHeader: true });
+            pdfAction(pb, function (pdf) { App.print('Lab Report Preview', html, { noHeader: true, pdfBlobUrl: pdf.blobUrl }); });
+          });
+          var db = ov.querySelector('#spPrevPdf');
+          if (db) db.addEventListener('click', function () {
+            pdfAction(db, function (pdf) {
+              var link = document.createElement('a'); link.href = pdf.blobUrl; link.download = 'Lab-Profile-Preview.pdf';
+              document.body.appendChild(link); link.click(); link.remove();
+            });
           });
         }});
       });

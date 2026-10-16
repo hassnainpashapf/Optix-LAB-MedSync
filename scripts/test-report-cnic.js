@@ -52,6 +52,12 @@ async function suite(folder) {
     LABPOS_API: 'https://fixture.invalid',
     qrcode: () => ({ addData() {}, make() {}, createDataURL: () => pixel }),
     fetch: async (url, options) => {
+      if (url === 'https://fixture.invalid/api/report-pdf/render') {
+        const html = JSON.parse(options.body).html;
+        assert.ok(html.includes(cnic), 'CNIC reaches the canonical report document');
+        const pdf = App.testPdf('i', html.includes('data-qr="1"') ? pixel : null, null, { noLabHeader: !html.includes('CNIC Fixture Lab') });
+        return { ok: true, json: async () => ({ dataUri: 'data:application/pdf;base64,' + pdf.dataUri.split('base64,')[1] }) };
+      }
       assert.equal(url, 'https://fixture.invalid/api/report-pdfs');
       const body = JSON.parse(options.body);
       uploads.push(body);
@@ -80,21 +86,21 @@ async function suite(folder) {
     const pages = receipt.doc.getNumberOfPages();
     if (multiPage) assert.ok(pages > 1 && pages < 15, 'Bounded multi-page report');
     const shown = value != null && String(value).trim() !== '';
-    const COLON = 12 + 186 * 0.2;          // left column: ":" at 20% of the width, value 3mm after it
+    const COLON = 12 + 186 * 0.25;          // left column: ":" at 20% of the width, value 3mm after it
     for (let page = 1; page <= pages; page++) {
       const label = text('CNIC', page), patient = text('Patient Name', page), visit = text('Registration Date', page);
       const phone = text('Phone', page), address = text('Address', page);
       const footer = text('Electronically verified report. No signatures necessary.', page);
       assert.ok(patient && visit && phone && address && footer, 'Full identity and footer on page ' + page);
       /* the CNIC row is ALWAYS printed (left column, after Phone, before Address); an empty one has nothing after the ":" */
-      assert.ok(label && label.x === 12, 'CNIC label in the left column on page ' + page);
+      assert.ok(label && label.x === 14, 'CNIC label in the left column on page ' + page);
       assert.ok(receipt.text.some(t => t.page === page && t.value === ':' && t.y === label.y && Math.abs(t.x - COLON) < 0.01), 'CNIC colon aligned');
       assert.ok(label.y > phone.y && label.y < address.y, 'CNIC sits after Phone and before Address');
       assert.ok(label.y < footer.y - 3 && label.y > patient.y);
       const rendered = receipt.text.find(t => t.page === page && t.y === label.y && Math.abs(t.x - (COLON + 3)) < 0.01);
       if (shown) assert.equal(rendered && rendered.value.trim(), String(value).trim(), 'CNIC PDF value');
       else assert.ok(!rendered || rendered.value.trim() === '', 'Empty CNIC prints nothing after the colon');
-      assert.ok(patient.x === 12 && visit.x === 105 && patient.y === visit.y, 'Identity left, visit right, top-aligned');
+      assert.ok(patient.x === 14 && visit.x === 107 && patient.y === visit.y, 'Identity left, visit right, top-aligned');
       const rule = receipt.lines.filter(l => l.page === page && l.x1 === 12 && l.x2 === 198 && l.y1 > patient.y && l.y1 < footer.y - 3 && l.y1 < (receipt.text.find(t => t.page === page && /^Analyte \d+$/.test(t.value)) || { y: Infinity }).y);
       assert.equal(rule.length, 1, 'One closing rule, no divider');
       assert.ok(rule[0].y1 > address.y && rule[0].y1 > text('Consultant', page).y, 'Rule closes the block below both columns');

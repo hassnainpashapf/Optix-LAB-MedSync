@@ -25,3 +25,13 @@ Git-first: push to `main` on GitHub (`hassnainpashapf/Optix-LAB-MedSync`) and Cl
 - `optix-lab-medsync` → https://optix-lab-medsync.pages.dev (main app at `/`, superadmin console at `/superadmin/`)
 
 Never deploy with direct upload; the old `labpos-auto-deploy` watcher is retired.
+
+## Report PDF rendering
+
+Lab reports and Settings → Lab Profile → Full Page Preview use the same `reportHtml()` template. The preview's Download PDF and Print controls render the current form values, including unsaved custom header/footer edits. Report viewing, downloading and QR sharing render the saved profile with the selected invoice data. PDF failures are shown explicitly; the app does not switch to a differently styled report.
+
+The authenticated `/api/report-pdf/render` endpoint prints this HTML with Chromium. Cloud Docker images include Chromium and the supported profile fonts. For a non-Docker server, install Chromium and set `REPORT_CHROMIUM_PATH` to its executable before starting the API. Desktop builds use Electron's bundled Chromium locally, with embedded fonts and no additional browser download. Ship both the backend and frontend changes; existing desktop installations need a rebuilt app containing `report-pdf.js` and the `server/report-fonts` directory.
+
+Rendering disables document scripts, blocks non-font external resources, verifies embedded report images and reserves the measured footer height on every page. Do not add a second PDF layout for lab reports. The older vector drawing helper is retained for compatibility regression checks, not used by the report export flow.
+
+Run `node scripts/test-profile-pdf.js` for template/route checks. For actual browser integration, install the cloud dependencies and set `REPORT_CHROMIUM_PATH`; optionally set `REPORT_SAMPLE_DIR` to a scratch directory to inspect generated single- and multi-page PDFs. Existing `scripts/test-report-*.js` and `scripts/test-qr-report-pdf.js` cover identity, footer, QR publication and comparison regressions.

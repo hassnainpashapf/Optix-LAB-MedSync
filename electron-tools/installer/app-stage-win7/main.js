@@ -33,7 +33,7 @@ async function boot() {
   for (let p = 3765; p < 3785; p++) {
     process.env.PORT = String(p);
     delete require.cache[serverPath]; /* server.js reads its config at load time */
-    try { started = await require('./server/server.js').main(); started.port = p; break; }
+    try { started = await require('./server/server.js').main({ renderReportPdf: require('./report-pdf').render }); started.port = p; break; }
     catch (e) { lastErr = e; }
   }
   if (!started) {
