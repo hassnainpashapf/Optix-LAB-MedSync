@@ -3568,7 +3568,7 @@
     var W = 210, M = 12, CW = W - 2 * M;
     var y = M;
 
-    var inHdr = false, repeatPatientGrid = true, letterheadBottom = M;
+    var inHdr = false, repeatPatientGrid = true, letterheadBottom = M, pageFrameTop = null;
     var PH = 297, FM = M;                                   // A4 height, bottom margin
     var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
     doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
@@ -3578,7 +3578,7 @@
     var fHasSigImg = s.enableSignatures !== false && fSigs.some(function (g) { return !!(g.sigImg || g.signature); });
     var fSigImgH = fHasSigImg ? 9 : 0;
     var fSigBlockH = 0;
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(8.2);
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2);
     var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
     doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2);
     var fSigQualLines = fSigs.map(function (g) { return g.qual ? doc.splitTextToSize(g.qual, fSw - 3) : []; });
@@ -3608,9 +3608,13 @@
     var fTextH = fTextLines.length ? fTextLines.length * 4.2 + 3 : 0;
     var fH = (pre && pre.ftr)
       ? (CW * pre.ftr.ratio + 2)
-      : (fTextH + fVerLines.length * 4.4 + 3 + 4.2 + fSigBlockH + 3 + fNoteH + 3 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + 5);
+      : (fTextH + fVerLines.length * 4.4 + 3 + 6.2 + fSigBlockH + 3 + fNoteH + 3 + (fAddrLines.length ? fAddrLines.length * 4.2 + 2 : 0) + 5);
 
     function drawFooter() {
+      if (pageFrameTop != null && y > pageFrameTop) {
+        doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.15);
+        doc.rect(M, pageFrameTop, CW, y + 1 - pageFrameTop);
+      }
       var fy = PH - FM - fH;
       if (pre && pre.ftr) {
         addImg(pre.ftr.url, M, fy, CW, fH - 2);
@@ -3625,7 +3629,7 @@
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); doc.setTextColor(20, 20, 20);
       txt(fVerLines, W / 2, curY + 3, { align: 'center' });
       curY += fVerLines.length * 4.4 + 3;
-      doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.5); doc.line(M, curY, W - M, curY); curY += 4;
+      doc.setDrawColor(230, 233, 238); doc.setLineWidth(0.15); doc.line(M, curY, W - M, curY); curY += 6;
       fSigs.forEach(function (g, k) {
         var fCx = M + fSw * (k + 0.5), fSy = curY;
         var sigImgData = (s.enableSignatures !== false) ? (g.sigImg || g.signature) : null;
@@ -3636,7 +3640,7 @@
           try { doc.addImage(g.stampImg, 'PNG', fCx + 10, fSy, 8, 8); } catch (e) {}
         }
         if (fSigImgH) fSy += fSigImgH + 1;
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.2); doc.setTextColor(20, 20, 20);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); doc.setTextColor(20, 20, 20);
         txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 3.6;
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2); doc.setTextColor(40, 40, 40);
         if (fSigQualLines[k].length) { txt(fSigQualLines[k], fCx, fSy, { align: 'center' }); fSy += fSigQualLines[k].length * 3.3; }
@@ -3659,13 +3663,14 @@
       if (y + h > maxBodyY) {
         drawFooter();
         doc.addPage();
-        y = M;
+        y = M; pageFrameTop = null;
         // An unusually long patient/location field can span pages. Continue
         // it under the letterhead, without recursively restarting the grid.
         var wasInHdr = inHdr;
         if (wasInHdr) repeatPatientGrid = false;
         inHdr = true;
         drawHeader(wasInHdr || !repeatPatientGrid);
+        if (pageFrameTop == null) pageFrameTop = y;
         inHdr = wasInHdr;
       }
     } /* Normal result pages repeat the letterhead and patient/visit block. */
@@ -3730,13 +3735,13 @@
         return;
       }
       // Reference letterhead: logo/name left, stacked visit barcodes beside QR right.
-      var qrSize = 20, barcodeW = 26, rightGap = 3;
+      var qrSize = 24, barcodeW = 30, rightGap = 4;
       var barcodeX = W - M - barcodeW - (showQr ? qrSize + rightGap : 0);
-      if (s.logo) addImg(s.logo, M, y, 22, 22);
-      var htx = M + (s.logo ? 28 : 0);
+      if (s.logo) addImg(s.logo, M, y, 28, 28);
+      var htx = M + (s.logo ? 35 : 0);
       var nameW = barcodeX - htx - 6;
       doc.setFont('times', 'bold'); doc.setFontSize(23);
-      var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : [0, 0, 0];
+      var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : [24, 25, 76];
       doc.setTextColor(NC[0], NC[1], NC[2]);
       var labLines = doc.splitTextToSize(s.labName || 'Optix Medical Sync', nameW);
       txt(labLines, htx, y + 8);
@@ -3760,7 +3765,7 @@
         idBottom += lines.length * 2.7 + 2;
       });
       if (showQr) addImg(qrDataUrl, W - M - qrSize, y, qrSize, qrSize);
-      y += Math.max(24, labBottom + 3, idBottom, showQr ? qrSize : 0) + 4;
+      y += Math.max(30, labBottom + 3, idBottom, showQr ? qrSize : 0) + 5;
 
       // --- plain header text from Lab Profile ("Header text"), centred under the header ---
       if (String(s.headerText || '').trim()) {
@@ -3788,12 +3793,13 @@
       if (!skipPatient) drawPatientGrid();
     }
     function drawPatientGrid() {
+      pageFrameTop = Math.max(M, y - 1);
       var hr = reportHeaderRows(d), LH = 4.6, ROW_PAD = 1.4, COLON_W = 3;
-      /* Two columns like the HTML block: label | ":" | value. Left starts at the
-         margin with ":" at 20% of the width; right starts at 50% with ":" at 70%. */
+      /* Two columns like the HTML block: label | ":" | value. Labels are inset from the frame; colons sit at 25% and 73%
+         of the content width, matching the supplied two-column reference. */
       var cols = [
-        { rows: hr.identity, x: M, colon: M + CW * 0.2, right: M + CW * 0.5 - 5 },
-        { rows: hr.visit, x: M + CW * 0.5, colon: M + CW * 0.69, right: W - M }
+        { rows: hr.identity, x: M + 2, colon: M + CW * 0.25, right: M + CW * 0.5 - 5 },
+        { rows: hr.visit, x: M + CW * 0.5 + 2, colon: M + CW * 0.73, right: W - M }
       ];
       doc.setFontSize(9);
       cols.forEach(function (c) {
@@ -3999,8 +4005,8 @@
         txt(previous ? 'PREVIOUS' : 'RESULT', cx, byy + 3.9, { align: 'center' });
         var valOnly = String(patText || '').replace(/^P\s*#\s*/i, '').trim();
         if (showBc) {
-          drawBarcode(bx, yy + 1, RBW, 6.5, patCode);
-          yy += 8.2;
+          drawBarcode(bx, yy + 1, RBW, 3.8, patCode);
+          yy += 5.5;
           if (valOnly) {
             doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5);
             doc.setTextColor(0, 0, 0);
@@ -4046,9 +4052,9 @@
           var titleAvailH = BOX_H - headH;
           var titleStartY = boxTop + Math.max(0, (titleAvailH - curTitleLines.length * 5.2) / 2);
           doc.setFont('helvetica', 'bold'); doc.setFontSize(11);
-          doc.setTextColor(11, 23, 64);
+          doc.setTextColor(0, 0, 0);
           curTitleLines.forEach(function (tl, li) {
-            txt(tl, M, titleStartY + 4.6 + li * 5.2);
+            txt(tl, M + 2, titleStartY + 4.6 + li * 5.2);
           });
         }
 
@@ -4076,7 +4082,7 @@
         var nameL = doc.splitTextToSize(p.name || '', Math.max(10, nameW));
         doc.setFont('helvetica', 'normal');
         var refL  = doc.splitTextToSize(refStr, Math.max(10, refW));
-        var unitL = doc.splitTextToSize(p.unit || '—', Math.max(10, unitW));
+        var unitL = doc.splitTextToSize(p.unit || '', Math.max(10, unitW));
         doc.setFont('helvetica', 'bold');
         var valueLines = resultCols.map(function (c) {
           return doc.splitTextToSize(String(c.values[p.name] == null ? '' : c.values[p.name]), RBW - 7);
@@ -4111,7 +4117,7 @@
         for (var li = 0; li < row.count; li++) {
           tableNeed(LINE + 2.5);
           doc.setTextColor(20, 20, 20); doc.setFontSize(9);
-          doc.setFont('helvetica', 'bold');
+          doc.setFont('helvetica', 'normal');
           if (row.name[li]) txt(row.name[li], CX_TEST, y + LINE);
           doc.setFont('helvetica', 'normal');
           if (row.ref[li]) txt(row.ref[li], CX_REF, y + LINE);
@@ -4122,14 +4128,18 @@
             /* the value sits in the middle of the RESULT column, under the RESULT box (the arrow, when there is one, goes right after it) */
             var cxv = resultStart + ci * RBW + RBW / 2;
             var color = dir === 'high' ? RED : (dir === 'low' ? BLUE : INK);
-            doc.setFont('helvetica', ci === 0 ? 'bold' : 'normal');
+            doc.setFont('helvetica', ci === 0 && dir ? 'bold' : 'normal');
             doc.setTextColor(color[0], color[1], color[2]);
             var tw = doc.getTextWidth(String(value)), arrowW = dir ? 3.5 : 0, vx = cxv - (tw + arrowW) / 2;
             txt(value, vx, y + LINE);
             if (dir && li === 0) {
               doc.setFillColor(color[0], color[1], color[2]);
               var by = y + LINE - 1.1, sign = dir === 'high' ? 1 : -1, ax = vx + tw + 0.9;
-              doc.triangle(ax, by + sign * 1.2, ax + 2.6, by + sign * 1.2, ax + 1.3, by - sign * 1.3, 'F');
+              doc.setDrawColor(color[0], color[1], color[2]); doc.setLineWidth(0.45);
+              var tipY = by - sign * 1.3;
+              doc.line(ax + 1.3, by + sign * 1.3, ax + 1.3, tipY);
+              doc.line(ax, tipY + sign * 1.2, ax + 1.3, tipY);
+              doc.line(ax + 2.6, tipY + sign * 1.2, ax + 1.3, tipY);
             }
           });
           y += LINE;
@@ -4174,6 +4184,7 @@
         var params = Array.isArray(test.params) ? test.params : [];
         var vals = (r.res && r.res.values) || {};
         var tid = (r.item && (r.item.testId || r.item.id)) || '';
+        RBW = (d.prevByTest && d.prevByTest[tid] && d.prevByTest[tid].length) ? 30 : CW * 0.215;
         resultCols = [{ values: vals, invoiceNo: inv.no || inv.id,
           caseCode: pvn && pvn.caseCode, caseText: pvn && pvn.caseText,
           reportedAt: (r.res && r.res.reportedAt) || d.maxReported || inv.createdAt }]
@@ -4204,13 +4215,13 @@
           CX_REF = M + 46;
           CX_UNIT = M + 90;
         } else {
-          CX_REF = M + 58;
-          CX_UNIT = M + 112;
+          CX_REF = M + CW * 0.325;
+          CX_UNIT = M + CW * 0.57;
         }
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7);
         var idLines = 1;
         resultCols.forEach(function (c) { idLines = Math.max(idLines, doc.splitTextToSize(c.boxInvoiceNo, RBW - 3).length); });
-        BOX_H = resultCols.length > 1 ? (showBc ? 23 : 16) + idLines * 3.2 : (showBc ? 21 : 14);
+        BOX_H = resultCols.length > 1 ? (showBc ? 23 : 16) + idLines * 3.2 : (showBc ? 18 : 14);
 
         // Section title in Chughtai style: "{NAME} ({CODE}) REPORT"
         var tTitle = testName(r) + (testCode(r) ? ' (' + testCode(r) + ')' : '');
@@ -4241,7 +4252,7 @@
           noteLines = doc.splitTextToSize(String(tnote), CW - 6);
         }
 
-        need(BOX_H + 14);
+        need(BOX_H + LINE + 2.5);
         resultCols.forEach(function (c) {
           c.identifierNotes.forEach(function (note) {
             doc.setFont('helvetica', 'normal'); doc.setFontSize(8.5);
@@ -4320,7 +4331,7 @@
             bodyLines(remLinesOnly, 'normal', 8.5);
           }
         }
-        y += 4;
+        y += 2.5;
       });
     })();
 

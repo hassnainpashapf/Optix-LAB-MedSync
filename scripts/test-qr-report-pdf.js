@@ -283,7 +283,7 @@ async function suite(folder) {
   assert.ok(previewPdf && previewPdf.dataUri, 'Desktop preview produces PDF');
   assert.equal(uploads.length, 1, 'Preview publishes report before embedding patient QR');
   assert.ok(qrTargets.includes('https://fixture.invalid/r/' + tables.invoices[0].reportPdfKey));
-  assert.ok(receipt.images.some(i => i.args[4] === 20 && i.args[5] === 20), 'QR embedded in desktop letterhead');
+  assert.ok(receipt.images.some(i => i.args[4] === 24 && i.args[5] === 24), 'QR embedded in desktop letterhead');
   assert.ok(qrTargets.every(url => !/localhost|127\.0\.0\.1/.test(url)), 'Patient QR never targets local desktop');
   context.labposDesktop = null; delete context.LABPOS_REPORT_API;
 

@@ -167,19 +167,39 @@ function suite(folder) {
   tables.tests.push({ id: 'hb', name: 'HEMOGLOBIN (HB)', params: [{ name: 'Hemoglobin', ref: '13.5-17.5', unit: 'g/dL' }] });
   tables.invoices[0].items.push({ testId: 'hb', name: 'HEMOGLOBIN (HB)' });
   tables.results.push({ id: 'hb-result', invoiceId: 'i', testId: 'hb', status: 'ready', reportedAt: '2026-10-09T10:00:00Z', values: { Hemoglobin: '12.7' } });
+  for (const spec of [ ['fbs', 'FASTING BLOOD GLUCOSE (FBS)', 'Glucose - Fasting', '70-100', '85'],
+    ['rbs', 'RANDOM BLOOD GLUCOSE (RBS)', 'Glucose - Random', '< 140', '114'] ].reverse()) {
+    tables.tests.unshift({ id: spec[0], name: spec[1], params: [{ name: spec[2], ref: spec[3], unit: 'mg/dL' }] });
+    tables.invoices[0].items.unshift({ testId: spec[0], name: spec[1] });
+    tables.results.unshift({ id: spec[0] + '-result', invoiceId: 'i', testId: spec[0], status: 'ready', reportedAt: '2026-10-09T10:00:00Z', values: { [spec[2]]: spec[4] } });
+  }
   // Real bundled QR encoder, not the one-pixel transport test fixture.
   vm.runInContext(fs.readFileSync(path.join(folder, 'assets/js/qrcode.min.js'), 'utf8'), context);
   const qr = context.qrcode(0, 'M'); qr.addData('https://example.invalid/r/synthetic-sample'); qr.make();
   tables.settings[0].showQr = true;
   render(null, qr.createDataURL(4, 16));
-  assert.ok(pdf.images.some(image => image.args[4] === 20 && image.args[5] === 20), 'Real QR image embeds in sample PDF');
-  assert.equal(pdf.doc.getNumberOfPages(), 1, 'Two short sections and four signatories fit one A4 page');
-  assert.ok(pdf.text.filter(t => /^SYNTHETIC SIGNATORY/.test(t.values[0])).every(t => t.style === 'bold' && t.y > 220));
-  assert.ok(pdf.text.find(t => t.values[0] === 'Hemoglobin').y < 170, 'Tests remain near top, footer remains at bottom');
+  assert.ok(pdf.images.some(image => image.args[4] === 24 && image.args[5] === 24), 'Real QR image embeds in sample PDF');
+  assert.equal(pdf.doc.getNumberOfPages(), 1, 'Four reference sections and four signatories fit one A4 page');
+  assert.ok(pdf.text.filter(t => /^SYNTHETIC SIGNATORY/.test(t.values[0])).every(t => t.style === 'normal' && t.y > 210));
+  assert.ok(pdf.text.find(t => t.values[0] === 'Hemoglobin').y < 225, 'Tests remain near top, footer remains at bottom');
   assert.ok(pdf.doc.internal.pages[1].length > 0);
   if (process.env.REPORT_SAMPLE_DIR && folder === root) {
+    // Reference lab details supplied by the user; patient data stays synthetic.
+    Object.assign(tables.settings[0], {
+      address: 'Ghala Mandi Road Opposite Ahmad Jamal Clinic Ellah Abad',
+      phone: '0300-0722292; 03320722292', email: 'cclab6701@gmail.com',
+      signatories: [
+        { name: 'DR. AAFRINISH AMANAT', qual: 'MBBS, M.Phil (Histopathology)', title: 'Consultant Pathologist' },
+        { name: 'DR. YUMNA KHAN', qual: 'B.Sc, MBBS, FCPS, RMP' },
+        { name: 'ABDAL INAM UL HAQ KHANZADA', qual: 'M.Phil (Microbiology)', title: 'Lab Technologist' },
+        { name: 'ABDUL WAHEED KHANZADA', qual: 'MA, MLT (AFIP)', title: 'Lab Technologist' }
+      ]
+    });
+    tables.invoices[0].regLocation = 'Main Center'; tables.invoices[0].destLocation = 'Head Office';
+    render(null, qr.createDataURL(4, 16));
+    assert.equal(pdf.doc.getNumberOfPages(), 1, 'Complete supplied reference fits one A4 page');
     fs.mkdirSync(process.env.REPORT_SAMPLE_DIR, { recursive: true });
-    fs.writeFileSync(path.join(process.env.REPORT_SAMPLE_DIR, 'reference-layout-sample.pdf'), Buffer.from(pdf.doc.output('arraybuffer')));
+    fs.writeFileSync(path.join(process.env.REPORT_SAMPLE_DIR, 'complete-report-sample.pdf'), Buffer.from(pdf.doc.output('arraybuffer')));
   }
 
   // Regression: long letterheads, titles and multi-line signatory credentials.
