@@ -3731,7 +3731,7 @@
         + '    </div>'
         + '  </div>'
         + '  <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.03em">' + esc(m.category) + '</div>'
-        + '  <div style="font-size:16px;font-weight:800;color:#131845;margin-top:2px">' + esc(m.title) + '</div>'
+        + '  <div class="pd-launch-ai-tab-btn" role="button" tabindex="0" data-ai-module-tab="' + esc(m.tab) + '" data-inv-id="' + esc(invId) + '" title="Open ' + esc(m.title) + ' Dashboard" style="font-size:16px;font-weight:800;color:#131845;margin-top:2px;cursor:pointer">' + esc(m.title) + '</div>'
         + '  <div style="font-size:12.5px;color:#475569;margin-top:6px;line-height:1.45">' + esc(m.desc) + '</div>'
         + '</div>'
         + '<div style="margin-top:16px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">'

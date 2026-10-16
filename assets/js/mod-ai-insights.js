@@ -2954,7 +2954,12 @@
         : null;
       if (!inv && !directData && window.DB && typeof DB.all === 'function') {
         var allInvs = (DB.all('invoices') || []).filter(function (x) { return x && (x.id || x.no); });
-        if (allInvs.length) inv = allInvs[allInvs.length - 1];
+        var allRes = DB.all('results') || [];
+        var invsWithRes = allInvs.filter(function (iv) {
+          return allRes.some(function (r) { return r && (r.invoiceId === iv.id || (iv.no && r.invoiceId === iv.no)); });
+        });
+        if (invsWithRes.length) inv = invsWithRes[invsWithRes.length - 1];
+        else if (allInvs.length) inv = allInvs[allInvs.length - 1];
       }
       if (inv) {
         var pt = (DB.get('patients', inv.patientId)) || {};
@@ -2965,8 +2970,51 @@
           var t = DB.get('tests', r.testId) || tests.filter(function (x) { return x.id === r.testId; })[0];
           return { test: t, res: r };
         });
-        d = { inv: inv, pt: pt, doc: doc, groups: groups };
+        if (groups.length) {
+          d = { inv: inv, pt: pt, doc: doc, groups: groups };
+        }
       }
+    }
+
+    if (!d && !invoiceId) {
+      d = {
+        inv: { id: 'SIM-DASH-01', no: 'SIM-DASH-01', date: new Date().toISOString() },
+        pt: { id: 'P-1001', name: 'Muhammad Tariq', age: 52, sex: 'Male', gender: 'Male', phone: '03001234567' },
+        doc: { name: 'Dr. Kamran Siddiqui', phone: '03219876543' },
+        groups: [
+          {
+            test: { name: 'Complete Blood Count (CBC)', params: [
+              { id: 'hb', name: 'Hemoglobin (Hb)', unit: 'g/dL', normal: '13.0 - 17.0' },
+              { id: 'mcv', name: 'MCV', unit: 'fL', normal: '80 - 100' },
+              { id: 'rbc', name: 'Total RBC', unit: 'x10^6/uL', normal: '4.5 - 5.5' },
+              { id: 'wbc', name: 'Total WBC Count', unit: '/uL', normal: '4000 - 11000' },
+              { id: 'plt', name: 'Platelet Count', unit: '/uL', normal: '150000 - 450000' }
+            ] },
+            res: { values: { hb: '8.2', mcv: '62', rbc: '5.6', wbc: '14200', plt: '42000' } }
+          },
+          {
+            test: { name: 'Renal & Liver Profile (RFT / LFT)', params: [
+              { id: 'creatinine', name: 'Serum Creatinine', unit: 'mg/dL', normal: '0.7 - 1.2' },
+              { id: 'urea', name: 'Blood Urea', unit: 'mg/dL', normal: '15 - 45' },
+              { id: 'alt', name: 'SGPT (ALT)', unit: 'U/L', normal: '10 - 40' },
+              { id: 'ast', name: 'SGOT (AST)', unit: 'U/L', normal: '10 - 35' },
+              { id: 'potassium', name: 'Serum Potassium (K+)', unit: 'mEq/L', normal: '3.5 - 5.1' }
+            ] },
+            res: { values: { creatinine: '2.3', urea: '68', alt: '88', ast: '64', potassium: '5.6' } }
+          },
+          {
+            test: { name: 'Lipid & Glycemic Profile', params: [
+              { id: 'glucose', name: 'Blood Glucose (Random)', unit: 'mg/dL', normal: '70 - 140' },
+              { id: 'hba1c', name: 'HbA1c', unit: '%', normal: '4.0 - 5.6' },
+              { id: 'chol', name: 'Total Cholesterol', unit: 'mg/dL', normal: '< 200' },
+              { id: 'hdl', name: 'HDL Cholesterol', unit: 'mg/dL', normal: '> 40' },
+              { id: 'ldl', name: 'LDL Cholesterol', unit: 'mg/dL', normal: '< 100' },
+              { id: 'trig', name: 'Triglycerides', unit: 'mg/dL', normal: '< 150' }
+            ] },
+            res: { values: { glucose: '245', hba1c: '8.4', chol: '248', hdl: '34', ldl: '162', trig: '260' } }
+          }
+        ]
+      };
     }
     return d;
   };
@@ -3658,6 +3706,22 @@
       + (s.redflags || []).map(function (x) { return '• ' + x; }).join('\n') + '\n\n'
       + '_Note: Clinical decision support for authorized medical practitioners only._';
 
+    var TAB_TITLES_MAP = {
+      solutions: '5 Core Solutions',
+      bodymap: 'Organ Impact Map',
+      indices: 'Clinical Calculators',
+      panic: 'Panic SOS Alerts',
+      ddi: 'Drug Interactions (DDI)',
+      safety: 'Organ Toxicity Shields',
+      ddx: 'Differential Diagnosis (DDx)',
+      genetic: 'Genetic & Marriage Guard',
+      ascvd: '10-Year ASCVD Risk',
+      urdu: 'Roman Urdu Guide',
+      rx: 'Digital Prescription Pad',
+      remarks: 'Report Remarks Summary',
+      trends: 'Velocity Trends'
+    };
+
     // Tab Switching Logic
     scopeEl.querySelectorAll('.ai-tab-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -3676,6 +3740,11 @@
         });
         var targetPane = scopeEl.querySelector('#aiPane-' + target);
         if (targetPane) targetPane.style.display = 'block';
+
+        var modHeading = scopeEl.querySelector('#aiActiveModuleHeading');
+        if (modHeading && TAB_TITLES_MAP[target]) {
+          modHeading.textContent = TAB_TITLES_MAP[target] + ' — Dashboard';
+        }
       });
     });
 
@@ -3975,6 +4044,14 @@
     });
   };
 
+  /* Open Dedicated Dashboard for a Specific AI Module (from AI Settings / Control Center) */
+  AI.openModuleDashboard = function (tabKey, modTitle, containerId) {
+    var targetTab = tabKey || 'solutions';
+    AI._preferredTab = targetTab;
+    AI._preferredModuleTitle = modTitle || '';
+    AI.renderRecommendationsPage(containerId || 'view', null, null, targetTab);
+  };
+
   /* Render Dedicated Full Page for AI Clinical Recommendations */
   AI.renderRecommendationsPage = function (containerId, invoiceId, directData, preferredTab) {
     var container = (typeof containerId === 'string' ? document.getElementById(containerId) : containerId)
@@ -4023,10 +4100,18 @@
         + '</div>')
       : '';
 
+    var activeTabKey = preferredTab || AI._preferredTab || 'solutions';
+    var initialHeading = AI._preferredModuleTitle ? (AI._preferredModuleTitle + ' — Dashboard') : 'AI Clinical Recommendations';
+    AI._preferredModuleTitle = '';
+
     var mergedHeaderHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">'
-      + '<div>'
-      + '  <h1 style="font-size:20px;font-weight:800;color:#131845;margin:0;letter-spacing:-0.01em">AI Clinical Recommendations</h1>'
-      + '  <div style="display:none" data-patient="' + ptName + '" data-invoice="' + invNo + '">' + ptName + '</div>'
+      + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+      + '  <button type="button" class="btn ai-action-btn" id="aiBackToDashboardBtn" style="border:1.5px solid #cbd5e1;background:#f8fafc;color:#1e293b;font-weight:700;font-size:12.5px;padding:6px 13px;min-height:36px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px" title="Back to AI Settings &amp; Subsystems"><span>←</span><span>AI Dashboard</span></button>'
+      + '  <div>'
+      + '    <h1 id="aiActiveModuleHeading" style="font-size:20px;font-weight:800;color:#131845;margin:0;letter-spacing:-0.01em">' + (window.App ? App.esc(initialHeading) : initialHeading) + '</h1>'
+      + '    <span style="display:none">AI Clinical Recommendations</span>'
+      + '    <div style="display:none" data-patient="' + ptName + '" data-invoice="' + invNo + '">' + ptName + '</div>'
+      + '  </div>'
       + '</div>'
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
       +    switcherHtml
@@ -4040,12 +4125,24 @@
 
     var pageContentHtml = AI.buildRecommendationsContent(analysis, { isPage: true });
 
-    container.innerHTML = '<div class="ai-recommendations-page" style="padding:16px 24px 48px;max-width:1480px;margin:0 auto;font-family:inherit">'
+    container.innerHTML = '<div id="aiRecommendationsPage" class="ai-recommendations-page" style="padding:16px 24px 48px;max-width:1480px;margin:0 auto;font-family:inherit">'
       + mergedHeaderHtml
       + pageContentHtml
       + '</div>';
 
-    AI.wireRecommendationsEvents(container, analysis, { isPage: true, preferredTab: preferredTab || AI._preferredTab });
+    AI.wireRecommendationsEvents(container, analysis, { isPage: true, preferredTab: activeTabKey });
+
+    var backBtn = container.querySelector('#aiBackToDashboardBtn');
+    if (backBtn) {
+      backBtn.addEventListener('click', function () {
+        if (window.App && typeof App.nav === 'function' && window.location && window.location.hash !== '#/ai-dashboard') {
+          AI.renderDashboard(containerId);
+          try { window.location.hash = '#/ai-dashboard'; } catch (e) {}
+        } else {
+          AI.renderDashboard(containerId);
+        }
+      });
+    }
 
     var switcher = container.querySelector('#aiPageInvoiceSwitcher');
     if (switcher) {
@@ -4344,18 +4441,18 @@
     var activeTab = 'modules';
 
     var MODULE_DEFS = [
-      { key: 'solutions5', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>', name: '5 Core Solutions', desc: 'Diagnosis, medications, diet & red flags.' },
-      { key: 'bodyMap', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v8"/><path d="M9 12h6"/><path d="M9 21l3-5 3 5"/></svg>', name: 'Organ Impact Map', desc: '8-system physiological impact visualizer.' },
-      { key: 'calculators', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>', name: 'Clinical Calculators', desc: 'eGFR, Mentzer, FIB-4 & ASCVD scores.' },
-      { key: 'panicSos', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', name: 'Panic SOS Alerts', desc: 'Emergency limits & automated WhatsApp dispatch.' },
-      { key: 'drugInteractions', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>', name: 'Drug Interactions (DDI)', desc: 'Multi-drug clash & conflict detection.' },
-      { key: 'safetyShields', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>', name: 'Organ Toxicity Shields', desc: 'Renal, hepatic & hematology contraindications.' },
-      { key: 'ddx', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>', name: 'Differential Diagnosis (DDx)', desc: 'Ranked candidate disease differentials.' },
-      { key: 'geneticGuard', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-14 0"/><circle cx="9" cy="9" r="2"/><path d="m14 8 5 5"/></svg>', name: 'Genetic & Marriage Guard', desc: 'Thalassemia & familial carrier risk.' },
-      { key: 'ascvdRisk', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5v14"/></svg>', name: '10-Year ASCVD Risk', desc: 'Cardiovascular stroke & heart risk.' },
-      { key: 'urduGuide', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>', name: 'Roman Urdu Guide', desc: 'Bilingual patient care & diet instructions.' },
-      { key: 'rxPad', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>', name: 'Digital Prescription Pad', desc: 'Printable prescription pad with credentials.' },
-      { key: 'reportRemarks', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', name: 'Report Remarks Summary', desc: 'Attaches AI summary to report footer.' }
+      { key: 'solutions5', tab: 'solutions', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>', name: '5 Core Solutions', desc: 'Diagnosis, medications, diet & red flags.' },
+      { key: 'bodyMap', tab: 'bodymap', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v8"/><path d="M9 12h6"/><path d="M9 21l3-5 3 5"/></svg>', name: 'Organ Impact Map', desc: '8-system physiological impact visualizer.' },
+      { key: 'calculators', tab: 'indices', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>', name: 'Clinical Calculators', desc: 'eGFR, Mentzer, FIB-4 & ASCVD scores.' },
+      { key: 'panicSos', tab: 'panic', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>', name: 'Panic SOS Alerts', desc: 'Emergency limits & automated WhatsApp dispatch.' },
+      { key: 'drugInteractions', tab: 'ddi', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>', name: 'Drug Interactions (DDI)', desc: 'Multi-drug clash & conflict detection.' },
+      { key: 'safetyShields', tab: 'safety', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>', name: 'Organ Toxicity Shields', desc: 'Renal, hepatic & hematology contraindications.' },
+      { key: 'ddx', tab: 'ddx', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>', name: 'Differential Diagnosis (DDx)', desc: 'Ranked candidate disease differentials.' },
+      { key: 'geneticGuard', tab: 'genetic', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-14 0"/><circle cx="9" cy="9" r="2"/><path d="m14 8 5 5"/></svg>', name: 'Genetic & Marriage Guard', desc: 'Thalassemia & familial carrier risk.' },
+      { key: 'ascvdRisk', tab: 'ascvd', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5v14"/></svg>', name: '10-Year ASCVD Risk', desc: 'Cardiovascular stroke & heart risk.' },
+      { key: 'urduGuide', tab: 'urdu', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>', name: 'Roman Urdu Guide', desc: 'Bilingual patient care & diet instructions.' },
+      { key: 'rxPad', tab: 'rx', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>', name: 'Digital Prescription Pad', desc: 'Printable prescription pad with credentials.' },
+      { key: 'reportRemarks', tab: 'remarks', icon: '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>', name: 'Report Remarks Summary', desc: 'Attaches AI summary to report footer.' }
     ];
 
     function renderShell() {
@@ -4418,9 +4515,10 @@
         + '  #optixAiDashboard .ai-card-mod {'
         + '    background: #ffffff; border: 1px solid var(--bd, #cbd5e1); border-radius: 10px; padding: 10px 14px;'
         + '    display: flex; justify-content: space-between; align-items: center; gap: 12px; box-shadow: 0 1px 2px rgba(15,30,46,0.03);'
-        + '    min-height: 48px; transition: border-color .15s ease, box-shadow .15s ease;'
+        + '    min-height: 48px; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;'
         + '  }'
-        + '  #optixAiDashboard .ai-card-mod:hover { border-color: #94a3b8; box-shadow: 0 2px 6px rgba(15,30,46,0.06); }'
+        + '  #optixAiDashboard .ai-card-mod:hover { border-color: #2563eb; box-shadow: 0 2px 8px rgba(37,99,235,0.1); background: #f8fbff; }'
+        + '  #optixAiDashboard .ai-mod-open-trigger { display: flex; gap: 10px; align-items: center; min-width: 0; flex: 1; cursor: pointer; }'
         + '  #optixAiDashboard .ai-mod-ico {'
         + '    display: inline-flex; align-items: center; justify-content: center;'
         + '    color: #2563eb; background: transparent; border: none;'
@@ -4428,7 +4526,8 @@
         + '  }'
         + '  #optixAiDashboard .ai-mod-ico svg { width: 22px; height: 22px; stroke-width: 2.2; }'
         + '  #optixAiDashboard .ai-card-mod:hover .ai-mod-ico { background: transparent; border: none; color: #1d4ed8; }'
-        + '  #optixAiDashboard .ai-card-mod .ai-mod-title { font-size: 13px; font-weight: 600; color: var(--ink, #0f1e2e); line-height: 1.25; }'
+        + '  #optixAiDashboard .ai-card-mod .ai-mod-title { font-size: 13px; font-weight: 600; color: var(--ink, #0f1e2e); line-height: 1.25; cursor: pointer; transition: color .15s ease; }'
+        + '  #optixAiDashboard .ai-mod-open-trigger:hover .ai-mod-title { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; }'
         + '  #optixAiDashboard .ai-switch { position: relative; display: inline-block; width: 42px; height: 22px; flex-shrink: 0; }'
         + '  #optixAiDashboard .ai-switch input { opacity: 0; width: 0; height: 0; }'
         + '  #optixAiDashboard .ai-slider {'
@@ -4552,10 +4651,10 @@
         + '    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px">'
         +        MODULE_DEFS.map(function (m) {
                    var isChecked = curCfg.modules[m.key] !== false;
-                   return '<div class="ai-card-mod">'
-                     + '  <div style="display:flex;gap:10px;align-items:center;min-width:0">'
+                   return '<div class="ai-card-mod" data-card-mod-tab="' + m.tab + '" data-card-mod-title="' + escFn(m.name) + '">'
+                     + '  <div class="ai-mod-open-trigger" role="button" tabindex="0" data-open-ai-mod="' + m.tab + '" data-open-ai-title="' + escFn(m.name) + '" title="Open ' + escFn(m.name) + ' Dashboard">'
                      + '    <div class="ai-mod-ico">' + m.icon + '</div>'
-                     + '    <div class="ai-mod-title">' + m.name + '</div>'
+                     + '    <div class="ai-mod-title" data-open-ai-mod="' + m.tab + '" data-open-ai-title="' + escFn(m.name) + '">' + m.name + '</div>'
                      + '  </div>'
                      + '  <label class="ai-switch">'
                      + '    <input type="checkbox" data-mod-key="' + m.key + '"' + (isChecked ? ' checked' : '') + '>'
@@ -4751,6 +4850,24 @@
         hint.className = 'muted'; hint.textContent = 'Read-only settings: only an admin can save changes. You can use the sandbox simulations.';
         var bar = container.querySelector('.ai-tabs-bar'); if (bar) bar.insertAdjacentElement('afterend', hint);
       }
+
+      // Click on any of the 12 module names / triggers to open its dedicated dashboard
+      container.querySelectorAll('.ai-mod-open-trigger').forEach(function (trigger) {
+        trigger.addEventListener('click', function (e) {
+          if (e && e.target && e.target.closest && e.target.closest('.ai-switch')) return;
+          var tabKey = trigger.getAttribute('data-open-ai-mod') || 'solutions';
+          var modTitle = trigger.getAttribute('data-open-ai-title') || '';
+          AI.openModuleDashboard(tabKey, modTitle, containerId || 'view');
+        });
+        trigger.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            var tabKey = trigger.getAttribute('data-open-ai-mod') || 'solutions';
+            var modTitle = trigger.getAttribute('data-open-ai-title') || '';
+            AI.openModuleDashboard(tabKey, modTitle, containerId || 'view');
+          }
+        });
+      });
 
       // Enable / Disable All helper buttons
       var enAllBtn = container.querySelector('#aiEnableAllMods');

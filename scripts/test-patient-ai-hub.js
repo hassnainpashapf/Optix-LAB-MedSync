@@ -201,6 +201,44 @@ assert.equal(modalTitle, 'AI Clinical Recommendations');
 assert(modalBody.includes('id="aiPane-panic"'), 'Modal body must contain panic pane');
 console.log('✓ showModal supports preferredTab argument');
 
+// 4. Verify AI.renderDashboard clickable module names & AI.openModuleDashboard
+const mockViewContainer = {
+  innerHTML: '',
+  querySelector: () => null,
+  querySelectorAll: () => []
+};
+sandbox.document.getElementById = (id) => (id === 'view' ? mockViewContainer : null);
+AI.renderDashboard('view');
+const dashHtml = mockViewContainer.innerHTML;
+assert(dashHtml.includes('id="optixAiDashboard"'), 'AI.renderDashboard must render #optixAiDashboard');
+
+const EXPECTED_MOD_TRIGGERS = [
+  'data-open-ai-mod="solutions"',
+  'data-open-ai-mod="bodymap"',
+  'data-open-ai-mod="indices"',
+  'data-open-ai-mod="panic"',
+  'data-open-ai-mod="ddi"',
+  'data-open-ai-mod="safety"',
+  'data-open-ai-mod="ddx"',
+  'data-open-ai-mod="genetic"',
+  'data-open-ai-mod="ascvd"',
+  'data-open-ai-mod="urdu"',
+  'data-open-ai-mod="rx"',
+  'data-open-ai-mod="remarks"'
+];
+EXPECTED_MOD_TRIGGERS.forEach(attr => {
+  assert(dashHtml.includes(attr), `AI Dashboard must include clickable module trigger: ${attr}`);
+});
+assert(dashHtml.includes('class="ai-mod-open-trigger"'), 'AI Dashboard must render .ai-mod-open-trigger on each of the 12 modules');
+console.log('✓ All 12 options in AI Dashboard (#optixAiDashboard) have clickable module name triggers');
+
+AI.openModuleDashboard('bodymap', 'Organ Impact Map', 'view');
+const modDashHtml = mockViewContainer.innerHTML;
+assert(modDashHtml.includes('id="aiRecommendationsPage"'), 'AI.openModuleDashboard must open #aiRecommendationsPage');
+assert(modDashHtml.includes('Organ Impact Map — Dashboard'), 'AI.openModuleDashboard must display the selected module name in the dashboard header');
+assert(modDashHtml.includes('id="aiBackToDashboardBtn"'), 'Module dashboard must include a back button (#aiBackToDashboardBtn) to return to AI Dashboard');
+console.log('✓ Clicking a module name opens its dedicated dashboard with back navigation');
+
 console.log('\n============================================================');
 console.log('ALL PATIENT AI HUB & 12 CORE MODULES TESTS PASSED CLEANLY 100%!');
 console.log('============================================================\n');
