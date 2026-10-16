@@ -65,21 +65,35 @@ const mockPatient = {
 
 const patientHtml = PD.render(mockPatient);
 
-// Navigation button
-assert(patientHtml.includes('data-pd-section="pdAiHub"'), 'Patient navigation must include data-pd-section="pdAiHub"');
-assert(patientHtml.includes('AI Clinical Intelligence (12 Core Modules)'), 'Patient nav item must have label AI Clinical Intelligence (12 Core Modules)');
-assert(patientHtml.includes('🤖'), 'Patient nav button icon must be 🤖');
-console.log('✓ Patient navigation includes 12 Core Modules Hub');
+// Navigation buttons for all 12 AI modules + Hub
+const EXPECTED_NAV_SECTIONS = [
+  'data-pd-section="pdAi-solutions"',
+  'data-pd-section="pdAi-bodymap"',
+  'data-pd-section="pdAi-indices"',
+  'data-pd-section="pdAi-panic"',
+  'data-pd-section="pdAi-ddi"',
+  'data-pd-section="pdAi-safety"',
+  'data-pd-section="pdAi-ddx"',
+  'data-pd-section="pdAi-genetic"',
+  'data-pd-section="pdAi-ascvd"',
+  'data-pd-section="pdAi-urdu"',
+  'data-pd-section="pdAi-rx"',
+  'data-pd-section="pdAi-remarks"',
+  'data-pd-section="pdAiHub"'
+];
 
-// Overview Banner
-assert(patientHtml.includes('id="pdAiQuickBanner"'), 'Patient Overview must render AI Clinical Intelligence Banner');
-assert(patientHtml.includes('12/12 Modules Active'), 'Overview banner must show 12/12 Modules Active badge');
-assert(patientHtml.includes('btnOpenPatientAiHub'), 'Overview banner must include Explore 12 Modules button');
-assert(patientHtml.includes('btnLaunchOverviewAI'), 'Overview banner must include Full AI Recommendations button');
-console.log('✓ Patient Overview banner displays 12/12 Modules Active with launch buttons');
+EXPECTED_NAV_SECTIONS.forEach(secAttr => {
+  assert(patientHtml.includes(secAttr), `Patient navigation must include icon button: ${secAttr}`);
+});
+assert(patientHtml.includes('class="pd-ai-nav-icon-btn"'), 'Patient navigation must render .pd-ai-nav-icon-btn buttons');
+assert(patientHtml.includes('class="pd-ai-quick-icon-btn'), 'Patient AI view must render .pd-ai-quick-icon-btn quick switcher buttons');
+console.log('✓ Patient navigation includes all 12 AI Module Icon Buttons + Hub icon button');
 
-// Dedicated Hub Container
+// Dedicated Single Module View & Hub Grid Container
 assert(patientHtml.includes('id="pdAiHub"'), 'Dedicated #pdAiHub layout section must exist');
+assert(patientHtml.includes('id="pdAiSingleModuleView"'), 'Single module inline view container must exist');
+assert(patientHtml.includes('id="pdAiInlineMount"'), 'Inline AI mount container must exist');
+assert(patientHtml.includes('id="pdAiHubGridWrap"'), 'All 12 modules grid container must exist');
 assert(patientHtml.includes('AI Clinical Intelligence Hub (12 Core Modules)'), 'Hub title must be present');
 
 // All 12 Modules in Patient Hub

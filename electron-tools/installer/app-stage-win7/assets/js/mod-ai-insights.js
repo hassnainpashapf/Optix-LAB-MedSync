@@ -3516,8 +3516,9 @@
       + '  .ai-tab-btn.active .ai-tab-ico { color: #ffffff; }'
       + '</style>';
 
+    var hideTabsBar = !!(opts && opts.hideTabsBar);
     var tabsHtml = tabsStyle
-      + '<div class="ai-tabs-bar">'
+      + '<div class="ai-tabs-bar"' + (hideTabsBar ? ' style="display:none"' : '') + '>'
       + (showSolutions ? '<button type="button" class="btn ai-tab-btn active" data-tab="solutions"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v5a4.5 4.5 0 0 0 9 0V3"/><path d="M6 3h3"/><path d="M10.5 3h3"/><path d="M9 12.5A6.5 6.5 0 0 0 15.5 19h1a2.5 2.5 0 0 0 2.5-2.5v-1"/><circle cx="19" cy="15" r="2"/></svg></span> <span>5 Core Solutions</span></button>' : '')
       + (showBodyMap ? '<button type="button" class="btn ai-tab-btn" data-tab="bodymap"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v8"/><path d="M9 12h6"/><path d="M9 21l3-5 3 5"/></svg></span> <span>Organ Impact Map</span></button>' : '')
       + (showCalculators ? '<button type="button" class="btn ai-tab-btn" data-tab="indices"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg></span> <span>Clinical Calculators</span></button>' : '')

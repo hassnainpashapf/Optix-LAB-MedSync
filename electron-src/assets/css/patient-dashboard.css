@@ -207,24 +207,34 @@
 #ptPatientDashboard .pd-patient-menu nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  gap: 5px;
   margin: 0;
   flex-wrap: wrap;
 }
-#ptPatientDashboard .pd-patient-menu nav button {
+#ptPatientDashboard .pd-patient-menu nav .pd-nav-vsep {
+  width: 1.5px;
+  height: 22px;
+  background: #cbd5e1;
+  margin: 0 3px;
+  flex-shrink: 0;
+  border-radius: 2px;
+}
+#ptPatientDashboard .pd-patient-menu nav button,
+#ptPatientDashboard .pd-ai-quick-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   background: #f0f7ff;
   border: 1.5px solid #bfdbfe;
-  border-radius: 10px;
+  border-radius: 9px;
   padding: 0;
-  min-width: 36px;
-  width: 36px;
-  height: 36px;
+  min-width: 33px;
+  width: 33px;
+  height: 33px;
   color: #1d4ed8;
   font: inherit;
-  font-size: 17px;
+  font-size: 15.5px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -233,32 +243,55 @@
   position: relative;
   box-sizing: border-box;
 }
-#ptPatientDashboard .pd-patient-menu nav button span:first-child {
-  font-size: 17px;
+#ptPatientDashboard .pd-patient-menu nav button span:first-child,
+#ptPatientDashboard .pd-ai-quick-icon-btn span:first-child {
+  font-size: 15.5px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
   transition: transform 0.2s ease;
 }
-#ptPatientDashboard .pd-patient-menu nav button:hover:not(.active) {
+#ptPatientDashboard .pd-patient-menu nav button:hover:not(.active),
+#ptPatientDashboard .pd-ai-quick-icon-btn:hover:not(.active) {
   background: #dbeafe;
   border-color: #93c5fd;
   color: #1e40af;
   transform: translateY(-1px);
   box-shadow: 0 4px 10px rgba(37, 99, 235, 0.16);
 }
-#ptPatientDashboard .pd-patient-menu nav button:hover:not(.active) span:first-child {
+#ptPatientDashboard .pd-patient-menu nav button:hover:not(.active) span:first-child,
+#ptPatientDashboard .pd-ai-quick-icon-btn:hover:not(.active) span:first-child {
   transform: scale(1.1);
 }
-#ptPatientDashboard .pd-patient-menu nav button:active {
+#ptPatientDashboard .pd-patient-menu nav button:active,
+#ptPatientDashboard .pd-ai-quick-icon-btn:active {
   transform: translateY(0);
 }
-#ptPatientDashboard .pd-patient-menu nav button.active {
+#ptPatientDashboard .pd-patient-menu nav button.active,
+#ptPatientDashboard .pd-ai-quick-icon-btn.active {
   background: linear-gradient(135deg, #2563eb, #1d4ed8);
   border-color: #1d4ed8;
   color: #ffffff;
   box-shadow: 0 3px 10px rgba(37, 99, 235, 0.35), 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+#ptPatientDashboard .pd-patient-menu nav button[title]:hover::after,
+#ptPatientDashboard .pd-ai-quick-icon-btn[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 9px;
+  border-radius: 6px;
+  white-space: nowrap;
+  z-index: 120;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
 }
 
 
