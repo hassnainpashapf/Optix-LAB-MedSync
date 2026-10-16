@@ -107,8 +107,10 @@ async function main() {
   desktopWindow.requestFilter({ url: 'http://127.0.0.1/private' }, result => assert.equal(result.cancel, true));
   console.log('PASS: one Lab Profile template, custom parts, bundled fonts, auth, request boundaries and desktop copies');
   if (!process.env.REPORT_CHROMIUM_PATH) { console.log('Browser integration requires REPORT_CHROMIUM_PATH.'); return; }
+  const medium = fixture(12); medium.settings.reportFontSize = 'large';
+  medium.tables.invoices[0].regLocation = medium.tables.invoices[0].destLocation = 'Ghala Mandi Road Opposite Ahmad Jamal Clinic Ellah Abad';
   const out = process.env.REPORT_SAMPLE_DIR || path.join(root, 'work/profile-pdf-tests'); fs.mkdirSync(out, { recursive: true });
-  for (const [name, data] of [['lab-profile-report', sample], ['lab-profile-long-report', fixture(90)]]) {
+  for (const [name, data] of [['lab-profile-report', sample], ['lab-profile-long-report', fixture(90)], ['lab-profile-cbc-report', medium]]) {
     const html = data.html();
     const pdf = await renderer.chromiumPdf(html);
     assert.ok(pdf.subarray(0, 5).toString() === '%PDF-');
@@ -116,6 +118,29 @@ async function main() {
     fs.writeFileSync(path.join(out, name + '.pdf'), pdf);
     fs.writeFileSync(path.join(out, name + '.html'), html);
   }
+  // Regress the former header/footer-only first page and footer overlaps.
+  const browser = await require('puppeteer-core').launch({ executablePath: process.env.REPORT_CHROMIUM_PATH, headless: true, args: ['--no-sandbox'] });
+  try {
+    for (const data of [sample, medium, fixture(90), medium]) {
+      const page = await browser.newPage(); await page.emulateMediaType(data === medium ? 'screen' : 'print');
+      await page.setContent(renderer.documentHtml(data.html()), { waitUntil: 'networkidle0' });
+      await page.evaluate(renderer.preparePage);
+      const sheets = await page.evaluate(() => Array.from(document.querySelectorAll('.rpt-sheet'), sheet => {
+        const content = sheet.querySelector('.rpt-sheet-content'), footer = sheet.querySelector('.rpt-footer-block');
+        return { text: content.innerText, bottom: content.getBoundingClientRect().bottom, footerTop: footer.getBoundingClientRect().top };
+      }));
+      assert.ok(sheets[0].text.includes(data === sample ? 'Glucose - Fasting' : 'Parameter-0'), 'First sheet contains actual test results');
+      for (const sheet of sheets) {
+        assert.ok(sheet.text.trim(), 'No header/footer-only sheets');
+        assert.ok(sheet.bottom <= sheet.footerTop - 15, 'Test results stay above the footer');
+      }
+      if (data.tables.tests[0].params.length === 90) {
+        const text = sheets.map(sheet => sheet.text).join('\n');
+        for (let i = 0; i < 90; i++) assert.ok(text.includes('Result-' + i), 'Every long-report result is retained');
+      }
+      await page.close();
+    }
+  } finally { await browser.close(); }
   // Renderer must refuse missing assets rather than silently omit a logo.
   await assert.rejects(renderer.chromiumPdf(sample.html() + '<img src="data:image/png;base64,broken">'), /image could not be loaded/);
   console.log('PASS: real Chromium A4 PDFs, multi-page report and explicit missing-image failure');
