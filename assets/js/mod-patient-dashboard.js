@@ -2851,10 +2851,6 @@
 
       // Center & Right Main Vitals Overview Layout
       '<div class="pd-layout-vitals" id="pdOverview">' +
-      '  <div class="vitals-header-title-block" style="margin-bottom:14px">' +
-      '    <h2 style="font-size:24px;font-weight:800;color:#0f172a;margin:0 0 4px;letter-spacing:-0.02em">' + esc(patient.name || 'Patient') + ' Vitals Overview</h2>' +
-      '    <p style="font-size:13px;color:#64748b;margin:0">Real-time monitoring of current physiological metrics and trends.</p>' +
-      '  </div>' +
 
       // 2-Column Responsive Main Grid
       '  <div class="vitals-main-grid">' +
