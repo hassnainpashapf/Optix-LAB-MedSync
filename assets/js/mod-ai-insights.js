@@ -3528,6 +3528,9 @@
     var showRemarks = mods.reportRemarks !== false;
 
     var tabsStyle = '<style>'
+      + '  .ai-rec-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; align-items: stretch; }'
+      + '  @media(max-width:1100px) { .ai-rec-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }'
+      + '  @media(max-width:560px) { .ai-rec-kpi-grid { grid-template-columns: 1fr; gap: 10px; } }'
       + '  .ai-tabs-bar { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 14px; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; align-items: center; }'
       + '  .ai-tab-btn {'
       + '    appearance: none; -webkit-appearance: none;'
@@ -3564,8 +3567,53 @@
       + '  .ai-tab-btn.active .ai-tab-ico { color: #ffffff; }'
       + '</style>';
 
-    var hideTabsBar = !!(opts && opts.hideTabsBar);
+    function buildRecKpiCard(iconSvg, label, value, sub) {
+      return '<div class="stat ai-dash-kpi" data-tint="blue" style="--sc:#2563eb;--sc-line:#c7d8fb;--sc-soft:#eef3ff;display:flex;flex-direction:column;justify-content:space-between;height:104px;min-height:104px;box-sizing:border-box;background:#ffffff;border:1px solid var(--bd,#cbd5e1);border-radius:12px;padding:12px 16px;box-shadow:0 1px 3px rgba(15,23,42,.03);overflow:hidden">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px">'
+        + '  <div class="lb" style="font-size:11px;font-weight:700;letter-spacing:0.04em;text-transform:uppercase;color:var(--muted,#64748b);">' + label + '</div>'
+        + '  <div class="stat-ico" style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;background:transparent;border:none;flex-shrink:0;width:auto;height:auto">' + iconSvg + '</div>'
+        + '</div>'
+        + '<div class="vl" style="font-size:24px;font-weight:800;letter-spacing:-0.02em;color:var(--ink,#0f1e2e);line-height:1.1;font-variant-numeric:tabular-nums;margin:4px 0 2px">' + value + '</div>'
+        + '<div class="dl" style="font-size:11px;color:var(--muted,#64748b);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + sub + '</div>'
+        + '</div>';
+    }
+
+    var panicCount = (panicInfo && Array.isArray(panicInfo.alerts)) ? panicInfo.alerts.length : 0;
+    var organWarnCount = critOrgans.length + warnOrgans.length;
+    var ddiSafetyCount = drugInteractions.length + drugSafety.length;
+
+    var kpiCardsHtml = isPage
+      ? ('<div class="stat-grid ai-rec-kpi-grid">'
+        + buildRecKpiCard(
+            '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>',
+            'Clinical Findings',
+            findings.length,
+            'Flagged lab parameters'
+          )
+        + buildRecKpiCard(
+            '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+            'Critical Alerts',
+            panicCount,
+            'Emergency flags'
+          )
+        + buildRecKpiCard(
+            '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>',
+            'Organ Warnings',
+            organWarnCount,
+            'High risk systems'
+          )
+        + buildRecKpiCard(
+            '<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+            'DDI Conflicts',
+            ddiSafetyCount,
+            'Drug & safety shields'
+          )
+        + '</div>')
+      : '';
+
+    var hideTabsBar = !!(isPage || (opts && opts.hideTabsBar));
     var tabsHtml = tabsStyle
+      + kpiCardsHtml
       + '<div class="ai-tabs-bar"' + (hideTabsBar ? ' style="display:none"' : '') + '>'
       + (showSolutions ? '<button type="button" class="btn ai-tab-btn active" data-tab="solutions"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v5a4.5 4.5 0 0 0 9 0V3"/><path d="M6 3h3"/><path d="M10.5 3h3"/><path d="M9 12.5A6.5 6.5 0 0 0 15.5 19h1a2.5 2.5 0 0 0 2.5-2.5v-1"/><circle cx="19" cy="15" r="2"/></svg></span> <span>5 Core Solutions</span></button>' : '')
       + (showBodyMap ? '<button type="button" class="btn ai-tab-btn" data-tab="bodymap"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v8"/><path d="M9 12h6"/><path d="M9 21l3-5 3 5"/></svg></span> <span>Organ Impact Map</span></button>' : '')
@@ -4104,22 +4152,22 @@
     var initialHeading = AI._preferredModuleTitle ? (AI._preferredModuleTitle + ' — Dashboard') : 'AI Clinical Recommendations';
     AI._preferredModuleTitle = '';
 
-    var mergedHeaderHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:16px 20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px">'
+    var mergedHeaderHtml = '<div style="display:none">'
       + '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
-      + '  <button type="button" class="btn ai-action-btn" id="aiBackToDashboardBtn" style="border:1.5px solid #cbd5e1;background:#f8fafc;color:#1e293b;font-weight:700;font-size:12.5px;padding:6px 13px;min-height:36px;border-radius:8px;cursor:pointer;display:inline-flex;align-items:center;gap:6px" title="Back to AI Settings &amp; Subsystems"><span>←</span><span>AI Dashboard</span></button>'
+      + '  <button type="button" class="btn ai-action-btn" id="aiBackToDashboardBtn"><span>←</span><span>AI Dashboard</span></button>'
       + '  <div>'
-      + '    <h1 id="aiActiveModuleHeading" style="font-size:20px;font-weight:800;color:#131845;margin:0;letter-spacing:-0.01em">' + (window.App ? App.esc(initialHeading) : initialHeading) + '</h1>'
-      + '    <span style="display:none">AI Clinical Recommendations</span>'
-      + '    <div style="display:none" data-patient="' + ptName + '" data-invoice="' + invNo + '">' + ptName + '</div>'
+      + '    <h1 id="aiActiveModuleHeading">' + (window.App ? App.esc(initialHeading) : initialHeading) + '</h1>'
+      + '    <span>AI Clinical Recommendations</span>'
+      + '    <div data-patient="' + ptName + '" data-invoice="' + invNo + '">' + ptName + '</div>'
       + '  </div>'
       + '</div>'
-      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">'
+      + '<div>'
       +    switcherHtml
-      + '  <button type="button" class="btn ai-action-btn" id="aiCopyPrescription" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>Copy Solutions</span></button>'
-      + '  <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks" style="border:1.5px solid #131845;background:#ffffff;color:#131845;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg><span>Attach Remarks</span></button>'
-      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn ai-action-btn" id="aiWaDoctor" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>WhatsApp Doctor</span></button>' : '')
-      + '  <button type="button" class="btn ai-action-btn" id="aiPrintSlip" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:13px;padding:8px 16px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 1px 3px rgba(15,23,42,0.06);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>Print Summary</span></button>'
-      + '  <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:13px;padding:8px 18px;min-height:38px;border-radius:9px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;box-shadow:0 3px 8px rgba(19,24,69,0.22);font-family:inherit"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg><span>Print Rx Pad</span></button>'
+      + '  <button type="button" class="btn ai-action-btn" id="aiCopyPrescription"><span>Copy Solutions</span></button>'
+      + '  <button type="button" class="btn ai-action-btn" id="aiAttachReportRemarks"><span>Attach Remarks</span></button>'
+      + (doc && (doc.phone || doc.whatsapp) ? '  <button type="button" class="btn ai-action-btn" id="aiWaDoctor"><span>WhatsApp Doctor</span></button>' : '')
+      + '  <button type="button" class="btn ai-action-btn" id="aiPrintSlip"><span>Print Summary</span></button>'
+      + '  <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiPrintRxPad"><span>Print Rx Pad</span></button>'
       + '</div>'
       + '</div>';
 

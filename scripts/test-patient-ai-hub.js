@@ -235,9 +235,9 @@ console.log('✓ All 12 options in AI Dashboard (#optixAiDashboard) have clickab
 AI.openModuleDashboard('bodymap', 'Organ Impact Map', 'view');
 const modDashHtml = mockViewContainer.innerHTML;
 assert(modDashHtml.includes('id="aiRecommendationsPage"'), 'AI.openModuleDashboard must open #aiRecommendationsPage');
-assert(modDashHtml.includes('Organ Impact Map — Dashboard'), 'AI.openModuleDashboard must display the selected module name in the dashboard header');
-assert(modDashHtml.includes('id="aiBackToDashboardBtn"'), 'Module dashboard must include a back button (#aiBackToDashboardBtn) to return to AI Dashboard');
-console.log('✓ Clicking a module name opens its dedicated dashboard with back navigation');
+assert(modDashHtml.includes('ai-rec-kpi-grid'), 'Module dashboard must render 4 KPI summary cards at the top');
+assert(modDashHtml.includes('Clinical Findings') && modDashHtml.includes('Critical Alerts') && modDashHtml.includes('Organ Warnings') && modDashHtml.includes('DDI Conflicts'), 'Module dashboard must render all 4 KPI card titles');
+console.log('✓ Clicking a module name opens its dedicated dashboard with 4 KPI summary cards at the top');
 
 console.log('\n============================================================');
 console.log('ALL PATIENT AI HUB & 12 CORE MODULES TESTS PASSED CLEANLY 100%!');
