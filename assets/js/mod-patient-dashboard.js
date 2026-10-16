@@ -2814,24 +2814,7 @@
 
       // Center & Right Main Vitals Overview Layout
       '<div class="pd-layout-vitals" id="pdOverview">' +
-      // Breadcrumbs & Title matching Screenshot
-      '  <div class="vitals-breadcrumb-row" style="margin-bottom:12px">' +
-      '    <div style="display:flex;align-items:center;gap:12px">' +
-      '      <div style="display:flex;align-items:center;gap:6px">' +
-      '        <button type="button" class="vitals-nav-arrow" id="btnVitalsNavBack" title="Back" onclick="window.history.back()">←</button>' +
-      '        <button type="button" class="vitals-nav-arrow" id="btnVitalsNavForward" title="Forward" onclick="window.history.forward()">→</button>' +
-      '      </div>' +
-      '      <div class="vitals-breadcrumb">' +
-      '        <span style="font-size:13px">👤</span>' +
-      '        <a href="#/patients" class="vitals-bc-item">Patients</a>' +
-      '        <span class="vitals-bc-sep">&gt;</span>' +
-      '        <span class="vitals-bc-item">Patients Profile</span>' +
-      '        <span class="vitals-bc-sep">&gt;</span>' +
-      '        <span class="vitals-bc-curr">Vitals Overview</span>' +
-      '      </div>' +
-      '    </div>' +
-      '  </div>' +
-      '  <div class="vitals-header-title-block" style="margin-bottom:18px">' +
+      '  <div class="vitals-header-title-block" style="margin-bottom:14px">' +
       '    <h2 style="font-size:24px;font-weight:800;color:#0f172a;margin:0 0 4px;letter-spacing:-0.02em">' + esc(patient.name || 'Patient') + ' Vitals Overview</h2>' +
       '    <p style="font-size:13px;color:#64748b;margin:0">Real-time monitoring of current physiological metrics and trends.</p>' +
       '  </div>' +
