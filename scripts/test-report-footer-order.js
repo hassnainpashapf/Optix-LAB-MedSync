@@ -154,6 +154,35 @@ function suite(folder) {
   fixture(); tables.settings[0].footerNote = 'NOTE: Fixture legacy note retained.'; checkDefault();
   fixture(); tables.settings[0].footerNote = 'Get well soon. Reports available on counter & phone.'; checkDefault();
 
+  // Regression: long letterheads, titles and multi-line signatory credentials.
+  fixture(45);
+  tables.settings[0].labName = 'Synthetic Advanced Diagnostic Laboratory and Research Centre';
+  tables.settings[0].tagline = 'Accurate diagnostic services with detailed laboratory reporting';
+  tables.settings[0].showTagline = true;
+  tables.settings[0].signatories.push({ name: 'Second Synthetic Signatory',
+    qual: 'Specialist in Chemical Pathology and Laboratory Medicine with Additional Qualifications',
+    title: 'Consultant and Director of Diagnostic Laboratory Services', regNo: 'SYNTHETIC-002' });
+  tables.tests[0].name = 'Comprehensive extended diagnostic investigation with a very long descriptive test title '.repeat(4);
+  tables.invoices[0].items[0].name = tables.tests[0].name;
+  render();
+  for (const t of pdf.text) {
+    const left = t.align === 'center' ? t.x - Math.max(...t.widths) / 2 : t.align === 'right' ? t.x - Math.max(...t.widths) : t.x;
+    assert.ok(left >= 11.9 && left + Math.max(...t.widths) <= 198.1, 'Long fields stay inside page width');
+    assert.ok(t.y >= 12 && t.bottom <= (/^Page \d+ of/.test(t.values[0]) ? 293 : 285), 'Long fields stay inside page height: ' + JSON.stringify(t));
+  }
+  const credentials = pdf.text.filter(t => t.values.join(' ').includes('Specialist in Chemical'));
+  assert.ok(credentials.length && credentials.every(t => t.values.length > 1), 'Credentials wrap within signatory column');
+  const titleDraws = pdf.text.filter(t => t.values[0].startsWith('Comprehensive'));
+  assert.ok(titleDraws.length > 0);
+  for (const t of titleDraws) {
+    const firstRow = pdf.text.find(row => row.page === t.page && row.values[0] === 'Analyte 0');
+    if (firstRow) assert.ok(t.bottom < firstRow.y, 'Full title flows above table rows');
+  }
+  if (process.env.REPORT_SAMPLE_DIR && folder === root) {
+    fs.mkdirSync(process.env.REPORT_SAMPLE_DIR, { recursive: true });
+    fs.writeFileSync(path.join(process.env.REPORT_SAMPLE_DIR, 'report-layout-sample.pdf'), Buffer.from(pdf.doc.output('arraybuffer')));
+  }
+
   // HTML overrides and the rasterized custom-footer PDF path keep their priority.
   fixture(75);
   tables.settings[0].footerHtml = '<section>Fixture custom footer override</section>';

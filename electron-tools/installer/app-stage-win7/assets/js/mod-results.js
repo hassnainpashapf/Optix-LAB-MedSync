@@ -3391,7 +3391,7 @@
         '</div>' +
       '</div>';
 
-    var htmlContent = previewQr(reportHtml(d), invoiceId);
+    var htmlContent = '<div style="color:#fff;text-align:center;padding:32px" role="alert">PDF could not be generated. Please retry using Download PDF or reopen this report.</div>';
     var close = App.modal(modalTitle,
       topToolbarHtml +
       '<div class="rv-box" style="position:relative;background:#525659;border-radius:12px;overflow:hidden">' +
@@ -3575,6 +3575,7 @@
     var inHdr = false, repeatPatientGrid = true, letterheadBottom = M;
     var PH = 297, FM = M;                                   // A4 height, bottom margin
     var fVerNote = s.verNote || s.verificationNote || 'Electronically verified report. No signatures necessary.';
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5);
     var fVerLines = doc.splitTextToSize(fVerNote, CW);
     var fSigs = (Array.isArray(s.signatories) ? s.signatories : []).filter(function (g) { return g && (g.name || g.title) && g.active !== false; });
     var fSw = fSigs.length ? CW / fSigs.length : CW;
@@ -3583,8 +3584,13 @@
     var fSigBlockH = 0;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2);
     var fSigNameLines = fSigs.map(function (g) { return doc.splitTextToSize(g.name || '', fSw - 3); });
+    doc.setFontSize(7.2);
+    var fSigQualLines = fSigs.map(function (g) { return g.qual ? doc.splitTextToSize(g.qual, fSw - 3) : []; });
+    var fSigTitleLines = fSigs.map(function (g) {
+      return g.title ? doc.splitTextToSize(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fSw - 3) : [];
+    });
     fSigs.forEach(function (g, k) {
-      var h = fSigImgH + fSigNameLines[k].length * 3.6 + (g.qual ? 3.3 : 0) + (g.title ? 3.3 : 0);
+      var h = (fSigImgH ? fSigImgH + 1 : 0) + fSigNameLines[k].length * 3.6 + fSigQualLines[k].length * 3.3 + fSigTitleLines[k].length * 3.3;
       if (h > fSigBlockH) fSigBlockH = h;
     });
     var fAddrParts = [];
@@ -3637,8 +3643,8 @@
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8.2); doc.setTextColor(20, 20, 20);
         txt(fSigNameLines[k], fCx, fSy, { align: 'center' }); fSy += fSigNameLines[k].length * 3.6;
         doc.setFont('helvetica', 'normal'); doc.setFontSize(7.2); doc.setTextColor(40, 40, 40);
-        if (g.qual) { txt(g.qual, fCx, fSy, { align: 'center' }); fSy += 3.3; }
-        if (g.title) { txt(g.title + (g.regNo ? ' (' + g.regNo + ')' : ''), fCx, fSy, { align: 'center' }); fSy += 3.3; }
+        if (fSigQualLines[k].length) { txt(fSigQualLines[k], fCx, fSy, { align: 'center' }); fSy += fSigQualLines[k].length * 3.3; }
+        if (fSigTitleLines[k].length) { txt(fSigTitleLines[k], fCx, fSy, { align: 'center' }); fSy += fSigTitleLines[k].length * 3.3; }
       });
       curY += fSigBlockH + 3;
       doc.setDrawColor(0, 0, 0); doc.setLineWidth(0.3); doc.rect(M, curY, CW, fNoteH);
@@ -3719,11 +3725,16 @@
       doc.setFont('times', 'bold'); doc.setFontSize(25);
       var NC = s.labNameColor ? hdrAccentRgb(s.labNameColor) : A; /* the lab-name colour from Lab Profile (default: the accent colour) */
       doc.setTextColor(NC[0], NC[1], NC[2]);
-      txt(s.labName || 'Optix Medical Sync', htx, y + 8);
+      var nameW = Math.max(30, W - M - (showQr ? qrS + 15 : 0) - 42 - htx);
+      var labLines = doc.splitTextToSize(s.labName || 'Optix Medical Sync', nameW);
+      txt(labLines, htx, y + 8);
+      var labBottom = 8 + (labLines.length - 1) * 25 * 1.15 / doc.internal.scaleFactor;
       if (showTagline) {
         doc.setFont('times', 'italic'); doc.setFontSize(13);
         doc.setTextColor(A[0], A[1], A[2]);
-        txt(s.tagline, htx, y + 15.5);
+        var tagLines = doc.splitTextToSize(s.tagline, nameW);
+        txt(tagLines, htx, y + labBottom + 7.5);
+        labBottom += 7.5 + (tagLines.length - 1) * 13 * 1.15 / doc.internal.scaleFactor;
       }
 
       // --- right: Patient No. / Case # right-aligned with wide letter spacing ---
@@ -3740,7 +3751,7 @@
       // --- QR 26mm at far right ---
       if (showQr) addImg(qrDataUrl, W - M - qrS, y, qrS, qrS);
 
-      y += headH + 1.5;
+      y += Math.max(headH, labBottom + 3) + 1.5;
 
       // --- plain header text from Lab Profile ("Header text"), centred under the header ---
       if (String(s.headerText || '').trim()) {
@@ -4216,7 +4227,9 @@
         var titleLines = doc.splitTextToSize(tTitle, Math.max(20, leftW - 4));
         var headH = 7.5;
         var neededBoxH = Math.max(BOX_H, titleLines.length * 5.2 + headH + 2);
-        BOX_H = Math.min(30, neededBoxH);
+        // Long titles belong in the flowing body, never over the table headings.
+        var flowTitle = neededBoxH > 30;
+        BOX_H = flowTitle ? BOX_H : neededBoxH;
 
         // Include parameters populated only in a selected previous report.
         var shown = params.filter(function (p) {
@@ -4243,7 +4256,8 @@
           });
         });
 
-        drawSectionHeader(titleLines);
+        if (flowTitle) bodyLines(titleLines, 'bold', 11);
+        drawSectionHeader(flowTitle ? null : titleLines);
         rows.forEach(tableRow);
 
         drawReportGraph(test, vals);
