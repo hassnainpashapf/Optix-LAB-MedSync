@@ -1124,42 +1124,59 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 
 /* 2-Column Responsive Layout */
 .vitals-main-grid {
-  display: grid;
-  grid-template-columns: 1.25fr 1fr;
-  gap: 14px;
-  align-items: stretch;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr) !important;
+  gap: 12px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
-@media (max-width: 768px) {
+@media (max-width: 850px) {
   .vitals-main-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 }
 
 .vitals-left-col,
 .vitals-right-col {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 .vitals-left-col > .vitals-card {
   flex: 0 0 auto !important;
   height: auto !important;
   min-height: unset !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 .vitals-right-col > .vitals-stage-card {
-  flex: 1;
-  height: 100%;
+  flex: 1 !important;
+  height: 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 .vitals-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 20px;
-  padding: 20px 22px;
+  border-radius: 16px;
+  padding: 12px 14px;
   box-shadow: 0 2px 8px rgba(15,23,42,0.03);
   position: relative;
-  box-sizing: border-box;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
 }
 
 .vitals-card-head {
@@ -1362,23 +1379,31 @@ body:not(.auth) .card, .card, .pt-card, .ovk, .stat, .kpi, .dbq-card, .wa-card, 
 /* Sub-Cards Row (Daily Rehab Plan & Capacity / Adherence) */
 .vitals-subcards-row {
   display: grid !important;
-  grid-template-columns: 1fr 1fr !important;
-  gap: 12px !important;
-  margin-top: 12px !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 10px !important;
+  margin-top: 10px !important;
   width: 100% !important;
-  box-sizing: border-box;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 .vitals-stacked-cards {
   display: flex !important;
   flex-direction: column !important;
-  gap: 10px !important;
+  gap: 8px !important;
   width: 100% !important;
-  box-sizing: border-box;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 .vitals-subcards-row > .vitals-card,
 .vitals-stacked-cards > .vitals-card {
   width: 100% !important;
-  box-sizing: border-box;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
 }
 
 .vitals-subcard-subtitle {

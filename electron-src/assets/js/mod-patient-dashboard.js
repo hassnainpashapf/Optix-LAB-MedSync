@@ -437,14 +437,14 @@
       if (isAbnormal && t.abnormalParams && t.abnormalParams.length) {
         subText += ' • Flag: ' + t.abnormalParams.slice(0, 2).join(', ');
       }
-      return '<div class="vitals-rehab-item" data-test-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;border-radius:8px;padding:3px 4px" onclick="if(window.App&&App.openPatientTestDetailModal&&(\'' + esc(t.invoiceId || '') + '\'||\'' + esc(t.testId || '') + '\')){App.openPatientTestDetailModal(\'' + esc(t.invoiceId || '') + '\',\'' + esc(t.testId || '') + '\')}else{location.hash=\'#/patient/' + esc(pId) + '?tab=tests\'}">' +
-        '<div class="vitals-rehab-badge" style="' + (isAbnormal ? 'background:#fee2e2;color:#dc2626' : 'background:#eff6ff;color:#2563eb') + '">' + num + '</div>' +
-        '<div class="vitals-rehab-text" style="flex:1;min-width:0">' +
-        '  <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">' +
-        '    <div class="rehab-item-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(tName) + '">' + esc(tName) + '</div>' +
-        '    <span style="font-size:9.5px;font-weight:700;color:' + statusColor + ';background:' + statusBg + ';border:1px solid ' + statusBorder + ';padding:1px 6px;border-radius:10px;flex-shrink:0">' + statusText + '</span>' +
+      return '<div class="vitals-rehab-item" data-test-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;border-radius:8px;padding:3px 4px;width:100%;box-sizing:border-box;min-width:0;display:flex;align-items:center;gap:6px" onclick="if(window.App&&App.openPatientTestDetailModal&&(\'' + esc(t.invoiceId || '') + '\'||\'' + esc(t.testId || '') + '\')){App.openPatientTestDetailModal(\'' + esc(t.invoiceId || '') + '\',\'' + esc(t.testId || '') + '\')}else{location.hash=\'#/patient/' + esc(pId) + '?tab=tests\'}">' +
+        '<div class="vitals-rehab-badge" style="' + (isAbnormal ? 'background:#fee2e2;color:#dc2626' : 'background:#eff6ff;color:#2563eb') + ';width:20px;height:20px;font-size:10.5px;flex-shrink:0">' + num + '</div>' +
+        '<div class="vitals-rehab-text" style="flex:1;min-width:0;overflow:hidden">' +
+        '  <div style="display:flex;align-items:center;justify-content:space-between;gap:4px">' +
+        '    <div class="rehab-item-title" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:700" title="' + esc(tName) + '">' + esc(tName) + '</div>' +
+        '    <span style="font-size:9px;font-weight:700;color:' + statusColor + ';background:' + statusBg + ';border:1px solid ' + statusBorder + ';padding:1px 5px;border-radius:8px;flex-shrink:0;white-space:nowrap">' + statusText + '</span>' +
         '  </div>' +
-        '  <div class="rehab-item-desc" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(subText) + '</div>' +
+        '  <div class="rehab-item-desc" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:9.5px" title="' + esc(subText) + '">' + esc(subText) + '</div>' +
         '</div>' +
         '</div>';
     }).join('') + '<div style="display:none" aria-hidden="true">Early Ambulation</div>';
@@ -452,28 +452,28 @@
 
   function renderMedListHtml(meds, patient) {
     var defaultIcons = [
-      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4"></path><path d="M12 2v4"></path><rect x="6" y="6" width="12" height="15" rx="3"></rect><line x1="12" y1="11" x2="12" y2="16"></line><line x1="9.5" y1="13.5" x2="14.5" y2="13.5"></line></svg>',
-      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"></rect><circle cx="9" cy="9" r="2"></circle><circle cx="15" cy="9" r="2"></circle><circle cx="9" cy="15" r="2"></circle><circle cx="15" cy="15" r="2"></circle></svg>',
-      '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8"></path><path d="M9 2v3h6V2"></path><rect x="5" y="7" width="14" height="14" rx="3"></rect><path d="M9 13h6"></path><path d="M12 10v6"></path></svg>'
+      '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2h4"></path><path d="M12 2v4"></path><rect x="6" y="6" width="12" height="15" rx="3"></rect><line x1="12" y1="11" x2="12" y2="16"></line><line x1="9.5" y1="13.5" x2="14.5" y2="13.5"></line></svg>',
+      '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"></rect><circle cx="9" cy="9" r="2"></circle><circle cx="15" cy="9" r="2"></circle><circle cx="9" cy="15" r="2"></circle><circle cx="15" cy="15" r="2"></circle></svg>',
+      '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2h8"></path><path d="M9 2v3h6V2"></path><rect x="5" y="7" width="14" height="14" rx="3"></rect><path d="M9 13h6"></path><path d="M12 10v6"></path></svg>'
     ];
     var statusSchedules = [
-      { text: '✓ Taken 08:30 AM', color: '#059669', bg: '#f0fdf4', border: '#bbf7d0', timing: 'Morning Dose' },
-      { text: '⏰ Due 02:00 PM', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', timing: 'Midday Dose' },
-      { text: '⏳ Next 09:30 PM', color: '#64748b', bg: '#f8fafc', border: '#cbd5e1', timing: 'Night Dose' }
+      { text: '✓ Taken', color: '#059669', bg: '#f0fdf4', border: '#bbf7d0', timing: '8:30 AM' },
+      { text: '⏰ Due', color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd', timing: '2:00 PM' },
+      { text: '⏳ Next', color: '#64748b', bg: '#f8fafc', border: '#cbd5e1', timing: '9:30 PM' }
     ];
     return (meds || []).map(function (m, idx) {
       var icon = defaultIcons[idx % defaultIcons.length];
       var sched = statusSchedules[idx % statusSchedules.length];
-      var doseText = m.dose ? (m.dose + ' • ' + sched.timing) : sched.timing;
-      return '<div class="vitals-med-item" data-med-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:space-between;gap:8px" title="Click to log dose adherence" onclick="var b=this.querySelector(\'.med-status-chip\');if(b){b.textContent=\'✓ Taken Just Now\';b.style.color=\'#059669\';b.style.background=\'#f0fdf4\';b.style.borderColor=\'#bbf7d0\';if(window.App&&App.toast)App.toast(\'Medication dose recorded as taken!\');}">' +
-        '<div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">' +
-        '  <div class="vitals-med-icon-box">' + icon + '</div>' +
-        '  <div class="vitals-med-details" style="min-width:0;flex:1">' +
-        '    <div class="med-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(m.name) + '">' + esc(m.name) + '</div>' +
-        '    <div class="med-dosage" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(doseText) + '</div>' +
+      var doseText = (m.dose ? m.dose : '1 dose') + ' • ' + sched.timing;
+      return '<div class="vitals-med-item" data-med-idx="' + idx + '" style="cursor:pointer;transition:background 0.2s;display:flex;align-items:center;justify-content:space-between;gap:6px;padding:4px 6px;min-width:0;width:100%;box-sizing:border-box" title="Click to log dose adherence" onclick="var b=this.querySelector(\'.med-status-chip\');if(b){b.textContent=\'✓ Taken\';b.style.color=\'#059669\';b.style.background=\'#f0fdf4\';b.style.borderColor=\'#bbf7d0\';if(window.App&&App.toast)App.toast(\'Medication dose recorded as taken!\');}">' +
+        '<div style="display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow:hidden">' +
+        '  <div class="vitals-med-icon-box" style="width:22px!important;height:22px!important;font-size:11px!important;flex-shrink:0">' + icon + '</div>' +
+        '  <div class="vitals-med-details" style="min-width:0;flex:1;overflow:hidden">' +
+        '    <div class="med-name" style="font-size:11px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(m.name) + '">' + esc(m.name) + '</div>' +
+        '    <div class="med-dosage" style="font-size:9.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(doseText) + '">' + esc(doseText) + '</div>' +
         '  </div>' +
         '</div>' +
-        '<span class="med-status-chip" style="font-size:9.5px;font-weight:700;color:' + sched.color + ';background:' + sched.bg + ';border:1px solid ' + sched.border + ';padding:2px 7px;border-radius:10px;flex-shrink:0">' + sched.text + '</span>' +
+        '<span class="med-status-chip" style="font-size:9px;font-weight:700;color:' + sched.color + ';background:' + sched.bg + ';border:1px solid ' + sched.border + ';padding:1.5px 6px;border-radius:8px;flex-shrink:0;white-space:nowrap">' + sched.text + '</span>' +
         '</div>';
     }).join('');
   }
@@ -2876,48 +2876,42 @@
       '          </div>' +
       '          <div class="vitals-month-pill" id="btnMonthPicker" style="cursor:default;font-weight:700">ID: ' + esc(patient.id || 'N/A') + '</div>' +
       '        </div>' +
-      '        <div class="vitals-timeline-strip" style="margin-bottom:12px;padding-bottom:8px">' +
-      '          <div class="vitals-day-pill" style="cursor:default">' +
-      '            <div class="day-num">' + esc(patient.age == null ? 'N/A' : (patient.age + ' years')) + '</div>' +
+      '        <div class="vitals-timeline-strip" style="margin-bottom:8px;padding-bottom:6px;gap:6px;display:grid;grid-template-columns:repeat(5,minmax(0,1fr))">' +
+      '          <div class="vitals-day-pill" style="cursor:default;min-width:0;padding:4px 2px">' +
+      '            <div class="day-num" style="font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(patient.age == null ? 'N/A' : (patient.age + 'y')) + '</div>' +
       '            <div class="day-name">Age</div>' +
       '          </div>' +
-      '          <div class="vitals-day-pill" style="cursor:default">' +
-      '            <div class="day-num">' + esc(patient.gender || patient.sex || 'Not recorded') + '</div>' +
+      '          <div class="vitals-day-pill" style="cursor:default;min-width:0;padding:4px 2px">' +
+      '            <div class="day-num" style="font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(patient.gender || patient.sex || 'N/A') + '</div>' +
       '            <div class="day-name">Gender</div>' +
       '          </div>' +
-      '          <div class="vitals-day-pill" style="cursor:default">' +
-      '            <div class="day-num">' + esc(patient.blood || 'Not recorded') + '</div>' +
-      '            <div class="day-name">Blood Group</div>' +
+      '          <div class="vitals-day-pill" style="cursor:default;min-width:0;padding:4px 2px">' +
+      '            <div class="day-num" style="font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(patient.blood || 'N/A') + '</div>' +
+      '            <div class="day-name">Blood</div>' +
       '          </div>' +
-      '          <div class="vitals-day-pill" style="cursor:default">' +
-      '            <div class="day-num">' + esc(patient.dob || 'Not recorded') + '</div>' +
-      '            <div class="day-name">Date of Birth</div>' +
+      '          <div class="vitals-day-pill" style="cursor:default;min-width:0;padding:4px 2px">' +
+      '            <div class="day-num" style="font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(patient.dob || 'Not recorded') + '">' + esc(patient.dob ? String(patient.dob).slice(0, 10) : 'N/A') + '</div>' +
+      '            <div class="day-name">DOB</div>' +
       '          </div>' +
-      '          <div class="vitals-day-pill active" style="cursor:default">' +
-      '            <div class="day-num">' + esc(registered || 'Active') + '</div>' +
+      '          <div class="vitals-day-pill active" style="cursor:default;min-width:0;padding:4px 2px">' +
+      '            <div class="day-num" style="font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(registered || 'Active') + '">' + esc(registered ? String(registered).slice(0, 10) : 'Active') + '</div>' +
       '            <div class="day-name">Registered</div>' +
       '          </div>' +
       '        </div>' +
-      '        <div class="vitals-stress-row">' +
-      '          <div class="vitals-radial-gauge-box" id="gaugeBox" style="display:flex;flex-direction:column;align-items:center;justify-content:center">' +
-      '            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#0284c7 0%,#2563eb 100%);color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;box-shadow:0 6px 18px rgba(37,99,235,0.28);margin-bottom:6px">' + esc(initials) + '</div>' +
-      '            <span style="font-size:10px;font-weight:700;color:#0284c7;background:#eff6ff;padding:2px 8px;border-radius:12px;border:1px solid #dbeafe">Verified</span>' +
+      '        <div class="vitals-stress-row" style="display:flex;align-items:center;gap:12px">' +
+      '          <div class="vitals-radial-gauge-box" id="gaugeBox" style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;width:56px;height:56px">' +
+      '            <div style="width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,#0284c7 0%,#2563eb 100%);color:#ffffff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;box-shadow:0 3px 10px rgba(37,99,235,0.25)">' + esc(initials) + '</div>' +
       '          </div>' +
-      '          <div class="vitals-stress-info">' +
-      '            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
-      '              <h4 style="font-size:15px;font-weight:800;color:#0f172a;margin:0">' + esc(patient.name || 'Patient') + '</h4>' +
-      '              <span style="font-size:11px;color:#64748b">Father / Guardian: <strong style="color:#1e293b">' + esc(patient.father || 'Not recorded') + '</strong></span>' +
+      '          <div class="vitals-stress-info" style="min-width:0;flex:1;overflow:hidden">' +
+      '            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;gap:6px">' +
+      '              <h4 style="font-size:14px;font-weight:800;color:#0f172a;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + esc(patient.name || 'Patient') + '</h4>' +
+      '              <span style="font-size:10.5px;color:#64748b;white-space:nowrap;flex-shrink:0">Father: <strong style="color:#1e293b">' + esc(patient.father || 'N/A') + '</strong></span>' +
       '            </div>' +
-      '            <p id="stressTrendsDesc" style="font-size:11.5px;color:#64748b;line-height:1.35;margin:0 0 8px">CNIC: <strong style="color:#1e293b">' + esc(patient.cnic || 'Not recorded') + '</strong> &nbsp;|&nbsp; Ref Doctor: <strong style="color:#0284c7">' + esc(doctor || 'Not recorded') + '</strong></p>' +
-      '            <div class="vitals-peak-stats">' +
-      '              <div class="vitals-stat-item">' +
-      '                <span class="vitals-stat-lbl">📞 Phone / WA</span>' +
-      '                <span class="vitals-stat-val" id="highestPeakVal"><span>' + esc(patient.phone || 'Not recorded') + '</span><span class="vitals-stat-sep">|</span><span>WA: ' + esc(patient.whatsapp || 'Not recorded') + '</span><span class="vitals-stat-sep">|</span><span>' + esc(patient.email || 'Not recorded') + '</span></span>' +
-      '              </div>' +
-      '              <div class="vitals-stat-item">' +
-      '                <span class="vitals-stat-lbl">📍 Address</span>' +
-      '                <span class="vitals-stat-val" id="lowestPointVal"><span>' + esc(patient.address || 'Not recorded') + '</span><span class="vitals-stat-sep">|</span><span>Notes: ' + esc(patient.notes || 'Not recorded') + '</span></span>' +
-      '              </div>' +
+      '            <div style="font-size:10.5px;color:#64748b;margin:0 0 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">CNIC: <strong style="color:#1e293b">' + esc(patient.cnic || 'N/A') + '</strong> &bull; Dr: <strong style="color:#0284c7">' + esc(doctor || 'Self') + '</strong></div>' +
+      '            <div class="vitals-peak-stats" style="display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;font-size:10px">' +
+      '              <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(patient.phone || 'N/A') + '">📞 <span style="font-weight:600;color:#334155">' + esc(patient.phone || 'N/A') + '</span></div>' +
+      '              <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="' + esc(patient.whatsapp || 'N/A') + '">💬 <span style="font-weight:600;color:#16a34a">' + esc(patient.whatsapp || 'N/A') + '</span></div>' +
+      '              <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;grid-column:span 2" title="' + esc(patient.address || 'N/A') + '">📍 <span style="color:#475569">' + esc(patient.address || 'N/A') + '</span></div>' +
       '            </div>' +
       '          </div>' +
       '        </div>' +
