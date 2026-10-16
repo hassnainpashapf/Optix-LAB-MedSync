@@ -2991,6 +2991,7 @@
     var geneticGuard = analysis.geneticGuard || [];
     var urduGuide = analysis.urduGuide || { wazahat: [], khurak: [], parhez: [], dawaiSchedule: [], khatraAlamaat: [], plainText: '' };
     var organMap = analysis.organMap || [];
+    var reportNarrative = analysis.reportNarrative || '';
     var critOrgans = organMap.filter(function (o) { return o.status === 'critical'; });
     var warnOrgans = organMap.filter(function (o) { return o.status === 'warning'; });
     var safeOrgans = organMap.filter(function (o) { return o.status === 'normal'; });
@@ -3109,100 +3110,244 @@
         + '</div>';
     }
 
-    // Tab 2: Medical Indices & ASCVD HTML (Calm Theme)
-    var indicesHtml = '';
-    if (ascvdRisk) {
-      indicesHtml += '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
-        + '  <div>'
-        + '    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">Cardiovascular / AHA-ACC Guideline</div>'
-        + '    <div style="font-size:15.5px;font-weight:800;color:#131845;margin-top:2px;display:flex;align-items:center;gap:7px"><span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span><span>10-Year ASCVD Heart Attack &amp; Stroke Risk</span></div>'
-        + '    <div style="font-size:12px;color:#64748b;margin-top:2px">' + (window.App ? App.esc(ascvdRisk.details) : ascvdRisk.details) + '</div>'
-        + '  </div>'
-        + '  <div style="text-align:right">'
-        + '    <div style="font-size:22px;font-weight:800;color:#131845">' + ascvdRisk.riskScore + '% <span style="font-size:11px;font-weight:600;color:#64748b">10-Yr Risk</span></div>'
-        + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#f8fafc;border:1px solid #cbd5e1;color:#1e293b">' + (window.App ? App.esc(ascvdRisk.tier) : ascvdRisk.tier) + '</span>'
-        + '  </div>'
-        + '</div>'
-        + '<div style="font-size:12.5px;color:#334155;line-height:1.55;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">'
-        + '  <b style="color:#0f172a">Clinical Recommendation:</b> ' + (window.App ? App.esc(ascvdRisk.recommendation) : ascvdRisk.recommendation)
-        + '</div>'
-        + '</div>';
-    }
-
+    // Tab: Clinical Calculators & Medical Indices HTML
+    var calculatorsHtml = '';
     if (indices.length) {
-      indicesHtml += indices.map(function (ind) {
-        return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-          + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
-          + '  <div>'
-          + '    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">' + (window.App ? App.esc(ind.category) : ind.category) + '</div>'
-          + '    <div style="font-size:15px;font-weight:800;color:#131845;margin-top:2px">' + (window.App ? App.esc(ind.name) : ind.name) + '</div>'
-          + '    <div style="font-size:11.5px;color:#64748b;margin-top:2px">Formula: ' + (window.App ? App.esc(ind.formula) : ind.formula) + '</div>'
-          + '  </div>'
-          + '  <div style="text-align:right">'
-          + '    <div style="font-size:20px;font-weight:800;color:#131845">' + ind.score + ' <span style="font-size:11.5px;font-weight:600;color:#64748b">' + ind.unit + '</span></div>'
-          + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#f8fafc;border:1px solid #cbd5e1;color:#1e293b">' + (window.App ? App.esc(ind.statusLabel) : ind.statusLabel) + '</span>'
-          + '  </div>'
-          + '</div>'
-          + '<div style="font-size:12.5px;color:#334155;line-height:1.55;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">'
-          + '  <b style="color:#0f172a">Interpretation:</b> ' + (window.App ? App.esc(ind.interpretation) : ind.interpretation) + '<br>'
-          + '  <b style="color:#0f172a">Clinical Action:</b> ' + (window.App ? App.esc(ind.recommendation) : ind.recommendation)
-          + '</div>'
-          + '</div>';
-      }).join('');
-    }
-
-    // Tab 3: Drug Safety & DDI Shield HTML (Calm Theme)
-    var safetyHtml = '';
-    if (drugInteractions.length) {
-      safetyHtml += '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-        + '<div style="font-size:14.5px;font-weight:800;color:#131845;margin-bottom:12px;display:flex;align-items:center;gap:7px"><span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span><span>Drug Interactions &amp; Clash Matrix (DDI)</span></div>'
-        + drugInteractions.map(function (di) {
-            return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-left:3px solid #131845;border-radius:8px;padding:12px 14px;margin-bottom:8px">'
-              + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:gap:6px">'
-              + '  <b style="color:#131845;font-size:13px;display:inline-flex;align-items:center;gap:5px"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#2563eb"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> ' + (window.App ? App.esc(di.pair) : di.pair) + '</b>'
-              + '  <span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase">' + di.severity + '</span>'
-              + '</div>'
-              + '<div style="font-size:12px;color:#475569;margin-top:4px;line-height:1.45">' + (window.App ? App.esc(di.mechanism) : di.mechanism) + '</div>'
-              + '<div style="font-size:12px;color:#1e293b;font-weight:700;margin-top:4px">💡 Recommendation: ' + (window.App ? App.esc(di.solution) : di.solution) + '</div>'
-              + '</div>';
-          }).join('')
+      calculatorsHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+        + '<div style="font-size:16px;font-weight:800;color:#131845;margin-bottom:14px;display:flex;align-items:center;gap:8px"><span>🧮</span><span>Clinical Calculators &amp; Medical Indices</span></div>'
+        + indices.map(function (ind) {
+          return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+            + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px;margin-bottom:8px">'
+            + '  <div>'
+            + '    <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.04em">' + (window.App ? App.esc(ind.category) : ind.category) + '</div>'
+            + '    <div style="font-size:15px;font-weight:800;color:#131845;margin-top:2px">' + (window.App ? App.esc(ind.name) : ind.name) + '</div>'
+            + '    <div style="font-size:11.5px;color:#64748b;margin-top:2px">Formula: ' + (window.App ? App.esc(ind.formula) : ind.formula) + '</div>'
+            + '  </div>'
+            + '  <div style="text-align:right">'
+            + '    <div style="font-size:20px;font-weight:800;color:#131845">' + ind.score + ' <span style="font-size:11.5px;font-weight:600;color:#64748b">' + ind.unit + '</span></div>'
+            + '    <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;background:#f8fafc;border:1px solid #cbd5e1;color:#1e293b">' + (window.App ? App.esc(ind.statusLabel) : ind.statusLabel) + '</span>'
+            + '  </div>'
+            + '</div>'
+            + '<div style="font-size:12.5px;color:#334155;line-height:1.55;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9">'
+            + '  <b style="color:#0f172a">Interpretation:</b> ' + (window.App ? App.esc(ind.interpretation) : ind.interpretation) + '<br>'
+            + '  <b style="color:#0f172a">Clinical Action:</b> ' + (window.App ? App.esc(ind.recommendation) : ind.recommendation)
+            + '</div>'
+            + '</div>';
+        }).join('')
+        + '</div>';
+    } else {
+      calculatorsHtml = '<div style="padding:22px;text-align:center;color:#64748b;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;font-weight:600">'
+        + 'Clinical indices (eGFR, Mentzer Index, FIB-4, APRI, Castelli) evaluate automatically when corresponding diagnostic parameters are tested.'
         + '</div>';
     }
+    var indicesHtml = calculatorsHtml;
 
-    if (drugSafety.length) {
-      safetyHtml += drugSafety.map(function (ds) {
-        var dsSvg = ds.organ === 'Renal'
-          ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
-          : (ds.organ === 'Hepatic'
-              ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
-              : '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>');
-        var contraHtml = ds.contraindications.map(function (c) {
-          return '<li style="margin-bottom:4px"><b style="color:#1e293b">CONTRAINDICATED:</b> <span style="color:#334155">' + (window.App ? App.esc(c) : c) + '</span></li>';
-        }).join('');
-        var cautionsHtml = ds.cautions.map(function (c) {
-          return '<li style="margin-bottom:4px"><b style="color:#1e293b">CAUTION:</b> <span style="color:#334155">' + (window.App ? App.esc(c) : c) + '</span></li>';
-        }).join('');
-        var safeHtml = ds.safeAlternatives.map(function (sAlt) {
-          return '<li style="margin-bottom:4px"><b style="color:#1e293b">SAFE ALTERNATIVE:</b> <span style="color:#334155">' + (window.App ? App.esc(sAlt) : sAlt) + '</span></li>';
-        }).join('');
+    // Tab: 10-Year ASCVD Risk HTML
+    var ascvdPaneHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;border-bottom:1px solid #f1f5f9;padding-bottom:12px">'
+      + '  <div>'
+      + '    <div style="font-size:16px;font-weight:800;color:#131845;display:flex;align-items:center;gap:8px"><span>❤️</span><span>10-Year ASCVD Cardiovascular Risk (AHA/ACC Guideline)</span></div>'
+      + '    <div style="font-size:12px;color:#64748b;margin-top:2px">Primary prevention risk estimator for hard atherosclerotic cardiovascular disease events (stroke, myocardial infarction)</div>'
+      + '  </div>'
+      + '</div>';
+    if (ascvdRisk) {
+      ascvdPaneHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-bottom:16px">'
+        + '  <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:16px">'
+        + '    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">10-Year Estimated Risk</div>'
+        + '    <div style="font-size:32px;font-weight:800;color:#131845;margin-top:4px">' + ascvdRisk.riskScore + '%</div>'
+        + '    <span style="display:inline-block;padding:2px 10px;border-radius:6px;font-size:11.5px;font-weight:700;background:#ffffff;border:1px solid #cbd5e1;color:#131845;margin-top:6px">' + (window.App ? App.esc(ascvdRisk.tier) : ascvdRisk.tier) + '</span>'
+        + '  </div>'
+        + '  <div style="background:#f8fafc;border:1px solid #cbd5e1;border-radius:10px;padding:16px">'
+        + '    <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Risk Factor Profile</div>'
+        + '    <div style="font-size:13px;color:#334155;margin-top:6px;line-height:1.5">' + (window.App ? App.esc(ascvdRisk.details) : ascvdRisk.details) + '</div>'
+        + '  </div>'
+        + '</div>'
+        + '<div style="background:#ffffff;border:1px solid #cbd5e1;border-left:4px solid #131845;border-radius:10px;padding:16px 18px">'
+        + '  <div style="font-size:12.5px;font-weight:800;color:#131845;text-transform:uppercase;margin-bottom:4px">Guideline-Directed Medical Therapy (GDMT) Recommendation:</div>'
+        + '  <div style="font-size:13px;color:#334155;line-height:1.6">' + (window.App ? App.esc(ascvdRisk.recommendation) : ascvdRisk.recommendation) + '</div>'
+        + '</div>';
+    } else {
+      ascvdPaneHtml += '<div style="padding:22px;text-align:center;color:#64748b;background:#f8fafc;border:1px solid #cbd5e1;border-radius:12px;font-weight:600">'
+        + 'ASCVD Risk assessment requires age, gender, and lipid/blood pressure test parameters in the patient profile.'
+        + '</div>';
+    }
+    ascvdPaneHtml += '</div>';
 
-        return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
-          + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
-          + '  <span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0">' + dsSvg + '</span>'
-          + '  <div>'
-          + '    <div style="font-size:15px;font-weight:800;color:#131845">' + (window.App ? App.esc(ds.title) : ds.title) + '</div>'
-          + '    <div style="font-size:11.5px;color:#64748b;margin-top:1px">Trigger: ' + (window.App ? App.esc(ds.trigger) : ds.trigger) + '</div>'
-          + '  </div>'
+    // Tab: Panic SOS Alerts HTML
+    var panicPaneHtml = '';
+    var panicAlertsList = '';
+    if (panicInfo.isPanic && panicInfo.alerts && panicInfo.alerts.length) {
+      panicAlertsList = panicInfo.alerts.map(function (a) {
+        return '<div style="background:#ffffff;border:1.5px solid #cbd5e1;border-left:4px solid #131845;border-radius:10px;padding:14px 18px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+          + '  <div style="font-size:15px;font-weight:800;color:#131845">⚠️ ' + (window.App ? App.esc(a.param) : a.param) + ': <span style="color:#0f172a">' + (window.App ? App.esc(a.value) : a.value) + '</span></div>'
+          + '  <span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase">CRITICAL BREACH</span>'
           + '</div>'
-          + '<ul style="margin:8px 0 0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
-          + contraHtml + cautionsHtml + safeHtml
-          + '</ul>'
+          + '<div style="font-size:12.5px;color:#334155;margin-top:6px;line-height:1.5"><b style="color:#0f172a">Clinical Hazard:</b> ' + (window.App ? App.esc(a.hazard) : a.hazard) + '</div>'
+          + '<div style="font-size:12px;color:#64748b;margin-top:4px">Standard Cutoff: ' + (window.App ? App.esc(a.cutoff) : a.cutoff) + '</div>'
           + '</div>';
       }).join('');
-    } else if (!drugInteractions.length) {
-      safetyHtml = '<div style="padding:22px;text-align:center;color:#334155;background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;font-weight:700">✅ All organ safety shields green. No renal, hepatic, or hematological drug contraindications detected.</div>';
+    } else {
+      panicAlertsList = '<div style="padding:22px;text-align:center;color:#047857;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-weight:700;margin-bottom:14px">'
+        + '✅ All Tested Parameters Within Normal / Safe Emergency Range. No life-threatening panic limits breached.'
+        + '</div>';
     }
+    panicPaneHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;border-bottom:1px solid #f1f5f9;padding-bottom:12px">'
+      + '  <div>'
+      + '    <div style="font-size:16px;font-weight:800;color:#131845;display:flex;align-items:center;gap:8px"><span>🚨</span><span>Panic SOS Alerts (ISO 15189 / CAP Emergency Limits)</span></div>'
+      + '    <div style="font-size:12px;color:#64748b;margin-top:2px">Immediate notification standard for critical laboratory values requiring urgent medical intervention</div>'
+      + '  </div>'
+      + '  <div>'
+      + '    <button type="button" class="btn ai-action-btn" id="aiSendPanicSosTab" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;color:#2563eb"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg><span>Dispatch WhatsApp to Doctor</span></button>'
+      + '  </div>'
+      + '</div>'
+      + panicAlertsList
+      + '<div style="margin-top:16px;padding-top:14px;border-top:1px solid #f1f5f9">'
+      + '  <div style="font-size:12px;font-weight:800;color:#131845;text-transform:uppercase;margin-bottom:8px">Standard Emergency Critical Panic Thresholds Reference:</div>'
+      + '  <div style="overflow-x:auto">'
+      + '    <table style="width:100%;border-collapse:collapse;font-size:12px;color:#334155">'
+      + '      <thead><tr style="background:#f8fafc;color:#1e293b;font-weight:700;text-align:left;border-bottom:1px solid #cbd5e1"><th style="padding:6px 10px">Parameter</th><th style="padding:6px 10px">Critical Low</th><th style="padding:6px 10px">Critical High</th><th style="padding:6px 10px">Clinical Hazard</th></tr></thead>'
+      + '      <tbody>'
+      + '        <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px 10px;font-weight:700">Hemoglobin (Hb)</td><td style="padding:6px 10px;color:#e11d48">&lt; 7.0 g/dL</td><td style="padding:6px 10px;color:#e11d48">&gt; 20.0 g/dL</td><td style="padding:6px 10px">Tissue hypoxia / severe polycythemia hyperviscosity</td></tr>'
+      + '        <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px 10px;font-weight:700">Platelets (PLT)</td><td style="padding:6px 10px;color:#e11d48">&lt; 50,000 /µL</td><td style="padding:6px 10px;color:#e11d48">&gt; 1,000,000 /µL</td><td style="padding:6px 10px">Spontaneous intracranial/GI hemorrhage risk</td></tr>'
+      + '        <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px 10px;font-weight:700">Total Leukocytes (WBC)</td><td style="padding:6px 10px;color:#e11d48">&lt; 2,000 /µL</td><td style="padding:6px 10px;color:#e11d48">&gt; 30,000 /µL</td><td style="padding:6px 10px">Agranulocytosis / Severe septic crisis / Blast leukemia</td></tr>'
+      + '        <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px 10px;font-weight:700">Blood Glucose</td><td style="padding:6px 10px;color:#e11d48">&lt; 50 mg/dL</td><td style="padding:6px 10px;color:#e11d48">&gt; 400 mg/dL</td><td style="padding:6px 10px">Hypoglycemic coma / DKA / Hyperosmolar state</td></tr>'
+      + '        <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px 10px;font-weight:700">Serum Creatinine</td><td style="padding:6px 10px">—</td><td style="padding:6px 10px;color:#e11d48">&gt; 5.0 mg/dL</td><td style="padding:6px 10px">Acute anuric renal failure / Uremic encephalopathy</td></tr>'
+      + '        <tr style="border-bottom:1px solid #f1f5f9"><td style="padding:6px 10px;font-weight:700">Serum Potassium</td><td style="padding:6px 10px;color:#e11d48">&lt; 2.8 mmol/L</td><td style="padding:6px 10px;color:#e11d48">&gt; 6.2 mmol/L</td><td style="padding:6px 10px">Fatal cardiac arrhythmias / Ventricular fibrillation</td></tr>'
+      + '      </tbody>'
+      + '    </table>'
+      + '  </div>'
+      + '</div>'
+      + '</div>';
+
+    // Tab: Drug Interactions (DDI) HTML
+    var ddiPaneHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;border-bottom:1px solid #f1f5f9;padding-bottom:12px">'
+      + '  <div>'
+      + '    <div style="font-size:16px;font-weight:800;color:#131845;display:flex;align-items:center;gap:8px"><span>💊</span><span>Drug Interactions (DDI) &amp; Conflict Clash Matrix</span></div>'
+      + '    <div style="font-size:12px;color:#64748b;margin-top:2px">Pharmacodynamic and pharmacokinetic conflict checker between co-prescribed therapies</div>'
+      + '  </div>'
+      + '</div>';
+    if (drugInteractions.length) {
+      ddiPaneHtml += drugInteractions.map(function (di) {
+        return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-left:4px solid #131845;border-radius:10px;padding:16px 18px;margin-bottom:12px;box-shadow:0 1px 3px rgba(15,30,46,0.03)">'
+          + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+          + '  <div style="font-size:14.5px;font-weight:800;color:#131845;display:inline-flex;align-items:center;gap:6px">'
+          + '    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color:#2563eb"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'
+          + '    ' + (window.App ? App.esc(di.pair) : di.pair)
+          + '  </div>'
+          + '  <span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase">' + (window.App ? App.esc(di.severity) : di.severity) + '</span>'
+          + '</div>'
+          + '<div style="font-size:12.5px;color:#334155;margin-top:8px;line-height:1.55"><b style="color:#0f172a">Mechanism:</b> ' + (window.App ? App.esc(di.mechanism) : di.mechanism) + '</div>'
+          + '<div style="background:#f8fafc;border-left:3px solid #2563eb;padding:8px 12px;border-radius:6px;font-size:12.5px;color:#1e293b;font-weight:700;margin-top:8px">💡 Clinical Solution: ' + (window.App ? App.esc(di.solution) : di.solution) + '</div>'
+          + '</div>';
+      }).join('');
+    } else {
+      ddiPaneHtml += '<div style="padding:22px;text-align:center;color:#047857;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-weight:700">'
+        + '✅ No adverse drug-drug interactions (DDI) detected across active medications.'
+        + '</div>';
+    }
+    ddiPaneHtml += '</div>';
+
+    // Tab: Organ Toxicity Shields HTML
+    var safetyShieldsHtml = '';
+    if (drugSafety.length) {
+      safetyShieldsHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+        + '<div style="font-size:16px;font-weight:800;color:#131845;margin-bottom:14px;display:flex;align-items:center;gap:8px"><span>🛡️</span><span>Organ-Specific Toxicity Shields (Renal, Hepatic, Hematology)</span></div>'
+        + drugSafety.map(function (ds) {
+          var dsSvg = ds.organ === 'Renal'
+            ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+            : (ds.organ === 'Hepatic'
+                ? '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>'
+                : '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>');
+          var contraHtml = ds.contraindications.map(function (c) {
+            return '<li style="margin-bottom:4px"><b style="color:#1e293b">CONTRAINDICATED:</b> <span style="color:#334155">' + (window.App ? App.esc(c) : c) + '</span></li>';
+          }).join('');
+          var cautionsHtml = ds.cautions.map(function (c) {
+            return '<li style="margin-bottom:4px"><b style="color:#1e293b">CAUTION:</b> <span style="color:#334155">' + (window.App ? App.esc(c) : c) + '</span></li>';
+          }).join('');
+          var safeHtml = ds.safeAlternatives.map(function (sAlt) {
+            return '<li style="margin-bottom:4px"><b style="color:#1e293b">SAFE ALTERNATIVE:</b> <span style="color:#334155">' + (window.App ? App.esc(sAlt) : sAlt) + '</span></li>';
+          }).join('');
+
+          return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:18px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+            + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+            + '  <span style="display:inline-flex;align-items:center;justify-content:center;color:#2563eb;flex-shrink:0">' + dsSvg + '</span>'
+            + '  <div>'
+            + '    <div style="font-size:15px;font-weight:800;color:#131845">' + (window.App ? App.esc(ds.title) : ds.title) + '</div>'
+            + '    <div style="font-size:11.5px;color:#64748b;margin-top:1px">Trigger: ' + (window.App ? App.esc(ds.trigger) : ds.trigger) + '</div>'
+            + '  </div>'
+            + '</div>'
+            + '<ul style="margin:8px 0 0;padding-left:18px;font-size:12.5px;color:#334155;line-height:1.6">'
+            + contraHtml + cautionsHtml + safeHtml
+            + '</ul>'
+            + '</div>';
+        }).join('')
+        + '</div>';
+    } else {
+      safetyShieldsHtml = '<div style="padding:22px;text-align:center;color:#047857;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-weight:700">✅ All organ safety shields green. No renal, hepatic, or hematological drug contraindications detected.</div>';
+    }
+    var safetyHtml = safetyShieldsHtml;
+
+    // Tab: Differential Diagnosis (DDx) HTML
+    var ddxPaneHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;border-bottom:1px solid #f1f5f9;padding-bottom:12px">'
+      + '  <div>'
+      + '    <div style="font-size:16px;font-weight:800;color:#131845;display:flex;align-items:center;gap:8px"><span>🎯</span><span>Differential Diagnosis (DDx) Ranked Candidates</span></div>'
+      + '    <div style="font-size:12px;color:#64748b;margin-top:2px">Algorithmic disease differential ranking matching patient multi-organ laboratory findings</div>'
+      + '  </div>'
+      + '</div>';
+    if (ddx.length) {
+      ddxPaneHtml += ddx.map(function (dm) {
+        var candidatesHtml = (dm.candidates || []).map(function (c, cIdx) {
+          return '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:10px;padding:14px 16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
+            + '<div>'
+            + '  <div style="display:flex;align-items:center;gap:8px">'
+            + '    <span style="font-size:12px;font-weight:800;color:#64748b">#' + (cIdx + 1) + '</span>'
+            + '    <span style="font-size:15px;font-weight:800;color:#0f172a">' + (window.App ? App.esc(c.disease) : c.disease) + '</span>'
+            + '  </div>'
+            + '  <div style="font-size:12px;color:#475569;margin-top:4px">Recommended Confirmatory Test: <b style="color:#131845">' + (window.App ? App.esc(c.confirmatoryTest) : c.confirmatoryTest) + '</b></div>'
+            + '</div>'
+            + '<div style="text-align:right">'
+            + '  <div style="font-size:18px;font-weight:800;color:#131845">' + c.probability + '%</div>'
+            + '  <span style="background:#f8fafc;color:#1e293b;border:1px solid #cbd5e1;padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700">Probability Match</span>'
+            + '</div>'
+            + '</div>';
+        }).join('');
+
+        return '<div style="margin-bottom:14px">'
+          + '<div style="font-size:13px;font-weight:800;color:#131845;text-transform:uppercase;margin-bottom:8px">Clinical Syndrome: ' + (window.App ? App.esc(dm.syndrome || dm.group || 'Diagnostic Match') : (dm.syndrome || dm.group || 'Diagnostic Match')) + '</div>'
+          + candidatesHtml
+          + '</div>';
+      }).join('');
+    } else {
+      ddxPaneHtml += '<div style="padding:22px;text-align:center;color:#047857;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;font-weight:700">'
+        + '✅ Findings are within standard reference boundaries; no high-probability disease differentials indicated.'
+        + '</div>';
+    }
+    ddxPaneHtml += '</div>';
+
+    // Tab: Report Remarks Summary HTML
+    var remarksPaneHtml = '<div style="background:#ffffff;border:1px solid #cbd5e1;border-radius:12px;padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 3px rgba(15,30,46,0.04)">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;border-bottom:1px solid #f1f5f9;padding-bottom:12px">'
+      + '  <div>'
+      + '    <div style="font-size:16px;font-weight:800;color:#131845;display:flex;align-items:center;gap:8px"><span>📝</span><span>Report Remarks Summary (Lab Sheet Footer)</span></div>'
+      + '    <div style="font-size:12px;color:#64748b;margin-top:2px">Concise, professional clinical remarks auto-formatted for inclusion on the printed lab report</div>'
+      + '  </div>'
+      + '  <div style="display:flex;gap:8px">'
+      + '    <button type="button" class="btn ai-action-btn" id="aiCopyRemarksTabBtn" style="border:1.5px solid #cbd5e1;background:#ffffff;color:#1e293b;font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer">📋 Copy Remarks</button>'
+      + '    <button type="button" class="btn ai-action-btn ai-action-btn-primary" id="aiAttachRemarksTabBtn" style="background:#131845;color:#ffffff;border:1.5px solid #131845;font-weight:800;font-size:12.5px;padding:7px 14px;border-radius:8px;cursor:pointer">➕ Attach to Printed Report</button>'
+      + '  </div>'
+      + '</div>'
+      + '<div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:16px 18px;margin-bottom:14px">'
+      + '  <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:8px">Generated Narrative Preview:</div>'
+      + '  <div style="font-size:13.5px;color:#1e293b;line-height:1.65;white-space:pre-wrap;font-family:inherit" id="aiRemarksTextContent">' + (window.App ? App.esc(reportNarrative) : reportNarrative) + '</div>'
+      + '</div>'
+      + '<div style="font-size:12px;color:#64748b">'
+      + '  💡 <b>Tip:</b> Clicking "Attach to Printed Report" automatically adds this interpretation to the invoice remarks so it prints directly at the bottom of the laboratory test sheet.'
+      + '</div>'
+      + '</div>';
 
     // Tab 4: Historical Velocity Trends HTML (Theme Harmonized)
     var trendsHtml = '';
@@ -3318,15 +3463,21 @@
       + AI.generateRxPadHtml(analysis)
       + '</div>';
 
-    // Pro Navigation Tabs Bar
+    // Pro Navigation Tabs Bar (Exposes all 12 Clinical Intelligence Modules)
     var cfg = (typeof AI.getAiConfig === 'function') ? AI.getAiConfig() : null;
     var mods = (cfg && cfg.modules) || {};
+    var showSolutions = mods.solutions5 !== false;
     var showBodyMap = mods.bodyMap !== false;
     var showCalculators = mods.calculators !== false;
-    var showSafety = mods.safetyShields !== false || mods.drugInteractions !== false;
+    var showPanic = mods.panicSos !== false;
+    var showDdi = mods.drugInteractions !== false;
+    var showSafety = mods.safetyShields !== false;
+    var showDdx = mods.ddx !== false;
     var showGenetic = mods.geneticGuard !== false;
+    var showAscvd = mods.ascvdRisk !== false;
     var showUrdu = mods.urduGuide !== false;
     var showRx = mods.rxPad !== false;
+    var showRemarks = mods.reportRemarks !== false;
 
     var tabsStyle = '<style>'
       + '  .ai-tabs-bar { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 14px; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; align-items: center; }'
@@ -3367,19 +3518,24 @@
 
     var tabsHtml = tabsStyle
       + '<div class="ai-tabs-bar">'
-      + '<button type="button" class="btn ai-tab-btn active" data-tab="solutions"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v5a4.5 4.5 0 0 0 9 0V3"/><path d="M6 3h3"/><path d="M10.5 3h3"/><path d="M9 12.5A6.5 6.5 0 0 0 15.5 19h1a2.5 2.5 0 0 0 2.5-2.5v-1"/><circle cx="19" cy="15" r="2"/></svg></span> <span>5 Solutions</span></button>'
-      + (showBodyMap ? '<button type="button" class="btn ai-tab-btn" data-tab="bodymap"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></span> <span>Organ Map</span></button>' : '')
-      + (showCalculators ? '<button type="button" class="btn ai-tab-btn" data-tab="indices"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg></span> <span>Indices</span></button>' : '')
-      + (showSafety ? '<button type="button" class="btn ai-tab-btn" data-tab="safety"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span> <span>Drug Safety</span></button>' : '')
-      + '<button type="button" class="btn ai-tab-btn" data-tab="trends"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span> <span>Velocity</span></button>'
-      + (showGenetic ? '<button type="button" class="btn ai-tab-btn" data-tab="genetic"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></span> <span>Genetic Guard</span></button>' : '')
-      + (showUrdu ? '<button type="button" class="btn ai-tab-btn" data-tab="urdu"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> <span>Urdu Guide</span></button>' : '')
-      + (showRx ? '<button type="button" class="btn ai-tab-btn" data-tab="rx"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span> <span>Rx Pad</span></button>' : '')
+      + (showSolutions ? '<button type="button" class="btn ai-tab-btn active" data-tab="solutions"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 3v5a4.5 4.5 0 0 0 9 0V3"/><path d="M6 3h3"/><path d="M10.5 3h3"/><path d="M9 12.5A6.5 6.5 0 0 0 15.5 19h1a2.5 2.5 0 0 0 2.5-2.5v-1"/><circle cx="19" cy="15" r="2"/></svg></span> <span>5 Core Solutions</span></button>' : '')
+      + (showBodyMap ? '<button type="button" class="btn ai-tab-btn" data-tab="bodymap"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v8"/><path d="M9 12h6"/><path d="M9 21l3-5 3 5"/></svg></span> <span>Organ Impact Map</span></button>' : '')
+      + (showCalculators ? '<button type="button" class="btn ai-tab-btn" data-tab="indices"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg></span> <span>Clinical Calculators</span></button>' : '')
+      + (showPanic ? '<button type="button" class="btn ai-tab-btn" data-tab="panic"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span> <span>Panic SOS Alerts</span></button>' : '')
+      + (showDdi ? '<button type="button" class="btn ai-tab-btn" data-tab="ddi"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg></span> <span>Drug Interactions (DDI)</span></button>' : '')
+      + (showSafety ? '<button type="button" class="btn ai-tab-btn" data-tab="safety"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg></span> <span>Organ Toxicity Shields</span></button>' : '')
+      + (showDdx ? '<button type="button" class="btn ai-tab-btn" data-tab="ddx"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></span> <span>Differential Diagnosis (DDx)</span></button>' : '')
+      + (showGenetic ? '<button type="button" class="btn ai-tab-btn" data-tab="genetic"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-14 0"/><circle cx="9" cy="9" r="2"/><path d="m14 8 5 5"/></svg></span> <span>Genetic & Marriage Guard</span></button>' : '')
+      + (showAscvd ? '<button type="button" class="btn ai-tab-btn" data-tab="ascvd"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5v14"/></svg></span> <span>10-Year ASCVD Risk</span></button>' : '')
+      + (showUrdu ? '<button type="button" class="btn ai-tab-btn" data-tab="urdu"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span> <span>Roman Urdu Guide</span></button>' : '')
+      + (showRx ? '<button type="button" class="btn ai-tab-btn" data-tab="rx"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span> <span>Digital Prescription Pad</span></button>' : '')
+      + (showRemarks ? '<button type="button" class="btn ai-tab-btn" data-tab="remarks"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></span> <span>Report Remarks Summary</span></button>' : '')
+      + '<button type="button" class="btn ai-tab-btn" data-tab="trends"><span class="ai-tab-ico"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg></span> <span>Velocity Trends</span></button>'
       + '</div>';
 
     var html = ''
       + tabsHtml
-      // PANE 1: 5 Solutions (Clean Unified Medical Cards - Big & Spacious)
+      // PANE 1: 5 Core Solutions
       + '<div class="ai-tab-pane" id="aiPane-solutions" style="display:block">'
       + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:20px;margin-bottom:20px">'
       + '    <div style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:16px;padding:24px;box-shadow:0 4px 14px rgba(15,30,46,0.06);display:flex;flex-direction:column;height:520px;box-sizing:border-box">'
@@ -3414,33 +3570,53 @@
       + '    </div>'
       + '  </div>'
       + '</div>'
-      // PANE 2: Medical Indices & ASCVD
+      // PANE 2: Organ Impact Map
+      + '<div class="ai-tab-pane" id="aiPane-bodymap" style="display:none">'
+      +   AI.renderBodyMapHtml(analysis)
+      + '</div>'
+      // PANE 3: Clinical Calculators
       + '<div class="ai-tab-pane" id="aiPane-indices" style="display:none">'
-      +   indicesHtml
+      +   calculatorsHtml
       + '</div>'
-      // PANE 3: Drug Safety & DDI Shield
+      // PANE 4: Panic SOS Alerts
+      + '<div class="ai-tab-pane" id="aiPane-panic" style="display:none">'
+      +   panicPaneHtml
+      + '</div>'
+      // PANE 5: Drug Interactions (DDI)
+      + '<div class="ai-tab-pane" id="aiPane-ddi" style="display:none">'
+      +   ddiPaneHtml
+      + '</div>'
+      // PANE 6: Organ Toxicity Shields
       + '<div class="ai-tab-pane" id="aiPane-safety" style="display:none">'
-      +   safetyHtml
+      +   safetyShieldsHtml
       + '</div>'
-      // PANE 4: Historical Velocity Trends
-      + '<div class="ai-tab-pane" id="aiPane-trends" style="display:none">'
-      +   trendsHtml
+      // PANE 7: Differential Diagnosis (DDx)
+      + '<div class="ai-tab-pane" id="aiPane-ddx" style="display:none">'
+      +   ddxPaneHtml
       + '</div>'
-      // PANE 5: Family Genetic & Marriage Guard
+      // PANE 8: Family Genetic & Marriage Guard
       + '<div class="ai-tab-pane" id="aiPane-genetic" style="display:none">'
       +   geneticHtml
       + '</div>'
-      // PANE 6: Roman Urdu Guide
+      // PANE 9: 10-Year ASCVD Risk
+      + '<div class="ai-tab-pane" id="aiPane-ascvd" style="display:none">'
+      +   ascvdPaneHtml
+      + '</div>'
+      // PANE 10: Roman Urdu Guide
       + '<div class="ai-tab-pane" id="aiPane-urdu" style="display:none">'
       +   urduHtml
       + '</div>'
-      // PANE 7: Digital Rx Pad
+      // PANE 11: Digital Rx Pad
       + '<div class="ai-tab-pane" id="aiPane-rx" style="display:none">'
       +   rxPadPreviewHtml
       + '</div>'
-      // PANE 8: Interactive Organ Body Map
-      + '<div class="ai-tab-pane" id="aiPane-bodymap" style="display:none">'
-      +   AI.renderBodyMapHtml(analysis)
+      // PANE 12: Report Remarks Summary
+      + '<div class="ai-tab-pane" id="aiPane-remarks" style="display:none">'
+      +   remarksPaneHtml
+      + '</div>'
+      // PANE 13: Historical Velocity Trends
+      + '<div class="ai-tab-pane" id="aiPane-trends" style="display:none">'
+      +   trendsHtml
       + '</div>'
       // Medical Advisory Disclaimer
       + '<div style="font-size:11px;color:#94a3b8;line-height:1.4;text-align:center;padding:10px 14px;margin-top:10px">'
@@ -3503,32 +3679,66 @@
     });
 
     // Panic SOS WhatsApp Button
-    var sosBtn = scopeEl.querySelector('#aiSendPanicSos');
-    if (sosBtn) {
-      sosBtn.addEventListener('click', function () {
-        if (String(inv.id || inv.no || '').indexOf('SIM-') === 0) { if (window.App && App.toast) App.toast('Simulation only: no message will be sent.', 'info'); return; }
-        var rawPh = (doc && (doc.whatsapp || doc.phone)) || '';
-        var ph = rawPh.replace(/[^0-9]/g, '');
-        if (ph.indexOf('0') === 0) ph = '92' + ph.slice(1);
-        var url = ph ? ('https://wa.me/' + ph + '?text=' + encodeURIComponent(panicInfo.formattedMessage))
-                     : ('https://wa.me/?text=' + encodeURIComponent(panicInfo.formattedMessage));
-        window.open(url, '_blank');
+    var sosBtns = [scopeEl.querySelector('#aiSendPanicSos'), scopeEl.querySelector('#aiSendPanicSosTab')];
+    sosBtns.forEach(function (sosBtn) {
+      if (sosBtn) {
+        sosBtn.addEventListener('click', function () {
+          if (String(inv.id || inv.no || '').indexOf('SIM-') === 0) { if (window.App && App.toast) App.toast('Simulation only: no message will be sent.', 'info'); return; }
+          var rawPh = (doc && (doc.whatsapp || doc.phone)) || '';
+          var ph = rawPh.replace(/[^0-9]/g, '');
+          if (ph.indexOf('0') === 0) ph = '92' + ph.slice(1);
+          var url = ph ? ('https://wa.me/' + ph + '?text=' + encodeURIComponent(panicInfo.formattedMessage))
+                       : ('https://wa.me/?text=' + encodeURIComponent(panicInfo.formattedMessage));
+          window.open(url, '_blank');
+        });
+      }
+    });
+
+    // Attach Summary to Printed Report Remarks Button
+    var attachBtns = [scopeEl.querySelector('#aiAttachReportRemarks'), scopeEl.querySelector('#aiAttachRemarksTabBtn')];
+    attachBtns.forEach(function (attachBtn) {
+      if (attachBtn) {
+        attachBtn.addEventListener('click', function () {
+          var targetId = (inv && (inv.id || inv.no)) || '';
+          var ok = AI.attachSummaryToReportRemarks(targetId, reportNarrative);
+          if (ok) {
+            attachBtn.innerHTML = '✅ Attached to Remarks!';
+            attachBtn.style.color = '#059669';
+            attachBtn.style.borderColor = '#10b981';
+            attachBtn.style.background = '#ecfdf5';
+          }
+        });
+      }
+    });
+
+    // Copy Remarks Tab Button
+    var copyRemarksBtn = scopeEl.querySelector('#aiCopyRemarksTabBtn');
+    if (copyRemarksBtn) {
+      copyRemarksBtn.addEventListener('click', function () {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(reportNarrative).then(function () {
+            if (window.App && App.toast) App.toast('Report remarks copied to clipboard!');
+          });
+        } else {
+          var ta = document.createElement('textarea');
+          ta.value = reportNarrative;
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (window.App && App.toast) App.toast('Report remarks copied!');
+        }
       });
     }
 
-    // Attach Summary to Printed Report Remarks Button
-    var attachBtn = scopeEl.querySelector('#aiAttachReportRemarks');
-    if (attachBtn) {
-      attachBtn.addEventListener('click', function () {
-        var targetId = (inv && (inv.id || inv.no)) || '';
-        var ok = AI.attachSummaryToReportRemarks(targetId, reportNarrative);
-        if (ok) {
-          attachBtn.innerHTML = '✅ Attached to Remarks!';
-          attachBtn.style.color = '#059669';
-          attachBtn.style.borderColor = '#10b981';
-          attachBtn.style.background = '#ecfdf5';
-        }
-      });
+    // Auto-activate preferred tab if requested
+    var prefTab = (opts && opts.preferredTab) || AI._preferredTab;
+    if (prefTab) {
+      AI._preferredTab = null;
+      var targetTabBtn = scopeEl.querySelector('.ai-tab-btn[data-tab="' + prefTab + '"]');
+      if (targetTabBtn) {
+        targetTabBtn.click();
+      }
     }
 
     // Organ Body Map Selection & Jump Interactivity
@@ -3765,7 +3975,7 @@
   };
 
   /* Render Dedicated Full Page for AI Clinical Recommendations */
-  AI.renderRecommendationsPage = function (containerId, invoiceId, directData) {
+  AI.renderRecommendationsPage = function (containerId, invoiceId, directData, preferredTab) {
     var container = (typeof containerId === 'string' ? document.getElementById(containerId) : containerId)
                  || document.getElementById('view') || (typeof document !== 'undefined' ? document.body : null);
     if (!container) return;
@@ -3834,8 +4044,7 @@
       + pageContentHtml
       + '</div>';
 
-    AI.wireRecommendationsEvents(container, analysis, { isPage: true });
-
+    AI.wireRecommendationsEvents(container, analysis, { isPage: true, preferredTab: preferredTab || AI._preferredTab });
 
     var switcher = container.querySelector('#aiPageInvoiceSwitcher');
     if (switcher) {
@@ -3853,7 +4062,10 @@
   };
 
   /* Render Rich Modal with 5 Solutions + All Extended Pro Clinical Tabs (Headless Fallback) */
-  AI.showModal = function (invoiceId, directData) {
+  AI.showModal = function (invoiceId, directData, preferredTab) {
+    if (preferredTab) {
+      AI._preferredTab = preferredTab;
+    }
     // If in live browser environment with #view and navigation, open the dedicated full page!
     if (typeof window !== 'undefined' && window.App && typeof window.App.nav === 'function' && typeof document !== 'undefined' && document.getElementById('view')) {
       if (directData) {
@@ -3907,7 +4119,7 @@
       onOpen: function (ov, close) {
         var cBtn = ov.querySelector('#aiModalClose');
         if (cBtn) cBtn.addEventListener('click', close);
-        AI.wireRecommendationsEvents(ov, analysis, { isPage: false, closeFn: close });
+        AI.wireRecommendationsEvents(ov, analysis, { isPage: false, closeFn: close, preferredTab: preferredTab || AI._preferredTab });
       }
     });
   };

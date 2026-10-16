@@ -3526,6 +3526,163 @@
       '</div>';
   }
 
+  /* Render Dedicated Patient AI Clinical Intelligence Hub (All 12 Modules) */
+  function renderPatientAiHubPage(patient, labData, activeInvId) {
+    var invId = activeInvId || (labData && (labData.currentInvoice || labData.pastInvoice) && ((labData.currentInvoice || labData.pastInvoice).id || (labData.currentInvoice || labData.pastInvoice).no)) || '';
+    var patName = patient ? (patient.name || 'Patient') : 'Patient';
+
+    var MODULE_ITEMS = [
+      {
+        id: 'solutions5',
+        tab: 'solutions',
+        title: '5 Core Solutions',
+        desc: 'Diagnosis, evidence-based medications, dietary plan, confirmatory tests & red flags.',
+        icon: '📋',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><path d="m9 14 2 2 4-4"/></svg>',
+        category: 'Core Clinical'
+      },
+      {
+        id: 'bodyMap',
+        tab: 'bodymap',
+        title: 'Organ Impact Map',
+        desc: '8-system physiological impact visualizer with organ-specific lab correlation.',
+        icon: '🫀',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M12 8v8"/><path d="M9 12h6"/><path d="M9 21l3-5 3 5"/></svg>',
+        category: 'Physiology'
+      },
+      {
+        id: 'calculators',
+        tab: 'indices',
+        title: 'Clinical Calculators',
+        desc: 'Calculates eGFR, Mentzer index, FIB-4 score, APRI & Castelli ratios automatically.',
+        icon: '🧮',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="16" y1="14" x2="16" y2="18"/><path d="M16 10h.01"/><path d="M12 10h.01"/><path d="M8 10h.01"/><path d="M12 14h.01"/><path d="M8 14h.01"/><path d="M12 18h.01"/><path d="M8 18h.01"/></svg>',
+        category: 'Indices & Formulas'
+      },
+      {
+        id: 'panicSos',
+        tab: 'panic',
+        title: 'Panic SOS Alerts',
+        desc: 'ISO 15189 / CAP emergency cutoff limits detection with 1-click WhatsApp dispatch.',
+        icon: '🚨',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+        category: 'Critical Safety'
+      },
+      {
+        id: 'drugInteractions',
+        tab: 'ddi',
+        title: 'Drug Interactions (DDI)',
+        desc: 'Multi-drug clash matrix identifying harmful pharmacokinetic & pharmacodynamic clashes.',
+        icon: '💊',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>',
+        category: 'Pharmacology'
+      },
+      {
+        id: 'safetyShields',
+        tab: 'safety',
+        title: 'Organ Toxicity Shields',
+        desc: 'Renal, hepatic & hematology safety barriers flagging organ-toxic contraindications.',
+        icon: '🛡️',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
+        category: 'Toxicity Shield'
+      },
+      {
+        id: 'ddx',
+        tab: 'ddx',
+        title: 'Differential Diagnosis (DDx)',
+        desc: 'Ranked candidate disease differentials with probabilistic % matching & confirmatory tests.',
+        icon: '🎯',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>',
+        category: 'Diagnostics'
+      },
+      {
+        id: 'geneticGuard',
+        tab: 'genetic',
+        title: 'Genetic & Marriage Guard',
+        desc: 'Thalassemia carrier detection, familial trait risk & pre-marital advisory screening.',
+        icon: '🧬',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 18h8"/><path d="M3 22h18"/><path d="M14 22a7 7 0 1 0-14 0"/><circle cx="9" cy="9" r="2"/><path d="m14 8 5 5"/></svg>',
+        category: 'Genetics'
+      },
+      {
+        id: 'ascvdRisk',
+        tab: 'ascvd',
+        title: '10-Year ASCVD Risk',
+        desc: 'AHA/ACC 10-year cardiovascular heart attack & stroke risk with GDMT guideline targets.',
+        icon: '❤️',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5v14"/></svg>',
+        category: 'Cardiology'
+      },
+      {
+        id: 'urduGuide',
+        tab: 'urdu',
+        title: 'Roman Urdu Guide',
+        desc: 'Asan zaban mein mareez ke liye bemari ki wazahat, khurak, parhez aur dawai ka tareeqa.',
+        icon: '🗣️',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>',
+        category: 'Patient Care'
+      },
+      {
+        id: 'rxPad',
+        tab: 'rx',
+        title: 'Digital Prescription Pad',
+        desc: 'Printable prescription pad formatted with lab & doctor credentials and voice dictation.',
+        icon: '🖨️',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>',
+        category: 'Prescription'
+      },
+      {
+        id: 'reportRemarks',
+        tab: 'remarks',
+        title: 'Report Remarks Summary',
+        desc: 'Generates concise clinical narrative and attaches summary directly to report footer.',
+        icon: '📝',
+        svg: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+        category: 'Documentation'
+      }
+    ];
+
+    var cardsHtml = MODULE_ITEMS.map(function (m, idx) {
+      return '<div class="pd-ai-module-card" style="background:#ffffff;border:1.5px solid #cbd5e1;border-radius:14px;padding:20px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;flex-direction:column;justify-content:space-between;min-height:210px;transition:all 0.15s ease">'
+        + '<div>'
+        + '  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:12px">'
+        + '    <div style="width:40px;height:40px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;color:#2563eb;font-size:18px;flex-shrink:0">'
+        +        m.svg
+        + '    </div>'
+        + '    <div style="display:inline-flex;align-items:center;gap:6px;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700">'
+        + '      <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:#10b981"></span> Active &amp; Mapped'
+        + '    </div>'
+        + '  </div>'
+        + '  <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.03em">' + esc(m.category) + '</div>'
+        + '  <div style="font-size:16px;font-weight:800;color:#131845;margin-top:2px">' + esc(m.title) + '</div>'
+        + '  <div style="font-size:12.5px;color:#475569;margin-top:6px;line-height:1.45">' + esc(m.desc) + '</div>'
+        + '</div>'
+        + '<div style="margin-top:16px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">'
+        + '  <span style="font-size:11.5px;color:#64748b;font-weight:600">Module #' + (idx + 1) + '</span>'
+        + '  <button type="button" class="btn btn-outline-primary btn-sm pd-launch-ai-tab-btn" data-ai-module-tab="' + esc(m.tab) + '" data-inv-id="' + esc(invId) + '" style="font-weight:700;font-size:12px;border-radius:8px;padding:6px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:5px"><span>Launch ' + esc(m.title.split(' ')[0]) + '</span> <span>→</span></button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+
+    return '<div class="pd-layout-ai-hub" id="pdAiHub" style="display:none">'
+      + '<div class="vitals-card" style="width:100%">'
+      + '  <div class="vitals-card-head" style="margin-bottom:18px;padding-bottom:16px;border-bottom:1.5px solid #edf2f7;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px">'
+      + '    <div>'
+      + '      <h3 style="display:flex;align-items:center;gap:10px;font-size:19px;font-weight:800;color:#131845;margin:0"><span>🤖</span><span>AI Clinical Intelligence Hub (12 Core Modules)</span></h3>'
+      + '      <p class="pd-sub" style="margin-top:4px;color:#64748b;font-size:12.5px;font-weight:450">All 12 advanced diagnostic, calculative, and pharmacological safety systems mapped to <b>' + esc(patName) + '</b> laboratory profile.</p>'
+      + '    </div>'
+      + '    <div style="display:flex;gap:8px;align-items:center">'
+      + '      <span style="font-size:12px;font-weight:700;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:6px 12px;border-radius:8px;display:inline-flex;align-items:center;gap:6px"><span style="width:8px;height:8px;border-radius:50%;background:#10b981"></span> 12 / 12 Systems Online</span>'
+      + '      <button type="button" class="btn btn-primary" id="btnHubLaunchAllAI" data-inv-id="' + esc(invId) + '" style="font-weight:800;padding:8px 18px;border-radius:9px;background:#131845;color:#ffffff;border:none;cursor:pointer;box-shadow:0 2px 6px rgba(19,24,69,0.2)">🚀 Open Full Recommendations</button>'
+      + '    </div>'
+      + '  </div>'
+      + '  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px">'
+      +      cardsHtml
+      + '  </div>'
+      + '</div>'
+      + '</div>';
+  }
+
   /* Render Dedicated Patient Diagnostic Tests Dashboard Page */
   function renderDiagnosticTestsPage(patient, tests, labData) {
     tests = tests || [];
@@ -3786,7 +3943,7 @@
       '    </div>' +
       '  </div>' +
       '  <nav aria-label="Patient sections">' +
-      [['pdOverview','Vitals Overview','🧬'],['pdTests','Diagnostic Laboratory Tests & Parameters','🧪'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdTrajectory','Longitudinal Trajectory Vector Graph','📊'],['pdGraphs','Individual Biomarker Trend Graphs','🔬'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','🫀'],['pdReports','Diagnostic Lab Reports & Downloads','📑']].map(function(item,index){
+      [['pdOverview','Vitals Overview','🧬'],['pdTests','Diagnostic Laboratory Tests & Parameters','🧪'],['pdTrends','Biomarker Trends & Longitudinal Test Comparison','📈'],['pdTrajectory','Longitudinal Trajectory Vector Graph','📊'],['pdGraphs','Individual Biomarker Trend Graphs','🔬'],['pdVariance','Biomarker Variance & Delta Velocity Visualizer','⚡'],['pdAnatomy','Test Anatomy','🫀'],['pdReports','Diagnostic Lab Reports & Downloads','📑'],['pdAiHub','AI Clinical Intelligence (12 Core Modules)','🤖']].map(function(item,index){
         return '<button type="button" data-pd-section="'+item[0]+'" title="'+esc(item[1])+'" aria-label="'+esc(item[1])+'" aria-pressed="'+(index===0?'true':'false')+'" class="'+(index===0?'active':'')+'"><span aria-hidden="true">'+item[2]+'</span></button>';
       }).join('') +
       '  </nav>' +
@@ -3798,6 +3955,24 @@
 
       // Center & Right Main Vitals Overview Layout
       '<div class="pd-layout-vitals" id="pdOverview">' +
+
+      // Top Quick AI Clinical Intelligence Banner
+      '  <div class="vitals-card" id="pdAiQuickBanner" style="margin-bottom:14px;padding:14px 18px;background:#ffffff;border:1.5px solid #cbd5e1;border-left:4px solid #131845;border-radius:12px;box-shadow:0 1px 3px rgba(15,30,46,0.04);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px">' +
+      '    <div style="display:flex;align-items:center;gap:12px">' +
+      '      <div style="width:38px;height:38px;border-radius:10px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">🤖</div>' +
+      '      <div>' +
+      '        <div style="font-size:14px;font-weight:800;color:#131845;display:flex;align-items:center;gap:8px">' +
+      '          <span>AI Clinical Intelligence Suite</span>' +
+      '          <span style="font-size:11px;font-weight:700;background:#ecfdf5;color:#047857;border:1px solid #a7f3d0;padding:1px 8px;border-radius:999px">✓ 12/12 Modules Active</span>' +
+      '        </div>' +
+      '        <div style="font-size:12px;color:#64748b;margin-top:2px">Solutions • Organ Map • Calculators • Panic SOS • DDI • Toxicity Shields • DDx • Genetic Guard • ASCVD • Roman Urdu • Rx Pad • Remarks</div>' +
+      '      </div>' +
+      '    </div>' +
+      '    <div style="display:flex;gap:8px;align-items:center">' +
+      '      <button type="button" class="btn btn-outline-primary btn-sm" id="btnOpenPatientAiHub" style="font-weight:700;font-size:12px;padding:6px 14px;border-radius:8px;cursor:pointer">Explore 12 Modules →</button>' +
+      '      <button type="button" class="btn btn-primary btn-sm" id="btnLaunchOverviewAI" data-inv-id="' + esc(activeInvId) + '" style="font-weight:700;font-size:12px;padding:6px 14px;border-radius:8px;background:#131845;color:#ffffff;border:none;cursor:pointer">Full AI Recommendations</button>' +
+      '    </div>' +
+      '  </div>' +
 
       // 2-Column Responsive Main Grid
       '  <div class="vitals-main-grid">' +
@@ -4009,6 +4184,9 @@
 
       // Dedicated Patient Diagnostic Reports & Downloads Page
       renderPatientReportsPage(patient) +
+
+      // Dedicated Patient AI Clinical Intelligence Hub Page (12 Core Modules)
+      renderPatientAiHubPage(patient, labData, activeInvId) +
       '</div>' +
       '</section>';
   }
@@ -4243,6 +4421,7 @@
       var varianceEl = host.querySelector('#pdVariance');
       var anatomyEl = host.querySelector('#pdAnatomy');
       var reportsEl = host.querySelector('#pdReports');
+      var aiHubEl = host.querySelector('#pdAiHub');
 
       if (overviewEl) overviewEl.style.display = 'none';
       if (testsEl) testsEl.style.display = 'none';
@@ -4252,6 +4431,7 @@
       if (varianceEl) varianceEl.style.display = 'none';
       if (anatomyEl) anatomyEl.style.display = 'none';
       if (reportsEl) reportsEl.style.display = 'none';
+      if (aiHubEl) aiHubEl.style.display = 'none';
 
       if (sectionId === 'pdTests') {
         if (testsEl) testsEl.style.display = 'block';
@@ -4267,6 +4447,8 @@
         if (anatomyEl) anatomyEl.style.display = 'block';
       } else if (sectionId === 'pdReports') {
         if (reportsEl) reportsEl.style.display = 'block';
+      } else if (sectionId === 'pdAiHub') {
+        if (aiHubEl) aiHubEl.style.display = 'block';
       } else {
         if (overviewEl) overviewEl.style.display = 'block';
       }
@@ -4649,6 +4831,50 @@
     host.querySelectorAll('.rehab-check-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         btn.classList.toggle('active');
+      });
+    });
+
+    // Wire AI Clinical Intelligence Hub buttons
+    var btnOpenAi = host.querySelector('#btnOpenPatientAiHub');
+    if (btnOpenAi) {
+      btnOpenAi.addEventListener('click', function () {
+        switchSection('pdAiHub');
+      });
+    }
+
+    var btnOverAI = host.querySelector('#btnLaunchOverviewAI');
+    if (btnOverAI) {
+      btnOverAI.addEventListener('click', function () {
+        var invId = btnOverAI.getAttribute('data-inv-id') || activeInvId;
+        if (App.aiInsights && invId) {
+          App.aiInsights.showModal(invId);
+        } else if (App.toast) {
+          App.toast('Full AI clinical report loaded for patient.');
+        }
+      });
+    }
+
+    var btnHubAllAI = host.querySelector('#btnHubLaunchAllAI');
+    if (btnHubAllAI) {
+      btnHubAllAI.addEventListener('click', function () {
+        var invId = btnHubAllAI.getAttribute('data-inv-id') || activeInvId;
+        if (App.aiInsights && invId) {
+          App.aiInsights.showModal(invId);
+        } else if (App.toast) {
+          App.toast('Full AI clinical report loaded for patient.');
+        }
+      });
+    }
+
+    host.querySelectorAll('.pd-launch-ai-tab-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var targetTab = btn.getAttribute('data-ai-module-tab');
+        var invId = btn.getAttribute('data-inv-id') || activeInvId;
+        if (App.aiInsights && invId) {
+          App.aiInsights.showModal(invId, null, targetTab);
+        } else if (App.toast) {
+          App.toast('AI module ' + targetTab + ' opened for patient.');
+        }
       });
     });
 
